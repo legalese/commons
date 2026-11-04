@@ -1,0 +1,857 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `ssc-core`
+
+-- Social Security Contributions and Benefits Act 1992 (United Kingdom), 1992 c. 4.
+-- LAYER 1, part ssc2, module 3 of 6: ss 30A to 30E (incapacity benefit).
+-- Source: inputs/ukpga-1992-4.txt, a plain-text rendering made by a converter script; it is not the
+-- official text and nothing here is "verified against the official text".
+-- Money is a NUMBER in pounds; a rate is weekly unless the name says otherwise.
+-- JUST TRUE / JUST FALSE is the Act answering in its own words; NOTHING is "not covered".
+-- "over" and "under" an age follow s 173(a) (seam K2): a person is over an age on the day they attain it.
+-- "Under pensionable age on a day" is the day being before the date the person attains pensionable age.
+
+§ `Part II -- Incapacity benefit (ss 30A to 30E)`
+
+§§ `s 30A Incapacity benefit: entitlement`
+
+-- Kleene "and" and "or" over MAYBE BOOLEAN: a limb the text answers "no" decides the whole even when
+-- another limb is unknown; otherwise an unknown limb leaves the whole unknown.
+-- src:865 | (1) Subject to the following provisions of this section, a person who satisfies
+-- src:866 | (a) either of the conditions mentioned in subsection (2) below; or
+-- src:867 | (b) if he satisfies neither of those conditions, each of the conditions mentioned in subsection (2A) below,
+-- src:868 | is entitled to short-term incapacity benefit in respect of any day of incapacity for work (“the relevant day”) which forms part of a period of incapacity for work.
+@ref s 30A(1) (src:865-868)
+GIVEN a IS A MAYBE BOOLEAN, b IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 30A both` MEANS
+    CONSIDER a
+    WHEN JUST FALSE THEN JUST FALSE
+    WHEN JUST TRUE THEN b
+    WHEN NOTHING THEN
+        CONSIDER b
+        WHEN JUST FALSE THEN JUST FALSE
+        OTHERWISE NOTHING
+
+@ref s 30A(1) (src:865-868)
+GIVEN a IS A MAYBE BOOLEAN, b IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 30A either` MEANS
+    CONSIDER a
+    WHEN JUST TRUE THEN JUST TRUE
+    WHEN JUST FALSE THEN b
+    WHEN NOTHING THEN
+        CONSIDER b
+        WHEN JUST TRUE THEN JUST TRUE
+        OTHERWISE NOTHING
+
+-- The anniversary of a date a whole number of years away. The Act does not say what the anniversary of
+-- 29 February is in a year with no 29 February (fork F5 in NOTES.md), so that case is NOT COVERED.
+-- src:871 | (b) on that day he is over pensionable age but not more than 5 years over that age, the period of incapacity for work began before he attained pensionable age, and—
+@ref s 30A(2)(b) (src:871)
+GIVEN y IS A NUMBER
+GIVETH A BOOLEAN
+`s 30A(2)(b) the year is a leap year` MEANS
+    ((y MODULO 4 EQUALS 0) AND (NOT (y MODULO 100 EQUALS 0))) OR (y MODULO 400 EQUALS 0)
+
+@ref s 30A(2)(b) (src:871)
+GIVEN date IS A DATE
+      years IS A NUMBER
+GIVETH A MAYBE DATE
+`s 30A(2)(b) the same day and month a number of whole years from the date` MEANS
+    IF (DATE_DAY date EQUALS 29) AND (DATE_MONTH date EQUALS 2) AND (NOT (`s 30A(2)(b) the year is a leap year` ((DATE_YEAR date) PLUS years)))
+    THEN NOTHING     -- NOTHING-kind (silent): the Act does not say what the anniversary of 29 February is in a year with no 29 February
+    ELSE JUST (Date (DATE_DAY date) (DATE_MONTH date) ((DATE_YEAR date) PLUS years))
+
+-- (2)(a): under pensionable age on the relevant day and satisfies the contribution conditions specified
+-- for short-term incapacity benefit in Schedule 3, Part I, paragraph 2 (seam S1).
+-- src:870 | (a) he is under pensionable age on the relevant day and satisfies the contribution conditions specified for short-term incapacity benefit in Schedule 3, Part I, paragraph 2; or
+@ref s 30A(2)(a) (src:870)
+GIVEN `the relevant day` IS A DATE
+      `the person` IS A Person
+      `sch 3 pt I para 2 the contribution conditions for short-term incapacity benefit are satisfied` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 30A(2)(a) the person is under pensionable age on the relevant day and satisfies the contribution conditions` MEANS
+    `s 30A both`
+        (JUST (`the relevant day` BELOW (`the person`'s `date of attaining pensionable age`)))
+        `sch 3 pt I para 2 the contribution conditions for short-term incapacity benefit are satisfied`
+
+-- (2)(b): on the relevant day over pensionable age but not more than 5 years over it; the period of
+-- incapacity for work began before the person attained pensionable age; and they would be entitled to a
+-- Category A retirement pension (i), or to a Category B one by virtue of a deceased spouse's or civil
+-- partner's contributions (ii), if the entitlement had not been deferred or no election made under s 54(1).
+-- "not more than 5 years over": the person is over pensionable age on the day they attain it and is still
+-- within the limit on the fifth anniversary itself (fork F4 in NOTES.md).
+-- src:871 | (b) on that day he is over pensionable age but not more than 5 years over that age, the period of incapacity for work began before he attained pensionable age, and—
+-- src:872 | (i) he would be entitled to a Category A retirement pension if his entitlement had not been deferred or if he had not made an election under section 54(1) below, or
+-- src:873 | (ii) he would be entitled to a Category B retirement pension by virtue of the contributions of his deceased spouse or deceased civil partner, but for any such deferment or election.
+@ref s 30A(2)(b) (src:871-873)
+GIVEN `the relevant day` IS A DATE
+      `the person` IS A Person
+      `the first day of the period of incapacity for work` IS A DATE
+      `s 44 the person would be entitled to a Category A retirement pension apart from deferment or an election under section 54(1)` IS A MAYBE BOOLEAN
+      `s 48 the person would be entitled to a Category B retirement pension by virtue of the contributions of a deceased spouse or civil partner apart from deferment or an election under section 54(1)` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 30A(2)(b) the person is not more than 5 years over pensionable age on the relevant day, the period began before that age, and a retirement pension would be payable but for deferment or election` MEANS
+    IF `the relevant day` BELOW (`the person`'s `date of attaining pensionable age`)
+    THEN JUST FALSE           -- FALSE-kind (the text says no in its own words): "on that day he is over pensionable age"
+    ELSE CONSIDER `s 30A(2)(b) the same day and month a number of whole years from the date` (`the person`'s `date of attaining pensionable age`) 5
+         WHEN NOTHING THEN NOTHING   -- NOTHING-kind (silent): the fifth anniversary of 29 February in a year with no 29 February
+         WHEN JUST fifth THEN
+             `s 30A both`
+                 (JUST ((`the relevant day` AT MOST fifth) AND (`the first day of the period of incapacity for work` BELOW (`the person`'s `date of attaining pensionable age`))))
+                 (`s 30A either`
+                     `s 44 the person would be entitled to a Category A retirement pension apart from deferment or an election under section 54(1)`
+                     `s 48 the person would be entitled to a Category B retirement pension by virtue of the contributions of a deceased spouse or civil partner apart from deferment or an election under section 54(1)`)
+
+-- (2): the conditions mentioned in subsection (1)(a) are that (a) or (b). The conditions "are that":
+-- a definition of the conditions, so neither limb holding is the text's no.
+-- src:869 | (2) The conditions mentioned in subsection (1)(a) above are that—
+-- src:870 | (a) he is under pensionable age on the relevant day and satisfies the contribution conditions specified for short-term incapacity benefit in Schedule 3, Part I, paragraph 2; or
+-- src:871 | (b) on that day he is over pensionable age but not more than 5 years over that age, the period of incapacity for work began before he attained pensionable age, and—
+-- src:872 | (i) he would be entitled to a Category A retirement pension if his entitlement had not been deferred or if he had not made an election under section 54(1) below, or
+-- src:873 | (ii) he would be entitled to a Category B retirement pension by virtue of the contributions of his deceased spouse or deceased civil partner, but for any such deferment or election.
+@ref s 30A(2) (src:869-873)
+GIVEN a IS A MAYBE BOOLEAN, b IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 30A(2) the person satisfies either of the conditions mentioned in subsection (1)(a)` MEANS
+    `s 30A either` a b
+    -- JUST FALSE when neither limb holds: FALSE-kind (the text says no in its own words): "The conditions mentioned in subsection (1)(a) above are that—"
+
+-- (2A): the conditions in (1)(b), all of which must hold: (a) aged 16 or over on the relevant day; (b) under
+-- 20 on a day forming part of the period of incapacity or, in prescribed cases, under 25; (c) incapable
+-- of work throughout 196 consecutive days immediately preceding the relevant day (or an earlier day of
+-- the period on which aged 16 or over); (d) the prescribed conditions as to residence in, or presence in,
+-- Great Britain; (e) not receiving full-time education. Ages are s 173(a)'s answers (seam K2); that the
+-- person was incapable of work on each of the days is s 171A(1)'s answer (seam S35).
+-- src:874 | (2A) The conditions mentioned in subsection (1)(b) above are that—
+-- src:875 | (a) he is aged 16 or over on the relevant day;
+-- src:876 | (b) he is under the age of 20 or, in prescribed cases, 25 on a day which forms part of the period of incapacity for work;
+-- src:877 | (c) he was incapable of work throughout a period of 196 consecutive days immediately preceding the relevant day, or an earlier day in the period of incapacity for work on which he was aged 16 or over;
+-- src:878 | (d) on the relevant day he satisfies the prescribed conditions as to residence in Great Britain, or as to presence there; and
+-- src:879 | (e) he is not, on that day, a person who is receiving full-time education.
+@ref s 30A(2A) (src:874-879)
+GIVEN `s 173(a) the person is over 16` IS A MAYBE BOOLEAN
+      `the case is a prescribed case in which the age limit is 25` IS A BOOLEAN
+      `s 173(a) the person is under 20` IS A MAYBE BOOLEAN
+      `s 173(a) the person is under 25` IS A MAYBE BOOLEAN
+      `s 171A(1) the person is incapable of work` IS A MAYBE BOOLEAN
+      `the number of consecutive days immediately before the relevant day (or the earlier day on which the person was aged 16 or over) on which the person was incapable of work` IS A NUMBER
+      `the person satisfies the prescribed conditions as to residence in Great Britain, or presence there, on the relevant day` IS A BOOLEAN
+      `the person is receiving full-time education on the relevant day` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 30A(2A) the person satisfies each of the conditions mentioned in subsection (1)(b)` MEANS
+    `s 30A both`
+        (`s 30A both`
+            (`s 30A both`
+                (`s 30A both`
+                    `s 173(a) the person is over 16`
+                    (IF `the case is a prescribed case in which the age limit is 25` THEN `s 173(a) the person is under 25` ELSE `s 173(a) the person is under 20`))
+                (`s 30A both`
+                    `s 171A(1) the person is incapable of work`
+                    (JUST (`the number of consecutive days immediately before the relevant day (or the earlier day on which the person was aged 16 or over) on which the person was incapable of work` AT LEAST 196))))
+            (JUST `the person satisfies the prescribed conditions as to residence in Great Britain, or presence there, on the relevant day`))
+        (JUST (NOT `the person is receiving full-time education on the relevant day`))
+    -- JUST FALSE when a limb holds not: FALSE-kind (the text says no in its own words): "each of the conditions mentioned in subsection (2A) below" (the conditions "are that")
+
+-- (3) and (4): flat negatives. (1) the entitlement, for the relevant day.
+-- Seam S35 / K2 / S1 are inputs of the two condition functions above; here the inputs are their answers.
+-- src:865 | (1) Subject to the following provisions of this section, a person who satisfies
+-- src:866 | (a) either of the conditions mentioned in subsection (2) below; or
+-- src:867 | (b) if he satisfies neither of those conditions, each of the conditions mentioned in subsection (2A) below,
+-- src:868 | is entitled to short-term incapacity benefit in respect of any day of incapacity for work (“the relevant day”) which forms part of a period of incapacity for work.
+@ref s 30A(1) (src:865-868)
+GIVEN `s 30A(2) the person satisfies either of the conditions mentioned in subsection (1)(a)` IS A MAYBE BOOLEAN
+      `s 30A(2A) the person satisfies each of the conditions mentioned in subsection (1)(b)` IS A MAYBE BOOLEAN
+      `s 30C(1) the relevant day is a day of incapacity for work forming part of a period of incapacity for work` IS A MAYBE BOOLEAN
+      `the number of the relevant day in the period of incapacity for work, counting the first day as 1` IS A NUMBER
+      `s 30D the number of days of entitlement before the relevant day` IS A NUMBER
+GIVETH A MAYBE BOOLEAN
+`s 30A(1) the person is entitled to short-term incapacity benefit for the relevant day` MEANS
+    CONSIDER `s 30C(1) the relevant day is a day of incapacity for work forming part of a period of incapacity for work`
+    WHEN JUST TRUE THEN
+        IF `s 30D the number of days of entitlement before the relevant day` AT LEAST 364
+        THEN JUST FALSE      -- FALSE-kind (the text says no in its own words): "In any period of incapacity for work a person is not entitled to short-term incapacity benefit for more than 364 days." (subsection (4))
+        ELSE CONSIDER `s 30A(2) the person satisfies either of the conditions mentioned in subsection (1)(a)`
+             WHEN JUST TRUE THEN
+                 IF `the number of the relevant day in the period of incapacity for work, counting the first day as 1` AT MOST 3
+                 THEN JUST FALSE   -- FALSE-kind (the text says no in its own words): "A person is not entitled to short-term incapacity benefit under subsection (1)(a) above for the first 3 days of any period of incapacity for work." (subsection (3))
+                 ELSE JUST TRUE
+             WHEN JUST FALSE THEN
+                 CONSIDER `s 30A(2A) the person satisfies each of the conditions mentioned in subsection (1)(b)`
+                 WHEN JUST TRUE THEN JUST TRUE
+                 OTHERWISE NOTHING   -- NOTHING-kind (limited by its own wording): the grant is to "a person who satisfies" the conditions of (1)(a) or, if neither, each of those of (1)(b)
+             WHEN NOTHING THEN NOTHING   -- NOTHING-kind (limited by its own wording): whether the person satisfies the conditions of (1)(a) is not decided
+    OTHERWISE NOTHING     -- NOTHING-kind (limited by its own wording): the grant is "in respect of any day of incapacity for work ... which forms part of a period of incapacity for work"
+
+-- (5) After the person ceases, by virtue of (4), to be entitled to short-term incapacity benefit, they are
+-- entitled to long-term incapacity benefit for any subsequent day of incapacity for work in the same period
+-- on which they are not over pensionable age.
+-- src:882 | (5) Where a person ceases by virtue of subsection (4) above to be entitled to short-term incapacity benefit, he is entitled to long-term incapacity benefit in respect of any subsequent day of incapacity for work in the same period of incapacity for work on which he is not over pensionable age.
+@ref s 30A(5) (src:882)
+GIVEN `the person ceased to be entitled to short-term incapacity benefit by virtue of subsection (4)` IS A BOOLEAN
+      `the relevant day` IS A DATE
+      `the person` IS A Person
+      `the relevant day is a subsequent day of incapacity for work in the same period of incapacity for work` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 30A(5) the person is entitled to long-term incapacity benefit for the relevant day` MEANS
+    IF `the person ceased to be entitled to short-term incapacity benefit by virtue of subsection (4)`
+       AND `the relevant day is a subsequent day of incapacity for work in the same period of incapacity for work`
+       AND (`the relevant day` BELOW (`the person`'s `date of attaining pensionable age`))
+    THEN JUST TRUE
+    ELSE NOTHING     -- NOTHING-kind (limited by its own wording): "in respect of any subsequent day of incapacity for work in the same period of incapacity for work on which he is not over pensionable age"
+
+§§ `s 30B Incapacity benefit: rate`
+
+-- (1) the amount payable for a day is 1/7th of the appropriate weekly rate.
+-- src:886 | (1) The amount payable by way of incapacity benefit in respect of any day is 1/7th of the appropriate weekly rate.
+@ref s 30B(1) (src:886)
+GIVEN `the appropriate weekly rate` IS A NUMBER
+GIVETH A NUMBER
+`s 30B(1) the amount payable by way of incapacity benefit for a day` MEANS
+    `the appropriate weekly rate` DIVIDED BY 7
+
+-- (2) the weekly rate of short-term incapacity benefit is the lower or higher rate specified in
+-- Schedule 4, Part I, paragraph 2 (seam S2; the table is omitted from this text). The lower rate is
+-- payable for the first 196 days of entitlement in a period of incapacity for work, the higher after.
+-- The day's place among the days of entitlement is given by s 30D's count of the days BEFORE the relevant
+-- day: with fewer than 196 such days the relevant day is within the first 196 (fork F8 in NOTES.md).
+-- src:887 | (2) Subject to the following provisions of this section, the weekly rate of short-term incapacity benefit is the lower or higher rate specified in Schedule 4, Part I, paragraph 2.
+-- src:888 | The benefit is payable at the lower rate so specified for the first 196 days of entitlement in any period of incapacity for work and at the higher rate so specified thereafter.
+@ref s 30B(2) (src:887-888)
+GIVEN `sch 4 pt I para 2 the lower rate of short-term incapacity benefit in pounds` IS A MAYBE NUMBER
+      `sch 4 pt I para 2 the higher rate of short-term incapacity benefit in pounds` IS A MAYBE NUMBER
+      `s 30D the number of days of entitlement before the relevant day` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`s 30B(2) the weekly rate of short-term incapacity benefit` MEANS
+    IF `s 30D the number of days of entitlement before the relevant day` BELOW 196
+    THEN `sch 4 pt I para 2 the lower rate of short-term incapacity benefit in pounds`      -- NOTHING when the table is absent: NOTHING-kind (points outside the text): Schedule 4 is omitted from this text
+    ELSE `sch 4 pt I para 2 the higher rate of short-term incapacity benefit in pounds`     -- NOTHING when the table is absent: NOTHING-kind (points outside the text): Schedule 4 is omitted from this text
+
+-- (3) A person over pensionable age: the weekly rate is that at which the relevant retirement pension
+-- referred to in s 30A(2)(b) would have been payable, disregarding (a) the increase for married people or
+-- civil partners under s 51A(2) and for deferred retirement under Schedule 5, (b) [blank], (c) the annual
+-- up-rating increase under s 150 of the Administration Act. The rate the pension would have been payable
+-- at is ssc3's answer (seam S3, taken as the weekly rate of the basic pension); the increases are inputs.
+-- src:889 | (3) In the case of a person over pensionable age the weekly rate of short-term incapacity benefit is, subject to subsection (4) below, that at which the relevant retirement pension referred to in section 30A(2)(b) above would have been payable.
+-- src:890 | But in determining that rate any increase of the following descriptions shall be disregarded—
+-- src:891 | (a) any increase (for married people or civil partners) under section 51A(2) below or (for deferred retirement) under Schedule 5 to this Act;
+-- src:892 | (b) . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+-- src:893 | (c) any increase (for Category A or Category B pensioners) under section 150 of the Administration Act (annual up-rating) of the sums mentioned in subsection (1)(e) of that section.
+@ref s 30B(3) (src:889-893)
+GIVEN `s 44(4) the weekly rate of the basic pension in pounds` IS A MAYBE NUMBER
+      `the increase for married people or civil partners under section 51A(2) in that rate` IS A NUMBER
+      `the increase for deferred retirement under Schedule 5 in that rate` IS A NUMBER
+      `the increase under section 150 of the Administration Act in that rate` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`s 30B(3) the weekly rate of short-term incapacity benefit for a person over pensionable age` MEANS
+    CONSIDER `s 44(4) the weekly rate of the basic pension in pounds`
+    WHEN NOTHING THEN NOTHING    -- NOTHING-kind (points outside the text): the rate of the retirement pension is section 44's
+    WHEN JUST rate THEN JUST (rate MINUS `the increase for married people or civil partners under section 51A(2) in that rate` MINUS `the increase for deferred retirement under Schedule 5 in that rate` MINUS `the increase under section 150 of the Administration Act in that rate`)
+
+-- (4) terminally ill: suffers from a progressive disease and death in consequence of it can reasonably be
+-- expected within 6 months.
+-- src:898 | For the purposes of this subsection a person is terminally ill if he suffers from a progressive disease and his death in consequence of that disease can reasonably be expected within 6 months.
+@ref s 30B(4) (src:898)
+GIVEN `the person suffers from a progressive disease` IS A BOOLEAN
+      `the person's death in consequence of that disease can reasonably be expected within 6 months` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 30B(4) the person is terminally ill` MEANS
+    IF `the person suffers from a progressive disease` AND `the person's death in consequence of that disease can reasonably be expected within 6 months`
+    THEN JUST TRUE
+    ELSE JUST FALSE   -- FALSE-kind (the text says no in its own words): "a person is terminally ill if he suffers from a progressive disease and his death in consequence of that disease can reasonably be expected within 6 months"
+
+-- (4) A person entitled to short-term incapacity benefit for 196 days or more in a period of incapacity,
+-- who is terminally ill or entitled to the highest rate of the care component of disability living
+-- allowance, has a weekly rate equal to the rate of long-term incapacity benefit if that is greater than
+-- the rate otherwise payable under (2) or (3). The long-term rate is Schedule 4, Part I, paragraph 2A (seam S2').
+-- src:894 | (4) In the case of a person who has been entitled to short-term incapacity benefit for 196 days or more in any period of incapacity for work and—
+-- src:895 | (a) is terminally ill, or
+-- src:896 | (b) he is entitled to the highest rate of the care component of disability living allowance,
+-- src:897 | the weekly rate of short-term incapacity benefit payable, if greater than the rate otherwise payable to him under subsection (2) or (3) above, shall be equal to the rate at which long-term incapacity benefit under section 30A above would be payable to him if he were entitled to it.
+@ref s 30B(4) (src:894-897)
+GIVEN `s 30D the number of days of entitlement before the relevant day` IS A NUMBER
+      `s 30B(4) the person is terminally ill` IS A MAYBE BOOLEAN
+      `the person is entitled to the highest rate of the care component of disability living allowance` IS A BOOLEAN
+      `the rate otherwise payable under subsection (2) or (3)` IS A MAYBE NUMBER
+      `sch 4 pt I para 2A the weekly rate of long-term incapacity benefit in pounds` IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+`s 30B(4) the weekly rate of short-term incapacity benefit for a terminally ill person` MEANS
+    IF `s 30D the number of days of entitlement before the relevant day` AT LEAST 196
+    THEN CONSIDER `s 30A either` `s 30B(4) the person is terminally ill` (JUST `the person is entitled to the highest rate of the care component of disability living allowance`)
+         WHEN JUST TRUE THEN
+             CONSIDER `the rate otherwise payable under subsection (2) or (3)`
+             WHEN NOTHING THEN NOTHING         -- NOTHING-kind (points outside the text): the rate otherwise payable is Schedule 4's
+             WHEN JUST other THEN
+                 CONSIDER `sch 4 pt I para 2A the weekly rate of long-term incapacity benefit in pounds`
+                 WHEN NOTHING THEN NOTHING     -- NOTHING-kind (points outside the text): Schedule 4 is omitted from this text
+                 WHEN JUST long THEN JUST (IF long ABOVE other THEN long ELSE other)
+         WHEN JUST FALSE THEN `the rate otherwise payable under subsection (2) or (3)`   -- the subsection does not apply to a person who is neither terminally ill nor on the highest rate: the rate otherwise payable stands
+         WHEN NOTHING THEN NOTHING         -- NOTHING-kind (silent): whether the person is terminally ill or on the highest rate is not decided
+    ELSE `the rate otherwise payable under subsection (2) or (3)`              -- the subsection does not apply: the person has not been entitled for 196 days; the rate otherwise payable stands
+
+-- (2), (3), (4) together: for a person over pensionable age on the relevant day the rate is (3)'s, for any
+-- other it is (2)'s; (4) then raises it where it applies.
+-- src:887 | (2) Subject to the following provisions of this section, the weekly rate of short-term incapacity benefit is the lower or higher rate specified in Schedule 4, Part I, paragraph 2.
+-- src:888 | The benefit is payable at the lower rate so specified for the first 196 days of entitlement in any period of incapacity for work and at the higher rate so specified thereafter.
+@ref s 30B(2) (src:887-888)
+GIVEN `the relevant day is after the person attained pensionable age` IS A BOOLEAN
+      `s 30B(2) the weekly rate of short-term incapacity benefit` IS A MAYBE NUMBER
+      `s 30B(3) the weekly rate of short-term incapacity benefit for a person over pensionable age` IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+`s 30B(2) the rate otherwise payable under subsection (2) or (3)` MEANS
+    IF `the relevant day is after the person attained pensionable age`
+    THEN `s 30B(3) the weekly rate of short-term incapacity benefit for a person over pensionable age`
+    ELSE `s 30B(2) the weekly rate of short-term incapacity benefit`
+
+-- (5) References to short-term incapacity benefit at the higher rate include benefit payable to a person
+-- entitled for 196 days or more in a period, whatever the subsection under which the rate is determined.
+-- src:899 | (5) References to short-term incapacity benefit at the higher rate shall be construed as including short-term incapacity benefit payable to any person who has been entitled to that benefit for 196 days or more in a period of incapacity for work, notwithstanding that the rate of benefit is determined in accordance with subsection (3) or (4) above.
+@ref s 30B(5) (src:899)
+GIVEN `the benefit is payable at the higher rate specified in Schedule 4` IS A BOOLEAN
+      `s 30D the number of days of entitlement before the relevant day` IS A NUMBER
+GIVETH A MAYBE BOOLEAN
+`s 30B(5) the short-term incapacity benefit is at the higher rate` MEANS
+    IF `the benefit is payable at the higher rate specified in Schedule 4` OR (`s 30D the number of days of entitlement before the relevant day` AT LEAST 196)
+    THEN JUST TRUE
+    ELSE NOTHING     -- NOTHING-kind (includes): "shall be construed as including" does not say that a benefit outside those cases is not at the higher rate
+
+-- (6) the weekly rate of long-term incapacity benefit is that in Schedule 4, Part I, paragraph 2A,
+-- subject to (7), s 30DD and s 30E (seam S2').
+-- src:900 | (6) Subject as follows, the weekly rate of long-term incapacity benefit under section 30A above is that specified in Schedule 4, Part I, paragraph 2A.
+@ref s 30B(6) (src:900)
+GIVEN `sch 4 pt I para 2A the weekly rate of long-term incapacity benefit in pounds` IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+`s 30B(6) the weekly rate of long-term incapacity benefit` MEANS
+    `sch 4 pt I para 2A the weekly rate of long-term incapacity benefit in pounds`    -- NOTHING-kind (points outside the text): Schedule 4 is omitted from this text
+
+-- (7) Regulations may provide that a person who is, on the qualifying date, under such age as may be
+-- prescribed gets a prescribed increase of the long-term rate (the "age addition"). Seam S16: ssc3 s 47(1)
+-- asks whether the pensioner was entitled to an age addition and at what rate. The qualifying date is the
+-- first day of the period of incapacity for work or such earlier day as may be prescribed.
+-- src:901 | (7) Regulations may provide that if a person is, on the qualifying date in relation to a period of incapacity for work, under such age as may be prescribed, the rate of long-term incapacity benefit under section 30A above payable to him in respect of any day in that period shall be increased by such amount as may be prescribed.
+-- src:902 | For this purpose “the qualifying date” means the first day of the period of incapacity for work or such earlier day as may be prescribed.
+@ref s 30B(7) (src:901-902)
+GIVEN `the first day of the period of incapacity for work` IS A DATE
+      `the earlier day the regulations prescribe` IS A MAYBE DATE
+GIVETH A DATE
+`s 30B(7) the qualifying date` MEANS
+    CONSIDER `the earlier day the regulations prescribe`
+    WHEN JUST earlier THEN earlier
+    WHEN NOTHING THEN `the first day of the period of incapacity for work`
+
+@ref s 30B(7) (src:901)
+GIVEN `regulations under section 30B(7) provide for an increase` IS A BOOLEAN
+      `s 173(a) the person is under the prescribed age on the qualifying date` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 30B(7) the pensioner was entitled to an age addition to long-term incapacity benefit` MEANS
+    IF `regulations under section 30B(7) provide for an increase`
+    THEN (CONSIDER `s 173(a) the person is under the prescribed age on the qualifying date`
+          WHEN JUST TRUE THEN JUST TRUE
+          OTHERWISE NOTHING)   -- NOTHING-kind (points outside the text): whether the person is under the prescribed age is for the regulations
+    ELSE NOTHING             -- NOTHING-kind (points outside the text): the subsection only says regulations "may" provide
+
+@ref s 30B(7) (src:901)
+GIVEN `s 30B(7) the pensioner was entitled to an age addition to long-term incapacity benefit` IS A MAYBE BOOLEAN
+      `the amount the regulations prescribe` IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+`s 30B(7) the weekly rate of the age addition in pounds` MEANS
+    CONSIDER `s 30B(7) the pensioner was entitled to an age addition to long-term incapacity benefit`
+    WHEN JUST TRUE THEN `the amount the regulations prescribe`     -- NOTHING when no amount is prescribed: NOTHING-kind (points outside the text): "such amount as may be prescribed"
+    OTHERWISE NOTHING     -- NOTHING-kind (limited by its own wording): the increase is for a person under the prescribed age on the qualifying date
+
+-- (8) The section has effect subject to s 30DD (reduction for pension payments) and s 30E (reduction for
+-- councillor's allowance). The Act names no order; neither reduction is worked out from the benefit left
+-- over, so any order gives max(0, rate - a - b). Both are taken off together and the weekly amount payable
+-- is not less than nothing (fork F6 in NOTES.md).
+-- src:903 | (8) This section has effect subject to sections 30DD (reduction for pension payments) and section 30E (reduction for councillor’s allowance) below.
+@ref s 30B(8) (src:903)
+GIVEN `the weekly rate before reduction` IS A NUMBER
+      `the reduction under section 30DD` IS A NUMBER
+      `the deduction under section 30E` IS A NUMBER
+GIVETH A NUMBER
+`s 30B(8) the weekly amount payable after the reductions in sections 30DD and 30E` MEANS
+    IF `the weekly rate before reduction` MINUS `the reduction under section 30DD` MINUS `the deduction under section 30E` AT LEAST 0
+    THEN `the weekly rate before reduction` MINUS `the reduction under section 30DD` MINUS `the deduction under section 30E`
+    ELSE 0
+
+§§ `s 30C Incapacity benefit: days and periods of incapacity for work`
+
+-- (1)(a) "a day of incapacity for work means a day on which a person is incapable of work". Whether the
+-- person is incapable of work is s 171A(1)'s answer (seam S35).
+-- src:905 | (1) For the purposes of any provisions of this Act relating to incapacity benefit, subject to the following provisions and save as otherwise expressly provided—
+-- src:906 | (a) a day of incapacity for work means a day on which a person is incapable of work;
+@ref s 30C(1)(a) (src:905-906)
+GIVEN `s 171A(1) the person is incapable of work` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 30C(1)(a) the day is a day of incapacity for work` MEANS
+    `s 171A(1) the person is incapable of work`
+    -- JUST FALSE when the person is capable of work: FALSE-kind (the text says no in its own words): "a day of incapacity for work means a day on which a person is incapable of work"
+
+-- (2) Any day within the maternity allowance period (s 35(2)) is treated as a day of incapacity for work
+-- unless the woman is disqualified for receiving a maternity allowance for that day by regulations under
+-- s 35(3)(a).
+-- src:909 | (2) Any day which falls within the maternity allowance period (as defined in section 35(2) below) shall be treated for the purposes of any provision of this Act relating to incapacity benefit as a day of incapacity for work unless the woman is disqualified for receiving a maternity allowance for that day by virtue of regulations under section 35(3)(a) below.
+@ref s 30C(2) (src:909)
+GIVEN `the day` IS A DATE
+      `s 35(2) the maternity allowance period` IS A Period
+      `the woman is disqualified for receiving a maternity allowance for that day by virtue of regulations under section 35(3)(a)` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 30C(2) the day is treated as a day of incapacity for work` MEANS
+    IF (`the day` AT LEAST (`s 35(2) the maternity allowance period`'s `the first day`)) AND (`the day` AT MOST (`s 35(2) the maternity allowance period`'s `the last day`))
+    THEN (IF `the woman is disqualified for receiving a maternity allowance for that day by virtue of regulations under section 35(3)(a)`
+          THEN JUST FALSE   -- FALSE-kind (the text says no in its own words): "unless the woman is disqualified for receiving a maternity allowance for that day"
+          ELSE JUST TRUE)
+    ELSE NOTHING     -- NOTHING-kind (limited by its own wording): "Any day which falls within the maternity allowance period"
+
+-- (1)(b) a period of incapacity for work means a period of 4 or more consecutive days, each of which is a
+-- day of incapacity for work.
+-- src:907 | (b) a period of incapacity for work means a period of 4 or more consecutive days, each of which is a day of incapacity for work; and
+@ref s 30C(1)(b) (src:907)
+GIVEN `the first day of the run of days` IS A DATE
+      `the last day of the run of days` IS A DATE
+      `every day of the run is a day of incapacity for work` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 30C(1)(b) the run of days is a period of incapacity for work` MEANS
+    IF (((`the last day of the run of days`) MINUS (`the first day of the run of days`)) PLUS 1 AT LEAST 4) AND `every day of the run is a day of incapacity for work`
+    THEN JUST TRUE
+    ELSE JUST FALSE   -- FALSE-kind (the text says no in its own words): "a period of incapacity for work means a period of 4 or more consecutive days, each of which is a day of incapacity for work"
+
+-- (7) "week" means any period of 7 days (the core's `any period of 7 days`).
+-- src:928 | (7) For the purposes of this section “week” means any period of 7 days.
+@ref s 30C(7) (src:928)
+`s 30C(7) the number of days in a week` MEANS 7
+
+-- (1)(c) any two such periods not separated by a period of more than 8 weeks are treated as one period.
+-- Separated by the days strictly between the last day of the first and the first day of the second (fork F9).
+-- Overlapping or adjacent periods are not separated at all.
+-- src:908 | (c) any two such periods not separated by a period of more than 8 weeks shall be treated as one period of incapacity for work.
+@ref s 30C(1)(c) (src:908)
+GIVEN `the first period of incapacity for work` IS A Period
+      `the second period of incapacity for work` IS A Period
+GIVETH A MAYBE BOOLEAN
+`s 30C(1)(c) the two periods are treated as one period of incapacity for work` MEANS
+    IF (((`the second period of incapacity for work`'s `the first day`) MINUS (`the first period of incapacity for work`'s `the last day`)) MINUS 1) AT MOST (8 TIMES `s 30C(7) the number of days in a week`)
+    THEN JUST TRUE
+    ELSE NOTHING     -- NOTHING-kind (limited by its own wording): periods "not separated by a period of more than 8 weeks" are treated as one; the text does not say what is done with periods that are
+
+@ref s 30C(1)(c) (src:908)
+GIVEN `the first period of incapacity for work` IS A Period
+      `the second period of incapacity for work` IS A Period
+GIVETH A MAYBE Period
+`s 30C(1)(c) the period of incapacity for work that the two periods are treated as` MEANS
+    IF (`s 30C(1)(c) the two periods are treated as one period of incapacity for work` `the first period of incapacity for work` `the second period of incapacity for work`) EQUALS JUST TRUE
+    THEN JUST (Period WITH
+            `the first day` IS (`the first period of incapacity for work`'s `the first day`)
+            `the last day` IS (`the second period of incapacity for work`'s `the last day`))
+    ELSE NOTHING     -- NOTHING-kind (limited by its own wording): see the rule above
+
+-- (1) read with (2): a day is a day of incapacity for work if the person is incapable of work on it (a) or it
+-- is treated as one by (2); and s 30A(1) needs it to form part of a period of incapacity for work (b), (c).
+-- (2) only ever adds days, so where it does not apply (no answer, or the woman is disqualified) (a) stands.
+-- src:905 | (1) For the purposes of any provisions of this Act relating to incapacity benefit, subject to the following provisions and save as otherwise expressly provided—
+-- src:906 | (a) a day of incapacity for work means a day on which a person is incapable of work;
+-- src:907 | (b) a period of incapacity for work means a period of 4 or more consecutive days, each of which is a day of incapacity for work; and
+-- src:908 | (c) any two such periods not separated by a period of more than 8 weeks shall be treated as one period of incapacity for work.
+@ref s 30C(1) (src:905-908)
+GIVEN `s 30C(1)(a) the day is a day of incapacity for work` IS A MAYBE BOOLEAN
+      `s 30C(2) the day is treated as a day of incapacity for work` IS A MAYBE BOOLEAN
+      `the day forms part of a period of incapacity for work` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 30C(1) the relevant day is a day of incapacity for work forming part of a period of incapacity for work` MEANS
+    `s 30A both`
+        (CONSIDER `s 30C(2) the day is treated as a day of incapacity for work`
+         WHEN JUST TRUE THEN JUST TRUE
+         OTHERWISE `s 30C(1)(a) the day is a day of incapacity for work`)
+        `the day forms part of a period of incapacity for work`
+    -- JUST FALSE when the person is capable of work on a day (2) does not reach, or the day is in no period: FALSE-kind (the text says no in its own words): "a day of incapacity for work means a day on which a person is incapable of work; a period of incapacity for work means a period of 4 or more consecutive days, each of which is a day of incapacity for work"
+
+-- (5A) the relevant tax credit conditions: (a) entitled for the day to the disability element of working
+-- tax credit (claimed alone or jointly) or would be but for the relevant income; and (b) either working tax
+-- credit or any element of child tax credit other than the family element is paid in respect of the day.
+-- src:919 | (5A) A person satisfies the relevant tax credit conditions on a day if—
+-- src:920 | (a) he is entitled for the day to the disability element of working tax credit (on a claim made by him or by him jointly with another) or would be so entitled but for the fact that the relevant income (within the meaning of Part 1 of the Tax Credits Act 2002) in his or their case is such that he is not so entitled, and
+-- src:921 | (b) either working tax credit or any element of child tax credit other than the family element is paid in respect of the day on such a claim.
+@ref s 30C(5A) (src:919-921)
+GIVEN `the person is entitled for the day to the disability element of working tax credit` IS A BOOLEAN
+      `the person would be so entitled but for the relevant income in their or their joint case` IS A BOOLEAN
+      `working tax credit or an element of child tax credit other than the family element is paid in respect of the day on such a claim` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 30C(5A) the person satisfies the relevant tax credit conditions on the day` MEANS
+    IF (`the person is entitled for the day to the disability element of working tax credit` OR `the person would be so entitled but for the relevant income in their or their joint case`)
+       AND `working tax credit or an element of child tax credit other than the family element is paid in respect of the day on such a claim`
+    THEN JUST TRUE
+    ELSE JUST FALSE   -- FALSE-kind (the text says no in its own words): "A person satisfies the relevant tax credit conditions on a day if—"
+
+-- (5) A person who claims the higher rate of short-term incapacity benefit, or long-term incapacity
+-- benefit, for a period commencing after ceasing to be in qualifying remunerative work, and (a) the day
+-- following was a day of incapacity for work, (b) was entitled to the higher rate of short-term incapacity
+-- benefit or to long-term incapacity benefit within the 2 years ending with that day of incapacity for work,
+-- and (c) satisfied the relevant tax credit conditions on the day before ceasing: every day during that
+-- period (the period of the claim) on which the person satisfied those conditions is treated, for the claim,
+-- as a day of incapacity for work. The 2 years ending with a day begin the day after the same day and month
+-- two years earlier (fork F10). Seam S23: ssc4 s 93 asks whether the person is entitled "by virtue of section 30C(5)".
+-- src:914 | (5) Where a person claims the higher rate of short-term incapacity benefit, or long-term incapacity benefit, under section 30A above for a period commencing after he has ceased to be in qualifying remunerative work (within the meaning of Part 1 of the Tax Credits Act 2002) and—
+-- src:915 | (a) the day following that on which he so ceased was a day of incapacity for work for him,
+-- src:916 | (b) he has been entitled to the higher rate of short-term incapacity benefit, or to long-term incapacity benefit, under section 30A above within the period of two years ending with that day of incapacity for work, and
+-- src:917 | (c) he satisfied the relevant tax credit conditions on the day before he so ceased,
+-- src:918 | every day during that period on which he satisfied those conditions is to be treated for the purposes of the claim as a day of incapacity for work for him.
+@ref s 30C(5) (src:914-918)
+GIVEN `the claim is for the higher rate of short-term incapacity benefit, or for long-term incapacity benefit` IS A BOOLEAN
+      `the period for which the claim is made` IS A Period
+      `the day on which the person ceased to be in qualifying remunerative work` IS A DATE
+      `s 30C(1)(a) the day following the day of ceasing was a day of incapacity for work for the person` IS A MAYBE BOOLEAN
+      `the latest day on or before that day of incapacity for work on which the person was entitled to the higher rate of short-term incapacity benefit or to long-term incapacity benefit` IS A MAYBE DATE
+      `s 30C(5A) the person satisfied the relevant tax credit conditions on the day before ceasing` IS A MAYBE BOOLEAN
+      `the day` IS A DATE
+      `s 30C(5A) the person satisfies the relevant tax credit conditions on the day` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 30C(5) the day is treated as a day of incapacity for work for the claim` MEANS
+    CONSIDER `s 30A(2)(b) the same day and month a number of whole years from the date` (`the day on which the person ceased to be in qualifying remunerative work` PLUS 1) (0 MINUS 2)
+    WHEN NOTHING THEN NOTHING   -- NOTHING-kind (silent): two years before 29 February in a year with no 29 February
+    WHEN JUST twoYearsBefore THEN
+        CONSIDER
+            `s 30A both`
+                (JUST ((`the claim is for the higher rate of short-term incapacity benefit, or for long-term incapacity benefit`)
+                       AND ((`the period for which the claim is made`'s `the first day`) ABOVE `the day on which the person ceased to be in qualifying remunerative work`)
+                       AND (`the day` AT LEAST (`the period for which the claim is made`'s `the first day`))
+                       AND (`the day` AT MOST (`the period for which the claim is made`'s `the last day`))))
+                (`s 30A both`
+                    `s 30C(1)(a) the day following the day of ceasing was a day of incapacity for work for the person`
+                    (`s 30A both`
+                        (CONSIDER `the latest day on or before that day of incapacity for work on which the person was entitled to the higher rate of short-term incapacity benefit or to long-term incapacity benefit`
+                         WHEN NOTHING THEN NOTHING
+                         WHEN JUST entitled THEN JUST ((entitled ABOVE twoYearsBefore) AND (entitled AT MOST (`the day on which the person ceased to be in qualifying remunerative work` PLUS 1))))
+                        (`s 30A both`
+                            `s 30C(5A) the person satisfied the relevant tax credit conditions on the day before ceasing`
+                            `s 30C(5A) the person satisfies the relevant tax credit conditions on the day`)))
+        WHEN JUST TRUE THEN JUST TRUE
+        OTHERWISE NOTHING     -- NOTHING-kind (limited by its own wording): "every day during that period on which he satisfied those conditions is to be treated" where (a), (b) and (c) hold
+
+-- src:914 | (5) Where a person claims the higher rate of short-term incapacity benefit, or long-term incapacity benefit, under section 30A above for a period commencing after he has ceased to be in qualifying remunerative work (within the meaning of Part 1 of the Tax Credits Act 2002) and—
+-- src:915 | (a) the day following that on which he so ceased was a day of incapacity for work for him,
+-- src:916 | (b) he has been entitled to the higher rate of short-term incapacity benefit, or to long-term incapacity benefit, under section 30A above within the period of two years ending with that day of incapacity for work, and
+-- src:917 | (c) he satisfied the relevant tax credit conditions on the day before he so ceased,
+-- src:918 | every day during that period on which he satisfied those conditions is to be treated for the purposes of the claim as a day of incapacity for work for him.
+@ref s 30C(5) (src:914-918)
+GIVEN `s 30C(5) the day is treated as a day of incapacity for work for the claim` IS A MAYBE BOOLEAN
+      `the person is otherwise entitled to the benefit on that footing` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 30C(5) the person is entitled to the higher rate of short-term incapacity benefit` MEANS
+    CONSIDER `s 30C(5) the day is treated as a day of incapacity for work for the claim`
+    WHEN JUST TRUE THEN
+        IF `the person is otherwise entitled to the benefit on that footing` THEN JUST TRUE ELSE NOTHING   -- NOTHING-kind (silent): the subsection treats days as days of incapacity; the other conditions of entitlement are those of s 30A
+    OTHERWISE NOTHING     -- NOTHING-kind (limited by its own wording): the person is entitled by virtue of s 30C(5) only through days it treats as days of incapacity
+
+-- (6) A person who becomes engaged in training for work, was entitled to the higher rate of short-term
+-- incapacity benefit or to long-term incapacity benefit for one or more of the 56 days immediately before,
+-- and the first day after ceasing to be so engaged is a day of incapacity for work and falls not later than
+-- the end of the period of 2 years beginning with the last day for which they were entitled to that benefit:
+-- any day since that day in which they were engaged in training for work is treated, for any claim for such
+-- benefit for a period commencing after ceasing, as a day of incapacity for work.
+-- "that day": the text leaves open which day; the encoding reads it as the last day of entitlement (fork F7).
+-- The two years beginning with that day end the day before the same day and month two years later (fork F10).
+-- src:922 | (6) Where—
+-- src:923 | (a) a person becomes engaged in training for work, and
+-- src:924 | (b) he was entitled to the higher rate of short-term incapacity benefit, or to long-term incapacity benefit under section 30A above, for one or more of the 56 days immediately before he became so engaged, and
+-- src:925 | (c) the first day after he ceases to be so engaged is for him a day of incapacity for work and falls not later than the end of the period of two years beginning with the last day for which he was entitled to such benefit,
+-- src:926 | any day since that day in which he was engaged in training for work shall be treated for the purposes of any claim for such benefit for a period commencing after he ceases to be so engaged as having been a day of incapacity for work.
+-- src:927 | In this subsection “training for work” means training for work in pursuance of arrangements made under section 2(1) of the Employment and Training Act 1973 or section 2(3) of the Enterprise and New Towns (Scotland) Act 1990 or training of such other description as may be prescribed.
+@ref s 30C(6) (src:922-927)
+GIVEN `the first day on which the person was engaged in training for work` IS A DATE
+      `the last day on which the person was entitled to the higher rate of short-term incapacity benefit or to long-term incapacity benefit` IS A MAYBE DATE
+      `the first day after the person ceased to be engaged in training for work` IS A DATE
+      `that first day is a day of incapacity for work for the person` IS A BOOLEAN
+      `the training day` IS A DATE
+GIVETH A MAYBE BOOLEAN
+`s 30C(6) the training day is treated as a day of incapacity for work` MEANS
+    CONSIDER `the last day on which the person was entitled to the higher rate of short-term incapacity benefit or to long-term incapacity benefit`
+    WHEN NOTHING THEN NOTHING   -- NOTHING-kind (silent): the paragraph needs a last day of entitlement
+    WHEN JUST lastDay THEN
+        CONSIDER `s 30A(2)(b) the same day and month a number of whole years from the date` lastDay 2
+        WHEN NOTHING THEN NOTHING   -- NOTHING-kind (silent): two years from 29 February in a year with no 29 February
+        WHEN JUST twoYearsOn THEN
+            IF (lastDay AT LEAST (`the first day on which the person was engaged in training for work` MINUS 56))
+               AND (lastDay BELOW `the first day on which the person was engaged in training for work`)
+               AND `that first day is a day of incapacity for work for the person`
+               AND (`the first day after the person ceased to be engaged in training for work` BELOW twoYearsOn)
+               AND (`the training day` ABOVE lastDay)
+               AND (`the training day` AT LEAST `the first day on which the person was engaged in training for work`)
+               AND (`the training day` BELOW `the first day after the person ceased to be engaged in training for work`)
+            THEN JUST TRUE
+            ELSE NOTHING     -- NOTHING-kind (limited by its own wording): "any day since that day in which he was engaged in training for work" where (a), (b) and (c) hold
+
+-- (6) "training for work" means training in pursuance of arrangements made under s 2(1) of the Employment
+-- and Training Act 1973 or s 2(3) of the Enterprise and New Towns (Scotland) Act 1990, or training of such
+-- other description as may be prescribed.
+-- src:927 | In this subsection “training for work” means training for work in pursuance of arrangements made under section 2(1) of the Employment and Training Act 1973 or section 2(3) of the Enterprise and New Towns (Scotland) Act 1990 or training of such other description as may be prescribed.
+@ref s 30C(6) (src:927)
+GIVEN `the training is in pursuance of arrangements made under section 2(1) of the Employment and Training Act 1973 or section 2(3) of the Enterprise and New Towns (Scotland) Act 1990` IS A BOOLEAN
+      `the training is of a description the regulations prescribe` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 30C(6) the training is training for work` MEANS
+    IF `the training is in pursuance of arrangements made under section 2(1) of the Employment and Training Act 1973 or section 2(3) of the Enterprise and New Towns (Scotland) Act 1990` OR `the training is of a description the regulations prescribe`
+    THEN JUST TRUE
+    ELSE JUST FALSE   -- FALSE-kind (the text says no in its own words): "In this subsection “training for work” means training in pursuance of arrangements made under ..."
+
+§§ `s 30D Incapacity benefit: construction of references to days of entitlement`
+
+-- (2) included: (a) the first three days of the period of incapacity for work; (b) in the case of a woman,
+-- any days for which she was entitled to maternity allowance. (3) also included: such days as may be
+-- prescribed in respect of which the person was entitled to statutory sick pay and on the first of which
+-- they satisfied the contribution conditions for short-term incapacity benefit. (4) excluded: any days in
+-- respect of which the person was disqualified for receiving incapacity benefit.
+-- Input contract: the first input counts the days of entitlement OUTSIDE the first three days of the period of
+-- incapacity for work, because (2)(a) adds those three days once, whatever the route. A person entitled under
+-- s 30A(1)(a) is never entitled for them (s 30A(3)); a person entitled under (1)(b) is (finding 7), and must
+-- leave them out of the first input, or they are counted twice. Ten days of entitlement that include the
+-- first three are 7 in the first input and give 10 here, not 13.
+-- src:930 | (1) The following provisions have effect in calculating for the purposes of—
+-- src:931 | (a) section 30A(4) above (length of entitlement to short-term incapacity benefit),
+-- src:932 | (b) section 30B(2) above (period after which short-term incapacity benefit is payable at higher rate),
+-- src:933 | (c) section 30B(4) above (period after which incapacity benefit is payable at long-term rate in case of terminal illness), and
+-- src:934 | (d) section 30B(5) above (construction of references to short-term incapacity benefit at the higher rate),
+-- src:935 | the number of days for which a person has been entitled to short-term incapacity benefit.
+-- src:936 | (2) There shall be included—
+-- src:937 | (a) the first three days of the period of incapacity for work, and
+-- src:938 | (b) in the case of a woman, any days for which she was entitled to maternity allowance.
+-- src:939 | (3) There shall also be included such days as may be prescribed in respect of which a person was entitled to statutory sick pay, and on the first of which he satisfied the contribution conditions for short-term incapacity benefit.
+-- src:940 | (4) There shall be excluded any days in respect of which a person was disqualified for receiving incapacity benefit.
+@ref s 30D (src:930-940)
+GIVEN `the number of days for which the person was entitled to short-term incapacity benefit in the period` IS A NUMBER
+      `the person is a woman` IS A BOOLEAN
+      `the number of days for which a woman was entitled to maternity allowance` IS A NUMBER
+      `the number of prescribed days of entitlement to statutory sick pay` IS A NUMBER
+      `the person satisfied the contribution conditions for short-term incapacity benefit on the first of those days` IS A BOOLEAN
+      `the number of days for which the person was disqualified for receiving incapacity benefit` IS A NUMBER
+GIVETH A NUMBER
+`s 30D the number of days of entitlement before the relevant day` MEANS
+    `the number of days for which the person was entitled to short-term incapacity benefit in the period`
+        PLUS 3                                                                                                              -- (2)(a)
+        PLUS (IF `the person is a woman` THEN `the number of days for which a woman was entitled to maternity allowance` ELSE 0)   -- (2)(b)
+        PLUS (IF `the person satisfied the contribution conditions for short-term incapacity benefit on the first of those days` THEN `the number of prescribed days of entitlement to statutory sick pay` ELSE 0)   -- (3)
+        MINUS `the number of days for which the person was disqualified for receiving incapacity benefit`                   -- (4)
+
+§§ `s 30DD Incapacity benefit: reduction for pension payments and PPF periodic payments`
+
+-- (2) the threshold: (a) for a week, £85 or such greater amount as may be prescribed; (b) for a period that
+-- is not a week, such proportion of that amount as falls to be calculated in accordance with regulations.
+-- src:951 | (2) In subsection (1) above “the threshold” means—
+-- src:952 | (a) if the period in question is a week, £85 or such greater amount as may be prescribed; or
+-- src:953 | (b) if that period is not a week, such proportion of the amount mentioned in paragraph (a) as falls to be calculated in accordance with regulations on such basis as may be prescribed.
+@ref s 30DD(2) (src:951-953)
+GIVEN `the greater amount prescribed` IS A MAYBE NUMBER
+GIVETH A NUMBER
+`s 30DD(2)(a) the threshold for a week` MEANS
+    CONSIDER `the greater amount prescribed`
+    WHEN JUST prescribed THEN (IF prescribed ABOVE 85 THEN prescribed ELSE 85)
+    WHEN NOTHING THEN 85
+
+@ref s 30DD(2) (src:953)
+GIVEN `s 30DD(2)(a) the threshold for a week` IS A NUMBER
+      `the proportion of the amount in paragraph (a) calculated in accordance with regulations` IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+`s 30DD(2)(b) the threshold for a period that is not a week` MEANS
+    CONSIDER `the proportion of the amount in paragraph (a) calculated in accordance with regulations`
+    WHEN JUST proportion THEN JUST (proportion TIMES `s 30DD(2)(a) the threshold for a week`)
+    WHEN NOTHING THEN NOTHING     -- NOTHING-kind (points outside the text): "such proportion ... as falls to be calculated in accordance with regulations"
+
+-- (1) Where a person is entitled to incapacity benefit for a period, a pension payment or PPF periodic payment
+-- (or both) is payable in respect of it, and the amount (or the amount regulations treat as payable) taken
+-- together exceeds the threshold, the benefit is reduced by 50 per cent. of the excess. (3) Regulations may
+-- secure that a person of a prescribed description does not suffer any reduction.
+-- src:942 | (1) Where—
+-- src:943 | (a) a person is entitled to incapacity benefit in respect of any period of a week or part of a week,
+-- src:944 | (b) there is—
+-- src:945 | (i) a pension payment;
+-- src:946 | (ii) a PPF periodic payment; or
+-- src:947 | (iii) any combination of the payments specified in sub-paragraphs (i) and (ii) above,
+-- src:948 | payable to him in respect of that period (or a period which forms part of that period or includes that period or part of it), and
+-- src:949 | (c) the amount of the payment or payments (or, as the case may be, the amount which in accordance with regulations is to be taken as payable to him by way of pension payments or PPF periodic payments in respect of that period), when taken together exceeds the threshold,
+-- src:950 | the amount of that benefit shall be reduced by an amount equal to 50 per cent. of that excess.
+@ref s 30DD(1) (src:942-950)
+GIVEN `the person is entitled to incapacity benefit for the period` IS A BOOLEAN
+      `a pension payment or a PPF periodic payment, or both, is payable to the person in respect of the period` IS A BOOLEAN
+      `the amount of the payments, or the amount regulations treat as payable, taken together` IS A NUMBER
+      `the threshold` IS A NUMBER
+      `regulations under section 30DD(3) secure that a person of the person's description does not suffer any reduction` IS A BOOLEAN
+GIVETH A MAYBE NUMBER
+`s 30DD(1) the reduction in the amount of incapacity benefit` MEANS
+    IF `regulations under section 30DD(3) secure that a person of the person's description does not suffer any reduction`
+    THEN JUST 0      -- the regulations' own words: "does not suffer any reduction under subsection (1) above" (subsection (3) says regulations "may" secure this; whether they have is an input)
+    ELSE IF `the person is entitled to incapacity benefit for the period`
+            AND `a pension payment or a PPF periodic payment, or both, is payable to the person in respect of the period`
+            AND (`the amount of the payments, or the amount regulations treat as payable, taken together` ABOVE `the threshold`)
+         THEN JUST (50% TIMES (`the amount of the payments, or the amount regulations treat as payable, taken together` MINUS `the threshold`))
+         ELSE NOTHING     -- NOTHING-kind (limited by its own wording): "Where ... the amount ... when taken together exceeds the threshold"
+
+-- (5) "pension payment" means (a) a periodical payment under a personal pension scheme or, in connection
+-- with the coming to an end of an employment, under an occupational pension scheme or public service
+-- pension scheme; (b) a payment of a specified description under an insurance policy providing benefits in
+-- connection with illness, disability, infirmity or defect; (c) a payment of any other specified
+-- description. "Specified" means prescribed by or determined in accordance with regulations.
+-- src:960 | (5) In this section “pension payment” means—
+-- src:961 | (a) a periodical payment made in relation to a person under a personal pension scheme or, in connection with the coming to an end of an employment of his, under an occupational pension scheme or a public service pension scheme;
+-- src:962 | (b) a payment of any specified description, being a payment made under an insurance policy providing benefits in connection with physical or mental illness, disability, infirmity or defect; or
+-- src:963 | (c) a payment of any other specified description;
+-- src:964 | and “specified” means prescribed by or determined in accordance with regulations under this section.
+@ref s 30DD(5) (src:960-964)
+DECLARE `s 30DD(5) Kind of payment` IS ONE OF
+    `s 30DD(5)(a) a periodical payment under a personal pension scheme`
+    `s 30DD(5)(a) a periodical payment under an occupational pension scheme or a public service pension scheme`
+    `s 30DD(5)(b) a payment under an insurance policy providing benefits in connection with physical or mental illness, disability, infirmity or defect`
+    `s 30DD(5)(c) a payment of another description`
+
+@ref s 30DD(5) (src:960-964)
+GIVEN kind IS A `s 30DD(5) Kind of payment`
+      `the payment is made in connection with the coming to an end of an employment of the person` IS A BOOLEAN
+      `the payment is of a description specified by the regulations` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 30DD(5) the payment is a pension payment` MEANS
+    CONSIDER kind
+    WHEN `s 30DD(5)(a) a periodical payment under a personal pension scheme` THEN JUST TRUE
+    WHEN `s 30DD(5)(a) a periodical payment under an occupational pension scheme or a public service pension scheme` THEN
+        IF `the payment is made in connection with the coming to an end of an employment of the person` THEN JUST TRUE
+        ELSE JUST FALSE   -- FALSE-kind (the text says no in its own words): "“pension payment” means— (a) ... or, in connection with the coming to an end of an employment of his, under an occupational pension scheme or a public service pension scheme"
+    WHEN `s 30DD(5)(b) a payment under an insurance policy providing benefits in connection with physical or mental illness, disability, infirmity or defect` THEN
+        IF `the payment is of a description specified by the regulations` THEN JUST TRUE
+        ELSE JUST FALSE   -- FALSE-kind (the text says no in its own words): "(b) a payment of any specified description, being a payment made under an insurance policy ..."
+    WHEN `s 30DD(5)(c) a payment of another description` THEN
+        IF `the payment is of a description specified by the regulations` THEN JUST TRUE
+        ELSE JUST FALSE   -- FALSE-kind (the text says no in its own words): "(c) a payment of any other specified description"
+
+-- (6) For (5), "occupational pension scheme", "personal pension scheme" and "public service pension scheme"
+-- each have the meaning given by s 1 of the Pension Schemes Act 1993 (not among the sources: a fact asked as
+-- an input), except that "personal pension scheme" includes an annuity contract or trust scheme approved
+-- under s 620 or 621 of ICTA 1988, or a substituted contract within s 622(3), which is treated as having
+-- become a registered pension scheme by virtue of paragraph 1(1)(f) of Schedule 36 to the Finance Act 2004.
+-- Seam S13: ssc3 s 44A(6) asks for both.
+-- src:965 | (6) For the purposes of subsection (5) “occupational pension scheme”, “personal pension scheme” and “public service pension scheme” each have the meaning given by section 1 of the Pension Schemes Act 1993, except that “personal pension scheme” includes an annuity contract or trust scheme approved under section 620 or 621 of the Income and Corporation Taxes Act 1988, or a substituted contract within the meaning of section 622(3) of that Act, which is treated as having become a registered pension scheme by virtue of paragraph 1(1)(f) of Schedule 36 to the Finance Act 2004.
+@ref s 30DD(6) (src:965)
+GIVEN `the scheme is an occupational pension scheme within the meaning of section 1 of the Pension Schemes Act 1993` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 30DD(6) the scheme is an occupational pension scheme` MEANS
+    IF `the scheme is an occupational pension scheme within the meaning of section 1 of the Pension Schemes Act 1993`
+    THEN JUST TRUE
+    ELSE NOTHING     -- NOTHING-kind (points outside the text): the meaning is that of the Pension Schemes Act 1993
+
+@ref s 30DD(6) (src:965)
+GIVEN `the scheme is a personal pension scheme within the meaning of section 1 of the Pension Schemes Act 1993` IS A BOOLEAN
+      `the scheme is an annuity contract, trust scheme or substituted contract treated as a registered pension scheme by paragraph 1(1)(f) of Schedule 36 to the Finance Act 2004` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 30DD(6) the scheme is a personal pension scheme` MEANS
+    IF `the scheme is a personal pension scheme within the meaning of section 1 of the Pension Schemes Act 1993`
+       OR `the scheme is an annuity contract, trust scheme or substituted contract treated as a registered pension scheme by paragraph 1(1)(f) of Schedule 36 to the Finance Act 2004`
+    THEN JUST TRUE
+    ELSE NOTHING     -- NOTHING-kind (includes): "except that “personal pension scheme” includes ..."; the Pension Schemes Act decides the rest
+
+@ref s 30DD(6) (src:965)
+GIVEN `the scheme is a public service pension scheme within the meaning of section 1 of the Pension Schemes Act 1993` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 30DD(6) the scheme is a public service pension scheme` MEANS
+    IF `the scheme is a public service pension scheme within the meaning of section 1 of the Pension Schemes Act 1993`
+    THEN JUST TRUE
+    ELSE NOTHING     -- NOTHING-kind (points outside the text): the meaning is that of the Pension Schemes Act 1993
+
+§§ `s 30E Incapacity benefit: reduction for councillor's allowance`
+
+-- (3) "net amount": the aggregate of the councillor's allowance or allowances for the week, less the
+-- expenses incurred in the week in connection with membership of the council or councils.
+-- src:975 | (3) In subsection (1) above “net amount”, in relation to any councillor’s allowance to which a person is entitled, means the aggregate amount of the councillor’s allowance or allowances to which he is entitled for the week in question, reduced by the amount of any expenses incurred by him in that week in connection with his membership of the council or councils in question.
+@ref s 30E(3) (src:975)
+GIVEN `the aggregate of the councillor's allowances to which the person is entitled for the week` IS A NUMBER
+      `the expenses the person incurred in the week in connection with membership of the council or councils` IS A NUMBER
+GIVETH A NUMBER
+`s 30E(3) the net amount of councillor's allowance` MEANS
+    `the aggregate of the councillor's allowances to which the person is entitled for the week` MINUS `the expenses the person incurred in the week in connection with membership of the council or councils`
+
+-- (2) "councillor's allowance" means an allowance in England or Wales under or by virtue of s 173 or 177 of
+-- the Local Government Act 1972, or a scheme made by virtue of s 18 of the Local Government and Housing Act
+-- 1989, other than an allowance mentioned in s 173(4) of the 1972 Act; or in Scotland under or by virtue of
+-- s 49 of the Local Government (Scotland) Act 1973 or a scheme made by virtue of s 18 of the 1989 Act.
+-- src:968 | (2) In this section “councillor’s allowance” means—
+-- src:969 | (a) in England or Wales, an allowance under or by virtue of—
+-- src:970 | (i) section 173 or 177 of the Local Government Act 1972, or
+-- src:971 | (ii) a scheme made by virtue of section 18 of the Local Government and Housing Act 1989,
+-- src:972 | other than such an allowance as is mentioned in section 173(4) of the Local Government Act 1972, or
+-- src:973 | (b) in Scotland, an allowance under or by virtue of section 49 of the Local Government (Scotland) Act 1973 or a scheme made by virtue of section 18 of the Local Government and Housing Act 1989;
+-- src:974 | and where any such allowance is paid otherwise than weekly, an amount calculated or estimated in accordance with regulations shall be regarded as the weekly amount of the allowance.
+@ref s 30E(2) (src:968-974)
+DECLARE `s 30E(2) Kind of allowance` IS ONE OF
+    `s 30E(2)(a) an allowance in England or Wales under or by virtue of section 173 or 177 of the Local Government Act 1972`
+    `s 30E(2)(a) an allowance in England or Wales under a scheme made by virtue of section 18 of the Local Government and Housing Act 1989`
+    `s 30E(2)(b) an allowance in Scotland under or by virtue of section 49 of the Local Government (Scotland) Act 1973`
+    `s 30E(2)(b) an allowance in Scotland under a scheme made by virtue of section 18 of the Local Government and Housing Act 1989`
+    `s 30E(2) another allowance`
+
+@ref s 30E(2) (src:968-974)
+GIVEN kind IS A `s 30E(2) Kind of allowance`
+      `the allowance is one mentioned in section 173(4) of the Local Government Act 1972` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 30E(2) the allowance is a councillor's allowance` MEANS
+    CONSIDER kind
+    WHEN `s 30E(2)(a) an allowance in England or Wales under or by virtue of section 173 or 177 of the Local Government Act 1972` THEN
+        IF `the allowance is one mentioned in section 173(4) of the Local Government Act 1972`
+        THEN JUST FALSE   -- FALSE-kind (the text says no in its own words): "other than such an allowance as is mentioned in section 173(4) of the Local Government Act 1972"
+        ELSE JUST TRUE
+    WHEN `s 30E(2)(a) an allowance in England or Wales under a scheme made by virtue of section 18 of the Local Government and Housing Act 1989` THEN
+        IF `the allowance is one mentioned in section 173(4) of the Local Government Act 1972`
+        THEN JUST FALSE   -- FALSE-kind (the text says no in its own words): "other than such an allowance as is mentioned in section 173(4) of the Local Government Act 1972"
+        ELSE JUST TRUE
+    WHEN `s 30E(2)(b) an allowance in Scotland under or by virtue of section 49 of the Local Government (Scotland) Act 1973` THEN JUST TRUE
+    WHEN `s 30E(2)(b) an allowance in Scotland under a scheme made by virtue of section 18 of the Local Government and Housing Act 1989` THEN JUST TRUE
+    WHEN `s 30E(2) another allowance` THEN JUST FALSE   -- FALSE-kind (the text says no in its own words): "“councillor’s allowance” means—"
+
+-- (2) and where such an allowance is paid otherwise than weekly, an amount calculated or estimated in
+-- accordance with regulations is regarded as the weekly amount.
+-- src:974 | and where any such allowance is paid otherwise than weekly, an amount calculated or estimated in accordance with regulations shall be regarded as the weekly amount of the allowance.
+@ref s 30E(2) (src:974)
+GIVEN `the allowance is paid weekly` IS A BOOLEAN
+      `the amount of the allowance for the week` IS A NUMBER
+      `the amount calculated or estimated in accordance with regulations as the weekly amount` IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+`s 30E(2) the weekly amount of the allowance` MEANS
+    IF `the allowance is paid weekly`
+    THEN JUST `the amount of the allowance for the week`
+    ELSE `the amount calculated or estimated in accordance with regulations as the weekly amount`   -- NOTHING when not supplied: NOTHING-kind (points outside the text): "calculated or estimated in accordance with regulations"
+
+-- (1) Where the net amount of councillor's allowance to which a person is entitled for a week exceeds such
+-- amount as may be prescribed, an amount equal to the excess is deducted from the incapacity benefit for the
+-- week and only the balance remaining (if any) is payable.
+-- src:967 | (1) Where the net amount of councillor’s allowance to which a person is entitled in respect of any week exceeds such amount as may be prescribed, an amount equal to the excess shall be deducted from the amount of any incapacity benefit to which he is entitled in respect of that week, and only the balance remaining (if any) shall be payable.
+@ref s 30E(1) (src:967)
+GIVEN `s 30E(3) the net amount of councillor's allowance` IS A NUMBER
+      `the amount the regulations prescribe` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`s 30E(1) the deduction from the incapacity benefit for the week` MEANS
+    IF `s 30E(3) the net amount of councillor's allowance` ABOVE `the amount the regulations prescribe`
+    THEN JUST (`s 30E(3) the net amount of councillor's allowance` MINUS `the amount the regulations prescribe`)
+    ELSE NOTHING     -- NOTHING-kind (limited by its own wording): "Where the net amount ... exceeds such amount as may be prescribed"
+
+@ref s 30E(1) (src:967)
+GIVEN `the incapacity benefit to which the person is entitled for the week` IS A NUMBER
+      `the deduction` IS A NUMBER
+GIVETH A NUMBER
+`s 30E(1) the balance of the incapacity benefit payable for the week` MEANS
+    IF `the incapacity benefit to which the person is entitled for the week` MINUS `the deduction` AT LEAST 0
+    THEN `the incapacity benefit to which the person is entitled for the week` MINUS `the deduction`
+    ELSE 0
+
+-- (1) of s 30DD, applied to a weekly figure: the benefit after the reduction.
+-- src:942 | (1) Where—
+-- src:943 | (a) a person is entitled to incapacity benefit in respect of any period of a week or part of a week,
+-- src:944 | (b) there is—
+-- src:945 | (i) a pension payment;
+-- src:946 | (ii) a PPF periodic payment; or
+-- src:947 | (iii) any combination of the payments specified in sub-paragraphs (i) and (ii) above,
+-- src:948 | payable to him in respect of that period (or a period which forms part of that period or includes that period or part of it), and
+-- src:949 | (c) the amount of the payment or payments (or, as the case may be, the amount which in accordance with regulations is to be taken as payable to him by way of pension payments or PPF periodic payments in respect of that period), when taken together exceeds the threshold,
+-- src:950 | the amount of that benefit shall be reduced by an amount equal to 50 per cent. of that excess.
+@ref s 30DD(1) (src:942-950)
+GIVEN `the incapacity benefit to which the person is entitled for the week` IS A NUMBER
+      `the reduction` IS A NUMBER
+GIVETH A NUMBER
+`s 30DD(1) the incapacity benefit after the reduction` MEANS
+    IF `the incapacity benefit to which the person is entitled for the week` MINUS `the reduction` AT LEAST 0
+    THEN `the incapacity benefit to which the person is entitled for the week` MINUS `the reduction`
+    ELSE 0

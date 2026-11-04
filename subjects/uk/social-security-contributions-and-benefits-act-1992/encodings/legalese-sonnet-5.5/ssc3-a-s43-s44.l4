@@ -1,0 +1,458 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `ssc-core`
+IMPORT `ssc3-helpers`
+IMPORT `ssc3-a0-s61za-s61zc`
+
+-- Social Security Contributions and Benefits Act 1992 (United Kingdom), 1992 c. 4, ss 43 and 44 (part ssc3).
+-- Source: inputs/ukpga-1992-4.txt, a plain-text rendering by a converter script; it is not the official text.
+--
+-- Section 43: which retirement pension a person receives when entitled to more than one.
+-- Section 44: Category A retirement pension.
+--
+-- Money is a NUMBER in pounds sterling, weekly unless the name says otherwise.
+-- A figure the Act leaves to regulations or an order is an INPUT.
+-- A figure the Act states in its own words (s 44(4): 184.90, 140.65, 196 days) is encoded here and cited.
+-- A "Person" is the core's record; the date the person attains pensionable age is a FACT about
+-- the person (the core says why), so "attained pensionable age before 6 April 2016" is a date comparison.
+
+§ `Part II: retirement pensions (Categories A and B)`
+
+§§ `Section 43: persons entitled to more than one retirement pension`
+
+-- A candidate pension: one the person would be entitled to for the period "apart from subsection (1)".
+-- The name tells two Category B pensions apart (a widow's and a divorcee's, say).
+DECLARE `s 43 Pension in contention` HAS
+    `the kind of pension`              IS A Benefit
+    `the name the person gives it`     IS A STRING
+    `the weekly rate in pounds`        IS A NUMBER
+    `awarded because of section 61ZA`  IS A BOOLEAN
+    `awarded because of section 61ZB`  IS A BOOLEAN
+
+-- "(6) For the purposes of this section, a pension under section 55A or 55AA below is not a retirement pension."
+-- A Category A, B, C or D pension is a retirement pension by its name.
+-- src:1244 | (6) For the purposes of this section, a pension under section 55A or 55AA below is not a retirement pension.
+@ref s 43(6) (src:1244)
+GIVEN pension IS A Benefit
+GIVETH A MAYBE BOOLEAN
+`s 43(6) the pension is a retirement pension for the purposes of section 43` MEANS
+    CONSIDER pension
+    WHEN `shared additional pension` THEN JUST FALSE  -- FALSE-kind (the text says no in its own words): "a pension under section 55A or 55AA below is not a retirement pension"
+    WHEN `Category A retirement pension` THEN JUST TRUE
+    WHEN `Category B retirement pension` THEN JUST TRUE
+    WHEN `Category C retirement pension` THEN JUST TRUE
+    WHEN `Category D retirement pension` THEN JUST TRUE
+    OTHERWISE NOTHING  -- NOTHING-kind (silent): the subsection speaks of the shared additional pension only
+
+-- Which of the person's candidate pensions are Part II pensions (Category A or B, "under this Part").
+GIVEN pensions IS A LIST OF `s 43 Pension in contention`
+GIVETH A LIST OF `s 43 Pension in contention`
+`s 43(2)(a) the Category A and Category B pensions among them` MEANS
+    filter (GIVEN p YIELD p's `the kind of pension` EQUALS `Category A retirement pension` OR p's `the kind of pension` EQUALS `Category B retirement pension`) pensions
+
+-- Which of the person's candidate pensions are Part III pensions (Category C or D, "under Part III").
+GIVEN pensions IS A LIST OF `s 43 Pension in contention`
+GIVETH A LIST OF `s 43 Pension in contention`
+`s 43(2)(b) the Category C and Category D pensions among them` MEANS
+    filter (GIVEN p YIELD p's `the kind of pension` EQUALS `Category C retirement pension` OR p's `the kind of pension` EQUALS `Category D retirement pension`) pensions
+
+-- "(3) ... may from time to time give notice in writing to the Secretary of State specifying which of
+-- the pensions ... he wishes to receive."  A notice names one pension and is dated.
+DECLARE `s 43 Notice` HAS
+    `the name of the pension it specifies` IS A STRING
+    `the date of the notice`               IS A DATE
+
+-- "(5) ... whichever of the pensions is from time to time the most favourable to him": the highest weekly rate.
+-- Where two rates are equal the first named is taken (the text does not say; either is equally favourable).
+-- src:1243 | (5) If no such notice is given, the person shall be entitled to whichever of the pensions is from time to time the most favourable to him (whether it is the pension which he claimed or not).
+@ref s 43(5) (src:1243)
+GIVEN pensions IS A LIST OF `s 43 Pension in contention`
+GIVETH A MAYBE (LIST OF STRING)
+`s 43(5) the name of the most favourable pension` MEANS
+    CONSIDER pensions
+    WHEN EMPTY THEN NOTHING  -- NOTHING-kind (silent): there is no pension to be most favourable
+    WHEN first FOLLOWED BY rest THEN
+        JUST (LIST (foldl (GIVEN best, p YIELD IF p's `the weekly rate in pounds` GREATER THAN best's `the weekly rate in pounds` THEN p ELSE best) first rest)'s `the name the person gives it`)
+
+-- "(4) If a person gives such a notice, the pension so specified shall be the one to which he is entitled
+-- in respect of any week commencing after the date of the notice."
+-- A notice has effect for a week that commences after its date. A notice dated on the day the week
+-- commences, or later, does not (reading F2 in NOTES.md: for that week subsection (5) applies).
+-- src:1242 | (4) If a person gives such a notice, the pension so specified shall be the one to which he is entitled in respect of any week commencing after the date of the notice.
+@ref s 43(4) (src:1242)
+GIVEN group IS A LIST OF `s 43 Pension in contention`
+      notices IS A LIST OF `s 43 Notice`
+      `the week commences on` IS A DATE
+GIVETH A LIST OF `s 43 Notice`
+`s 43(4) the notices that specify a pension in the group and have effect for the week` MEANS
+    filter
+        (GIVEN notice YIELD
+                notice's `the date of the notice` LESS THAN `the week commences on`
+            AND any (GIVEN pension YIELD pension's `the name the person gives it` EQUALS notice's `the name of the pension it specifies`) group)
+        notices
+
+-- (3) to (5) for one group of pensions ("the pensions referred to in paragraph (a), (aa) or (b)").
+-- With one pension or none there is nothing to choose. With two or more: the pension a notice
+-- specifies (if two notices have effect the text does not say which prevails), else the most favourable.
+-- src:1237 | (3) A person who, apart from subsection (1) above, would be entitled—
+-- src:1238 | (a) to both a Category A retirement pension and one or more Category B retirement pensions under this Part for the same period,
+-- src:1239 | (aa) to more than one Category B retirement pension (but not a Category A retirement pension) under this Part for the same period, or
+-- src:1240 | (b) to both a Category C and a Category D retirement pension under Part III below for the same period,
+-- src:1241 | may from time to time give notice in writing to the Secretary of State specifying which of the pensions referred to in paragraph (a), (aa) or (b) (as the case may be) he wishes to receive.
+-- src:1242 | (4) If a person gives such a notice, the pension so specified shall be the one to which he is entitled in respect of any week commencing after the date of the notice.
+-- src:1243 | (5) If no such notice is given, the person shall be entitled to whichever of the pensions is from time to time the most favourable to him (whether it is the pension which he claimed or not).
+@ref s 43(3) to (5) (src:1237-1243)
+GIVEN group IS A LIST OF `s 43 Pension in contention`
+      notices IS A LIST OF `s 43 Notice`
+      `the week commences on` IS A DATE
+GIVETH A MAYBE (LIST OF STRING)
+`s 43(3) the pension the person is entitled to out of the group` MEANS
+    BRANCH
+        IF count group AT MOST 1 THEN JUST (map (GIVEN pension YIELD pension's `the name the person gives it`) group)
+        IF count effective EQUALS 1 THEN JUST (map (GIVEN notice YIELD notice's `the name of the pension it specifies`) effective)
+        IF count effective GREATER THAN 1 THEN NOTHING  -- NOTHING-kind (silent): two notices have effect and the text does not say which prevails
+        OTHERWISE `s 43(5) the name of the most favourable pension` group
+    WHERE
+        effective MEANS `s 43(4) the notices that specify a pension in the group and have effect for the week` group notices `the week commences on`
+
+-- (1) one pension only; (2) a Part II pension and a Part III pension together.
+-- The answer is the list of names of the pensions the person is entitled to for the week.
+-- NOTHING where the text does not decide (two Category A pensions; an ordinary Category B pension
+-- beside one awarded because of section 61ZB; two notices with effect for the same group).
+-- src:1232 | (1) A person shall not be entitled for the same period to more than one retirement pension under this Part of this Act except as provided by subsection (2) below and section 61ZC below (which deals with unusual cases involving units of additional pension).
+-- src:1233 | (2) A person who, apart from subsection (1) above, would be entitled for the same period to both—
+-- src:1234 | (a) a Category A or a Category B retirement pension under this Part; and
+-- src:1235 | (b) a Category C or a Category D retirement pension under Part III below,
+-- src:1236 | shall be entitled to both of those pensions for that period, subject to any adjustment of them in pursuance of regulations under section 73 of the Administration Act.
+@ref s 43(1) and (2), with s 61ZC (src:1232-1236)
+GIVEN pensions IS A LIST OF `s 43 Pension in contention`
+      notices IS A LIST OF `s 43 Notice`
+      `the week commences on` IS A DATE
+GIVETH A MAYBE (LIST OF STRING)
+`s 43(1) the pensions the person is entitled to for the week` MEANS
+    CONSIDER `the Part II result`
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST names2 THEN
+        CONSIDER `the Part III result`
+        WHEN NOTHING THEN NOTHING
+        WHEN JUST names3 THEN JUST (append names2 names3)
+    WHERE
+        `the Part II pensions` MEANS `s 43(2)(a) the Category A and Category B pensions among them` pensions
+        `the Part III pensions` MEANS `s 43(2)(b) the Category C and Category D pensions among them` pensions
+        `the Category A pensions` MEANS filter (GIVEN p YIELD p's `the kind of pension` EQUALS `Category A retirement pension`) `the Part II pensions`
+        `the Category B pensions` MEANS filter (GIVEN p YIELD p's `the kind of pension` EQUALS `Category B retirement pension`) `the Part II pensions`
+        `the Category B pensions awarded because of section 61ZB` MEANS filter (GIVEN p YIELD p's `awarded because of section 61ZB`) `the Category B pensions`
+        `the names of the Category A pensions` MEANS map (GIVEN p YIELD p's `the name the person gives it`) `the Category A pensions`
+        `the Part III result` MEANS `s 43(3) the pension the person is entitled to out of the group` `the Part III pensions` notices `the week commences on`
+        `the choice among all the Part II pensions` MEANS `s 43(3) the pension the person is entitled to out of the group` `the Part II pensions` notices `the week commences on`
+        `the choice among the Category B pensions` MEANS `s 43(3) the pension the person is entitled to out of the group` `the Category B pensions` notices `the week commences on`
+        `the Category A pension is awarded because of section 61ZA` MEANS any (GIVEN p YIELD p's `awarded because of section 61ZA`) `the Category A pensions`
+        `the Category A pension and a Category B pension together` MEANS
+            CONSIDER `the choice among the Category B pensions`
+            WHEN NOTHING THEN NOTHING
+            WHEN JUST names THEN JUST (append `the names of the Category A pensions` names)
+        `the Part II result` MEANS
+            BRANCH
+                IF count `the Part II pensions` AT MOST 1 THEN `the choice among all the Part II pensions`
+                IF count `the Category A pensions` GREATER THAN 1 THEN NOTHING  -- NOTHING-kind (silent): the section speaks of "a Category A retirement pension" and never of two
+                IF count `the Category A pensions` EQUALS 1
+                   AND `s 61ZC(1) section 43 does not prevent entitlement to both pensions` `the Category A pension is awarded because of section 61ZA` (count `the Category B pensions`) EQUALS JUST TRUE
+                THEN `the Category A pension and a Category B pension together`
+                IF count `the Category A pensions` EQUALS 1
+                   AND `s 61ZC(2) section 43 does not prevent entitlement to both pensions` TRUE (count `the Category B pensions awarded because of section 61ZB`) EQUALS JUST TRUE
+                THEN
+                    IF count `the Category B pensions awarded because of section 61ZB` EQUALS count `the Category B pensions`
+                    THEN `the Category A pension and a Category B pension together`
+                    ELSE NOTHING  -- NOTHING-kind (silent): s 61ZC(2) pairs the Category A pension with "one Category B retirement pension because of section 61ZB"; the text does not say what happens to an ordinary Category B pension held beside it (fork F3)
+                IF count `the Category A pensions` EQUALS 1 THEN `the choice among all the Part II pensions`
+                OTHERWISE `the choice among the Category B pensions`
+
+-- (3) The person "may from time to time give notice in writing to the Secretary of State specifying
+-- which of the pensions ... he wishes to receive": a permission (a regulative rule), with (4) as what
+-- follows. The decision functions above carry the same notice as data (`s 43 Notice`).
+DECLARE `s 43 Party` IS ONE OF
+    `s 43 the person`
+    `s 43 the Secretary of State`
+
+DECLARE `s 43 Act` IS ONE OF
+    `s 43 give notice in writing to the Secretary of State specifying which pension is wished to be received`
+
+-- src:1237 | (3) A person who, apart from subsection (1) above, would be entitled—
+-- src:1238 | (a) to both a Category A retirement pension and one or more Category B retirement pensions under this Part for the same period,
+-- src:1239 | (aa) to more than one Category B retirement pension (but not a Category A retirement pension) under this Part for the same period, or
+-- src:1240 | (b) to both a Category C and a Category D retirement pension under Part III below for the same period,
+-- src:1241 | may from time to time give notice in writing to the Secretary of State specifying which of the pensions referred to in paragraph (a), (aa) or (b) (as the case may be) he wishes to receive.
+-- src:1242 | (4) If a person gives such a notice, the pension so specified shall be the one to which he is entitled in respect of any week commencing after the date of the notice.
+@ref s 43(3) and (4) (src:1237-1242)
+GIVETH A DEONTIC `s 43 Party` `s 43 Act`
+`s 43(3) the person may give notice` MEANS
+    PARTY `s 43 the person`
+    MAY `s 43 give notice in writing to the Secretary of State specifying which pension is wished to be received`
+    HENCE FULFILLED
+
+§§ `Section 44: Category A retirement pension`
+
+-- (1A): which contribution test the Act points to for the pensioner. The tests themselves are
+-- Schedule 3, Part I, paragraphs 5 and 5A (another part's range); their answers are INPUTS below.
+DECLARE `s 44(1A) Contribution test` IS ONE OF
+    `s 44(1A)(a) the conditions specified in Schedule 3, Part I, paragraph 5`
+    `s 44(1A)(b) the condition specified in Schedule 3, Part I, paragraph 5A`
+
+-- src:1250 | (1A) In subsection (1)(b) above “the relevant conditions or condition” means—
+-- src:1251 | (a) in a case where the person attains pensionable age before 6th April 2010, the conditions specified in Schedule 3, Part I, paragraph 5;
+-- src:1252 | (b) in a case where the person attains pensionable age on or after that date, the condition specified in Schedule 3, Part I, paragraph 5A.
+@ref s 44(1A) (src:1250-1252)
+GIVEN pensioner IS A Person
+GIVETH A `s 44(1A) Contribution test`
+`s 44(1A) the relevant conditions or condition` MEANS
+    IF pensioner's `date of attaining pensionable age` LESS THAN (Date 6 4 2010)
+    THEN `s 44(1A)(a) the conditions specified in Schedule 3, Part I, paragraph 5`
+    ELSE `s 44(1A)(b) the condition specified in Schedule 3, Part I, paragraph 5A`
+
+-- (1): a person "shall be entitled to a Category A retirement pension if" the person attained
+-- pensionable age before 6 April 2016 and satisfies the relevant conditions or condition.
+-- The contribution answers arrive as inputs named for the answering section (seam S1).
+-- src:1246 | (1) A person shall be entitled to a Category A retirement pension if—
+-- src:1247 | (a) the person attained pensionable age before 6 April 2016, and
+-- src:1248 | (b) he satisfies the relevant conditions or condition;
+-- src:1249 | and, subject to the provisions of this Act, he shall become so entitled on the day on which he attains pensionable age and his entitlement shall continue throughout his life.
+@ref s 44(1) (src:1246-1249)
+GIVEN pensioner IS A Person
+      `sch 3 pt I para 5 the contribution conditions for a Category A retirement pension are satisfied` IS A MAYBE BOOLEAN
+      `sch 3 pt I para 5A the contribution condition for a Category A retirement pension is satisfied` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 44(1) the person is entitled to a Category A retirement pension` MEANS
+    -- FALSE-kind (the text says no in its own words): "A person shall be entitled to a Category A retirement pension if" -- a failed "if" counts as the text's no (marginal reading (a))
+    `ssc3 helper all of`
+        (LIST
+            JUST (pensioner's `date of attaining pensionable age` LESS THAN (Date 6 4 2016))
+          , `the relevant conditions or condition are satisfied`)
+    WHERE
+        `the relevant conditions or condition are satisfied` MEANS
+            CONSIDER `s 44(1A) the relevant conditions or condition` pensioner
+            WHEN `s 44(1A)(a) the conditions specified in Schedule 3, Part I, paragraph 5` THEN `sch 3 pt I para 5 the contribution conditions for a Category A retirement pension are satisfied`
+            WHEN `s 44(1A)(b) the condition specified in Schedule 3, Part I, paragraph 5A` THEN `sch 3 pt I para 5A the contribution condition for a Category A retirement pension is satisfied`
+
+-- (1), closing words: the day entitlement begins, and "throughout his life".
+-- src:1249 | and, subject to the provisions of this Act, he shall become so entitled on the day on which he attains pensionable age and his entitlement shall continue throughout his life.
+@ref s 44(1), closing words (src:1249)
+GIVEN pensioner IS A Person
+GIVETH A DATE
+`s 44(1) the day on which the person becomes entitled` MEANS pensioner's `date of attaining pensionable age`
+
+-- src:1249 | and, subject to the provisions of this Act, he shall become so entitled on the day on which he attains pensionable age and his entitlement shall continue throughout his life.
+@ref s 44(1), closing words (src:1249)
+GIVEN pensioner IS A Person
+      entitled IS A MAYBE BOOLEAN @desc the answer of s 44(1)
+      day IS A DATE
+      `the date of the pensioner's death` IS A MAYBE DATE
+GIVETH A MAYBE BOOLEAN
+`s 44(1) the entitlement is running on the day` MEANS
+    CONSIDER entitled
+    WHEN JUST FALSE THEN JUST FALSE  -- FALSE-kind (the text says no in its own words): inherited from s 44(1), "A person shall be entitled ... if"
+    WHEN NOTHING THEN NOTHING  -- NOTHING-kind (points outside the text): the contribution conditions are another part's answer
+    WHEN JUST TRUE THEN
+        BRANCH
+            IF day LESS THAN `s 44(1) the day on which the person becomes entitled` pensioner THEN NOTHING  -- NOTHING-kind (limited by its own wording): "he shall become so entitled on the day on which he attains pensionable age"
+            IF `the date of the pensioner's death` EQUALS NOTHING THEN JUST TRUE
+            OTHERWISE
+                CONSIDER `the date of the pensioner's death`
+                WHEN NOTHING THEN JUST TRUE
+                WHEN JUST death THEN IF day AT MOST death THEN JUST TRUE ELSE NOTHING  -- NOTHING-kind (limited by its own wording): the entitlement continues "throughout his life"
+
+-- (2): not payable for any period before the day the entitlement is regarded as commencing under
+-- section 5(1)(k) of the Administration Act (a date the person is given: an input).
+-- src:1253 | (2) A Category A retirement pension shall not be payable in respect of any period falling before the day on which the pensioner’s entitlement is to be regarded as commencing for that purpose by virtue of section 5(1)(k) of the Administration Act.
+@ref s 44(2) (src:1253)
+GIVEN day IS A DATE
+      `the day on which the entitlement is to be regarded as commencing by virtue of section 5(1)(k) of the Administration Act` IS A DATE
+GIVETH A MAYBE BOOLEAN
+`s 44(2) the Category A retirement pension is payable in respect of the day` MEANS
+    IF day LESS THAN `the day on which the entitlement is to be regarded as commencing by virtue of section 5(1)(k) of the Administration Act`
+    THEN JUST FALSE  -- FALSE-kind (the text says no in its own words): "shall not be payable in respect of any period falling before the day"
+    ELSE NOTHING  -- NOTHING-kind (limited by its own wording): the bar is for "any period falling before the day"; from that day on the subsection says nothing, and when the pension is payable is left to the entitlement of s 44(1) and to the Administration Act
+
+-- (3)(a): the pension consists of a basic pension.
+-- src:1254 | (3) A Category A retirement pension shall consist of—
+-- src:1255 | (a) a basic pension payable at a weekly rate; and
+@ref s 44(3)(a) (src:1254-1255)
+`s 44(3)(a) the Category A retirement pension consists of a basic pension` MEANS TRUE
+
+-- (3)(b): "an additional pension payable where there are one or more surpluses in the pensioner's
+-- earnings factors for the relevant years or where the pensioner has one or more units of additional pension."
+-- src:1254 | (3) A Category A retirement pension shall consist of—
+-- src:1255 | (a) a basic pension payable at a weekly rate; and
+-- src:1256 | (b) an additional pension payable where there are one or more surpluses in the pensioner’s earnings factors for the relevant years or where the pensioner has one or more units of additional pension.
+-- src:1257 | For units of additional pension, see section 14A.
+@ref s 44(3)(b) (src:1254-1257)
+GIVEN `the number of relevant years in which there is a surplus in the pensioner's earnings factor` IS A NUMBER
+      `the number of units of additional pension the pensioner has` IS A NUMBER
+GIVETH A MAYBE BOOLEAN
+`s 44(3)(b) an additional pension is payable as part of the Category A retirement pension` MEANS
+    IF `the number of relevant years in which there is a surplus in the pensioner's earnings factor` AT LEAST 1 OR `the number of units of additional pension the pensioner has` AT LEAST 1
+    THEN JUST TRUE
+    ELSE NOTHING  -- NOTHING-kind (limited by its own wording): the additional pension is "payable where" there are surpluses or units; the text does not say it is not payable otherwise
+
+-- (4): the weekly rate of the basic pension. The two figures are the Act's own words.
+-- src:1258 | (4) The weekly rate of the basic pension shall be £184.90 except that, so far as the sum is relevant for the purpose of calculating the lower rate of short-term incapacity benefit under section 30B(3) above, it shall be £140.65.
+-- src:1259 | In this subsection “the lower rate” means the rate payable for the first 196 days of entitlement in any period of incapacity for work.
+@ref s 44(4) (src:1258-1259)
+GIVEN `the sum is relevant for calculating the lower rate of short-term incapacity benefit under section 30B(3)` IS A BOOLEAN
+GIVETH A MAYBE NUMBER
+`s 44(4) the weekly rate of the basic pension in pounds` MEANS
+    IF `the sum is relevant for calculating the lower rate of short-term incapacity benefit under section 30B(3)`
+    THEN JUST 140.65
+    ELSE JUST 184.90
+
+-- (4), second sentence: "the lower rate" means the rate payable for the first 196 days of entitlement
+-- in any period of incapacity for work.
+-- src:1258 | (4) The weekly rate of the basic pension shall be £184.90 except that, so far as the sum is relevant for the purpose of calculating the lower rate of short-term incapacity benefit under section 30B(3) above, it shall be £140.65.
+-- src:1259 | In this subsection “the lower rate” means the rate payable for the first 196 days of entitlement in any period of incapacity for work.
+@ref s 44(4), the lower rate (src:1258-1259)
+GIVEN `the number of the day of entitlement in the period of incapacity for work, counting the first day as 1` IS A NUMBER
+GIVETH A BOOLEAN
+`s 44(4) the day of entitlement is one for which the lower rate is payable` MEANS
+    `the number of the day of entitlement in the period of incapacity for work, counting the first day as 1` AT MOST 196
+
+-- (5A)(a): there is a surplus in the pensioner's earnings factor for a relevant year if that factor
+-- exceeds the qualifying earnings factor for that year.
+-- src:1261 | (5A) For the purposes of this section and section 45 and Schedules 4A and 4B below—
+-- src:1262 | (a) there is a surplus in the pensioner’s earnings factor for a relevant year if that factor exceeds the qualifying earnings factor for that year,
+@ref s 44(5A)(a) (src:1261-1262)
+GIVEN `the pensioner's earnings factor for the relevant year` IS A NUMBER
+      `the qualifying earnings factor for the year` IS A NUMBER
+GIVETH A BOOLEAN
+`s 44(5A)(a) there is a surplus in the pensioner's earnings factor for the relevant year` MEANS
+    -- FALSE-kind (the text says no in its own words): "there is a surplus ... if that factor exceeds the qualifying earnings factor for that year" -- a failed "if" counts as the text's no (marginal reading (a))
+    `the pensioner's earnings factor for the relevant year` GREATER THAN `the qualifying earnings factor for the year`
+
+-- (5A)(b): the amount of the surplus is the amount of that excess.
+-- src:1261 | (5A) For the purposes of this section and section 45 and Schedules 4A and 4B below—
+-- src:1262 | (a) there is a surplus in the pensioner’s earnings factor for a relevant year if that factor exceeds the qualifying earnings factor for that year,
+-- src:1263 | (b) the amount of the surplus is the amount of that excess, and
+@ref s 44(5A)(b) (src:1261-1263)
+GIVEN `the pensioner's earnings factor for the relevant year` IS A NUMBER
+      `the qualifying earnings factor for the year` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`s 44(5A)(b) the amount of the surplus in pounds` MEANS
+    IF `the pensioner's earnings factor for the relevant year` GREATER THAN `the qualifying earnings factor for the year`
+    THEN JUST (`the pensioner's earnings factor for the relevant year` MINUS `the qualifying earnings factor for the year`)
+    ELSE NOTHING  -- NOTHING-kind (silent): with no surplus there is no "excess" to be the amount of
+
+-- (5A)(c): for the purposes of s 45(1) and (2)(a) and (b), the adjusted amount of the surplus is the
+-- excess "as increased by the last order under section 148 of the Administration Act to come into
+-- force before the end of the final relevant year". The text does not say how an order increases an
+-- amount; this takes the order to specify a percentage increase (fork F6 in NOTES.md).
+-- src:1261 | (5A) For the purposes of this section and section 45 and Schedules 4A and 4B below—
+-- src:1262 | (a) there is a surplus in the pensioner’s earnings factor for a relevant year if that factor exceeds the qualifying earnings factor for that year,
+-- src:1263 | (b) the amount of the surplus is the amount of that excess, and
+-- src:1264 | (c) for the purposes of section 45(1) and (2)(a) and (b) below, the adjusted amount of the surplus is the amount of that excess, as increased by the last order under section 148 of the Administration Act to come into force before the end of the final relevant year.
+@ref s 44(5A)(c) (src:1261-1264)
+GIVEN `the amount of the surplus in pounds` IS A NUMBER
+      `the percentage by which the last order under section 148 of the Administration Act to come into force before the end of the final relevant year increases earnings factors for the year` IS A NUMBER
+GIVETH A NUMBER
+`s 44(5A)(c) the adjusted amount of the surplus in pounds` MEANS
+    `the amount of the surplus in pounds` TIMES (1 PLUS (`the percentage by which the last order under section 148 of the Administration Act to come into force before the end of the final relevant year increases earnings factors for the year` DIVIDED BY 100))
+
+-- (6): the pensioner's earnings factor for a relevant year, by limb.
+--   (za) the first appointed year or any later year: the factors from earnings up to the applicable limit on which primary Class 1 contributions were paid;
+--   (a) 1987-88 or any later year before the first appointed year: Class 1 factors, plus the Class 2 and Class 3 factors or, if less, the qualifying earnings factor;
+--   (b) an earlier year: the same with contributions "actually paid".
+-- "Subject to subsection (7A)": where the Secretary of State has prescribed another manner of calculating, that is an input.
+-- src:1265 | (6) Subject to subsection (7A) below any reference in this section or section 45 or Schedule 4A or 4B below to the pensioner’s earnings factor for any relevant year is a reference—
+-- src:1266 | (za) where the relevant year is the first appointed year or any subsequent year, to the aggregate of his earnings factors derived from so much of his earnings as did not exceed the applicable limit and upon which primary Class 1 contributions have been paid or treated as paid in respect of that year;
+-- src:1267 | (a) where the relevant year is 1987-88 or any subsequent tax year before the first appointed year, to the aggregate of—
+-- src:1268 | (i) his earnings factors derived from earnings upon which primary Class 1 contributions were paid or treated as paid in respect of that year, and
+-- src:1269 | (ii) his earnings factors derived from Class 2 and Class 3 contributions actually paid in respect of that year, or, if less, the qualifying earnings factor for that year; and
+-- src:1270 | (b) where the relevant year is an earlier tax year, to the aggregate of—
+-- src:1271 | (i) his earnings factors derived from Class 1 contributions actually paid by him in respect of that year, and
+-- src:1272 | (ii) his earnings factors derived from Class 2 and Class 3 contributions actually paid by him in respect of that year, or, if less, the qualifying earnings factor for that year.
+@ref s 44(6) (src:1265-1272)
+GIVEN year IS A `Tax year`
+      `the relevant year is the first appointed year or a later year` IS A BOOLEAN
+      `a manner of calculation prescribed under section 44(7A) applies` IS A BOOLEAN
+      `earnings factors derived from earnings up to the applicable limit on which primary Class 1 contributions were paid or treated as paid` IS A NUMBER
+      `earnings factors derived from earnings on which primary Class 1 contributions were paid or treated as paid` IS A NUMBER
+      `earnings factors derived from Class 1 contributions actually paid` IS A NUMBER
+      `earnings factors derived from Class 2 and Class 3 contributions actually paid` IS A NUMBER
+      `the qualifying earnings factor for the year` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`s 44(6) the pensioner's earnings factor for the relevant year` MEANS
+    BRANCH
+        IF `a manner of calculation prescribed under section 44(7A) applies` THEN NOTHING  -- NOTHING-kind (points outside the text): "Subject to subsection (7A) below" and the manner is prescribed
+        IF `the relevant year is the first appointed year or a later year`
+        THEN JUST `earnings factors derived from earnings up to the applicable limit on which primary Class 1 contributions were paid or treated as paid`
+        IF year's `calendar year in which it begins` AT LEAST 1987
+        THEN JUST (`earnings factors derived from earnings on which primary Class 1 contributions were paid or treated as paid`
+                   PLUS (min `earnings factors derived from Class 2 and Class 3 contributions actually paid` `the qualifying earnings factor for the year`))
+        OTHERWISE JUST (`earnings factors derived from Class 1 contributions actually paid`
+                        PLUS (min `earnings factors derived from Class 2 and Class 3 contributions actually paid` `the qualifying earnings factor for the year`))
+
+-- (7)(a): "relevant year" means 1978-79 or any subsequent tax year in the period between (inclusive) the
+-- tax year in which the pensioner attained the age of 16 and (exclusive) the tax year in which he
+-- attained pensionable age. The day the pensioner attains 16 is s 173's answer (seam K2), an input.
+-- src:1273 | (7) In this section—
+-- src:1274 | (a) “relevant year” means 1978-79 or any subsequent tax year in the period between—
+-- src:1275 | (i) (inclusive) the tax year in which the pensioner attained the age of 16, and
+-- src:1276 | (ii) (exclusive) the tax year in which he attained pensionable age;
+@ref s 44(7)(a) (src:1273-1276)
+GIVEN pensioner IS A Person
+      `s 173 the day the person attains the age of 16` IS A MAYBE DATE
+      year IS A `Tax year`
+GIVETH A MAYBE BOOLEAN
+`s 44(7)(a) the tax year is a relevant year` MEANS
+    CONSIDER `s 173 the day the person attains the age of 16`
+    WHEN NOTHING THEN NOTHING  -- NOTHING-kind (silent): s 173 does not say when a person born on 29 February attains an age in a year without one (fork F1 of the keel)
+    WHEN JUST sixteenth THEN
+        -- FALSE-kind (the text says no in its own words): "\"relevant year\" means 1978-79 or any subsequent tax year in the period between"
+        JUST (    year's `calendar year in which it begins` AT LEAST 1978
+              AND year's `calendar year in which it begins` AT LEAST `ssc3 helper tax year of` sixteenth
+              AND year's `calendar year in which it begins` LESS THAN `ssc3 helper tax year of` (pensioner's `date of attaining pensionable age`))
+
+-- (7)(b): "final relevant year" means the last tax year which is a relevant year in relation to the pensioner.
+-- (NOTHING where the pensioner has no relevant year at all.)
+-- src:1273 | (7) In this section—
+-- src:1274 | (a) “relevant year” means 1978-79 or any subsequent tax year in the period between—
+-- src:1275 | (i) (inclusive) the tax year in which the pensioner attained the age of 16, and
+-- src:1276 | (ii) (exclusive) the tax year in which he attained pensionable age;
+-- src:1277 | (b) “final relevant year” means the last tax year which is a relevant year in relation to the pensioner;
+@ref s 44(7)(b) (src:1273-1277)
+GIVEN pensioner IS A Person
+      `s 173 the day the person attains the age of 16` IS A MAYBE DATE
+GIVETH A MAYBE (`Tax year`)
+`s 44(7)(b) the final relevant year` MEANS
+    CONSIDER `s 173 the day the person attains the age of 16`
+    WHEN NOTHING THEN NOTHING  -- NOTHING-kind (silent): s 173 does not say when a person born on 29 February attains an age in a year without one (fork F1 of the keel)
+    WHEN JUST sixteenth THEN
+        IF (`ssc3 helper tax year of` (pensioner's `date of attaining pensionable age`)) MINUS 1 AT LEAST (max 1978 (`ssc3 helper tax year of` sixteenth))
+        THEN JUST (`Tax year` OF ((`ssc3 helper tax year of` (pensioner's `date of attaining pensionable age`)) MINUS 1))
+        ELSE NOTHING  -- NOTHING-kind (undefined term): the pensioner has no tax year that is a relevant year, so there is no last one
+
+-- (7)(c): "the applicable limit" is the upper earnings limit for a tax year before 2009-10 and the
+-- upper accrual point (770, the core's constant) for 2009-10 and later years.
+-- src:1273 | (7) In this section—
+-- src:1274 | (a) “relevant year” means 1978-79 or any subsequent tax year in the period between—
+-- src:1275 | (i) (inclusive) the tax year in which the pensioner attained the age of 16, and
+-- src:1276 | (ii) (exclusive) the tax year in which he attained pensionable age;
+-- src:1277 | (b) “final relevant year” means the last tax year which is a relevant year in relation to the pensioner;
+-- src:1278 | (c) “the applicable limit” means—
+-- src:1279 | (i) in relation to a tax year before 2009-10, the upper earnings limit;
+-- src:1280 | (ii) in relation to 2009-10 or any subsequent tax year, the upper accrual point.
+@ref s 44(7)(c) (src:1273-1280)
+GIVEN limits IS A `Earnings limits`
+GIVETH A NUMBER
+`s 44(7)(c) the applicable limit in pounds` MEANS
+    IF limits's `the tax year`'s `calendar year in which it begins` LESS THAN 2009
+    THEN limits's `upper earnings limit`
+    ELSE `the upper accrual point`
+
+-- (8): an order under s 21 of the Social Security Pensions Act 1975 is treated as an order under s 148
+-- of the Administration Act. The sentence says what is treated as what, and nothing about other orders.
+-- src:1282 | (8) For the purposes of this section any order under section 21 of the Social Security Pensions Act 1975 (which made provision corresponding to section 148 of the Administration Act) shall be treated as an order under section 148 (but without prejudice to sections 16 and 17 of the Interpretation Act 1978).
+@ref s 44(8) (src:1282)
+GIVEN `the order is made under section 21 of the Social Security Pensions Act 1975` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 44(8) the order is treated as an order under section 148 of the Administration Act` MEANS
+    IF `the order is made under section 21 of the Social Security Pensions Act 1975`
+    THEN JUST TRUE
+    ELSE NOTHING  -- NOTHING-kind (silent): the subsection speaks only of orders under section 21 of the 1975 Act

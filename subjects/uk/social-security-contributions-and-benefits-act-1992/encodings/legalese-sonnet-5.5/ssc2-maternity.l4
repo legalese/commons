@@ -1,0 +1,624 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `ssc-core`
+IMPORT `ssc2-prelim`
+IMPORT `ssc2-factors`
+
+-- Social Security Contributions and Benefits Act 1992 (United Kingdom), 1992 c. 4.
+-- LAYER 1, part ssc2, module 4 of 6: ss 35, 35A and 35B (maternity allowance).
+-- Source: inputs/ukpga-1992-4.txt, a plain-text rendering made by a converter script; it is not the
+-- official text and nothing here is "verified against the official text".
+-- Money is a NUMBER in pounds; a rate is weekly unless the name says otherwise.
+-- JUST TRUE / JUST FALSE is the Act answering in its own words; NOTHING is "not covered".
+-- A "week" in these sections is a week of Part II, which s 122(1) (src:2624) makes a period of 7 days
+-- beginning with Sunday; the weekday count is the one in ssc2-prelim (s 21(6)(a)).
+
+§ `Part II -- Maternity allowance (ss 35, 35A, 35B)`
+
+§§ `s 35 State maternity allowance for employed or self-employed earner`
+
+-- Kleene negation, "and" and "or" over MAYBE BOOLEAN: a limb the text answers "no" decides the whole
+-- even when another limb is unknown; otherwise an unknown limb leaves the whole unknown.
+-- src:988 | (1) A woman shall be entitled to a maternity allowance under this section, at the appropriate weekly rate determined under section 35A below, if—
+-- src:989 | (a) she has become pregnant and has reached, or been confined before reaching, the commencement of the 11th week before the expected week of confinement; and
+-- src:990 | (b) she has been engaged in employment as an employed or self-employed earner for any part of the week in the case of at least 26 of the 66 weeks immediately preceding the expected week of confinement; and
+-- src:991 | (c) her average weekly earnings (within the meaning of section 35A below) are not less than the maternity allowance threshold for the tax year in which the beginning of the period of 66 weeks mentioned in paragraph (b) above falls;
+-- src:992 | (d) she is not entitled to statutory maternity pay for the same week in respect of the same pregnancy.
+@ref s 35(1) (src:988-992)
+GIVEN a IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 35 not` MEANS
+    CONSIDER a
+    WHEN JUST TRUE THEN JUST FALSE
+    WHEN JUST FALSE THEN JUST TRUE
+    WHEN NOTHING THEN NOTHING
+
+@ref s 35(1) (src:988-992)
+GIVEN a IS A MAYBE BOOLEAN, b IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 35 both` MEANS
+    CONSIDER a
+    WHEN JUST FALSE THEN JUST FALSE
+    WHEN JUST TRUE THEN b
+    WHEN NOTHING THEN
+        CONSIDER b
+        WHEN JUST FALSE THEN JUST FALSE
+        OTHERWISE NOTHING
+
+@ref s 35(1) (src:988-992)
+GIVEN a IS A MAYBE BOOLEAN, b IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 35 either` MEANS
+    CONSIDER a
+    WHEN JUST TRUE THEN JUST TRUE
+    WHEN JUST FALSE THEN b
+    WHEN NOTHING THEN
+        CONSIDER b
+        WHEN JUST TRUE THEN JUST TRUE
+        OTHERWISE NOTHING
+
+-- The week of Part II containing a day: s 122(1) makes a week begin on a Sunday.
+-- src:989 | (a) she has become pregnant and has reached, or been confined before reaching, the commencement of the 11th week before the expected week of confinement; and
+@ref s 35(1) (src:989)
+GIVEN day IS A DATE
+GIVETH A Period
+`s 35(1) the week of Part II containing the day` MEANS
+    Period WITH
+        `the first day` IS day MINUS (`s 21(6)(a) the weekday of the date, 0 for Sunday` day)
+        `the last day` IS (day MINUS (`s 21(6)(a) the weekday of the date, 0 for Sunday` day)) PLUS 6
+
+-- The "11th week before the expected week of confinement": the 1st week before it is the week just before,
+-- so the 11th begins 11 times 7 days before the first day of the expected week (fork F11 in NOTES.md).
+-- src:989 | (a) she has become pregnant and has reached, or been confined before reaching, the commencement of the 11th week before the expected week of confinement; and
+@ref s 35(1)(a) (src:989)
+GIVEN `the expected week of confinement` IS A Period
+GIVETH A DATE
+`s 35(1)(a) the commencement of the 11th week before the expected week of confinement` MEANS
+    (`the expected week of confinement`'s `the first day`) MINUS 77
+
+-- (1)(a) she has become pregnant and has reached, or been confined before reaching, the commencement of the
+-- 11th week before the expected week of confinement. On a day, she "has reached" the commencement when the
+-- day is not before it; she "has been confined before reaching" it when she was confined on or before the
+-- day and (a confinement on or after the commencement leaves the first limb to hold).
+-- src:989 | (a) she has become pregnant and has reached, or been confined before reaching, the commencement of the 11th week before the expected week of confinement; and
+@ref s 35(1)(a) (src:989)
+GIVEN `the woman has become pregnant` IS A BOOLEAN
+      `the expected week of confinement` IS A Period
+      `the day on which the condition is tested` IS A DATE
+      `the day on which the woman was confined` IS A MAYBE DATE
+GIVETH A MAYBE BOOLEAN
+`s 35(1)(a) the woman has become pregnant and has reached, or been confined before reaching, the commencement of the 11th week before the expected week of confinement` MEANS
+    IF `the woman has become pregnant`
+       AND ((`the day on which the condition is tested` AT LEAST (`s 35(1)(a) the commencement of the 11th week before the expected week of confinement` `the expected week of confinement`))
+            OR (CONSIDER `the day on which the woman was confined`
+                WHEN JUST confined THEN confined AT MOST `the day on which the condition is tested`
+                WHEN NOTHING THEN FALSE))
+    THEN JUST TRUE
+    ELSE JUST FALSE   -- FALSE-kind (the text says no in its own words): "A woman shall be entitled to a maternity allowance under this section ... if— (a) she has become pregnant and has reached, or been confined before reaching, the commencement of the 11th week before the expected week of confinement"
+
+-- (1)(b) she has been engaged in employment as an employed or self-employed earner for any part of the week
+-- in the case of at least 26 of the 66 weeks immediately preceding the expected week of confinement. The 66
+-- weeks are the 462 days that end the day before the expected week begins.
+-- src:990 | (b) she has been engaged in employment as an employed or self-employed earner for any part of the week in the case of at least 26 of the 66 weeks immediately preceding the expected week of confinement; and
+@ref s 35(1)(b) (src:990)
+GIVEN `the expected week of confinement` IS A Period
+GIVETH A Period
+`s 35(1)(b) the 66 weeks immediately preceding the expected week of confinement` MEANS
+    Period WITH
+        `the first day` IS (`the expected week of confinement`'s `the first day`) MINUS 462
+        `the last day` IS (`the expected week of confinement`'s `the first day`) MINUS 1
+
+@ref s 35(1)(b) (src:990)
+GIVEN `the number of those 66 weeks in which the woman was engaged in employment as an employed or self-employed earner for any part of the week` IS A NUMBER
+GIVETH A MAYBE BOOLEAN
+`s 35(1)(b) the woman has been engaged in employment for any part of the week in the case of at least 26 of the 66 weeks` MEANS
+    IF `the number of those 66 weeks in which the woman was engaged in employment as an employed or self-employed earner for any part of the week` AT LEAST 26
+    THEN JUST TRUE
+    ELSE JUST FALSE   -- FALSE-kind (the text says no in its own words): "A woman shall be entitled ... if— ... (b) she has been engaged in employment ... in the case of at least 26 of the 66 weeks"
+
+-- (1)(c) the tax year in which the beginning of the period of 66 weeks falls: a tax year begins on 6 April.
+-- src:991 | (c) her average weekly earnings (within the meaning of section 35A below) are not less than the maternity allowance threshold for the tax year in which the beginning of the period of 66 weeks mentioned in paragraph (b) above falls;
+@ref s 35(1)(c) (src:991)
+GIVEN `the expected week of confinement` IS A Period
+GIVETH A `Tax year`
+`s 35(1)(c) the tax year in which the beginning of the period of 66 weeks falls` MEANS
+    `Tax year` WITH `calendar year in which it begins` IS `s 23A(8) the calendar year in which the tax year containing the date begins` ((`s 35(1)(b) the 66 weeks immediately preceding the expected week of confinement` `the expected week of confinement`)'s `the first day`)
+
+-- (6A) the maternity allowance threshold for a tax year is 30 pounds (6B) increased by order, for a tax year
+-- after 2001-2002, to the amount the order specifies.
+-- src:1020 | (6A) In this section “the maternity allowance threshold”, in relation to a tax year, means (subject to subsection (6B) below) £30.
+@ref s 35(6A) (src:1020)
+`s 35(6A) the amount specified in subsection (6A) in pounds` MEANS 30
+
+-- src:1021 | (6B) The Secretary of State may, in relation to any tax year after 2001-2002, by order increase the amount for the time being specified in subsection (6A) above to such amount as is specified in the order.
+@ref s 35(6B) (src:1021)
+GIVEN year IS A `Tax year`
+      `the amount that an order under section 35(6B) specifies for the tax year` IS A MAYBE NUMBER
+GIVETH A NUMBER
+`s 35(6A) the maternity allowance threshold for the tax year` MEANS
+    IF year's `calendar year in which it begins` AT LEAST 2002
+    THEN (CONSIDER `the amount that an order under section 35(6B) specifies for the tax year`
+          WHEN JUST specified THEN specified
+          WHEN NOTHING THEN `s 35(6A) the amount specified in subsection (6A) in pounds`)
+    ELSE `s 35(6A) the amount specified in subsection (6A) in pounds`
+
+-- (1)(c) her average weekly earnings (within the meaning of s 35A) are not less than the threshold.
+-- src:991 | (c) her average weekly earnings (within the meaning of section 35A below) are not less than the maternity allowance threshold for the tax year in which the beginning of the period of 66 weeks mentioned in paragraph (b) above falls;
+@ref s 35(1)(c) (src:991)
+GIVEN `s 35A(4) the woman's average weekly earnings in pounds` IS A MAYBE NUMBER
+      `the maternity allowance threshold for the tax year in which the beginning of the period of 66 weeks falls` IS A NUMBER
+GIVETH A MAYBE BOOLEAN
+`s 35(1)(c) her average weekly earnings are not less than the maternity allowance threshold` MEANS
+    CONSIDER `s 35A(4) the woman's average weekly earnings in pounds`
+    WHEN NOTHING THEN NOTHING     -- NOTHING-kind (points outside the text): the average is determined in accordance with regulations
+    WHEN JUST earnings THEN
+        IF earnings AT LEAST `the maternity allowance threshold for the tax year in which the beginning of the period of 66 weeks falls`
+        THEN JUST TRUE
+        ELSE JUST FALSE   -- FALSE-kind (the text says no in its own words): "A woman shall be entitled ... if— ... (c) her average weekly earnings ... are not less than the maternity allowance threshold"
+
+-- (1)(d) she is not entitled to statutory maternity pay for the same week in respect of the same pregnancy.
+-- src:992 | (d) she is not entitled to statutory maternity pay for the same week in respect of the same pregnancy.
+@ref s 35(1)(d) (src:992)
+GIVEN `she is entitled to statutory maternity pay for the same week in respect of the same pregnancy` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 35(1)(d) she is not entitled to statutory maternity pay for the same week in respect of the same pregnancy` MEANS
+    `s 35 not` `she is entitled to statutory maternity pay for the same week in respect of the same pregnancy`
+    -- JUST FALSE when she is entitled: FALSE-kind (the text says no in its own words): "A woman shall be entitled ... if— ... (d) she is not entitled to statutory maternity pay for the same week in respect of the same pregnancy"
+
+-- src:988 | (1) A woman shall be entitled to a maternity allowance under this section, at the appropriate weekly rate determined under section 35A below, if—
+-- src:989 | (a) she has become pregnant and has reached, or been confined before reaching, the commencement of the 11th week before the expected week of confinement; and
+-- src:990 | (b) she has been engaged in employment as an employed or self-employed earner for any part of the week in the case of at least 26 of the 66 weeks immediately preceding the expected week of confinement; and
+-- src:991 | (c) her average weekly earnings (within the meaning of section 35A below) are not less than the maternity allowance threshold for the tax year in which the beginning of the period of 66 weeks mentioned in paragraph (b) above falls;
+-- src:992 | (d) she is not entitled to statutory maternity pay for the same week in respect of the same pregnancy.
+@ref s 35(1) (src:988-992)
+GIVEN `s 35(1)(a) the woman has become pregnant and has reached, or been confined before reaching, the commencement of the 11th week before the expected week of confinement` IS A MAYBE BOOLEAN
+      `s 35(1)(b) the woman has been engaged in employment for any part of the week in the case of at least 26 of the 66 weeks` IS A MAYBE BOOLEAN
+      `s 35(1)(c) her average weekly earnings are not less than the maternity allowance threshold` IS A MAYBE BOOLEAN
+      `s 35(1)(d) she is not entitled to statutory maternity pay for the same week in respect of the same pregnancy` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 35(1) the woman is entitled to a maternity allowance under this section` MEANS
+    `s 35 both`
+        (`s 35 both` `s 35(1)(a) the woman has become pregnant and has reached, or been confined before reaching, the commencement of the 11th week before the expected week of confinement` `s 35(1)(b) the woman has been engaged in employment for any part of the week in the case of at least 26 of the 66 weeks`)
+        (`s 35 both` `s 35(1)(c) her average weekly earnings are not less than the maternity allowance threshold` `s 35(1)(d) she is not entitled to statutory maternity pay for the same week in respect of the same pregnancy`)
+    -- JUST FALSE when a condition fails: FALSE-kind (the text says no in its own words): "A woman shall be entitled to a maternity allowance under this section, at the appropriate weekly rate determined under section 35A below, if—"
+
+-- (2) the maternity allowance period is the period that, if she were entitled to statutory maternity pay,
+-- would be the maternity pay period under s 165 (seam S6).
+-- src:993 | (2) Subject to the following provisions of this section, a maternity allowance under this section shall be payable for the period (“the maternity allowance period”) which, if she were entitled to statutory maternity pay, would be the maternity pay period under section 165 below.
+@ref s 35(2) (src:993)
+GIVEN `s 165(1) the maternity pay period if she were entitled to statutory maternity pay` IS A Period
+GIVETH A Period
+`s 35(2) the maternity allowance period` MEANS
+    `s 165(1) the maternity pay period if she were entitled to statutory maternity pay`
+
+-- (3A) Regulations may provide for the duration of the period to be reduced (seam S27). The reduced period
+-- begins on the same day and lasts the number of weeks the regulations give, each week 7 days.
+-- src:1003 | (3A) Regulations may provide for the duration of the maternity allowance period as it applies to a woman to be reduced, subject to prescribed restrictions and conditions.
+@ref s 35(3A) (src:1003)
+GIVEN `the maternity allowance period before any reduction` IS A Period
+      `the number of weeks the regulations reduce the maternity allowance period to` IS A MAYBE NUMBER
+GIVETH A NUMBER
+`s 35(3A) the number of weeks to which the maternity allowance period is reduced` MEANS
+    CONSIDER `the number of weeks the regulations reduce the maternity allowance period to`
+    WHEN JUST weeks THEN weeks
+    WHEN NOTHING THEN ((`the maternity allowance period before any reduction`'s `the last day`) MINUS (`the maternity allowance period before any reduction`'s `the first day`) PLUS 1) DIVIDED BY 7
+
+@ref s 35(3A) (src:1003)
+GIVEN `the maternity allowance period before any reduction` IS A Period
+      `the number of weeks the regulations reduce the maternity allowance period to` IS A MAYBE NUMBER
+GIVETH A Period
+`s 35(3A) the maternity allowance period as reduced` MEANS
+    Period WITH
+        `the first day` IS `the maternity allowance period before any reduction`'s `the first day`
+        `the last day` IS (`the maternity allowance period before any reduction`'s `the first day`) PLUS ((`s 35(3A) the number of weeks to which the maternity allowance period is reduced` `the maternity allowance period before any reduction` `the number of weeks the regulations reduce the maternity allowance period to`) TIMES 7 MINUS 1)
+
+-- (3E) A woman who would, but for the reduction of a maternity pay period by s 165(3A), be entitled to
+-- statutory maternity pay for a week is not entitled to a maternity allowance for that week (seam S6).
+-- src:1013 | (3E) A woman who would, but for the reduction in duration of a maternity pay period by virtue of section 165(3A), be entitled to statutory maternity pay for a week is not entitled to a maternity allowance for that week.
+@ref s 35(3E) (src:1013)
+GIVEN `s 165(3A) the woman would be entitled to statutory maternity pay for the week but for the reduction in the maternity pay period` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 35(3E) the woman is entitled to a maternity allowance for the week` MEANS
+    CONSIDER `s 165(3A) the woman would be entitled to statutory maternity pay for the week but for the reduction in the maternity pay period`
+    WHEN JUST TRUE THEN JUST FALSE     -- FALSE-kind (the text says no in its own words): "is not entitled to a maternity allowance for that week"
+    OTHERWISE NOTHING                  -- NOTHING-kind (limited by its own wording): the subsection speaks only of a woman who would be entitled to statutory maternity pay but for the reduction
+
+-- (4) A woman who has become entitled ceases to be entitled if she dies before the beginning of the period;
+-- if she dies after the beginning but before the end, the allowance is not payable for any week after the
+-- one in which she dies. A week is a week of Part II (Sunday to Saturday).
+-- src:1014 | (4) A woman who has become entitled to a maternity allowance under this section shall cease to be entitled to it if she dies before the beginning of the maternity allowance period; and if she dies after the beginning, but before the end, of that period, the allowance shall not be payable for any week subsequent to that in which she dies.
+@ref s 35(4) (src:1014)
+GIVEN `the first day of the week` IS A DATE
+      `the maternity allowance period` IS A Period
+      `the day on which the woman dies` IS A MAYBE DATE
+GIVETH A MAYBE BOOLEAN
+`s 35(4) the allowance is payable for the week` MEANS
+    CONSIDER `the day on which the woman dies`
+    WHEN NOTHING THEN NOTHING     -- NOTHING-kind (limited by its own wording): the subsection speaks only of a woman who dies
+    WHEN JUST death THEN
+        IF death BELOW (`the maternity allowance period`'s `the first day`)
+        THEN JUST FALSE           -- FALSE-kind (the text says no in its own words): "shall cease to be entitled to it if she dies before the beginning of the maternity allowance period"
+        ELSE IF death AT MOST (`the maternity allowance period`'s `the last day`)
+             THEN (IF `the first day of the week` ABOVE ((`s 35(1) the week of Part II containing the day` death)'s `the last day`)
+                   THEN JUST FALSE   -- FALSE-kind (the text says no in its own words): "the allowance shall not be payable for any week subsequent to that in which she dies"
+                   ELSE NOTHING)     -- NOTHING-kind (limited by its own wording): the subsection does not say the allowance is payable for the week of death or earlier weeks
+             ELSE NOTHING            -- NOTHING-kind (limited by its own wording): the subsection speaks only of a woman who dies before the end of the period
+
+-- (5) the amount payable for a day is one seventh of the weekly rate.
+-- src:1015 | (5) Where for any purpose of this Part of this Act or of regulations it is necessary to calculate the daily rate of a maternity allowance under this section the amount payable by way of that allowance for any day shall be taken as one seventh of the weekly rate of the allowance.
+@ref s 35(5) (src:1015)
+GIVEN `the weekly rate of the allowance` IS A NUMBER
+GIVETH A NUMBER
+`s 35(5) the amount payable by way of maternity allowance for a day` MEANS
+    `the weekly rate of the allowance` DIVIDED BY 7
+
+-- (6) "confinement" means (a) labour resulting in the issue of a living child, or (b) labour after 24 weeks
+-- of pregnancy resulting in the issue of a child whether alive or dead. The weeks of pregnancy are completed
+-- weeks, so a labour that begins at 24 completed weeks is "after 24 weeks" (fork F12 in NOTES.md).
+-- src:1016 | (6) In this section “confinement” means—
+-- src:1017 | (a) labour resulting in the issue of a living child, or
+-- src:1018 | (b) labour after 24 weeks of pregnancy resulting in the issue of a child whether alive or dead,
+-- src:1019 | and “confined” shall be construed accordingly; and where a woman’s labour begun on one day results in the issue of a child on another day she shall be taken to be confined on the day of the issue of the child or, if labour results in the issue of twins or a greater number of children, she shall be taken to be confined on the day of the issue of the last of them.
+@ref s 35(6) (src:1016-1019)
+GIVEN labour IS A Labour
+GIVETH A MAYBE BOOLEAN
+`s 35(6) the woman is confined by the labour` MEANS
+    IF labour's `labour resulted in the issue of a living child`
+       OR (labour's `weeks of pregnancy when labour began` AT LEAST `the weeks of pregnancy named in the stillbirth rule`)
+    THEN JUST TRUE
+    ELSE JUST FALSE   -- FALSE-kind (the text says no in its own words): "“confinement” means— (a) labour resulting in the issue of a living child, or (b) labour after 24 weeks of pregnancy resulting in the issue of a child whether alive or dead"
+
+@ref s 35(6) (src:1019)
+GIVEN labour IS A Labour
+GIVETH A MAYBE DATE
+`s 35(6) the day on which the woman is confined` MEANS
+    IF (`s 35(6) the woman is confined by the labour` labour) EQUALS JUST TRUE
+    THEN JUST (labour's `the day of the issue of the child, or of the last of the children`)
+    ELSE NOTHING     -- NOTHING-kind (limited by its own wording): "where a woman’s labour begun on one day results in the issue of a child on another day she shall be taken to be confined on the day of the issue"
+
+-- (6B) The Secretary of State may by order increase the amount in (6A) for a tax year after 2001-2002.
+-- (6C) deciding whether, and by how much, to increase it, the Secretary of State shall have regard to the
+-- movement in the general level of prices. (6D) The Secretary of State shall in each tax year carry out such
+-- a review of the amount as he thinks fit. (7) The fact that the mother is being paid maternity allowance
+-- shall not be taken into consideration by any court in deciding whether to order payment of expenses
+-- incidental to the birth. The party of each duty or permission is the one the text names.
+-- src:1021 | (6B) The Secretary of State may, in relation to any tax year after 2001-2002, by order increase the amount for the time being specified in subsection (6A) above to such amount as is specified in the order.
+-- src:1022 | (6C) When deciding whether, and (if so) by how much, to increase the amount so specified the Secretary of State shall have regard to the movement, over such period as he thinks fit, in the general level of prices obtaining in Great Britain (estimated in such manner as he thinks fit).
+-- src:1023 | (6D) The Secretary of State shall in each tax year carry out such a review of the amount for the time being specified in subsection (6A) above as he thinks fit.
+@ref s 35(6B) (src:1021-1023)
+DECLARE `s 35 Party` IS ONE OF
+    `s 35(6B) the Secretary of State`
+    `s 35(7) any court`
+
+DECLARE `s 35 Act` IS ONE OF
+    `s 35(6B) increase the amount specified in subsection (6A) by order`
+    `s 35(6C) have regard to the movement in the general level of prices`
+    `s 35(6D) carry out such a review of the amount for the time being specified in subsection (6A) as he thinks fit`
+    `s 35(7) take into consideration that the mother of the child is being paid maternity allowance`
+
+-- src:1021 | (6B) The Secretary of State may, in relation to any tax year after 2001-2002, by order increase the amount for the time being specified in subsection (6A) above to such amount as is specified in the order.
+@ref s 35(6B) (src:1021)
+GIVEN year IS A `Tax year`
+GIVETH A DEONTIC `s 35 Party` `s 35 Act`
+`s 35(6B) the Secretary of State may increase the amount by order` MEANS
+    IF year's `calendar year in which it begins` AT LEAST 2002
+    THEN PARTY `s 35(6B) the Secretary of State` MAY `s 35(6B) increase the amount specified in subsection (6A) by order`
+    ELSE FULFILLED
+
+@ref s 35(6B) (src:1021)
+GIVEN year IS A `Tax year`
+GIVETH A MAYBE BOOLEAN
+`s 35(6B) an order may increase the amount for the tax year` MEANS
+    IF year's `calendar year in which it begins` AT LEAST 2002
+    THEN JUST TRUE
+    ELSE NOTHING     -- NOTHING-kind (limited by its own wording): "in relation to any tax year after 2001-2002"
+
+-- src:1022 | (6C) When deciding whether, and (if so) by how much, to increase the amount so specified the Secretary of State shall have regard to the movement, over such period as he thinks fit, in the general level of prices obtaining in Great Britain (estimated in such manner as he thinks fit).
+@ref s 35(6C) (src:1022)
+GIVEN `the Secretary of State is deciding whether, and (if so) by how much, to increase the amount` IS A BOOLEAN
+GIVETH A DEONTIC `s 35 Party` `s 35 Act`
+`s 35(6C) the Secretary of State must have regard to the movement in prices` MEANS
+    IF `the Secretary of State is deciding whether, and (if so) by how much, to increase the amount`
+    THEN PARTY `s 35(6B) the Secretary of State` MUST `s 35(6C) have regard to the movement in the general level of prices`
+    ELSE FULFILLED
+
+@ref s 35(6C) (src:1022)
+GIVEN `the Secretary of State is deciding whether, and (if so) by how much, to increase the amount` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 35(6C) the Secretary of State is required to have regard to the movement in prices` MEANS
+    IF `the Secretary of State is deciding whether, and (if so) by how much, to increase the amount`
+    THEN JUST TRUE
+    ELSE NOTHING     -- NOTHING-kind (limited by its own wording): "When deciding whether, and (if so) by how much, to increase the amount"
+
+-- The review falls "in each tax year": the duty runs from the first day of the tax year (time 0) to its last
+-- day, which is the number of days in the year, less one, after it.
+-- src:1023 | (6D) The Secretary of State shall in each tax year carry out such a review of the amount for the time being specified in subsection (6A) above as he thinks fit.
+@ref s 35(6D) (src:1023)
+GIVEN year IS A `Tax year`
+GIVETH A DEONTIC `s 35 Party` `s 35 Act`
+`s 35(6D) the Secretary of State must review the amount in the tax year` MEANS
+    PARTY `s 35(6B) the Secretary of State` MUST `s 35(6D) carry out such a review of the amount for the time being specified in subsection (6A) as he thinks fit`
+        WITHIN ((Day (Date 6 4 ((year's `calendar year in which it begins`) PLUS 1))) MINUS (Day (Date 6 4 (year's `calendar year in which it begins`))) MINUS 1)
+        HENCE FULFILLED
+        LEST BREACH
+
+@ref s 35(6D) (src:1023)
+GIVEN year IS A `Tax year`
+GIVETH A MAYBE BOOLEAN
+`s 35(6D) the Secretary of State is required to review the amount in the tax year` MEANS
+    JUST TRUE     -- the text imposes the review "in each tax year": every tax year
+
+-- src:1024 | (7) The fact that the mother of a child is being paid maternity allowance under this section shall not be taken into consideration by any court in deciding whether to order payment of expenses incidental to the birth of the child.
+@ref s 35(7) (src:1024)
+GIVETH A DEONTIC `s 35 Party` `s 35 Act`
+`s 35(7) a court may not take the mother's payment into consideration` MEANS
+    PARTY `s 35(7) any court` SHANT `s 35(7) take into consideration that the mother of the child is being paid maternity allowance`
+
+@ref s 35(7) (src:1024)
+GIVEN `the court is deciding whether to order payment of expenses incidental to the birth of the child` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 35(7) the court may take into consideration that the mother is being paid maternity allowance` MEANS
+    IF `the court is deciding whether to order payment of expenses incidental to the birth of the child`
+    THEN JUST FALSE   -- FALSE-kind (the text says no in its own words): "shall not be taken into consideration by any court in deciding whether to order payment of expenses incidental to the birth of the child"
+    ELSE NOTHING      -- NOTHING-kind (limited by its own wording): the prohibition is limited to a decision whether to order payment of expenses incidental to the birth
+
+§§ `s 35A Appropriate weekly rate of maternity allowance under section 35`
+
+-- (4) A woman's average weekly earnings are the average weekly amount, determined in accordance with
+-- regulations, of the specified payments made to her or for her benefit as an employed earner, or treated by
+-- regulations as made to her as a self-employed earner, during the specified period. The average is the
+-- regulations' result: it is an input, and is NOTHING when the regulations' figure is not supplied.
+-- src:1029 | (4) For the purposes of this section a woman’s “average weekly earnings” shall be taken to be the average weekly amount (as determined in accordance with regulations) of specified payments which—
+-- src:1030 | (a) were made to her or for her benefit as an employed earner, or
+-- src:1031 | (b) are (in accordance with regulations) to be treated as made to her or for her benefit as a self-employed earner,
+-- src:1032 | during the specified period.
+@ref s 35A(4) (src:1029-1032)
+GIVEN `the average weekly amount of the specified payments, as determined in accordance with regulations` IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+`s 35A(4) the woman's average weekly earnings in pounds` MEANS
+    `the average weekly amount of the specified payments, as determined in accordance with regulations`   -- NOTHING when not supplied: NOTHING-kind (points outside the text): "as determined in accordance with regulations"
+
+-- (5)(c) Regulations may provide for a self-employed woman to be treated as having received a payment in
+-- respect of a week (i) equal to an amount 90 per cent of which is the weekly rate prescribed under
+-- s 166(1)(b) in force on the last day of the week, if she has paid a Class 2 contribution for the week, or
+-- (ii) equal to the maternity allowance threshold in force on that day, if she could have paid but has not.
+-- src:1036 | (c) for a woman engaged in employment as a self-employed earner to be treated as having received a payment in respect of a week—
+-- src:1037 | (i) equal to an amount 90 per cent of which is equal to the weekly rate prescribed under section 166(1)(b) below that is in force on the last day of the week, if she has paid a Class 2 contribution in respect of the week, or
+-- src:1038 | (ii) equal to the maternity allowance threshold in force on that day, if she could have paid, but has not paid, such a contribution in respect of the week;
+@ref s 35A(5) (src:1036-1038)
+GIVEN `regulations under section 35A(5)(c) so provide` IS A BOOLEAN
+      `she is engaged in employment as a self-employed earner in the week` IS A BOOLEAN
+      `she has paid a Class 2 contribution in respect of the week` IS A BOOLEAN
+      `she could have paid, but has not paid, a Class 2 contribution in respect of the week` IS A BOOLEAN
+      `s 166(1)(b) the weekly rate prescribed in pounds` IS A NUMBER
+      `the last day of the week` IS A DATE
+      `the amount that an order under section 35(6B) specifies for the tax year in which that day falls` IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+`s 35A(5)(c) the payment that the woman is treated as having received in respect of the week` MEANS
+    IF `regulations under section 35A(5)(c) so provide` AND `she is engaged in employment as a self-employed earner in the week`
+    THEN (IF `she has paid a Class 2 contribution in respect of the week`
+          THEN JUST (`s 166(1)(b) the weekly rate prescribed in pounds` DIVIDED BY 90%)
+          ELSE IF `she could have paid, but has not paid, a Class 2 contribution in respect of the week`
+               THEN JUST (`s 35(6A) the maternity allowance threshold for the tax year` (`Tax year` WITH `calendar year in which it begins` IS `s 23A(8) the calendar year in which the tax year containing the date begins` `the last day of the week`) `the amount that an order under section 35(6B) specifies for the tax year in which that day falls`)
+               ELSE NOTHING)   -- NOTHING-kind (limited by its own wording): (i) and (ii) cover the woman who has paid, and the woman who could have paid but has not
+    ELSE NOTHING               -- NOTHING-kind (points outside the text): regulations "may" provide for this
+
+-- (5B) applies where a woman is treated by regulations under (5)(c)(i) as having received, for each week in the
+-- specified period, the payment in that sub-paragraph.
+-- src:1041 | (5B) This subsection applies where a woman is treated by virtue of regulations under sub-paragraph (i) of paragraph (c) of subsection (5) above as having received a payment in respect of each week in the specified period equal to the amount mentioned in that sub-paragraph.
+@ref s 35A(5B) (src:1041)
+GIVEN `the woman is treated by virtue of regulations under section 35A(5)(c)(i) as having received a payment in respect of each week in the specified period equal to the amount mentioned in that sub-paragraph` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 35A(5B) subsection (5B) applies` MEANS
+    IF `the woman is treated by virtue of regulations under section 35A(5)(c)(i) as having received a payment in respect of each week in the specified period equal to the amount mentioned in that sub-paragraph`
+    THEN JUST TRUE
+    ELSE NOTHING     -- NOTHING-kind (limited by its own wording): "This subsection applies where a woman is treated by virtue of regulations under sub-paragraph (i) ..."
+
+-- (1) The appropriate weekly rate is the lower of 90 per cent of her average weekly earnings and the weekly
+-- rate prescribed under s 166(1)(b) (seam S7). (5A) Where (5B) applies it is the prescribed rate.
+-- NOTHING from (5B) means (5B) does not apply, and the general rule is then used.
+-- src:1026 | (1) For the purposes of section 35(1) above the appropriate weekly rate is (subject to subsection (5A) below) whichever is the lower rate of—
+-- src:1027 | (a) a weekly rate equivalent to 90 per cent of the woman’s average weekly earnings; and
+-- src:1028 | (b) the weekly rate for the time being prescribed under section 166(1)(b) below.
+@ref s 35A(1) (src:1026-1028)
+GIVEN `s 35A(5B) subsection (5B) applies` IS A MAYBE BOOLEAN
+      `s 35A(4) the woman's average weekly earnings in pounds` IS A MAYBE NUMBER
+      `s 166(1)(b) the weekly rate prescribed in pounds` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`s 35A(1) the appropriate weekly rate of maternity allowance` MEANS
+    CONSIDER `s 35A(5B) subsection (5B) applies`
+    WHEN JUST TRUE THEN JUST `s 166(1)(b) the weekly rate prescribed in pounds`     -- subsection (5A)
+    OTHERWISE
+        CONSIDER `s 35A(4) the woman's average weekly earnings in pounds`
+        WHEN NOTHING THEN NOTHING     -- NOTHING-kind (points outside the text): the average is determined in accordance with regulations
+        WHEN JUST earnings THEN JUST (IF 90% TIMES earnings BELOW `s 166(1)(b) the weekly rate prescribed in pounds` THEN 90% TIMES earnings ELSE `s 166(1)(b) the weekly rate prescribed in pounds`)
+
+-- (6) "the maternity allowance threshold" has the same meaning as in s 35 (s 35(6A) above); "specified" means
+-- prescribed by or determined in accordance with regulations (the inputs of (4) and (5)).
+
+§§ `s 35B State maternity allowance for participating wife or civil partner of self-employed earner`
+
+-- (2)(a) "W working with S" is W participating in the activities S engages in as a self-employed earner,
+-- performing the same or ancillary tasks, without being employed by S or in partnership with S.
+-- src:1052 | (a) a reference to W working with S is a reference to W participating in the activities engaged in by S as a self-employed earner, performing the same tasks or ancillary tasks, without being employed by S or being in partnership with S;
+@ref s 35B(2) (src:1052)
+GIVEN `W participates in the activities engaged in by S as a self-employed earner` IS A BOOLEAN
+      `W performs the same tasks as S or ancillary tasks` IS A BOOLEAN
+      `W is employed by S` IS A BOOLEAN
+      `W is in partnership with S` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 35B(2)(a) W works with S` MEANS
+    IF `W participates in the activities engaged in by S as a self-employed earner`
+       AND `W performs the same tasks as S or ancillary tasks`
+       AND (NOT `W is employed by S`)
+       AND (NOT `W is in partnership with S`)
+    THEN JUST TRUE
+    ELSE JUST FALSE   -- FALSE-kind (the text says no in its own words): "a reference to W working with S is a reference to W participating in the activities engaged in by S ..."
+
+-- (2)(b) "W ceasing to work with S" is W ceasing to do so either permanently or until after her confinement.
+-- src:1053 | (b) a reference to W ceasing to work with S is a reference to W ceasing to do so either permanently or until after her confinement.
+@ref s 35B(2) (src:1053)
+GIVEN `W ceases to work with S permanently` IS A BOOLEAN
+      `W ceases to work with S until after her confinement` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 35B(2)(b) W ceases to work with S` MEANS
+    IF `W ceases to work with S permanently` OR `W ceases to work with S until after her confinement`
+    THEN JUST TRUE
+    ELSE JUST FALSE   -- FALSE-kind (the text says no in its own words): "a reference to W ceasing to work with S is a reference to W ceasing to do so either permanently or until after her confinement"
+
+-- (1)(b) W has worked with S, who at the time of her doing so was her spouse or civil partner and engaged in
+-- employment as a self-employed earner, for any part of the week in the case of at least 26 of the 66 weeks
+-- immediately preceding the expected week of confinement.
+-- src:1046 | (b) for any part of the week in the case of at least 26 of the 66 weeks immediately preceding the expected week of confinement, W has worked with a person (S) who at the time of her doing so—
+-- src:1047 | (i) was her spouse or civil partner, and
+-- src:1048 | (ii) was engaged in employment as a self-employed earner; and
+@ref s 35B(1)(b) (src:1046-1048)
+GIVEN `the number of those 66 weeks in which W worked with S for any part of the week, S being at the time her spouse or civil partner and engaged in employment as a self-employed earner` IS A NUMBER
+GIVETH A MAYBE BOOLEAN
+`s 35B(1)(b) W has worked with S for any part of the week in the case of at least 26 of the 66 weeks` MEANS
+    IF `the number of those 66 weeks in which W worked with S for any part of the week, S being at the time her spouse or civil partner and engaged in employment as a self-employed earner` AT LEAST 26
+    THEN JUST TRUE
+    ELSE JUST FALSE   -- FALSE-kind (the text says no in its own words): "A woman (W) shall be entitled to a maternity allowance under this section ... if— ... (b) for any part of the week in the case of at least 26 of the 66 weeks ... W has worked with a person (S)"
+
+-- (1)(c) S has paid a Class 2 contribution in respect of the 26 weeks referred to in (1)(b).
+-- src:1049 | (c) S has paid a Class 2 contribution in respect of the 26 weeks referred to in paragraph (1)(b); and
+@ref s 35B(1)(c) (src:1049)
+GIVEN `S has paid a Class 2 contribution in respect of the 26 weeks referred to in paragraph (1)(b)` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 35B(1)(c) S has paid a Class 2 contribution in respect of the 26 weeks` MEANS
+    IF `S has paid a Class 2 contribution in respect of the 26 weeks referred to in paragraph (1)(b)`
+    THEN JUST TRUE
+    ELSE JUST FALSE   -- FALSE-kind (the text says no in its own words): "A woman (W) shall be entitled to a maternity allowance under this section ... if— ... (c) S has paid a Class 2 contribution"
+
+-- (1)(d) W is not entitled to a maternity allowance under s 35, or to statutory maternity pay, for the same
+-- week in respect of the same pregnancy.
+-- src:1050 | (d) W is not entitled to a maternity allowance under section 35 above, or statutory maternity pay, for the same week in respect of the same pregnancy.
+@ref s 35B(1)(d) (src:1050)
+GIVEN `s 35(1) the woman is entitled to a maternity allowance under this section` IS A MAYBE BOOLEAN
+      `W is entitled to statutory maternity pay for the same week in respect of the same pregnancy` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 35B(1)(d) W is not entitled to a maternity allowance under section 35 or to statutory maternity pay for the same week` MEANS
+    `s 35 not` (`s 35 either` `s 35(1) the woman is entitled to a maternity allowance under this section` `W is entitled to statutory maternity pay for the same week in respect of the same pregnancy`)
+    -- JUST FALSE when she is entitled to either: FALSE-kind (the text says no in its own words): "A woman (W) shall be entitled to a maternity allowance under this section ... if— ... (d) W is not entitled to a maternity allowance under section 35 above, or statutory maternity pay"
+
+-- (1) conditions (a) to (d) together. (1)(a) is worded as in s 35(1)(a) and is answered by the same function.
+-- src:1044 | (1) A woman (W) shall be entitled to a maternity allowance under this section, at the weekly rate given by subsection (3) below, if—
+-- src:1045 | (a) W has become pregnant and has reached, or been confined before reaching, the commencement of the 11th week before the expected week of confinement; and
+-- src:1046 | (b) for any part of the week in the case of at least 26 of the 66 weeks immediately preceding the expected week of confinement, W has worked with a person (S) who at the time of her doing so—
+-- src:1047 | (i) was her spouse or civil partner, and
+-- src:1048 | (ii) was engaged in employment as a self-employed earner; and
+-- src:1049 | (c) S has paid a Class 2 contribution in respect of the 26 weeks referred to in paragraph (1)(b); and
+-- src:1050 | (d) W is not entitled to a maternity allowance under section 35 above, or statutory maternity pay, for the same week in respect of the same pregnancy.
+@ref s 35B(1) (src:1044-1050)
+GIVEN `s 35(1)(a) the woman has become pregnant and has reached, or been confined before reaching, the commencement of the 11th week before the expected week of confinement` IS A MAYBE BOOLEAN
+      `s 35B(1)(b) W has worked with S for any part of the week in the case of at least 26 of the 66 weeks` IS A MAYBE BOOLEAN
+      `s 35B(1)(c) S has paid a Class 2 contribution in respect of the 26 weeks` IS A MAYBE BOOLEAN
+      `s 35B(1)(d) W is not entitled to a maternity allowance under section 35 or to statutory maternity pay for the same week` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 35B(1) W is entitled to a maternity allowance under this section` MEANS
+    `s 35 both`
+        (`s 35 both` `s 35(1)(a) the woman has become pregnant and has reached, or been confined before reaching, the commencement of the 11th week before the expected week of confinement` `s 35B(1)(b) W has worked with S for any part of the week in the case of at least 26 of the 66 weeks`)
+        (`s 35 both` `s 35B(1)(c) S has paid a Class 2 contribution in respect of the 26 weeks` `s 35B(1)(d) W is not entitled to a maternity allowance under section 35 or to statutory maternity pay for the same week`)
+    -- JUST FALSE when a condition fails: FALSE-kind (the text says no in its own words): "A woman (W) shall be entitled to a maternity allowance under this section, at the weekly rate given by subsection (3) below, if—"
+
+-- (3) The rate for a week is 90 per cent of the maternity allowance threshold for the tax year in which the
+-- week ends.
+-- src:1054 | (3) The rate of allowance under this section for any particular week is 90 per cent of the amount of the maternity allowance threshold for the tax year in which the week ends.
+@ref s 35B(3) (src:1054)
+GIVEN `the last day of the week` IS A DATE
+      `the amount that an order under section 35(6B) specifies for the tax year in which the week ends` IS A MAYBE NUMBER
+GIVETH A NUMBER
+`s 35B(3) the weekly rate of the allowance` MEANS
+    90% TIMES (`s 35(6A) the maternity allowance threshold for the tax year` (`Tax year` WITH `calendar year in which it begins` IS `s 23A(8) the calendar year in which the tax year containing the date begins` `the last day of the week`) `the amount that an order under section 35(6B) specifies for the tax year in which the week ends`)
+
+-- (4) The allowance is payable for 14 weeks (98 days) beginning as (5), (6), (7) or (8) says.
+-- src:1055 | (4) Subject to subsections (10) and (11) below, a maternity allowance under this section shall be payable for the period of 14 weeks (“the 14-week period”) beginning as set out in subsection (5), (6), (7) or (8) below (whichever applies).
+@ref s 35B(4) (src:1055)
+GIVEN `the first day of the 14-week period` IS A DATE
+GIVETH A Period
+`s 35B(4) the 14-week period` MEANS
+    Period WITH
+        `the first day` IS `the first day of the 14-week period`
+        `the last day` IS `the first day of the 14-week period` PLUS 97
+
+-- (7) The day on which, within the period from the commencement of the fourth week before the expected week
+-- of confinement to the date of confinement, W ceases to work with S or refrains from working with S wholly
+-- or partly because of her pregnancy or confinement. If both happen in that period the earlier day is taken
+-- (fork F13 in NOTES.md).
+-- src:1058 | (7) If on a day that falls within the period beginning with the commencement of the fourth week before the expected week of confinement and ending with the date of confinement—
+-- src:1059 | (a) W ceases to work with S, or
+-- src:1060 | (b) she refrains from working with S wholly or partly because of her pregnancy or confinement,
+-- src:1061 | the 14-week period begins immediately after the day on which she ceases or refrains.
+@ref s 35B(7) (src:1058-1061)
+GIVEN `the expected week of confinement` IS A Period
+      `the date of confinement` IS A DATE
+      `the day on which W ceased to work with S` IS A MAYBE DATE
+      `the first day on which W refrained from working with S wholly or partly because of her pregnancy or confinement` IS A MAYBE DATE
+GIVETH A MAYBE DATE
+`s 35B(7) the day within the period on which W ceases or refrains` MEANS
+    CONSIDER `the day on which W ceased to work with S`
+    WHEN JUST ceased THEN
+        CONSIDER `the first day on which W refrained from working with S wholly or partly because of her pregnancy or confinement`
+        WHEN JUST refrained THEN
+            IF ((ceased AT LEAST ((`the expected week of confinement`'s `the first day`) MINUS 28)) AND (ceased AT MOST `the date of confinement`))
+            THEN (IF ((refrained AT LEAST ((`the expected week of confinement`'s `the first day`) MINUS 28)) AND (refrained AT MOST `the date of confinement`)) AND (refrained BELOW ceased)
+                  THEN JUST refrained
+                  ELSE JUST ceased)
+            ELSE (IF (refrained AT LEAST ((`the expected week of confinement`'s `the first day`) MINUS 28)) AND (refrained AT MOST `the date of confinement`)
+                  THEN JUST refrained
+                  ELSE NOTHING)
+        WHEN NOTHING THEN
+            IF (ceased AT LEAST ((`the expected week of confinement`'s `the first day`) MINUS 28)) AND (ceased AT MOST `the date of confinement`)
+            THEN JUST ceased
+            ELSE NOTHING
+    WHEN NOTHING THEN
+        CONSIDER `the first day on which W refrained from working with S wholly or partly because of her pregnancy or confinement`
+        WHEN JUST refrained THEN
+            IF (refrained AT LEAST ((`the expected week of confinement`'s `the first day`) MINUS 28)) AND (refrained AT MOST `the date of confinement`)
+            THEN JUST refrained
+            ELSE NOTHING
+        WHEN NOTHING THEN NOTHING
+
+-- (5), (6), (7), (8) The first day of the 14-week period. (5) If W ceases to work with S before the
+-- commencement of the 11th week before the expected week of confinement, the period begins with that
+-- commencement. (6) If she ceases on a day from that commencement to the end of the fifth week before the
+-- expected week, it begins the day after. (7) If she ceases or refrains from the commencement of the fourth
+-- week before the expected week to the date of confinement, it begins the day after. (8) Otherwise it begins
+-- the day after the date of confinement. When more than one of (5) to (7) applies the earlier-numbered one
+-- is taken (fork F13 in NOTES.md).
+-- src:1056 | (5) If W ceases to work with S before the commencement of the 11th week before the expected week of confinement, the 14-week period begins with the commencement of the 11th week before the expected week of confinement.
+-- src:1057 | (6) If W ceases to work with S on a day that falls within the period beginning with the commencement of the 11th week before the expected week of confinement and ending with the end of the fifth week before the expected week of confinement, the 14-week period begins immediately after that day.
+-- src:1058 | (7) If on a day that falls within the period beginning with the commencement of the fourth week before the expected week of confinement and ending with the date of confinement—
+-- src:1059 | (a) W ceases to work with S, or
+-- src:1060 | (b) she refrains from working with S wholly or partly because of her pregnancy or confinement,
+-- src:1061 | the 14-week period begins immediately after the day on which she ceases or refrains.
+-- src:1062 | (8) If none of subsections (5) to (7) above applies, the 14-week period begins immediately after the date of confinement.
+@ref s 35B(5) (src:1056-1062)
+GIVEN `the expected week of confinement` IS A Period
+      `the date of confinement` IS A DATE
+      `the day on which W ceased to work with S` IS A MAYBE DATE
+      `the first day on which W refrained from working with S wholly or partly because of her pregnancy or confinement` IS A MAYBE DATE
+GIVETH A DATE
+`s 35B(8) the first day of the 14-week period` MEANS
+    CONSIDER `the day on which W ceased to work with S`
+    WHEN JUST ceased THEN
+        IF ceased BELOW (`s 35(1)(a) the commencement of the 11th week before the expected week of confinement` `the expected week of confinement`)
+        THEN `s 35(1)(a) the commencement of the 11th week before the expected week of confinement` `the expected week of confinement`     -- (5)
+        ELSE IF ceased AT MOST ((`the expected week of confinement`'s `the first day`) MINUS 29)
+             THEN ceased PLUS 1                                                                                                          -- (6)
+             ELSE CONSIDER `s 35B(7) the day within the period on which W ceases or refrains` `the expected week of confinement` `the date of confinement` `the day on which W ceased to work with S` `the first day on which W refrained from working with S wholly or partly because of her pregnancy or confinement`
+                  WHEN JUST day THEN day PLUS 1                                                                                          -- (7)
+                  WHEN NOTHING THEN `the date of confinement` PLUS 1                                                                     -- (8)
+    OTHERWISE
+        CONSIDER `s 35B(7) the day within the period on which W ceases or refrains` `the expected week of confinement` `the date of confinement` `the day on which W ceased to work with S` `the first day on which W refrained from working with S wholly or partly because of her pregnancy or confinement`
+        WHEN JUST day THEN day PLUS 1                                                                                                    -- (7)
+        WHEN NOTHING THEN `the date of confinement` PLUS 1                                                                               -- (8)
+
+-- (9) For maternity allowance under this section, a reference to the maternity allowance period is a
+-- reference to the 14-week period.
+-- src:1063 | (9) In relation to maternity allowance under this section, a reference in a provision contained in or made under any enactment to the maternity allowance period shall be read as a reference to the 14-week period.
+@ref s 35B(9) (src:1063)
+GIVEN `the first day of the 14-week period` IS A DATE
+GIVETH A Period
+`s 35B(9) the maternity allowance period` MEANS
+    `s 35B(4) the 14-week period` `the first day of the 14-week period`

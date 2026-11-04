@@ -1,0 +1,342 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `ssc-core`
+
+-- Social Security Contributions and Benefits Act 1992 (United Kingdom), 1992 c. 4.
+-- SCHEDULE 4B: additional pension, accrual rates for the purposes of section 45(2)(d) (ssc8, layer 1).
+-- Source: ukpga-1992-4.txt, a plain-text rendering made by a converter script from legislation.gov.uk
+-- (point in time 2026-07-08). It is not the official text and nothing here is "verified against the
+-- official text".
+--
+-- The paragraph numbers are the Schedule's own, found from its cross-references ("paragraph 1",
+-- "paragraphs 8 to 10", "paragraph 13"): 1 (src:4998), 2 (5005), 3 (5009), 4 (5012), 5 (5014), 6 (5021),
+-- 7 (5025), 8 (5029), 9 (5034), 10 (5044), 11 (5051), 12 (5055), 13 (5064); see NOTES.md.
+--
+-- INPUTS (borrowed from sections outside these lines, or supplied by orders and regulations):
+--   * the pensioner's earnings factor, the surplus, the LET, the QEF and the number of relevant years are
+--     other sections' answers (ss 44, 44A and 122(1)): NUMBERs the person states;
+--   * "multiply ... in accordance with the last order under section 148 / 148AA of the Administration Act"
+--     is read as scaling by (100 + p) / 100, where p is the percentage by which that order directs the
+--     amount to be increased; p is an input (assumed, not ruled: fork F-S4B-1 in NOTES.md);
+--   * every year handed to a function is a "relevant year within section 45(2)(d)": which years those are is s 45(2)(d)'s answer.
+-- Amounts are in pounds a week.
+
+§ `Schedule 4B -- additional pension: accrual rates for the purposes of section 45(2)(d)`
+
+§§ `Nouns`
+
+-- What the Schedule reads about one relevant year.
+DECLARE `sch 4B a relevant year` HAS
+    `the pensioner's earnings factor for the year`                   IS A NUMBER
+    `the pensioner's assumed earnings factor for the year`           IS A NUMBER
+    `there is a surplus in the pensioner's earnings factor for the year` IS A BOOLEAN
+    `there would be a surplus if section 48A of the Pension Schemes Act 1993 did not apply` IS A BOOLEAN
+    `the low earnings threshold for the year`                        IS A NUMBER
+    `the qualifying earnings factor for the year`                    IS A NUMBER
+    `the number of tax weeks in the year`                            IS A NUMBER
+    `the number of those weeks in which the contracted-out condition is satisfied` IS A NUMBER
+    `the percentage by which the last order under section 148 directs the year's earnings factors to be increased` IS A NUMBER
+    `the number of relevant years in the pensioner's working life`  IS A NUMBER
+
+-- What the final relevant year fixes: the flat rate amount (paragraph 4) depends on it.
+DECLARE `sch 4B the final relevant year` HAS
+    `the final relevant year`                                IS A `Tax year`
+    `the percentage by which the last order under section 148AA directs the flat rate accrual amount to be increased` IS A NUMBER
+    `the percentage by which the last order under section 148 directs earnings factors for 2015-16 to be increased`    IS A NUMBER
+
+-- Which Part of the Schedule governs a year.
+DECLARE `sch 4B which Part governs the year` IS ONE OF
+    `sch 4B Part 2 governs the year`
+    `sch 4B Part 3 governs the year`
+    `sch 4B neither Part governs the year`
+
+§§ `Part 5 -- interpretation (paragraphs 12 and 13)`
+
+-- Paragraph 13(1)-(3): "the FRAA" is the flat rate accrual amount: £72.80 where the final relevant year is
+-- 2015-16 or an earlier tax year (but subject to section 148AA of the Administration Act), and otherwise £93.60.
+-- The two figures are the Act's own.
+-- src:5064 | (1) “The FRAA” means the flat rate accrual amount.
+-- src:5065 | (2) Where the final relevant year is 2015-16 or an earlier tax year, that amount is £72.80 for the flat rate introduction year and subsequent tax years (but subject to section 148AA of the Administration Act).
+-- src:5066 | (3) Otherwise, that amount is £93.60 for the flat rate introduction year and subsequent tax years.
+@ref sch 4B para 13 (src:5064-5066)
+GIVEN final IS A `sch 4B the final relevant year`
+GIVETH A NUMBER
+`sch 4B para 13 the flat rate accrual amount` MEANS
+    IF final's `the final relevant year`'s `calendar year in which it begins` AT MOST 2015
+    THEN 72.80
+    ELSE 93.60
+
+-- Paragraph 12: "the contracted-out condition", in relation to a tax week, is the condition that any earnings paid
+-- in that week were in respect of employment qualifying the pensioner for a pension provided by a salary
+-- related contracted-out scheme (within the meaning of the Pension Schemes Act 1993). The number of weeks in
+-- which a person meets it is a fact; whether the scheme is such a scheme is a borrowed term, asked as a fact.
+-- src:5057 | “the contracted-out condition”, in relation to a tax week, means the condition that any earnings paid to or for the benefit of the pensioner in that week in respect of employment were in respect of employment qualifying him for a pension provided by a salary related contracted-out scheme (within the meaning of the Pension Schemes Act 1993);
+@ref sch 4B para 12 (src:5057)
+GIVEN `any earnings paid in the tax week were in respect of employment qualifying the pensioner for a pension provided by a salary related contracted-out scheme` IS A BOOLEAN
+GIVETH A BOOLEAN
+`sch 4B para 12 the contracted-out condition is satisfied for the tax week` MEANS
+    `any earnings paid in the tax week were in respect of employment qualifying the pensioner for a pension provided by a salary related contracted-out scheme`
+
+§§ `Part 1 -- amount for the purposes of section 45(2)(d) (paragraph 1)`
+
+-- (1)(a)-(c): the amount is the sum of the appropriate amounts for the relevant years to which Part 2 applies and
+-- the relevant years to which Part 3 applies; (2): "if the resulting amount is a negative one" it is nil.
+-- src:4998 | (1) The amount referred to in section 45(2)(d) is to be calculated as follows—
+-- src:4999 | (a) calculate the appropriate amount for each of the relevant years within section 45(2)(d) to which Part 2 of this Schedule applies;
+-- src:5000 | (b) calculate the appropriate amount for each of the relevant years within section 45(2)(d) to which Part 3 of this Schedule applies; and
+-- src:5001 | (c) add those amounts together.
+-- src:5002 | (2) But if the resulting amount is a negative one, the amount referred to in section 45(2)(d) is nil.
+@ref sch 4B para 1 (src:4998-5002)
+GIVEN `the total of the appropriate amounts for the relevant years to which Part 2 applies` IS A NUMBER
+      `the total of the appropriate amounts for the relevant years to which Part 3 applies` IS A NUMBER
+GIVETH A NUMBER
+`sch 4B para 1 the amount referred to in section 45(2)(d)` MEANS
+    max 0
+        (`the total of the appropriate amounts for the relevant years to which Part 2 applies`
+         PLUS `the total of the appropriate amounts for the relevant years to which Part 3 applies`)
+
+§§ `Part 2 -- normal rules: employment not contracted-out (paragraphs 2 to 5)`
+
+-- Paragraph 2: this Part applies to a relevant year if (a) the contracted-out condition is not satisfied in respect of
+-- any tax week in the year AND (b) there is a surplus in the pensioner's earnings factor for the year.
+-- src:5005 | This Part applies to a relevant year if—
+-- src:5006 | (a) the contracted-out condition is not satisfied in respect of any tax week in the year; and
+-- src:5007 | (b) there is a surplus in the pensioner's earnings factor for the year.
+@ref sch 4B para 2 (src:5005-5007)
+GIVEN year IS A `sch 4B a relevant year`
+GIVETH A MAYBE BOOLEAN
+`sch 4B para 2 Part 2 applies to the relevant year` MEANS
+    IF     year's `the number of those weeks in which the contracted-out condition is satisfied` EQUALS 0
+       AND year's `there is a surplus in the pensioner's earnings factor for the year`
+    THEN JUST TRUE
+    -- FALSE-kind (the text says no in its own words): "This Part applies to a relevant year if" (reading (a): a failed limb is the text's no)
+    ELSE JUST FALSE
+
+-- Paragraph 4: the flat rate amount. (1) Final relevant year 2015-16 or earlier: the FRAA multiplied in accordance with
+-- the last order under section 148AA. (2) Otherwise: the FRAA increased by the percentage by which earnings factors for
+-- 2015-16 are directed to be increased by the last order under section 148.
+-- src:5012 | (1) Where the final relevant year is 2015-16 or an earlier tax year, the flat rate amount for the year is calculated by multiplying the FRAA in accordance with the last order under section 148AA of the Administration Act to come into force before the end of the final relevant year.
+-- src:5013 | (2) Otherwise, the flat rate amount is calculated by increasing the FRAA by the percentage by which earnings factors for 2015-16 are directed to be increased by the last order under section 148 of the Administration Act to come into force before the end of the final relevant year.
+@ref sch 4B para 4 (src:5012-5013)
+GIVEN final IS A `sch 4B the final relevant year`
+GIVETH A NUMBER
+`sch 4B para 4 the flat rate amount` MEANS
+    IF final's `the final relevant year`'s `calendar year in which it begins` AT MOST 2015
+    THEN `sch 4B para 13 the flat rate accrual amount` final
+            TIMES (1 PLUS final's `the percentage by which the last order under section 148AA directs the flat rate accrual amount to be increased` DIVIDED BY 100)
+    ELSE `sch 4B para 13 the flat rate accrual amount` final
+            TIMES (1 PLUS final's `the percentage by which the last order under section 148 directs earnings factors for 2015-16 to be increased` DIVIDED BY 100)
+
+-- Paragraph 5: the earnings-related amount: (a) take the part of the earnings factor which exceeds the LET; (b) multiply it in
+-- accordance with the last order under section 148; (c) multiply by 10%; (d) divide by 44. (The words "..." after
+-- "LET" in (a) are shown as omitted in the text.)
+-- src:5014 | The earnings-related amount for the year is calculated as follows—
+-- src:5015 | (a) take the part of the earnings factor for the year which exceeds the LET ...;
+-- src:5016 | (b) multiply that amount in accordance with the last order under section 148 of the Administration Act to come into force before the end of the final relevant year;
+-- src:5017 | (c) multiply the amount found under paragraph (b) by 10%;
+-- src:5018 | (d) divide the amount found under paragraph (c) by 44.
+@ref sch 4B para 5 (src:5014-5018)
+GIVEN year IS A `sch 4B a relevant year`
+GIVETH A NUMBER
+`sch 4B para 5 the earnings-related amount` MEANS
+    max 0 (year's `the pensioner's earnings factor for the year` MINUS year's `the low earnings threshold for the year`)
+        TIMES (1 PLUS year's `the percentage by which the last order under section 148 directs the year's earnings factors to be increased` DIVIDED BY 100)
+        TIMES 10%
+        DIVIDED BY 44
+
+-- Paragraph 3: the appropriate amount is (a) the flat rate amount if the pensioner's earnings factor does not exceed the LET, or
+-- (b) the flat rate amount plus the earnings-related amount if it exceeds the LET.
+-- src:5009 | The appropriate amount for the year for the purposes of paragraph 1 is either—
+-- src:5010 | (a) the flat rate amount for the year (if the pensioner's earnings factor for the year does not exceed the LET), or
+-- src:5011 | (b) the sum of the flat rate amount and the earnings-related amount for the year (if that earnings factor exceeds the LET).
+@ref sch 4B para 3 (src:5009-5011)
+GIVEN year IS A `sch 4B a relevant year`
+      final IS A `sch 4B the final relevant year`
+GIVETH A NUMBER
+`sch 4B para 3 the appropriate amount for the year under Part 2` MEANS
+    IF year's `the pensioner's earnings factor for the year` AT MOST year's `the low earnings threshold for the year`
+    THEN `sch 4B para 4 the flat rate amount` final
+    ELSE `sch 4B para 4 the flat rate amount` final PLUS `sch 4B para 5 the earnings-related amount` year
+
+§§ `Part 3 -- contracted-out employment (paragraphs 6 to 10)`
+
+-- Paragraph 6: this Part applies to a relevant year if (a) the contracted-out condition is satisfied in respect of each tax week in
+-- the year AND (b) there would be a surplus in the pensioner's earnings factor if section 48A of the Pension Schemes Act 1993 did
+-- not apply in relation to any tax week in the year.
+-- src:5021 | This Part applies to a relevant year if —
+-- src:5022 | (a) the contracted-out condition is satisfied in respect of each tax week in the year; and
+-- src:5023 | (b) there would be a surplus in the pensioner's earnings factor for the year if section 48A of the Pension Schemes Act 1993 did not apply in relation to any tax week falling in the year.
+@ref sch 4B para 6 (src:5021-5023)
+GIVEN year IS A `sch 4B a relevant year`
+GIVETH A MAYBE BOOLEAN
+`sch 4B para 6 Part 3 applies to the relevant year` MEANS
+    IF     year's `the number of those weeks in which the contracted-out condition is satisfied` EQUALS year's `the number of tax weeks in the year`
+       AND year's `there would be a surplus if section 48A of the Pension Schemes Act 1993 did not apply`
+    THEN JUST TRUE
+    -- FALSE-kind (the text says no in its own words): "This Part applies to a relevant year if" (reading (a): a failed limb is the text's no)
+    ELSE JUST FALSE
+
+-- Paragraph 8: amount A where the assumed earnings factor does not exceed the LET: the flat rate amount.
+-- src:5029 | (1) Amount A is calculated in accordance with this paragraph if the pensioner's assumed earnings factor for the year does not exceed the LET.
+-- src:5030 | (2) In such a case, amount A is the flat rate amount for the year.
+-- src:5031 | (3) Where the final relevant year is 2015-16 or an earlier tax year, the flat rate amount for the year is calculated by multiplying the FRAA in accordance with the last order under section 148AA of the Administration Act to come into force before the end of the final relevant year.
+-- src:5032 | (4) Otherwise, the flat rate amount is calculated by increasing the FRAA by the percentage by which earnings factors for 2015-16 are directed to be increased by the last order under section 148 of the Administration Act to come into force before the end of the final relevant year.
+@ref sch 4B para 8 (src:5029-5032)
+GIVEN final IS A `sch 4B the final relevant year`
+GIVETH A NUMBER
+`sch 4B para 8 amount A where the assumed earnings factor does not exceed the LET` MEANS
+    `sch 4B para 4 the flat rate amount` final
+
+-- Paragraph 9: amount A where the assumed earnings factor exceeds the LET: (a) the part of the assumed earnings factor above the
+-- LET; (b) multiplied in accordance with the last order under section 148; (c) times 10%; (d) divided by 44; (e) plus the flat rate amount.
+-- src:5034 | (1) Amount A is calculated in accordance with this paragraph if the pensioner's assumed earnings factor for the year exceeds the LET.
+-- src:5035 | (2) In such a case, amount A is calculated as follows—
+-- src:5036 | (a) take the part of the assumed earnings factor for the year which exceeds the LET ...;
+-- src:5037 | (b) multiply that amount in accordance with the last order under section 148 of the Administration Act to come into force before the end of the final relevant year;
+-- src:5038 | (c) multiply the amount found under paragraph (b) by 10%;
+-- src:5039 | (d) divide the amount found under paragraph (c) by 44;
+-- src:5040 | (e) add the amount found under paragraph (d) to the flat rate amount for the year.
+-- src:5041 | (3) Where the final relevant year is 2015-16 or an earlier tax year, the flat rate amount for the year is calculated by multiplying the FRAA in accordance with the last order under section 148AA of the Administration Act to come into force before the end of the final relevant year.
+-- src:5042 | (4) Otherwise, the flat rate amount is calculated by increasing the FRAA by the percentage by which earnings factors for 2015-16 are directed to be increased by the last order under section 148 of the Administration Act to come into force before the end of the final relevant year.
+@ref sch 4B para 9 (src:5034-5042)
+GIVEN year IS A `sch 4B a relevant year`
+      final IS A `sch 4B the final relevant year`
+GIVETH A NUMBER
+`sch 4B para 9 amount A where the assumed earnings factor exceeds the LET` MEANS
+    max 0 (year's `the pensioner's assumed earnings factor for the year` MINUS year's `the low earnings threshold for the year`)
+        TIMES (1 PLUS year's `the percentage by which the last order under section 148 directs the year's earnings factors to be increased` DIVIDED BY 100)
+        TIMES 10%
+        DIVIDED BY 44
+        PLUS `sch 4B para 4 the flat rate amount` final
+
+-- Paragraph 10: amount B: (a) the part of the assumed earnings factor above the QEF; (b) multiplied in accordance with the last order under
+-- section 148; (c) times 20%; (d) divided by the number of relevant years in the pensioner's working life. (The words "..." after "QEF"
+-- in (a) are shown as omitted in the text.) (2): section 44B is ignored in applying section 44(6) for the purposes of this paragraph.
+-- src:5044 | (1) Amount B is calculated as follows—
+-- src:5045 | (a) take the part of the pensioner's assumed earnings factor for the year which exceeds the QEF ...;
+-- src:5046 | (b) multiply that amount in accordance with the last order under section 148 of the Administration Act to come into force before the end of the final relevant year;
+-- src:5047 | (c) multiply the amount found under paragraph (b) by 20%;
+-- src:5048 | (d) divide the amount found under paragraph (c) by the number of relevant years in the pensioner's working life.
+-- src:5049 | (2) Section 44B is to be ignored in applying section 44(6) for the purposes of this paragraph.
+@ref sch 4B para 10 (src:5044-5049)
+GIVEN year IS A `sch 4B a relevant year`
+GIVETH A MAYBE NUMBER
+`sch 4B para 10 amount B` MEANS
+    -- NOTHING-kind (undefined term): the number of relevant years in the working life must be above nought to divide by it
+    IF year's `the number of relevant years in the pensioner's working life` AT MOST 0
+    THEN NOTHING
+    ELSE JUST (max 0 (year's `the pensioner's assumed earnings factor for the year` MINUS year's `the qualifying earnings factor for the year`)
+                    TIMES (1 PLUS year's `the percentage by which the last order under section 148 directs the year's earnings factors to be increased` DIVIDED BY 100)
+                    TIMES 20%
+                    DIVIDED BY year's `the number of relevant years in the pensioner's working life`)
+
+-- Paragraph 7: the appropriate amount is amount A minus amount B, A being found by paragraph 8 or 9 according as the assumed
+-- earnings factor does not exceed, or exceeds, the LET.
+-- src:5025 | The appropriate amount for the year for the purposes of paragraph 1 is calculated as follows—
+-- src:5026 | (a) calculate amounts A and B in accordance with paragraphs 8 to 10;
+-- src:5027 | (b) subtract amount B from amount A.
+@ref sch 4B para 7 (src:5025-5027)
+GIVEN year IS A `sch 4B a relevant year`
+      final IS A `sch 4B the final relevant year`
+GIVETH A MAYBE NUMBER
+`sch 4B para 7 the appropriate amount for the year under Part 3` MEANS
+    CONSIDER `sch 4B para 10 amount B` year
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST b THEN
+        JUST (IF year's `the pensioner's assumed earnings factor for the year` AT MOST year's `the low earnings threshold for the year`
+              THEN `sch 4B para 8 amount A where the assumed earnings factor does not exceed the LET` final MINUS b
+              ELSE `sch 4B para 9 amount A where the assumed earnings factor exceeds the LET` year final MINUS b)
+
+§§ `Which Part governs a year`
+
+-- Paragraphs 2 and 6 together: a year in which the contracted-out condition is met in some tax weeks but not in all
+-- falls under neither Part; paragraph 11 (Part 4) hands such cases to regulations.
+-- src:5051 | The Secretary of State may make regulations containing provision for finding for a tax year the amount referred to in section 45(2)(d)—
+-- src:5052 | (a) in cases where the circumstances relating to the pensioner change in the course of the year, and
+-- src:5053 | (b) in such other cases as the Secretary of State thinks fit.
+@ref sch 4B para 11 (src:5051-5053)
+GIVEN year IS A `sch 4B a relevant year`
+GIVETH A `sch 4B which Part governs the year`
+`sch 4B para 11 which Part governs the year` MEANS
+    BRANCH
+        IF `sch 4B para 2 Part 2 applies to the relevant year` year EQUALS JUST TRUE THEN `sch 4B Part 2 governs the year`
+        IF `sch 4B para 6 Part 3 applies to the relevant year` year EQUALS JUST TRUE THEN `sch 4B Part 3 governs the year`
+        OTHERWISE `sch 4B neither Part governs the year`
+
+-- The appropriate amount for the year, from whichever Part governs it.
+-- src:5009 | The appropriate amount for the year for the purposes of paragraph 1 is either—
+-- src:5010 | (a) the flat rate amount for the year (if the pensioner's earnings factor for the year does not exceed the LET), or
+-- src:5011 | (b) the sum of the flat rate amount and the earnings-related amount for the year (if that earnings factor exceeds the LET).
+@ref sch 4B para 3 (src:5009-5011)
+GIVEN year IS A `sch 4B a relevant year`
+      final IS A `sch 4B the final relevant year`
+GIVETH A MAYBE NUMBER
+`sch 4B para 3 the appropriate amount for the year` MEANS
+    CONSIDER `sch 4B para 11 which Part governs the year` year
+    WHEN `sch 4B Part 2 governs the year` THEN JUST (`sch 4B para 3 the appropriate amount for the year under Part 2` year final)
+    WHEN `sch 4B Part 3 governs the year` THEN `sch 4B para 7 the appropriate amount for the year under Part 3` year final
+    -- NOTHING-kind (points outside the text): Part 4 (paragraph 11) leaves cases where the circumstances change in the course of the year to regulations
+    WHEN `sch 4B neither Part governs the year` THEN NOTHING
+
+§§ `Part 5 -- interpretation: the terms that point at other sections (paragraph 12)`
+
+-- "the LET", in relation to a tax year, means the low earnings threshold for the year as specified in section 44A (ssc3); the
+-- amount is that section's answer, asked as an input.
+-- src:5059 | “the LET”, in relation to a tax year, means the low earnings threshold for the year as specified in section 44A above;
+@ref sch 4B para 12 (src:5059)
+GIVEN year IS A `sch 4B a relevant year`
+GIVETH A NUMBER
+`sch 4B para 12 the LET for the year` MEANS
+    year's `the low earnings threshold for the year`
+
+-- "the QEF", in relation to a tax year, means the qualifying earnings factor for the year (section 122(1), ssc5).
+-- src:5060 | “the QEF”, in relation to a tax year, means the qualifying earnings factor for the year;
+@ref sch 4B para 12 (src:5060)
+GIVEN year IS A `sch 4B a relevant year`
+GIVETH A NUMBER
+`sch 4B para 12 the QEF for the year` MEANS
+    year's `the qualifying earnings factor for the year`
+
+-- "the pensioner's assumed earnings factor", in relation to a year, means the earnings factor the pensioner would have
+-- for the year if section 48A(1) of the Pension Schemes Act 1993 did not apply in relation to any tax week in the year
+-- (another Act's rule: the amount is asked as a fact).
+-- src:5061 | “the pensioner's assumed earnings factor”, in relation to a year, means the earnings factor that the pensioner would have for the year if section 48A(1) of the Pension Schemes Act 1993 did not apply in relation to any tax week falling in the year;
+@ref sch 4B para 12 (src:5061)
+GIVEN year IS A `sch 4B a relevant year`
+GIVETH A NUMBER
+`sch 4B para 12 the pensioner's assumed earnings factor for the year` MEANS
+    year's `the pensioner's assumed earnings factor for the year`
+
+-- "relevant year" and "final relevant year" have the same meanings as in section 44 (ssc3): the number of relevant years in
+-- the working life and the final relevant year are that section's answers, asked as inputs.
+-- src:5062 | “relevant year” and “final relevant year” have the same meanings as in section 44 above;
+@ref sch 4B para 12 (src:5062)
+GIVEN year IS A `sch 4B a relevant year`
+GIVETH A NUMBER
+`sch 4B para 12 the number of relevant years in the pensioner's working life` MEANS
+    year's `the number of relevant years in the pensioner's working life`
+
+-- src:5062 | “relevant year” and “final relevant year” have the same meanings as in section 44 above;
+@ref sch 4B para 12 (src:5062)
+GIVEN final IS A `sch 4B the final relevant year`
+GIVETH A `Tax year`
+`sch 4B para 12 the final relevant year` MEANS
+    final's `the final relevant year`
+
+§§ `Paragraph 10(2) -- section 44B is ignored`
+
+-- Paragraph 10(2): section 44B is to be ignored in applying section 44(6) for the purposes of this paragraph (amount B). The
+-- rule is limited to that purpose.
+DECLARE `sch 4B para 10(2) purpose` IS ONE OF
+    `sch 4B para 10(2) calculating amount B`
+    `sch 4B para 10(2) some other purpose`
+
+-- src:5049 | (2) Section 44B is to be ignored in applying section 44(6) for the purposes of this paragraph.
+@ref sch 4B para 10(2) (src:5049)
+GIVEN purpose IS A `sch 4B para 10(2) purpose`
+GIVETH A MAYBE BOOLEAN
+`sch 4B para 10(2) section 44B is ignored in applying section 44(6)` MEANS
+    CONSIDER purpose
+    WHEN `sch 4B para 10(2) calculating amount B` THEN JUST TRUE
+    -- NOTHING-kind (limited by its own wording): "for the purposes of this paragraph"
+    WHEN `sch 4B para 10(2) some other purpose` THEN NOTHING
