@@ -848,7 +848,7 @@ Numbered findings. Each was checked against the lines of `usc07-ch51.txt` it cit
 
 ## Independent review: triage of the 32 failing assertions (snap2)
 
-On 2026-11-04 an independent reviewer ran 1,976 assertions against the merged SNAP encoding; 32 failed in this part's range (list at `~/.claude/state/ca81f332-162b-4c52-8cc3-57ed15b3f6fa/snaptriage/snap2.md`).
+On 2026-11-04 an independent reviewer ran 1,976 assertions against the merged SNAP encoding; 32 failed in this part's range (the list was a file the lead kept outside this repository and is not shipped; the failures and what became of them are in the 'Independent test pass' section of the merged `NOTES.md`).
 I read the reviewer's file and its reasoning (read-only, at the lead's direction) and answered each item against the text.
 **Four functions had defects of mine and are fixed: `s 2015(b)(2)` (185, S1.34), `s 2015(c)(1)(D)(i)` (192a, 192c, S1.42), `s 2015(d)(3)` (218) and `s 2029(g)(2)(B)` (646), seven of the 32 lines. One family (202) is a fork I have now written down. The other 24 stand, each as a reading (a) or (b) branch, an input-convention point, a unit, or a fork.**
 No ruling on readings (a) and (b) has been made. A branch changed only where the text or the brief's wording answered it, and its row says which.
