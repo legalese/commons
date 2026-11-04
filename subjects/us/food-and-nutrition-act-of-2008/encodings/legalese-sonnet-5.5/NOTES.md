@@ -359,6 +359,7 @@ The 127:
 
 **The convention is not applied one way throughout, and the parts do not agree with each other.**
 These are the pairs and families a lawyer should look at first; none has been ruled, and each is listed with the line that would move it.
+Some of these pairs are worked through, with the statute words, both functions and one input each, in [`docs/design-question-false-or-nothing.md`](../../../../../docs/design-question-false-or-nothing.md), which records the question as open.
 
 - **A predicate named for the limit against a function named for a permission.**
   A predicate named for a limit answers `JUST TRUE` inside and `JUST FALSE` past it (part 6's rule, applied by the lead to 375b and by part 3 to its own predicates); a function named for a permission is read otherwise (part 6 answers `NOTHING` past the limit; part 3's 347b answers `NOTHING` inside the cap of a bar and `JUST FALSE` past it).

@@ -418,6 +418,7 @@ Each reconciled assertion carries a `-- RECONCILED` comment quoting what the aut
 
 **The convention is not applied one way throughout, and the parts do not agree with each other.**
 These are the pairs and families a lawyer should look at first; none has been ruled, and each is listed with the line that would move it.
+Some of these pairs are worked through, with the statute words, both functions and one input each, in [`docs/design-question-false-or-nothing.md`](../../../../../docs/design-question-false-or-nothing.md), which records the question as open.
 
 - **"Where".** Parts 1, 2 and 9 answer `NOTHING` for a failed "where" ("Where in any tax week earnings are paid ...", "applies where", "Where ... the period of deferment is at least 12 months"), on the ground that "where" is not on the brief's list of grounds for `JUST FALSE` and the same text uses "if" where it means a condition; part 7 answers `JUST FALSE` for a failed "where" in eight branches of Part 12ZC and `NOTHING` for s 171B(1) (`ssc7-12zc.l4:117, 222, 397, 444, 555, 654, 786, 827`), and four of those eight are permissions ("V may vary").
   If a ruling goes against reading (a) for "where", those eight flip; if it goes the other way, the `NOTHING` branches of parts 1, 2 and 9 flip together.
