@@ -307,7 +307,7 @@ A separate agent that had not seen this encoding's `NOTES.md`, `PROGRESS.md`, br
 It then wrote `tests-independent.l4`: 1,976 assertions, 28 scenarios kept as comment lines, and ran it with the stable binary.
 By the author's count 702 scenarios carry an assertion; seven tables (706, 710, 713 and 715 to 718) are covered cell by cell in a table block.
 `ANSWERS.md` is not kept in this folder; the numbers in the comments of `tests-independent.l4` refer to it.
-The author was given the family's rule for "no" and "not said" in its brief (see "Reading a result: FALSE and NOTHING" above) and wrote its expected values by it.
+The author was given the family's rule for "no" and "not said" in its brief (see the "Reading a result" section of each part's notes, in `notes/`) and wrote its expected values by it.
 
 | step | assertions | satisfied | failed | refused |
 | --- | --- | --- | --- | --- |

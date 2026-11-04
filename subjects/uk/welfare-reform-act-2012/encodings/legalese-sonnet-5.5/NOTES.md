@@ -234,7 +234,7 @@ The quoted text is a plain-text rendering of the Act as deposited in `../../regi
 A separate agent that had not seen this encoding's `NOTES.md`, `PROGRESS.md`, briefs or tests wrote `ANSWERS.md` from the text of the Act alone before it opened any `.l4` file: 635 scenarios, spread over the four quarters of the text by line (Q1 164, Q2 181, Q3 166, Q4 124), and a sample of seat questions from every quarter.
 It then wrote `tests-independent.l4`: 480 assertions, 260 of them on 148 distinct seat questions (Q1 36, Q2 47, Q3 35, Q4 30), covering 404 of the 635 scenarios, and ran it with the stable binary.
 `ANSWERS.md` is not kept in this folder; the numbers in the comments of `tests-independent.l4` refer to it.
-The author was given the family's rule for "no" and "not said" in its brief (see "Reading a result: FALSE and NOTHING" above) and wrote its expected values by it.
+The author was given the family's rule for "no" and "not said" in its brief (see the "Reading a result" section of each part's notes, in `notes/`) and wrote its expected values by it.
 
 | step | assertions | satisfied | failed | refused |
 | --- | --- | --- | --- | --- |
