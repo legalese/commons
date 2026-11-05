@@ -26,8 +26,8 @@ Read this first after any compaction, then NOTES.md, then the text (inputs/RRA19
 COMPLETE (2026-11-05). Everything below is on disk and was last run after the final edit to any .l4 file.
 - Layer 1: rra-logic, rra-nouns, rra-part1-preliminary (ss 2, 3), rra-part2-minimum-retirement-age (ss 4, 6), rra-part3-re-employment (ss 7-7C), rra-part4-remedies (ss 8-8C), rra-part5-general (ss 9-13); tests rra-tests-part1..5.
 - Layer 2: rra-seat.l4 (77 questions), rra-cases-seat.l4 (228 assertions).
-- check.sh: 14 modules, 0 errors, 731 satisfied, 0 failed, 0 refused; main columns (1.6.108) the same for every module.
-- trace-check.py: 27 traces, 54 outcomes (2 builds), 0 problems. srcrefs.py check --refs: 0 problems. coverage.py audit: AUDIT OK (208 rows, 157 rules).
+- check.sh: 14 modules, 0 errors, 742 satisfied, 0 failed, 0 refused; main columns (1.6.108) the same for every module.
+- trace-check.py: 27 traces, 54 outcomes (2 builds), 0 problems. srcrefs.py check --refs: 0 problems. coverage.py audit: AUDIT OK (208 rows, 159 rules).
 - NOTES.md, encoding.json, SOURCE-LICENSE.md written. NOTES tables are generated: `python3 -I coverage.py write RAW NOTES.md` and `python3 -I marginal.py NOTES.md`.
 - No second (unstable) encoding was written; NOTES.md says so under "Unstable dialect" and names the main-build workaround.
 - fillquotes.py is kept: it is the quote expander (all placeholders are expanded).

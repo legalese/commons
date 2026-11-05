@@ -142,7 +142,7 @@ The kind is recorded here only; the person-facing answers do not carry it (rulin
 | s 8(5) | Minister: immunity | Employee: disability | `s 8(5) the decision of the Minister on the representation is final` |
 | s 8(6) | Employer: immunity | Employee: disability | `s 8(6) the employee may bring an action for damages in a court in respect of the unlawful dismissal` |
 | s 8(7) | State: claim | Employer: duty | `s 8(7) the employer is guilty of an offence`; `s 8(7) the penalty on conviction`; `s 8(7) the sentence is within the penalty` |
-| s 8(8) | Employee: claim | Employer: duty | `s 8(8) the amount recoverable by the court as if it were a fine` |
+| s 8(8) | Employee: claim | Employer: duty | `s 8(8) the amount recoverable by the court as if it were a fine`; `s 8(8) the court may recover the unpaid amount as if it were a fine` |
 | s 8(11) | Employee: claim | Employer: duty | `s 8(11) the power exercised by the delegate is deemed to have been exercised by the Minister` |
 | s 8A(1) | Commissioner: claim | Employee: duty | `s 8A(1) the last day on which the employee can notify the Commissioner of the re-employment dispute`; `s 8A(1) the employee notified the Commissioner in time`; `s 8A(1) the employee must notify the Commissioner in writing of the re-employment dispute` |
 | s 8A(2) | Commissioner: claim | Employee: duty | `s 8A(2) the last day on which the employee can notify the Commissioner of the dismissal`; `s 8A(2) the employee notified the Commissioner in time`; `s 8A(2) the employee must notify the Commissioner in writing of the dismissal` |
@@ -161,7 +161,7 @@ The kind is recorded here only; the person-facing answers do not carry it (rulin
 | s 8B(11) | Minister: immunity | Employee: disability | `s 8B(11) the decision of the Minister on the representation is final` |
 | s 8B(12) | Employer: immunity | Employee: disability | `s 8B(12) the employee may bring an action for damages in a court in respect of the denial of re-employment or the dismissal` |
 | s 8B(13) | State: claim | Employer: duty | `s 8B(13) the employer is guilty of an offence`; `s 8B(13) the penalty on conviction`; `s 8B(13) the sentence is within the penalty` |
-| s 8B(14) | Employee: claim | Employer: duty | `s 8B(14) the amount recoverable by the court as if it were a fine` |
+| s 8B(14) | Employee: claim | Employer: duty | `s 8B(14) the amount recoverable by the court as if it were a fine`; `s 8B(14) the court may recover the unpaid amount as if it were a fine` |
 | s 8B(17) | Employee: claim | Employer: duty | `s 8B(17) the power exercised by the delegate is deemed to have been exercised by the Minister` |
 | s 8C(1) | Employee: power | Tribunal: liability | `s 8C(1) the employee may lodge a claim for employment assistance payment with an Employment Claims Tribunal` |
 | s 8C(2) | Employer: immunity | Employee: disability | `s 8C(2) the employee may make representations under section 8B(1) in respect of that dismissal`; `s 8C(2) the employee may make representations to the Minister under section 35(3) of the Industrial Relations Act 1960` |
@@ -196,7 +196,7 @@ The coverage table was built fresh, so there were no rows before; there are 208 
 `python3 -I coverage.py audit` counts 966 non-blank lines in the 1,390-line text and finds every one in some row: 80 are running page headers and footers and 45 are marginal amendment notes (both counted automatically, inert reason 1), and the rest are in the 208 rows.
 The rows by disposition: encoded 156, fork 22, inert reason 1 (not operative) 11, inert reason 2 (machinery) 14, repealed or blank in this text 5.
 Lines 115 to 117 are in two rows, because one sentence defines two terms ("approved mediator" and "claim referral certificate").
-All 157 rules in layer 1 (every function whose name begins `s ...`) are in a row, and every encoded or fork row has a rule: the audit ends `AUDIT OK`.
+All 159 rules in layer 1 (every function whose name begins `s ...`) are in a row, and every encoded or fork row has a rule: the audit ends `AUDIT OK`.
 Nothing is a row of "out of scope" or "deferred", and no row was moved out of inert, because the table was built fresh.
 
 <!-- BEGIN coverage -->
@@ -217,7 +217,7 @@ Nothing is a row of "out of scope" or "deferred", and no row was moved out of in
 | s 2(1) "contract of service" | 125-128 | encoded | `s 2(1) "contract of service" the agreement is a contract of service` |
 | s 2(1) "eligible employee" | 130-131 | encoded | `s 2(1) "eligible employee" the person is an eligible employee` |
 | s 2(1) "employee" | 133-134 | encoded | `s 2(1) "employee" the person is an employee` |
-| s 2(1) "employer" | 136-138 | fork F4 | `s 2(1) "employer" the person is an employer` |
+| s 2(1) "employer" | 136-138 | fork F4,F22 | `s 2(1) "employer" the person is an employer` |
 | s 2(1) "employer" (a) | 139 | encoded | within `s 2(1) "employer" the person is an employer` |
 | s 2(1) "employer" (b) | 141 | encoded | within `s 2(1) "employer" the person is an employer` |
 | s 2(1) "employer" (c) | 143-144 | encoded | within `s 2(1) "employer" the person is an employer` |
@@ -246,10 +246,10 @@ Nothing is a row of "out of scope" or "deferred", and no row was moved out of in
 | s 3(4) | 258-259 | inert, reason 2 | rule-making power |
 | Part 2: headings | 266-270,272,297 | inert, reason 1 | part title, amendment note and section headings |
 | s 4(1) | 274-277 | encoded | `s 4(1) the age specified may be the prescribed minimum retirement age` |
-| s 4(2) | 281-284 | encoded | `s 4(2) the employer may dismiss the employee on the ground of age before the prescribed minimum retirement age`; `s 4(2) the employer shall not dismiss the employee on the ground of age before the prescribed minimum retirement age` |
+| s 4(2) | 281-284 | fork F23 | `s 4(2) the employer may dismiss the employee on the ground of age before the prescribed minimum retirement age`; `s 4(2) the employer shall not dismiss the employee on the ground of age before the prescribed minimum retirement age` |
 | s 4(3) | 288-291 | encoded | `s 4(3) the employer is guilty of an offence`; `s 4(3) the penalty on conviction`; `s 4(3) the sentence is within the penalty` |
 | s 5 | 295 | repealed or blank in this text | the text shows [Repealed by Act 5 of 2017] |
-| s 6 | 299-302 | encoded | `s 6 the term is void`; `s 6 the retirement age that the term leaves standing` |
+| s 6 | 299-302 | fork F22 | `s 6 the term is void`; `s 6 the retirement age that the term leaves standing` |
 | Part 3: headings | 306-308,339,458-459,501 | inert, reason 1 | part title and section headings |
 | s 7(1) | 309-310 | encoded | `s 7(1) the employee is eligible for re-employment in accordance with section 7A` |
 | s 7(1)(a) | 311 | encoded | `s 7(1)(a) the employee is born on or after 1 July 1952` |
@@ -257,13 +257,13 @@ Nothing is a row of "out of scope" or "deferred", and no row was moved out of in
 | s 7(1)(b)(i) | 320 | encoded | within `s 7(1) the employee is eligible for re-employment in accordance with section 7A` |
 | s 7(1)(b)(ii) | 322 | fork F5 | `s 7(1)(b)(ii) the employee counts as assessed by the employer as medically fit to continue working` |
 | s 7(2) | 326-329 | fork F5 | `s 7(2) the employee is presumed to be medically fit to continue working` |
-| s 7(3) | 331-335 | encoded | `s 7(3) the employer has complied with the duty to give written notice of the intention not to re-employ`; `s 7(3) the employer must give the employee written notice of the intention not to re-employ` |
+| s 7(3) | 331-335 | fork F23 | `s 7(3) the employer has complied with the duty to give written notice of the intention not to re-employ`; `s 7(3) the employer must give the employee written notice of the intention not to re-employ` |
 | s 7A(1) | 341-346 | fork F6,F7,F19 | `s 7A(1) the employer owes the employee an offer of re-employment before the specified age`; `s 7A(1) the last day on which the employer can offer re-employment`; `s 7A(1) the offer of re-employment was made before the employee attained the specified age`; `s 7A(1) the employer's obligation to re-employ the employee is on foot on the date`; `s 7A(1) the employer must offer re-employment before the employee attains the specified age` |
-| s 7A(2) | 352 | encoded | `s 7A(2) a right, privilege, obligation or liability accrued before the specified age is affected` |
+| s 7A(2) | 352 | fork F23 | `s 7A(2) a right, privilege, obligation or liability accrued before the specified age is affected` |
 | s 7A(2)(a) | 354-356 | encoded | within `s 7A(2) a right, privilege, obligation or liability accrued before the specified age is affected` |
 | s 7A(2)(b) | 358-363 | encoded | within `s 7A(2) a right, privilege, obligation or liability accrued before the specified age is affected` |
 | s 7A(2) effect | 365-366,373-374 | encoded | within `s 7A(2) a right, privilege, obligation or liability accrued before the specified age is affected` |
-| s 7A(3) | 378-379 | encoded | `s 7A(3) the employer may re-employ the employee`; `s 7A(3) the employer may terminate the employment of the employee`; `s 7A(3) the employer is deemed to have complied with section 7A(1) on the date` |
+| s 7A(3) | 378-379 | fork F23 | `s 7A(3) the employer may re-employ the employee`; `s 7A(3) the employer may terminate the employment of the employee`; `s 7A(3) the employer is deemed to have complied with section 7A(1) on the date` |
 | s 7A(3)(a) | 381-382 | encoded | within `s 7A(3) the employer may re-employ the employee`; `s 7A(3) the employer may terminate the employment of the employee`; `s 7A(3) the employer is deemed to have complied with section 7A(1) on the date` |
 | s 7A(3)(a)(i) | 384 | encoded | within `s 7A(3) the employer may re-employ the employee`; `s 7A(3) the employer may terminate the employment of the employee`; `s 7A(3) the employer is deemed to have complied with section 7A(1) on the date` |
 | s 7A(3)(a)(ii) | 386-388 | fork F20 | within `s 7A(3) the employer may re-employ the employee`; `s 7A(3) the employer may terminate the employment of the employee`; `s 7A(3) the employer is deemed to have complied with section 7A(1) on the date` |
@@ -271,12 +271,12 @@ Nothing is a row of "out of scope" or "deferred", and no row was moved out of in
 | s 7A(4) | 401-405 | encoded | `s 7A(4) the employer has complied with the requirement to enter into a re-employment contract`; `s 7A(4) the job scope and the terms and conditions may vary from the previous contract` |
 | s 7A(5) | 409-412 | encoded | `s 7A(5) the variation is based on a reasonable factor` |
 | s 7A(6) | 414-416 | fork F8,F18 | `s 7A(6) the period of employment stipulated is not less than one year` |
-| s 7A(7) | 420-423,430-431,433-434 | encoded | `s 7A(7) the period of employment may be for the shorter period` |
+| s 7A(7) | 420-423,430-431,433-434 | fork F23 | `s 7A(7) the period of employment may be for the shorter period` |
 | s 7A(8) | 440 | repealed or blank in this text | the text shows [Deleted by Act 5 of 2017] |
 | s 7A(9) | 442-445 | encoded | `s 7A(9) the eligible employee may retire or be retired` |
 | s 7A(10) | 447-450 | encoded | `s 7A(10) the employee has complied with the duty to give written notice of the intention to retire`; `s 7A(10) the eligible employee must give the employer written notice of the intention to retire` |
 | s 7A(11) | 452-454 | encoded | `s 7A(11) the age specified may be the prescribed re-employment age` |
-| s 7B(1) | 461-470 | fork F8 | `s 7B(1) the previous service is disregarded for the purpose` |
+| s 7B(1) | 461-470 | fork F8,F23 | `s 7B(1) the previous service is disregarded for the purpose` |
 | s 7B(2) | 474-483 | encoded | `s 7B(2) the previous service is reckoned for the purpose` |
 | s 7B(2)(a) | 485-487 | encoded | within `s 7B(2) the previous service is reckoned for the purpose` |
 | s 7B(2)(b) | 489-491 | encoded | within `s 7B(2) the previous service is reckoned for the purpose` |
@@ -299,10 +299,10 @@ Nothing is a row of "out of scope" or "deferred", and no row was moved out of in
 | s 7C(6)(a) | 570-572 | encoded | within `s 7C(6) the service under E1 is reckoned for the purpose` |
 | s 7C(6)(b) | 574-576 | encoded | within `s 7C(6) the service under E1 is reckoned for the purpose` |
 | s 7C(7) | 580-582 | encoded | `s 7C(7) the consent form is prima facie proof of the matters mentioned in subsection (1)(b)` |
-| s 7C(8) | 591-592 | encoded | `s 7C(8) a reference to the employer in Part 4 or 5 includes E2` |
+| s 7C(8) | 591-592 | fork F23 | `s 7C(8) a reference to the employer in Part 4 or 5 includes E2` |
 | Part 4: headings | 596-598,600,688,753-754,910-911 | inert, reason 1 | part title and section headings |
-| s 8(1) | 602-606 | fork F12,F3 | `s 8(1) the last day on which the employee can make representations to the Minister`; `s 8(1) the employee may make representations in writing to the Minister to be reinstated` |
-| s 8(2) | 608-611 | encoded | `s 8(2) the Minister may direct the Commissioner in writing to inquire and report` |
+| s 8(1) | 602-606 | fork F12,F3,F22 | `s 8(1) the last day on which the employee can make representations to the Minister`; `s 8(1) the employee may make representations in writing to the Minister to be reinstated` |
+| s 8(2) | 608-611 | fork F23 | `s 8(2) the Minister may direct the Commissioner in writing to inquire and report` |
 | s 8(3) | 613-617 | encoded | `s 8(3) the Minister may direct the employer to reinstate and pay, or to pay compensation`; `s 8(3) the employer has complied with the direction of the Minister`; `s 8(3) the employer must comply with the direction of the Minister` |
 | s 8(3)(a) | 619-623 | encoded | within `s 8(3) the Minister may direct the employer to reinstate and pay, or to pay compensation`; `s 8(3) the employer has complied with the direction of the Minister`; `s 8(3) the employer must comply with the direction of the Minister` |
 | s 8(3)(b) | 625-628 | encoded | within `s 8(3) the Minister may direct the employer to reinstate and pay, or to pay compensation`; `s 8(3) the employer has complied with the direction of the Minister`; `s 8(3) the employer must comply with the direction of the Minister` |
@@ -314,9 +314,9 @@ Nothing is a row of "out of scope" or "deferred", and no row was moved out of in
 | s 8(4)(d) | 649 | encoded | within `s 8(4) the Minister must have regard to the consideration` |
 | s 8(4)(e) | 650 | encoded | within `s 8(4) the Minister must have regard to the consideration` |
 | s 8(5) | 652-653 | encoded | `s 8(5) the decision of the Minister on the representation is final` |
-| s 8(6) | 655-657 | encoded | `s 8(6) the employee may bring an action for damages in a court in respect of the unlawful dismissal` |
+| s 8(6) | 655-657 | fork F23 | `s 8(6) the employee may bring an action for damages in a court in respect of the unlawful dismissal` |
 | s 8(7) | 659-662 | encoded | `s 8(7) the employer is guilty of an offence`; `s 8(7) the penalty on conviction`; `s 8(7) the sentence is within the penalty` |
-| s 8(8) | 664-670 | encoded | `s 8(8) the amount recoverable by the court as if it were a fine` |
+| s 8(8) | 664-670 | fork F23 | `s 8(8) the amount recoverable by the court as if it were a fine`; `s 8(8) the court may recover the unpaid amount as if it were a fine` |
 | s 8(9) | 672-674 | encoded | `s 8(9) the Minister may delegate the power` |
 | s 8(10) | 676-677 | encoded | `s 8(10) the delegation is revocable at will`; `s 8(10) the delegation prevents the Minister from exercising the power` |
 | s 8(11) | 679-681 | encoded | `s 8(11) the power exercised by the delegate is deemed to have been exercised by the Minister` |
@@ -328,16 +328,16 @@ Nothing is a row of "out of scope" or "deferred", and no row was moved out of in
 | s 8A(4)(b) | 726-729 | encoded | within `s 8A(4) the dispute is a re-employment dispute` |
 | s 8A(4)(c) | 736-738 | encoded | within `s 8A(4) the dispute is a re-employment dispute` |
 | s 8A(4)(d) | 740-742 | encoded | within `s 8A(4) the dispute is a re-employment dispute` |
-| s 8A(5) | 746-749 | encoded | `s 8A(5) the Commissioner may consult, or direct an approved mediator to consult, the employer and employee` |
+| s 8A(5) | 746-749 | fork F23 | `s 8A(5) the Commissioner may consult, or direct an approved mediator to consult, the employer and employee` |
 | s 8B(1) | 756-764 | fork F13 | `s 8B(1) the employee may make representations in writing to the Minister to be re-employed` |
 | s 8B(2) | 766-768 | fork F3 | `s 8B(2) the last day on which the employee can make representations to the Minister`; `s 8B(2) the representations were made in time`; `s 8B(2) the employee must make written representations to the Minister within one month after the conclusion of the conciliation` |
-| s 8B(3) | 770-773 | encoded | `s 8B(3) the employee may lodge a claim under section 8C(1) in relation to the matter referred to in section 8A(4)(d)`; `s 8B(3) the employee may make representations to the Minister under section 35(3) of the Industrial Relations Act 1960` |
+| s 8B(3) | 770-773 | fork F23 | `s 8B(3) the employee may lodge a claim under section 8C(1) in relation to the matter referred to in section 8A(4)(d)`; `s 8B(3) the employee may make representations to the Minister under section 35(3) of the Industrial Relations Act 1960` |
 | s 8B(3)(a) | 775-777 | encoded | within `s 8B(3) the employee may lodge a claim under section 8C(1) in relation to the matter referred to in section 8A(4)(d)`; `s 8B(3) the employee may make representations to the Minister under section 35(3) of the Industrial Relations Act 1960` |
 | s 8B(3)(b) | 784-786 | encoded | within `s 8B(3) the employee may lodge a claim under section 8C(1) in relation to the matter referred to in section 8A(4)(d)`; `s 8B(3) the employee may make representations to the Minister under section 35(3) of the Industrial Relations Act 1960` |
-| s 8B(4) | 790-793 | encoded | `s 8B(4) the employee may lodge a claim under section 8C(1) in relation to the matter referred to in section 8A(4)(d)`; `s 8B(4) the employee may make representations to the Minister under subsection (1)` |
+| s 8B(4) | 790-793 | fork F23 | `s 8B(4) the employee may lodge a claim under section 8C(1) in relation to the matter referred to in section 8A(4)(d)`; `s 8B(4) the employee may make representations to the Minister under subsection (1)` |
 | s 8B(4)(a) | 795-797 | encoded | within `s 8B(4) the employee may lodge a claim under section 8C(1) in relation to the matter referred to in section 8A(4)(d)`; `s 8B(4) the employee may make representations to the Minister under subsection (1)` |
 | s 8B(4)(b) | 799-800 | encoded | within `s 8B(4) the employee may lodge a claim under section 8C(1) in relation to the matter referred to in section 8A(4)(d)`; `s 8B(4) the employee may make representations to the Minister under subsection (1)` |
-| s 8B(5) | 804-809 | encoded | `s 8B(5) the Minister may direct the Commissioner to inquire and report` |
+| s 8B(5) | 804-809 | fork F23 | `s 8B(5) the Minister may direct the Commissioner to inquire and report` |
 | s 8B(6) | 811-816 | encoded | `s 8B(6) the Minister may direct the employer to re-employ the employee or to pay compensation`; `s 8B(6) the employer has complied with the direction of the Minister` |
 | s 8B(6)(a) | 818 | encoded | within `s 8B(6) the Minister may direct the employer to re-employ the employee or to pay compensation`; `s 8B(6) the employer has complied with the direction of the Minister` |
 | s 8B(6)(b) | 820-822 | encoded | within `s 8B(6) the Minister may direct the employer to re-employ the employee or to pay compensation`; `s 8B(6) the employer has complied with the direction of the Minister` |
@@ -345,20 +345,20 @@ Nothing is a row of "out of scope" or "deferred", and no row was moved out of in
 | s 8B(7) | 826-829,836-838 | encoded | `s 8B(7) the Minister may allow the employee to submit a mediation request and to lodge a claim for employment assistance payment` |
 | s 8B(7)(a) | 840-841 | encoded | within `s 8B(7) the Minister may allow the employee to submit a mediation request and to lodge a claim for employment assistance payment` |
 | s 8B(7)(b) | 843-847 | encoded | within `s 8B(7) the Minister may allow the employee to submit a mediation request and to lodge a claim for employment assistance payment` |
-| s 8B(8) | 851-853 | encoded | `s 8B(8) the employee submitted the mediation request within the time the Minister determined`; `s 8B(8) the employee must submit the mediation request within the time the Minister determined` |
+| s 8B(8) | 851-853 | fork F23 | `s 8B(8) the employee submitted the mediation request within the time the Minister determined`; `s 8B(8) the employee must submit the mediation request within the time the Minister determined` |
 | s 8B(9) | 857-858 | encoded | `s 8B(9) section 8C(3) applies in relation to the claim` |
 | s 8B(10) | 862-864 | encoded | `s 8B(10) the Minister may have regard to the consideration` |
 | s 8B(10)(a) | 866 | encoded | within `s 8B(10) the Minister may have regard to the consideration` |
 | s 8B(10)(b) | 868-869 | encoded | within `s 8B(10) the Minister may have regard to the consideration` |
 | s 8B(11) | 871-872 | encoded | `s 8B(11) the decision of the Minister on the representation is final` |
-| s 8B(12) | 874-877 | encoded | `s 8B(12) the employee may bring an action for damages in a court in respect of the denial of re-employment or the dismissal` |
+| s 8B(12) | 874-877 | fork F23 | `s 8B(12) the employee may bring an action for damages in a court in respect of the denial of re-employment or the dismissal` |
 | s 8B(13) | 879-882 | encoded | `s 8B(13) the employer is guilty of an offence`; `s 8B(13) the penalty on conviction`; `s 8B(13) the sentence is within the penalty` |
-| s 8B(14) | 889-895 | encoded | `s 8B(14) the amount recoverable by the court as if it were a fine` |
+| s 8B(14) | 889-895 | fork F23 | `s 8B(14) the amount recoverable by the court as if it were a fine`; `s 8B(14) the court may recover the unpaid amount as if it were a fine` |
 | s 8B(15) | 897-900 | encoded | `s 8B(15) the Minister may delegate the power` |
 | s 8B(16) | 902-904 | encoded | `s 8B(16) the delegation is revocable at will`; `s 8B(16) the delegation prevents the Minister from exercising the power` |
 | s 8B(17) | 906-908 | encoded | `s 8B(17) the power exercised by the delegate is deemed to have been exercised by the Minister` |
-| s 8C(1) | 913-918 | fork F21 | `s 8C(1) the employee may lodge a claim for employment assistance payment with an Employment Claims Tribunal` |
-| s 8C(2) | 922-925 | encoded | `s 8C(2) the employee may make representations under section 8B(1) in respect of that dismissal`; `s 8C(2) the employee may make representations to the Minister under section 35(3) of the Industrial Relations Act 1960` |
+| s 8C(1) | 913-918 | fork F21,F22 | `s 8C(1) the employee may lodge a claim for employment assistance payment with an Employment Claims Tribunal` |
+| s 8C(2) | 922-925 | fork F23 | `s 8C(2) the employee may make representations under section 8B(1) in respect of that dismissal`; `s 8C(2) the employee may make representations to the Minister under section 35(3) of the Industrial Relations Act 1960` |
 | s 8C(2)(a) | 927-928 | encoded | within `s 8C(2) the employee may make representations under section 8B(1) in respect of that dismissal`; `s 8C(2) the employee may make representations to the Minister under section 35(3) of the Industrial Relations Act 1960` |
 | s 8C(2)(b) | 935-937 | encoded | within `s 8C(2) the employee may make representations under section 8B(1) in respect of that dismissal`; `s 8C(2) the employee may make representations to the Minister under section 35(3) of the Industrial Relations Act 1960` |
 | s 8C(3) | 941-942 | encoded | `s 8C(3) the Tribunal may take the tripartite guidelines and the employer's steps to re-employ into account`; `s 8C(3) the Tribunal may order any amount of employment assistance payment that it considers just and equitable` |
@@ -368,7 +368,7 @@ Nothing is a row of "out of scope" or "deferred", and no row was moved out of in
 | s 8E | 958 | repealed or blank in this text | the text shows [Repealed by Act 21 of 2016] |
 | s 8F | 960 | repealed or blank in this text | the text shows [Repealed by Act 21 of 2016] |
 | Part 5: headings | 962-964,966,1022,1064,1076,1091,1110,1119,1135,1147,1184 | inert, reason 1 | part title and section headings |
-| s 9(1) | 967-969 | fork F14 | `s 9(1) the person has the power` |
+| s 9(1) | 967-969 | fork F14,F23 | `s 9(1) the person has the power` |
 | s 9(1)(a) | 971-976 | encoded | within `s 9(1) the person has the power` |
 | s 9(1)(b) | 978-991 | encoded | `s 9(1)(b) the person examined is bound to state truly the facts and circumstances` |
 | s 9(1)(c) | 993-996 | encoded | `s 9(1)(c) the Commissioner or investigating officer may require the employer to produce the employee and the documents` |
@@ -377,7 +377,7 @@ Nothing is a row of "out of scope" or "deferred", and no row was moved out of in
 | s 9(1)(f) | 1004-1008 | encoded | within `s 9(1) the person has the power` |
 | s 9(1)(g) | 1010-1012 | encoded | `s 9(1)(g) the Commissioner or investigating officer may require a person to produce the article` |
 | s 9(2) | 1014-1020 | encoded | `s 9(2) the person is guilty of an offence`; `s 9(2) the penalty on conviction`; `s 9(2) the sentence is within the penalty` |
-| s 9A(1) | 1024 | encoded | `s 9A(1) the person acting may summon the person`; `s 9A(1) the person summoned is legally bound to attend and to answer truthfully`; `s 9A(1) the person summoned must attend at the time and place specified in the summons` |
+| s 9A(1) | 1024 | fork F23 | `s 9A(1) the person acting may summon the person`; `s 9A(1) the person summoned is legally bound to attend and to answer truthfully`; `s 9A(1) the person summoned must attend at the time and place specified in the summons` |
 | s 9A(1)(a) | 1026-1028 | encoded | within `s 9A(1) the person acting may summon the person`; `s 9A(1) the person summoned is legally bound to attend and to answer truthfully`; `s 9A(1) the person summoned must attend at the time and place specified in the summons` |
 | s 9A(1)(b) | 1030-1039 | encoded | within `s 9A(1) the person acting may summon the person`; `s 9A(1) the person summoned is legally bound to attend and to answer truthfully`; `s 9A(1) the person summoned must attend at the time and place specified in the summons` |
 | s 9A(1)(c) | 1041-1042 | encoded | within `s 9A(1) the person acting may summon the person`; `s 9A(1) the person summoned is legally bound to attend and to answer truthfully`; `s 9A(1) the person summoned must attend at the time and place specified in the summons` |
@@ -387,17 +387,17 @@ Nothing is a row of "out of scope" or "deferred", and no row was moved out of in
 | s 9B(1) | 1066-1070 | encoded | `s 9B(1) the person is guilty of an offence`; `s 9B(1) the penalty on conviction`; `s 9B(1) the sentence is within the penalty` |
 | s 9B(2) | 1072-1074 | encoded | `s 9B(2) the person is guilty of an offence` |
 | s 9C | 1078-1089 | encoded | `s 9C the penalty on conviction`; `s 9C the sentence is within the penalty` |
-| s 10(1) | 1093-1097 | encoded | `s 10(1) the investigating officer may compound the offence`; `s 10(1) the largest sum that may be collected` |
+| s 10(1) | 1093-1097 | fork F22 | `s 10(1) the investigating officer may compound the offence`; `s 10(1) the largest sum that may be collected` |
 | s 10(1)(a) | 1099-1100 | encoded | within `s 10(1) the investigating officer may compound the offence`; `s 10(1) the largest sum that may be collected` |
 | s 10(1)(b) | 1102 | encoded | within `s 10(1) the investigating officer may compound the offence`; `s 10(1) the largest sum that may be collected` |
-| s 10(2) | 1104-1105 | encoded | `s 10(2) further proceedings may be taken against the person in respect of the offence` |
+| s 10(2) | 1104-1105 | fork F23 | `s 10(2) further proceedings may be taken against the person in respect of the offence` |
 | s 10(3) | 1107-1108 | inert, reason 2 | regulation-making power |
 | s 11(1) | 1112-1114 | encoded | `s 11(1) the person is exempt from the provision` |
 | s 11(2) | 1116-1117 | encoded | `s 11(2) the Minister may revoke the exemption, vary or revoke its conditions, or impose new conditions` |
-| s 11A | 1121-1122 | encoded | `s 11A the term is void insofar as it so purports` |
+| s 11A | 1121-1122 | fork F22 | `s 11A the term is void insofar as it so purports` |
 | s 11A(a) | 1124-1125 | encoded | within `s 11A the term is void insofar as it so purports` |
 | s 11A(b) | 1127-1128 | encoded | within `s 11A the term is void insofar as it so purports` |
-| s 11B | 1137-1143 | fork F15 | `s 11B regard may be had to the guidelines for the purpose` |
+| s 11B | 1137-1143 | fork F15,F23 | `s 11B regard may be had to the guidelines for the purpose` |
 | s 12(1) | 1149-1152 | inert, reason 2 | regulation-making power |
 | s 12(2) | 1154-1156 | inert, reason 2 | regulation-making power |
 | s 12(2)(a) | 1158-1159 | inert, reason 2 | regulation-making power |
@@ -422,12 +422,15 @@ The two rulings of 2026-11-04 come first, word for word as printed in the brief.
 
 - **E1** (bench `commons-negation-1030`; should a legal effect be one definition gathered from every section that gives it?): option B, as guidance for gathering a legal effect's routes by hand only, with no pilot run; option A (gathering by bare name) is withdrawn as a direction for the language, not deferred; option C (per-section answers) applies everywhere else; the Magna Carta pilot in the printed recommendation (chapters 2, 3, 4, 5, 37, 43, 46 and 53, with a blind second reader) is not to be run. Meng's lean, verbatim: "B but generally uncomfortable with this much magic because it takes the language from unopinionated to opinionated in ways that are hard to teach an l4 novice." Meng's note, verbatim: "Fundamentally I feel like we are trying to make the language do work that the human l4 drafter should do. Too much magic. Can’t we just decline to be this opinionated and say the programmer needs to do this thinking?" Marked 2026-11-03T23:19:02.812Z, ruled 2026-11-04. Bench: https://claude.ai/artifact/49q6k2H5xtuJqy5ttkwZ23
 - **N2** (bench `commons-negation-1030`; does a flat negative count as the text's no?): option A as printed: flat negatives count as a no, and where the text names the bearer the prohibition (`SHANT`) is derived from that answer; the Hohfeld kinds stay in each row's "Jural relations" table; option C's wording (the kind typed in the person-facing answer) comes only after a lawyer confirms the typing, decided together with the S/E choice for how "not covered" is said. Meng's lean, verbatim: "Why are we even trying to do this work? Some of these rules are metatextual and require more homoiconicity than we currently have in L4." Meng's note: none written. Marked 2026-11-03T23:22:49.971Z, ruled 2026-11-04. Bench: https://claude.ai/artifact/49q6k2H5xtuJqy5ttkwZ23
+- **Periods, "where" and scope limits** (ruled 2026-11-05): (a) a period the text fixes in its own words: outside it `JUST FALSE`; (b) a "where" condition not met: `JUST FALSE`; (c) a scope limit with no "only": `NOTHING` outside the scope. Meng's words, verbatim apart from the trigger word: "i agree with your lean: no for a and b; nothing for c." Typed 2026-11-05T04:30:00.322Z.
 
 How E1 applies here: each section's answer is encoded on its own (option C), and the seat asks them one at a time.
 Where I gathered by hand, in plain L4, it is in two places only: `s 7(1)(b)(ii)` calls `s 7(2)` because the Act supplies the employer's assessment of medical fitness by presumption (F5), and `s 2(1) "eligible employee"` calls `s 7(1)` because the definition points at it.
 Nothing proposes or uses a construct that gathers a legal effect by name.
 How N2 applies here: a flat negative ("must not", "shall not", "does not apply", "operates as a bar", "no further proceedings") answers `JUST FALSE`, and the only prohibition the text names a bearer for, section 4(2), is also written as a `SHANT` rule whose breach follows from that answer.
 The Hohfeld kinds are in the table above.
+How the ruling of 2026-11-05 applies here: every period the text fixes in its own words, and every "where", "when", "upon" or "whenever" condition, answers `JUST FALSE` outside the period or when the condition fails, for the function that asks the proposition the clause governs; a scope limit with no "only" answers `NOTHING` outside the scope.
+Where it was not plain which of (a), (b) and (c) a clause is, or what "outside" means for the question the function asks, the reading taken is in F23.
 
 ### F1. Section 2(3): a person born on 29 February (lines 233-236)
 
@@ -456,7 +459,7 @@ Tested: 31 January 2023 plus one month is 28 February 2023, and 31 August 2023 p
 Readings: (i) the definition is closed by its limbs; (ii) "includes" leaves the class open.
 Taken: (ii).
 A person who employs another under a contract of service, the Government, a statutory authority, a duly authorised agent or manager, and an owner or manager of a business in which an employee is engaged, all answer `JUST TRUE`; anyone else answers `NOTHING` (includes).
-Reviewer expected `JUST FALSE` for a person who is none of the listed kinds, weighting "means" over "includes"; open convention question (see F22).
+Ruled 2026-11-05 (c): NOTHING outside the scope.
 
 ### F5. Sections 7(1)(b)(ii) and 7(2): the employer's assessment of medical fitness (lines 322, 326-329)
 
@@ -468,9 +471,8 @@ The performance assessment of section 7(1)(b)(i) is the employer's judgment and 
 
 Readings: (i) the obligation lasts until, and not including, the day the employee attains the prescribed re-employment age; (ii) it includes that day.
 Taken: (i).
-On the day of attaining the age the rule answers `NOTHING` (limited by its own wording).
-Reviewer expected `JUST FALSE` before the specified age is attained and on or after the day the prescribed re-employment age is attained, reading "begins from ... until" as the bounds of the obligation; open convention question (see F22).
-The rule and the seat question "Is my employer's obligation to re-employ me on foot" keep `NOTHING` there.
+Before the specified age is attained, and on or after the day the prescribed re-employment age is attained, the obligation is not on foot: `JUST FALSE`, for the rule and for the seat question "Is my employer's obligation to re-employ me on foot".
+Ruled 2026-11-05 (a): JUST FALSE outside the period.
 
 ### F7. Section 7A(1): "Subject to section 7C" (lines 341-346, 503-508)
 
@@ -495,7 +497,8 @@ Taken: (i), reading (a) below.
 
 Readings: (i) at the end of the day before the agreed date, so discharged on the agreed date and after; (ii) on the day before.
 Taken: (i).
-Before the agreed date the rule answers `NOTHING`: the text says when the obligations are discharged, not that they are not discharged earlier.
+Before the agreed date the obligations are not discharged: `JUST FALSE`; the same holds for the reference to E2 in section 7C(2)(b), which runs "from that agreed date".
+Ruled 2026-11-05 (a): JUST FALSE outside the period.
 
 ### F11. Section 7C(4): "is (a) a single lump sum ... by the last day of employment; or (b) other mutually agreed arrangements" (lines 552-558)
 
@@ -513,13 +516,15 @@ Readings: (i) the age of the employee at the dismissal; (ii) at the time the rep
 Taken: (i).
 "Specified age" is the higher of the prescribed minimum retirement age and the contract's age, so the class of section 8(1) is wider than the prohibition of section 4(2); see finding 4.
 For an employee who had already attained the specified age at the dismissal ("any employee below the specified age", line 602) the function answers `NOTHING`.
-Reviewer expected `JUST FALSE`; open convention question (a clause that narrows with no "if", "only" or "unless": see F22).
+Ruled 2026-11-05 (c): NOTHING outside the scope.
 
 ### F13. Sections 8B(1) and 8B(2): "any conciliation conducted pursuant to section 8A(5)" (lines 756-768)
 
 Readings: (i) where the Commissioner conducted none, the Act does not say when representations may be made or by when (`NOTHING`); (ii) the time runs from the notice under section 8A(1) or (2); (iii) there is no deadline.
 Taken: (i).
 "At any time after" a conciliation is read as from the day it concluded, that day included; the one month of section 8B(2) runs from that day.
+Representations made before the conciliation concluded answer `JUST FALSE`.
+Ruled 2026-11-05 (a): JUST FALSE outside the period.
 
 ### F14. Section 9(1): "power to do all or any of the following" (lines 967-969)
 
@@ -543,6 +548,10 @@ Taken: (i).
 Readings: (i) both ends are inside the period; (ii) neither is.
 Taken: (i).
 The period has no end until the employer re-employs or terminates.
+Before the specified age is attained, and after the employer re-employs or terminates, the deeming does not apply: `JUST FALSE`.
+Ruled 2026-11-05 (a): JUST FALSE outside the period.
+Where subsection (2) does not apply at all, the deeming does not apply either.
+Ruled 2026-11-05 (b): JUST FALSE when the condition fails.
 
 ### F18. Section 7A(6): "not be less than one year" (lines 414-416, 420-434)
 
@@ -564,7 +573,9 @@ The last, `s 7A(9)`, still answers `NOTHING` for an employee who is not eligible
 
 Readings: (i) the permission is given "if" the employee does not satisfy section 7(1)(b); where the employee does satisfy it, the "if" is not met and the permission does not arise: `JUST FALSE`; (ii) the text gives a permission in one case and does not say that the employer may not terminate in the other: `NOTHING`.
 Taken: (i), marginal reading (a), within the case that subsection (3) speaks to (subsection (2) applies and the specified age has been attained).
-Outside that case, and where it is not known whether the employee satisfies section 7(1)(b), the answer is `NOTHING`.
+Outside that case (subsection (2) not applying, or the specified age not yet attained) the permission does not arise either: `JUST FALSE`.
+Ruled 2026-11-05 (a) and (b): JUST FALSE outside the period and when the condition fails.
+Where it is not known whether the employee satisfies section 7(1)(b), the answer is `NOTHING`.
 The answer concerns the permission this paragraph gives; it does not say whether the employer may terminate on some other lawful ground.
 
 ### F21. Section 8C(1): "may, if a claim referral certificate is issued" (lines 913-918)
@@ -573,31 +584,64 @@ Readings, for the certificate: (i) the employee "may, if a claim referral certif
 Taken: (i), for a dispute over a matter in section 8A(4)(c) or (d), marginal reading (a).
 Readings, for the matter: the clause "which relates to any matter referred to in section 8A(4)(c) or (d)" narrows who may lodge a claim and has no "if", "only" or "unless".
 Taken: `NOTHING` for a dispute over any other matter (including the denials of re-employment in section 8A(4)(a) and (b)), certificate or no certificate.
-For a dispute over the matter in section 8A(4)(a), with a certificate, reviewer expected `JUST FALSE`; open convention question (see F22).
+Ruled 2026-11-05 (c): NOTHING outside the scope.
 
-### F22. Clauses that narrow a grant, a duty or a definition with no "if", "only" or "unless": open convention question
+### F22. Scope limits with no "only" (lines as listed)
 
-The rule applied in this encoding: where a sentence names the case it speaks to and the narrowing words are none of "if", "only" or "unless" (for example "any employee below the specified age", "which relates to any matter referred to in ...", "any offence ... that is prescribed as a compoundable offence"), the answer outside that case is `NOTHING`, because the text says what the rule covers and does not say that nothing else is covered (marginal reading (b)).
-Whether such a clause counts as the text's own no is an open question about the convention, not a reading of this Act; until it is settled the answers below stand.
-For each of the following, reviewer expected `JUST FALSE`; open convention question:
+Where a sentence names the case it speaks to and the narrowing words are none of "if", "only" or "unless", and are not a period or a "where" (for example "any employee below the specified age", "which relates to any matter referred to in ...", "any offence ... that is prescribed as a compoundable offence"), the text says what the rule covers and does not say that nothing else is covered.
+Ruled 2026-11-05 (c): NOTHING outside the scope.
+The clauses, and what each answers outside its scope:
 
-- s 2(1) "employer" ("means ... and includes"): F4.
+- s 2(1) "employer" ("means ... and includes"): F4; a person who is none of the listed kinds answers `NOTHING`.
 - s 6 (lines 299-302): a term that provides for a retirement age equal to or above the prescribed minimum retirement age; the function answers `NOTHING` to "the term is void".
-- s 7A(1) (lines 343-346): the bounds "begins from ... until": F6.
-- s 8(1) (line 602): an employee who had attained the specified age at the dismissal: F12; and (line 604) a representation one day after the month: the split between section 8(1) and sections 8A and 8B(2).
-- s 8B(7)(b) (lines 843-847): the Minister not satisfied that the employer made reasonable attempts, in a dispute over the matter in section 8A(4)(b); the power answers `NOTHING`.
+- s 8(1) (line 602): an employee who had attained the specified age at the dismissal: F12.
 - s 8C(1) (lines 913-915): a dispute over a matter outside section 8A(4)(c) and (d): F21.
 - s 10(1) (lines 1093-1095): an offence that is not prescribed as compoundable, and a compounding without the Commissioner's approval; the power answers `NOTHING`.
 - s 11A (lines 1121-1128): a term that neither excludes or limits a provision nor precludes a claim, such as a more favourable term; the function answers `NOTHING` to "the term is void insofar as it so purports".
 
-### The split between section 8(1) and sections 8A and 8B(2)
+The other scope limits of the same shape (a relative clause naming the person, the thing or the occasion a rule is about) answer `NOTHING` in the same way; they are the branches tagged `limited by its own wording` in the code, and are counted under "Marginal readings for a lawyer".
 
-Section 8(1) says "he or she may, within one month of the dismissal, make representations": a grant limited by a stated period, so a late representation answers `NOTHING` (reading (b)).
-Sections 8A(1) to (3) and 8B(2) say the employee "must" notify or act "no later than" a stated time, and sections 8B(8) and 7A(10) say "must": a requirement, so a late act answers `JUST FALSE` (reading (a)).
-That is what the rule of 2026-10-29 produces for the two shapes, and it is not an inconsistency.
-Both are listed below so that a lawyer sees them together.
-For a representation made one day after the month ("within one month of the dismissal", line 604), reviewer expected `JUST FALSE`; open convention question (a grant limited by a stated period with no "if", "only" or "unless": see F22).
-The function keeps `NOTHING`.
+### F23. Applying the ruling of 2026-11-05 where a clause is not plain
+
+The ruling is applied to the proposition the text states.
+A function that asks that proposition answers `JUST FALSE` outside the period or when the "where" fails.
+A function that asks the opposite of what the clause says keeps `NOTHING` outside, as every flat negative always did: "A shall not do X if C" gives no for C and gives no yes for not-C.
+A function that asks whether a duty was complied with, and not whether the duty exists, keeps `NOTHING` when the duty's trigger fails: there is nothing to comply with, and a no would read as a breach.
+
+Ruled 2026-11-05 (a): JUST FALSE outside the period, for these functions: `s 7A(1)` on foot (and the seat question); `s 7A(3)` "at any time after" the specified age and the deeming period; `s 7A(7)` "that shorter period"; `s 7C(2)(a)` "immediately before the agreed date" and `s 7C(2)(b)` "from that agreed date"; `s 8(1)` "within one month"; `s 8B(1)` "at any time after" the conciliation; `s 8(2)` and `s 8B(5)` "before making a decision".
+The month and year periods that already answered `JUST FALSE` when late (ss 7A(1) the offer, 7A(6), 7C(4), 8A(1) to (3), 8B(2), 8B(8)) are unchanged.
+Ruled 2026-11-05 (b): JUST FALSE when the condition fails, for these functions: `s 7A(3)` "Where subsection (2) applies"; `s 7A(7)` "where the period between ... is less than one year"; `s 7B(1)` "when a re-employment contract is entered into"; `s 7C(2)(a)`, `(b)` and `(c)` "where subsection (1)(b) applies"; `s 7C(6)` "where E2 enters into a contract of service"; `s 7C(8)` "where applicable"; `s 8(8)` and `s 8B(14)` "Where any amount ... is not paid ... and the employer has been convicted"; `s 8A(5)` "Upon receipt"; `s 8B(7)` "where the Minister (a) has considered ... and (b) is satisfied"; `s 9A(1)` "Whenever"; `s 11B` "upon the publication".
+
+Readings taken where it was not plain which of (a), (b) and (c) a clause is:
+
+- "When", "upon" and "whenever" are read as "where" (ss 7B(1), 8A(5), 9A(1), 11B), and "where applicable" in section 7C(8) as "where section 7C(1)(b) applies".
+  If they are scope limits, those answers would be `NOTHING`.
+- "Before making a decision" (ss 8(2), 8B(5)) is read as a period the text fixes: once the decision is made the power has gone.
+  With no representations at all the answer stays `NOTHING`, because there is nothing to decide on.
+- "At any reasonable time" (s 9(1)) is a standard and not a period the text fixes, so an unreasonable time answers `NOTHING` (a scope limit), as "a reasonable period" is an input throughout.
+- "A power so delegated, when exercised by the delegate" (ss 8(11), 8B(17)) puts the "when" inside the subject of the deeming, so it is a scope limit and the answer stays `NOTHING`.
+- A function that returns a number (`s 8(8)` and `s 8B(14)`, the amount recoverable) has no `JUST FALSE`.
+  Each keeps its `NOTHING` and has a yes-or-no twin, `s 8(8) the court may recover the unpaid amount as if it were a fine` and `s 8B(14) the court may recover the unpaid amount as if it were a fine`, which answers the "where".
+- Section 7A(7) has two limbs: the "where" (the period between the start of re-employment and the prescribed re-employment age is less than one year) and the length ("may be for that shorter period", read as no longer than that period); either failing answers `JUST FALSE`.
+
+Kept at `NOTHING` outside, because the function asks the opposite of what the clause says:
+
+- A bar asked as "may": ss 8B(3), 8B(4), 8C(2) (the bars on the second step), 8(6) and 8B(12) (the direction bars an action for damages), 10(2) ("On payment of the sum of money, no further proceedings").
+  Inside the "where" (or the occasion the bar is of) the answer is `JUST FALSE`; outside it the Act does not say the step may be taken.
+- A prohibition asked as "may": `s 4(2)` asks whether the employer may dismiss on the ground of age before the prescribed minimum retirement age; the period is the period of the prohibition, and on or after the day the age is attained the Act does not say the employer may (finding 2).
+- A saving asked as "is affected": `s 7A(2)` ("Where ... then any right ... is not affected"); the "where" failing gives no yes to "affected".
+
+Kept at `NOTHING` when the duty's trigger fails, because the function asks about compliance: `s 7(3)` "Where an employer does not intend to re-employ ..."; `s 7A(4)`; `s 7A(6)` ("Unless otherwise agreed", F8); `s 8B(8)` "Where subsection (7) applies".
+The duties of sections 7(3) and 7A(10) are also qualified by "as far as it is reasonably practicable" and "insofar as is reasonably practicable"; where giving notice was not reasonably practicable the Act does not say what is owed, and the answer is `NOTHING` (a scope limit, (c)).
+
+Four "if" conditions on a permission or a continuity were found in the same sweep and answer `JUST FALSE` when not met, on reading (a) of the rule of 2026-10-29: `s 7A(9)` ("may retire or be retired, if he or she does not wish ..."), `s 7B(3)` ("is not broken if ..."), `s 8(3)` and `s 8B(6)` ("If, after considering any report ..., the Minister is satisfied ...").
+
+### Section 8(1) and sections 8A and 8B(2): one month
+
+Section 8(1) says "he or she may, within one month of the dismissal, make representations": a period the text fixes in its own words, so a late representation answers `JUST FALSE`.
+Ruled 2026-11-05 (a): JUST FALSE outside the period.
+Sections 8A(1) to (3) and 8B(2) say the employee "must" notify or act "no later than" a stated time, and sections 8B(8) and 7A(10) say "must": a requirement, so a late act answers `JUST FALSE` (reading (a) of the rule of 2026-10-29).
+Both shapes now give the same answer for a late act, and each is listed under its own heading below.
 
 ### Choices that are not forks (assumed, not ruled)
 
@@ -615,7 +659,7 @@ Findings, each ending "Asserted." where a case asserts it.
 3. The specified age is the higher of the prescribed minimum retirement age and the retirement age stipulated in the contract; a lower contract age is ignored (and section 6 voids it to that extent). Asserted.
 4. The class of section 8(1) ("any employee below the specified age") is wider than the prohibition of section 4(2): with a contract age of 65 and a prescribed minimum of 63, a dismissal on the ground of age at 64 is not prohibited by section 4(2) (`NOTHING`), yet the employee may ask the Minister for reinstatement under section 8(1). "Unlawfully dismissed" is not defined, so whether such a dismissal is unlawful is the employee's belief, an input. Asserted (`rra-tests-part4.l4`).
 5. The last day for the offer of re-employment is the day before the specified age is attained; an offer on the day itself is late. Asserted.
-6. The employer's obligation to re-employ runs from the day the specified age is attained up to, not including, the day the prescribed re-employment age is attained; the Act answers nothing for that day (F6). Asserted.
+6. The employer's obligation to re-employ runs from the day the specified age is attained up to, not including, the day the prescribed re-employment age is attained; before the specified age is attained, and on or after the day the prescribed re-employment age is attained, it is not on foot (F6). Asserted.
 7. Section 7A(3)(b) deems the employer to have complied with the duty to offer from the day the employee attains the specified age until the employer re-employs or terminates, and sets no limit: an employee may work on indefinitely with the deeming in force. Asserted.
 8. A re-employment period of exactly one year remaining is not "less than one year": a contract beginning on 1 January 2027 for an employee who attains the prescribed re-employment age on 1 January 2028 is outside section 7A(7), and one beginning on 2 January 2027 is inside it. Asserted.
 9. Section 7B(1) disregards earlier service but section 7B(2) reckons it for annual leave and paid sick leave, so for those two purposes "disregarded" is false; for any other purpose section 7B(2) says nothing; where the parties agreed otherwise it is not disregarded for any purpose (F8). Section 7C(6), by contrast, reckons the service under the first employer "only" for those two purposes, so any other purpose is false there. Asserted.
@@ -648,11 +692,42 @@ The rule of 2026-10-29 names two readings and asks that every branch resting on 
 I took both as the status quo.
 Reading (c) is not in that rule: it is a flag I added for a third shape I met, so that a lawyer sees it once rather than finding it.
 Fork F2 and fork F8 describe the two places it arises.
+The ruling of 2026-11-05 (fork register, beside E1 and N2) then settled three shapes: a period the text fixes in its own words and a "where" condition answer `JUST FALSE` outside, and a scope limit with no "only" answers `NOTHING` outside.
+The branches that rest on it are listed first below, and the branches that rest on the older readings after them.
 
 <!-- BEGIN marginal -->
 These counts are produced by `marginal.py` from the tags in the code, so they cannot drift from it.
 
-**Reading (a): a failed "if", an "unless" that applies, or a "must" that is not met, is the text's no (25 branches).** It covers, among others, section 7B(1) ("Unless otherwise agreed", fork F8), section 7C(4) ("the payment is (a) ... or (b)", read as naming the only two forms, fork F11), sections 7A(3)(a)(ii) and 8C(1) (a permission "if" its condition holds, forks F20 and F21), and the carry of section 7(1)'s no into section 7A(1) (fork F19). The other reading: "if A then B" does not itself say "if not A then not B", and "must" says what is required, not that its absence is a no, so each of these would answer `NOTHING`.
+**Ruled 2026-11-05: a period the text fixes in its own words, and a "where" condition, answer `JUST FALSE` outside the period or when the condition fails (25 branches).** These are not marginal: the ruling is in the fork register beside rulings E1 and N2. They are listed so that a lawyer sees every place it is used; (a) is a period, (b) is a "where" (which includes "when", "upon" and "whenever", fork F23).
+
+| Rule | File | Lines | Ruling |
+| --- | --- | --- | --- |
+| `s 7A(1) the employer's obligation to re-employ the employee is on foot on the date` | rra-part3-re-employment.l4 | 217 | (a) |
+| `s 7A(3) the employer is deemed to have complied with section 7A(1) on the date` | rra-part3-re-employment.l4 | 334, 343 | (a) |
+| `s 7C(2) E1's re-employment obligations are discharged on the date` | rra-part3-re-employment.l4 | 656 | (a) |
+| `s 7C(2) the reference to the employer includes E2 on the date` | rra-part3-re-employment.l4 | 680 | (a) |
+| `s 8(1) the employee may make representations in writing to the Minister to be reinstated` | rra-part4-remedies.l4 | 48 | (a) |
+| `s 8(2) the Minister may direct the Commissioner in writing to inquire and report` | rra-part4-remedies.l4 | 67 | (a) |
+| `s 8B(1) the employee may make representations in writing to the Minister to be re-employed` | rra-part4-remedies.l4 | 541 | (a) |
+| `s 8B(5) the Minister may direct the Commissioner to inquire and report` | rra-part4-remedies.l4 | 671 | (a) |
+| `s 7A(3) the employer is deemed to have complied with section 7A(1) on the date` | rra-part3-re-employment.l4 | 330 | (b) |
+| `s 7B(1) the previous service is disregarded for the purpose` | rra-part3-re-employment.l4 | 542 | (b) |
+| `s 7C(2) E1's re-employment obligations are discharged on the date` | rra-part3-re-employment.l4 | 645 | (b) |
+| `s 7C(2) the reference to the employer includes E2 on the date` | rra-part3-re-employment.l4 | 670 | (b) |
+| `s 7C(2) E1's re-employment obligations survive an unlawful dismissal by E1` | rra-part3-re-employment.l4 | 696 | (b) |
+| `s 7C(6) the service under E1 is reckoned for the purpose` | rra-part3-re-employment.l4 | 795 | (b) |
+| `s 7C(8) a reference to the employer in Part 4 or 5 includes E2` | rra-part3-re-employment.l4 | 829 | (b) |
+| `s 8(8) the court may recover the unpaid amount as if it were a fine` | rra-part4-remedies.l4 | 241 | (b) |
+| `s 8A(5) the Commissioner may consult, or direct an approved mediator to consult, the employer and employee` | rra-part4-remedies.l4 | 505 | (b) |
+| `s 8B(7) the Minister may allow the employee to submit a mediation request and to lodge a claim for employment assistance payment` | rra-part4-remedies.l4 | 740 | (b) |
+| `s 8B(14) the court may recover the unpaid amount as if it were a fine` | rra-part4-remedies.l4 | 903 | (b) |
+| `s 9A(1) the person acting may summon the person` | rra-part5-general.l4 | 180 | (b) |
+| `s 11B regard may be had to the guidelines for the purpose` | rra-part5-general.l4 | 463 | (b) |
+| `s 7A(3) the employer may re-employ the employee` | rra-part3-re-employment.l4 | 277 | (a) and (b) |
+| `s 7A(3) the employer may terminate the employment of the employee` | rra-part3-re-employment.l4 | 301 | (a) and (b) |
+| `s 7A(7) the period of employment may be for the shorter period` | rra-part3-re-employment.l4 | 441 | (a) and (b) |
+
+**Reading (a): a failed "if", an "unless" that applies, or a "must" that is not met, is the text's no (29 branches).** It covers, among others, section 7B(1) ("Unless otherwise agreed", fork F8), section 7C(4) ("the payment is (a) ... or (b)", read as naming the only two forms, fork F11), sections 7A(3)(a)(ii) and 8C(1) (a permission "if" its condition holds, forks F20 and F21), and the carry of section 7(1)'s no into section 7A(1) (fork F19). The other reading: "if A then B" does not itself say "if not A then not B", and "must" says what is required, not that its absence is a no, so each of these would answer `NOTHING`.
 
 | Rule | File | Lines |
 | --- | --- | --- |
@@ -664,32 +739,36 @@ These counts are produced by `marginal.py` from the tags in the code, so they ca
 | `s 7A(1) the employer owes the employee an offer of re-employment before the specified age` | rra-part3-re-employment.l4 | 150 |
 | `s 7A(1) the offer of re-employment was made before the employee attained the specified age` | rra-part3-re-employment.l4 | 180 |
 | `s 7A(1) the employer's obligation to re-employ the employee is on foot on the date` | rra-part3-re-employment.l4 | 199 |
-| `s 7A(3) the employer may terminate the employment of the employee` | rra-part3-re-employment.l4 | 301 |
-| `s 7A(4) the employer has complied with the requirement to enter into a re-employment contract` | rra-part3-re-employment.l4 | 361 |
-| `s 7A(5) the variation is based on a reasonable factor` | rra-part3-re-employment.l4 | 392 |
-| `s 7A(10) the employee has complied with the duty to give written notice of the intention to retire` | rra-part3-re-employment.l4 | 480 |
-| `s 7A(11) the age specified may be the prescribed re-employment age` | rra-part3-re-employment.l4 | 502 |
-| `s 7B(1) the previous service is disregarded for the purpose` | rra-part3-re-employment.l4 | 538 |
-| `s 7C(1) section 7A does not apply to the employer` | rra-part3-re-employment.l4 | 619 |
-| `s 7C(4) the employment assistance payment is made in a form the section names` | rra-part3-re-employment.l4 | 731 |
-| `s 7C(5) the employer has complied with the duty to take the tripartite guidelines into account` | rra-part3-re-employment.l4 | 759 |
-| `s 8(3) the employer has complied with the direction of the Minister` | rra-part4-remedies.l4 | 109 |
-| `s 8A(1) the employee notified the Commissioner in time` | rra-part4-remedies.l4 | 367 |
-| `s 8A(2) the employee notified the Commissioner in time` | rra-part4-remedies.l4 | 420 |
-| `s 8A(3) the employee submitted the mediation request in time` | rra-part4-remedies.l4 | 465 |
-| `s 8B(2) the representations were made in time` | rra-part4-remedies.l4 | 551 |
-| `s 8B(6) the employer has complied with the direction of the Minister` | rra-part4-remedies.l4 | 691 |
-| `s 8B(8) the employee submitted the mediation request within the time the Minister determined` | rra-part4-remedies.l4 | 745 |
-| `s 8C(1) the employee may lodge a claim for employment assistance payment with an Employment Claims Tribunal` | rra-part4-remedies.l4 | 951 |
+| `s 7A(3) the employer may terminate the employment of the employee` | rra-part3-re-employment.l4 | 305 |
+| `s 7A(4) the employer has complied with the requirement to enter into a re-employment contract` | rra-part3-re-employment.l4 | 365 |
+| `s 7A(5) the variation is based on a reasonable factor` | rra-part3-re-employment.l4 | 396 |
+| `s 7A(9) the eligible employee may retire or be retired` | rra-part3-re-employment.l4 | 459 |
+| `s 7A(10) the employee has complied with the duty to give written notice of the intention to retire` | rra-part3-re-employment.l4 | 488 |
+| `s 7A(11) the age specified may be the prescribed re-employment age` | rra-part3-re-employment.l4 | 510 |
+| `s 7B(1) the previous service is disregarded for the purpose` | rra-part3-re-employment.l4 | 546 |
+| `s 7B(3) the employee's continuity of employment under re-employment is not broken` | rra-part3-re-employment.l4 | 598 |
+| `s 7C(1) section 7A does not apply to the employer` | rra-part3-re-employment.l4 | 627 |
+| `s 7C(4) the employment assistance payment is made in a form the section names` | rra-part3-re-employment.l4 | 743 |
+| `s 7C(5) the employer has complied with the duty to take the tripartite guidelines into account` | rra-part3-re-employment.l4 | 771 |
+| `s 8(3) the Minister may direct the employer to reinstate and pay, or to pay compensation` | rra-part4-remedies.l4 | 97 |
+| `s 8(3) the employer has complied with the direction of the Minister` | rra-part4-remedies.l4 | 113 |
+| `s 8A(1) the employee notified the Commissioner in time` | rra-part4-remedies.l4 | 383 |
+| `s 8A(2) the employee notified the Commissioner in time` | rra-part4-remedies.l4 | 436 |
+| `s 8A(3) the employee submitted the mediation request in time` | rra-part4-remedies.l4 | 481 |
+| `s 8B(2) the representations were made in time` | rra-part4-remedies.l4 | 567 |
+| `s 8B(6) the Minister may direct the employer to re-employ the employee or to pay compensation` | rra-part4-remedies.l4 | 695 |
+| `s 8B(6) the employer has complied with the direction of the Minister` | rra-part4-remedies.l4 | 711 |
+| `s 8B(8) the employee submitted the mediation request within the time the Minister determined` | rra-part4-remedies.l4 | 765 |
+| `s 8C(1) the employee may lodge a claim for employment assistance payment with an Employment Claims Tribunal` | rra-part4-remedies.l4 | 983 |
 
 **Reading (c): the text's own contrary affirmative is read as its no (3 branches).** Section 7B(1) disregards earlier service, "subject to" section 7B(2), which reckons it for annual leave and paid sick leave, so "disregarded for annual leave" is answered `JUST FALSE`; and section 2(3) says a person is regarded as attaining an age on or after the anniversary, so a date before it answers `JUST FALSE` to "has attained" (fork F2). The other reading answers `NOTHING`: the text says what is reckoned, or when a person is regarded as attaining, and does not say what is not.
 
 | Rule | File | Lines |
 | --- | --- | --- |
 | `s 2(3) the person has attained the age on the date` | rra-part1-preliminary.l4 | 383 |
-| `s 7B(1) the previous service is disregarded for the purpose` | rra-part3-re-employment.l4 | 543, 546 |
+| `s 7B(1) the previous service is disregarded for the purpose` | rra-part3-re-employment.l4 | 551, 554 |
 
-**Reading (b): a grant or prohibition limited by its own wording does not answer no outside the limit (102 branches, over 93 rules).** Every one answers `NOTHING`. The other reading: outside the limit the text means no, so each would answer `JUST FALSE` (for a grant, "may ... if the conditions hold" would mean "may not otherwise"; for a duty or bar, "applies to X" would mean "does not apply to anyone else").
+**Reading (b): a grant or prohibition limited by its own wording does not answer no outside the limit (83 branches, over 78 rules).** Every one answers `NOTHING`. Ruled 2026-11-05 (c): a scope limit with no "only" answers `NOTHING` outside the scope; the limits that are a period or a "where" are in the ruled table above and are not counted here. The other reading, now ruled out for a scope limit: outside the limit the text means no, so each would answer `JUST FALSE` (for a grant, "may ... if the conditions hold" would mean "may not otherwise"; for a duty or bar, "applies to X" would mean "does not apply to anyone else").
 
 | Rule | File | Lines |
 | --- | --- | --- |
@@ -700,98 +779,83 @@ These counts are produced by `marginal.py` from the tags in the code, so they ca
 | `s 4(3) the sentence is within the penalty` | rra-part2-minimum-retirement-age.l4 | 110 |
 | `s 6 the term is void` | rra-part2-minimum-retirement-age.l4 | 134 |
 | `s 7(3) the employer has complied with the duty to give written notice of the intention not to re-employ` | rra-part3-re-employment.l4 | 107, 111 |
-| `s 7A(1) the employer's obligation to re-employ the employee is on foot on the date` | rra-part3-re-employment.l4 | 217 |
 | `s 7A(2) a right, privilege, obligation or liability accrued before the specified age is affected` | rra-part3-re-employment.l4 | 257 |
-| `s 7A(3) the employer may re-employ the employee` | rra-part3-re-employment.l4 | 277 |
-| `s 7A(3) the employer may terminate the employment of the employee` | rra-part3-re-employment.l4 | 304 |
-| `s 7A(3) the employer is deemed to have complied with section 7A(1) on the date` | rra-part3-re-employment.l4 | 326, 330, 339 |
-| `s 7A(4) the employer has complied with the requirement to enter into a re-employment contract` | rra-part3-re-employment.l4 | 356 |
-| `s 7A(4) the job scope and the terms and conditions may vary from the previous contract` | rra-part3-re-employment.l4 | 371 |
-| `s 7A(6) the period of employment stipulated is not less than one year` | rra-part3-re-employment.l4 | 409 |
-| `s 7A(7) the period of employment may be for the shorter period` | rra-part3-re-employment.l4 | 437 |
-| `s 7A(9) the eligible employee may retire or be retired` | rra-part3-re-employment.l4 | 454 |
-| `s 7A(10) the employee has complied with the duty to give written notice of the intention to retire` | rra-part3-re-employment.l4 | 471, 475 |
-| `s 7A(11) the age specified may be the prescribed re-employment age` | rra-part3-re-employment.l4 | 507 |
-| `s 7B(1) the previous service is disregarded for the purpose` | rra-part3-re-employment.l4 | 534 |
-| `s 7B(2) the previous service is reckoned for the purpose` | rra-part3-re-employment.l4 | 570 |
-| `s 7B(3) the employee's continuity of employment under re-employment is not broken` | rra-part3-re-employment.l4 | 590 |
-| `s 7C(2) E1's re-employment obligations are discharged on the date` | rra-part3-re-employment.l4 | 637, 648 |
-| `s 7C(2) the reference to the employer includes E2 on the date` | rra-part3-re-employment.l4 | 662, 672 |
-| `s 7C(2) E1's re-employment obligations survive an unlawful dismissal by E1` | rra-part3-re-employment.l4 | 687 |
-| `s 7C(3) the employer is not required to offer an employment assistance payment` | rra-part3-re-employment.l4 | 705 |
-| `s 7C(6) the service under E1 is reckoned for the purpose` | rra-part3-re-employment.l4 | 783 |
-| `s 7C(7) the consent form is prima facie proof of the matters mentioned in subsection (1)(b)` | rra-part3-re-employment.l4 | 805 |
-| `s 7C(8) a reference to the employer in Part 4 or 5 includes E2` | rra-part3-re-employment.l4 | 817 |
-| `s 8(1) the employee may make representations in writing to the Minister to be reinstated` | rra-part4-remedies.l4 | 48, 51 |
-| `s 8(2) the Minister may direct the Commissioner in writing to inquire and report` | rra-part4-remedies.l4 | 66 |
-| `s 8(3) the Minister may direct the employer to reinstate and pay, or to pay compensation` | rra-part4-remedies.l4 | 93 |
-| `s 8(3) the employer has complied with the direction of the Minister` | rra-part4-remedies.l4 | 104 |
-| `s 8(5) the decision of the Minister on the representation is final` | rra-part4-remedies.l4 | 156 |
-| `s 8(6) the employee may bring an action for damages in a court in respect of the unlawful dismissal` | rra-part4-remedies.l4 | 171 |
-| `s 8(7) the employer is guilty of an offence` | rra-part4-remedies.l4 | 185 |
-| `s 8(7) the sentence is within the penalty` | rra-part4-remedies.l4 | 200 |
-| `s 8(8) the amount recoverable by the court as if it were a fine` | rra-part4-remedies.l4 | 225 |
-| `s 8(9) the Minister may delegate the power` | rra-part4-remedies.l4 | 245 |
-| `s 8(10) the delegation is revocable at will` | rra-part4-remedies.l4 | 257 |
-| `s 8(10) the delegation prevents the Minister from exercising the power` | rra-part4-remedies.l4 | 269 |
-| `s 8(11) the power exercised by the delegate is deemed to have been exercised by the Minister` | rra-part4-remedies.l4 | 283 |
-| `s 8A(1) the last day on which the employee can notify the Commissioner of the re-employment dispute` | rra-part4-remedies.l4 | 351 |
-| `s 8A(1) the employee notified the Commissioner in time` | rra-part4-remedies.l4 | 361 |
-| `s 8A(2) the last day on which the employee can notify the Commissioner of the dismissal` | rra-part4-remedies.l4 | 404 |
-| `s 8A(3) the last day on which the employee can submit a mediation request` | rra-part4-remedies.l4 | 450 |
-| `s 8A(5) the Commissioner may consult, or direct an approved mediator to consult, the employer and employee` | rra-part4-remedies.l4 | 489 |
-| `s 8B(1) the employee may make representations in writing to the Minister to be re-employed` | rra-part4-remedies.l4 | 515, 525 |
-| `s 8B(3) the employee may lodge a claim under section 8C(1) in relation to the matter referred to in section 8A(4)(d)` | rra-part4-remedies.l4 | 581 |
-| `s 8B(3) the employee may make representations to the Minister under section 35(3) of the Industrial Relations Act 1960` | rra-part4-remedies.l4 | 600 |
-| `s 8B(4) the employee may lodge a claim under section 8C(1) in relation to the matter referred to in section 8A(4)(d)` | rra-part4-remedies.l4 | 619 |
-| `s 8B(4) the employee may make representations to the Minister under subsection (1)` | rra-part4-remedies.l4 | 637 |
-| `s 8B(5) the Minister may direct the Commissioner to inquire and report` | rra-part4-remedies.l4 | 654 |
-| `s 8B(6) the Minister may direct the employer to re-employ the employee or to pay compensation` | rra-part4-remedies.l4 | 675 |
-| `s 8B(6) the employer has complied with the direction of the Minister` | rra-part4-remedies.l4 | 686 |
-| `s 8B(7) the Minister may allow the employee to submit a mediation request and to lodge a claim for employment assistance payment` | rra-part4-remedies.l4 | 720 |
-| `s 8B(8) the employee submitted the mediation request within the time the Minister determined` | rra-part4-remedies.l4 | 735 |
-| `s 8B(9) section 8C(3) applies in relation to the claim` | rra-part4-remedies.l4 | 768 |
-| `s 8B(11) the decision of the Minister on the representation is final` | rra-part4-remedies.l4 | 802 |
-| `s 8B(12) the employee may bring an action for damages in a court in respect of the denial of re-employment or the dismissal` | rra-part4-remedies.l4 | 818 |
-| `s 8B(13) the employer is guilty of an offence` | rra-part4-remedies.l4 | 832 |
-| `s 8B(13) the sentence is within the penalty` | rra-part4-remedies.l4 | 847 |
-| `s 8B(14) the amount recoverable by the court as if it were a fine` | rra-part4-remedies.l4 | 871 |
-| `s 8B(15) the Minister may delegate the power` | rra-part4-remedies.l4 | 892 |
-| `s 8B(16) the delegation is revocable at will` | rra-part4-remedies.l4 | 905 |
-| `s 8B(16) the delegation prevents the Minister from exercising the power` | rra-part4-remedies.l4 | 917 |
-| `s 8B(17) the power exercised by the delegate is deemed to have been exercised by the Minister` | rra-part4-remedies.l4 | 931 |
-| `s 8C(1) the employee may lodge a claim for employment assistance payment with an Employment Claims Tribunal` | rra-part4-remedies.l4 | 954 |
-| `s 8C(2) the employee may make representations under section 8B(1) in respect of that dismissal` | rra-part4-remedies.l4 | 972 |
-| `s 8C(2) the employee may make representations to the Minister under section 35(3) of the Industrial Relations Act 1960` | rra-part4-remedies.l4 | 991 |
-| `s 8C(3) the Tribunal may take the tripartite guidelines and the employer's steps to re-employ into account` | rra-part4-remedies.l4 | 1006 |
-| `s 8C(3) the Tribunal may order any amount of employment assistance payment that it considers just and equitable` | rra-part4-remedies.l4 | 1023 |
+| `s 7A(4) the employer has complied with the requirement to enter into a re-employment contract` | rra-part3-re-employment.l4 | 360 |
+| `s 7A(4) the job scope and the terms and conditions may vary from the previous contract` | rra-part3-re-employment.l4 | 375 |
+| `s 7A(6) the period of employment stipulated is not less than one year` | rra-part3-re-employment.l4 | 413 |
+| `s 7A(9) the eligible employee may retire or be retired` | rra-part3-re-employment.l4 | 462 |
+| `s 7A(10) the employee has complied with the duty to give written notice of the intention to retire` | rra-part3-re-employment.l4 | 479, 483 |
+| `s 7A(11) the age specified may be the prescribed re-employment age` | rra-part3-re-employment.l4 | 515 |
+| `s 7B(2) the previous service is reckoned for the purpose` | rra-part3-re-employment.l4 | 578 |
+| `s 7C(2) E1's re-employment obligations survive an unlawful dismissal by E1` | rra-part3-re-employment.l4 | 699 |
+| `s 7C(3) the employer is not required to offer an employment assistance payment` | rra-part3-re-employment.l4 | 717 |
+| `s 7C(7) the consent form is prima facie proof of the matters mentioned in subsection (1)(b)` | rra-part3-re-employment.l4 | 817 |
+| `s 8(1) the employee may make representations in writing to the Minister to be reinstated` | rra-part4-remedies.l4 | 51 |
+| `s 8(2) the Minister may direct the Commissioner in writing to inquire and report` | rra-part4-remedies.l4 | 70 |
+| `s 8(3) the employer has complied with the direction of the Minister` | rra-part4-remedies.l4 | 108 |
+| `s 8(5) the decision of the Minister on the representation is final` | rra-part4-remedies.l4 | 160 |
+| `s 8(6) the employee may bring an action for damages in a court in respect of the unlawful dismissal` | rra-part4-remedies.l4 | 175 |
+| `s 8(7) the employer is guilty of an offence` | rra-part4-remedies.l4 | 189 |
+| `s 8(7) the sentence is within the penalty` | rra-part4-remedies.l4 | 204 |
+| `s 8(8) the amount recoverable by the court as if it were a fine` | rra-part4-remedies.l4 | 229 |
+| `s 8(9) the Minister may delegate the power` | rra-part4-remedies.l4 | 261 |
+| `s 8(10) the delegation is revocable at will` | rra-part4-remedies.l4 | 273 |
+| `s 8(10) the delegation prevents the Minister from exercising the power` | rra-part4-remedies.l4 | 285 |
+| `s 8(11) the power exercised by the delegate is deemed to have been exercised by the Minister` | rra-part4-remedies.l4 | 299 |
+| `s 8A(1) the last day on which the employee can notify the Commissioner of the re-employment dispute` | rra-part4-remedies.l4 | 367 |
+| `s 8A(1) the employee notified the Commissioner in time` | rra-part4-remedies.l4 | 377 |
+| `s 8A(2) the last day on which the employee can notify the Commissioner of the dismissal` | rra-part4-remedies.l4 | 420 |
+| `s 8A(3) the last day on which the employee can submit a mediation request` | rra-part4-remedies.l4 | 466 |
+| `s 8B(1) the employee may make representations in writing to the Minister to be re-employed` | rra-part4-remedies.l4 | 531 |
+| `s 8B(3) the employee may lodge a claim under section 8C(1) in relation to the matter referred to in section 8A(4)(d)` | rra-part4-remedies.l4 | 597 |
+| `s 8B(3) the employee may make representations to the Minister under section 35(3) of the Industrial Relations Act 1960` | rra-part4-remedies.l4 | 616 |
+| `s 8B(4) the employee may lodge a claim under section 8C(1) in relation to the matter referred to in section 8A(4)(d)` | rra-part4-remedies.l4 | 635 |
+| `s 8B(4) the employee may make representations to the Minister under subsection (1)` | rra-part4-remedies.l4 | 653 |
+| `s 8B(5) the Minister may direct the Commissioner to inquire and report` | rra-part4-remedies.l4 | 674 |
+| `s 8B(6) the employer has complied with the direction of the Minister` | rra-part4-remedies.l4 | 706 |
+| `s 8B(8) the employee submitted the mediation request within the time the Minister determined` | rra-part4-remedies.l4 | 755 |
+| `s 8B(9) section 8C(3) applies in relation to the claim` | rra-part4-remedies.l4 | 788 |
+| `s 8B(11) the decision of the Minister on the representation is final` | rra-part4-remedies.l4 | 822 |
+| `s 8B(12) the employee may bring an action for damages in a court in respect of the denial of re-employment or the dismissal` | rra-part4-remedies.l4 | 838 |
+| `s 8B(13) the employer is guilty of an offence` | rra-part4-remedies.l4 | 852 |
+| `s 8B(13) the sentence is within the penalty` | rra-part4-remedies.l4 | 867 |
+| `s 8B(14) the amount recoverable by the court as if it were a fine` | rra-part4-remedies.l4 | 891 |
+| `s 8B(15) the Minister may delegate the power` | rra-part4-remedies.l4 | 924 |
+| `s 8B(16) the delegation is revocable at will` | rra-part4-remedies.l4 | 937 |
+| `s 8B(16) the delegation prevents the Minister from exercising the power` | rra-part4-remedies.l4 | 949 |
+| `s 8B(17) the power exercised by the delegate is deemed to have been exercised by the Minister` | rra-part4-remedies.l4 | 963 |
+| `s 8C(1) the employee may lodge a claim for employment assistance payment with an Employment Claims Tribunal` | rra-part4-remedies.l4 | 986 |
+| `s 8C(2) the employee may make representations under section 8B(1) in respect of that dismissal` | rra-part4-remedies.l4 | 1004 |
+| `s 8C(2) the employee may make representations to the Minister under section 35(3) of the Industrial Relations Act 1960` | rra-part4-remedies.l4 | 1023 |
+| `s 8C(3) the Tribunal may take the tripartite guidelines and the employer's steps to re-employ into account` | rra-part4-remedies.l4 | 1038 |
+| `s 8C(3) the Tribunal may order any amount of employment assistance payment that it considers just and equitable` | rra-part4-remedies.l4 | 1055 |
 | `s 9(1) the person has the power` | rra-part5-general.l4 | 39, 47 |
 | `s 9(1)(b) the person examined is bound to state truly the facts and circumstances` | rra-part5-general.l4 | 74 |
 | `s 9(1)(c) the Commissioner or investigating officer may require the employer to produce the employee and the documents` | rra-part5-general.l4 | 89 |
 | `s 9(1)(g) the Commissioner or investigating officer may require a person to produce the article` | rra-part5-general.l4 | 103 |
 | `s 9(2) the person is guilty of an offence` | rra-part5-general.l4 | 121 |
 | `s 9(2) the sentence is within the penalty` | rra-part5-general.l4 | 136 |
-| `s 9A(1) the person acting may summon the person` | rra-part5-general.l4 | 175 |
-| `s 9A(1) the person summoned is legally bound to attend and to answer truthfully` | rra-part5-general.l4 | 194 |
-| `s 9A(2) the person is guilty of an offence` | rra-part5-general.l4 | 219 |
-| `s 9A(3) the Commissioner or investigating officer may report the failure to a Magistrate, who may issue a warrant to secure the attendance` | rra-part5-general.l4 | 234 |
-| `s 9B(1) the person is guilty of an offence` | rra-part5-general.l4 | 251 |
-| `s 9B(1) the sentence is within the penalty` | rra-part5-general.l4 | 266 |
-| `s 9B(2) the person is guilty of an offence` | rra-part5-general.l4 | 285 |
-| `s 9C the sentence is within the penalty` | rra-part5-general.l4 | 319 |
-| `s 10(1) the investigating officer may compound the offence` | rra-part5-general.l4 | 346 |
-| `s 10(2) further proceedings may be taken against the person in respect of the offence` | rra-part5-general.l4 | 377 |
-| `s 11(1) the person is exempt from the provision` | rra-part5-general.l4 | 394 |
-| `s 11(2) the Minister may revoke the exemption, vary or revoke its conditions, or impose new conditions` | rra-part5-general.l4 | 406 |
-| `s 11A the term is void insofar as it so purports` | rra-part5-general.l4 | 427 |
-| `s 11B regard may be had to the guidelines for the purpose` | rra-part5-general.l4 | 450 |
-| `s 13 this Act relieves the employer of the duty or liability` | rra-part5-general.l4 | 467 |
+| `s 9A(1) the person acting may summon the person` | rra-part5-general.l4 | 176, 183 |
+| `s 9A(1) the person summoned is legally bound to attend and to answer truthfully` | rra-part5-general.l4 | 202 |
+| `s 9A(2) the person is guilty of an offence` | rra-part5-general.l4 | 227 |
+| `s 9A(3) the Commissioner or investigating officer may report the failure to a Magistrate, who may issue a warrant to secure the attendance` | rra-part5-general.l4 | 242 |
+| `s 9B(1) the person is guilty of an offence` | rra-part5-general.l4 | 259 |
+| `s 9B(1) the sentence is within the penalty` | rra-part5-general.l4 | 274 |
+| `s 9B(2) the person is guilty of an offence` | rra-part5-general.l4 | 293 |
+| `s 9C the sentence is within the penalty` | rra-part5-general.l4 | 327 |
+| `s 10(1) the investigating officer may compound the offence` | rra-part5-general.l4 | 354 |
+| `s 10(2) further proceedings may be taken against the person in respect of the offence` | rra-part5-general.l4 | 385 |
+| `s 11(1) the person is exempt from the provision` | rra-part5-general.l4 | 402 |
+| `s 11(2) the Minister may revoke the exemption, vary or revoke its conditions, or impose new conditions` | rra-part5-general.l4 | 414 |
+| `s 11A the term is void insofar as it so purports` | rra-part5-general.l4 | 435 |
+| `s 11B regard may be had to the guidelines for the purpose` | rra-part5-general.l4 | 459, 466 |
+| `s 13 this Act relieves the employer of the duty or liability` | rra-part5-general.l4 | 483 |
 <!-- END marginal -->
 
 ### Reading a result: FALSE and NOTHING
 
-In this row a `JUST FALSE` is a no that the Act gives in its own words: a definition that says "means" or "has the meaning given by"; "must not", "does not", "shall not" and "operates as a bar"; a list the Act closes with "only" or "means ... any of the following"; a ceiling ("not exceeding"); and, on reading (a), a "must" or a condition ("if", "no later than") that the facts do not meet.
-A `NOTHING` is "not covered": the Act is silent, lists without closing the list ("such as", "in particular", "includes", "all or any"), leaves a term undefined, points to a Gazette notification, regulation or guideline that is not among the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit.
+In this row a `JUST FALSE` is a no that the Act gives in its own words: a definition that says "means" or "has the meaning given by"; "must not", "does not", "shall not" and "operates as a bar"; a list the Act closes with "only" or "means ... any of the following"; a ceiling ("not exceeding"); on reading (a), a "must" or a condition ("if", "no later than") that the facts do not meet; and, by the ruling of 2026-11-05, a period the Act fixes in its own words (outside it) and a "where" condition (when it fails).
+A `NOTHING` is "not covered": the Act is silent, lists without closing the list ("such as", "in particular", "includes", "all or any"), leaves a term undefined, points to a Gazette notification, regulation or guideline that is not among the sources, or narrows a grant or prohibition by a scope limit that has no "only" (ruled 2026-11-05 (c)) and the case falls outside the scope.
 Each branch says which, in a comment: `-- FALSE-kind (the text says no in its own words): "..."` or `-- NOTHING-kind (<why>)`, where `<why>` is silent, list not closed, includes, undefined term, points outside the text, or limited by its own wording.
 A caller must never turn `NOTHING` into `FALSE`: "the Act does not say the employer may" is not "the employer may not", and "the Act does not say" is not "no".
 In the seat, "I am not sure" becomes `NOTHING`, and a rule that cannot answer without that fact answers `NOTHING`; if another fact already decides the answer, it answers that.
@@ -829,9 +893,9 @@ rra-seat.l4                                    0         0       0        0     
 rra-tests-part1.l4                             0        82       0        0         0 |      0        82       0        0  same
 rra-tests-part2.l4                             0        33       0        0         0 |      0        33       0        0  same
 rra-tests-part3.l4                             0       147       0        0         0 |      0       147       0        0  same
-rra-tests-part4.l4                             0       157       0        0         0 |      0       157       0        0  same
+rra-tests-part4.l4                             0       168       0        0         0 |      0       168       0        0  same
 rra-tests-part5.l4                             0        84       0        0         0 |      0        84       0        0  same
-TOTAL (14 modules)                             0       731       0        0           |      0       731       0        0
+TOTAL (14 modules)                             0       742       0        0           |      0       742       0        0
 (a failed assertion is also an error; any other error, or any refused assertion, makes the run red)
 (target main: every module has the same four counts on the main build. That rules out a module main rejects and a difference an assertion shows; it does not see a different TRACE outcome, or any difference no assertion exercises)
 ```
@@ -848,7 +912,7 @@ I did not test whether the unstable dialect would express these deadlines better
 
 ## Before this encoding is worth relying on
 
-- A lawyer who knows Singapore employment law should read the marginal readings above and rule on readings (a), (b) and (c), and on forks F3, F6, F10, F11 and F13, which decide the dates and the cases where the answer is `NOTHING`.
+- A lawyer who knows Singapore employment law should read the marginal readings above and rule on readings (a) and (c) and on forks F3, F11, F13 and F23, which decide the dates and the places where a clause could be a period, a "where" or a scope limit.
 - The Gazette notifications that fix the ages, the regulations, the tripartite guidelines and the borrowed Acts should be added, so the ages and the borrowed terms stop being inputs.
 - The text is a converter rendering; it should be checked against the official text on Singapore Statutes Online, which this encoding does not do.
 - No domain expert has reviewed the seat's wording against what an employee would ask.
