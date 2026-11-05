@@ -14,7 +14,7 @@ Parts of the Act that address only an official (the Minister's delegation, the C
 There is no seat for an official.
 
 Layer 1 is the law, taking nobody's point of view: seven modules, each rule citing its provision with `@ref` and quoting it with `-- src:` lines produced by `srcrefs.py`.
-Layer 2 is `rra-seat.l4`, 77 questions with `@export` and `@desc`, and `rra-cases-seat.l4`, 228 assertions, at least one for every question.
+Layer 2 is `rra-seat.l4`, 77 questions with `@export` and `@desc`, and `rra-cases-seat.l4`, 230 assertions, at least one for every question.
 The seat calls the layer-1 rules and restates none of them.
 
 ## Files
@@ -319,7 +319,7 @@ Nothing is a row of "out of scope" or "deferred", and no row was moved out of in
 | s 8(8) | 664-670 | fork F23 | `s 8(8) the amount recoverable by the court as if it were a fine`; `s 8(8) the court may recover the unpaid amount as if it were a fine` |
 | s 8(9) | 672-674 | encoded | `s 8(9) the Minister may delegate the power` |
 | s 8(10) | 676-677 | encoded | `s 8(10) the delegation is revocable at will`; `s 8(10) the delegation prevents the Minister from exercising the power` |
-| s 8(11) | 679-681 | encoded | `s 8(11) the power exercised by the delegate is deemed to have been exercised by the Minister` |
+| s 8(11) | 679-681 | fork F23 | `s 8(11) the power exercised by the delegate is deemed to have been exercised by the Minister` |
 | s 8A(1) | 690-695 | fork F3 | `s 8A(1) the last day on which the employee can notify the Commissioner of the re-employment dispute`; `s 8A(1) the employee notified the Commissioner in time`; `s 8A(1) the employee must notify the Commissioner in writing of the re-employment dispute` |
 | s 8A(2) | 699-706 | fork F3 | `s 8A(2) the last day on which the employee can notify the Commissioner of the dismissal`; `s 8A(2) the employee notified the Commissioner in time`; `s 8A(2) the employee must notify the Commissioner in writing of the dismissal` |
 | s 8A(3) | 708-715 | fork F3 | `s 8A(3) the last day on which the employee can submit a mediation request`; `s 8A(3) the employee submitted the mediation request in time`; `s 8A(3) the employee must submit a mediation request to the Commissioner` |
@@ -356,7 +356,7 @@ Nothing is a row of "out of scope" or "deferred", and no row was moved out of in
 | s 8B(14) | 889-895 | fork F23 | `s 8B(14) the amount recoverable by the court as if it were a fine`; `s 8B(14) the court may recover the unpaid amount as if it were a fine` |
 | s 8B(15) | 897-900 | encoded | `s 8B(15) the Minister may delegate the power` |
 | s 8B(16) | 902-904 | encoded | `s 8B(16) the delegation is revocable at will`; `s 8B(16) the delegation prevents the Minister from exercising the power` |
-| s 8B(17) | 906-908 | encoded | `s 8B(17) the power exercised by the delegate is deemed to have been exercised by the Minister` |
+| s 8B(17) | 906-908 | fork F23 | `s 8B(17) the power exercised by the delegate is deemed to have been exercised by the Minister` |
 | s 8C(1) | 913-918 | fork F21,F22 | `s 8C(1) the employee may lodge a claim for employment assistance payment with an Employment Claims Tribunal` |
 | s 8C(2) | 922-925 | fork F23 | `s 8C(2) the employee may make representations under section 8B(1) in respect of that dismissal`; `s 8C(2) the employee may make representations to the Minister under section 35(3) of the Industrial Relations Act 1960` |
 | s 8C(2)(a) | 927-928 | encoded | within `s 8C(2) the employee may make representations under section 8B(1) in respect of that dismissal`; `s 8C(2) the employee may make representations to the Minister under section 35(3) of the Industrial Relations Act 1960` |
@@ -422,8 +422,8 @@ The two rulings of 2026-11-04 come first, word for word as printed in the brief.
 
 - **E1** (bench `commons-negation-1030`; should a legal effect be one definition gathered from every section that gives it?): option B, as guidance for gathering a legal effect's routes by hand only, with no pilot run; option A (gathering by bare name) is withdrawn as a direction for the language, not deferred; option C (per-section answers) applies everywhere else; the Magna Carta pilot in the printed recommendation (chapters 2, 3, 4, 5, 37, 43, 46 and 53, with a blind second reader) is not to be run. Meng's lean, verbatim: "B but generally uncomfortable with this much magic because it takes the language from unopinionated to opinionated in ways that are hard to teach an l4 novice." Meng's note, verbatim: "Fundamentally I feel like we are trying to make the language do work that the human l4 drafter should do. Too much magic. Can’t we just decline to be this opinionated and say the programmer needs to do this thinking?" Marked 2026-11-03T23:19:02.812Z, ruled 2026-11-04. Bench: https://claude.ai/artifact/49q6k2H5xtuJqy5ttkwZ23
 - **N2** (bench `commons-negation-1030`; does a flat negative count as the text's no?): option A as printed: flat negatives count as a no, and where the text names the bearer the prohibition (`SHANT`) is derived from that answer; the Hohfeld kinds stay in each row's "Jural relations" table; option C's wording (the kind typed in the person-facing answer) comes only after a lawyer confirms the typing, decided together with the S/E choice for how "not covered" is said. Meng's lean, verbatim: "Why are we even trying to do this work? Some of these rules are metatextual and require more homoiconicity than we currently have in L4." Meng's note: none written. Marked 2026-11-03T23:22:49.971Z, ruled 2026-11-04. Bench: https://claude.ai/artifact/49q6k2H5xtuJqy5ttkwZ23
-- **Periods, "where" and scope limits** (a question raised on 2026-11-05 while checking an encoding of the Retirement and Re-employment Act 1993, not a bench): (a) a period the text fixes in its own words ("within one month", "begins from ... until the employee attains the age", "on the last day of employment"): outside the period the answer is `JUST FALSE`; (b) a "where ..." condition: when it fails the answer is `JUST FALSE`; (c) a scope limit with no "only" (for example "below" the minimum age): outside the scope the answer is `NOTHING`. Meng's words, verbatim apart from the trigger word that ended the message: "i agree with your lean: no for a and b; nothing for c." Typed 2026-11-05T04:30:00.322Z, ruled 2026-11-05.
 - **Delegated definitions, defences and "until" bars** (questions raised on 2026-11-05 while checking encodings of the Proceeds of Crime Act 2002, the Terrorism Act 2000 and the Singapore Sale of Goods Act 1979, not a bench): (a) a definition the text itself hands to a list ("Schedule 9 has effect for determining what is a business in the regulated sector"): when no head in the list holds, the answer is `JUST FALSE`; a bare list with no such hand-off still answers `NOTHING`; (b) "it is a defence ... to prove that X": when X is not proved, the answer is `JUST FALSE` for that provision's defence, worded "this section gives no defence on these facts" and never "no defence at all"; (c) "when", "upon" and "whenever" count as "where" under rule (b) of the periods ruling above; (d) "the property does not pass until X": encode the bar ("the property cannot yet pass": `JUST TRUE` before X, `JUST FALSE` after X) and never claim that the property has passed. Meng approved these four readings as put to him by the general-manager session, in the word NOTHINGBURGER; his note on (d), verbatim apart from the bracket and the trigger word that ended the message: "in the case of Q5 [the "until" bar] i hope we are using the deontic mechanisms to examine a trace." The note is a request about how (d) is modelled, not part of the ruling. Typed 2026-11-05T06:04:54.553Z, ruled 2026-11-05.
+- **Periods, "where" and scope limits** (a question raised on 2026-11-05 while checking an encoding of the Retirement and Re-employment Act 1993, not a bench): (a) a period the text fixes in its own words ("within one month", "begins from ... until the employee attains the age", "on the last day of employment"): outside the period the answer is `JUST FALSE`; (b) a "where ..." condition: when it fails the answer is `JUST FALSE`; (c) a scope limit with no "only" (for example "below" the minimum age): outside the scope the answer is `NOTHING`. Meng's words, verbatim apart from the trigger word that ended the message: "i agree with your lean: no for a and b; nothing for c." Typed 2026-11-05T04:30:00.322Z, ruled 2026-11-05.
 
 How E1 applies here: each section's answer is encoded on its own (option C), and the seat asks them one at a time.
 Where I gathered by hand, in plain L4, it is in two places only: `s 7(1)(b)(ii)` calls `s 7(2)` because the Act supplies the employer's assessment of medical fitness by presumption (F5), and `s 2(1) "eligible employee"` calls `s 7(1)` because the definition points at it.
@@ -611,16 +611,16 @@ A function that asks whether a duty was complied with, and not whether the duty 
 
 Ruled 2026-11-05 (a): JUST FALSE outside the period, for these functions: `s 7A(1)` on foot (and the seat question); `s 7A(3)` "at any time after" the specified age and the deeming period; `s 7A(7)` "that shorter period"; `s 7C(2)(a)` "immediately before the agreed date" and `s 7C(2)(b)` "from that agreed date"; `s 8(1)` "within one month"; `s 8B(1)` "at any time after" the conciliation; `s 8(2)` and `s 8B(5)` "before making a decision".
 The month and year periods that already answered `JUST FALSE` when late (ss 7A(1) the offer, 7A(6), 7C(4), 8A(1) to (3), 8B(2), 8B(8)) are unchanged.
-Ruled 2026-11-05 (b): JUST FALSE when the condition fails, for these functions: `s 7A(3)` "Where subsection (2) applies"; `s 7A(7)` "where the period between ... is less than one year"; `s 7B(1)` "when a re-employment contract is entered into"; `s 7C(2)(a)`, `(b)` and `(c)` "where subsection (1)(b) applies"; `s 7C(6)` "where E2 enters into a contract of service"; `s 7C(8)` "where applicable"; `s 8(8)` and `s 8B(14)` "Where any amount ... is not paid ... and the employer has been convicted"; `s 8A(5)` "Upon receipt"; `s 8B(7)` "where the Minister (a) has considered ... and (b) is satisfied"; `s 9A(1)` "Whenever"; `s 11B` "upon the publication".
+Ruled 2026-11-05 (b): JUST FALSE when the condition fails, for these functions: `s 7A(3)` "Where subsection (2) applies"; `s 7A(7)` "where the period between ... is less than one year"; `s 7B(1)` "when a re-employment contract is entered into"; `s 7C(2)(a)`, `(b)` and `(c)` "where subsection (1)(b) applies"; `s 7C(6)` "where E2 enters into a contract of service"; `s 7C(8)` "where applicable"; `s 8(8)` and `s 8B(14)` "Where any amount ... is not paid ... and the employer has been convicted"; `s 8A(5)` "Upon receipt"; `s 8(11)` and `s 8B(17)` "when exercised by the delegate"; `s 8B(7)` "where the Minister (a) has considered ... and (b) is satisfied"; `s 9A(1)` "Whenever"; `s 11B` "upon the publication".
 
 Readings taken where it was not plain which of (a), (b) and (c) a clause is:
 
-- "When", "upon" and "whenever" are read as "where" (ss 7B(1), 8A(5), 9A(1), 11B), and "where applicable" in section 7C(8) as "where section 7C(1)(b) applies".
-  If they are scope limits, those answers would be `NOTHING`.
+- "When", "upon" and "whenever" count as "where" (ss 7B(1), 8A(5), 8(11), 8B(17), 9A(1), 11B): ruled 2026-11-05 (06:04), see F24.
+  "Where applicable" in section 7C(8) is read as "where section 7C(1)(b) applies" (assumed, not ruled); if it is a scope limit, that answer would be `NOTHING`.
 - "Before making a decision" (ss 8(2), 8B(5)) is read as a period the text fixes: once the decision is made the power has gone.
   With no representations at all the answer stays `NOTHING`, because there is nothing to decide on.
 - "At any reasonable time" (s 9(1)) is a standard and not a period the text fixes, so an unreasonable time answers `NOTHING` (a scope limit), as "a reasonable period" is an input throughout.
-- "A power so delegated, when exercised by the delegate" (ss 8(11), 8B(17)) puts the "when" inside the subject of the deeming, so it is a scope limit and the answer stays `NOTHING`.
+- "A power so delegated, when exercised by the delegate" (ss 8(11), 8B(17)): "when exercised by the delegate" is an adverbial "when", not a relative clause, so it is a "where" and a delegated power the delegate did not exercise answers `JUST FALSE`; "A power so delegated" is the scope, and a power that was never delegated answers `NOTHING`.
 - A function that returns a number (`s 8(8)` and `s 8B(14)`, the amount recoverable) has no `JUST FALSE`.
   Each keeps its `NOTHING` and has a yes-or-no twin, `s 8(8) the court may recover the unpaid amount as if it were a fine` and `s 8B(14) the court may recover the unpaid amount as if it were a fine`, which answers the "where".
 - Section 7A(7) has two limbs: the "where" (the period between the start of re-employment and the prescribed re-employment age is less than one year) and the length ("may be for that shorter period", read as no longer than that period); either failing answers `JUST FALSE`.
@@ -636,6 +636,25 @@ Kept at `NOTHING` when the duty's trigger fails, because the function asks about
 The duties of sections 7(3) and 7A(10) are also qualified by "as far as it is reasonably practicable" and "insofar as is reasonably practicable"; where giving notice was not reasonably practicable the Act does not say what is owed, and the answer is `NOTHING` (a scope limit, (c)).
 
 Four "if" conditions on a permission or a continuity were found in the same sweep and answer `JUST FALSE` when not met, on reading (a) of the rule of 2026-10-29: `s 7A(9)` ("may retire or be retired, if he or she does not wish ..."), `s 7B(3)` ("is not broken if ..."), `s 8(3)` and `s 8B(6)` ("If, after considering any report ..., the Minister is satisfied ...").
+
+### F24. Delegated lists, defences, "when", "upon" and "whenever", and "until" bars: sites checked
+
+Ruled 2026-11-05 (06:04): "when", "upon" and "whenever" count as "where", and an unmet one answers `JUST FALSE` (a relative clause such as "upon which" is not a "where").
+The trigger words in the text, by line of `RRA1993.txt`, and what each does:
+
+- 358 "the employer does not, upon that employee attaining the specified age" (s 7A(2)(b)): inside the "Where" of section 7A(2), which is a saving asked as "is affected"; unchanged, `NOTHING` outside (F23).
+- 462 "when a re-employment contract is entered into" (s 7B(1)): a "where"; no such contract answers `JUST FALSE`, in the function and in the seat question "Is my earlier service disregarded for the purpose".
+- 746 "Upon receipt of the notice" (s 8A(5)): a "where"; no notice received answers `JUST FALSE`.
+- 1024 "Whenever" (s 9A(1)): a "where"; none of the three occasions answers `JUST FALSE`.
+- 679 and 906 "when exercised by the delegate" (ss 8(11), 8B(17)): a "where", not a relative clause; a delegated power the delegate did not exercise answers `JUST FALSE`, and a power that was never delegated ("A power so delegated") answers `NOTHING`.
+- 1140 "upon the publication of such guidelines" (s 11B): a "where"; guidelines not published answer `JUST FALSE`, in the function and in the seat question "May regard be had to the tripartite guidelines for this purpose".
+- 1187 "imposed upon the employer" (s 13): a participle phrase naming the duty, not a condition; unchanged.
+- 345 "until that employee attains the employee's prescribed re-employment age" (s 7A(1)): a period (F6), not a bar of the form "X does not happen until Y"; the ruling on such bars has no site in this Act.
+
+A definition handed to a list: "a re-employment dispute means a dispute over any of the following matters" (s 8A(4)) already answers `JUST FALSE` when no head holds; "specified age ... means the higher of the following ages" returns a number; "power to do all or any of the following" (s 9(1)) is a grant and not a definition, a bare list, and answers `NOTHING` (F14).
+A defence ("it is a defence ... to prove that"): no "defence" or "prove" occurs in the text.
+Assumed, not ruled: "in the event of", "once" and "while" counting as "where": none of the three occurs in the text, so there is no assumed site.
+Branches still answering `NOTHING` under "limited by its own wording" that carry a "where", "if", "unless", "when", "upon" or "while" in the words they quote: ss 7(3) and 7A(2) ("Where"; a duty asked as compliance and a saving asked as "is affected", F23), 7A(6) ("Unless otherwise agreed"; compliance, F8), the amount functions of ss 8(8) and 8B(14) (a number has no `JUST FALSE`; each has a twin, F23), s 8C(1) ("which relates to"; a relative clause, F21) and s 13 ("imposed upon", above).
 
 ### Section 8(1) and sections 8A and 8B(2): one month
 
@@ -699,7 +718,7 @@ The branches that rest on it are listed first below, and the branches that rest 
 <!-- BEGIN marginal -->
 These counts are produced by `marginal.py` from the tags in the code, so they cannot drift from it.
 
-**Ruled 2026-11-05: a period the text fixes in its own words, and a "where" condition, answer `JUST FALSE` outside the period or when the condition fails (25 branches).** These are not marginal: the ruling is in the fork register beside rulings E1 and N2. They are listed so that a lawyer sees every place it is used; (a) is a period, (b) is a "where" (which includes "when", "upon" and "whenever", fork F23).
+**Ruled 2026-11-05: a period the text fixes in its own words, and a "where" condition, answer `JUST FALSE` outside the period or when the condition fails (27 branches).** These are not marginal: the ruling is in the fork register beside rulings E1 and N2. They are listed so that a lawyer sees every place it is used; (a) is a period, (b) is a "where" (which includes "when", "upon" and "whenever": ruled 2026-11-05 at 06:04, fork F24).
 
 | Rule | File | Lines | Ruling |
 | --- | --- | --- | --- |
@@ -709,8 +728,8 @@ These counts are produced by `marginal.py` from the tags in the code, so they ca
 | `s 7C(2) the reference to the employer includes E2 on the date` | rra-part3-re-employment.l4 | 680 | (a) |
 | `s 8(1) the employee may make representations in writing to the Minister to be reinstated` | rra-part4-remedies.l4 | 48 | (a) |
 | `s 8(2) the Minister may direct the Commissioner in writing to inquire and report` | rra-part4-remedies.l4 | 67 | (a) |
-| `s 8B(1) the employee may make representations in writing to the Minister to be re-employed` | rra-part4-remedies.l4 | 541 | (a) |
-| `s 8B(5) the Minister may direct the Commissioner to inquire and report` | rra-part4-remedies.l4 | 671 | (a) |
+| `s 8B(1) the employee may make representations in writing to the Minister to be re-employed` | rra-part4-remedies.l4 | 545 | (a) |
+| `s 8B(5) the Minister may direct the Commissioner to inquire and report` | rra-part4-remedies.l4 | 675 | (a) |
 | `s 7A(3) the employer is deemed to have complied with section 7A(1) on the date` | rra-part3-re-employment.l4 | 330 | (b) |
 | `s 7B(1) the previous service is disregarded for the purpose` | rra-part3-re-employment.l4 | 542 | (b) |
 | `s 7C(2) E1's re-employment obligations are discharged on the date` | rra-part3-re-employment.l4 | 645 | (b) |
@@ -719,9 +738,11 @@ These counts are produced by `marginal.py` from the tags in the code, so they ca
 | `s 7C(6) the service under E1 is reckoned for the purpose` | rra-part3-re-employment.l4 | 795 | (b) |
 | `s 7C(8) a reference to the employer in Part 4 or 5 includes E2` | rra-part3-re-employment.l4 | 829 | (b) |
 | `s 8(8) the court may recover the unpaid amount as if it were a fine` | rra-part4-remedies.l4 | 241 | (b) |
-| `s 8A(5) the Commissioner may consult, or direct an approved mediator to consult, the employer and employee` | rra-part4-remedies.l4 | 505 | (b) |
-| `s 8B(7) the Minister may allow the employee to submit a mediation request and to lodge a claim for employment assistance payment` | rra-part4-remedies.l4 | 740 | (b) |
-| `s 8B(14) the court may recover the unpaid amount as if it were a fine` | rra-part4-remedies.l4 | 903 | (b) |
+| `s 8(11) the power exercised by the delegate is deemed to have been exercised by the Minister` | rra-part4-remedies.l4 | 300 | (b) |
+| `s 8A(5) the Commissioner may consult, or direct an approved mediator to consult, the employer and employee` | rra-part4-remedies.l4 | 509 | (b) |
+| `s 8B(7) the Minister may allow the employee to submit a mediation request and to lodge a claim for employment assistance payment` | rra-part4-remedies.l4 | 744 | (b) |
+| `s 8B(14) the court may recover the unpaid amount as if it were a fine` | rra-part4-remedies.l4 | 907 | (b) |
+| `s 8B(17) the power exercised by the delegate is deemed to have been exercised by the Minister` | rra-part4-remedies.l4 | 968 | (b) |
 | `s 9A(1) the person acting may summon the person` | rra-part5-general.l4 | 180 | (b) |
 | `s 11B regard may be had to the guidelines for the purpose` | rra-part5-general.l4 | 463 | (b) |
 | `s 7A(3) the employer may re-employ the employee` | rra-part3-re-employment.l4 | 277 | (a) and (b) |
@@ -753,14 +774,14 @@ These counts are produced by `marginal.py` from the tags in the code, so they ca
 | `s 7C(5) the employer has complied with the duty to take the tripartite guidelines into account` | rra-part3-re-employment.l4 | 771 |
 | `s 8(3) the Minister may direct the employer to reinstate and pay, or to pay compensation` | rra-part4-remedies.l4 | 97 |
 | `s 8(3) the employer has complied with the direction of the Minister` | rra-part4-remedies.l4 | 113 |
-| `s 8A(1) the employee notified the Commissioner in time` | rra-part4-remedies.l4 | 383 |
-| `s 8A(2) the employee notified the Commissioner in time` | rra-part4-remedies.l4 | 436 |
-| `s 8A(3) the employee submitted the mediation request in time` | rra-part4-remedies.l4 | 481 |
-| `s 8B(2) the representations were made in time` | rra-part4-remedies.l4 | 567 |
-| `s 8B(6) the Minister may direct the employer to re-employ the employee or to pay compensation` | rra-part4-remedies.l4 | 695 |
-| `s 8B(6) the employer has complied with the direction of the Minister` | rra-part4-remedies.l4 | 711 |
-| `s 8B(8) the employee submitted the mediation request within the time the Minister determined` | rra-part4-remedies.l4 | 765 |
-| `s 8C(1) the employee may lodge a claim for employment assistance payment with an Employment Claims Tribunal` | rra-part4-remedies.l4 | 983 |
+| `s 8A(1) the employee notified the Commissioner in time` | rra-part4-remedies.l4 | 387 |
+| `s 8A(2) the employee notified the Commissioner in time` | rra-part4-remedies.l4 | 440 |
+| `s 8A(3) the employee submitted the mediation request in time` | rra-part4-remedies.l4 | 485 |
+| `s 8B(2) the representations were made in time` | rra-part4-remedies.l4 | 571 |
+| `s 8B(6) the Minister may direct the employer to re-employ the employee or to pay compensation` | rra-part4-remedies.l4 | 699 |
+| `s 8B(6) the employer has complied with the direction of the Minister` | rra-part4-remedies.l4 | 715 |
+| `s 8B(8) the employee submitted the mediation request within the time the Minister determined` | rra-part4-remedies.l4 | 769 |
+| `s 8C(1) the employee may lodge a claim for employment assistance payment with an Employment Claims Tribunal` | rra-part4-remedies.l4 | 991 |
 
 **Reading (c): the text's own contrary affirmative is read as its no (3 branches).** Section 7B(1) disregards earlier service, "subject to" section 7B(2), which reckons it for annual leave and paid sick leave, so "disregarded for annual leave" is answered `JUST FALSE`; and section 2(3) says a person is regarded as attaining an age on or after the anniversary, so a date before it answers `JUST FALSE` to "has attained" (fork F2). The other reading answers `NOTHING`: the text says what is reckoned, or when a person is regarded as attaining, and does not say what is not.
 
@@ -802,34 +823,34 @@ These counts are produced by `marginal.py` from the tags in the code, so they ca
 | `s 8(9) the Minister may delegate the power` | rra-part4-remedies.l4 | 261 |
 | `s 8(10) the delegation is revocable at will` | rra-part4-remedies.l4 | 273 |
 | `s 8(10) the delegation prevents the Minister from exercising the power` | rra-part4-remedies.l4 | 285 |
-| `s 8(11) the power exercised by the delegate is deemed to have been exercised by the Minister` | rra-part4-remedies.l4 | 299 |
-| `s 8A(1) the last day on which the employee can notify the Commissioner of the re-employment dispute` | rra-part4-remedies.l4 | 367 |
-| `s 8A(1) the employee notified the Commissioner in time` | rra-part4-remedies.l4 | 377 |
-| `s 8A(2) the last day on which the employee can notify the Commissioner of the dismissal` | rra-part4-remedies.l4 | 420 |
-| `s 8A(3) the last day on which the employee can submit a mediation request` | rra-part4-remedies.l4 | 466 |
-| `s 8B(1) the employee may make representations in writing to the Minister to be re-employed` | rra-part4-remedies.l4 | 531 |
-| `s 8B(3) the employee may lodge a claim under section 8C(1) in relation to the matter referred to in section 8A(4)(d)` | rra-part4-remedies.l4 | 597 |
-| `s 8B(3) the employee may make representations to the Minister under section 35(3) of the Industrial Relations Act 1960` | rra-part4-remedies.l4 | 616 |
-| `s 8B(4) the employee may lodge a claim under section 8C(1) in relation to the matter referred to in section 8A(4)(d)` | rra-part4-remedies.l4 | 635 |
-| `s 8B(4) the employee may make representations to the Minister under subsection (1)` | rra-part4-remedies.l4 | 653 |
-| `s 8B(5) the Minister may direct the Commissioner to inquire and report` | rra-part4-remedies.l4 | 674 |
-| `s 8B(6) the employer has complied with the direction of the Minister` | rra-part4-remedies.l4 | 706 |
-| `s 8B(8) the employee submitted the mediation request within the time the Minister determined` | rra-part4-remedies.l4 | 755 |
-| `s 8B(9) section 8C(3) applies in relation to the claim` | rra-part4-remedies.l4 | 788 |
-| `s 8B(11) the decision of the Minister on the representation is final` | rra-part4-remedies.l4 | 822 |
-| `s 8B(12) the employee may bring an action for damages in a court in respect of the denial of re-employment or the dismissal` | rra-part4-remedies.l4 | 838 |
-| `s 8B(13) the employer is guilty of an offence` | rra-part4-remedies.l4 | 852 |
-| `s 8B(13) the sentence is within the penalty` | rra-part4-remedies.l4 | 867 |
-| `s 8B(14) the amount recoverable by the court as if it were a fine` | rra-part4-remedies.l4 | 891 |
-| `s 8B(15) the Minister may delegate the power` | rra-part4-remedies.l4 | 924 |
-| `s 8B(16) the delegation is revocable at will` | rra-part4-remedies.l4 | 937 |
-| `s 8B(16) the delegation prevents the Minister from exercising the power` | rra-part4-remedies.l4 | 949 |
-| `s 8B(17) the power exercised by the delegate is deemed to have been exercised by the Minister` | rra-part4-remedies.l4 | 963 |
-| `s 8C(1) the employee may lodge a claim for employment assistance payment with an Employment Claims Tribunal` | rra-part4-remedies.l4 | 986 |
-| `s 8C(2) the employee may make representations under section 8B(1) in respect of that dismissal` | rra-part4-remedies.l4 | 1004 |
-| `s 8C(2) the employee may make representations to the Minister under section 35(3) of the Industrial Relations Act 1960` | rra-part4-remedies.l4 | 1023 |
-| `s 8C(3) the Tribunal may take the tripartite guidelines and the employer's steps to re-employ into account` | rra-part4-remedies.l4 | 1038 |
-| `s 8C(3) the Tribunal may order any amount of employment assistance payment that it considers just and equitable` | rra-part4-remedies.l4 | 1055 |
+| `s 8(11) the power exercised by the delegate is deemed to have been exercised by the Minister` | rra-part4-remedies.l4 | 303 |
+| `s 8A(1) the last day on which the employee can notify the Commissioner of the re-employment dispute` | rra-part4-remedies.l4 | 371 |
+| `s 8A(1) the employee notified the Commissioner in time` | rra-part4-remedies.l4 | 381 |
+| `s 8A(2) the last day on which the employee can notify the Commissioner of the dismissal` | rra-part4-remedies.l4 | 424 |
+| `s 8A(3) the last day on which the employee can submit a mediation request` | rra-part4-remedies.l4 | 470 |
+| `s 8B(1) the employee may make representations in writing to the Minister to be re-employed` | rra-part4-remedies.l4 | 535 |
+| `s 8B(3) the employee may lodge a claim under section 8C(1) in relation to the matter referred to in section 8A(4)(d)` | rra-part4-remedies.l4 | 601 |
+| `s 8B(3) the employee may make representations to the Minister under section 35(3) of the Industrial Relations Act 1960` | rra-part4-remedies.l4 | 620 |
+| `s 8B(4) the employee may lodge a claim under section 8C(1) in relation to the matter referred to in section 8A(4)(d)` | rra-part4-remedies.l4 | 639 |
+| `s 8B(4) the employee may make representations to the Minister under subsection (1)` | rra-part4-remedies.l4 | 657 |
+| `s 8B(5) the Minister may direct the Commissioner to inquire and report` | rra-part4-remedies.l4 | 678 |
+| `s 8B(6) the employer has complied with the direction of the Minister` | rra-part4-remedies.l4 | 710 |
+| `s 8B(8) the employee submitted the mediation request within the time the Minister determined` | rra-part4-remedies.l4 | 759 |
+| `s 8B(9) section 8C(3) applies in relation to the claim` | rra-part4-remedies.l4 | 792 |
+| `s 8B(11) the decision of the Minister on the representation is final` | rra-part4-remedies.l4 | 826 |
+| `s 8B(12) the employee may bring an action for damages in a court in respect of the denial of re-employment or the dismissal` | rra-part4-remedies.l4 | 842 |
+| `s 8B(13) the employer is guilty of an offence` | rra-part4-remedies.l4 | 856 |
+| `s 8B(13) the sentence is within the penalty` | rra-part4-remedies.l4 | 871 |
+| `s 8B(14) the amount recoverable by the court as if it were a fine` | rra-part4-remedies.l4 | 895 |
+| `s 8B(15) the Minister may delegate the power` | rra-part4-remedies.l4 | 928 |
+| `s 8B(16) the delegation is revocable at will` | rra-part4-remedies.l4 | 941 |
+| `s 8B(16) the delegation prevents the Minister from exercising the power` | rra-part4-remedies.l4 | 953 |
+| `s 8B(17) the power exercised by the delegate is deemed to have been exercised by the Minister` | rra-part4-remedies.l4 | 971 |
+| `s 8C(1) the employee may lodge a claim for employment assistance payment with an Employment Claims Tribunal` | rra-part4-remedies.l4 | 994 |
+| `s 8C(2) the employee may make representations under section 8B(1) in respect of that dismissal` | rra-part4-remedies.l4 | 1012 |
+| `s 8C(2) the employee may make representations to the Minister under section 35(3) of the Industrial Relations Act 1960` | rra-part4-remedies.l4 | 1031 |
+| `s 8C(3) the Tribunal may take the tripartite guidelines and the employer's steps to re-employ into account` | rra-part4-remedies.l4 | 1046 |
+| `s 8C(3) the Tribunal may order any amount of employment assistance payment that it considers just and equitable` | rra-part4-remedies.l4 | 1063 |
 | `s 9(1) the person has the power` | rra-part5-general.l4 | 39, 47 |
 | `s 9(1)(b) the person examined is bound to state truly the facts and circumstances` | rra-part5-general.l4 | 74 |
 | `s 9(1)(c) the Commissioner or investigating officer may require the employer to produce the employee and the documents` | rra-part5-general.l4 | 89 |
@@ -882,7 +903,7 @@ There are no earlier numbers for it to replace: this is a fresh row.
 target: main. Each module is run with your l4 and with the main build below; the main columns must match.
 main build: 1.6.108 (main, 2ae7c9b, 2026-11-02)
 module                                    errors satisfied  failed  refused  expected | errors satisfied  failed  refused  main
-rra-cases-seat.l4                              0       228       0        0         0 |      0       228       0        0  same
+rra-cases-seat.l4                              0       230       0        0         0 |      0       230       0        0  same
 rra-logic.l4                                   0         0       0        0         0 |      0         0       0        0  same
 rra-nouns.l4                                   0         0       0        0         0 |      0         0       0        0  same
 rra-part1-preliminary.l4                       0         0       0        0         0 |      0         0       0        0  same
@@ -894,9 +915,9 @@ rra-seat.l4                                    0         0       0        0     
 rra-tests-part1.l4                             0        82       0        0         0 |      0        82       0        0  same
 rra-tests-part2.l4                             0        33       0        0         0 |      0        33       0        0  same
 rra-tests-part3.l4                             0       147       0        0         0 |      0       147       0        0  same
-rra-tests-part4.l4                             0       168       0        0         0 |      0       168       0        0  same
+rra-tests-part4.l4                             0       172       0        0         0 |      0       172       0        0  same
 rra-tests-part5.l4                             0        84       0        0         0 |      0        84       0        0  same
-TOTAL (14 modules)                             0       742       0        0           |      0       742       0        0
+TOTAL (14 modules)                             0       748       0        0           |      0       748       0        0
 (a failed assertion is also an error; any other error, or any refused assertion, makes the run red)
 (target main: every module has the same four counts on the main build. That rules out a module main rejects and a difference an assertion shows; it does not see a different TRACE outcome, or any difference no assertion exercises)
 ```

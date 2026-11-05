@@ -141,7 +141,7 @@ s 8(7) ; 659-662 ; E ; State: claim > Employer: duty ; Offence of failing to com
 s 8(8) ; 664-670 ; F:F23 ; Employee: claim > Employer: duty ; An unpaid amount is recoverable by the court as if it were a fine, and paid to the employee
 s 8(9) ; 672-674 ; E ; - ; The Minister may delegate the Minister's powers under this section (except the power of delegation) to a public officer
 s 8(10) ; 676-677 ; E ; - ; A delegation is revocable at will and does not prevent the Minister exercising the power
-s 8(11) ; 679-681 ; E ; Employee: claim > Employer: duty ; A delegated power, when exercised by the delegate, is deemed exercised by the Minister
+s 8(11) ; 679-681 ; F:F23 ; Employee: claim > Employer: duty ; A delegated power, when exercised by the delegate, is deemed exercised by the Minister
 s 8A(1) ; 690-695 ; F:F3 ; Commissioner: claim > Employee: duty ; The employee must first notify the Commissioner in writing no later than one month after the last day of employment
 s 8A(2) ; 699-706 ; F:F3 ; Commissioner: claim > Employee: duty ; The same for an employee dismissed without just cause or excuse on or after attaining the specified age, who attained it on or after 1 January 2012
 s 8A(3) ; 708-715 ; F:F3 ; Commissioner: claim > Employee: duty ; The employee must submit a mediation request not later than 6 months after the last day of employment
@@ -178,7 +178,7 @@ s 8B(13) ; 879-882 ; E ; State: claim > Employer: duty ; Offence of failing to c
 s 8B(14) ; 889-895 ; F:F23 ; Employee: claim > Employer: duty ; An unpaid amount is recoverable by the court as if it were a fine, and paid to the employee
 s 8B(15) ; 897-900 ; E ; - ; The Minister may delegate the Minister's powers under this section (except the power of delegation) to a public officer
 s 8B(16) ; 902-904 ; E ; - ; A delegation is revocable at will and does not prevent the Minister exercising the power
-s 8B(17) ; 906-908 ; E ; Employee: claim > Employer: duty ; A delegated power, when exercised by the delegate, is deemed exercised by the Minister
+s 8B(17) ; 906-908 ; F:F23 ; Employee: claim > Employer: duty ; A delegated power, when exercised by the delegate, is deemed exercised by the Minister
 s 8C(1) ; 913-918 ; F:F21,F22 ; Employee: power > Tribunal: liability ; A claim for employment assistance payment with an Employment Claims Tribunal, if a claim referral certificate is issued
 s 8C(2) ; 922-925 ; F:F23 ; Employer: immunity > Employee: disability ; A claim to a Tribunal over section 8A(4)(d) bars
 s 8C(2)(a) ; 927-928 ; E>s 8C(2) ; - ; (a) representations under section 8B(1) in respect of that dismissal

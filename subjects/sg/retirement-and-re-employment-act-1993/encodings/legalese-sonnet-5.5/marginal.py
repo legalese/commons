@@ -32,7 +32,7 @@ out = []
 out.append("These counts are produced by `marginal.py` from the tags in the code, so they cannot drift from it.")
 out.append("")
 nr = len(rows["ra"]) + len(rows["rb"]) + len(rows["rab"])
-out.append(f"**Ruled 2026-11-05: a period the text fixes in its own words, and a \"where\" condition, answer `JUST FALSE` outside the period or when the condition fails ({nr} branches).** These are not marginal: the ruling is in the fork register beside rulings E1 and N2. They are listed so that a lawyer sees every place it is used; (a) is a period, (b) is a \"where\" (which includes \"when\", \"upon\" and \"whenever\", fork F23).")
+out.append(f"**Ruled 2026-11-05: a period the text fixes in its own words, and a \"where\" condition, answer `JUST FALSE` outside the period or when the condition fails ({nr} branches).** These are not marginal: the ruling is in the fork register beside rulings E1 and N2. They are listed so that a lawyer sees every place it is used; (a) is a period, (b) is a \"where\" (which includes \"when\", \"upon\" and \"whenever\": ruled 2026-11-05 at 06:04, fork F24).")
 out.append("")
 out.append("| Rule | File | Lines | Ruling |"); out.append("| --- | --- | --- | --- |")
 for key, lab in (("ra", "(a)"), ("rb", "(b)"), ("rab", "(a) and (b)")):
