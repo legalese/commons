@@ -1,0 +1,687 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `poca-nouns`
+IMPORT `poca-sch9`
+IMPORT `poca-interp`
+IMPORT `poca-threshold`
+IMPORT `poca-consent`
+IMPORT `poca-disclose`
+IMPORT `poca-orders`
+IMPORT `poca-dealing`
+IMPORT `poca-failure`
+IMPORT `poca-tipping`
+
+-- Proceeds of Crime Act 2002, Part 7 and Schedule 9 (United Kingdom), edition of 2026-06-30 -- THE SEAT LAYER.   Target: main (checked on build 1.6.109).
+--
+-- SEAT: a person in or outside the regulated sector who knows or suspects that property is criminal property, or who is asked to deal with it, asking on facts they can state
+-- whether they commit an offence under Part 7 or have a defence, and what they must disclose to whom and when.
+-- This layer phrases the rules encoded in the modules imported above as the questions that person would ask.  Nothing here is new law, and no rule is restated here:
+-- every question gathers plain answers and calls the layer-1 rule that decides it.  There is no seat for an official (a constable, an NCA officer, a court or the Secretary of State):
+-- where a provision addresses only an official, its rule is in layer 1 and the person meets it only through the questions below.
+--
+-- PLAIN INPUTS.  Every question takes plain inputs -- yes/no, a number, a date, or a choice from a list -- one for each fact the person can state, each with an @desc worded as the person would be asked.
+-- Where a layer-1 rule expects a record or a MAYBE, it is built inside the question, in its body, from those answers.
+--   * A fact the person may not know is asked as "Yes / No / I am not sure" (`My answer`); "I am not sure" becomes NOTHING, and a rule that cannot answer without it answers NOTHING.
+--   * An amount or a day that the person does not know is asked as 0 (or as a yes/no that it exists), and becomes NOTHING.
+--   * The orders and regulations that Part 7 points to (the training the Secretary of State specifies, conduct prescribed as unlawful abroad, the excluded businesses, the prescribed form of a disclosure,
+--     the regulations on customer due diligence) are not among the sources: the person says whether each applies.
+--
+-- HOW TO READ A RESULT.  JUST TRUE and JUST FALSE are answers the Act itself gives; NOTHING means the Act does not answer on these facts (see NOTES.md, "Reading a result: FALSE and NOTHING").
+-- Never read NOTHING as no.  A result that rests on a reading a lawyer may contest is listed in NOTES.md under "Marginal readings for a lawyer".
+
+DECLARE `My answer` IS ONE OF
+    Yes
+    No
+    `I am not sure`
+
+-- ---------------------------------------------------------------------------
+-- Wiring: the person's answers become the modules' inputs.  Not questions.
+-- ---------------------------------------------------------------------------
+
+-- An answer of Yes, No or "I am not sure" as a MAYBE BOOLEAN.
+GIVEN answer IS A `My answer`
+GIVETH A MAYBE BOOLEAN
+`what I say, as a fact` MEANS
+    CONSIDER answer
+    WHEN Yes THEN JUST TRUE -- input mapping
+    WHEN No THEN JUST FALSE -- input mapping
+    WHEN `I am not sure` THEN NOTHING -- input mapping
+
+-- An amount that the person gives as 0 when they do not know it.
+GIVEN amount IS A NUMBER
+GIVETH A MAYBE NUMBER
+`my amount if I know it` MEANS
+    IF amount EQUALS 0 THEN NOTHING ELSE JUST amount -- input mapping
+
+-- A day that exists only if the person says it does.
+GIVEN `it happened` IS A BOOLEAN
+      day IS A DATE
+GIVETH A MAYBE DATE
+`my day if it happened` MEANS
+    IF `it happened` THEN JUST day ELSE NOTHING -- input mapping
+
+-- An answer about a listed activity of Schedule 9 paragraph 1(1): Yes is what the paragraph lists; the paragraph does not say that an unlisted activity is outside it, so No is not an answer.
+GIVEN answer IS A `My answer`
+GIVETH A MAYBE BOOLEAN
+`what I say about a listed activity` MEANS
+    CONSIDER answer
+    WHEN Yes THEN JUST TRUE -- input mapping
+    WHEN No THEN NOTHING -- input mapping: paragraph 1(1) is a list and the text does not close it
+    WHEN `I am not sure` THEN NOTHING -- input mapping
+
+-- An answer about an exclusion of Schedule 9 paragraph 2: an exclusion that applies says the business is NOT in the regulated sector.
+GIVEN answer IS A `My answer`
+GIVETH A MAYBE BOOLEAN
+`what I say about an exclusion` MEANS
+    CONSIDER answer
+    WHEN Yes THEN JUST FALSE -- input mapping: the exclusion says "is not in the regulated sector"
+    WHEN No THEN NOTHING -- input mapping: an exclusion that does not apply says nothing
+    WHEN `I am not sure` THEN NOTHING -- input mapping
+
+-- A MAYBE BOOLEAN answered by a layer-1 rule, as the BOOLEAN that another layer-1 rule asks for: only JUST TRUE counts.
+-- This turns NOTHING into FALSE, which no caller may do with an answer that can be NOTHING.  It is used on four layer-1 answers, each of which is only ever JUST TRUE or JUST FALSE and never NOTHING:
+-- s 333C(1) (JUST FALSE for another disclosure, otherwise JUST TRUE), s 339ZK(2), s 339ZD(5) and s 339ZD(4) (each JUST TRUE, otherwise JUST FALSE).  Any other caller is a defect.
+GIVEN answer IS A MAYBE BOOLEAN
+GIVETH A BOOLEAN
+`that answer is yes` MEANS
+    answer EQUALS JUST TRUE -- input mapping
+
+§ `The Proceeds of Crime Act 2002, Part 7 -- my questions`
+
+-- ---------------------------------------------------------------------------
+§§ `May I deal with it? The offences of dealing and their exceptions (ss 327 to 329)`
+-- Situation: you are about to conceal, transfer, arrange or acquire property you know or suspect is criminal property.  Answer the same facts for each section that fits the act.
+-- ---------------------------------------------------------------------------
+
+@export Do I commit an offence under section 327 by concealing, disguising, converting, transferring or removing criminal property (s 327(1))?
+GIVEN `the act` IS A `Act in section 327(1)` @desc What are you doing with the property?
+      `the property is criminal property` IS A `My answer` @desc Is the property criminal property (it is a person's benefit from criminal conduct, or represents one, and you know or suspect that)?
+      `I make an authorised disclosure under section 338` IS A BOOLEAN @desc Do you make an authorised disclosure under section 338 (see the question on authorised disclosures)?
+      `my disclosure is made before I do the act` IS A BOOLEAN @desc Is that disclosure made before you do the act?
+      `I have the appropriate consent` IS A BOOLEAN @desc Do you have the appropriate consent (see the questions on consent)?
+      `I intended to make such a disclosure` IS A BOOLEAN @desc Did you intend to make such a disclosure?
+      `I had a reasonable excuse for not making it` IS A BOOLEAN @desc Did you have a reasonable excuse for not making it?
+      `my act is done in carrying out a function I have relating to enforcement` IS A BOOLEAN @desc Is your act done in carrying out a function you have relating to the enforcement of any provision of this Act or of any other enactment relating to criminal conduct or benefit from criminal conduct?
+      `I know, or believe on reasonable grounds, that the criminal conduct occurred outside the United Kingdom` IS A BOOLEAN @desc Do you know, or believe on reasonable grounds, that the criminal conduct occurred in a particular country or territory outside the United Kingdom?
+      `the criminal conduct was not unlawful where it occurred` IS A BOOLEAN @desc Was that conduct not, at the time it occurred, unlawful under the criminal law then applying in that country or territory?
+      `the criminal conduct is of a description prescribed by the Secretary of State` IS A BOOLEAN @desc Is that conduct of a description prescribed by an order made by the Secretary of State?
+      `I am a deposit-taking body, electronic money institution or payment institution` IS A BOOLEAN @desc Are you a deposit-taking body, an electronic money institution or a payment institution?
+      `I do the act in operating an account maintained with me` IS A BOOLEAN @desc Do you do the act in operating an account maintained with you?
+      `the value of the criminal property concerned, in pounds` IS A NUMBER @desc What is the value of the criminal property concerned, in pounds?
+      `the threshold amount for my act, in pounds` IS A NUMBER @desc What is the threshold amount for your act, in pounds (3000 unless a higher amount has been specified; see the question on the threshold amount)?
+      `I am carrying on business in the regulated sector` IS A BOOLEAN @desc Are you carrying on business in the regulated sector?
+      `the business is excluded business` IS A BOOLEAN @desc Is the business of a description specified in regulations made by the Secretary of State as excluded business?
+      `I do the act in handing over to the customer or client money or other property of, or owing to, the customer or client` IS A BOOLEAN @desc Do you do the act in transferring or handing over to a customer or client money or other property of, or owing to, the customer or client (including to another person at their direction)?
+      `I do it for the purposes of the termination of my business relationship with the customer or client` IS A BOOLEAN @desc Is that for the purposes of the termination of your business relationship with the customer or client?
+      `the total value of the criminal property so handed over, in pounds` IS A NUMBER @desc What is the total value of the criminal property so transferred or handed over, in pounds?
+      `the threshold amount for my termination act, in pounds` IS A NUMBER @desc What is the threshold amount for your act, in pounds (see the question on the threshold amount for terminating a relationship)?
+      `before the act I complied with the customer due diligence duties` IS A BOOLEAN @desc Before the act, did you comply with all the customer due diligence duties imposed on you in relation to the customer or client by regulation 28(2), (3), (3A), (4), (8) or (10) of the Money Laundering, Terrorist Financing and Transfer of Funds (Information on the Payer) Regulations 2017?
+      `I am carrying on business in the regulated sector (mixed funds)` IS A BOOLEAN @desc Are you carrying on business in the regulated sector?
+      `I do the act in the course of that business on behalf of a customer or client, in operating an account or holding property` IS A BOOLEAN @desc Do you do the act in the course of that business, on behalf of a customer or client, in operating an account or accounts maintained with you or in connection with holding any property for the customer or client?
+      `at the time of the act I know or suspect that part but not all of the funds or property is criminal property` IS A BOOLEAN @desc At the time of the act, do you know or suspect that part but not all of the funds in the account or accounts, or of the property so held, is criminal property?
+      `it is not possible at the time to identify the part that is criminal property` IS A BOOLEAN @desc Is it not possible, at the time the act takes place, to identify the part of the funds or property that is criminal property?
+      `the value of the funds or property after the act, in pounds` IS A NUMBER @desc What is the value of the funds in the account or accounts, or of the property so held, after the act, in pounds?
+      `the value of the criminal property at the time of the act, in pounds` IS A NUMBER @desc What was the value of the criminal property at the time of the act, in pounds?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Do I commit an offence under section 327` IS
+    `s 327(1) the person commits an offence` (`what I say, as a fact` `the property is criminal property`) `the act` (`Disclosure and exemption facts` OF `I make an authorised disclosure under section 338`, `my disclosure is made before I do the act`, `I have the appropriate consent`, `I intended to make such a disclosure`, `I had a reasonable excuse for not making it`, `my act is done in carrying out a function I have relating to enforcement`, FALSE) (`Overseas conduct facts` OF `I know, or believe on reasonable grounds, that the criminal conduct occurred outside the United Kingdom`, `the criminal conduct was not unlawful where it occurred`, `the criminal conduct is of a description prescribed by the Secretary of State`) (`Account facts` OF `I am a deposit-taking body, electronic money institution or payment institution`, `I do the act in operating an account maintained with me`, `the value of the criminal property concerned, in pounds`, `the threshold amount for my act, in pounds`) (`Termination facts` OF `I am carrying on business in the regulated sector`, `the business is excluded business`, `I do the act in handing over to the customer or client money or other property of, or owing to, the customer or client`, `I do it for the purposes of the termination of my business relationship with the customer or client`, `the total value of the criminal property so handed over, in pounds`, `the threshold amount for my termination act, in pounds`, `before the act I complied with the customer due diligence duties`) (`Mixed funds facts` OF `I am carrying on business in the regulated sector (mixed funds)`, `I do the act in the course of that business on behalf of a customer or client, in operating an account or holding property`, `at the time of the act I know or suspect that part but not all of the funds or property is criminal property`, `it is not possible at the time to identify the part that is criminal property`, `the value of the funds or property after the act, in pounds`, `the value of the criminal property at the time of the act, in pounds`)
+
+@export Do I commit an offence under section 328 by entering into an arrangement that facilitates the use of criminal property (s 328(1))?
+GIVEN `I enter into or become concerned in an arrangement` IS A BOOLEAN @desc Do you enter into, or become concerned in, an arrangement?
+      `I know or suspect that the arrangement facilitates the acquisition, retention, use or control of criminal property by or on behalf of another person` IS A BOOLEAN @desc Do you know or suspect that the arrangement facilitates (by whatever means) the acquisition, retention, use or control of criminal property by or on behalf of another person?
+      `the property is criminal property` IS A `My answer` @desc Is the property criminal property (it is a person's benefit from criminal conduct, or represents one, and you know or suspect that)?
+      `I make an authorised disclosure under section 338` IS A BOOLEAN @desc Do you make an authorised disclosure under section 338 (see the question on authorised disclosures)?
+      `my disclosure is made before I do the act` IS A BOOLEAN @desc Is that disclosure made before you do the act?
+      `I have the appropriate consent` IS A BOOLEAN @desc Do you have the appropriate consent (see the questions on consent)?
+      `I intended to make such a disclosure` IS A BOOLEAN @desc Did you intend to make such a disclosure?
+      `I had a reasonable excuse for not making it` IS A BOOLEAN @desc Did you have a reasonable excuse for not making it?
+      `my act is done in carrying out a function I have relating to enforcement` IS A BOOLEAN @desc Is your act done in carrying out a function you have relating to the enforcement of any provision of this Act or of any other enactment relating to criminal conduct or benefit from criminal conduct?
+      `I know, or believe on reasonable grounds, that the criminal conduct occurred outside the United Kingdom` IS A BOOLEAN @desc Do you know, or believe on reasonable grounds, that the criminal conduct occurred in a particular country or territory outside the United Kingdom?
+      `the criminal conduct was not unlawful where it occurred` IS A BOOLEAN @desc Was that conduct not, at the time it occurred, unlawful under the criminal law then applying in that country or territory?
+      `the criminal conduct is of a description prescribed by the Secretary of State` IS A BOOLEAN @desc Is that conduct of a description prescribed by an order made by the Secretary of State?
+      `I am a deposit-taking body, electronic money institution or payment institution` IS A BOOLEAN @desc Are you a deposit-taking body, an electronic money institution or a payment institution?
+      `I do the act in operating an account maintained with me` IS A BOOLEAN @desc Do you do the act in operating an account maintained with you?
+      `the value of the criminal property concerned, in pounds` IS A NUMBER @desc What is the value of the criminal property concerned, in pounds?
+      `the threshold amount for my act, in pounds` IS A NUMBER @desc What is the threshold amount for your act, in pounds (3000 unless a higher amount has been specified; see the question on the threshold amount)?
+      `I am carrying on business in the regulated sector` IS A BOOLEAN @desc Are you carrying on business in the regulated sector?
+      `the business is excluded business` IS A BOOLEAN @desc Is the business of a description specified in regulations made by the Secretary of State as excluded business?
+      `I do the act in handing over to the customer or client money or other property of, or owing to, the customer or client` IS A BOOLEAN @desc Do you do the act in transferring or handing over to a customer or client money or other property of, or owing to, the customer or client (including to another person at their direction)?
+      `I do it for the purposes of the termination of my business relationship with the customer or client` IS A BOOLEAN @desc Is that for the purposes of the termination of your business relationship with the customer or client?
+      `the total value of the criminal property so handed over, in pounds` IS A NUMBER @desc What is the total value of the criminal property so transferred or handed over, in pounds?
+      `the threshold amount for my termination act, in pounds` IS A NUMBER @desc What is the threshold amount for your act, in pounds (see the question on the threshold amount for terminating a relationship)?
+      `before the act I complied with the customer due diligence duties` IS A BOOLEAN @desc Before the act, did you comply with all the customer due diligence duties imposed on you in relation to the customer or client by regulation 28(2), (3), (3A), (4), (8) or (10) of the Money Laundering, Terrorist Financing and Transfer of Funds (Information on the Payer) Regulations 2017?
+      `I am carrying on business in the regulated sector (mixed funds)` IS A BOOLEAN @desc Are you carrying on business in the regulated sector?
+      `I do the act in the course of that business on behalf of a customer or client, in operating an account or holding property` IS A BOOLEAN @desc Do you do the act in the course of that business, on behalf of a customer or client, in operating an account or accounts maintained with you or in connection with holding any property for the customer or client?
+      `at the time of the act I know or suspect that part but not all of the funds or property is criminal property` IS A BOOLEAN @desc At the time of the act, do you know or suspect that part but not all of the funds in the account or accounts, or of the property so held, is criminal property?
+      `it is not possible at the time to identify the part that is criminal property` IS A BOOLEAN @desc Is it not possible, at the time the act takes place, to identify the part of the funds or property that is criminal property?
+      `the value of the funds or property after the act, in pounds` IS A NUMBER @desc What is the value of the funds in the account or accounts, or of the property so held, after the act, in pounds?
+      `the value of the criminal property at the time of the act, in pounds` IS A NUMBER @desc What was the value of the criminal property at the time of the act, in pounds?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Do I commit an offence under section 328` IS
+    `s 328(1) the person commits an offence` (`what I say, as a fact` `the property is criminal property`) (`s 328(1) the person's act is the act of subsection (1)` `I enter into or become concerned in an arrangement` `I know or suspect that the arrangement facilitates the acquisition, retention, use or control of criminal property by or on behalf of another person`) (`Disclosure and exemption facts` OF `I make an authorised disclosure under section 338`, `my disclosure is made before I do the act`, `I have the appropriate consent`, `I intended to make such a disclosure`, `I had a reasonable excuse for not making it`, `my act is done in carrying out a function I have relating to enforcement`, FALSE) (`Overseas conduct facts` OF `I know, or believe on reasonable grounds, that the criminal conduct occurred outside the United Kingdom`, `the criminal conduct was not unlawful where it occurred`, `the criminal conduct is of a description prescribed by the Secretary of State`) (`Account facts` OF `I am a deposit-taking body, electronic money institution or payment institution`, `I do the act in operating an account maintained with me`, `the value of the criminal property concerned, in pounds`, `the threshold amount for my act, in pounds`) (`Termination facts` OF `I am carrying on business in the regulated sector`, `the business is excluded business`, `I do the act in handing over to the customer or client money or other property of, or owing to, the customer or client`, `I do it for the purposes of the termination of my business relationship with the customer or client`, `the total value of the criminal property so handed over, in pounds`, `the threshold amount for my termination act, in pounds`, `before the act I complied with the customer due diligence duties`) (`Mixed funds facts` OF `I am carrying on business in the regulated sector (mixed funds)`, `I do the act in the course of that business on behalf of a customer or client, in operating an account or holding property`, `at the time of the act I know or suspect that part but not all of the funds or property is criminal property`, `it is not possible at the time to identify the part that is criminal property`, `the value of the funds or property after the act, in pounds`, `the value of the criminal property at the time of the act, in pounds`)
+
+@export Do I commit an offence under section 329 by acquiring, using or possessing criminal property (s 329(1))?
+GIVEN `the act` IS A `Act in section 329(1)` @desc What are you doing with the property?
+      `the property is criminal property` IS A `My answer` @desc Is the property criminal property (it is a person's benefit from criminal conduct, or represents one, and you know or suspect that)?
+      `I make an authorised disclosure under section 338` IS A BOOLEAN @desc Do you make an authorised disclosure under section 338 (see the question on authorised disclosures)?
+      `my disclosure is made before I do the act` IS A BOOLEAN @desc Is that disclosure made before you do the act?
+      `I have the appropriate consent` IS A BOOLEAN @desc Do you have the appropriate consent (see the questions on consent)?
+      `I intended to make such a disclosure` IS A BOOLEAN @desc Did you intend to make such a disclosure?
+      `I had a reasonable excuse for not making it` IS A BOOLEAN @desc Did you have a reasonable excuse for not making it?
+      `my act is done in carrying out a function I have relating to enforcement` IS A BOOLEAN @desc Is your act done in carrying out a function you have relating to the enforcement of any provision of this Act or of any other enactment relating to criminal conduct or benefit from criminal conduct?
+      `I acquired, used or had possession of the property for adequate consideration` IS A BOOLEAN @desc Did you acquire, use or have possession of the property for adequate consideration (one that is not significantly less than the value of the property or of its use, and not the provision of goods or services you know or suspect may help another carry out criminal conduct)?
+      `I know, or believe on reasonable grounds, that the criminal conduct occurred outside the United Kingdom` IS A BOOLEAN @desc Do you know, or believe on reasonable grounds, that the criminal conduct occurred in a particular country or territory outside the United Kingdom?
+      `the criminal conduct was not unlawful where it occurred` IS A BOOLEAN @desc Was that conduct not, at the time it occurred, unlawful under the criminal law then applying in that country or territory?
+      `the criminal conduct is of a description prescribed by the Secretary of State` IS A BOOLEAN @desc Is that conduct of a description prescribed by an order made by the Secretary of State?
+      `I am a deposit-taking body, electronic money institution or payment institution` IS A BOOLEAN @desc Are you a deposit-taking body, an electronic money institution or a payment institution?
+      `I do the act in operating an account maintained with me` IS A BOOLEAN @desc Do you do the act in operating an account maintained with you?
+      `the value of the criminal property concerned, in pounds` IS A NUMBER @desc What is the value of the criminal property concerned, in pounds?
+      `the threshold amount for my act, in pounds` IS A NUMBER @desc What is the threshold amount for your act, in pounds (3000 unless a higher amount has been specified; see the question on the threshold amount)?
+      `I am carrying on business in the regulated sector` IS A BOOLEAN @desc Are you carrying on business in the regulated sector?
+      `the business is excluded business` IS A BOOLEAN @desc Is the business of a description specified in regulations made by the Secretary of State as excluded business?
+      `I do the act in handing over to the customer or client money or other property of, or owing to, the customer or client` IS A BOOLEAN @desc Do you do the act in transferring or handing over to a customer or client money or other property of, or owing to, the customer or client (including to another person at their direction)?
+      `I do it for the purposes of the termination of my business relationship with the customer or client` IS A BOOLEAN @desc Is that for the purposes of the termination of your business relationship with the customer or client?
+      `the total value of the criminal property so handed over, in pounds` IS A NUMBER @desc What is the total value of the criminal property so transferred or handed over, in pounds?
+      `the threshold amount for my termination act, in pounds` IS A NUMBER @desc What is the threshold amount for your act, in pounds (see the question on the threshold amount for terminating a relationship)?
+      `before the act I complied with the customer due diligence duties` IS A BOOLEAN @desc Before the act, did you comply with all the customer due diligence duties imposed on you in relation to the customer or client by regulation 28(2), (3), (3A), (4), (8) or (10) of the Money Laundering, Terrorist Financing and Transfer of Funds (Information on the Payer) Regulations 2017?
+      `I am carrying on business in the regulated sector (mixed funds)` IS A BOOLEAN @desc Are you carrying on business in the regulated sector?
+      `I do the act in the course of that business on behalf of a customer or client, in operating an account or holding property` IS A BOOLEAN @desc Do you do the act in the course of that business, on behalf of a customer or client, in operating an account or accounts maintained with you or in connection with holding any property for the customer or client?
+      `at the time of the act I know or suspect that part but not all of the funds or property is criminal property` IS A BOOLEAN @desc At the time of the act, do you know or suspect that part but not all of the funds in the account or accounts, or of the property so held, is criminal property?
+      `it is not possible at the time to identify the part that is criminal property` IS A BOOLEAN @desc Is it not possible, at the time the act takes place, to identify the part of the funds or property that is criminal property?
+      `the value of the funds or property after the act, in pounds` IS A NUMBER @desc What is the value of the funds in the account or accounts, or of the property so held, after the act, in pounds?
+      `the value of the criminal property at the time of the act, in pounds` IS A NUMBER @desc What was the value of the criminal property at the time of the act, in pounds?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Do I commit an offence under section 329` IS
+    `s 329(1) the person commits an offence` (`what I say, as a fact` `the property is criminal property`) `the act` (`Disclosure and exemption facts` OF `I make an authorised disclosure under section 338`, `my disclosure is made before I do the act`, `I have the appropriate consent`, `I intended to make such a disclosure`, `I had a reasonable excuse for not making it`, `my act is done in carrying out a function I have relating to enforcement`, `I acquired, used or had possession of the property for adequate consideration`) (`Overseas conduct facts` OF `I know, or believe on reasonable grounds, that the criminal conduct occurred outside the United Kingdom`, `the criminal conduct was not unlawful where it occurred`, `the criminal conduct is of a description prescribed by the Secretary of State`) (`Account facts` OF `I am a deposit-taking body, electronic money institution or payment institution`, `I do the act in operating an account maintained with me`, `the value of the criminal property concerned, in pounds`, `the threshold amount for my act, in pounds`) (`Termination facts` OF `I am carrying on business in the regulated sector`, `the business is excluded business`, `I do the act in handing over to the customer or client money or other property of, or owing to, the customer or client`, `I do it for the purposes of the termination of my business relationship with the customer or client`, `the total value of the criminal property so handed over, in pounds`, `the threshold amount for my termination act, in pounds`, `before the act I complied with the customer due diligence duties`) (`Mixed funds facts` OF `I am carrying on business in the regulated sector (mixed funds)`, `I do the act in the course of that business on behalf of a customer or client, in operating an account or holding property`, `at the time of the act I know or suspect that part but not all of the funds or property is criminal property`, `it is not possible at the time to identify the part that is criminal property`, `the value of the funds or property after the act, in pounds`, `the value of the criminal property at the time of the act, in pounds`)
+
+-- ---------------------------------------------------------------------------
+§§ `Must I tell someone? Failure to disclose (ss 330 to 332)`
+-- Situation: in the course of your work you have come to know or suspect that someone is laundering money.
+-- ---------------------------------------------------------------------------
+
+@export Do I commit an offence under section 330 by failing to disclose a suspicion of money laundering (s 330(1))?
+GIVEN `I know or suspect that another person is engaged in money laundering` IS A BOOLEAN @desc Do you know or suspect that another person is engaged in money laundering?
+      `I have reasonable grounds for knowing or suspecting that another person is engaged in money laundering` IS A BOOLEAN @desc Do you have reasonable grounds for knowing or suspecting that another person is engaged in money laundering?
+      `my business is in the regulated sector` IS A `My answer` @desc Does Schedule 9 put the business you work in in the regulated sector?  Answer Yes if it does, No if Schedule 9 says it is not (an exclusion applies), and I am not sure if Schedule 9 does not settle it (see the question on the regulated sector).
+      `the information or other matter came to me in the course of that business` IS A BOOLEAN @desc Did the information or other matter on which your knowledge or suspicion is based (or which gives reasonable grounds for it) come to you in the course of that business?
+      `I can identify the other person or the whereabouts of any of the laundered property` IS A BOOLEAN @desc Can you identify the other person, or the whereabouts of any of the laundered property?
+      `I believe, or it is reasonable to expect me to believe, that the information will or may assist in identifying that person or the property` IS A BOOLEAN @desc Do you believe, or is it reasonable to expect you to believe, that the information or other matter will or may assist in identifying that other person or the whereabouts of any of the laundered property?
+      `I made the required disclosure to a nominated officer` IS A BOOLEAN @desc Did you make the required disclosure to a nominated officer?
+      `I made the required disclosure to a person authorised by the Director General of the National Crime Agency` IS A BOOLEAN @desc Did you make the required disclosure to a person authorised for the purposes of this Part by the Director General of the National Crime Agency?
+      `I made it as soon as practicable after the information came to me` IS A BOOLEAN @desc Did you make it as soon as is practicable after the information or other matter came to you?
+      `I have a reasonable excuse for not making the required disclosure` IS A BOOLEAN @desc Do you have a reasonable excuse for not making the required disclosure?
+      `I am a professional legal adviser or a relevant professional adviser` IS A BOOLEAN @desc Are you a professional legal adviser or a relevant professional adviser (an accountant, auditor or tax adviser who is a member of a qualifying professional body)?
+      `I know the identity of the other person or the whereabouts of the laundered property` IS A BOOLEAN @desc Do you know either the identity of the other person or the whereabouts of the laundered property?
+      `I know it because of information that came to me in privileged circumstances` IS A BOOLEAN @desc If so, do you know it because of information or other matter that came to you in privileged circumstances?
+      `the information or other matter came to me in privileged circumstances` IS A BOOLEAN @desc Did the information or other matter that gives rise to your knowledge or suspicion come to you in privileged circumstances?
+      `my employer has provided me with the training specified by the Secretary of State` IS A BOOLEAN @desc Has your employer provided you with such training as the Secretary of State specifies by order for the purposes of section 330?
+      `I am employed by, or in partnership with, an adviser to provide the adviser with assistance or support` IS A BOOLEAN @desc Are you employed by, or in partnership with, a professional legal adviser or a relevant professional adviser to provide the adviser with assistance or support?
+      `the information came to me in connection with that assistance or support` IS A BOOLEAN @desc Did the information come to you in connection with the provision of that assistance or support?
+      `the information came to the adviser in privileged circumstances` IS A BOOLEAN @desc Did the information come to the adviser in privileged circumstances?
+      `I know, or believe on reasonable grounds, that the money laundering is occurring outside the United Kingdom` IS A BOOLEAN @desc Do you know, or believe on reasonable grounds, that the money laundering is occurring in a particular country or territory outside the United Kingdom?
+      `the money laundering is not unlawful under the criminal law applying there` IS A BOOLEAN @desc Is the money laundering not unlawful under the criminal law applying in that country or territory?
+      `the money laundering is of a description prescribed by the Secretary of State` IS A BOOLEAN @desc Is the money laundering of a description prescribed in an order made by the Secretary of State?
+      `the information was obtained only in consequence of an immigration check` IS A BOOLEAN @desc Does the information consist of or include information that was obtained only in consequence of a status check under section 40 of the Immigration Act 2014 or an immigration check under section 40A of that Act?
+      `but for that information I would not have reasonable grounds for knowing or suspecting` IS A BOOLEAN @desc But for the information so obtained, would you not have reasonable grounds for knowing or suspecting that another person is engaged in money laundering?
+      `the information was obtained only in consequence of complying with an eligibility verification notice` IS A BOOLEAN @desc Does the information consist of or include information that was obtained only in consequence of complying with an eligibility verification notice given to you under paragraph 1(1) of Schedule 3B to the Social Security Administration Act 1992?
+      `but for that information I would not know or suspect or have reasonable grounds for knowing or suspecting` IS A BOOLEAN @desc But for the information so obtained, would you not know or suspect, or have reasonable grounds for knowing or suspecting, that another person is engaged in money laundering?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Do I commit an offence under section 330` IS
+    `s 330(1) the person commits an offence` (`s 330(2) the first condition is satisfied` `I know or suspect that another person is engaged in money laundering` `I have reasonable grounds for knowing or suspecting that another person is engaged in money laundering`) (`s 330(3) the second condition is satisfied` (`what I say, as a fact` `my business is in the regulated sector`) `the information or other matter came to me in the course of that business`) (`s 330(3A) the third condition is satisfied` `I can identify the other person or the whereabouts of any of the laundered property` `I believe, or it is reasonable to expect me to believe, that the information will or may assist in identifying that person or the property`) (`s 330(4) the fourth condition is satisfied` `I made the required disclosure to a nominated officer` `I made the required disclosure to a person authorised by the Director General of the National Crime Agency` `I made it as soon as practicable after the information came to me`) (`s 330(6) to (7E) one of the exceptions applies` (`s 330(6)(a) the exception for a reasonable excuse applies` `I have a reasonable excuse for not making the required disclosure`) (`s 330(6)(b) the exception for a professional adviser applies` `I am a professional legal adviser or a relevant professional adviser` `I know the identity of the other person or the whereabouts of the laundered property` `I know it because of information that came to me in privileged circumstances` `the information or other matter came to me in privileged circumstances`) (`s 330(6)(c) subsection (7) or (7B) applies to him` (`s 330(7) the exception for an untrained person who does not know or suspect applies` (NOT `I know or suspect that another person is engaged in money laundering`) `my employer has provided me with the training specified by the Secretary of State`) (`s 330(7B) the exception for a person assisting an adviser applies` `I am employed by, or in partnership with, an adviser to provide the adviser with assistance or support` `the information came to me in connection with that assistance or support` `the information came to the adviser in privileged circumstances`)) (`s 330(7C) the exception for money laundering lawful abroad applies` `I know, or believe on reasonable grounds, that the money laundering is occurring outside the United Kingdom` `the money laundering is not unlawful under the criminal law applying there` `the money laundering is of a description prescribed by the Secretary of State`) (`s 330(7D) the exception for information from an immigration check applies` `the information was obtained only in consequence of an immigration check` `but for that information I would not have reasonable grounds for knowing or suspecting`) (`s 330(7E) the exception for information from an eligibility verification notice applies` `the information was obtained only in consequence of complying with an eligibility verification notice` `but for that information I would not know or suspect or have reasonable grounds for knowing or suspecting`))
+
+-- -- The disclosure goes to a nominated officer or to a person authorised by the Director General of the National Crime Agency, as soon as is practicable after the information comes to you (s 330(4)).
+@export Must I make a disclosure of my suspicion under section 330 (s 330(1) and (4))?
+GIVEN `I know or suspect that another person is engaged in money laundering` IS A BOOLEAN @desc Do you know or suspect that another person is engaged in money laundering?
+      `I have reasonable grounds for knowing or suspecting that another person is engaged in money laundering` IS A BOOLEAN @desc Do you have reasonable grounds for knowing or suspecting that another person is engaged in money laundering?
+      `my business is in the regulated sector` IS A `My answer` @desc Does Schedule 9 put the business you work in in the regulated sector?  Answer Yes if it does, No if Schedule 9 says it is not (an exclusion applies), and I am not sure if Schedule 9 does not settle it (see the question on the regulated sector).
+      `the information or other matter came to me in the course of that business` IS A BOOLEAN @desc Did the information or other matter on which your knowledge or suspicion is based (or which gives reasonable grounds for it) come to you in the course of that business?
+      `I can identify the other person or the whereabouts of any of the laundered property` IS A BOOLEAN @desc Can you identify the other person, or the whereabouts of any of the laundered property?
+      `I believe, or it is reasonable to expect me to believe, that the information will or may assist in identifying that person or the property` IS A BOOLEAN @desc Do you believe, or is it reasonable to expect you to believe, that the information or other matter will or may assist in identifying that other person or the whereabouts of any of the laundered property?
+      `I have a reasonable excuse for not making the required disclosure` IS A BOOLEAN @desc Do you have a reasonable excuse for not making the required disclosure?
+      `I am a professional legal adviser or a relevant professional adviser` IS A BOOLEAN @desc Are you a professional legal adviser or a relevant professional adviser (an accountant, auditor or tax adviser who is a member of a qualifying professional body)?
+      `I know the identity of the other person or the whereabouts of the laundered property` IS A BOOLEAN @desc Do you know either the identity of the other person or the whereabouts of the laundered property?
+      `I know it because of information that came to me in privileged circumstances` IS A BOOLEAN @desc If so, do you know it because of information or other matter that came to you in privileged circumstances?
+      `the information or other matter came to me in privileged circumstances` IS A BOOLEAN @desc Did the information or other matter that gives rise to your knowledge or suspicion come to you in privileged circumstances?
+      `my employer has provided me with the training specified by the Secretary of State` IS A BOOLEAN @desc Has your employer provided you with such training as the Secretary of State specifies by order for the purposes of section 330?
+      `I am employed by, or in partnership with, an adviser to provide the adviser with assistance or support` IS A BOOLEAN @desc Are you employed by, or in partnership with, a professional legal adviser or a relevant professional adviser to provide the adviser with assistance or support?
+      `the information came to me in connection with that assistance or support` IS A BOOLEAN @desc Did the information come to you in connection with the provision of that assistance or support?
+      `the information came to the adviser in privileged circumstances` IS A BOOLEAN @desc Did the information come to the adviser in privileged circumstances?
+      `I know, or believe on reasonable grounds, that the money laundering is occurring outside the United Kingdom` IS A BOOLEAN @desc Do you know, or believe on reasonable grounds, that the money laundering is occurring in a particular country or territory outside the United Kingdom?
+      `the money laundering is not unlawful under the criminal law applying there` IS A BOOLEAN @desc Is the money laundering not unlawful under the criminal law applying in that country or territory?
+      `the money laundering is of a description prescribed by the Secretary of State` IS A BOOLEAN @desc Is the money laundering of a description prescribed in an order made by the Secretary of State?
+      `the information was obtained only in consequence of an immigration check` IS A BOOLEAN @desc Does the information consist of or include information that was obtained only in consequence of a status check under section 40 of the Immigration Act 2014 or an immigration check under section 40A of that Act?
+      `but for that information I would not have reasonable grounds for knowing or suspecting` IS A BOOLEAN @desc But for the information so obtained, would you not have reasonable grounds for knowing or suspecting that another person is engaged in money laundering?
+      `the information was obtained only in consequence of complying with an eligibility verification notice` IS A BOOLEAN @desc Does the information consist of or include information that was obtained only in consequence of complying with an eligibility verification notice given to you under paragraph 1(1) of Schedule 3B to the Social Security Administration Act 1992?
+      `but for that information I would not know or suspect or have reasonable grounds for knowing or suspecting` IS A BOOLEAN @desc But for the information so obtained, would you not know or suspect, or have reasonable grounds for knowing or suspecting, that another person is engaged in money laundering?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Must I make a disclosure under section 330` IS
+    `s 330(1) the person must make the required disclosure` (`s 330(2) the first condition is satisfied` `I know or suspect that another person is engaged in money laundering` `I have reasonable grounds for knowing or suspecting that another person is engaged in money laundering`) (`s 330(3) the second condition is satisfied` (`what I say, as a fact` `my business is in the regulated sector`) `the information or other matter came to me in the course of that business`) (`s 330(3A) the third condition is satisfied` `I can identify the other person or the whereabouts of any of the laundered property` `I believe, or it is reasonable to expect me to believe, that the information will or may assist in identifying that person or the property`) (`s 330(6) to (7E) one of the exceptions applies` (`s 330(6)(a) the exception for a reasonable excuse applies` `I have a reasonable excuse for not making the required disclosure`) (`s 330(6)(b) the exception for a professional adviser applies` `I am a professional legal adviser or a relevant professional adviser` `I know the identity of the other person or the whereabouts of the laundered property` `I know it because of information that came to me in privileged circumstances` `the information or other matter came to me in privileged circumstances`) (`s 330(6)(c) subsection (7) or (7B) applies to him` (`s 330(7) the exception for an untrained person who does not know or suspect applies` (NOT `I know or suspect that another person is engaged in money laundering`) `my employer has provided me with the training specified by the Secretary of State`) (`s 330(7B) the exception for a person assisting an adviser applies` `I am employed by, or in partnership with, an adviser to provide the adviser with assistance or support` `the information came to me in connection with that assistance or support` `the information came to the adviser in privileged circumstances`)) (`s 330(7C) the exception for money laundering lawful abroad applies` `I know, or believe on reasonable grounds, that the money laundering is occurring outside the United Kingdom` `the money laundering is not unlawful under the criminal law applying there` `the money laundering is of a description prescribed by the Secretary of State`) (`s 330(7D) the exception for information from an immigration check applies` `the information was obtained only in consequence of an immigration check` `but for that information I would not have reasonable grounds for knowing or suspecting`) (`s 330(7E) the exception for information from an eligibility verification notice applies` `the information was obtained only in consequence of complying with an eligibility verification notice` `but for that information I would not know or suspect or have reasonable grounds for knowing or suspecting`))
+
+@export Is the disclosure I am about to make the required disclosure (s 330(5))?
+GIVEN `I know the identity of the other person` IS A BOOLEAN @desc Do you know the identity of the other person?
+      `my disclosure gives the identity of that person` IS A BOOLEAN @desc Does your disclosure give that identity?
+      `I know the whereabouts of some or all of the laundered property` IS A BOOLEAN @desc Do you know the whereabouts of some or all of the laundered property?
+      `my disclosure gives the whereabouts, so far as I know them` IS A BOOLEAN @desc Does your disclosure give those whereabouts, so far as you know them?
+      `my disclosure gives the information or other matter` IS A BOOLEAN @desc Does your disclosure give the information or other matter on which your knowledge or suspicion is based?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is my disclosure the required disclosure` IS
+    `s 330(5) the disclosure is the required disclosure` `I know the identity of the other person` `my disclosure gives the identity of that person` `I know the whereabouts of some or all of the laundered property` `my disclosure gives the whereabouts, so far as I know them` `my disclosure gives the information or other matter`
+
+-- Situation: you are a nominated officer, the person your employer has nominated to receive disclosures.
+@export Do I commit an offence under section 331 as a nominated officer who does not pass a disclosure on (s 331(1))?
+GIVEN `I am a person nominated to receive disclosures under section 330` IS A BOOLEAN @desc Are you a person nominated to receive disclosures under section 330?
+      `I know or suspect that another person is engaged in money laundering (nominated officer)` IS A BOOLEAN @desc Do you know or suspect that another person is engaged in money laundering?
+      `I have reasonable grounds for knowing or suspecting it (nominated officer)` IS A BOOLEAN @desc Do you have reasonable grounds for knowing or suspecting that another person is engaged in money laundering?
+      `the information came to me in consequence of a disclosure under section 330` IS A BOOLEAN @desc Did the information or other matter on which your knowledge or suspicion is based come to you in consequence of a disclosure made under section 330?
+      `I know the identity of the other person or the whereabouts of the property in consequence of a disclosure under section 330` IS A BOOLEAN @desc Do you know the identity of the other person, or the whereabouts of any of the laundered property, in consequence of a disclosure made under section 330?
+      `that person or the property can be identified from the information` IS A BOOLEAN @desc Can that other person, or the whereabouts of any of the laundered property, be identified from the information or other matter?
+      `I believe, or it is reasonable to expect me to believe, that the information will or may assist in identifying them` IS A BOOLEAN @desc Do you believe, or is it reasonable to expect you to believe, that the information or other matter will or may assist in identifying that other person or the whereabouts of the laundered property?
+      `I made the required disclosure to a person authorised by the Director General of the National Crime Agency` IS A BOOLEAN @desc Did you make the required disclosure to a person authorised for the purposes of this Part by the Director General of the National Crime Agency?
+      `I made it as soon as practicable after the information came to me` IS A BOOLEAN @desc Did you make it as soon as is practicable after the information or other matter came to you?
+      `I have a reasonable excuse for not making the required disclosure` IS A BOOLEAN @desc Do you have a reasonable excuse for not making the required disclosure?
+      `I know, or believe on reasonable grounds, that the money laundering is occurring outside the United Kingdom` IS A BOOLEAN @desc Do you know, or believe on reasonable grounds, that the money laundering is occurring in a particular country or territory outside the United Kingdom?
+      `the money laundering is not unlawful under the criminal law applying there` IS A BOOLEAN @desc Is the money laundering not unlawful under the criminal law applying in that country or territory?
+      `the money laundering is of a description prescribed by the Secretary of State` IS A BOOLEAN @desc Is the money laundering of a description prescribed in an order made by the Secretary of State?
+      `the information was obtained only in consequence of an immigration check` IS A BOOLEAN @desc Does the information consist of or include information that was obtained only in consequence of a status check under section 40 of the Immigration Act 2014 or an immigration check under section 40A of that Act?
+      `but for that information I would not have reasonable grounds for knowing or suspecting` IS A BOOLEAN @desc But for the information so obtained, would you not have reasonable grounds for knowing or suspecting that another person is engaged in money laundering?
+      `the information was obtained only in consequence of complying with an eligibility verification notice` IS A BOOLEAN @desc Does the information consist of or include information that was obtained only in consequence of complying with an eligibility verification notice given to you under paragraph 1(1) of Schedule 3B to the Social Security Administration Act 1992?
+      `but for that information I would not know or suspect or have reasonable grounds for knowing or suspecting` IS A BOOLEAN @desc But for the information so obtained, would you not know or suspect, or have reasonable grounds for knowing or suspecting, that another person is engaged in money laundering?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Do I commit an offence under section 331` IS
+    `s 331(1) the person commits an offence` `I am a person nominated to receive disclosures under section 330` (`s 331(2) the first condition is satisfied` `I know or suspect that another person is engaged in money laundering (nominated officer)` `I have reasonable grounds for knowing or suspecting it (nominated officer)`) (`s 331(3) the second condition is satisfied` `the information came to me in consequence of a disclosure under section 330`) (`s 331(3A) the third condition is satisfied` `I know the identity of the other person or the whereabouts of the property in consequence of a disclosure under section 330` `that person or the property can be identified from the information` `I believe, or it is reasonable to expect me to believe, that the information will or may assist in identifying them`) (`s 331(4) the fourth condition is satisfied` `I made the required disclosure to a person authorised by the Director General of the National Crime Agency` `I made it as soon as practicable after the information came to me`) (`s 331(6) the exception for a reasonable excuse applies` `I have a reasonable excuse for not making the required disclosure`) (`s 331(6A) the exception for money laundering lawful abroad applies` `I know, or believe on reasonable grounds, that the money laundering is occurring outside the United Kingdom` `the money laundering is not unlawful under the criminal law applying there` `the money laundering is of a description prescribed by the Secretary of State`) (`s 331(6B) the exception for information from an immigration check applies` `the information was obtained only in consequence of an immigration check` `but for that information I would not have reasonable grounds for knowing or suspecting`) (`s 331(6C) the exception for information from an eligibility verification notice applies` `the information was obtained only in consequence of complying with an eligibility verification notice` `but for that information I would not know or suspect or have reasonable grounds for knowing or suspecting`)
+
+@export Do I commit an offence under section 332 as a nominated officer who does not pass a disclosure on (s 332(1))?
+GIVEN `I am a person nominated to receive disclosures under section 337 or 338` IS A BOOLEAN @desc Are you a person nominated to receive disclosures under section 337 or 338?
+      `I know or suspect that another person is engaged in money laundering` IS A BOOLEAN @desc Do you know or suspect that another person is engaged in money laundering?
+      `the information came to me in consequence of a disclosure under section 337 or 338` IS A BOOLEAN @desc Did the information or other matter on which your knowledge or suspicion is based come to you in consequence of a disclosure made under section 337 or 338?
+      `I know the identity of the other person or the whereabouts of the property in consequence of that disclosure` IS A BOOLEAN @desc Do you know the identity of the other person, or the whereabouts of any of the laundered property, in consequence of that disclosure?
+      `that person or the property can be identified from the information (section 332)` IS A BOOLEAN @desc Can that other person, or the whereabouts of any of the laundered property, be identified from the information or other matter?
+      `I believe, or it is reasonable to expect me to believe, that the information will or may assist in identifying them (section 332)` IS A BOOLEAN @desc Do you believe, or is it reasonable to expect you to believe, that the information or other matter will or may assist in identifying that other person or the whereabouts of the laundered property?
+      `I made the required disclosure to a person authorised by the Director General of the National Crime Agency` IS A BOOLEAN @desc Did you make the required disclosure to a person authorised for the purposes of this Part by the Director General of the National Crime Agency?
+      `I made it as soon as practicable after the information came to me` IS A BOOLEAN @desc Did you make it as soon as is practicable after the information or other matter came to you?
+      `I have a reasonable excuse for not making the required disclosure` IS A BOOLEAN @desc Do you have a reasonable excuse for not making the required disclosure?
+      `I know, or believe on reasonable grounds, that the money laundering is occurring outside the United Kingdom` IS A BOOLEAN @desc Do you know, or believe on reasonable grounds, that the money laundering is occurring in a particular country or territory outside the United Kingdom?
+      `the money laundering is not unlawful under the criminal law applying there` IS A BOOLEAN @desc Is the money laundering not unlawful under the criminal law applying in that country or territory?
+      `the money laundering is of a description prescribed by the Secretary of State` IS A BOOLEAN @desc Is the money laundering of a description prescribed in an order made by the Secretary of State?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Do I commit an offence under section 332` IS
+    `s 332(1) the person commits an offence` `I am a person nominated to receive disclosures under section 337 or 338` (`s 332(2) the first condition is satisfied` `I know or suspect that another person is engaged in money laundering`) (`s 332(3) the second condition is satisfied` `the information came to me in consequence of a disclosure under section 337 or 338`) (`s 332(3A) the third condition is satisfied` `I know the identity of the other person or the whereabouts of the property in consequence of that disclosure` `that person or the property can be identified from the information (section 332)` `I believe, or it is reasonable to expect me to believe, that the information will or may assist in identifying them (section 332)`) (`s 332(4) the fourth condition is satisfied` `I made the required disclosure to a person authorised by the Director General of the National Crime Agency` `I made it as soon as practicable after the information came to me`) (`s 332(6) the exception for a reasonable excuse applies` `I have a reasonable excuse for not making the required disclosure`) (`s 332(7) the exception for money laundering lawful abroad applies` `I know, or believe on reasonable grounds, that the money laundering is occurring outside the United Kingdom` `the money laundering is not unlawful under the criminal law applying there` `the money laundering is of a description prescribed by the Secretary of State`)
+
+-- ---------------------------------------------------------------------------
+§§ `Can I tell anyone? Tipping off in the regulated sector (ss 333A to 333E)`
+-- Situation: a disclosure has been made, or an investigation may follow, and you work in the regulated sector.
+-- ---------------------------------------------------------------------------
+
+@export Do I commit an offence under section 333A by disclosing that a disclosure has been made (s 333A(1))?
+GIVEN `a disclosure has been made under this Part by me or another person` IS A BOOLEAN @desc Has the person, or another person, made a disclosure under this Part?
+      `the person the earlier disclosure was made to` IS A `Recipient of the earlier disclosure (section 333A(2))` @desc To whom was it made?
+      `the earlier disclosure was of information that came in the course of a business in the regulated sector` IS A BOOLEAN @desc Was it of information that came to that person in the course of a business in the regulated sector?
+      `my disclosure is likely to prejudice any investigation that might follow` IS A BOOLEAN @desc Is the disclosure you are about to make likely to prejudice any investigation that might be conducted following that earlier disclosure?
+      `my business is in the regulated sector` IS A `My answer` @desc Does Schedule 9 put the business you work in in the regulated sector?  Answer Yes if it does, No if Schedule 9 says it is not (an exclusion applies), and I am not sure if Schedule 9 does not settle it (see the question on the regulated sector).
+      `the information on which my disclosure is based came to me in the course of that business` IS A BOOLEAN @desc Did the information on which your disclosure is based come to you in the course of that business?
+      `one of the permitted disclosures of sections 333B to 333D applies to me` IS A BOOLEAN @desc Does one of the permitted disclosures in sections 333B to 333D apply (answer Yes if any of the questions on permitted disclosures below is answered Yes)?
+      `I do not know or suspect that my disclosure is likely to prejudice an investigation` IS A BOOLEAN @desc Do you not know or suspect that your disclosure is likely to have that effect?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Do I commit the offence of tipping off about a disclosure` IS
+    `s 333A(1) the person commits an offence by disclosing a matter within subsection (2)` (`s 333A(2) the matter is within subsection (2)` `a disclosure has been made under this Part by me or another person` `the person the earlier disclosure was made to` `the earlier disclosure was of information that came in the course of a business in the regulated sector`) `my disclosure is likely to prejudice any investigation that might follow` (`what I say, as a fact` `my business is in the regulated sector`) `the information on which my disclosure is based came to me in the course of that business` `one of the permitted disclosures of sections 333B to 333D applies to me` (`s 333D(3) the exception of section 333D(3) applies` `I do not know or suspect that my disclosure is likely to prejudice an investigation`)
+
+@export Do I commit an offence under section 333A by disclosing an investigation (s 333A(3))?
+GIVEN `I disclose that an investigation into allegations of an offence under this Part is being contemplated or carried out` IS A BOOLEAN @desc Do you disclose that an investigation into allegations that an offence under this Part has been committed is being contemplated or is being carried out?
+      `my disclosure is likely to prejudice that investigation` IS A BOOLEAN @desc Is your disclosure likely to prejudice that investigation?
+      `my business is in the regulated sector` IS A `My answer` @desc Does Schedule 9 put the business you work in in the regulated sector?  Answer Yes if it does, No if Schedule 9 says it is not (an exclusion applies), and I am not sure if Schedule 9 does not settle it (see the question on the regulated sector).
+      `the information on which my disclosure is based came to me in the course of that business` IS A BOOLEAN @desc Did the information on which your disclosure is based come to you in the course of that business?
+      `one of the permitted disclosures of sections 333B to 333D applies to me` IS A BOOLEAN @desc Does one of the permitted disclosures in sections 333B to 333D apply (answer Yes if any of the questions on permitted disclosures below is answered Yes)?
+      `I do not know or suspect that my disclosure is likely to prejudice that investigation` IS A BOOLEAN @desc Do you not know or suspect that your disclosure is likely to have that effect?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Do I commit the offence of tipping off about an investigation` IS
+    `s 333A(3) the person commits an offence by disclosing an investigation` `I disclose that an investigation into allegations of an offence under this Part is being contemplated or carried out` `my disclosure is likely to prejudice that investigation` (`what I say, as a fact` `my business is in the regulated sector`) `the information on which my disclosure is based came to me in the course of that business` `one of the permitted disclosures of sections 333B to 333D applies to me` (`s 333D(4) the exception of section 333D(4) applies` `I do not know or suspect that my disclosure is likely to prejudice that investigation`)
+
+@export May I tell a colleague in the same undertaking (s 333B(1))?
+GIVEN `I am an employee, officer or partner of an undertaking` IS A BOOLEAN @desc Are you an employee, officer or partner of an undertaking?
+      `the disclosure is to an employee, officer or partner of the same undertaking` IS A BOOLEAN @desc Is the disclosure to an employee, officer or partner of the same undertaking?
+GIVETH A BOOLEAN
+DECIDE `May I tell a colleague in my undertaking` IS
+    `s 333B(1) the disclosure within an undertaking is permitted` `I am an employee, officer or partner of an undertaking` `the disclosure is to an employee, officer or partner of the same undertaking`
+
+@export May a credit or financial institution tell another institution in its group (s 333B(2))?
+GIVEN `the disclosure is by a credit institution or a financial institution` IS A BOOLEAN @desc Is the disclosure by a credit institution or a financial institution?
+      `the disclosure is to a credit institution or a financial institution` IS A BOOLEAN @desc Is the disclosure to a credit institution or a financial institution?
+      `the institution to which the disclosure is made is situated in the United Kingdom, an EEA state or an equivalent country (group)` IS A BOOLEAN @desc Is the institution or person to whom the disclosure is made situated in the United Kingdom or an EEA state or in a country or territory imposing equivalent money laundering requirements?
+      `both institutions belong to the same group` IS A BOOLEAN @desc Do both institutions belong to the same group (within the meaning of Directive 2002/87/EC)?
+GIVETH A BOOLEAN
+DECIDE `May I tell another institution in my group` IS
+    `s 333B(2) the disclosure within a group of institutions is permitted` `the disclosure is by a credit institution or a financial institution` `the disclosure is to a credit institution or a financial institution` `the institution to which the disclosure is made is situated in the United Kingdom, an EEA state or an equivalent country (group)` `both institutions belong to the same group`
+
+@export May an adviser tell another adviser in an undertaking under common control (s 333B(4))?
+GIVEN `I am a professional legal adviser or a relevant professional adviser` IS A BOOLEAN @desc Are you a professional legal adviser or a relevant professional adviser?
+      `the disclosure is to a professional legal adviser or a relevant professional adviser` IS A BOOLEAN @desc Is the disclosure to a professional legal adviser or a relevant professional adviser?
+      `both of us carry on business in the United Kingdom, an EEA state or an equivalent country` IS A BOOLEAN @desc Do both of you carry on business in the United Kingdom or an EEA state or in a country or territory imposing equivalent money laundering requirements?
+      `we perform our professional activities within different undertakings that share common ownership, management or control` IS A BOOLEAN @desc Do you perform your professional activities within different undertakings that share common ownership, management or control?
+GIVETH A BOOLEAN
+DECIDE `May an adviser tell an adviser under common control` IS
+    `s 333B(4) the disclosure between advisers in undertakings under common control is permitted` `I am a professional legal adviser or a relevant professional adviser` `the disclosure is to a professional legal adviser or a relevant professional adviser` `both of us carry on business in the United Kingdom, an EEA state or an equivalent country` `we perform our professional activities within different undertakings that share common ownership, management or control`
+
+@export May I tell another institution or adviser of the same kind about a shared client, transaction or service (s 333C)?
+GIVEN `the kind of disclosure` IS A `Kind of disclosure (section 333C(1))` @desc What kind of disclosure is it?
+      `it relates to a client or former client of both` IS A BOOLEAN @desc Does the disclosure relate to a client or former client of the institution or adviser making it and the one to whom it is made?
+      `it relates to a transaction involving us both` IS A BOOLEAN @desc Does it relate to a transaction involving you both?
+      `it relates to the provision of a service involving us both` IS A BOOLEAN @desc Does it relate to the provision of a service involving you both?
+      `it is for the purpose only of preventing an offence under this Part` IS A BOOLEAN @desc Is the disclosure for the purpose only of preventing an offence under this Part of this Act?
+      `the recipient is situated in the United Kingdom, an EEA state or an equivalent country` IS A BOOLEAN @desc Is the institution or adviser to whom the disclosure is made situated in the United Kingdom or an EEA state or in a country or territory imposing equivalent money laundering requirements?
+      `we are subject to equivalent duties of professional confidentiality and the protection of personal data` IS A BOOLEAN @desc Are you and the one to whom you disclose subject to equivalent duties of professional confidentiality and the protection of personal data?
+GIVETH A BOOLEAN
+DECIDE `May I tell an institution or adviser of the same kind` IS
+    `s 333C(2) the disclosure between institutions or advisers is permitted` (`that answer is yes` (`s 333C(1) this section applies to the disclosure` `the kind of disclosure`)) `it relates to a client or former client of both` `it relates to a transaction involving us both` `it relates to the provision of a service involving us both` `it is for the purpose only of preventing an offence under this Part` `the recipient is situated in the United Kingdom, an EEA state or an equivalent country` `we are subject to equivalent duties of professional confidentiality and the protection of personal data`
+
+@export May I make the disclosure for one of the purposes in section 333D(1)?
+GIVEN `the disclosure is to my supervisory authority` IS A BOOLEAN @desc Is the disclosure to the authority that is your supervisory authority by virtue of the Money Laundering, Terrorist Financing and Transfer of Funds (Information on the Payer) Regulations 2017?
+      `the disclosure is for the purposes of proceedings under section 336A` IS A BOOLEAN @desc Is the disclosure for the purposes of proceedings under section 336A (power of court to extend the moratorium period)?
+      `the disclosure is made in good faith by virtue of section 339ZB` IS A BOOLEAN @desc Is the disclosure made in good faith by virtue of section 339ZB (disclosures within the regulated sector)?
+      `the disclosure is for the detection, investigation or prosecution of a criminal offence` IS A BOOLEAN @desc Is the disclosure for the purpose of the detection, investigation or prosecution of a criminal offence (whether in the United Kingdom or elsewhere)?
+      `the disclosure is for an investigation under this Act` IS A BOOLEAN @desc Is the disclosure for the purpose of an investigation under this Act?
+      `the disclosure is for the enforcement of a court order under this Act` IS A BOOLEAN @desc Is the disclosure for the purpose of the enforcement of any order of a court under this Act?
+GIVETH A BOOLEAN
+DECIDE `May I make a disclosure for a purpose listed in section 333D` IS
+    `s 333D(1) the disclosure for one of the listed purposes is permitted` `the disclosure is to my supervisory authority` `the disclosure is for the purposes of proceedings under section 336A` `the disclosure is made in good faith by virtue of section 339ZB` `the disclosure is for the detection, investigation or prosecution of a criminal offence` `the disclosure is for an investigation under this Act` `the disclosure is for the enforcement of a court order under this Act`
+
+@export May I tell my customer or client that an application to extend the moratorium has been made (s 333D(1A))?
+GIVEN `an application is made to extend a moratorium period under section 336A` IS A BOOLEAN @desc Has an application been made to extend a moratorium period under section 336A?
+      `the disclosure is made to a customer or client of mine` IS A BOOLEAN @desc Is the disclosure made to a customer or client of yours?
+      `the customer or client appears to me to have an interest in the relevant property` IS A BOOLEAN @desc Does the customer or client appear to you to have an interest in the relevant property?
+      `the disclosure contains only what is necessary to notify them of the application` IS A BOOLEAN @desc Does the disclosure contain only such information as is necessary for the purposes of notifying the customer or client that the application has been made?
+GIVETH A BOOLEAN
+DECIDE `May I tell my customer about the application` IS
+    `s 333D(1A) the disclosure to a customer or client about the application is permitted` `an application is made to extend a moratorium period under section 336A` `the disclosure is made to a customer or client of mine` `the customer or client appears to me to have an interest in the relevant property` `the disclosure contains only what is necessary to notify them of the application`
+
+@export May I, as an adviser, tell my client to dissuade them from an offence (s 333D(2))?
+GIVEN `I am a professional legal adviser or a relevant professional adviser` IS A BOOLEAN @desc Are you a professional legal adviser or a relevant professional adviser?
+      `the disclosure is to my client` IS A BOOLEAN @desc Is the disclosure to your client?
+      `it is made for the purpose of dissuading the client from engaging in conduct amounting to an offence` IS A BOOLEAN @desc Is it made for the purpose of dissuading the client from engaging in conduct amounting to an offence?
+GIVETH A BOOLEAN
+DECIDE `May I tell my client to dissuade them` IS
+    `s 333D(2) the disclosure by an adviser to dissuade the client is permitted` `I am a professional legal adviser or a relevant professional adviser` `the disclosure is to my client` `it is made for the purpose of dissuading the client from engaging in conduct amounting to an offence`
+
+-- ---------------------------------------------------------------------------
+§§ `What is the most I can be sentenced to? (ss 333A(4) and 334)`
+-- Situation: you are guilty, or may be found guilty, of an offence under Part 7.  The answer is a ceiling (a most), never a tariff.
+-- ---------------------------------------------------------------------------
+
+@export What is the most I can be given if guilty of an offence under section 327, 328 or 329 (s 334(1))?
+GIVEN `how I am convicted` IS A `Way of being convicted` @desc Are you convicted on summary conviction or on conviction on indictment?
+GIVETH A `Penalty ceiling`
+DECIDE `What is the most for dealing with criminal property` IS
+    `s 334(1) the most that can be imposed on a person guilty of an offence under section 327, 328 or 329` `how I am convicted`
+
+@export What is the most I can be given if guilty of an offence under section 330, 331 or 332 (s 334(2))?
+GIVEN `how I am convicted` IS A `Way of being convicted` @desc Are you convicted on summary conviction or on conviction on indictment?
+GIVETH A `Penalty ceiling`
+DECIDE `What is the most for failing to disclose` IS
+    `s 334(2) the most that can be imposed on a person guilty of an offence under section 330, 331 or 332` `how I am convicted`
+
+@export What is the most I can be given if guilty of tipping off under section 333A (s 333A(4))?
+GIVEN `how I am convicted` IS A `Way of being convicted` @desc Are you convicted on summary conviction or on conviction on indictment?
+GIVETH A `Penalty ceiling`
+DECIDE `What is the most for tipping off` IS
+    `s 333A(4) the most that can be imposed on a person guilty of an offence under section 333A` `how I am convicted`
+
+@export What is the most I can be fined if guilty of an offence under section 339(1A) (s 334(3))?
+GIVEN `how I am convicted` IS A `Way of being convicted` @desc Are you convicted on summary conviction or on conviction on indictment?
+GIVETH A MAYBE `Penalty ceiling`
+DECIDE `What is the most for a disclosure in the wrong form` IS
+    `s 334(3) the most that can be imposed on a person guilty of an offence under section 339(1A)` `how I am convicted`
+
+-- ---------------------------------------------------------------------------
+§§ `Do I have consent to go ahead? (ss 335 and 336)`
+-- Situation: you have made an authorised disclosure and want to do the act the disclosure is about.  The notice period and the moratorium period are counted in working days and days.
+-- ---------------------------------------------------------------------------
+
+@export Is the consent I have the appropriate consent (s 335(1))?
+GIVEN `who gave the consent` IS A `Person to whom a disclosure is made` @desc Who gave you the consent?
+      `to whom my authorised disclosure was made` IS A `Person to whom a disclosure is made` @desc To whom did you make the authorised disclosure?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is the consent I have the appropriate consent` IS
+    `s 335(1) the consent is the appropriate consent` `who gave the consent` `to whom my authorised disclosure was made`
+
+@export On what day does the notice period end (s 335(5))?
+GIVEN `the day I make the disclosure` IS A DATE @desc On what day did you make the disclosure?
+      `the days that are Good Friday or a bank holiday in the part of the United Kingdom where I am` IS A LIST OF DATE @desc List the days that are Good Friday or a bank holiday in the part of the United Kingdom where you are when you make the disclosure, around the period you are asking about.
+GIVETH A DATE
+DECIDE `On what day does my notice period end` IS
+    `s 335(5) the last day of the notice period` `the day I make the disclosure` `the days that are Good Friday or a bank holiday in the part of the United Kingdom where I am`
+
+@export On what day does the moratorium period end (s 335(6))?
+GIVEN `the day I receive notice that consent is refused` IS A DATE @desc On what day did you receive notice that consent is refused?
+      `the days by which the moratorium period has been extended` IS A NUMBER @desc By how many days has the moratorium period been extended under section 336A or 336C?  (0 if it has not been)
+GIVETH A DATE
+DECIDE `On what day does my moratorium period end` IS
+    `s 335(6) the last day of the moratorium period` `the day I receive notice that consent is refused` `the days by which the moratorium period has been extended`
+
+@export Am I treated as having the appropriate consent on a given day (s 335(2))?
+GIVEN `I make an authorised disclosure to a constable or a customs officer` IS A BOOLEAN @desc Did you make an authorised disclosure to a constable or a customs officer?  (A person authorised by the Director General of the National Crime Agency counts as a constable: section 340(13).)
+      `the day I make the disclosure` IS A DATE @desc On what day did you make the disclosure?
+      `I have received notice that consent is refused` IS A BOOLEAN @desc Have you received notice that consent is refused?
+      `the day I received notice that consent is refused` IS A DATE @desc If so, on what day?  (any day if you have not)
+      `the days that are Good Friday or a bank holiday in the part of the United Kingdom where I am` IS A LIST OF DATE @desc List the days that are Good Friday or a bank holiday in the part of the United Kingdom where you are when you make the disclosure, around the period you are asking about.
+      `the days by which the moratorium period has been extended` IS A NUMBER @desc By how many days has the moratorium period been extended under section 336A or 336C?  (0 if it has not been)
+      `the day I am asking about` IS A DATE @desc For which day are you asking whether you are treated as having the appropriate consent?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Am I treated as having the appropriate consent` IS
+    `s 335(2) the person must be treated as having the appropriate consent` `I make an authorised disclosure to a constable or a customs officer` `the day I make the disclosure` (`my day if it happened` `I have received notice that consent is refused` `the day I received notice that consent is refused`) `the days that are Good Friday or a bank holiday in the part of the United Kingdom where I am` `the days by which the moratorium period has been extended` `the day I am asking about`
+
+-- ---------------------------------------------------------------------------
+§§ `Am I protected when I disclose? (ss 337 to 339)`
+-- Situation: you have told, or are about to tell, a nominated officer or the authorities, and wonder whether that breaches a duty of confidence or whether you did it the right way.
+-- ---------------------------------------------------------------------------
+
+@export Is my disclosure not a breach of a restriction on the disclosure of information (s 337(1))?
+GIVEN `the information came to me in the course of my trade, profession, business or employment` IS A BOOLEAN @desc Did the information or other matter come to you in the course of your trade, profession, business or employment?
+      `it causes me to know or suspect that another person is engaged in money laundering` IS A BOOLEAN @desc Does it cause you to know or suspect that another person is engaged in money laundering?
+      `it gives me reasonable grounds for knowing or suspecting it` IS A BOOLEAN @desc Does it give you reasonable grounds for knowing or suspecting that another person is engaged in money laundering?
+      `to whom I make the disclosure` IS A `Person to whom a disclosure is made` @desc To whom do you make the disclosure?
+      `I make it as soon as practicable after the information comes to me` IS A BOOLEAN @desc Do you make the disclosure as soon as is practicable after the information or other matter comes to you?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is my disclosure protected under section 337` IS
+    `s 337(1) the disclosure is not to be taken to breach a restriction on the disclosure of information` (`s 337(2) the first condition is satisfied` `the information came to me in the course of my trade, profession, business or employment`) (`s 337(3) the second condition is satisfied` `it causes me to know or suspect that another person is engaged in money laundering` `it gives me reasonable grounds for knowing or suspecting it`) (`s 337(4) the third condition is satisfied` `to whom I make the disclosure` `I make it as soon as practicable after the information comes to me`)
+
+@export Is my disclosure an authorised disclosure under section 338 (s 338(1))?
+GIVEN `to whom I make the disclosure` IS A `Person to whom a disclosure is made` @desc To whom do you make the disclosure?
+      `I am the person who would do the prohibited act` IS A BOOLEAN @desc Do you make the disclosure yourself, as the person who is, or would be, doing the prohibited act?
+      `the disclosure is that property is criminal property` IS A BOOLEAN @desc Is the disclosure that property is criminal property?
+      `my disclosure is made before I do the prohibited act` IS A BOOLEAN @desc Is the disclosure made before you do the prohibited act?
+      `my disclosure is made while I am doing the prohibited act` IS A BOOLEAN @desc Is it made while you are doing the prohibited act?
+      `I began the act when it was not a prohibited act because I did not then know or suspect` IS A BOOLEAN @desc Did you begin to do the act at a time when it was not a prohibited act because you did not then know or suspect that the property constituted or represented a person's benefit from criminal conduct?
+      `my disclosure is made on my own initiative` IS A BOOLEAN @desc Is the disclosure made on your own initiative?
+      `I make it as soon as practicable after I first know or suspect` IS A BOOLEAN @desc Is it made as soon as is practicable after you first know or suspect that the property is criminal property?
+      `my disclosure is made after I do the prohibited act` IS A BOOLEAN @desc Is the disclosure made after you do the prohibited act?
+      `I have a reasonable excuse for not making it before I did the act` IS A BOOLEAN @desc Do you have a reasonable excuse for your failure to make the disclosure before you did the act?
+      `I make it as soon as it is practicable for me to make it` IS A BOOLEAN @desc Is it made as soon as it is practicable for you to make it?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is my disclosure an authorised disclosure` IS
+    `s 338(1) the disclosure is authorised` `to whom I make the disclosure` `I am the person who would do the prohibited act` `the disclosure is that property is criminal property` (`s 338(2) the first condition is satisfied` `my disclosure is made before I do the prohibited act`) (`s 338(2A) the second condition is satisfied` `my disclosure is made while I am doing the prohibited act` `I began the act when it was not a prohibited act because I did not then know or suspect` `my disclosure is made on my own initiative` `I make it as soon as practicable after I first know or suspect`) (`s 338(3) the third condition is satisfied` `my disclosure is made after I do the prohibited act` `I have a reasonable excuse for not making it before I did the act` `my disclosure is made on my own initiative` `I make it as soon as it is practicable for me to make it`)
+
+@export Do I commit an offence by making a disclosure otherwise than in the prescribed form or manner (s 339(1A))?
+GIVEN `I make a disclosure under section 330, 331, 332 or 338` IS A BOOLEAN @desc Do you make a disclosure under section 330, 331, 332 or 338?
+      `my disclosure is in the prescribed form` IS A BOOLEAN @desc Is the disclosure made in the form prescribed by the Secretary of State by order?
+      `my disclosure is in the prescribed manner` IS A BOOLEAN @desc Is the disclosure made in the manner so prescribed?
+      `I have a reasonable excuse for making it otherwise than in the prescribed form or manner` IS A BOOLEAN @desc Do you have a reasonable excuse for making it otherwise than in the form or the manner prescribed?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Do I commit an offence under section 339` IS
+    `s 339(1A) the person commits an offence` `I make a disclosure under section 330, 331, 332 or 338` `my disclosure is in the prescribed form` `my disclosure is in the prescribed manner` `I have a reasonable excuse for making it otherwise than in the prescribed form or manner`
+
+-- ---------------------------------------------------------------------------
+§§ `What is the threshold amount for my act? (s 339A)`
+-- Situation: you are a bank, e-money or payment institution operating an account, or a regulated business ending a relationship, and wonder whether the value is under the threshold.
+-- ---------------------------------------------------------------------------
+
+@export What is the threshold amount for an act done in operating an account (s 339A(2))?
+GIVEN `the higher amount specified under section 339A(3) or (4), in pounds (0 if none)` IS A NUMBER @desc Has a higher amount been specified for your account under section 339A(3) or (4)?  If so, what is it, in pounds?  (0 if none)
+GIVETH A NUMBER
+DECIDE `What is the threshold amount for an account` IS
+    `s 339A(2) the threshold amount for acts done in operating an account, in pounds` (`my amount if I know it` `the higher amount specified under section 339A(3) or (4), in pounds (0 if none)`)
+
+@export What is the threshold amount for an act done to terminate a business relationship (s 339A(6A))?
+GIVEN `the act is done for the purposes of the termination of a business relationship` IS A BOOLEAN @desc Is the act done by you, carrying on business in the regulated sector, for the purposes of the termination of a business relationship with a customer or client?
+GIVETH A MAYBE NUMBER
+DECIDE `What is the threshold amount for terminating a relationship` IS
+    `s 339A(6A) the threshold amount for acts done to terminate a business relationship, in pounds` `the act is done for the purposes of the termination of a business relationship`
+
+-- ---------------------------------------------------------------------------
+§§ `Can I share my suspicion with another business, and does it count? (ss 339ZB to 339ZF)`
+-- Situation: you carry on a business in the regulated sector and want to share a suspicion with another regulated business, or you have been asked to; and you want to know whether the notification or joint report you make counts as the disclosure you owe.
+-- ---------------------------------------------------------------------------
+
+@export May I disclose information to other businesses in the regulated sector under section 339ZB (s 339ZB(1))?
+GIVEN `I am carrying on a business in the regulated sector as a relevant undertaking` IS A BOOLEAN @desc Are you carrying on a business in the regulated sector as a relevant undertaking?
+      `the information on which my disclosure is based came to me in the course of that business` IS A BOOLEAN @desc Did the information on which the disclosure is based come to you in the course of carrying on that business?
+      `each person I am to disclose to is also a relevant undertaking in the regulated sector` IS A BOOLEAN @desc Is each person to whom the information is to be disclosed also carrying on a business in the regulated sector as a relevant undertaking?
+      `an NCA authorised officer has requested me to make the disclosure` IS A BOOLEAN @desc Has an NCA authorised officer requested you to make the disclosure?
+      `at least one of the persons I am to disclose to has requested me to do so` IS A BOOLEAN @desc Has at least one of the persons to whom the information is to be disclosed requested you to do so?
+      `before I make the disclosure the required notification has been made to an NCA authorised officer` IS A BOOLEAN @desc Before you make the disclosure, has the required notification been made to an NCA authorised officer?
+      `I am satisfied that the disclosure will or may assist in determining a matter connected with a suspicion of money laundering` IS A BOOLEAN @desc Are you satisfied that the disclosure of the information will or may assist in determining any matter in connection with a suspicion that a person is engaged in money laundering?
+GIVETH A MAYBE BOOLEAN
+DECIDE `May I disclose information under section 339ZB` IS
+    `s 339ZB(1) A may disclose information to one or more other persons` (`s 339ZB(2) condition 1 is met` `I am carrying on a business in the regulated sector as a relevant undertaking` `the information on which my disclosure is based came to me in the course of that business` `each person I am to disclose to is also a relevant undertaking in the regulated sector`) (`s 339ZB(3) condition 2 is met` `an NCA authorised officer has requested me to make the disclosure` `at least one of the persons I am to disclose to has requested me to do so`) (`s 339ZB(4) condition 3 is met` `before I make the disclosure the required notification has been made to an NCA authorised officer`) (`s 339ZB(5) condition 4 is met` `I am satisfied that the disclosure will or may assist in determining a matter connected with a suspicion of money laundering`)
+
+@export May I disclose information to another business so that it can make a disclosure request (s 339ZB(6))?
+GIVEN `my disclosure is made to A for the purposes of making a disclosure request` IS A BOOLEAN @desc Is the disclosure made to the other business (A) for the purposes of that business making a disclosure request?
+      `I have reason to believe that A has information that will or may assist` IS A BOOLEAN @desc Do you have reason to believe that the other business has information that will or may assist in determining a matter connected with a suspicion that a person is engaged in money laundering?
+GIVETH A MAYBE BOOLEAN
+DECIDE `May I disclose information so that a request can be made` IS
+    `s 339ZB(6) the person may disclose information to A for the purposes of making a disclosure request` `my disclosure is made to A for the purposes of making a disclosure request` `I have reason to believe that A has information that will or may assist`
+
+@export Who must make the required notification after a disclosure request (s 339ZC(3))?
+GIVEN `who made the disclosure request` IS A `Who made the disclosure request` @desc Who made the disclosure request?
+GIVETH A MAYBE `Who must make the required notification`
+DECIDE `Who must make the required notification` IS
+    `s 339ZC(3) who must make the required notification` `who made the disclosure request`
+
+@export Does my required notification count as the required disclosure (s 339ZD(2))?
+GIVEN `a question arises in proceedings as to whether the required disclosure has been made` IS A BOOLEAN @desc Does a question arise in proceedings as to whether the required disclosure has been made for the purposes of section 330(4) or 331(4) by you or the other business?
+      `my required notification is made in good faith` IS A BOOLEAN @desc Is the required notification made in good faith?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Does my required notification count as the required disclosure` IS
+    `s 339ZD(2) the required notification is treated as satisfying the requirement to make the required disclosure` `a question arises in proceedings as to whether the required disclosure has been made` `my required notification is made in good faith`
+
+@export Does our joint disclosure report count as the required disclosure (s 339ZD(3))?
+GIVEN `a question arises in proceedings as to whether the required disclosure has been made` IS A BOOLEAN @desc Does a question arise in proceedings as to whether the required disclosure has been made for the purposes of section 330(4) or 331(4) by you or the other business?
+      `the report is made jointly by me and the other business` IS A BOOLEAN @desc Is the report made jointly by you and the other business?
+      `the report explains the extent to which there are continuing grounds to suspect the person` IS A BOOLEAN @desc Does the report explain the extent to which there are continuing grounds to suspect that the person is engaged in money laundering?
+      `the report identifies the person (if known)` IS A BOOLEAN @desc Does the report identify the person (if known)?
+      `the report sets out the grounds for the suspicion` IS A BOOLEAN @desc Does the report set out the grounds for the suspicion?
+      `the report provides any other information relevant to the matter` IS A BOOLEAN @desc Does the report provide any other information relevant to the matter?
+      `the report is prepared after a disclosure under section 339ZB(1)` IS A BOOLEAN @desc Is the report prepared after the making of a disclosure by one of you to the other under section 339ZB(1) in connection with a suspicion of a person's engagement in money laundering?
+      `the day the report is sent to the NCA authorised officer` IS A DATE @desc On what day is the report sent to the NCA authorised officer?
+      `the disclosure request was made by an NCA authorised officer` IS A BOOLEAN @desc Was the disclosure request made by an NCA authorised officer?
+      `the officer specified a period when making the request` IS A BOOLEAN @desc Did the officer specify a period when making the request?
+      `the last day of the period the officer specified` IS A DATE @desc If so, what is the last day of the period the officer specified?  (any day if none)
+      `the day on which the required notification was made` IS A DATE @desc On what day was the required notification made?
+      `the report is made in good faith` IS A BOOLEAN @desc Is the report made in good faith?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Does my joint disclosure report count as the required disclosure` IS
+    CONSIDER `s 339ZD(6) the last day of the applicable period` `the disclosure request was made by an NCA authorised officer` (`my day if it happened` `the officer specified a period when making the request` `the last day of the period the officer specified`) `the day on which the required notification was made`
+    WHEN NOTHING THEN NOTHING -- input mapping: the applicable period cannot be worked out, so the report cannot be shown to be in time
+    WHEN JUST last THEN `s 339ZD(3) the joint disclosure report is treated as satisfying the requirement to make the required disclosure` `a question arises in proceedings as to whether the required disclosure has been made` (`that answer is yes` (`s 339ZD(4) the report is a joint disclosure report` `the report is made jointly by me and the other business` (`that answer is yes` (`s 339ZD(5) the report satisfies the requirements as to content` `the report explains the extent to which there are continuing grounds to suspect the person` `the report identifies the person (if known)` `the report sets out the grounds for the suspicion` `the report provides any other information relevant to the matter`)) `the report is prepared after a disclosure under section 339ZB(1)` `the day the report is sent to the NCA authorised officer` last)) `the report is made in good faith`
+
+-- -- The duty is that of the person who made the required notification.
+@export Must I notify an NCA authorised officer that a joint report is not being made (s 339ZE(9))?
+GIVEN `a joint disclosure report is not made before the end of the applicable period` IS A BOOLEAN @desc Is a joint disclosure report not made before the end of the applicable period?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Must I notify that no joint report is being made` IS
+    `s 339ZE(9) the person who made the required notification must notify an NCA authorised officer that a report is not being made` `a joint disclosure report is not made before the end of the applicable period`
+
+@export Is my relevant disclosure protected from a claim for breach of confidence (s 339ZF(1))?
+GIVEN `my disclosure is a relevant disclosure` IS A BOOLEAN @desc Is the disclosure a relevant disclosure (a disclosure under section 339ZB(1), a required notification or a joint disclosure report)?
+      `my disclosure is made in good faith` IS A BOOLEAN @desc Is it made in good faith?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is my relevant disclosure protected` IS
+    `s 339ZF(1) the relevant disclosure does not breach an obligation of confidence or another restriction on disclosure` `my disclosure is a relevant disclosure` `my disclosure is made in good faith`
+
+-- -- JUST TRUE means the bar applies: the relevant disclosure may not include the information unless the agency consents.
+@export Is my relevant disclosure barred from including information I obtained from a UK law enforcement agency (s 339ZF(2))?
+GIVEN `my relevant disclosure includes information obtained from a UK law enforcement agency` IS A BOOLEAN @desc Does your relevant disclosure include information that you obtained from a UK law enforcement agency?
+      `that agency consents to the disclosure` IS A BOOLEAN @desc Does that agency consent to the disclosure?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Am I barred from including law enforcement information` IS
+    `s 339ZF(2) the relevant disclosure may not include the information` `my relevant disclosure includes information obtained from a UK law enforcement agency` `that agency consents to the disclosure`
+
+-- ---------------------------------------------------------------------------
+§§ `What can be done to me if an information order is made against me? (ss 339ZH to 339ZK)`
+-- Situation: a magistrates' court or the sheriff has made an information order requiring you to provide information.
+-- ---------------------------------------------------------------------------
+
+@export Can a magistrates' court make me pay for failing to comply with an information order (s 339ZH(8))?
+GIVEN `I fail to comply with an information order made by a magistrates' court` IS A BOOLEAN @desc Do you fail to comply with an information order made by a magistrates' court?
+      `the amount the court orders me to pay, in pounds` IS A NUMBER @desc What amount is the court ordering you to pay, in pounds?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Can the court order me to pay` IS
+    `s 339ZH(8) the magistrates' court may order the person to pay the amount` `I fail to comply with an information order made by a magistrates' court` `the amount the court orders me to pay, in pounds`
+
+@export Can what I say in response to an information order be used in evidence against me (s 339ZI(1))?
+GIVEN `the statement was made by me in response to an information order` IS A BOOLEAN @desc Was the statement made by you in response to an information order?
+      `it is used in evidence against me in criminal proceedings` IS A BOOLEAN @desc Is it used in evidence against you in criminal proceedings?
+      `an exception in section 339ZI(2) applies` IS A BOOLEAN @desc Does an exception in section 339ZI(2) apply (proceedings under this Part; a prosecution for perjury; a prosecution for another offence in which you give evidence inconsistent with the statement)?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Can my statement be used against me` IS
+    `s 339ZI(1) the statement may be used in evidence against the person in criminal proceedings` `the statement was made by me in response to an information order` `it is used in evidence against me in criminal proceedings` `an exception in section 339ZI(2) applies`
+
+@export Does an appeal lie from a decision on an application for an information order (s 339ZJ(1))?
+GIVEN `the decision is a decision on an application for an information order` IS A BOOLEAN @desc Is the decision a decision on an application for an information order?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Does an appeal lie from this decision` IS
+    `s 339ZJ(1) an appeal lies to the relevant appeal court` `the decision is a decision on an application for an information order`
+
+@export May I appeal against a decision on an information order (s 339ZJ(2))?
+GIVEN `I was a party to the proceedings on the application` IS A BOOLEAN @desc Were you a party to the proceedings on the application?
+GIVETH A MAYBE BOOLEAN
+DECIDE `May I appeal as a party` IS
+    `s 339ZJ(2) the appeal lies at the instance of the person` `I was a party to the proceedings on the application`
+
+@export Which court hears my appeal against a decision on an information order (s 339ZJ(3))?
+GIVEN `who made the decision` IS A `Decision-maker on an information order` @desc Who made the decision?
+GIVETH A MAYBE `Appeal court under section 339ZJ`
+DECIDE `Which court hears my appeal` IS
+    `s 339ZJ(3) the relevant appeal court` `who made the decision`
+
+@export Can I be required to give privileged information under an information order (s 339ZK(1))?
+GIVEN `I would be entitled to refuse on grounds of legal professional privilege in High Court proceedings` IS A BOOLEAN @desc Would you be entitled to refuse to provide the information on grounds of legal professional privilege in proceedings in the High Court?
+      `in Scotland, the information is subject to legal privilege as defined by section 412` IS A BOOLEAN @desc In Scotland, is the information subject to legal privilege as defined by section 412?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Can I be required to give privileged information` IS
+    `s 339ZK(1) the information order confers the right to require the person to provide the information` (`that answer is yes` (`s 339ZK(2) the information is privileged information` `I would be entitled to refuse on grounds of legal professional privilege in High Court proceedings` `in Scotland, the information is subject to legal privilege as defined by section 412`))
+
+-- ---------------------------------------------------------------------------
+§§ `Is what I am dealing with criminal property? (s 340)`
+-- Situation: you hold, or are asked to deal with, money or other property and wonder whether it comes from crime.
+-- ---------------------------------------------------------------------------
+
+@export Is the conduct I have in mind criminal conduct (s 340(2))?
+GIVEN `the conduct constitutes an offence in any part of the United Kingdom` IS A BOOLEAN @desc Is the conduct an offence in any part of the United Kingdom?
+      `the conduct would constitute an offence in any part of the United Kingdom if it occurred there` IS A BOOLEAN @desc Would the conduct be an offence in any part of the United Kingdom if it had happened there?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is it criminal conduct` IS
+    `s 340(2) the conduct is criminal conduct` `the conduct constitutes an offence in any part of the United Kingdom` `the conduct would constitute an offence in any part of the United Kingdom if it occurred there`
+
+@export Is the property I am dealing with criminal property (s 340(3))?
+GIVEN `the property constitutes a person's benefit from criminal conduct or represents such a benefit` IS A BOOLEAN @desc Does the property constitute a person's benefit from criminal conduct, or represent such a benefit (in whole or part, directly or indirectly)?
+      `I know or suspect that it constitutes or represents such a benefit` IS A BOOLEAN @desc Do you know or suspect that it constitutes or represents such a benefit?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is the property criminal property` IS
+    `s 340(3) the property is criminal property` `the property constitutes a person's benefit from criminal conduct or represents such a benefit` `I know or suspect that it constitutes or represents such a benefit`
+
+-- ---------------------------------------------------------------------------
+§§ `Is my business in the regulated sector? (Schedule 9, paragraphs 1 and 2)`
+-- Situation: sections 330 and 333A apply only to a business in the regulated sector.
+-- ---------------------------------------------------------------------------
+
+-- -- A listed activity that no exclusion removes answers JUST TRUE; an exclusion that applies answers JUST FALSE; a business that lists nothing answers NOTHING (the list is not closed by the text).
+-- -- This question takes your conclusion on paragraph 1(1); the layer-1 module poca-sch9.l4 holds the limbs (a) to (v) one by one for a reader who wants to check it.
+@export Is my business in the regulated sector (Schedule 9, paragraphs 1 and 2)?
+GIVEN `my business consists of a listed activity` IS A `My answer` @desc Does your business consist of an activity listed in paragraph 1(1) of Schedule 9 (for example banking, accepting deposits, insurance, investment business, accountancy, audit, tax advice, certain legal and estate agency work, casinos, trust or company services, cryptoasset exchange or custody, high-value dealing, art market participation)?
+      `an exclusion in paragraph 2(1) applies` IS A `My answer` @desc Does an exclusion in paragraph 2(1) of Schedule 9 apply to you?
+      `the thresholds of paragraph 2(3) are met` IS A `My answer` @desc Are you excluded by the thresholds in paragraph 2(3) of Schedule 9 (a turnover of 100,000 pounds or less, with transactions limited in the way that paragraph describes)?
+      `paragraph 2(4) applies` IS A `My answer` @desc Does paragraph 2(4) of Schedule 9 apply to you (a body whose business is not in the regulated sector)?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is my business in the regulated sector` IS
+    IF (`my business consists of a listed activity` EQUALS `I am not sure`) OR (`an exclusion in paragraph 2(1) applies` EQUALS `I am not sure`) OR (`the thresholds of paragraph 2(3) are met` EQUALS `I am not sure`) OR (`paragraph 2(4) applies` EQUALS `I am not sure`) THEN NOTHING -- input mapping: Schedule 9 cannot be applied while an answer is not known
+    ELSE `sch 9 paras 1 and 2 the business is in the regulated sector` (`what I say about a listed activity` `my business consists of a listed activity`) (`what I say about an exclusion` `an exclusion in paragraph 2(1) applies`) (`what I say about an exclusion` `the thresholds of paragraph 2(3) are met`) (`what I say about an exclusion` `paragraph 2(4) applies`)
+

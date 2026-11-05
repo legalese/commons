@@ -1,0 +1,598 @@
+IMPORT prelude
+IMPORT `poca-nouns`
+
+-- Proceeds of Crime Act 2002, Part 7, sections 327, 328, 329 (the three money-laundering offences) and section 334 (their penalties) -- LAYER 1.
+-- Target: main (checked on build 1.6.109).
+--
+-- SHAPE.  Each offence is a MAYBE BOOLEAN answer, `s 327(1) the person commits an offence` and its two siblings:
+--   JUST FALSE  when a subsection says the person does not commit the offence ("But a person does not commit such an offence if ...", "Nor does ..."):
+--               a flat negative, which counts as the text's no (ruling N2); and when the "if" of subsection (1) fails (lawyer-reading (a)).
+--   JUST TRUE   when subsection (1) is met and no subsection says otherwise.
+--   NOTHING     when the property's status is itself unanswered (the s 340(3) answer is NOTHING).
+-- The exceptions are BOOLEAN conditions (`... the exception applies`), each over a small record of facts the person can state.
+-- Facts that live in other instruments are inputs: the Money Laundering Regulations 2017 (customer due diligence duties; "excluded" business), the
+-- Secretary of State's order about conduct lawful abroad, the threshold amounts of section 339A (which the person looks up with poca-threshold).
+-- Whether the person "has the appropriate consent" and "makes an authorised disclosure under section 338" are inputs, answered by poca-consent and poca-disclose.
+--
+-- The offence is "a person commits an offence if he ..."; the matching prohibition is derived from the answer as a SHANT (ruling N2) in the last group of each section:
+-- the prohibition holds unless the answer is JUST FALSE.  It has no WITHIN: the text states no period, and WITHIN would sunset a prohibition.
+
+§ `Sections 327 to 329 and 334: the offences`
+
+§§ `Shared facts (nouns of this module)`
+
+-- Facts about a disclosure and the appropriate consent (s 327(2), 328(2), 329(2)).
+DECLARE `Disclosure and exemption facts` HAS
+    `he makes an authorised disclosure under section 338`                                       IS A BOOLEAN
+    `the disclosure is made before he does the act mentioned in subsection (1)`                  IS A BOOLEAN
+    `he has the appropriate consent`                                                             IS A BOOLEAN
+    `he intended to make such a disclosure`                                                      IS A BOOLEAN
+    `he had a reasonable excuse for not doing so`                                                IS A BOOLEAN
+    `the act is done in carrying out a function he has relating to the enforcement of any provision of this Act or of any other enactment relating to criminal conduct or benefit from criminal conduct` IS A BOOLEAN
+    `he acquired or used or had possession of the property for adequate consideration`           IS A BOOLEAN
+
+-- Facts about conduct abroad (s 327(2A), 328(3), 329(2A)).
+DECLARE `Overseas conduct facts` HAS
+    `he knows, or believes on reasonable grounds, that the relevant criminal conduct occurred in a particular country or territory outside the United Kingdom` IS A BOOLEAN
+    `the relevant criminal conduct was not, at the time it occurred, unlawful under the criminal law then applying in that country or territory` IS A BOOLEAN
+    `the relevant criminal conduct is of a description prescribed by an order made by the Secretary of State` IS A BOOLEAN
+
+-- Facts about a deposit-taking body, electronic money institution or payment institution operating an account (s 327(2C), 328(5), 329(2C)).
+DECLARE `Account facts` HAS
+    `it is a deposit-taking body, electronic money institution or payment institution`           IS A BOOLEAN
+    `it does the act in operating an account maintained with it`                                 IS A BOOLEAN
+    `the value of the criminal property concerned, in pounds`                                    IS A NUMBER
+    `the threshold amount determined under section 339A for the act, in pounds`                  IS A NUMBER
+
+-- Facts about the termination of a business relationship (s 327(2D), 328(6), 329(2D)).
+DECLARE `Termination facts` HAS
+    `P is carrying on business in the regulated sector`                                          IS A BOOLEAN
+    `the business is excluded business (of a description specified in regulations made by the Secretary of State)` IS A BOOLEAN
+    `P does the act in transferring or handing over to a customer or client money or other property of, or owing to, the customer or client (including to another person at the direction of the customer or client)` IS A BOOLEAN
+    `for the purposes of the termination of P's business relationship with the customer or client` IS A BOOLEAN
+    `the total value of the criminal property so transferred or handed over, in pounds`          IS A NUMBER
+    `the threshold amount determined under section 339A for the act, in pounds`                  IS A NUMBER
+    `before the act is done, P has complied with the customer due diligence duties (all duties imposed on P in relation to the customer or client by regulation 28(2), (3), (3A), (4), (8) or (10) of the Money Laundering, Terrorist Financing and Transfer of Funds (Information on the Payer) Regulations 2017)` IS A BOOLEAN
+
+-- Facts about funds or property of which only part is criminal property (s 327(2F), 328(8), 329(2F)).
+DECLARE `Mixed funds facts` HAS
+    `P is carrying on business in the regulated sector`                                          IS A BOOLEAN
+    `P does the act in the course of that business, on behalf of a customer or client, in operating an account or accounts maintained with P or in connection with holding any property for the customer or client` IS A BOOLEAN
+    `at the time of the act, P knows or suspects that part but not all of the funds or property is criminal property`   IS A BOOLEAN
+    `it is not possible, at the time the act takes place, to identify the part of the funds or property that is the relevant criminal property` IS A BOOLEAN
+    `the value of the funds in the account or accounts, or of the property so held, after the act, in pounds` IS A NUMBER
+    `the value of the relevant criminal property at the time of the act, in pounds`               IS A NUMBER
+
+DECLARE `Act in section 327(1)` IS ONE OF
+    `conceals criminal property`
+    `disguises criminal property`
+    `converts criminal property`
+    `transfers criminal property`
+    `removes criminal property from England and Wales or from Scotland or from Northern Ireland`
+    `another act`
+
+DECLARE `Act in section 329(1)` IS ONE OF
+    `acquires criminal property`
+    `uses criminal property`
+    `has possession of criminal property`
+    `another act`
+
+§§ `s 327: concealing etc`
+
+-- src:5 | (a) conceals criminal property;
+-- src:6 | (b) disguises criminal property;
+-- src:7 | (c) converts criminal property;
+-- src:8 | (d) transfers criminal property;
+-- src:9 | (e) removes criminal property from England and Wales or from Scotland or from Northern Ireland.
+@ref s 327(1) (src:5-9)
+GIVEN act IS A `Act in section 327(1)`
+GIVETH A BOOLEAN
+`s 327(1) the act is one of those listed` MEANS
+    NOT (act EQUALS `another act`)
+
+-- src:11 | (a) he makes an authorised disclosure under section 338 and (if the disclosure is made before he does the act mentioned in subsection (1)) he has the appropriate consent;
+-- src:12 | (b) he intended to make such a disclosure but had a reasonable excuse for not doing so;
+-- src:13 | (c) the act he does is done in carrying out a function he has relating to the enforcement of any provision of this Act or of any other enactment relating to criminal conduct or benefit from criminal conduct.
+@ref s 327(2) (src:11-13)
+GIVEN f IS A `Disclosure and exemption facts`
+GIVETH A BOOLEAN
+`s 327(2) the exception for a disclosure, an excuse or the enforcement of the law applies` MEANS
+        (   f's `he makes an authorised disclosure under section 338`
+         AND (   (NOT f's `the disclosure is made before he does the act mentioned in subsection (1)`)
+              OR f's `he has the appropriate consent`))
+     OR (f's `he intended to make such a disclosure` AND f's `he had a reasonable excuse for not doing so`)
+     OR f's `the act is done in carrying out a function he has relating to the enforcement of any provision of this Act or of any other enactment relating to criminal conduct or benefit from criminal conduct`
+
+-- src:15 | (a) he knows, or believes on reasonable grounds, that the relevant criminal conduct occurred in a particular country or territory outside the United Kingdom, and
+-- src:16 | (b) the relevant criminal conduct—
+-- src:17 | (i) was not, at the time it occurred, unlawful under the criminal law then applying in that country or territory, and
+-- src:18 | (ii) is not of a description prescribed by an order made by the Secretary of State.
+@ref s 327(2A) (src:15-18)
+GIVEN f IS A `Overseas conduct facts`
+GIVETH A BOOLEAN
+`s 327(2A) the exception for conduct lawful abroad applies` MEANS
+        f's `he knows, or believes on reasonable grounds, that the relevant criminal conduct occurred in a particular country or territory outside the United Kingdom`
+    AND f's `the relevant criminal conduct was not, at the time it occurred, unlawful under the criminal law then applying in that country or territory`
+    AND (NOT f's `the relevant criminal conduct is of a description prescribed by an order made by the Secretary of State`)
+
+-- src:19 | (2B) In subsection (2A) “ the relevant criminal conduct ” is the criminal conduct by reference to which the property concerned is criminal property.
+@ref s 327(2B) (src:19)
+GIVEN `it is the criminal conduct by reference to which the property concerned is criminal property` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 327(2B) the conduct is the relevant criminal conduct` MEANS
+    BRANCH
+        IF `it is the criminal conduct by reference to which the property concerned is criminal property` THEN JUST TRUE
+        OTHERWISE JUST FALSE -- FALSE-kind (the text says no in its own words): "“the relevant criminal conduct” is the criminal conduct by reference to which the property concerned is criminal property"
+
+-- src:20 | (2C) A deposit-taking body , electronic money institution or payment institution that does an act mentioned in paragraph (c) or (d) of subsection (1) does not commit an offence under that subsection if—
+-- src:21 | (a) it does the act in operating an account maintained with it, and
+-- src:22 | (b) the value of the criminal property concerned is less than the threshold amount determined under section 339A for the act.
+@ref s 327(2C) (src:20-22)
+GIVEN act IS A `Act in section 327(1)`
+      f IS A `Account facts`
+GIVETH A BOOLEAN
+`s 327(2C) the exception for acts in operating an account applies` MEANS
+        (act EQUALS `converts criminal property` OR act EQUALS `transfers criminal property`)
+    AND f's `it is a deposit-taking body, electronic money institution or payment institution`
+    AND f's `it does the act in operating an account maintained with it`
+    AND f's `the value of the criminal property concerned, in pounds` LESS THAN f's `the threshold amount determined under section 339A for the act, in pounds`
+
+-- src:23 | (2D) A person (“P”) who does an act mentioned in paragraph (c) or (d) of subsection (1) does not commit an offence under that subsection if—
+-- src:24 | (a) P is carrying on business in the regulated sector that is not excluded business,
+-- src:25 | (b) P does the act, in the course of that business—
+-- src:26 | (i) in transferring or handing over to a customer or client money or other property of, or owing to, the customer or client, and
+-- src:27 | (ii) for the purposes of the termination of P’s business relationship with the customer or client,
+-- src:28 | (c) the total value of the criminal property so transferred or handed over to the customer or client by P for those purposes is less than the threshold amount determined under section 339A for the act, and
+-- src:29 | (d) before the act is done, P has complied with the customer due diligence duties.
+@ref s 327(2D) (src:23-29)
+GIVEN act IS A `Act in section 327(1)`
+      f IS A `Termination facts`
+GIVETH A BOOLEAN
+`s 327(2D) the exception for acts that end a business relationship applies` MEANS
+        (act EQUALS `converts criminal property` OR act EQUALS `transfers criminal property`)
+    AND f's `P is carrying on business in the regulated sector`
+    AND (NOT f's `the business is excluded business (of a description specified in regulations made by the Secretary of State)`)
+    AND f's `P does the act in transferring or handing over to a customer or client money or other property of, or owing to, the customer or client (including to another person at the direction of the customer or client)`
+    AND f's `for the purposes of the termination of P's business relationship with the customer or client`
+    AND f's `the total value of the criminal property so transferred or handed over, in pounds` LESS THAN f's `the threshold amount determined under section 339A for the act, in pounds`
+    AND f's `before the act is done, P has complied with the customer due diligence duties (all duties imposed on P in relation to the customer or client by regulation 28(2), (3), (3A), (4), (8) or (10) of the Money Laundering, Terrorist Financing and Transfer of Funds (Information on the Payer) Regulations 2017)`
+
+-- s 327(2E) says what "excluded" business, a transfer "to the customer or client" and "customer due diligence duties" mean for (2D); each is an input of the rule above.
+-- (a) the business is excluded if it is of a description specified in regulations; (b) a transfer to the customer or client includes one to another person at the customer's direction;
+-- (c) the duties are those imposed by regulation 28(2), (3), (3A), (4), (8) or (10) of the 2017 Regulations.
+
+-- src:34 | (2F) A person (“P”) who does an act mentioned in paragraph (c), (d) or (e) of subsection (1) does not commit an offence under that subsection if—
+-- src:35 | (a) P is carrying on business in the regulated sector,
+-- src:36 | (b) P does the act in the course of that business, on behalf of a customer or client, in operating an account or accounts maintained with P or in connection with holding any property for the customer or client,
+-- src:37 | (c) at the time of the act, P knows or suspects that part but not all of the funds in the account or accounts, or of the property so held, is criminal property (“the relevant criminal property”),
+-- src:38 | (d) it is not possible, at the time the act takes place, to identify the part of the funds or property that is the relevant criminal property, and
+-- src:39 | (e) the value of the funds in the account or accounts, or of the property so held, is not, as a direct or indirect result of the act, less than the value of the relevant criminal property at the time of the act.
+@ref s 327(2F) (src:34-39)
+GIVEN act IS A `Act in section 327(1)`
+      f IS A `Mixed funds facts`
+GIVETH A BOOLEAN
+`s 327(2F) the exception for mixed funds applies` MEANS
+        (act EQUALS `converts criminal property` OR act EQUALS `transfers criminal property` OR act EQUALS `removes criminal property from England and Wales or from Scotland or from Northern Ireland`)
+    AND f's `P is carrying on business in the regulated sector`
+    AND f's `P does the act in the course of that business, on behalf of a customer or client, in operating an account or accounts maintained with P or in connection with holding any property for the customer or client`
+    AND f's `at the time of the act, P knows or suspects that part but not all of the funds or property is criminal property`
+    AND f's `it is not possible, at the time the act takes place, to identify the part of the funds or property that is the relevant criminal property`
+    AND f's `the value of the funds in the account or accounts, or of the property so held, after the act, in pounds` AT LEAST f's `the value of the relevant criminal property at the time of the act, in pounds`
+
+-- src:40 | (2G) Where subsection (2F) applies—
+-- src:41 | (a) if P does the act in operating an account or accounts, the funds in the account or accounts immediately after the act are assumed to include the relevant criminal property, and
+-- src:42 | (b) if P does the act in connection with holding any property for the customer or client, such of that property as is held by P immediately after the act is assumed to include the relevant criminal property.
+@ref s 327(2G) (src:40-42)
+GIVEN `subsection (2F) applies` IS A BOOLEAN
+      `P does the act in operating an account or accounts` IS A BOOLEAN
+      `P does the act in connection with holding any property for the customer or client` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 327(2G) the funds or property immediately after the act are assumed to include the relevant criminal property` MEANS
+    BRANCH
+        IF `subsection (2F) applies` AND (`P does the act in operating an account or accounts` OR `P does the act in connection with holding any property for the customer or client`) THEN JUST TRUE
+        OTHERWISE JUST FALSE -- FALSE-kind (the text says no in its own words): "Where subsection (2F) applies" (ruling of 2026-11-05 (b): a 'where' condition not met is the text's no, like 'if')
+
+DECLARE `Way of concealing or disguising` IS ONE OF
+    `its nature`
+    `its source`
+    `its location`
+    `its disposition`
+    `its movement`
+    `its ownership`
+    `any rights with respect to it`
+    `something else`
+
+-- src:43 | (3) Concealing or disguising criminal property includes concealing or disguising its nature, source, location, disposition, movement or ownership or any rights with respect to it.
+@ref s 327(3) (src:43)
+GIVEN way IS A `Way of concealing or disguising`
+GIVETH A MAYBE BOOLEAN
+`s 327(3) concealing or disguising criminal property includes concealing or disguising it in this way` MEANS
+    CONSIDER way
+    WHEN `something else` THEN NOTHING -- NOTHING-kind (includes): "Concealing or disguising criminal property includes"
+    OTHERWISE JUST TRUE
+
+-- src:4 | (1) A person commits an offence if he—
+-- src:5 | (a) conceals criminal property;
+-- src:6 | (b) disguises criminal property;
+-- src:7 | (c) converts criminal property;
+-- src:8 | (d) transfers criminal property;
+-- src:9 | (e) removes criminal property from England and Wales or from Scotland or from Northern Ireland.
+@ref s 327(1) (src:4-9)
+GIVEN `the answer under section 340(3): the property is criminal property` IS A MAYBE BOOLEAN
+      act IS A `Act in section 327(1)`
+      disclosure IS A `Disclosure and exemption facts`
+      overseas IS A `Overseas conduct facts`
+      account IS A `Account facts`
+      termination IS A `Termination facts`
+      mixed IS A `Mixed funds facts`
+GIVETH A MAYBE BOOLEAN
+`s 327(1) the person commits an offence` MEANS
+    BRANCH
+        IF NOT `s 327(1) the act is one of those listed` act THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "A person commits an offence if he (a) conceals ... (e) removes criminal property" (a failed "if" read as the text's no: marginal reading (a))
+        IF `the answer under section 340(3): the property is criminal property` EQUALS JUST FALSE THEN JUST FALSE -- FALSE-kind (the text says no in its own words): the offences are of "criminal property", which s 340(3) defines with "Property is criminal property if" (marginal reading (a))
+        IF `s 327(2) the exception for a disclosure, an excuse or the enforcement of the law applies` disclosure THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "But a person does not commit such an offence if"
+        IF `s 327(2A) the exception for conduct lawful abroad applies` overseas THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "Nor does a person commit an offence under subsection (1) if"
+        IF `s 327(2C) the exception for acts in operating an account applies` act account THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "does not commit an offence under that subsection if"
+        IF `s 327(2D) the exception for acts that end a business relationship applies` act termination THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "does not commit an offence under that subsection if"
+        IF `s 327(2F) the exception for mixed funds applies` act mixed THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "does not commit an offence under that subsection if"
+        IF `the answer under section 340(3): the property is criminal property` EQUALS NOTHING THEN NOTHING -- NOTHING-kind (limited by its own wording): the offence is of "criminal property"; whether the property is criminal property is not answered
+        OTHERWISE JUST TRUE
+
+@ref s 327(1) (src:4-9)
+GIVEN `the answer under section 327(1)` IS A MAYBE BOOLEAN
+GIVETH A DEONTIC `Party under Part 7` `Act under Part 7`
+`s 327(1) the person must not conceal, disguise, convert, transfer or remove criminal property` MEANS
+    IF `the answer under section 327(1)` EQUALS JUST FALSE
+    THEN FULFILLED
+    ELSE PARTY `the person`
+         SHANT `conceal, disguise, convert, transfer or remove criminal property`
+         HENCE FULFILLED
+         LEST BREACH BY `the person` BECAUSE "s 327(1): criminal property was concealed, disguised, converted, transferred or removed from England and Wales, Scotland or Northern Ireland"
+
+§§ `s 328: arrangements`
+
+-- The act of s 328(1) is entering into or becoming concerned in an arrangement which the person knows or suspects facilitates the acquisition, retention, use or control
+-- of criminal property by or on behalf of another person; the person states whether it is so.
+-- src:45 | (1) A person commits an offence if he enters into or becomes concerned in an arrangement which he knows or suspects facilitates (by whatever means) the acquisition, retention, use or control of criminal property by or on behalf of another person.
+@ref s 328(1) (src:45)
+GIVEN `he enters into or becomes concerned in an arrangement` IS A BOOLEAN
+      `he knows or suspects that the arrangement facilitates (by whatever means) the acquisition, retention, use or control of criminal property by or on behalf of another person` IS A BOOLEAN
+GIVETH A BOOLEAN
+`s 328(1) the person's act is the act of subsection (1)` MEANS
+    `he enters into or becomes concerned in an arrangement` AND `he knows or suspects that the arrangement facilitates (by whatever means) the acquisition, retention, use or control of criminal property by or on behalf of another person`
+
+-- src:46 | (2) But a person does not commit such an offence if—
+-- src:47 | (a) he makes an authorised disclosure under section 338 and (if the disclosure is made before he does the act mentioned in subsection (1)) he has the appropriate consent;
+-- src:48 | (b) he intended to make such a disclosure but had a reasonable excuse for not doing so;
+-- src:49 | (c) the act he does is done in carrying out a function he has relating to the enforcement of any provision of this Act or of any other enactment relating to criminal conduct or benefit from criminal conduct.
+@ref s 328(2) (src:46-49)
+GIVEN f IS A `Disclosure and exemption facts`
+GIVETH A BOOLEAN
+`s 328(2) the exception for a disclosure, an excuse or the enforcement of the law applies` MEANS
+        (   f's `he makes an authorised disclosure under section 338`
+         AND (   (NOT f's `the disclosure is made before he does the act mentioned in subsection (1)`)
+              OR f's `he has the appropriate consent`))
+     OR (f's `he intended to make such a disclosure` AND f's `he had a reasonable excuse for not doing so`)
+     OR f's `the act is done in carrying out a function he has relating to the enforcement of any provision of this Act or of any other enactment relating to criminal conduct or benefit from criminal conduct`
+
+-- src:50 | (3) Nor does a person commit an offence under subsection (1) if—
+-- src:51 | (a) he knows, or believes on reasonable grounds, that the relevant criminal conduct occurred in a particular country or territory outside the United Kingdom, and
+-- src:52 | (b) the relevant criminal conduct—
+-- src:53 | (i) was not, at the time it occurred, unlawful under the criminal law then applying in that country or territory, and
+-- src:54 | (ii) is not of a description prescribed by an order made by the Secretary of State.
+@ref s 328(3) (src:50-54)
+GIVEN f IS A `Overseas conduct facts`
+GIVETH A BOOLEAN
+`s 328(3) the exception for conduct lawful abroad applies` MEANS
+        f's `he knows, or believes on reasonable grounds, that the relevant criminal conduct occurred in a particular country or territory outside the United Kingdom`
+    AND f's `the relevant criminal conduct was not, at the time it occurred, unlawful under the criminal law then applying in that country or territory`
+    AND (NOT f's `the relevant criminal conduct is of a description prescribed by an order made by the Secretary of State`)
+
+-- src:55 | (4) In subsection (3) “ the relevant criminal conduct ” is the criminal conduct by reference to which the property concerned is criminal property.
+@ref s 328(4) (src:55)
+GIVEN `it is the criminal conduct by reference to which the property concerned is criminal property` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 328(4) the conduct is the relevant criminal conduct` MEANS
+    BRANCH
+        IF `it is the criminal conduct by reference to which the property concerned is criminal property` THEN JUST TRUE
+        OTHERWISE JUST FALSE -- FALSE-kind (the text says no in its own words): "“the relevant criminal conduct” is the criminal conduct by reference to which the property concerned is criminal property"
+
+-- src:56 | (5) A deposit-taking body , electronic money institution or payment institution that does an act mentioned in subsection (1) does not commit an offence under that subsection if—
+-- src:57 | (a) it does the act in operating an account maintained with it, and
+-- src:58 | (b) the arrangement facilitates the acquisition, retention, use or control of criminal property of a value that is less than the threshold amount determined under section 339A for the act.
+@ref s 328(5) (src:56-58)
+GIVEN f IS A `Account facts`
+GIVETH A BOOLEAN
+`s 328(5) the exception for acts in operating an account applies` MEANS
+        f's `it is a deposit-taking body, electronic money institution or payment institution`
+    AND f's `it does the act in operating an account maintained with it`
+    AND f's `the value of the criminal property concerned, in pounds` LESS THAN f's `the threshold amount determined under section 339A for the act, in pounds`
+
+-- src:59 | (6) A person (“P”) who does an act mentioned in subsection (1) does not commit an offence under that subsection if—
+-- src:60 | (a) P is carrying on business in the regulated sector that is not excluded business,
+-- src:61 | (b) P does the act, in the course of that business—
+-- src:62 | (i) in transferring or handing over to a customer or client money or other property of, or owing to, the customer or client, and
+-- src:63 | (ii) for the purposes of the termination of P’s business relationship with the customer or client,
+-- src:64 | (c) the total value of the criminal property so transferred or handed over to the customer or client by P for those purposes is less than the threshold amount determined under section 339A for the act, and
+-- src:65 | (d) before the act is done, P has complied with the customer due diligence duties.
+@ref s 328(6) (src:59-65)
+GIVEN f IS A `Termination facts`
+GIVETH A BOOLEAN
+`s 328(6) the exception for acts that end a business relationship applies` MEANS
+        f's `P is carrying on business in the regulated sector`
+    AND (NOT f's `the business is excluded business (of a description specified in regulations made by the Secretary of State)`)
+    AND f's `P does the act in transferring or handing over to a customer or client money or other property of, or owing to, the customer or client (including to another person at the direction of the customer or client)`
+    AND f's `for the purposes of the termination of P's business relationship with the customer or client`
+    AND f's `the total value of the criminal property so transferred or handed over, in pounds` LESS THAN f's `the threshold amount determined under section 339A for the act, in pounds`
+    AND f's `before the act is done, P has complied with the customer due diligence duties (all duties imposed on P in relation to the customer or client by regulation 28(2), (3), (3A), (4), (8) or (10) of the Money Laundering, Terrorist Financing and Transfer of Funds (Information on the Payer) Regulations 2017)`
+
+-- s 328(7) says what "excluded" business, a transfer "to the customer or client" and "customer due diligence duties" mean for (6); each is an input of the rule above (see s 327(2E)).
+
+-- src:70 | (8) A person (“P”) who does an act mentioned in subsection (1) does not commit an offence under that subsection if—
+-- src:71 | (a) P is carrying on business in the regulated sector,
+-- src:72 | (b) P does the act in the course of that business, on behalf of a customer or client, in operating an account or accounts maintained with P or in connection with holding any property for the customer or client,
+-- src:73 | (c) at the time of the act, P knows or suspects that part but not all of the funds in the account or accounts, or of the property so held, is criminal property (“the relevant criminal property”),
+-- src:74 | (d) it is not possible, at the time the act takes place, to identify the part of the funds or property that is the relevant criminal property, and
+-- src:75 | (e) the value of the funds in the account or accounts, or of the property so held, is not, as a direct or indirect result of the act, less than the value of the relevant criminal property at the time of the act.
+@ref s 328(8) (src:70-75)
+GIVEN f IS A `Mixed funds facts`
+GIVETH A BOOLEAN
+`s 328(8) the exception for mixed funds applies` MEANS
+        f's `P is carrying on business in the regulated sector`
+    AND f's `P does the act in the course of that business, on behalf of a customer or client, in operating an account or accounts maintained with P or in connection with holding any property for the customer or client`
+    AND f's `at the time of the act, P knows or suspects that part but not all of the funds or property is criminal property`
+    AND f's `it is not possible, at the time the act takes place, to identify the part of the funds or property that is the relevant criminal property`
+    AND f's `the value of the funds in the account or accounts, or of the property so held, after the act, in pounds` AT LEAST f's `the value of the relevant criminal property at the time of the act, in pounds`
+
+-- src:76 | (9) Where subsection (8) applies—
+-- src:77 | (a) if P does the act in operating an account or accounts, the funds in the account or accounts immediately after the act are assumed to include the relevant criminal property, and
+-- src:78 | (b) if P does the act in connection with holding any property for the customer or client, such of that property as is held by P immediately after the act is assumed to include the relevant criminal property.
+@ref s 328(9) (src:76-78)
+GIVEN `subsection (8) applies` IS A BOOLEAN
+      `P does the act in operating an account or accounts` IS A BOOLEAN
+      `P does the act in connection with holding any property for the customer or client` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 328(9) the funds or property immediately after the act are assumed to include the relevant criminal property` MEANS
+    BRANCH
+        IF `subsection (8) applies` AND (`P does the act in operating an account or accounts` OR `P does the act in connection with holding any property for the customer or client`) THEN JUST TRUE
+        OTHERWISE JUST FALSE -- FALSE-kind (the text says no in its own words): "Where subsection (8) applies" (ruling of 2026-11-05 (b): a 'where' condition not met is the text's no, like 'if')
+
+-- src:45 | (1) A person commits an offence if he enters into or becomes concerned in an arrangement which he knows or suspects facilitates (by whatever means) the acquisition, retention, use or control of criminal property by or on behalf of another person.
+-- src:46 | (2) But a person does not commit such an offence if—
+@ref s 328(1) (src:45-46)
+GIVEN `the answer under section 340(3): the property is criminal property` IS A MAYBE BOOLEAN
+      `the act of subsection (1)` IS A BOOLEAN
+      disclosure IS A `Disclosure and exemption facts`
+      overseas IS A `Overseas conduct facts`
+      account IS A `Account facts`
+      termination IS A `Termination facts`
+      mixed IS A `Mixed funds facts`
+GIVETH A MAYBE BOOLEAN
+`s 328(1) the person commits an offence` MEANS
+    BRANCH
+        IF NOT `the act of subsection (1)` THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "A person commits an offence if he enters into or becomes concerned in an arrangement which he knows or suspects facilitates" (a failed "if" read as the text's no: marginal reading (a))
+        IF `the answer under section 340(3): the property is criminal property` EQUALS JUST FALSE THEN JUST FALSE -- FALSE-kind (the text says no in its own words): the offence is of "criminal property", which s 340(3) defines with "Property is criminal property if" (marginal reading (a))
+        IF `s 328(2) the exception for a disclosure, an excuse or the enforcement of the law applies` disclosure THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "But a person does not commit such an offence if"
+        IF `s 328(3) the exception for conduct lawful abroad applies` overseas THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "Nor does a person commit an offence under subsection (1) if"
+        IF `s 328(5) the exception for acts in operating an account applies` account THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "does not commit an offence under that subsection if"
+        IF `s 328(6) the exception for acts that end a business relationship applies` termination THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "does not commit an offence under that subsection if"
+        IF `s 328(8) the exception for mixed funds applies` mixed THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "does not commit an offence under that subsection if"
+        IF `the answer under section 340(3): the property is criminal property` EQUALS NOTHING THEN NOTHING -- NOTHING-kind (limited by its own wording): the offence is of "criminal property"; whether the property is criminal property is not answered
+        OTHERWISE JUST TRUE
+
+@ref s 328(1) (src:45)
+GIVEN `the answer under section 328(1)` IS A MAYBE BOOLEAN
+GIVETH A DEONTIC `Party under Part 7` `Act under Part 7`
+`s 328(1) the person must not enter into or become concerned in an arrangement which facilitates the use of criminal property` MEANS
+    IF `the answer under section 328(1)` EQUALS JUST FALSE
+    THEN FULFILLED
+    ELSE PARTY `the person`
+         SHANT `enter into or become concerned in an arrangement which facilitates the acquisition, retention, use or control of criminal property`
+         HENCE FULFILLED
+         LEST BREACH BY `the person` BECAUSE "s 328(1): the person entered into or became concerned in an arrangement which he knew or suspected facilitates the acquisition, retention, use or control of criminal property"
+
+§§ `s 329: acquisition, use and possession`
+
+-- src:81 | (a) acquires criminal property;
+-- src:82 | (b) uses criminal property;
+-- src:83 | (c) has possession of criminal property.
+@ref s 329(1) (src:81-83)
+GIVEN act IS A `Act in section 329(1)`
+GIVETH A BOOLEAN
+`s 329(1) the act is one of those listed` MEANS
+    NOT (act EQUALS `another act`)
+
+-- src:85 | (a) he makes an authorised disclosure under section 338 and (if the disclosure is made before he does the act mentioned in subsection (1)) he has the appropriate consent;
+-- src:86 | (b) he intended to make such a disclosure but had a reasonable excuse for not doing so;
+-- src:87 | (c) he acquired or used or had possession of the property for adequate consideration;
+-- src:88 | (d) the act he does is done in carrying out a function he has relating to the enforcement of any provision of this Act or of any other enactment relating to criminal conduct or benefit from criminal conduct.
+@ref s 329(2) (src:85-88)
+GIVEN f IS A `Disclosure and exemption facts`
+GIVETH A BOOLEAN
+`s 329(2) the exception for a disclosure, an excuse, adequate consideration or the enforcement of the law applies` MEANS
+        (   f's `he makes an authorised disclosure under section 338`
+         AND (   (NOT f's `the disclosure is made before he does the act mentioned in subsection (1)`)
+              OR f's `he has the appropriate consent`))
+     OR (f's `he intended to make such a disclosure` AND f's `he had a reasonable excuse for not doing so`)
+     OR f's `he acquired or used or had possession of the property for adequate consideration`
+     OR f's `the act is done in carrying out a function he has relating to the enforcement of any provision of this Act or of any other enactment relating to criminal conduct or benefit from criminal conduct`
+
+-- src:90 | (a) he knows, or believes on reasonable grounds, that the relevant criminal conduct occurred in a particular country or territory outside the United Kingdom, and
+-- src:91 | (b) the relevant criminal conduct—
+-- src:92 | (i) was not, at the time it occurred, unlawful under the criminal law then applying in that country or territory, and
+-- src:93 | (ii) is not of a description prescribed by an order made by the Secretary of State.
+@ref s 329(2A) (src:90-93)
+GIVEN f IS A `Overseas conduct facts`
+GIVETH A BOOLEAN
+`s 329(2A) the exception for conduct lawful abroad applies` MEANS
+        f's `he knows, or believes on reasonable grounds, that the relevant criminal conduct occurred in a particular country or territory outside the United Kingdom`
+    AND f's `the relevant criminal conduct was not, at the time it occurred, unlawful under the criminal law then applying in that country or territory`
+    AND (NOT f's `the relevant criminal conduct is of a description prescribed by an order made by the Secretary of State`)
+
+-- src:94 | (2B) In subsection (2A) “ the relevant criminal conduct ” is the criminal conduct by reference to which the property concerned is criminal property.
+@ref s 329(2B) (src:94)
+GIVEN `it is the criminal conduct by reference to which the property concerned is criminal property` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 329(2B) the conduct is the relevant criminal conduct` MEANS
+    BRANCH
+        IF `it is the criminal conduct by reference to which the property concerned is criminal property` THEN JUST TRUE
+        OTHERWISE JUST FALSE -- FALSE-kind (the text says no in its own words): "“the relevant criminal conduct” is the criminal conduct by reference to which the property concerned is criminal property"
+
+-- src:95 | (2C) A deposit-taking body , electronic money institution or payment institution that does an act mentioned in subsection (1) does not commit an offence under that subsection if—
+-- src:96 | (a) it does the act in operating an account maintained with it, and
+-- src:97 | (b) the value of the criminal property concerned is less than the threshold amount determined under section 339A for the act.
+@ref s 329(2C) (src:95-97)
+GIVEN f IS A `Account facts`
+GIVETH A BOOLEAN
+`s 329(2C) the exception for acts in operating an account applies` MEANS
+        f's `it is a deposit-taking body, electronic money institution or payment institution`
+    AND f's `it does the act in operating an account maintained with it`
+    AND f's `the value of the criminal property concerned, in pounds` LESS THAN f's `the threshold amount determined under section 339A for the act, in pounds`
+
+-- src:98 | (2D) A person (“P”) who does an act mentioned in subsection (1) does not commit an offence under that subsection if—
+-- src:99 | (a) P is carrying on business in the regulated sector that is not excluded business,
+-- src:100 | (b) P does the act, in the course of that business—
+-- src:101 | (i) in transferring or handing over to the customer or client property of, or owing to, a customer or client, and
+-- src:102 | (ii) for the purposes of the termination of P’s business relationship with the customer or client,
+-- src:103 | (c) the total value of the criminal property so transferred or handed over to the customer or client by P for those purposes is less than the threshold amount determined under section 339A for the act, and
+-- src:104 | (d) before the act is done, P has complied with the customer due diligence duties.
+@ref s 329(2D) (src:98-104)
+GIVEN f IS A `Termination facts`
+GIVETH A BOOLEAN
+`s 329(2D) the exception for acts that end a business relationship applies` MEANS
+        f's `P is carrying on business in the regulated sector`
+    AND (NOT f's `the business is excluded business (of a description specified in regulations made by the Secretary of State)`)
+    AND f's `P does the act in transferring or handing over to a customer or client money or other property of, or owing to, the customer or client (including to another person at the direction of the customer or client)`
+    AND f's `for the purposes of the termination of P's business relationship with the customer or client`
+    AND f's `the total value of the criminal property so transferred or handed over, in pounds` LESS THAN f's `the threshold amount determined under section 339A for the act, in pounds`
+    AND f's `before the act is done, P has complied with the customer due diligence duties (all duties imposed on P in relation to the customer or client by regulation 28(2), (3), (3A), (4), (8) or (10) of the Money Laundering, Terrorist Financing and Transfer of Funds (Information on the Payer) Regulations 2017)`
+
+-- s 329(2E) says what "excluded" business, a transfer "to the customer or client" and "customer due diligence duties" mean for (2D); each is an input of the rule above (see s 327(2E)).
+
+-- src:109 | (2F) A person (“P”) who does an act mentioned in subsection (1) does not commit an offence under that subsection if—
+-- src:110 | (a) P is carrying on business in the regulated sector,
+-- src:111 | (b) P does the act in the course of that business, on behalf of a customer or client, in operating an account or accounts maintained with P or in connection with holding any property for the customer or client,
+-- src:112 | (c) at the time of the act, P knows or suspects that part but not all of the funds in the account or accounts, or of the property so held, is criminal property (“the relevant criminal property”),
+-- src:113 | (d) it is not possible, at the time the act takes place, to identify the part of the funds or property that is the relevant criminal property, and
+-- src:114 | (e) the value of the funds in the account or accounts, or of the property so held, is not, as a direct or indirect result of the act, less than the value of the relevant criminal property at the time of the act.
+@ref s 329(2F) (src:109-114)
+GIVEN f IS A `Mixed funds facts`
+GIVETH A BOOLEAN
+`s 329(2F) the exception for mixed funds applies` MEANS
+        f's `P is carrying on business in the regulated sector`
+    AND f's `P does the act in the course of that business, on behalf of a customer or client, in operating an account or accounts maintained with P or in connection with holding any property for the customer or client`
+    AND f's `at the time of the act, P knows or suspects that part but not all of the funds or property is criminal property`
+    AND f's `it is not possible, at the time the act takes place, to identify the part of the funds or property that is the relevant criminal property`
+    AND f's `the value of the funds in the account or accounts, or of the property so held, after the act, in pounds` AT LEAST f's `the value of the relevant criminal property at the time of the act, in pounds`
+
+-- src:115 | (2G) Where subsection (2F) applies—
+-- src:116 | (a) if P does the act in operating an account or accounts, the funds in the account or accounts immediately after the act are assumed to include the relevant criminal property, and
+-- src:117 | (b) if P does the act in connection with holding any property for the customer or client, such of that property as is held by P immediately after the act is assumed to include the relevant criminal property.
+@ref s 329(2G) (src:115-117)
+GIVEN `subsection (2F) applies` IS A BOOLEAN
+      `P does the act in operating an account or accounts` IS A BOOLEAN
+      `P does the act in connection with holding any property for the customer or client` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 329(2G) the funds or property immediately after the act are assumed to include the relevant criminal property` MEANS
+    BRANCH
+        IF `subsection (2F) applies` AND (`P does the act in operating an account or accounts` OR `P does the act in connection with holding any property for the customer or client`) THEN JUST TRUE
+        OTHERWISE JUST FALSE -- FALSE-kind (the text says no in its own words): "Where subsection (2F) applies" (ruling of 2026-11-05 (b): a 'where' condition not met is the text's no, like 'if')
+
+-- s 329(3): inadequate consideration.  (a) acquires for inadequate consideration if the value of the consideration is significantly less than the value of the property;
+-- (b) uses or has possession for inadequate consideration if the value of the consideration is significantly less than the value of the use or possession;
+-- (c) the provision of goods or services which he knows or suspects may help another to carry out criminal conduct is not consideration.
+-- "Significantly less" has no number; the person states whether it is.
+-- src:118 | (3) For the purposes of this section—
+-- src:119 | (a) a person acquires property for inadequate consideration if the value of the consideration is significantly less than the value of the property;
+-- src:120 | (b) a person uses or has possession of property for inadequate consideration if the value of the consideration is significantly less than the value of the use or possession;
+-- src:121 | (c) the provision by a person of goods or services which he knows or suspects may help another to carry out criminal conduct is not consideration.
+@ref s 329(3) (src:118-121)
+DECLARE `Kind of act for the consideration test` IS ONE OF
+    `acquires the property`
+    `uses or has possession of the property`
+
+GIVEN kind IS A `Kind of act for the consideration test`
+      `the value of the consideration is significantly less than the value of the property` IS A BOOLEAN
+      `the value of the consideration is significantly less than the value of the use or possession` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 329(3)(a) and (b) the consideration is inadequate` MEANS
+    CONSIDER kind
+    WHEN `acquires the property` THEN IF `the value of the consideration is significantly less than the value of the property` THEN JUST TRUE ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "a person acquires property for inadequate consideration if the value of the consideration is significantly less than the value of the property" (a failed "if" read as the text's no: marginal reading (a))
+    WHEN `uses or has possession of the property` THEN IF `the value of the consideration is significantly less than the value of the use or possession` THEN JUST TRUE ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "a person uses or has possession of property for inadequate consideration if the value of the consideration is significantly less than the value of the use or possession" (marginal reading (a))
+
+@ref s 329(3)(c) (src:121)
+GIVEN `it is the provision by a person of goods or services which he knows or suspects may help another to carry out criminal conduct` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 329(3)(c) the provision of goods or services is consideration` MEANS
+    BRANCH
+        IF `it is the provision by a person of goods or services which he knows or suspects may help another to carry out criminal conduct` THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "the provision by a person of goods or services which he knows or suspects may help another to carry out criminal conduct is not consideration"
+        OTHERWISE NOTHING -- NOTHING-kind (limited by its own wording): the sentence is about the provision of goods or services the person knows or suspects may help another carry out criminal conduct
+
+-- src:80 | (1) A person commits an offence if he—
+-- src:81 | (a) acquires criminal property;
+-- src:82 | (b) uses criminal property;
+-- src:83 | (c) has possession of criminal property.
+@ref s 329(1) (src:80-83)
+GIVEN `the answer under section 340(3): the property is criminal property` IS A MAYBE BOOLEAN
+      act IS A `Act in section 329(1)`
+      disclosure IS A `Disclosure and exemption facts`
+      overseas IS A `Overseas conduct facts`
+      account IS A `Account facts`
+      termination IS A `Termination facts`
+      mixed IS A `Mixed funds facts`
+GIVETH A MAYBE BOOLEAN
+`s 329(1) the person commits an offence` MEANS
+    BRANCH
+        IF NOT `s 329(1) the act is one of those listed` act THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "A person commits an offence if he (a) acquires criminal property; (b) uses criminal property; (c) has possession of criminal property" (a failed "if" read as the text's no: marginal reading (a))
+        IF `the answer under section 340(3): the property is criminal property` EQUALS JUST FALSE THEN JUST FALSE -- FALSE-kind (the text says no in its own words): the offence is of "criminal property", which s 340(3) defines with "Property is criminal property if" (marginal reading (a))
+        IF `s 329(2) the exception for a disclosure, an excuse, adequate consideration or the enforcement of the law applies` disclosure THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "But a person does not commit such an offence if"
+        IF `s 329(2A) the exception for conduct lawful abroad applies` overseas THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "Nor does a person commit an offence under subsection (1) if"
+        IF `s 329(2C) the exception for acts in operating an account applies` account THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "does not commit an offence under that subsection if"
+        IF `s 329(2D) the exception for acts that end a business relationship applies` termination THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "does not commit an offence under that subsection if"
+        IF `s 329(2F) the exception for mixed funds applies` mixed THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "does not commit an offence under that subsection if"
+        IF `the answer under section 340(3): the property is criminal property` EQUALS NOTHING THEN NOTHING -- NOTHING-kind (limited by its own wording): the offence is of "criminal property"; whether the property is criminal property is not answered
+        OTHERWISE JUST TRUE
+
+@ref s 329(1) (src:80-83)
+GIVEN `the answer under section 329(1)` IS A MAYBE BOOLEAN
+GIVETH A DEONTIC `Party under Part 7` `Act under Part 7`
+`s 329(1) the person must not acquire, use or have possession of criminal property` MEANS
+    IF `the answer under section 329(1)` EQUALS JUST FALSE
+    THEN FULFILLED
+    ELSE PARTY `the person`
+         SHANT `acquire, use or have possession of criminal property`
+         HENCE FULFILLED
+         LEST BREACH BY `the person` BECAUSE "s 329(1): criminal property was acquired, used or possessed"
+
+§§ `s 334: penalties`
+
+-- src:331 | (1) A person guilty of an offence under section 327, 328 or 329 is liable—
+-- src:332 | (a) on summary conviction, to imprisonment for a term not exceeding six months or to a fine not exceeding the statutory maximum or to both, or
+-- src:333 | (b) on conviction on indictment, to imprisonment for a term not exceeding 14 years or to a fine or to both.
+@ref s 334(1) (src:331-333)
+GIVEN way IS A `Way of being convicted`
+GIVETH A `Penalty ceiling`
+`s 334(1) the most that can be imposed on a person guilty of an offence under section 327, 328 or 329` MEANS
+    CONSIDER way
+    WHEN `on summary conviction` THEN `Penalty ceiling` WITH `months of imprisonment` IS 6, `ceiling of the fine` IS `the statutory maximum`, `imprisonment and a fine may both be imposed` IS TRUE
+    WHEN `on conviction on indictment` THEN `Penalty ceiling` WITH `months of imprisonment` IS 168, `ceiling of the fine` IS `a fine with no ceiling stated`, `imprisonment and a fine may both be imposed` IS TRUE
+
+-- src:334 | (2) A person guilty of an offence under section 330, 331or 332 is liable—
+-- src:335 | (a) on summary conviction, to imprisonment for a term not exceeding six months or to a fine not exceeding the statutory maximum or to both, or
+-- src:336 | (b) on conviction on indictment, to imprisonment for a term not exceeding five years or to a fine or to both.
+@ref s 334(2) (src:334-336)
+GIVEN way IS A `Way of being convicted`
+GIVETH A `Penalty ceiling`
+`s 334(2) the most that can be imposed on a person guilty of an offence under section 330, 331 or 332` MEANS
+    CONSIDER way
+    WHEN `on summary conviction` THEN `Penalty ceiling` WITH `months of imprisonment` IS 6, `ceiling of the fine` IS `the statutory maximum`, `imprisonment and a fine may both be imposed` IS TRUE
+    WHEN `on conviction on indictment` THEN `Penalty ceiling` WITH `months of imprisonment` IS 60, `ceiling of the fine` IS `a fine with no ceiling stated`, `imprisonment and a fine may both be imposed` IS TRUE
+
+-- src:337 | (3) A person guilty of an offence under section 339(1A) is liable on summary conviction to a fine not exceeding level 5 on the standard scale.
+@ref s 334(3) (src:337)
+GIVEN way IS A `Way of being convicted`
+GIVETH A MAYBE `Penalty ceiling`
+`s 334(3) the most that can be imposed on a person guilty of an offence under section 339(1A)` MEANS
+    CONSIDER way
+    WHEN `on summary conviction` THEN JUST (`Penalty ceiling` WITH `months of imprisonment` IS 0, `ceiling of the fine` IS `level 5 on the standard scale`, `imprisonment and a fine may both be imposed` IS FALSE)
+    WHEN `on conviction on indictment` THEN NOTHING -- NOTHING-kind (limited by its own wording): the subsection says the person "is liable on summary conviction to a fine not exceeding level 5 on the standard scale" and says nothing of conviction on indictment
