@@ -1,0 +1,870 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `rra-nouns`
+IMPORT `rra-logic`
+IMPORT `rra-part1-preliminary`
+IMPORT `rra-part2-minimum-retirement-age`
+IMPORT `rra-part3-re-employment`
+IMPORT `rra-part4-remedies`
+IMPORT `rra-part5-general`
+
+-- Retirement and Re-employment Act 1993 (Singapore), 2020 Revised Edition, informal
+-- consolidation in force from 1 July 2022 -- THE SEAT LAYER.
+--
+-- SEAT: an employee who is approaching the retirement age, or a worker who has reached it, asking on facts they can
+-- state whether they may be dismissed on the ground of age, whether an offer of re-employment is due, on what terms and
+-- by when, and what they can do if they think they were dismissed or denied re-employment unlawfully.  This layer
+-- phrases the rules already encoded in the modules imported above as the questions that person would ask.  Nothing here
+-- is new law.
+--
+-- PLAIN INPUTS.  Every question takes plain inputs -- yes/no, a number, a date, or a choice from a list -- one for each
+-- fact the person can state, each with an @desc worded as the person would be asked.  The records and MAYBE inputs the
+-- long modules expect are built inside each question, from those answers, and the SAME module rule is then called; no
+-- rule is restated here.
+--   * A fact the person may not know is asked as "Yes / No / I am not sure" (`My answer`); "I am not sure" becomes
+--     NOTHING, and a rule that cannot answer without it answers NOTHING.
+--   * An age or an amount that the person does not know is asked as 0.  The prescribed minimum retirement age and the
+--     prescribed re-employment age are set by notification in the Gazette, which is not among the sources: the person
+--     gives them.  Unknown (0), they make every answer that depends on them NOTHING.
+--   * What the Minister, the Commissioner or the Tribunal is "satisfied" of, and the figures the Minister fixes, are the
+--     person's to report.  The Act's own figures (the penalty ceilings, the $1,000 cap on a compounded sum, the ages 62 to
+--     65 and 67 to 70, the one-month and six-month periods) are taken from the modules.
+--
+-- HOW TO READ A RESULT.  JUST TRUE and JUST FALSE are answers the Act itself gives; NOTHING means the Act does not
+-- answer on these facts (see NOTES.md, "Reading a result: FALSE and NOTHING").  Never read NOTHING as no.
+--
+-- Each question is one section's answer on its own (ruling E1, option C): where the Act spreads an outcome across
+-- sections, the person asks each section and combines the answers.  A flat negative counts as the text's no (ruling N2); the
+-- kind of relation it is (a duty, a privilege, a power) is in NOTES.md under "Jural relations", not in the answer.
+--
+-- There is no seat for an official.  Where a provision addresses only the Minister, the Commissioner or an officer
+-- (ss 3, 8(2), 8(9) to (11), 8A(5), 8B(5), 8B(15) to (17), 9(1)(a) and (d) to (f), 9A(3), 11(2), 11B's issuing of guidelines), the
+-- rule is in layer 1 and the person meets it only through the questions below.
+
+DECLARE `My answer` IS ONE OF
+    Yes
+    No
+    `I am not sure`
+
+-- Which Part 4 section the Minister acted under: the two sections have the same shape and different rules.
+DECLARE `What the Minister acted on` IS ONE OF
+    `My dismissal on the ground of age, under section 8`
+    `The denial of re-employment, or my dismissal without just cause or excuse, under section 8B`
+
+-- The offences the Act creates, for the question on the heaviest sentence.
+DECLARE `Offence under the Act` IS ONE OF
+    `Dismissing an employee on the ground of age before the prescribed minimum retirement age (section 4(3))`
+    `Failing to comply with a direction of the Minister (sections 8(7) and 8B(13))`
+    `Hindering an investigating officer, or making a false statement to one (section 9(2))`
+    `Obstructing an employee in appearing before the Commissioner (section 9B(1))`
+    `Another breach or offence with no penalty otherwise provided, a first offence (section 9C)`
+    `Another breach or offence with no penalty otherwise provided, a subsequent offence under the same section (section 9C)`
+
+-- What the person did first and what they want to do next, for the bars in sections 8B(3), 8B(4) and 8C(2).
+DECLARE `What I have already done about the dismissal` IS ONE OF
+    `Made representations to the Minister to be re-employed (section 8B(1))`
+    `Made representations to the Minister under section 35(3) of the Industrial Relations Act 1960`
+    `Lodged a claim with an Employment Claims Tribunal about the employment assistance payment (section 8C(1))`
+
+DECLARE `What I want to do next about the dismissal` IS ONE OF
+    `Lodge a claim with an Employment Claims Tribunal about the employment assistance payment (section 8C(1))`
+    `Make representations to the Minister to be re-employed (section 8B(1))`
+    `Make representations to the Minister under section 35(3) of the Industrial Relations Act 1960`
+
+-- ---------------------------------------------------------------------------
+-- Wiring: the person's answers become the modules' inputs.  Not questions.
+-- ---------------------------------------------------------------------------
+
+-- An answer of Yes, No or "I am not sure" as a MAYBE BOOLEAN.
+GIVEN answer IS A `My answer`
+GIVETH A MAYBE BOOLEAN
+`what I say, as a fact` MEANS
+    CONSIDER answer
+    WHEN Yes THEN JUST TRUE -- input mapping
+    WHEN No THEN JUST FALSE -- input mapping
+    WHEN `I am not sure` THEN NOTHING -- input mapping
+
+-- A date the person gives when their answer is Yes: the date of something that may not have happened.
+GIVEN answer IS A `My answer`
+      date IS A DATE
+GIVETH A MAYBE DATE
+`a date I give if my answer is Yes` MEANS
+    CONSIDER answer
+    WHEN Yes THEN JUST date -- input mapping
+    WHEN No THEN NOTHING -- input mapping
+    WHEN `I am not sure` THEN NOTHING -- input mapping
+
+-- The employment record the modules ask for, from what the person knows.  An age given as 0 is not known.
+-- A contract age is not used when the prescribed minimum retirement age is not known, since the specified age is the higher of the two.
+GIVEN dob IS A DATE
+      minimum IS A NUMBER
+      contract IS A NUMBER
+      reemployment IS A NUMBER
+GIVETH AN Employment
+`my employment from what I know` MEANS Employment WITH
+    `date of birth` IS dob -- input mapping
+    `prescribed minimum retirement age` IS minimum -- input mapping
+    `retirement age stipulated in the contract of service` IS IF minimum EQUALS 0 OR contract EQUALS 0 THEN NOTHING ELSE JUST contract -- input mapping
+    `prescribed re-employment age` IS reemployment -- input mapping
+
+-- The heaviest sentence for an offence: the ceilings the modules state.
+GIVEN offence IS AN `Offence under the Act`
+GIVETH A Penalty
+`the heaviest sentence for the offence` MEANS
+    CONSIDER offence
+    WHEN `Dismissing an employee on the ground of age before the prescribed minimum retirement age (section 4(3))` THEN `s 4(3) the penalty on conviction`
+    WHEN `Failing to comply with a direction of the Minister (sections 8(7) and 8B(13))` THEN `s 8(7) the penalty on conviction`
+    WHEN `Hindering an investigating officer, or making a false statement to one (section 9(2))` THEN `s 9(2) the penalty on conviction`
+    WHEN `Obstructing an employee in appearing before the Commissioner (section 9B(1))` THEN `s 9B(1) the penalty on conviction`
+    WHEN `Another breach or offence with no penalty otherwise provided, a first offence (section 9C)` THEN `s 9C the penalty on conviction` FALSE
+    WHEN `Another breach or offence with no penalty otherwise provided, a subsequent offence under the same section (section 9C)` THEN `s 9C the penalty on conviction` TRUE
+
+§ `The Retirement and Re-employment Act 1993 -- my questions`
+
+-- ---------------------------------------------------------------------------
+§§ `My age and the retirement ages (ss 2 and 4)`
+-- ---------------------------------------------------------------------------
+
+-- s 2(3).  A person attains an age on the anniversary of the date of birth.  A person born on 29 February has no
+-- anniversary in a year that is not a leap year, and the Act does not say which date stands in.
+@export On what date do I attain the prescribed minimum retirement age (s 2(3))?
+GIVEN `my date of birth` IS A DATE @desc On what date were you born?
+      `the prescribed minimum retirement age that applies to me` IS A NUMBER @desc What is the prescribed minimum retirement age that applies to you, in years? (0 if you do not know)
+GIVETH A MAYBE DATE
+DECIDE `On what date do I attain the prescribed minimum retirement age` IS
+    `s 2(3) the date of the anniversary on which the person attains the age` `my date of birth` `the prescribed minimum retirement age that applies to me`
+
+-- s 2(1) "specified age" and s 2(3).  The specified age is the higher of the prescribed minimum retirement age and the
+-- retirement age stipulated in the contract of service, if any.
+@export On what date do I attain my specified age (ss 2(1) and 2(3))?
+GIVEN `my date of birth` IS A DATE @desc On what date were you born?
+      `the prescribed minimum retirement age that applies to me` IS A NUMBER @desc What is the prescribed minimum retirement age that applies to you, in years? (0 if you do not know)
+      `the retirement age in my contract` IS A NUMBER @desc What retirement age does your contract of service stipulate, in years? (0 if it stipulates none, or you do not know)
+GIVETH A MAYBE DATE
+DECIDE `On what date do I attain my specified age` IS
+    `s 2(3) the date of the anniversary on which the person attains the age` `my date of birth` (`s 2(1) "specified age" the employee's specified age` (`my employment from what I know` `my date of birth` `the prescribed minimum retirement age that applies to me` `the retirement age in my contract` 0))
+
+-- s 2(3).  The Act does not say as at when the question is asked, so you give the date you are asking about.
+@export Have I attained my specified age on this date (s 2(3))?
+GIVEN `my date of birth` IS A DATE @desc On what date were you born?
+      `the prescribed minimum retirement age that applies to me` IS A NUMBER @desc What is the prescribed minimum retirement age that applies to you, in years? (0 if you do not know)
+      `the retirement age in my contract` IS A NUMBER @desc What retirement age does your contract of service stipulate, in years? (0 if it stipulates none, or you do not know)
+      `the date I am asking about` IS A DATE @desc For which date are you asking whether you have attained your specified age?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Have I attained my specified age` IS
+    `s 2(3) the person has attained the age on the date` `my date of birth` (`s 2(1) "specified age" the employee's specified age` (`my employment from what I know` `my date of birth` `the prescribed minimum retirement age that applies to me` `the retirement age in my contract` 0)) `the date I am asking about`
+
+-- s 2(2).  An employee is treated as dismissed if the employer terminates the contract, or retires the employee, or
+-- requires or causes the employee to retire or resign on the ground of age.
+@export Am I treated as dismissed by my employer (s 2(2))?
+GIVEN `my employer ended my contract, with or without notice` IS A BOOLEAN @desc Did your employer terminate your contract of service, by notice or without notice?
+      `my employer retired me` IS A BOOLEAN @desc Did your employer retire you?
+      `my employer required or caused me to retire or resign` IS A BOOLEAN @desc Did your employer require or cause you to retire or resign?
+      `it was on the ground of my age` IS A BOOLEAN @desc Was that on the ground of your age?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Am I treated as dismissed` IS
+    `s 2(2) the employee is treated as dismissed by the employer` `my employer ended my contract, with or without notice` `my employer retired me` `my employer required or caused me to retire or resign` `it was on the ground of my age`
+
+-- s 4(2).  An employer must not dismiss an employee on the ground of age before the employee attains the prescribed
+-- minimum retirement age, despite any written law, contract of service or collective agreement.
+@export May my employer dismiss me on the ground of age on this date (s 4(2))?
+GIVEN `my date of birth` IS A DATE @desc On what date were you born?
+      `the prescribed minimum retirement age that applies to me` IS A NUMBER @desc What is the prescribed minimum retirement age that applies to you, in years? (0 if you do not know)
+      `it is a dismissal on the ground of my age` IS A BOOLEAN @desc Is the dismissal on the ground of your age?
+      `the date of the dismissal` IS A DATE @desc On what date would you be, or were you, dismissed?
+      `something else says otherwise` IS A BOOLEAN @desc Does a written law, your contract of service or a collective agreement say otherwise?
+GIVETH A MAYBE BOOLEAN
+DECIDE `May my employer dismiss me on the ground of age` IS
+    `s 4(2) the employer may dismiss the employee on the ground of age before the prescribed minimum retirement age` (`my employment from what I know` `my date of birth` `the prescribed minimum retirement age that applies to me` 0 0) `it is a dismissal on the ground of my age` `the date of the dismissal` `something else says otherwise`
+
+-- s 4(1).  The Minister specifies the age, at least 62 and not more than 65, by notification in the Gazette.
+@export Can this age be the prescribed minimum retirement age (s 4(1))?
+GIVEN `the age specified` IS A NUMBER @desc What age has been specified as the prescribed minimum retirement age, in years?
+      `it was specified by notification in the Gazette` IS A BOOLEAN @desc Was it specified by notification in the Gazette?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Can this age be the prescribed minimum retirement age` IS
+    `s 4(1) the age specified may be the prescribed minimum retirement age` `the age specified` `it was specified by notification in the Gazette`
+
+-- s 4(3).  An employer who contravenes s 4(2) is guilty of an offence.
+@export Is my employer guilty of an offence for dismissing me before the prescribed minimum retirement age (s 4(3))?
+GIVEN `my employer contravened the rule against dismissal on the ground of age` IS A BOOLEAN @desc Did your employer dismiss you on the ground of age before you attained the prescribed minimum retirement age, contrary to section 4(2)?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is my employer guilty of an offence for dismissing me early` IS
+    `s 4(3) the employer is guilty of an offence` `my employer contravened the rule against dismissal on the ground of age`
+
+-- s 6.  A term of a contract of service or collective agreement that provides for a retirement age below the
+-- employee's prescribed minimum retirement age is void to the extent that it is so less favourable.
+-- Placeholder: section 6 reads only the prescribed minimum retirement age from the employment record, so the record's date of
+-- birth is filled with a date no answer depends on, and the person is not asked for it.
+@export Is the retirement age in my contract void (s 6)?
+GIVEN `the prescribed minimum retirement age that applies to me` IS A NUMBER @desc What is the prescribed minimum retirement age that applies to you, in years? (0 if you do not know)
+      `the term is in my contract of service or a collective agreement` IS A BOOLEAN @desc Is the term in your contract of service or in a collective agreement?
+      `the retirement age the term provides for` IS A NUMBER @desc What retirement age does the term provide for, in years?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is the retirement age in my contract void` IS
+    `s 6 the term is void` (`my employment from what I know` (Date 1 1 2000) `the prescribed minimum retirement age that applies to me` 0 0) `the term is in my contract of service or a collective agreement` `the retirement age the term provides for`
+
+@export What retirement age does the term in my contract leave standing (s 6)?
+GIVEN `the prescribed minimum retirement age that applies to me` IS A NUMBER @desc What is the prescribed minimum retirement age that applies to you, in years?
+      `the retirement age the term provides for` IS A NUMBER @desc What retirement age does the term provide for, in years?
+GIVETH A NUMBER
+DECIDE `What retirement age does the term leave standing` IS
+    `s 6 the retirement age that the term leaves standing` (`my employment from what I know` (Date 1 1 2000) `the prescribed minimum retirement age that applies to me` 0 0) `the retirement age the term provides for`
+
+-- ---------------------------------------------------------------------------
+§§ `Am I eligible for re-employment? (s 7)`
+-- ---------------------------------------------------------------------------
+
+-- s 7(1).  An employee is eligible if born on or after 1 July 1952, and the employer assesses the employee as having at
+-- least satisfactory work performance and as medically fit to continue working.
+@export Am I eligible for re-employment (s 7(1))?
+GIVEN `my date of birth` IS A DATE @desc On what date were you born?
+      `my employer assesses my work performance as at least satisfactory` IS A `My answer` @desc Does your employer assess your work performance as at least satisfactory?
+      `my employer has proved that I am not medically fit` IS A BOOLEAN @desc Has your employer proved, on a balance of probabilities, that you are not medically fit to continue working?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Am I eligible for re-employment` IS
+    `s 7(1) the employee is eligible for re-employment in accordance with section 7A` `my date of birth` (`what I say, as a fact` `my employer assesses my work performance as at least satisfactory`) `my employer has proved that I am not medically fit`
+
+-- s 7(2).  An employee is presumed medically fit to continue working unless the employer proves otherwise.
+@export Am I presumed to be medically fit to continue working (s 7(2))?
+GIVEN `my employer has proved that I am not medically fit` IS A BOOLEAN @desc Has your employer proved, on a balance of probabilities, that you are not medically fit to continue working?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Am I presumed medically fit` IS
+    `s 7(2) the employee is presumed to be medically fit to continue working` `my employer has proved that I am not medically fit`
+
+-- s 7(3).  Where the employer does not intend to re-employ because the employee does not meet s 7(1)(b), it must as far
+-- as reasonably practicable give written notice within a reasonable period before terminating the employment.
+@export Has my employer given me the written notice it owed that it does not intend to re-employ me (s 7(3))?
+GIVEN `my employer does not intend to re-employ me because I do not meet the criteria in section 7(1)(b)` IS A BOOLEAN @desc Does your employer not intend to re-employ you because you do not meet the criteria in section 7(1)(b) (work performance and medical fitness)?
+      `it is reasonably practicable for my employer to give notice` IS A BOOLEAN @desc Is it reasonably practicable for your employer to give you written notice?
+      `my employer gave me written notice` IS A BOOLEAN @desc Did your employer give you written notice of that intention?
+      `it was within a reasonable period before my employment ends` IS A BOOLEAN @desc Was the notice given within a reasonable period before your employment is terminated?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Has my employer given me the notice it owed` IS
+    `s 7(3) the employer has complied with the duty to give written notice of the intention not to re-employ` `my employer does not intend to re-employ me because I do not meet the criteria in section 7(1)(b)` `it is reasonably practicable for my employer to give notice` `my employer gave me written notice` `it was within a reasonable period before my employment ends`
+
+-- ---------------------------------------------------------------------------
+§§ `Must I be offered re-employment, when, and on what terms? (s 7A)`
+-- Situation: asked of an employee who is eligible for re-employment, or whose employer says otherwise.
+-- ---------------------------------------------------------------------------
+
+-- s 7A(1).  Subject to s 7C, the employer must, before an eligible employee attains the specified age, offer
+-- re-employment.  Whether you are eligible is section 7(1)'s question and whether s 7C(1) takes the duty away is section
+-- 7C(1)'s; you say what you know of each.
+@export Does my employer owe me an offer of re-employment before I attain my specified age (s 7A(1))?
+GIVEN `I am an eligible employee` IS A `My answer` @desc Are you an eligible employee (see "Am I eligible for re-employment")?
+      `section 7A does not apply to my employer` IS A `My answer` @desc Does section 7A not apply to your employer because it cannot find a suitable vacancy (see "Does my employer's duty to re-employ me fall away")?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Does my employer owe me an offer of re-employment` IS
+    `s 7A(1) the employer owes the employee an offer of re-employment before the specified age` (`what I say, as a fact` `I am an eligible employee`) (`what I say, as a fact` `section 7A does not apply to my employer`)
+
+-- s 7A(1).  "Before an employee ... attains the specified age": the last day for the offer is the day before.
+@export By what date must my employer offer me re-employment (s 7A(1))?
+GIVEN `my date of birth` IS A DATE @desc On what date were you born?
+      `the prescribed minimum retirement age that applies to me` IS A NUMBER @desc What is the prescribed minimum retirement age that applies to you, in years? (0 if you do not know)
+      `the retirement age in my contract` IS A NUMBER @desc What retirement age does your contract of service stipulate, in years? (0 if it stipulates none, or you do not know)
+GIVETH A MAYBE DATE
+DECIDE `By what date must my employer offer me re-employment` IS
+    `s 7A(1) the last day on which the employer can offer re-employment` (`my employment from what I know` `my date of birth` `the prescribed minimum retirement age that applies to me` `the retirement age in my contract` 0)
+
+@export Was the offer of re-employment made before I attained my specified age (s 7A(1))?
+GIVEN `my date of birth` IS A DATE @desc On what date were you born?
+      `the prescribed minimum retirement age that applies to me` IS A NUMBER @desc What is the prescribed minimum retirement age that applies to you, in years? (0 if you do not know)
+      `the retirement age in my contract` IS A NUMBER @desc What retirement age does your contract of service stipulate, in years? (0 if it stipulates none, or you do not know)
+      `the date the offer was made` IS A DATE @desc On what date was the offer of re-employment made to you?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Was the offer of re-employment made in time` IS
+    `s 7A(1) the offer of re-employment was made before the employee attained the specified age` (`my employment from what I know` `my date of birth` `the prescribed minimum retirement age that applies to me` `the retirement age in my contract` 0) `the date the offer was made`
+
+-- s 7A(1).  The employer's obligation to re-employ begins when the employee attains the specified age and runs until the
+-- employee attains the prescribed re-employment age.
+@export Is my employer's obligation to re-employ me on foot on this date (s 7A(1))?
+GIVEN `my date of birth` IS A DATE @desc On what date were you born?
+      `the prescribed minimum retirement age that applies to me` IS A NUMBER @desc What is the prescribed minimum retirement age that applies to you, in years? (0 if you do not know)
+      `the retirement age in my contract` IS A NUMBER @desc What retirement age does your contract of service stipulate, in years? (0 if it stipulates none, or you do not know)
+      `the prescribed re-employment age that applies to me` IS A NUMBER @desc What is the prescribed re-employment age that applies to you, in years? (67 to 70; 0 if you do not know)
+      `I am an eligible employee` IS A `My answer` @desc Are you an eligible employee?
+      `section 7A does not apply to my employer` IS A `My answer` @desc Does section 7A not apply to your employer because it cannot find a suitable vacancy?
+      `the date I am asking about` IS A DATE @desc For which date are you asking?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is my employer's obligation to re-employ me on foot` IS
+    `s 7A(1) the employer's obligation to re-employ the employee is on foot on the date` (`my employment from what I know` `my date of birth` `the prescribed minimum retirement age that applies to me` `the retirement age in my contract` `the prescribed re-employment age that applies to me`) (`what I say, as a fact` `I am an eligible employee`) (`what I say, as a fact` `section 7A does not apply to my employer`) `the date I am asking about`
+
+-- s 7A(2).  Where an employee born on or after 1 July 1952 works on after the specified age and the employer neither
+-- re-employs nor terminates, rights accrued before the specified age are not affected.
+@export If I work on after my specified age and my employer does nothing, are the rights I had accrued affected (s 7A(2))?
+GIVEN `I was born on or after 1 July 1952` IS A BOOLEAN @desc Were you born on or after 1 July 1952?
+      `I continue to work for my employer after my specified age` IS A BOOLEAN @desc Do you continue to work for your employer after you attain your specified age?
+      `my employer re-employed me on my attaining it` IS A BOOLEAN @desc Did your employer re-employ you upon your attaining your specified age?
+      `my employer terminated my employment on my attaining it` IS A BOOLEAN @desc Did your employer terminate your employment upon your attaining your specified age?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Are my accrued rights affected if I work on` IS
+    `s 7A(2) a right, privilege, obligation or liability accrued before the specified age is affected` `I was born on or after 1 July 1952` `I continue to work for my employer after my specified age` `my employer re-employed me on my attaining it` `my employer terminated my employment on my attaining it`
+
+-- s 7A(3)(a)(ii).  Where s 7A(2) applies, the employer may, at any time after the specified age, terminate the employment of
+-- an employee who does not satisfy s 7(1)(b).
+@export May my employer terminate my employment now that I have passed my specified age (s 7A(3))?
+GIVEN `section 7A(2) applies to me` IS A BOOLEAN @desc Does section 7A(2) apply to you (you work on after your specified age and your employer has neither re-employed nor terminated you)?
+      `I have attained my specified age` IS A BOOLEAN @desc Have you attained your specified age?
+      `I satisfy the criteria in section 7(1)(b)` IS A `My answer` @desc Do you satisfy the criteria in section 7(1)(b) (at least satisfactory work performance, medically fit to continue working)?
+GIVETH A MAYBE BOOLEAN
+DECIDE `May my employer terminate my employment` IS
+    `s 7A(3) the employer may terminate the employment of the employee` `section 7A(2) applies to me` `I have attained my specified age` (`what I say, as a fact` `I satisfy the criteria in section 7(1)(b)`)
+
+-- s 7A(3)(b).  The employer is deemed to have complied with s 7A(1) from the day the employee attains the specified age
+-- until the day it re-employs or terminates.
+@export Is my employer treated as having complied with its duty to offer me re-employment on this date (s 7A(3))?
+GIVEN `section 7A(2) applies to me` IS A BOOLEAN @desc Does section 7A(2) apply to you (you work on after your specified age and your employer has neither re-employed nor terminated you)?
+      `the date I attained my specified age` IS A DATE @desc On what date did you attain your specified age?
+      `my employer has re-employed or terminated me` IS A `My answer` @desc Has your employer since re-employed you or terminated your employment?
+      `the date it did so` IS A DATE @desc On what date did it do so? (any date if it has not)
+      `the date I am asking about` IS A DATE @desc For which date are you asking?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is my employer treated as having complied` IS
+    `s 7A(3) the employer is deemed to have complied with section 7A(1) on the date` `section 7A(2) applies to me` `the date I attained my specified age` (`a date I give if my answer is Yes` `my employer has re-employed or terminated me` `the date it did so`) `the date I am asking about`
+
+-- s 7A(4).
+@export Has my employer entered into the re-employment contract it must enter into with me (s 7A(4))?
+GIVEN `the re-employment is under section 7A(1) or (3)(a)(i)` IS A BOOLEAN @desc Is the re-employment under section 7A(1) (the offer before your specified age) or section 7A(3)(a)(i) (re-employment after it)?
+      `a contract has been entered into` IS A BOOLEAN @desc Have you and your employer entered into a re-employment contract?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Has my employer entered into the re-employment contract` IS
+    `s 7A(4) the employer has complied with the requirement to enter into a re-employment contract` `the re-employment is under section 7A(1) or (3)(a)(i)` `a contract has been entered into`
+
+@export May the job scope and the terms and conditions of my re-employment differ from my old contract (s 7A(4))?
+GIVEN `the re-employment is under section 7A(1) or (3)(a)(i)` IS A BOOLEAN @desc Is the re-employment under section 7A(1) (the offer before your specified age) or section 7A(3)(a)(i) (re-employment after it)?
+GIVETH A MAYBE BOOLEAN
+DECIDE `May my job scope and terms differ from my old contract` IS
+    `s 7A(4) the job scope and the terms and conditions may vary from the previous contract` `the re-employment is under section 7A(1) or (3)(a)(i)`
+
+-- s 7A(5).  Any variation must be based on reasonable factors, such as productivity, performance, duties and
+-- responsibilities and the wage system; the list is not closed.
+@export Is the variation of my job scope or terms based on a reasonable factor (s 7A(5))?
+GIVEN `the factor the variation is based on` IS A `Factor for a variation` @desc On which factor is the variation based?
+      `the other factor is reasonable` IS A `My answer` @desc If it is another factor, is that factor reasonable?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is the variation based on a reasonable factor` IS
+    `s 7A(5) the variation is based on a reasonable factor` `the factor the variation is based on` (`what I say, as a fact` `the other factor is reasonable`)
+
+-- s 7A(6).  Unless the parties agreed otherwise, the period of employment stipulated in a re-employment contract must not
+-- be less than one year at any one time.
+@export Is the period of employment offered in my re-employment contract at least one year (s 7A(6))?
+GIVEN `the first day of the period` IS A DATE @desc On what date does the period of employment stipulated in the contract begin?
+      `the last day of the period` IS A DATE @desc On what date does the period of employment stipulated in the contract end (the last day of it)?
+      `we agreed otherwise` IS A BOOLEAN @desc Have you and your employer agreed that the period may be less than one year?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is the period offered at least a year` IS
+    `s 7A(6) the period of employment stipulated is not less than one year` `the first day of the period` `the last day of the period` `we agreed otherwise`
+
+-- s 7A(7).  Despite s 7A(6), where less than one year remains between the start of re-employment and the day the employee
+-- attains the prescribed re-employment age, the period may be for that shorter time.
+@export May the period of employment offered be shorter than one year because I am close to the prescribed re-employment age (s 7A(7))?
+GIVEN `the first day of the period` IS A DATE @desc On what date does the period of employment stipulated in the contract begin?
+      `the last day of the period` IS A DATE @desc On what date does the period of employment stipulated in the contract end (the last day of it)?
+      `the date I attain the prescribed re-employment age` IS A DATE @desc On what date do you attain the prescribed re-employment age?
+GIVETH A MAYBE BOOLEAN
+DECIDE `May the period be shorter than one year` IS
+    `s 7A(7) the period of employment may be for the shorter period` `the first day of the period` `the last day of the period` `the date I attain the prescribed re-employment age`
+
+-- s 7A(9).  Despite the Act, an eligible employee may retire or be retired if they do not wish to be employed on or after
+-- the specified age.
+@export May I retire, or be retired, rather than be re-employed (s 7A(9))?
+GIVEN `I am an eligible employee` IS A `My answer` @desc Are you an eligible employee?
+      `I do not wish to be employed on or after my specified age` IS A BOOLEAN @desc Do you not wish to be employed by your employer on or after the date you attain your specified age?
+GIVETH A MAYBE BOOLEAN
+DECIDE `May I retire rather than be re-employed` IS
+    `s 7A(9) the eligible employee may retire or be retired` (`what I say, as a fact` `I am an eligible employee`) `I do not wish to be employed on or after my specified age`
+
+-- s 7A(10).
+@export Have I given my employer the written notice of my intention to retire that I owed (s 7A(10))?
+GIVEN `I am an eligible employee` IS A BOOLEAN @desc Are you an eligible employee?
+      `I intend to retire` IS A BOOLEAN @desc Do you intend to retire?
+      `it is reasonably practicable for me to give notice` IS A BOOLEAN @desc Is it reasonably practicable for you to give written notice?
+      `I gave written notice stating my intention` IS A BOOLEAN @desc Did you give your employer written notice stating your intention to retire?
+      `it was within a reasonable period before I retire` IS A BOOLEAN @desc Was the notice given within a reasonable period before you retire?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Have I given the notice of my intention to retire` IS
+    `s 7A(10) the employee has complied with the duty to give written notice of the intention to retire` `I am an eligible employee` `I intend to retire` `it is reasonably practicable for me to give notice` `I gave written notice stating my intention` `it was within a reasonable period before I retire`
+
+-- s 7A(11).  The Minister specifies the prescribed re-employment age, at least 67 and not more than 70.
+@export Can this age be the prescribed re-employment age (s 7A(11))?
+GIVEN `the age specified` IS A NUMBER @desc What age has been specified as the prescribed re-employment age, in years?
+      `it was specified by notification in the Gazette` IS A BOOLEAN @desc Was it specified by notification in the Gazette?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Can this age be the prescribed re-employment age` IS
+    `s 7A(11) the age specified may be the prescribed re-employment age` `the age specified` `it was specified by notification in the Gazette`
+
+-- ---------------------------------------------------------------------------
+§§ `Does my earlier service count under the re-employment contract? (s 7B)`
+-- ---------------------------------------------------------------------------
+
+-- s 7B(1).  Unless otherwise agreed, and subject to s 7B(2) and (3), earlier service is disregarded for any right,
+-- privilege, obligation or liability under the re-employment contract.
+@export Is my earlier service with my employer disregarded for this purpose under my re-employment contract (s 7B(1))?
+GIVEN `a re-employment contract was entered into under section 7A(4)` IS A BOOLEAN @desc Was a re-employment contract entered into with you under section 7A(4)?
+      `we agreed otherwise` IS A BOOLEAN @desc Have you and your employer agreed otherwise?
+      `the purpose` IS A `Purpose of reckoning service` @desc For which purpose are you asking?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is my earlier service disregarded for the purpose` IS
+    `s 7B(1) the previous service is disregarded for the purpose` `a re-employment contract was entered into under section 7A(4)` `we agreed otherwise` `the purpose`
+
+-- s 7B(2).
+@export Is my earlier service with my employer reckoned for this purpose under my re-employment contract (s 7B(2))?
+GIVEN `a re-employment contract was entered into under section 7A(4)` IS A BOOLEAN @desc Was a re-employment contract entered into with you under section 7A(4)?
+      `the purpose` IS A `Purpose of reckoning service` @desc For which purpose are you asking?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is my earlier service reckoned for the purpose` IS
+    `s 7B(2) the previous service is reckoned for the purpose` `a re-employment contract was entered into under section 7A(4)` `the purpose`
+
+-- s 7B(3).
+@export Is my continuity of employment unbroken when my employer re-employs or renews my re-employment (s 7B(3))?
+GIVEN `my employer re-employed or renewed my re-employment under section 7A(4)` IS A BOOLEAN @desc Did your employer re-employ you, or renew your re-employment, in accordance with section 7A(4)?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is my continuity of employment unbroken` IS
+    `s 7B(3) the employee's continuity of employment under re-employment is not broken` `my employer re-employed or renewed my re-employment under section 7A(4)`
+
+-- ---------------------------------------------------------------------------
+§§ `If my employer cannot re-employ me (s 7C)`
+-- Situation: asked only of an employee whose employer says it has no suitable vacancy.
+-- The form can ask "Does your employer say it cannot find you a suitable job?" before showing this group.
+-- ---------------------------------------------------------------------------
+
+-- s 7C(1).
+@export Does my employer's duty to re-employ me fall away (s 7C(1))?
+GIVEN `my employer cannot find a suitable vacancy` IS A BOOLEAN @desc Is your employer unable to find a vacancy in its establishment that is suitable for you?
+      `it made reasonable attempts under the tripartite guidelines` IS A BOOLEAN @desc Did it make reasonable attempts to find one, in accordance with the tripartite guidelines?
+      `it offers me an employment assistance payment` IS A BOOLEAN @desc Does your employer offer you an employment assistance payment?
+      `another employer offers to employ me instead` IS A BOOLEAN @desc During your employment, does another employer offer to employ you in place of your employer?
+      `I accept that offer` IS A BOOLEAN @desc Do you accept that offer?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Does my employer's duty to re-employ me fall away` IS
+    `s 7C(1) section 7A does not apply to the employer` `my employer cannot find a suitable vacancy` `it made reasonable attempts under the tripartite guidelines` `it offers me an employment assistance payment` `another employer offers to employ me instead` `I accept that offer`
+
+-- s 7C(2)(a).  The old employer's re-employment obligations are discharged immediately before the agreed date, the date
+-- specified in the consent form.
+@export Has my old employer's duty to re-employ me been discharged on this date (s 7C(2))?
+GIVEN `I am moving to another employer under section 7C(1)(b)` IS A BOOLEAN @desc Does section 7C(1)(b) apply to you (another employer has offered to employ you and you accepted)?
+      `the consent form names a date` IS A `My answer` @desc Does the consent form specify a date for the move (the agreed date)?
+      `the agreed date` IS A DATE @desc What is the agreed date? (any date if there is none)
+      `the date I am asking about` IS A DATE @desc For which date are you asking?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Has my old employer's duty been discharged` IS
+    `s 7C(2) E1's re-employment obligations are discharged on the date` `I am moving to another employer under section 7C(1)(b)` (`a date I give if my answer is Yes` `the consent form names a date` `the agreed date`) `the date I am asking about`
+
+-- s 7C(2)(c).
+@export Does my old employer's duty to re-employ me survive its unlawfully dismissing me before the agreed date (s 7C(2))?
+GIVEN `I am moving to another employer under section 7C(1)(b)` IS A BOOLEAN @desc Does section 7C(1)(b) apply to you (another employer has offered to employ you and you accepted)?
+      `my old employer unlawfully dismissed me before the agreed date` IS A BOOLEAN @desc Did your old employer unlawfully dismiss you before the agreed date?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Does my old employer's duty survive an unlawful dismissal` IS
+    `s 7C(2) E1's re-employment obligations survive an unlawful dismissal by E1` `I am moving to another employer under section 7C(1)(b)` `my old employer unlawfully dismissed me before the agreed date`
+
+-- s 7C(3).  JUST TRUE means: the employer is not required to offer an employment assistance payment.
+@export Is my employer excused from offering me an employment assistance payment because I decided not to continue (s 7C(3))?
+GIVEN `I am an eligible employee` IS A BOOLEAN @desc Are you an eligible employee?
+      `I told my employer I decided not to continue` IS A BOOLEAN @desc Did you tell your employer of your decision not to continue to be employed by it on or after the date you attain your specified age?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is my employer excused from offering an employment assistance payment` IS
+    `s 7C(3) the employer is not required to offer an employment assistance payment` `I am an eligible employee` `I told my employer I decided not to continue`
+
+-- s 7C(4).  The payment is a single lump sum paid by the last day of employment, or other mutually agreed arrangements.
+@export Is the way my employment assistance payment is made one the Act names (s 7C(4))?
+GIVEN `a single lump sum was paid` IS A `My answer` @desc Was the payment made as a single lump sum?
+      `the date it was paid` IS A DATE @desc On what date was it paid? (any date if it has not been)
+      `the last day of my employment` IS A DATE @desc What is, or was, the last day of your employment?
+      `we made other arrangements` IS A BOOLEAN @desc Did you and your employer mutually agree other arrangements for the payment?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is the way my payment is made one the Act names` IS
+    `s 7C(4) the employment assistance payment is made in a form the section names` (`a date I give if my answer is Yes` `a single lump sum was paid` `the date it was paid`) `the last day of my employment` `we made other arrangements`
+
+-- s 7C(5).
+@export Has my employer taken the tripartite guidelines into account in setting the amount (s 7C(5))?
+GIVEN `it took them into account` IS A BOOLEAN @desc Did your employer take the tripartite guidelines into account in determining the amount of the employment assistance payment?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Has my employer taken the guidelines into account` IS
+    `s 7C(5) the employer has complied with the duty to take the tripartite guidelines into account` `it took them into account`
+
+-- s 7C(6).  Where a new employer takes the employee in place of the old, service under the old employer is reckoned only
+-- for annual leave and paid sick leave.
+@export Is my service under my old employer reckoned for this purpose with my new employer (s 7C(6))?
+GIVEN `my new employer entered into a contract of service with me in place of my old employer` IS A BOOLEAN @desc Did your new employer enter into a contract of service with you in place of your old employer?
+      `the purpose` IS A `Purpose of reckoning service` @desc For which purpose are you asking?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is my service under my old employer reckoned for the purpose` IS
+    `s 7C(6) the service under E1 is reckoned for the purpose` `my new employer entered into a contract of service with me in place of my old employer` `the purpose`
+
+-- s 7C(7).
+@export Is the consent form proof that I moved to another employer (s 7C(7))?
+GIVEN `it is signed by my old employer, my new employer and me` IS A BOOLEAN @desc Is the consent form signed by your old employer, your new employer and you?
+      `it is in the prescribed form and manner` IS A BOOLEAN @desc Is it in the prescribed form and manner?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is the consent form proof of my move` IS
+    `s 7C(7) the consent form is prima facie proof of the matters mentioned in subsection (1)(b)` `it is signed by my old employer, my new employer and me` `it is in the prescribed form and manner`
+
+-- ---------------------------------------------------------------------------
+§§ `If I believe I was dismissed, or denied re-employment, unlawfully (ss 8 to 8C)`
+-- Situation: asked only of an employee who has been dismissed, or denied re-employment, and wants a remedy.
+-- The form can ask "Do you believe you were dismissed because of your age, or denied re-employment?" before showing this group.
+-- ---------------------------------------------------------------------------
+
+-- s 8(1).  An employee below the specified age who considers they were unlawfully dismissed on the ground of age may,
+-- within one month of the dismissal, make representations in writing to the Minister to be reinstated.
+@export By what date may I make written representations to the Minister to be reinstated (s 8(1))?
+GIVEN `the date of my dismissal` IS A DATE @desc On what date were you dismissed?
+GIVETH A DATE
+DECIDE `By what date may I make representations to be reinstated` IS
+    `s 8(1) the last day on which the employee can make representations to the Minister` `the date of my dismissal`
+
+@export May I make written representations to the Minister to be reinstated (s 8(1))?
+GIVEN `my date of birth` IS A DATE @desc On what date were you born?
+      `the prescribed minimum retirement age that applies to me` IS A NUMBER @desc What is the prescribed minimum retirement age that applies to you, in years? (0 if you do not know)
+      `the retirement age in my contract` IS A NUMBER @desc What retirement age does your contract of service stipulate, in years? (0 if it stipulates none, or you do not know)
+      `the date of my dismissal` IS A DATE @desc On what date were you dismissed?
+      `I consider that I was unlawfully dismissed on the ground of age` IS A BOOLEAN @desc Do you consider that you were unlawfully dismissed on the ground of age?
+      `the date I make the representations` IS A DATE @desc On what date do you make, or did you make, the representations?
+GIVETH A MAYBE BOOLEAN
+DECIDE `May I make representations to be reinstated` IS
+    `s 8(1) the employee may make representations in writing to the Minister to be reinstated` (`my employment from what I know` `my date of birth` `the prescribed minimum retirement age that applies to me` `the retirement age in my contract` 0) `the date of my dismissal` `I consider that I was unlawfully dismissed on the ground of age` `the date I make the representations`
+
+-- s 8(3) and s 8B(6).  The employer must comply with the direction of the Minister.
+@export Has my employer complied with the direction the Minister gave it (ss 8(3) and 8B(6))?
+GIVEN `what the Minister acted on` IS A `What the Minister acted on` @desc Under which section did the Minister give the direction?
+      `the Minister gave my employer a direction` IS A BOOLEAN @desc Did the Minister give your employer a direction under that section?
+      `my employer complied` IS A BOOLEAN @desc Has your employer complied with the direction?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Has my employer complied with the direction` IS
+    CONSIDER `what the Minister acted on`
+    WHEN `My dismissal on the ground of age, under section 8` THEN `s 8(3) the employer has complied with the direction of the Minister` `the Minister gave my employer a direction` `my employer complied`
+    WHEN `The denial of re-employment, or my dismissal without just cause or excuse, under section 8B` THEN `s 8B(6) the employer has complied with the direction of the Minister` `the Minister gave my employer a direction` `my employer complied`
+
+-- s 8(4) and s 8B(10).  What the Minister must, or may, have regard to in fixing compensation.
+@export Must the Minister have regard to this in fixing my compensation (s 8(4))?
+GIVEN `the consideration` IS A `Consideration in fixing compensation` @desc Which consideration are you asking about?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Must the Minister have regard to the consideration` IS
+    `s 8(4) the Minister must have regard to the consideration` `the consideration`
+
+@export May the Minister have regard to this in fixing my compensation (s 8B(10))?
+GIVEN `the consideration` IS A `Consideration in fixing compensation` @desc Which consideration are you asking about?
+GIVETH A MAYBE BOOLEAN
+DECIDE `May the Minister have regard to the consideration` IS
+    `s 8B(10) the Minister may have regard to the consideration` `the consideration`
+
+-- s 8(5) and s 8B(11).  The decision of the Minister on the representation is final.
+@export Is the Minister's decision on my representations final (ss 8(5) and 8B(11))?
+GIVEN `what the Minister acted on` IS A `What the Minister acted on` @desc Under which section did the Minister decide?
+      `it is the Minister's decision on my representation` IS A BOOLEAN @desc Is it the Minister's decision on a representation you made under that section?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is the Minister's decision final` IS
+    CONSIDER `what the Minister acted on`
+    WHEN `My dismissal on the ground of age, under section 8` THEN `s 8(5) the decision of the Minister on the representation is final` `it is the Minister's decision on my representation`
+    WHEN `The denial of re-employment, or my dismissal without just cause or excuse, under section 8B` THEN `s 8B(11) the decision of the Minister on the representation is final` `it is the Minister's decision on my representation`
+
+-- s 8(6) and s 8B(12).  JUST FALSE means: the Act bars the action for damages.
+@export Can I sue my employer for damages after the Minister's direction (ss 8(6) and 8B(12))?
+GIVEN `what the Minister acted on` IS A `What the Minister acted on` @desc Under which section did the Minister give the direction?
+      `the Minister gave my employer a direction` IS A BOOLEAN @desc Did the Minister give your employer a direction under that section?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Can I sue my employer for damages` IS
+    CONSIDER `what the Minister acted on`
+    WHEN `My dismissal on the ground of age, under section 8` THEN `s 8(6) the employee may bring an action for damages in a court in respect of the unlawful dismissal` `the Minister gave my employer a direction`
+    WHEN `The denial of re-employment, or my dismissal without just cause or excuse, under section 8B` THEN `s 8B(12) the employee may bring an action for damages in a court in respect of the denial of re-employment or the dismissal` `the Minister gave my employer a direction`
+
+-- s 8(7) and s 8B(13).
+@export Is my employer guilty of an offence for not complying with the Minister's direction (ss 8(7) and 8B(13))?
+GIVEN `what the Minister acted on` IS A `What the Minister acted on` @desc Under which section did the Minister give the direction?
+      `my employer failed to comply` IS A BOOLEAN @desc Did your employer fail to comply with the direction?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is my employer guilty of an offence for not complying` IS
+    CONSIDER `what the Minister acted on`
+    WHEN `My dismissal on the ground of age, under section 8` THEN `s 8(7) the employer is guilty of an offence` `my employer failed to comply`
+    WHEN `The denial of re-employment, or my dismissal without just cause or excuse, under section 8B` THEN `s 8B(13) the employer is guilty of an offence` `my employer failed to comply`
+
+-- s 8(8) and s 8B(14).  What remains unpaid is recoverable by the court as if it were a fine, and is paid to the employee.
+@export How much of what my employer was told to pay can the court recover for me (ss 8(8) and 8B(14))?
+GIVEN `what the Minister acted on` IS A `What the Minister acted on` @desc Under which section did the Minister give the direction?
+      `the amount my employer was directed to pay` IS A NUMBER @desc What amount, in dollars, was your employer directed to pay?
+      `the amount it has paid` IS A NUMBER @desc How much, in dollars, has it paid?
+      `my employer was convicted of failing to comply` IS A BOOLEAN @desc Has your employer been convicted of the offence of failing to comply with the direction?
+GIVETH A MAYBE NUMBER
+DECIDE `How much can the court recover for me` IS
+    CONSIDER `what the Minister acted on`
+    WHEN `My dismissal on the ground of age, under section 8` THEN `s 8(8) the amount recoverable by the court as if it were a fine` `the amount my employer was directed to pay` `the amount it has paid` `my employer was convicted of failing to comply`
+    WHEN `The denial of re-employment, or my dismissal without just cause or excuse, under section 8B` THEN `s 8B(14) the amount recoverable by the court as if it were a fine` `the amount my employer was directed to pay` `the amount it has paid` `my employer was convicted of failing to comply`
+
+-- s 8A(4).
+@export Is my dispute a re-employment dispute (s 8A(4))?
+GIVEN `what my dispute is about` IS A `Dispute matter` @desc What is your dispute about?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is my dispute a re-employment dispute` IS
+    `s 8A(4) the dispute is a re-employment dispute` `what my dispute is about`
+
+-- s 8A(1).  One month after the last day of employment, counted to the same day of the next month.
+@export By what date must I first notify the Commissioner in writing of my re-employment dispute (s 8A(1))?
+GIVEN `what my dispute is about` IS A `Dispute matter` @desc What is your dispute about?
+      `the last day of my employment` IS A DATE @desc What is, or was, the last day of your employment?
+GIVETH A MAYBE DATE
+DECIDE `By what date must I notify the Commissioner of my dispute` IS
+    `s 8A(1) the last day on which the employee can notify the Commissioner of the re-employment dispute` `what my dispute is about` `the last day of my employment`
+
+@export Did I notify the Commissioner of my re-employment dispute in time (s 8A(1))?
+GIVEN `what my dispute is about` IS A `Dispute matter` @desc What is your dispute about?
+      `the last day of my employment` IS A DATE @desc What is, or was, the last day of your employment?
+      `the date I notified the Commissioner` IS A DATE @desc On what date did you notify the Commissioner in writing?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Did I notify the Commissioner of my dispute in time` IS
+    `s 8A(1) the employee notified the Commissioner in time` `what my dispute is about` `the last day of my employment` `the date I notified the Commissioner`
+
+-- s 8A(2).  An employee who attains the specified age on or after 1 January 2012 and considers they were dismissed without
+-- just cause or excuse on or after that date.
+@export By what date must I first notify the Commissioner in writing of my dismissal (s 8A(2))?
+GIVEN `my date of birth` IS A DATE @desc On what date were you born?
+      `the prescribed minimum retirement age that applies to me` IS A NUMBER @desc What is the prescribed minimum retirement age that applies to you, in years? (0 if you do not know)
+      `the retirement age in my contract` IS A NUMBER @desc What retirement age does your contract of service stipulate, in years? (0 if it stipulates none, or you do not know)
+      `I consider that I was dismissed without just cause or excuse on or after attaining it` IS A BOOLEAN @desc Do you consider that you were dismissed without just cause or excuse, on or after the date you attained your specified age?
+      `the last day of my employment` IS A DATE @desc What is, or was, the last day of your employment?
+GIVETH A MAYBE DATE
+DECIDE `By what date must I notify the Commissioner of my dismissal` IS
+    `s 8A(2) the last day on which the employee can notify the Commissioner of the dismissal` (`my employment from what I know` `my date of birth` `the prescribed minimum retirement age that applies to me` `the retirement age in my contract` 0) `I consider that I was dismissed without just cause or excuse on or after attaining it` `the last day of my employment`
+
+-- s 8A(3).  Six months after the last day of employment, for a dispute over the terms of an offer or the amount of a payment.
+@export By what date must I submit a mediation request to the Commissioner (s 8A(3))?
+GIVEN `what my dispute is about` IS A `Dispute matter` @desc What is your dispute about?
+      `the last day of my employment` IS A DATE @desc What is, or was, the last day of your employment?
+GIVETH A MAYBE DATE
+DECIDE `By what date must I submit a mediation request` IS
+    `s 8A(3) the last day on which the employee can submit a mediation request` `what my dispute is about` `the last day of my employment`
+
+@export Did I submit my mediation request in time (s 8A(3))?
+GIVEN `what my dispute is about` IS A `Dispute matter` @desc What is your dispute about?
+      `the last day of my employment` IS A DATE @desc What is, or was, the last day of your employment?
+      `the date I submitted the mediation request` IS A DATE @desc On what date did you submit the mediation request to the Commissioner?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Did I submit my mediation request in time` IS
+    `s 8A(3) the employee submitted the mediation request in time` `what my dispute is about` `the last day of my employment` `the date I submitted the mediation request`
+
+-- s 8B(1).  The Act runs the time from "any conciliation conducted"; if there was none, it does not say when the time begins.
+@export May I make written representations to the Minister to be re-employed (s 8B(1))?
+GIVEN `I have a re-employment dispute about a denial of re-employment` IS A BOOLEAN @desc Do you have a re-employment dispute about a denial of re-employment (because you do not satisfy the eligibility criteria, or because your employer cannot find a suitable vacancy)?
+      `I attained my specified age on or after 1 January 2012 and consider I was dismissed without just cause or excuse` IS A BOOLEAN @desc Did you attain your specified age on or after 1 January 2012, and do you consider that you were dismissed without just cause or excuse on or after that date?
+      `there was a conciliation` IS A `My answer` @desc Did the Commissioner conduct a conciliation?
+      `the date it concluded` IS A DATE @desc On what date did the conciliation conclude? (any date if there was none)
+      `the date I make the representations` IS A DATE @desc On what date do you make, or did you make, the representations?
+GIVETH A MAYBE BOOLEAN
+DECIDE `May I make representations to be re-employed` IS
+    `s 8B(1) the employee may make representations in writing to the Minister to be re-employed` `I have a re-employment dispute about a denial of re-employment` `I attained my specified age on or after 1 January 2012 and consider I was dismissed without just cause or excuse` (`a date I give if my answer is Yes` `there was a conciliation` `the date it concluded`) `the date I make the representations`
+
+-- s 8B(2).
+@export By what date must I make my representations to the Minister after the conciliation (s 8B(2))?
+GIVEN `there was a conciliation` IS A `My answer` @desc Did the Commissioner conduct a conciliation?
+      `the date it concluded` IS A DATE @desc On what date did the conciliation conclude? (any date if there was none)
+GIVETH A MAYBE DATE
+DECIDE `By what date must I make representations after the conciliation` IS
+    `s 8B(2) the last day on which the employee can make representations to the Minister` (`a date I give if my answer is Yes` `there was a conciliation` `the date it concluded`)
+
+@export Did I make my representations to the Minister in time (s 8B(2))?
+GIVEN `there was a conciliation` IS A `My answer` @desc Did the Commissioner conduct a conciliation?
+      `the date it concluded` IS A DATE @desc On what date did the conciliation conclude? (any date if there was none)
+      `the date I made the representations` IS A DATE @desc On what date did you make the representations?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Did I make my representations in time` IS
+    `s 8B(2) the representations were made in time` (`a date I give if my answer is Yes` `there was a conciliation` `the date it concluded`) `the date I made the representations`
+
+-- ss 8B(3), 8B(4) and 8C(2).  JUST FALSE means: the Act bars the second step.  The same step twice is not covered.
+@export Can I still take this step after what I have already done about my dismissal (ss 8B(3), 8B(4) and 8C(2))?
+GIVEN `what I have already done` IS A `What I have already done about the dismissal` @desc What have you already done about your dismissal?
+      `what I want to do next` IS A `What I want to do next about the dismissal` @desc What do you want to do next about your dismissal?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Can I still take this step` IS
+    CONSIDER `what I have already done`
+    WHEN `Made representations to the Minister to be re-employed (section 8B(1))` THEN
+        CONSIDER `what I want to do next`
+        WHEN `Lodge a claim with an Employment Claims Tribunal about the employment assistance payment (section 8C(1))` THEN `s 8B(3) the employee may lodge a claim under section 8C(1) in relation to the matter referred to in section 8A(4)(d)` TRUE
+        WHEN `Make representations to the Minister under section 35(3) of the Industrial Relations Act 1960` THEN `s 8B(3) the employee may make representations to the Minister under section 35(3) of the Industrial Relations Act 1960` TRUE
+        -- NOTHING-kind (silent): the Act bars a claim and representations under section 35(3) after representations under section 8B(1); it does not say whether the representations may be made again
+        WHEN `Make representations to the Minister to be re-employed (section 8B(1))` THEN NOTHING
+    WHEN `Made representations to the Minister under section 35(3) of the Industrial Relations Act 1960` THEN
+        CONSIDER `what I want to do next`
+        WHEN `Lodge a claim with an Employment Claims Tribunal about the employment assistance payment (section 8C(1))` THEN `s 8B(4) the employee may lodge a claim under section 8C(1) in relation to the matter referred to in section 8A(4)(d)` TRUE
+        WHEN `Make representations to the Minister to be re-employed (section 8B(1))` THEN `s 8B(4) the employee may make representations to the Minister under subsection (1)` TRUE
+        -- NOTHING-kind (silent): the Act bars a claim and representations under section 8B(1) after representations under section 35(3); it does not say whether they may be made again
+        WHEN `Make representations to the Minister under section 35(3) of the Industrial Relations Act 1960` THEN NOTHING
+    WHEN `Lodged a claim with an Employment Claims Tribunal about the employment assistance payment (section 8C(1))` THEN
+        CONSIDER `what I want to do next`
+        WHEN `Make representations to the Minister to be re-employed (section 8B(1))` THEN `s 8C(2) the employee may make representations under section 8B(1) in respect of that dismissal` TRUE
+        WHEN `Make representations to the Minister under section 35(3) of the Industrial Relations Act 1960` THEN `s 8C(2) the employee may make representations to the Minister under section 35(3) of the Industrial Relations Act 1960` TRUE
+        -- NOTHING-kind (silent): the Act bars representations under section 8B(1) and section 35(3) after a claim; it does not say whether a second claim may be lodged
+        WHEN `Lodge a claim with an Employment Claims Tribunal about the employment assistance payment (section 8C(1))` THEN NOTHING
+
+-- s 8B(7) and (8).
+@export May the Minister allow me to submit a mediation request and then lodge a claim (s 8B(7))?
+GIVEN `what my dispute is about` IS A `Dispute matter` @desc What is your dispute about?
+      `the Minister has considered the Commissioner's report` IS A BOOLEAN @desc Has the Minister considered the Commissioner's report on your representations?
+      `the Minister is satisfied my employer made reasonable attempts` IS A BOOLEAN @desc Is the Minister satisfied that your employer made reasonable attempts to find a suitable vacancy?
+GIVETH A MAYBE BOOLEAN
+DECIDE `May the Minister allow me to submit a mediation request` IS
+    `s 8B(7) the Minister may allow the employee to submit a mediation request and to lodge a claim for employment assistance payment` `what my dispute is about` `the Minister has considered the Commissioner's report` `the Minister is satisfied my employer made reasonable attempts`
+
+@export Did I submit the mediation request within the time the Minister determined (s 8B(8))?
+GIVEN `the Minister allowed me under section 8B(7)` IS A BOOLEAN @desc Did the Minister allow you to submit a mediation request under section 8B(7)?
+      `the Minister fixed a time` IS A `My answer` @desc Did the Minister determine a time within which you must submit it?
+      `the last day of that time` IS A DATE @desc What is the last day of the time the Minister determined? (any date if none)
+      `the date I submitted it` IS A DATE @desc On what date did you submit the mediation request?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Did I submit the mediation request within the Minister's time` IS
+    `s 8B(8) the employee submitted the mediation request within the time the Minister determined` `the Minister allowed me under section 8B(7)` (`a date I give if my answer is Yes` `the Minister fixed a time` `the last day of that time`) `the date I submitted it`
+
+-- s 8C(1).
+@export May I lodge a claim for an employment assistance payment with an Employment Claims Tribunal (s 8C(1))?
+GIVEN `what my dispute is about` IS A `Dispute matter` @desc What is your dispute about?
+      `a claim referral certificate was issued` IS A BOOLEAN @desc Was a claim referral certificate issued in respect of the dispute?
+GIVETH A MAYBE BOOLEAN
+DECIDE `May I lodge a claim with the Tribunal` IS
+    `s 8C(1) the employee may lodge a claim for employment assistance payment with an Employment Claims Tribunal` `what my dispute is about` `a claim referral certificate was issued`
+
+-- s 8C(3)(b).
+@export May the Tribunal order whatever amount of employment assistance payment it considers just and equitable (s 8C(3))?
+GIVEN `the decision is on my claim for the employment assistance payment` IS A BOOLEAN @desc Is the decision on a claim in relation to the employment assistance payment?
+GIVETH A MAYBE BOOLEAN
+DECIDE `May the Tribunal order any amount it considers just and equitable` IS
+    `s 8C(3) the Tribunal may order any amount of employment assistance payment that it considers just and equitable` `the decision is on my claim for the employment assistance payment`
+
+-- ---------------------------------------------------------------------------
+§§ `Officers, summonses, offences and penalties (ss 9 to 10)`
+-- Situation: asked only of a person who is being examined, summoned or accused, or who is an employer accused of obstructing a worker.
+-- The form can ask "Have you been summoned, examined, or accused of breaking this Act?" before showing this group.
+-- ---------------------------------------------------------------------------
+
+-- s 9(1)(b).
+@export Must I state truly the facts when an officer examines me (s 9(1)(b))?
+GIVEN `I am supposed to be acquainted with the relevant facts` IS A BOOLEAN @desc Are you supposed to be acquainted with the facts and circumstances relevant to carrying out the Act?
+      `I am examined orally by the Commissioner or an investigating officer` IS A BOOLEAN @desc Are you examined orally by the Commissioner or an investigating officer?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Must I state truly the facts when examined` IS
+    `s 9(1)(b) the person examined is bound to state truly the facts and circumstances` `I am supposed to be acquainted with the relevant facts` `I am examined orally by the Commissioner or an investigating officer`
+
+-- s 9(1)(c).
+@export Can the Commissioner or an investigating officer require my employer to produce me and my documents (s 9(1)(c))?
+GIVEN `the officer is the Commissioner or an investigating officer` IS A BOOLEAN @desc Is the person asking the Commissioner or an investigating officer?
+      `the person asked is the employer` IS A BOOLEAN @desc Is the person asked the employer of the employee to be produced?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Can an officer require my employer to produce me and my documents` IS
+    `s 9(1)(c) the Commissioner or investigating officer may require the employer to produce the employee and the documents` `the officer is the Commissioner or an investigating officer` `the person asked is the employer`
+
+-- s 9(1)(g).
+@export Can the Commissioner or an investigating officer require me to produce an article (s 9(1)(g))?
+GIVEN `the officer is the Commissioner or an investigating officer` IS A BOOLEAN @desc Is the person asking the Commissioner or an investigating officer?
+      `the article is relevant to an investigation under the Act` IS A BOOLEAN @desc Is the article relevant to an investigation carried out under the Act?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Can an officer require me to produce an article` IS
+    `s 9(1)(g) the Commissioner or investigating officer may require a person to produce the article` `the officer is the Commissioner or an investigating officer` `the article is relevant to an investigation under the Act`
+
+-- s 9(2).
+@export Have I committed an offence by obstructing an investigating officer, or by making a false statement to one (s 9(2))?
+GIVEN `I hindered or obstructed an investigating officer` IS A BOOLEAN @desc Did you hinder or obstruct an investigating officer in the exercise of the power under section 9?
+      `I made a statement false in a material particular` IS A BOOLEAN @desc Did you make to an investigating officer, orally or in writing, a statement that is false in a material particular?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Have I committed an offence by obstructing or lying to an officer` IS
+    `s 9(2) the person is guilty of an offence` `I hindered or obstructed an investigating officer` `I made a statement false in a material particular`
+
+-- s 9A(1).
+@export Am I legally bound to attend when I am summoned (s 9A(1))?
+GIVEN `I was summoned under section 9A(1)` IS A BOOLEAN @desc Were you summoned by the Minister, the Commissioner or an investigating officer under section 9A(1)?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Am I legally bound to attend` IS
+    `s 9A(1) the person summoned is legally bound to attend and to answer truthfully` `I was summoned under section 9A(1)`
+
+-- s 9A(2).
+@export Have I committed an offence by obstructing a summons, or by not attending (s 9A(2))?
+GIVEN `I wilfully obstructed the service of or obedience to a summons` IS A BOOLEAN @desc Did you wilfully obstruct the service of, or obedience to, a summons?
+      `I was summoned and neglected to attend` IS A BOOLEAN @desc Were you summoned, and did you neglect to attend as the summons required?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Have I committed an offence by obstructing a summons or not attending` IS
+    `s 9A(2) the person is guilty of an offence` `I wilfully obstructed the service of or obedience to a summons` `I was summoned and neglected to attend`
+
+-- s 9B(1).
+@export Has my employer committed an offence by obstructing me from appearing before the Commissioner (s 9B(1))?
+GIVEN `my employer obstructed me in appearing before the Commissioner` IS A BOOLEAN @desc Did your employer, or another person, in any way obstruct you in appearing before the Commissioner pursuant to a summons issued under the Act?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Has my employer committed an offence by obstructing me` IS
+    `s 9B(1) the person is guilty of an offence` `my employer obstructed me in appearing before the Commissioner`
+
+-- s 9B(2).
+@export Have I committed an offence by wilfully obstructing an entry, inquiry or investigation where no penalty is provided (s 9B(2))?
+GIVEN `I wilfully obstructed or impeded it` IS A BOOLEAN @desc Did you wilfully obstruct or impede an entry, inquiry or investigation made under the Act?
+      `a penalty is expressly provided for it` IS A BOOLEAN @desc Is a penalty expressly provided for that conduct elsewhere in the Act?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Have I committed an offence by obstructing an inquiry` IS
+    `s 9B(2) the person is guilty of an offence` `I wilfully obstructed or impeded it` `a penalty is expressly provided for it`
+
+-- ss 4(3), 8(7), 8B(13), 9(2), 9B(1) and 9C.  The most a court may impose; each ceiling is the section's own.
+@export What is the heaviest sentence a court may impose for this offence (ss 4(3), 8(7), 8B(13), 9(2), 9B(1) and 9C)?
+GIVEN `the offence` IS AN `Offence under the Act` @desc Which offence are you asking about?
+GIVETH A Penalty
+DECIDE `What is the heaviest sentence for the offence` IS
+    `the heaviest sentence for the offence` `the offence`
+
+-- s 10(1).  The sum is collected from a person reasonably suspected, with the Commissioner's approval, for an offence
+-- that is prescribed as compoundable.
+@export Can an investigating officer offer to settle my offence for a sum of money (s 10(1))?
+GIVEN `the officer is an investigating officer` IS A BOOLEAN @desc Is the person offering to settle an investigating officer?
+      `the Commissioner has approved` IS A BOOLEAN @desc Has the Commissioner approved?
+      `the offence is prescribed as compoundable` IS A BOOLEAN @desc Is the offence one that the regulations prescribe as compoundable?
+      `I am reasonably suspected of the offence` IS A BOOLEAN @desc Are you reasonably suspected of having committed the offence?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Can an investigating officer offer to settle my offence` IS
+    `s 10(1) the investigating officer may compound the offence` `the officer is an investigating officer` `the Commissioner has approved` `the offence is prescribed as compoundable` `I am reasonably suspected of the offence`
+
+@export What is the most I can be asked to pay to settle this offence, in dollars (s 10(1))?
+GIVEN `the offence` IS AN `Offence under the Act` @desc Which offence are you suspected of?
+GIVETH A NUMBER
+DECIDE `What is the most I can be asked to pay to settle` IS
+    `s 10(1) the largest sum that may be collected` `the greatest fine for the offence`
+    WHERE
+        `the penalty for the offence` MEANS `the heaviest sentence for the offence` `the offence`
+        `the greatest fine for the offence` MEANS `the penalty for the offence`'s `maximum fine in dollars`
+
+-- s 10(2).  JUST FALSE means: the Act bars further proceedings.
+@export After I pay the sum to settle the offence, can I still be prosecuted for it (s 10(2))?
+GIVEN `I have paid the sum` IS A BOOLEAN @desc Have you paid the sum of money?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Can I still be prosecuted after I pay` IS
+    `s 10(2) further proceedings may be taken against the person in respect of the offence` `I have paid the sum`
+
+-- ---------------------------------------------------------------------------
+§§ `Exemptions, contracts that cut across the Act, guidelines and other law (ss 11, 11A, 11B and 13)`
+-- ---------------------------------------------------------------------------
+
+-- s 11(1).
+@export Am I exempt from this provision of the Act (s 11(1))?
+GIVEN `I am exempted by the Minister by notification in the Gazette` IS A BOOLEAN @desc Has the Minister exempted you, or a class of persons that includes you, by notification in the Gazette?
+      `the provision is within the exemption` IS A BOOLEAN @desc Is the provision within the exemption?
+      `the conditions are met` IS A BOOLEAN @desc Are the conditions of the exemption, if any, met?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Am I exempt from the provision` IS
+    `s 11(1) the person is exempt from the provision` `I am exempted by the Minister by notification in the Gazette` `the provision is within the exemption` `the conditions are met`
+
+-- s 11A.  JUST TRUE means: the term is void to the extent that it so purports.
+@export Is a term of my contract that cuts across the Act void (s 11A)?
+GIVEN `the term is in my contract of service or a collective agreement` IS A BOOLEAN @desc Is the term in your contract of service or in a collective agreement?
+      `it purports to exclude or limit a provision of the Act` IS A BOOLEAN @desc Does it purport to exclude or limit the operation of any provision of the Act?
+      `it purports to stop anyone making a representation, claim or application under the Act` IS A BOOLEAN @desc Does it purport to preclude any person from making a representation, a claim or an application under the Act?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is the term of my contract void` IS
+    `s 11A the term is void insofar as it so purports` `the term is in my contract of service or a collective agreement` `it purports to exclude or limit a provision of the Act` `it purports to stop anyone making a representation, claim or application under the Act`
+
+-- s 11B.  "Regard may be had": a permission.
+@export May regard be had to the tripartite guidelines for this purpose (s 11B)?
+GIVEN `they relate to the re-employment of eligible employees and its terms and conditions` IS A BOOLEAN @desc Are they guidelines on the re-employment of eligible employees and the terms and conditions of their re-employment, in the form of tripartite guidelines?
+      `they are published in the Gazette` IS A BOOLEAN @desc Have they been published in the Gazette?
+      `the purpose is one the section names` IS A BOOLEAN @desc Is the purpose Part 3, section 8A, 8B or 8C of the Act, or section 34 of the Industrial Relations Act 1960?
+GIVETH A MAYBE BOOLEAN
+DECIDE `May regard be had to the guidelines` IS
+    `s 11B regard may be had to the guidelines for the purpose` `they relate to the re-employment of eligible employees and its terms and conditions` `they are published in the Gazette` `the purpose is one the section names`
+
+-- s 13.  JUST FALSE means: the Act does not relieve the employer.
+@export Does the Act relieve my employer of a duty or liability it has under another law (s 13)?
+GIVEN `the duty is imposed by another written law in force` IS A BOOLEAN @desc Is the duty or liability imposed on the employer by the provisions of another written law for the time being in force?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Does the Act relieve my employer of a duty under another law` IS
+    `s 13 this Act relieves the employer of the duty or liability` `the duty is imposed by another written law in force`
