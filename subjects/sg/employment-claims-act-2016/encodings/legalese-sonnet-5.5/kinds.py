@@ -3,7 +3,7 @@
 
 usage:  python3 -I kinds.py lint       every JUST FALSE or NOTHING result has a FALSE-kind or NOTHING-kind comment on it on its line, the next line or the two lines above it
         python3 -I kinds.py marginal   print the "Marginal readings for a lawyer" table rows
-        python3 -I kinds.py ruled      print the table of the sites decided by the ruling of 2026-11-05 ((a), (b), (c))
+        python3 -I kinds.py ruled      print the table of the sites decided by the rulings of 2026-11-05 (I(a), I(b), I(c), II(c), II(d))
         python3 -I kinds.py sites W    print one line per branch of class W (w: the "when" assumption; o: the open questions), for the fork register
         python3 -I kinds.py counts     counts of branches by kind
 
@@ -13,8 +13,8 @@ The table of marginal readings follows the brief: reading (a) is a failed "if"-t
 Reading (b), a limited grant or prohibition whose case falls outside the limit, was ruled on 2026-11-05 (Meng): (a) a period the text fixes in its own words, outside it JUST FALSE;
 (b) a "where" condition not met, JUST FALSE; (c) a scope limit with no "only", NOTHING outside the scope.
 A NOTHING that says `limited by its own wording` therefore carries one of three tags, which this script reads:
-`[scope limit, ruled (c)]`, `[no yes-or-no]` (the function returns a value, so there is no JUST FALSE to give) or `[open question...]` (a scope limit the review expected to be JUST FALSE).
-A JUST FALSE that rests on the ruling or on the assumption below carries `[ruled (a)]`, `[ruled (b)]` or `[assumed: when]`.
+`[scope limit, ruled I(c)]`, `[no yes-or-no]` (the function returns a value, so there is no JUST FALSE to give) or `[open question...]` (a scope limit the review expected to be JUST FALSE).
+A JUST FALSE that rests on the ruling or on the assumption below carries `[ruled I(a)]`, `[ruled I(b)]` or `[assumed: when]`.
 Assumed, not ruled: "when", "upon", "after an event", "on the application of" and "whenever" are read as "where".
 A "means" definition or a list closed with "only" is the text's own no and is not marginal.
 """
@@ -95,9 +95,9 @@ def lint(folder):
     badq = [r for r in rows if r[3] == "F" and r[4] and '"' not in r[4]]
     for r in badq:
         print(f"FALSE-kind comment quotes nothing: {r[0]}:{r[1]} in `{r[2]}`: {r[4][:120]}")
-    notag = [r for r in rows if r[3] == "N" and r[4] and "limited by its own wording" in r[4] and not any(w in r[4] for w in ("[scope limit, ruled (c)]", "[no yes-or-no]", "[open question"))]
+    notag = [r for r in rows if r[3] == "N" and r[4] and "limited by its own wording" in r[4] and not any(w in r[4] for w in ("[scope limit, ruled I(c)]", "[no yes-or-no]", "[open question"))]
     for r in notag:
-        print(f"NOTHING-kind (limited by its own wording) carries none of [scope limit, ruled (c)], [no yes-or-no], [open question...]: {r[0]}:{r[1]} in `{r[2]}`")
+        print(f"NOTHING-kind (limited by its own wording) carries none of [scope limit, ruled I(c)], [no yes-or-no], [open question...]: {r[0]}:{r[1]} in `{r[2]}`")
     print(f"{len(rows)} branches ({sum(1 for r in rows if r[3]=='F')} JUST FALSE, {sum(1 for r in rows if r[3]=='N')} NOTHING); {len(bad)} without a comment; {len(badwhy)} NOTHING comments with no allowed reason; {len(badq)} FALSE comments with no quotation; {len(notag)} scope-limit NOTHING branches with no ruling tag")
     return 1 if (bad or badwhy or badq or notag) else 0
 
@@ -113,26 +113,32 @@ def classify(r):
        'a-must'  reading (a) extended: a requirement worded "must" that is not met counted as the text's no, like "only if"
        'r-a'     JUST FALSE outside a period the text fixes in its own words (ruled 2026-11-05, (a))
        'r-b'     JUST FALSE where a "where" condition is not met (ruled 2026-11-05, (b))
-       'w'       JUST FALSE where a "when", "upon", "after" or "on the application of" condition is not met (assumed, not ruled: read as "where", fork F9)
+       'r2c'     JUST FALSE where a "when", "upon" or "whenever" condition is not met (second ruling of 2026-11-05, (c))
+       'r2d'     the two questions of an "until" bar (second ruling of 2026-11-05, (d)): the bar is JUST FALSE after Y, "has it ended" is JUST FALSE while the bar stands and NOTHING after
+       'w'       JUST FALSE where "in adopting", "after" an event, "on the application of" or "on the recommendation of" is not met (assumed, not ruled: read as "where", fork F9)
        'c'       NOTHING outside a scope limit with no "only" (ruled 2026-11-05, (c))
        'o'       NOTHING outside a scope limit that the review expected to be JUST FALSE: open question
        'v'       NOTHING because the function returns a value, so there is no JUST FALSE to give
        '?'       none of the above matched; read by hand"""
     cm = r[4] or ""
     q = quote_of(cm)
+    if "[ruled II(c)]" in cm:
+        return "r2c", cm
+    if "[ruled II(d)]" in cm:
+        return "r2d", cm
     if r[3] == "N":
         if "limited by its own wording" in cm:
             if "[open question" in cm:
                 return "o", cm
             if "[no yes-or-no]" in cm:
                 return "v", cm
-            if "[scope limit, ruled (c)]" in cm:
+            if "[scope limit, ruled I(c)]" in cm:
                 return "c", cm
             return "?", cm
         return "-", cm
-    if "[ruled (a)]" in cm:
+    if "[ruled I(a)]" in cm:
         return "r-a", cm
-    if "[ruled (b)]" in cm:
+    if "[ruled I(b)]" in cm:
         return "r-b", cm
     if "[assumed: when]" in cm:
         return "w", cm
@@ -157,16 +163,18 @@ LABEL = {
     "a-if": ("(a) a failed condition", "JUST FALSE", "NOTHING: \"if A then B\" does not itself say \"if not A then not B\""),
     "a-flat": ("(a) a flat negative", "JUST FALSE", "NOTHING: a flat negative is not a no for a case it does not reach (ruled N2, 2026-11-04: it counts as the no)"),
     "a-must": ("(a) a requirement worded \"must\", not met", "JUST FALSE", "NOTHING: \"must\" is not one of the words that make a no (\"if\", \"only if\", \"unless\", a flat negative)"),
-    "w": ("assumed, not ruled: \"when\", \"upon\", \"after\" or \"on the application of\" read as \"where\"", "JUST FALSE", "NOTHING: the word fixes the scope of the rule and is not a condition on it (fork F9)"),
-    "o": ("open question: a scope limit with no \"only\" (ruled (c)); the review expected JUST FALSE", "NOTHING", "JUST FALSE: the limit is itself the text's no for any case outside it"),
-    "r-a": ("(a) outside a period the text fixes in its own words", "JUST FALSE", "NOTHING (the reading the ruling of 2026-11-05 rejects)"),
-    "r-b": ("(b) a \"where\" condition not met", "JUST FALSE", "NOTHING (the reading the ruling of 2026-11-05 rejects)"),
-    "c": ("(c) outside a scope limit with no \"only\"", "NOTHING", "JUST FALSE (the reading the ruling of 2026-11-05 rejects)"),
+    "w": ("assumed, not ruled: \"in adopting\", \"after\" an event, \"on the application of\" or \"on the recommendation of\" read as \"where\"", "JUST FALSE", "NOTHING: the words fix the scope of the rule and are not a condition on it (fork F9)"),
+    "r2c": ("II(c) a \"when\", \"upon\" or \"whenever\" condition not met", "JUST FALSE", "NOTHING (the reading the second ruling rejects)"),
+    "r2d": ("II(d) an \"until\" bar: the bar after Y, or has the stay ended", "bar: JUST FALSE after Y; ended: JUST FALSE while the bar stands, NOTHING after", "ended: JUST TRUE after Y on the strength of the bar alone (the reading the second ruling rejects)"),
+    "o": ("open question: a scope limit with no \"only\" (ruled I(c)); the review expected JUST FALSE", "NOTHING", "JUST FALSE: the limit is itself the text's no for any case outside it"),
+    "r-a": ("I(a) outside a period the text fixes in its own words", "JUST FALSE", "NOTHING (the reading the first ruling of 2026-11-05 rejects)"),
+    "r-b": ("I(b) a \"where\" condition not met", "JUST FALSE", "NOTHING (the reading the first ruling of 2026-11-05 rejects)"),
+    "c": ("I(c) outside a scope limit with no \"only\"", "NOTHING", "JUST FALSE (the reading the first ruling of 2026-11-05 rejects)"),
     "v": ("outside a scope limit, in a function that returns a value (a person, a date, an amount), so there is no yes-or-no to refuse", "NOTHING", "none: a value cannot be JUST FALSE"),
 }
 
 MARGINAL = ("a-if", "a-flat", "a-must", "w", "o")
-RULED = ("r-a", "r-b", "c", "v")
+RULED = ("r-a", "r-b", "c", "v", "r2c", "r2d")
 
 def table(folder, classes, prefix):
     rows = scan(folder)

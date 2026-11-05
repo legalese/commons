@@ -6,7 +6,7 @@ Last updated 2026-11-05.
 ## Landed
 
 - Layer 1: `eca-nouns`, `eca-schedules`, `eca-part1-preliminary`, `eca-part2-mediation`, `eca-part3-jurisdiction`, `eca-part3-proceedings`, `eca-part3-appeals`, `eca-part4-miscellaneous`, each with its `eca-tests-*` module.
-- Layer 2: `eca-seat.l4` (86 questions) and `eca-cases-seat.l4` (207 cases).
+- Layer 2: `eca-seat.l4` and `eca-cases-seat.l4`.
 - Checks: `check.sh` (build 109, compared with build 108), `srcrefs.py`, `coverage.py`, `kinds.py`, `jural.py`, `seatcheck.py`; their output is printed in `NOTES.md`.
 - `NOTES.md` (built from the scripts' own output), `encoding.json`, `SOURCE-LICENSE.md`, `BRIEF.md`.
 
