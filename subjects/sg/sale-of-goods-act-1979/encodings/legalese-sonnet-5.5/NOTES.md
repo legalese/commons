@@ -1091,3 +1091,4 @@ Nothing in this Act calls for them: the only period in the operative text is s 1
 
 A second, unstable-dialect encoding of some of these provisions exists: the provisions that the Schedule changes according to the date a contract was made, a shape where the unstable dialect reads the rule-version axis directly and main needs the gate-and-modified-function workaround used in `soga-schedule.l4`.
 It pairs with this row, it was written only after this row was complete and checked, and this row is complete without it.
+A further unstable-dialect module, written the same way, models the rules on when the property in goods passes (section 18 Rules 1 to 5 and section 29(4)) as a trace of dated events on the state ledger, which main cannot read; this row asks the "until" bars of section 18 Rules 2 and 3 and of section 29(4) as plain functions (fork F12).
