@@ -1,0 +1,133 @@
+IMPORT prelude
+IMPORT daydate
+
+-- HELPERS FOR THE mlr2 PART (regs 33 to 45ZB of the Money Laundering, Terrorist Financing and Transfer of
+-- Funds (Information on the Payer) Regulations 2017).  Three-valued logic over MAYBE BOOLEAN.
+-- The text is a plain-text rendering made by a converter script; it is not the official text.
+--
+-- These are not provisions, so their names begin `mlr2 ` (the part's prefix) instead of a regulation
+-- label.  No other part can define such a name.
+--
+-- THE THREE ANSWERS.  JUST TRUE and JUST FALSE are answers the Regulations give; NOTHING means the
+-- Regulations do not answer on these facts.  A caller must never turn NOTHING into FALSE.
+-- The tags below say why an answer is given: a FALSE-kind or NOTHING-kind comment on every branch.
+
+-- Conjunction.  A conjunct answered "no" settles the whole as "no"; "yes" needs both; otherwise the
+-- Regulations have not answered.
+GIVEN first IS A MAYBE BOOLEAN
+      second IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`mlr2 both are true` MEANS
+    BRANCH
+        IF first EQUALS JUST FALSE THEN JUST FALSE -- FALSE-kind (the first conjunct was answered no by the text that supplied it): the answer is passed through, not decided here
+        IF second EQUALS JUST FALSE THEN JUST FALSE -- FALSE-kind (the second conjunct was answered no by the text that supplied it): the answer is passed through, not decided here
+        IF first EQUALS JUST TRUE AND second EQUALS JUST TRUE THEN JUST TRUE
+        OTHERWISE NOTHING -- NOTHING-kind (points outside the text): at least one conjunct has not been answered
+
+-- Disjunction.  A disjunct answered "yes" settles the whole as "yes"; "no" needs both; otherwise the
+-- Regulations have not answered.
+GIVEN first IS A MAYBE BOOLEAN
+      second IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`mlr2 either is true` MEANS
+    BRANCH
+        IF first EQUALS JUST TRUE THEN JUST TRUE
+        IF second EQUALS JUST TRUE THEN JUST TRUE
+        IF first EQUALS JUST FALSE AND second EQUALS JUST FALSE THEN JUST FALSE -- FALSE-kind (both disjuncts were answered no by the text that supplied them): the answer is passed through, not decided here
+        OTHERWISE NOTHING -- NOTHING-kind (points outside the text): at least one disjunct has not been answered
+
+-- Negation.
+GIVEN answer IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`mlr2 the opposite of` MEANS
+    CONSIDER answer
+    WHEN JUST TRUE THEN JUST FALSE -- FALSE-kind (the text that supplied the answer said yes): the opposite is passed through, not decided here
+    WHEN JUST FALSE THEN JUST TRUE
+    WHEN NOTHING THEN NOTHING -- NOTHING-kind (points outside the text): the answer has not been given
+
+-- A fact the caller states (a BOOLEAN) as an answer.
+GIVEN fact IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`mlr2 the fact stated` MEANS
+    IF fact THEN JUST TRUE ELSE JUST FALSE -- FALSE-kind (the caller states that the fact does not hold): a stated fact, not a decision by the text
+
+-- SEAM S-8 (asking), the shape every rule that begins "A relevant person ..." takes.  A rule addressed
+-- to a relevant person answers only for one.  For anyone else the Regulations are silent: the rule
+-- speaks of "a relevant person", and says nothing of a person who is not one.
+GIVEN `reg 8 the person is a relevant person` IS A MAYBE BOOLEAN
+      `the answer of the rule for a relevant person` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`mlr2 for a relevant person` MEANS
+    CONSIDER `reg 8 the person is a relevant person`
+    WHEN JUST TRUE THEN `the answer of the rule for a relevant person`
+    -- NOTHING-kind (limited by its own wording): the rule is addressed to "a relevant person" and the Regulations do not say what it does for anyone else
+    WHEN JUST FALSE THEN NOTHING
+    -- NOTHING-kind (points outside the text): whether the person is a relevant person is regulation 8's answer and has not been given
+    WHEN NOTHING THEN NOTHING
+
+-- A rule that applies only on a stated condition and whose text says no where the condition fails
+-- ("if", "where", "provided that"): the condition is a MAYBE BOOLEAN.
+GIVEN condition IS A MAYBE BOOLEAN
+      `the answer when the condition holds` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`mlr2 if the condition holds` MEANS
+    CONSIDER condition
+    WHEN JUST TRUE THEN `the answer when the condition holds`
+    WHEN JUST FALSE THEN JUST FALSE -- FALSE-kind (the text's own condition failed): the caller's text introduces the condition with "if", "where" or "provided that"
+    WHEN NOTHING THEN NOTHING -- NOTHING-kind (points outside the text): the condition has not been answered
+
+-- A date limit written as "before" a day: strictly earlier.  The event is a MAYBE DATE: NOTHING means it has not happened.
+-- When it has not happened the text has not been tested yet, so the answer is NOTHING at this helper; a caller that has a
+-- later day on which the limit was missed says so itself.
+GIVEN event IS A MAYBE DATE
+      limit IS A DATE
+GIVETH A MAYBE BOOLEAN
+`mlr2 the event was before the day` MEANS
+    CONSIDER event
+    WHEN NOTHING THEN NOTHING -- NOTHING-kind (silent): the event has not happened, so a limit written as "before" has been neither met nor missed
+    WHEN JUST day THEN
+        IF day LESS THAN limit
+        THEN JUST TRUE
+        ELSE JUST FALSE -- FALSE-kind (the text's own period elapsed): a limit written as "before" a day is missed by an event on or after that day
+
+-- A date limit written as "on or before", "within N days" or "before the end of": on or after the limit's last day is late.
+GIVEN event IS A MAYBE DATE
+      `the last day` IS A DATE
+GIVETH A MAYBE BOOLEAN
+`mlr2 the event was on or before the last day` MEANS
+    CONSIDER event
+    WHEN NOTHING THEN NOTHING -- NOTHING-kind (silent): the event has not happened, so the limit has been neither met nor missed
+    WHEN JUST day THEN
+        IF day AT MOST `the last day`
+        THEN JUST TRUE
+        ELSE JUST FALSE -- FALSE-kind (the text's own period elapsed): the limit is stated in the text's own words and the event came after its last day
+
+-- The same limit, asked on a day when the event is still outstanding: the day asked is after the last day, so the limit has been missed.
+GIVEN event IS A MAYBE DATE
+      `the last day` IS A DATE
+      `the day asked` IS A DATE
+GIVETH A MAYBE BOOLEAN
+`mlr2 the event was on or before the last day, asked on a day` MEANS
+    CONSIDER event
+    WHEN JUST day THEN `mlr2 the event was on or before the last day` (JUST day) `the last day`
+    WHEN NOTHING THEN
+        IF `the day asked` GREATER THAN `the last day`
+        THEN JUST FALSE -- FALSE-kind (the text's own period elapsed): the event has not happened and the last day has passed
+        ELSE NOTHING -- NOTHING-kind (silent): the event has not happened yet and the last day has not passed
+
+-- A rule addressed to a described class or occasion ("The trustees of a taxable relevant trust which ...", "When ... enters into ...")
+-- answers for that class or occasion and says nothing outside it.  The caller says in a comment which words limit the rule.
+GIVEN condition IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`mlr2 within the scope` MEANS
+    CONSIDER condition
+    WHEN JUST TRUE THEN JUST TRUE
+    WHEN JUST FALSE THEN NOTHING -- NOTHING-kind (limited by its own wording): the caller's rule is addressed to a described class or occasion and says nothing outside it
+    WHEN NOTHING THEN NOTHING -- NOTHING-kind (points outside the text): an answer the scope depends on has not been given
+
+-- The later of two days ("within 90 days of the trust being set up or, if later, ...").
+GIVEN first IS A DATE
+      second IS A DATE
+GIVETH A DATE
+`mlr2 the later of two days` MEANS
+    IF first AT LEAST second THEN first ELSE second
