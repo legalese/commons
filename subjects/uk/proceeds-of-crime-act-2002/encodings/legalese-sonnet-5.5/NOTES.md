@@ -41,7 +41,7 @@ Every decision function in this row answers `JUST TRUE`, `JUST FALSE` or `NOTHIN
 - **A "no" (`JUST FALSE`)** is only an answer the text itself gives in its own words: "does not commit an offence if", "is not to be taken to breach", "may not be used in evidence", a "means" definition the facts do not meet, or (reading (a)) a failed condition of an offence, or a condition the text states for a rule or a protection ("if", "where", a period the text fixes in its own words) that the facts do not meet (ruling of 2026-11-05 (a) and (b)).
   On an offence question it means the text says the person does not commit the offence on those facts.
   It does not mean that the act is wise, or that no other offence or regulation applies.
-- **"Not covered" (`NOTHING`)** means the text does not answer on the facts stated: the property's status is not known (`I am not sure` to s 340(3)), the Schedule 9 answer cannot be given (a business not on the list is not said to be outside it), an exception removes a bar without saying what follows (s 339ZI(2)), a protection or power given to a class of person or disclosure in a sentence that states no condition and no "only" (s 338(4) for a disclosure that is not "an authorised disclosure", s 339(1) for anyone but the Secretary of State: ruling of 2026-11-05 (c)), or a number or definition lives in an instrument that is not among the sources.
+- **"Not covered" (`NOTHING`)** means the text does not answer on the facts stated: the property's status is not known (`I am not sure` to s 340(3)), the Schedule 9 answer cannot be given (the person is not sure which head or exclusion applies, or a term Schedule 9 borrows from another instrument is not in the sources), an exception removes a bar without saying what follows (s 339ZI(2)), a protection or power given to a class of person or disclosure in a sentence that states no condition and no "only" (s 338(4) for a disclosure that is not "an authorised disclosure", s 339(1) for anyone but the Secretary of State: ruling of 2026-11-05 (c)), or a number or definition lives in an instrument that is not among the sources.
   `NOTHING` on "do I commit an offence" does not mean "you are safe"; it means that, on these facts, the text does not say.
 - A caller must never turn `NOTHING` into `FALSE`.
 - Hohfeld kinds are in the table below and are not typed into any answer (ruling N2).
@@ -1145,7 +1145,9 @@ The two rulings of 2026-11-04 on negatives and legal effects, word for word as t
 - **E1** (bench `commons-negation-1030`; should a legal effect be one definition gathered from every section that gives it?): option B, as guidance for gathering a legal effect's routes by hand only, with no pilot run; option A (gathering by bare name) is withdrawn as a direction for the language, not deferred; option C (per-section answers) applies everywhere else; the Magna Carta pilot in the printed recommendation (chapters 2, 3, 4, 5, 37, 43, 46 and 53, with a blind second reader) is not to be run. Meng's lean, verbatim: "B but generally uncomfortable with this much magic because it takes the language from unopinionated to opinionated in ways that are hard to teach an l4 novice." Meng's note, verbatim: "Fundamentally I feel like we are trying to make the language do work that the human l4 drafter should do. Too much magic. Can’t we just decline to be this opinionated and say the programmer needs to do this thinking?" Marked 2026-11-03T23:19:02.812Z, ruled 2026-11-04. Bench: https://claude.ai/artifact/49q6k2H5xtuJqy5ttkwZ23
 - **N2** (bench `commons-negation-1030`; does a flat negative count as the text's no?): option A as printed: flat negatives count as a no, and where the text names the bearer the prohibition (`SHANT`) is derived from that answer; the Hohfeld kinds stay in each row's "Jural relations" table; option C's wording (the kind typed in the person-facing answer) comes only after a lawyer confirms the typing, decided together with the S/E choice for how "not covered" is said. Meng's lean, verbatim: "Why are we even trying to do this work? Some of these rules are metatextual and require more homoiconicity than we currently have in L4." Meng's note: none written. Marked 2026-11-03T23:22:49.971Z, ruled 2026-11-04. Bench: https://claude.ai/artifact/49q6k2H5xtuJqy5ttkwZ23
 
-- **Periods, "where" and scope limits (ruled 2026-11-05):** (a) a period the text fixes in its own words: outside it JUST FALSE; (b) a "where" condition not met: JUST FALSE; (c) a scope limit with no "only": NOTHING outside the scope. Meng's words, verbatim apart from the trigger word: "i agree with your lean: no for a and b; nothing for c." Typed 2026-11-05T04:30:00.322Z.
+- **Periods, "where" and scope limits** (a question raised on 2026-11-05 while checking an encoding of the Retirement and Re-employment Act 1993, not a bench): (a) a period the text fixes in its own words ("within one month", "begins from ... until the employee attains the age", "on the last day of employment"): outside the period the answer is `JUST FALSE`; (b) a "where ..." condition: when it fails the answer is `JUST FALSE`; (c) a scope limit with no "only" (for example "below" the minimum age): outside the scope the answer is `NOTHING`. Meng's words, verbatim apart from the trigger word that ended the message: "i agree with your lean: no for a and b; nothing for c." Typed 2026-11-05T04:30:00.322Z, ruled 2026-11-05.
+
+- **Delegated definitions, defences and "until" bars** (questions raised on 2026-11-05 while checking encodings of the Proceeds of Crime Act 2002, the Terrorism Act 2000 and the Singapore Sale of Goods Act 1979, not a bench): (a) a definition the text itself hands to a list ("Schedule 9 has effect for determining what is a business in the regulated sector"): when no head in the list holds, the answer is `JUST FALSE`; a bare list with no such hand-off still answers `NOTHING`; (b) "it is a defence ... to prove that X": when X is not proved, the answer is `JUST FALSE` for that provision's defence, worded "this section gives no defence on these facts" and never "no defence at all"; (c) "when", "upon" and "whenever" count as "where" under rule (b) of the periods ruling above; (d) "the property does not pass until X": encode the bar ("the property cannot yet pass": `JUST TRUE` before X, `JUST FALSE` after X) and never claim that the property has passed. Meng approved these four readings as put to him by the general-manager session, in the word NOTHINGBURGER; his note on (d), verbatim apart from the bracket and the trigger word that ended the message: "in the case of Q5 [the "until" bar] i hope we are using the deontic mechanisms to examine a trace." The note is a request about how (d) is modelled, not part of the ruling. Typed 2026-11-05T06:04:54.553Z, ruled 2026-11-05.
 
 Forks of this row (each: the readings seen, the one taken, the text that licenses each).
 The first three are readings; F5 and F6 are readings of a drafting point; the others are modelling choices where the text is silent.
@@ -1192,7 +1194,7 @@ The first three are readings; F5 and F6 are readings of a drafting point; the ot
   Asserted (`poca-tests-consent.l4`).
 - **F10: the seat takes the person's conclusion on Schedule 9 paragraph 1(1).**
   The 23 limbs of para 1(1) are encoded and tested one by one in layer 1, but the seat question "Is my business in the regulated sector?" asks one yes/no for "my business consists of a listed activity" and one for each exclusion; it does not ask 23 questions.
-  A person who answers No gets `NOTHING`, not `JUST FALSE`, because the text does not close the list (reading (b)).
+  A person who answers No gets `JUST FALSE`: the Act hands the question to the list (F15), so a business in no head is not in the regulated sector.  "I am not sure" gets `NOTHING`.
 - **F11: legal effects gathered by hand (E1, option B as guidance only).**
   `sch 9 paras 1 and 2 the business is in the regulated sector` (para 1(1) and the three exclusions of para 2), `s 330(6) to (7E) one of the exceptions applies` (the six routes by which s 330 gives no offence), `s 330(6)(c) subsection (7) or (7B) applies to him`, and `s 333A(5) one of the permitted disclosures of sections 333B to 333D applies` (the three sections that permit a disclosure).
   Each gathers routes the text states in separate subsections, by name, in plain L4; no construct gathers them for the reader, and each subsection keeps its own answer (option C).
@@ -1202,7 +1204,7 @@ The first three are readings; F5 and F6 are readings of a drafting point; the ot
   Taken (b), a "where" not met is JUST FALSE: ss 327(2G), 328(9), 329(2G), 336A(5), 337(4A), 338(4A), 339(3), 339A(4), 339ZA, 339ZC(2), 339ZE(2), (5) and (7), 339ZF(3)(a) and (b); and s 336C(1) and (3), which are new companion questions ("is the period extended?") because the date rules s 336C(2) and (4) return a date and can only say NOTHING.
   An "if" not met is the text's no by the rule of 2026-10-29, and the places that still said NOTHING now say JUST FALSE: ss 339ZF(4) and 339ZH(8).
   s 337(1) ("A disclosure which satisfies the following three conditions") is read like "if": a late disclosure, a recipient s 337(4) does not name, or information that did not come in the course of trade, profession, business or employment is JUST FALSE.
-  Taken (c), NOTHING outside the scope: a power or protection given to a class in a sentence with no condition and no "only": ss 338(4), 339(1) (anyone but the Secretary of State), 339(4), 339(7), 336A(6) and (8), 336B(3), (4), (6) and (8), 339A(3) and (6A), 339ZD(2) and (3) (the notification or report "in good faith"), 339ZE(3) and (6), 339ZF(1) and (2), 339ZH(1) and (9), 339ZI, 339ZJ, 339ZK, 339ZL.
+  Taken (c), NOTHING outside the scope: a power or protection given to a class in a sentence with no condition and no "only": ss 338(4), 339(1) (anyone but the Secretary of State), 339(4), 339(7), 336A(6) and (8), 336B(3), (4), (6) and (8), 339A(6A), 339A(3) for a person it does not name, 339ZD(2) and (3) (the notification or report "in good faith"), 339ZE(3) and (6), 339ZF(1) and (2), 339ZH(1) and (9), 339ZI, 339ZJ, 339ZK, 339ZL.
   Where I could not tell which of (a), (b) and (c) a clause was: "In a case within subsection (3)(a)" (s 339ZC(4) and (5)) is read as "where", (b); "In a case where" (s 339ZF(3)) is (b); s 336A(5) has a "Where" and an "on the making of another application", and both limbs are (b); "as soon as reasonably practicable" in s 336B(2) is (a); the lead-in s 339ZD(1) ("This section applies if in any proceedings a question arises") is taken as (c), because its condition is an input of s 339ZD(2) and (3) and not a sentence of its own.
   Other reading for each: the opposite letter.
   Asserted (the test files of the modules named).
@@ -1212,19 +1214,36 @@ The first three are readings; F5 and F6 are readings of a drafting point; the ot
   Not needed: s 333A(2), which lists the NCA officer separately in its own words at (d); ss 335(3), (4) and 336(3), (4), where the notice is a day the person states, so an NCA-authorised giver counts; the seat's s 335(2) question says so in its `@desc`.
   Asserted.
 - **F14: left as they are (reviewer expected JUST FALSE; open question).**
-  - Schedule 9 para 1(1), "A business is in the regulated sector to the extent that it consists of": a business outside every head is NOTHING, because the heading has no "only" (list not closed); s 330(12) and its siblings say Schedule 9 "has effect for" determining what is a business in the regulated sector; reviewer expected JUST FALSE; open question.
-  - Schedule 9 para 4(1), "The following bodies are supervisory authorities": a body not named is NOTHING, no "only"; reviewer expected JUST FALSE; open question.
-  - Schedule 9 para 1(4), "The services referred to in sub-paragraph (1)(o) are": an open list, NOTHING; the one case the text carves out in its own words, a nominee shareholder for a company whose securities are listed, is answered JUST FALSE for that limb by `sch 9 para 1(4)(d)(ii) ...`, and the list as a whole stays NOTHING; reviewer expected JUST FALSE; open question.
+  The lines for Schedule 9 para 1(1), para 4(1) and para 1(4) and for s 339A(3) are gone: the ruling of 2026-11-05 (06:04) settles them (F15).
   - s 330(8)(b) (and its sibling s 331(7)): the court must consider the guidance described; the text does not say it may not consider other guidance, so NOTHING; reviewer expected JUST FALSE; open question.
   - s 336A(7): beyond 186 days in total JUST FALSE, within it NOTHING, because the permission comes from subsections (1) and (8); reviewer expected JUST FALSE; open question.
   - s 339ZI(2)(a): "Subsection (1) does not apply" lifts the bar and does not permit use in evidence, so NOTHING; reviewer expected JUST FALSE; open question.
-  - s 339A(3): another person, or another occasion, is NOTHING (a power given to named persons on named occasions, with no "only"); reviewer expected JUST FALSE; open question.
   - s 340(14)(c) is left as it is.
+- **F15: the ruling "Delegated definitions, defences and 'until' bars" applied.**
+  (a) A definition the text hands to a list.
+  The Act hands "what is a business in the regulated sector" to Schedule 9 in s 330(12)(a), s 333E(1)(a), s 339ZG(9) and s 339ZH(11), and "what is a supervisory authority" in s 330(12)(b), s 331(8) and s 333E(1)(b).
+  So `sch 9 para 1(1) ...` is JUST FALSE when none of the 23 heads (a) to (v) holds, `sch 9 paras 1 and 2 ...` follows (it never answers NOTHING now unless a caller passes NOTHING in), and `sch 9 para 4(1) the body is a supervisory authority` is JUST FALSE for a body in none of its heads, which includes a professional body not listed in para 4(2) and a body once named in paras (b), (e), (ea) or (f), now blank.
+  The seat question "Is my business in the regulated sector" maps "No" to JUST FALSE; "I am not sure" stays NOTHING.
+  The sites that consume the answer: ss 330(12), 331 and 332 and ss 333A to 333E take it as a MAYBE BOOLEAN input; ss 339ZG(9) and 339ZH(11) take it as a yes/no input ("carrying on a business in the regulated sector"), which the caller fills from `sch 9 paras 1 and 2`.
+  A bare list with no hand-off answers NOTHING: `sch 9 para 4(2)` (the professional bodies; its own answer for a body not listed, while `sch 9 para 4(1)` answers FALSE), para 1(4) (the services of (1)(o)), para 1(6D), 1(3), 3(1).
+  `sch 9 para 1(4)(d)(ii)` answers JUST FALSE for a nominee shareholder for a company whose securities are listed, in the text's own words (the function was added in the round before); the list of services as a whole stays open.
+  The exclusions (para 2(1), (3), (4), para 1(6C)) answer JUST FALSE when they apply and NOTHING when their own condition is unmet, because those functions ask the positive question ("is the business in the regulated sector", "is the thing letting agency work") and a carve-out whose condition is unmet says nothing about it; `sch 9 paras 1 and 2` gathers them with para 1(1).
+  Other reading: the exclusions' unmet condition is FALSE for the exclusion's own question; that question is not asked by any function.
+  (b) "It is a defence ... to prove that X".
+  No provision of Part 7 or Schedule 9 uses that wording (searched for "defence", "prove", "proves", "burden"): the exceptions are phrased "does not commit an offence if", which are the text's own no (JUST FALSE) already.
+  No site changed.
+  (c) "When", "upon" and "whenever".
+  Changed: s 339A(3), where "when he gives consent, or gives notice refusing consent" and "on a request" are the occasions of the power, so an occasion not named is JUST FALSE (a person not named stays NOTHING, (c) of the first ruling).
+  Read and left: Schedule 9 para 1(1)(q), (u) and (v) ("whenever", "when it", "when acting"), which are conditions of a head and already make the head FALSE; para 2(2) ("when carrying on", a closed "means"); para 1(6C) ("when done by", an exclusion, see (a)); s 336B(4) ("specified information upon which he or she intends to rely", a relative clause that describes the information, not a condition); s 336C(2), (4), (7) ("from the time when it would otherwise end", a point in time); s 338(2A)(b) ("at a time when", a point in time); s 339A(6) ("when specified", a point in time); s 340(17)(b) ("at the time when contact is established"); ss 335(7), 336(9) ("where the person is when he makes the disclosure", a place); s 339ZL(5) ("When the Secretary of State has laid a draft", inert, reason 2).
+  (d) "Until" bars.
+  None in range.
+  The three "until" clauses (s 336C(2), (4), (7)) say how long an extension lasts, not that something may not be done until an event; each is a date rule, with a yes/no companion ("is the period extended?") for s 336C(2) and (4) in `s 336C(1)` and `s 336C(3)`, and `s 336C(6)` for (7).
+  Asserted (the test files of the modules named).
 
 ## Marginal readings for a lawyer
 
 <!-- MARGINAL:BEGIN -->
-Generated by `python3 -I marginal.py write NOTES.md` from the comments in the layer-1 modules: 152 rules, 168 branches resting on reading (a) and 59 on reading (b).
+Generated by `python3 -I marginal.py write NOTES.md` from the comments in the layer-1 modules: 154 rules, 171 branches resting on reading (a) and 58 on reading (b).
 
 - **Reading (a)**, taken: a failed "if", a definition ("means" or "is") read as closed, a list the text closes, and a flat negative all count as the text's no, so the branch answers `JUST FALSE`.
   The other reading: "if A then B" does not itself say "if not A then not B", so the branch would answer `NOTHING` (not covered).
@@ -1368,14 +1387,16 @@ Generated by `python3 -I marginal.py write NOTES.md` from the comments in the la
 | `s 339ZK(1) the information order confers the right to require the person to provide the information` | poca-orders.l4:460 | 1 | 1 |
 | `s 339ZK(3) the provision is not to be taken to breach a restriction on the disclosure of information` | poca-orders.l4:469 | 0 | 1 |
 | `s 339ZK(4) the application may be heard and determined in private` | poca-orders.l4:478 | 0 | 1 |
-| `sch 9 para 1(4)(d)(ii) the service is acting as a nominee shareholder for a person other than a listed company` | poca-sch9.l4:378 | 1 | 0 |
-| `sch 9 para 1(6C) the thing done is letting agency work` | poca-sch9.l4:443 | 1 | 1 |
-| `sch 9 para 2(1) the business is in the regulated sector to the extent that it consists of an excluded activity` | poca-sch9.l4:664 | 1 | 1 |
-| `sch 9 para 2(3) the business is in the regulated sector to the extent that it consists of financial activity` | poca-sch9.l4:699 | 1 | 1 |
-| `sch 9 para 2(4) the business is in the regulated sector` | poca-sch9.l4:723 | 1 | 1 |
-| `sch 9 paras 1 and 2 the business is in the regulated sector` | poca-sch9.l4:748 | 3 | 0 |
-| `sch 9 para 3(3) the term has the same meaning in this Part as in that Regulation or Directive` | poca-sch9.l4:795 | 0 | 1 |
-| `s 339A(3) the person may specify the threshold amount for acts done in operating an account` | poca-threshold.l4:51 | 0 | 2 |
+| `sch 9 para 1(1) the business is in the regulated sector to the extent that it consists of a listed activity` | poca-sch9.l4:300 | 1 | 0 |
+| `sch 9 para 1(4)(d)(ii) the service is acting as a nominee shareholder for a person other than a listed company` | poca-sch9.l4:381 | 1 | 0 |
+| `sch 9 para 1(6C) the thing done is letting agency work` | poca-sch9.l4:446 | 1 | 1 |
+| `sch 9 para 2(1) the business is in the regulated sector to the extent that it consists of an excluded activity` | poca-sch9.l4:667 | 1 | 1 |
+| `sch 9 para 2(3) the business is in the regulated sector to the extent that it consists of financial activity` | poca-sch9.l4:702 | 1 | 1 |
+| `sch 9 para 2(4) the business is in the regulated sector` | poca-sch9.l4:726 | 1 | 1 |
+| `sch 9 paras 1 and 2 the business is in the regulated sector` | poca-sch9.l4:751 | 3 | 0 |
+| `sch 9 para 3(3) the term has the same meaning in this Part as in that Regulation or Directive` | poca-sch9.l4:798 | 0 | 1 |
+| `sch 9 para 4(1) the body is a supervisory authority` | poca-sch9.l4:818 | 1 | 0 |
+| `s 339A(3) the person may specify the threshold amount for acts done in operating an account` | poca-threshold.l4:51 | 1 | 1 |
 | `s 339A(4) the person may vary the threshold amount for acts done in operating an account` | poca-threshold.l4:62 | 1 | 1 |
 | `s 339A(5) different threshold amounts may be specified for different acts on the same account` | poca-threshold.l4:72 | 0 | 1 |
 | `s 339A(6) the specified amount is one that may be specified as the threshold amount` | poca-threshold.l4:83 | 1 | 0 |
@@ -1418,6 +1439,9 @@ Generated by `python3 -I marginal.py write NOTES.md` from the comments in the la
 25. Section 339(1) names one holder of the power to prescribe the form and manner of a disclosure, the Secretary of State; what an order prescribes is not in the sources, and the offence of s 339(1A) takes the person's statement that a form and manner are prescribed. Asserted.
 26. Schedule 9 para 1(4)(d)(ii) takes a nominee shareholder for a company whose securities are listed on a regulated market out of that limb in the text's own words (JUST FALSE for the limb); the list of services in para 1(4) as a whole is open and stays NOTHING. Asserted.
 27. Sections 330(4), 331(4) and 332(4) say "as soon as is practicable" and give no number: there is no function that computes a deadline or says a disclosure was late. The conditions take the person's statement and the `MUST` has no `WITHIN`. This is a stated gap, recorded under those three coverage rows. Not asserted.
+
+28. A business that is in none of the heads (a) to (v) of Schedule 9 para 1(1) is not in the regulated sector (JUST FALSE), because the Act hands the question to the Schedule (s 330(12)(a) and its siblings), and a body in none of the heads of para 4(1) is not a supervisory authority (JUST FALSE; ss 330(12)(b), 331(8), 333E(1)(b)). Asserted (`poca-tests-sch9.l4`, `poca-cases-seat.l4`).
+29. Under s 339A(3) an officer of Revenue and Customs, a constable or an NCA-authorised person may specify the threshold only on the occasions the subsection names (when giving consent, when giving notice refusing consent, on a request); on any other occasion the answer is JUST FALSE. Asserted.
 
 ## What the main binary does not accept
 
@@ -1562,12 +1586,12 @@ poca-tests-disclose.l4                         0       219       0        0     
 poca-tests-failure.l4                          0       217       0        0         0 |      0       217       0        0  same
 poca-tests-interp.l4                           0        70       0        0         0 |      0        70       0        0  same
 poca-tests-orders.l4                           0       122       0        0         0 |      0       122       0        0  same
-poca-tests-sch9.l4                             0       195       0        0         0 |      0       195       0        0  same
+poca-tests-sch9.l4                             0       196       0        0         0 |      0       196       0        0  same
 poca-tests-threshold.l4                        0        28       0        0         0 |      0        28       0        0  same
 poca-tests-tipping.l4                          0       105       0        0         0 |      0       105       0        0  same
 poca-threshold.l4                              0         0       0        0         0 |      0         0       0        0  same
 poca-tipping.l4                                0         0       0        0         0 |      0         0       0        0  same
-TOTAL (21 modules)                             0      1672       0        0           |      0      1672       0        0
+TOTAL (21 modules)                             0      1673       0        0           |      0      1673       0        0
 (a failed assertion is also an error; any other error, or any refused assertion, makes the run red)
 (target main: every module has the same four counts on the main build. That rules out a module main rejects and a difference an assertion shows; it does not see a different TRACE outcome, or any difference no assertion exercises)
 ```
