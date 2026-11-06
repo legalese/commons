@@ -230,3 +230,78 @@ The brief asked for a small baseline (25-35 assertions); this has 34. Left out:
 - Pair this with the Fair Work Act 2009 encoding (s 548) so that Jake's k062
   question can be answered end to end: where the claim goes, how it is heard, and
   what may be ordered.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026 (batch qa11), following the graffiti model
+(`../../../graffiti-vandalism-act-2016/encodings/baseline-2026-10/`, D2, D4, D8). The baseline files are unchanged;
+the layer is added beside them: `mca-qa.l4` (imports `prelude` and `mca-court`) and `mca-qa-cases.l4`.
+
+### Roles
+
+Every exported question takes `my role` IS A `Role` first ("Which of these describes you"), and answers
+`does not arise for you` for a role it is not about without reading any other input.
+
+| Role | Why | Questions |
+|---|---|---|
+| `I am bringing a claim in the Magistrates Court` | the baseline's seat | 15 |
+| `A claim has been brought against me in the Magistrates Court` | what the Act gives a party (ss 7, 8, 14, 17, 23, 28-30, 33) it gives every party alike | 15 |
+| `I am a witness, or someone else who is not a party to the case` | contempt (ss 15(2), 16(4)) and access to the record (s 33(8)) reach people who are not parties | 3 |
+
+The Court, magistrates, JPs, registrars and the Chief Magistrate are not seats. There are 16 questions: 13 asked of
+both party roles, one of the non-party alone, and the two contempt questions of all three roles.
+
+### Situation inputs
+
+Each is placed straight after `my role`; when it is FALSE the question answers `does not arise for you` and reads
+nothing else. All four are taken by both party roles.
+
+| Input | Type | Does not arise when | Questions |
+|---|---|---|---|
+| `the case is heard by a bench of two or more JPs` | BOOLEAN | FALSE | What is the result of the JPs' vote in my case |
+| `the registry refused to accept a document I lodged` | BOOLEAN | FALSE | May I lodge the document the registrar refused |
+| `a registrar has made a decision in my case` | BOOLEAN | FALSE | How many days do I have to appeal the registrar's decision; Can I appeal the registrar's decision to a magistrate; Will my appeal from the registrar be a new hearing |
+| `the judgment or order in my case has a mistake in it` | BOOLEAN | FALSE | May the Court correct this mistake in my judgment or order |
+
+### Decisions
+
+- **The party roles share their questions.** The baseline's questions speak of "my claim" and "my case", and every one
+  of them answers the same for the claimant and for the person the claim is brought against, so each is one export
+  asked of both. A mirror case shows the two roles agree on the same facts. The JP vote is counted from the
+  person asking ("JPs for me"), so the other party's answer is the claimant's turned round.
+- **One `My case` record for both party roles.** The baseline's record speaks as the claimant ("my claim", "I am
+  representing myself"). It is kept unchanged, and its `@desc` here says how its fields read for the other party.
+- **s 17 for any party.** The baseline asks about "my refused claim"; s 17(1) defines "document" to include a claim,
+  application and affidavit, and s 17(3) gives the right to "a person affected", so the question is asked of any
+  document a party lodged.
+- **s 33 for a party** does not ask the baseline's "I am a party": it is TRUE by the role, and the baseline is called
+  with TRUE. The non-party's own question calls the baseline with FALSE (and FALSE for the recording and transcript,
+  which the baseline does not read for a non-party): s 33(8) leave, or no for a magistrate's own note.
+- **The bench of JPs** is the situation of s 7(6). Where it holds, the baseline's vote count is used unchanged, so a
+  count under 2 still gives the baseline's "s 7(6) does not apply" answer.
+- **Whether the person asking represents themselves** (s 30) stays a field of the record, as in the baseline, and is
+  not a situation input: it is already one of the facts the record asks.
+
+### Not covered for the new roles
+
+- **The other party:** the defence or response itself, default judgments and anything else the Magistrates Court (Civil
+  Proceedings) Act 2004 or the rules of court govern; the criminal jurisdiction (ss 11, 11A), where the other party is
+  an accused.
+- **A witness or other person:** what is a contempt (s 15) and its procedure (s 16 beyond (4)), summonses and oaths
+  (ss 18-22), and access to records of criminal cases (s 33(1), (2), (5)-(7)).
+
+### Cases
+
+`mca-qa-cases.l4` has 86 cases, all satisfied:
+
+- 15 ask each question for each role it is not about, with every other input ASSUMEd;
+- 12 ask each situation question, for each party role, with FALSE and the later inputs ASSUMEd;
+- 59 are worked by hand from the text; 15 of them assert the answer equal to the baseline export's own on the same
+  facts, and 1 is a mirror case between the two party roles.
+
+The cases are the baseline cases' own fixtures, copied unchanged. The role and situation cases are generated from the
+exports' parameter lists by a script in the batch's scratch folder, which also checked every export: `my role` first;
+each parameter name with one type and one `@desc` across the file; each situation second and read first in every role
+branch; no DEONTIC or EVENT input. Two negative controls (an ASSUMEd input read after a holding situation, a wrong
+s 33(8) answer) failed as they should. All four files of the encoding run with 0 errors and 0 warnings, and
+`l4 check mca-qa.l4` succeeds.
