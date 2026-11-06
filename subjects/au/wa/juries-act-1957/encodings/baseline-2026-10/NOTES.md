@@ -93,3 +93,88 @@ Not encoded:
 - Settle how the Fair Work Act 2009 s 111 sits with s 56(3) for a national system employee (finding 13).
 - Check the readings marked INFERENCE or READING against practice or a decided case: the provisional enrolment reading of s 4, attending while ineligible, late service and s 55, and the bare refusal under s 56(2).
 - Encode the deferral date (s 34H(5)-(7)).
+
+## Q&A layer (seat and situations as parameters)
+
+Added on 6 November 2026, after the graffiti encoding's design (D2, D4, D8). The baseline's files are unchanged; the layer is added beside them.
+
+- `ja-qa.l4` imports `prelude` and `ja-juror`. It has 38 exported questions.
+- `ja-qa-cases.l4` imports the same and `ja-qa`. It has 200 cases.
+
+### Roles
+
+`my role` (`Role`, "Which of these describes you") is the first input of every question. A question about another role answers `does not arise for you` and reads nothing else.
+
+- **`I am liable for jury service, or have been summonsed for it`**: the baseline's seat (Chloe, c025 and c077). It has 30 questions, one for each baseline export. Each calls the baseline's function and wraps the answer:
+  - `yes if` for a BOOLEAN;
+  - `amount` for dollars;
+  - `items` for the Schedule 2 list;
+  - `the answer is` for the baseline's own enumerations.
+- **`I employ someone who has been summonsed for jury service`**: the person s 56 binds. It has 8 questions:
+  - may I excuse them;
+  - is my act prejudicial;
+  - do I commit the offence;
+  - the earnings I must keep paying;
+  - my maximum fine;
+  - the most compensation a court can order;
+  - can I be ordered to take them back;
+  - do I get the fees (s 58B(3)).
+
+  Each calls the baseline's function. What the employer did is asked in the employer's words (`What I did to my employee`) and put into the baseline's `EmployerAction` by `in the employee's words`. That helper lists every value, with no OTHERWISE.
+
+The sheriff, the summoning officer, the jury pool supervisor, the judge and the State are not seats.
+
+### Situation inputs
+
+All are BOOLEAN. Each comes straight after `my role`. FALSE gives `does not arise for you` without reading anything else.
+
+| Input | Role | Questions |
+|---|---|---|
+| `I have been served with a jury summons` | person | 13: the Schedule 2 disclosure, s 34G, "can my employer excuse me", s 34F(4), the two of s 34H, s 34I, s 34J, served in time, must I attend, the attendance day, the s 55 offence and fine |
+| `I have attended to serve, or served, as a juror` | person | 4: who gets the fees, how much the State pays me, and the two of s 56B |
+| `I work for an employer` | person | 4: is it prejudicial, does my employer commit the offence, the earnings, my employer's fine |
+| `my employer has been convicted under s 56(5)` | person | 2: compensation and re-employment |
+| `I have been convicted under s 56(5)` | employer | 2: the same two, from the employer's seat |
+
+These questions take no situation input, because they arise in every situation of their role:
+
+- liability, eligibility, qualification and standing (ss 4, 5);
+- the s 34E certificate;
+- "Am I doing jury service";
+- the employer's other six questions. The role is an employer of a person summonsed.
+
+### Decisions
+
+- **Payment is tied to service done.** "How much does the State pay me" takes the served situation. It calls the baseline with `I do jury service` TRUE, so the baseline's 0 for no service is now `does not arise for you`.
+- **Re-employment is tied to the conviction.** "Can the court order my employer to take me back" takes the conviction situation and calls the baseline with the conviction TRUE. The baseline's own input is now the situation.
+- **"Can my employer excuse me" takes the summons situation.** It answers no wherever it arises.
+- **"I work for an employer" covers contractors.** s 56(1) brings contractors in. The same input settles the person's four s 56 questions. Compensation and re-employment take the conviction instead, which implies an employer.
+
+### Not covered for the employer
+
+- the employer's own records and notices: the Act sets none;
+- the Fair Work Act 2009 s 111 make-up pay (finding 13);
+- the prescribed classes and amounts (no regulations deposited).
+
+### Cases
+
+The 200 cases in `ja-qa-cases.l4` are:
+
+| Kind | Cases |
+|---|---|
+| Each question for the role it is not about, every other input ASSUMEd | 38 |
+| Each situation question with FALSE, later inputs ASSUMEd | 25 |
+| Own role, worked by hand | 71 |
+| Person's answer equal to the baseline export's answer on the same facts | 56 |
+| Mirror cases and the mapping helper | 10 |
+
+The mirror cases put Chloe and Jarrah side by side: the threat, the fees and excusal, each asked from both seats.
+
+All 200 cases are satisfied, as are the baseline's 70. There are 0 errors and 0 warnings. `l4 check ja-qa.l4` succeeds.
+
+A scratch script checked every @export:
+
+- `my role` is first;
+- each situation input is identical wherever it is used;
+- no input is DEONTIC or EVENT;
+- each role branch reads its situation first.
