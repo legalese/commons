@@ -1,0 +1,486 @@
+IMPORT prelude
+IMPORT `cca-patron`
+
+-- Casino Control Act 1984 (WA) -- the Q&A layer: the questions people ask, with the seat and the situation as parameters.
+--
+-- PURPOSE. One module whose exported questions serve every seat from one deployment, following the Graffiti Vandalism
+-- Act encoding's design (D2, D4, D8). Every exported question takes `my role` first ("Which of these describes you"); a
+-- question about another role answers `does not arise for you` without reading any other input, so the site's question
+-- form never asks those inputs and drops the question.
+--
+-- ROLES. Three people the Act puts duties on or gives rights to who would ask it questions:
+--   - the casino patron, and the child who goes in with a parent (the baseline's seat): bans (ss 26, 26A), children
+--     (ss 27, 27A), playing (ss 22, 23), the fines and infringement penalties;
+--   - the casino employee or key employee, including one authorised by the casino licensee to keep people out and one
+--     concerned in managing the gaming: playing (s 23(2)(ia), (2a), (2b)), banning on the spot and removing (s 26(1a)-(1c),
+--     (5)), proof of age (s 27A), and keeping children out (s 27(1), (1a), (2));
+--   - the parent, spouse or guardian who would take a child into the casino for a meal (s 27(4)(b)).
+-- The casino licensee (a company), the Gaming and Wagering Commission, the Commissioner of Police, the Minister and the
+-- courts are never a seat: what they may or must do appears as what it means for the person asking.
+--
+-- SITUATIONS (design D8). A question that arises only in a situation takes that situation's fact straight after
+-- `my role`, and answers `does not arise for you` when it is FALSE, without reading anything else. The questions of one
+-- situation share one input with the same name, type and @desc. There are five, all BOOLEAN:
+--   - `I have been banned from the casino` (the patron): whether the ban is in force, review, its fee, and whether the
+--     ban stays in force during review (ss 26(1b)-(4), 26A);
+--   - `I have been convicted of a casino offence` (the patron): forfeiture of winnings (ss 23(2b), 27(3b));
+--   - `the casino licensee has authorised me to keep people out of the casino` (the employee): the four powers of an
+--     authorised person (ss 26(1a), (1b), (1c), (5), 27A);
+--   - `I am concerned in organising or managing the casino's gaming operations` (the employee): the duty to keep
+--     children out and its fines (s 27(1), (1a), (2));
+--   - `I have been convicted under s 23(2) of playing in the casino` (the employee): forfeiture of winnings (s 23(2b)).
+-- The other questions arise in every situation of their role and take none.
+--
+-- The rules are in cca-patron.l4. This module calls them and restates none: for the patron, each answer is the baseline
+-- export's own answer, wrapped in this layer's answer types. For the employee and the parent the baseline's functions are
+-- called with that seat's facts (the person's ban, visit and age check; the child's visit); the duties the baseline does
+-- not encode (ss 23(2)(ia), (2a), 27(1), (1a), (2)) are helpers here. No exported question takes a DEONTIC or EVENT input.
+--
+-- BASELINE. Not for public use as advice. See NOTES.md, "Q&A layer (seat and situations as parameters)".
+
+§ `Casino Control Act 1984 (WA) -- the questions people ask`
+
+§§ `Who is asking, and the shape of the answers`
+
+DECLARE Role IS ONE OF
+    `I go, or want to go, to a casino in Western Australia`
+    `I work at a casino in Western Australia, as a casino employee or key employee`
+    `I want to take a child under 18 into a casino with me`
+
+DECLARE `Yes or no` IS ONE OF
+    yes
+    no
+    `does not arise for you`
+
+DECLARE `Amount` IS ONE OF
+    `does not arise for you`
+    amount HAS dollars IS A NUMBER
+
+DECLARE `Hours` IS ONE OF
+    `does not arise for you`
+    `up to` HAS `hours` IS A NUMBER
+
+DECLARE `What they may do to keep me out` IS ONE OF
+    `does not arise for you`
+    `ban you on the spot for up to 24 hours (s 26(1a)), or by written direction until the casino revokes it (s 26(2))`
+    `ban you by written direction, in force once the casino is told of it in writing (s 26(2), (3))`
+    `not ban you, but confirm or revoke a casino direction if you apply for review (s 26A)`
+    `nothing: the Act gives your family no power to ban you and no right to apply for a ban`
+    `nothing of your own: the Act has no self-exclusion, so a ban on you is the casino or the Commissioner of Police giving one`
+
+§§ `Helpers`
+
+GIVEN `it holds` IS A BOOLEAN
+GIVETH A `Yes or no`
+`yes if` `it holds` MEANS
+    IF `it holds` THEN yes ELSE no
+
+GIVEN `what` IS A `What the Act lets them do`
+GIVETH A `What they may do to keep me out`
+`the keeping-out answer for` `what` MEANS
+    CONSIDER `what`
+    WHEN `ban me on the spot for up to 24 hours (s 26(1a)), or by written direction until the casino revokes it (s 26(2))` THEN `ban you on the spot for up to 24 hours (s 26(1a)), or by written direction until the casino revokes it (s 26(2))`
+    WHEN `ban me by written direction, in force once the casino is told of it in writing (s 26(2), (3))` THEN `ban you by written direction, in force once the casino is told of it in writing (s 26(2), (3))`
+    WHEN `not ban me, but confirm or revoke a casino direction if I apply for review (s 26A)` THEN `not ban you, but confirm or revoke a casino direction if you apply for review (s 26A)`
+    WHEN `nothing: the Act gives my family no power to ban me and no right to apply for a ban` THEN `nothing: the Act gives your family no power to ban you and no right to apply for a ban`
+    WHEN `nothing of my own: the Act has no self-exclusion, so a ban on me is the casino or the Commissioner of Police giving one` THEN `nothing of your own: the Act has no self-exclusion, so a ban on you is the casino or the Commissioner of Police giving one`
+
+-- No ban: for the parent's questions about a child, who is not banned. Only `who banned me` is read (`nobody`); the other
+-- fields are placeholders that no rule reads when nobody banned the person.
+GIVETH A `My ban`
+`no ban` MEANS `My ban` WITH
+    `who banned me` IS `nobody`
+    `hours since the ban was made` IS 0
+    `the person who made it has revoked it` IS FALSE
+    `the Commission has revoked it on review and given notice` IS FALSE
+    `the casino has been given written notice of the ban` IS FALSE
+    `the casino has been given written notice of the revocation` IS FALSE
+
+-- The child's visit, from the parent's facts. `the game` and `it is played to the approved rules` are placeholders: no
+-- rule the parent's questions call reads them.
+GIVEN `age` IS A NUMBER
+      `with a parent` IS A BOOLEAN
+      `only for a meal` IS A BOOLEAN
+      `plays` IS A BOOLEAN
+GIVETH A `My visit`
+`the child's visit` MEANS `My visit` WITH
+    `my age in years` IS `age`
+    `why I am there` IS (IF `only for a meal` THEN `to have a meal` ELSE `to gamble or for anything else`)
+    `with my spouse, parent or guardian who is over 18` IS `with a parent`
+    `I play` IS `plays`
+    `the game` IS `no game`
+    `it is played to the approved rules` IS FALSE
+
+-- s 23(2): a person "(ia) who is a casino key employee or casino employee ... participates as a player in any game in the
+-- casino, the person commits an offence. Penalty for this subsection: a fine of $50 000." (2a): it "does not apply ... if
+-- the person is required to do so in order to exercise or perform a power, function, or duty conferred or imposed on the
+-- person by or under this Act, any other Act, or a casino complex agreement".
+GIVEN `I am required to play to perform a power, function or duty` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `s 23(2)(ia), (2a) -- the employee may play` IF
+    `I am required to play to perform a power, function or duty`
+
+GIVETH A NUMBER
+`s 23(2) -- the most fine for playing` MEANS 50000
+
+-- s 27(1): the licensee "and any other person concerned in the organization or management of the gaming operations ...
+-- shall ensure that no person under the age of 18 years is permitted to enter or remain in that casino, unless subsection
+-- (4) applies. Penalty for this subsection: a fine of $20 000." (1a): the same for participating in gaming; "a fine of
+-- $50 000". (2): "It is a defence ... to establish that the accused had reasonable grounds for believing that the person
+-- ... was over that age." Whether the person was permitted to enter is read as their being in the casino.
+GIVEN `the person's visit` IS A `My visit`
+      `I had reasonable grounds to believe the person was over 18` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `s 27(1), (1a), (2) -- the manager commits an offence` IF
+        `I am under 18` `the person's visit`
+    AND (NOT `Does s 27(4) let me in although I am under 18` `the person's visit`)
+    AND (NOT `I had reasonable grounds to believe the person was over 18`)
+
+GIVEN `they took part in gaming` IS A BOOLEAN
+GIVETH A NUMBER
+`s 27(1), (1a) -- the most fine` MEANS
+    IF `they took part in gaming` THEN 50000 ELSE 20000
+
+§§ `For the casino patron`
+
+§§§ `s 26 -- who may keep me out`
+
+@export Who can keep me out of a WA casino, and how (Casino Control Act 1984 (WA) ss 26, 26A)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `who` IS A `Who wants me kept out` @desc Who wants you kept out of the casino
+GIVETH A `What they may do to keep me out`
+`Who can keep me out of the casino and how` MEANS
+    CONSIDER `my role`
+    WHEN `I go, or want to go, to a casino in Western Australia` THEN `the keeping-out answer for` (`What can this person do to keep me out of the casino` `who`)
+    OTHERWISE `does not arise for you`
+
+@export May a member of my family apply to have me banned from a WA casino (Casino Control Act 1984 (WA) s 26)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH A `Yes or no`
+`May a member of my family apply to have me banned` MEANS
+    CONSIDER `my role`
+    WHEN `I go, or want to go, to a casino in Western Australia` THEN `yes if` `May my family apply to have me banned`
+    OTHERWISE `does not arise for you`
+
+@export Have I a right to enter or stay in a WA casino against the casino's wishes (Casino Control Act 1984 (WA) s 26(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH A `Yes or no`
+`Have I a right to enter or stay in the casino against its wishes` MEANS
+    CONSIDER `my role`
+    WHEN `I go, or want to go, to a casino in Western Australia` THEN `yes if` `Have I a right to enter the casino`
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 26, 26A -- a ban on me`
+
+-- Situation: I have been banned (prohibited on the spot or given a written direction).
+
+@export Is the ban on me in force (Casino Control Act 1984 (WA) s 26(1b), (3), (4), s 26A(5))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have been banned from the casino` IS A BOOLEAN @desc Whether the casino, or the Commissioner of Police, has prohibited you from entering or staying in the casino, on the spot or by written direction
+      `the ban` IS A `My ban` @desc The ban on you: who made it, how many hours ago, and whether it has been revoked or notified
+GIVETH A `Yes or no`
+`Is the ban on me in force now` MEANS
+    CONSIDER `my role`
+    WHEN `I go, or want to go, to a casino in Western Australia` THEN
+        IF NOT `I have been banned from the casino`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Is the ban on me in force` `the ban`)
+    OTHERWISE `does not arise for you`
+
+@export May I apply to the Gaming and Wagering Commission to review the ban on me (Casino Control Act 1984 (WA) s 26A(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have been banned from the casino` IS A BOOLEAN @desc Whether the casino, or the Commissioner of Police, has prohibited you from entering or staying in the casino, on the spot or by written direction
+      `the ban` IS A `My ban` @desc The ban on you: who made it, how many hours ago, and whether it has been revoked or notified
+GIVETH A `Yes or no`
+`May I apply for a review of the ban on me` MEANS
+    CONSIDER `my role`
+    WHEN `I go, or want to go, to a casino in Western Australia` THEN
+        IF NOT `I have been banned from the casino`
+        THEN `does not arise for you`
+        ELSE `yes if` (`May I apply to have my ban reviewed` `the ban`)
+    OTHERWISE `does not arise for you`
+
+@export What fee must I pay to have a casino ban reviewed (Casino Control Regulations 1999 r 4)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have been banned from the casino` IS A BOOLEAN @desc Whether the casino, or the Commissioner of Police, has prohibited you from entering or staying in the casino, on the spot or by written direction
+GIVETH AN `Amount`
+`What fee must I pay for a review of the ban` MEANS
+    CONSIDER `my role`
+    WHEN `I go, or want to go, to a casino in Western Australia` THEN
+        IF NOT `I have been banned from the casino`
+        THEN `does not arise for you`
+        ELSE amount `What fee must I pay for a review`
+    OTHERWISE `does not arise for you`
+
+@export Does the ban stay in force while the Commission reviews it (Casino Control Act 1984 (WA) s 26A(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have been banned from the casino` IS A BOOLEAN @desc Whether the casino, or the Commissioner of Police, has prohibited you from entering or staying in the casino, on the spot or by written direction
+GIVETH A `Yes or no`
+`Does the ban on me stay in force during the review` MEANS
+    CONSIDER `my role`
+    WHEN `I go, or want to go, to a casino in Western Australia` THEN
+        IF NOT `I have been banned from the casino`
+        THEN `does not arise for you`
+        ELSE `yes if` `Does my ban stay in force during the review`
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 23, 26, 27, 27A, Schedule 1 -- the offences and fines`
+
+@export What is the most a court can fine me for this casino offence (Casino Control Act 1984 (WA) ss 23(2), 26(1d), (6), 27(3), (3a), 27A(4))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the offence` IS A `Patron offence` @desc The offence
+      `I have been convicted of it before` IS A BOOLEAN @desc Whether this would be a second or later offence (matters only under s 27(3))
+GIVETH AN `Amount`
+`What is the most a court can fine me for this casino offence` MEANS
+    CONSIDER `my role`
+    WHEN `I go, or want to go, to a casino in Western Australia` THEN amount (`What is the most I can be fined for` `the offence` `I have been convicted of it before`)
+    OTHERWISE `does not arise for you`
+
+@export What would an infringement notice ask me to pay for this casino offence (Casino Control Regulations 1999 r 8 and Schedule 1)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the offence` IS A `Patron offence` @desc The offence
+GIVETH AN `Amount`
+`What would an infringement notice ask me to pay for this offence` MEANS
+    CONSIDER `my role`
+    WHEN `I go, or want to go, to a casino in Western Australia` THEN amount (`What would an infringement notice ask me to pay` `the offence`)
+    OTHERWISE `does not arise for you`
+
+-- Situation: a conviction (ss 23(2b), 27(3b): "If a court convicts a person of an offence").
+@export If I am convicted, must the court take my winnings (Casino Control Act 1984 (WA) ss 23(2b), 27(3b))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have been convicted of a casino offence` IS A BOOLEAN @desc Whether a court has convicted you of an offence under the Casino Control Act 1984
+      `the offence` IS A `Patron offence` @desc The offence
+      `the prosecutor applies for forfeiture` IS A BOOLEAN @desc Whether the prosecutor applies for the winnings paid as a result of the offence to be forfeited
+GIVETH A `Yes or no`
+`Must the court take my winnings` MEANS
+    CONSIDER `my role`
+    WHEN `I go, or want to go, to a casino in Western Australia` THEN
+        IF NOT `I have been convicted of a casino offence`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Must my winnings be forfeited` `the offence` `the prosecutor applies for forfeiture`)
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 22, 23, 26, 27 -- my visit`
+
+@export Does s 27(4) let me into a WA casino although I am under 18 (Casino Control Act 1984 (WA) s 27(4))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the visit` IS A `My visit` @desc Your visit: your age, why you are there, who is with you, whether you play, and the game
+GIVETH A `Yes or no`
+`Does s 27(4) let me into the casino although I am under 18` MEANS
+    CONSIDER `my role`
+    WHEN `I go, or want to go, to a casino in Western Australia` THEN `yes if` (`Does s 27(4) let me in although I am under 18` `the visit`)
+    OTHERWISE `does not arise for you`
+
+@export Is it an offence for me to enter or stay in the casino (Casino Control Act 1984 (WA) ss 26(1d), (6), 27(3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the ban` IS A `My ban` @desc The ban on you: who made it, how many hours ago, and whether it has been revoked or notified
+      `the visit` IS A `My visit` @desc Your visit: your age, why you are there, who is with you, whether you play, and the game
+GIVETH A `Yes or no`
+`Is it an offence for me to enter or stay in the casino` MEANS
+    CONSIDER `my role`
+    WHEN `I go, or want to go, to a casino in Western Australia` THEN `yes if` (`Is it an offence for me to enter or stay` `the ban` `the visit`)
+    OTHERWISE `does not arise for you`
+
+@export Is it an offence for me to play in the casino (Casino Control Act 1984 (WA) ss 23(2)(ii), 27(3a))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the ban` IS A `My ban` @desc The ban on you: who made it, how many hours ago, and whether it has been revoked or notified
+      `the visit` IS A `My visit` @desc Your visit: your age, why you are there, who is with you, whether you play, and the game
+GIVETH A `Yes or no`
+`Is it an offence for me to play in the casino` MEANS
+    CONSIDER `my role`
+    WHEN `I go, or want to go, to a casino in Western Australia` THEN `yes if` (`Is it an offence for me to play` `the ban` `the visit`)
+    OTHERWISE `does not arise for you`
+
+@export What is the largest fine I risk for this visit (Casino Control Act 1984 (WA) ss 23(2), 26(1d), (6), 27(3), (3a))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the ban` IS A `My ban` @desc The ban on you: who made it, how many hours ago, and whether it has been revoked or notified
+      `the visit` IS A `My visit` @desc Your visit: your age, why you are there, who is with you, whether you play, and the game
+      `I have been convicted under s 27(3) before` IS A BOOLEAN @desc Whether you have been convicted before of being in a casino under 18
+GIVETH AN `Amount`
+`What is the largest fine I risk for this visit to the casino` MEANS
+    CONSIDER `my role`
+    WHEN `I go, or want to go, to a casino in Western Australia` THEN amount (`What is the largest fine I risk for this visit` `the ban` `the visit` `I have been convicted under s 27(3) before`)
+    OTHERWISE `does not arise for you`
+
+@export Is the game I am playing lawful in the casino (Casino Control Act 1984 (WA) ss 22(1), 23(1)(b))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the visit` IS A `My visit` @desc Your visit: your age, why you are there, who is with you, whether you play, and the game
+GIVETH A `Yes or no`
+`Is the game I am playing lawful in the casino` MEANS
+    CONSIDER `my role`
+    WHEN `I go, or want to go, to a casino in Western Australia` THEN `yes if` (`Is the game lawful in the casino` `the visit`)
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 26(1c), (5), 27A -- removal`
+
+@export May I be removed from the casino with reasonable force (Casino Control Act 1984 (WA) ss 26(1c), (5), 27A(3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the ban` IS A `My ban` @desc The ban on you: who made it, how many hours ago, and whether it has been revoked or notified
+      `the visit` IS A `My visit` @desc Your visit: your age, why you are there, who is with you, whether you play, and the game
+      `the check` IS AN `Age check` @desc Whether an authorised person asked your age, and what happened
+GIVETH A `Yes or no`
+`May I be removed from the casino with reasonable force` MEANS
+    CONSIDER `my role`
+    WHEN `I go, or want to go, to a casino in Western Australia` THEN `yes if` (`May I be removed with reasonable force` `the ban` `the visit` `the check`)
+    OTHERWISE `does not arise for you`
+
+@export Have I committed the offence of not leaving when I could not prove my age (Casino Control Act 1984 (WA) s 27A(4)(b))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the visit` IS A `My visit` @desc Your visit: your age, why you are there, who is with you, whether you play, and the game
+      `the check` IS AN `Age check` @desc Whether an authorised person asked your age, and what happened
+GIVETH A `Yes or no`
+`Have I committed the offence of not leaving the casino` MEANS
+    CONSIDER `my role`
+    WHEN `I go, or want to go, to a casino in Western Australia` THEN `yes if` (`Have I committed the offence of not leaving` `the visit` `the check`)
+    OTHERWISE `does not arise for you`
+
+§§ `For the casino employee`
+
+§§§ `s 23(2)(ia), (2a), (2b) -- may I play`
+
+@export May I play a game in the casino where I work (Casino Control Act 1984 (WA) s 23(2)(ia), (2a))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I am required to play to perform a power, function or duty` IS A BOOLEAN @desc Whether you must play to exercise or perform a power, function or duty under the Casino Control Act, another Act or a casino complex agreement
+GIVETH A `Yes or no`
+`May I play a game in the casino where I work` MEANS
+    CONSIDER `my role`
+    WHEN `I work at a casino in Western Australia, as a casino employee or key employee` THEN `yes if` (`s 23(2)(ia), (2a) -- the employee may play` `I am required to play to perform a power, function or duty`)
+    OTHERWISE `does not arise for you`
+
+@export What is the most I can be fined for playing in the casino where I work (Casino Control Act 1984 (WA) s 23(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH AN `Amount`
+`What is the most I can be fined for playing in the casino where I work` MEANS
+    CONSIDER `my role`
+    WHEN `I work at a casino in Western Australia, as a casino employee or key employee` THEN amount `s 23(2) -- the most fine for playing`
+    OTHERWISE `does not arise for you`
+
+-- Situation: a conviction under s 23(2).
+@export If I am convicted of playing, must the court take my winnings (Casino Control Act 1984 (WA) s 23(2b))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have been convicted under s 23(2) of playing in the casino` IS A BOOLEAN @desc Whether a court has convicted you under s 23(2) of playing a game in the casino
+      `the prosecutor applies for forfeiture` IS A BOOLEAN @desc Whether the prosecutor applies for the winnings paid as a result of the offence to be forfeited
+GIVETH A `Yes or no`
+`Must the court take my winnings from playing where I work` MEANS
+    CONSIDER `my role`
+    WHEN `I work at a casino in Western Australia, as a casino employee or key employee` THEN
+        IF NOT `I have been convicted under s 23(2) of playing in the casino`
+        THEN `does not arise for you`
+        ELSE `yes if` `the prosecutor applies for forfeiture`
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 26(1a)-(1c), (5), 27A -- keeping people out, as an authorised person`
+
+-- Situation: authorised by the casino licensee to keep people out (s 26(1a): "A person authorised by the casino licensee";
+-- s 27A(5): an authorised person includes "a person acting under its authority").
+
+@export May I prohibit this person, orally or in writing, from entering or staying in the casino (Casino Control Act 1984 (WA) s 26(1a))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the casino licensee has authorised me to keep people out of the casino` IS A BOOLEAN @desc Whether the casino licensee has authorised you to prohibit people from entering or staying in the casino, and to require proof of age
+GIVETH A `Yes or no`
+`May I prohibit this person from the casino on the spot` MEANS
+    CONSIDER `my role`
+    WHEN `I work at a casino in Western Australia, as a casino employee or key employee` THEN
+        IF NOT `the casino licensee has authorised me to keep people out of the casino`
+        THEN `does not arise for you`
+        ELSE yes
+    OTHERWISE `does not arise for you`
+
+@export How long does a prohibition I make on the spot last, at most (Casino Control Act 1984 (WA) s 26(1b): 24 hours, or until revoked if sooner)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the casino licensee has authorised me to keep people out of the casino` IS A BOOLEAN @desc Whether the casino licensee has authorised you to prohibit people from entering or staying in the casino, and to require proof of age
+GIVETH A `Hours`
+`How long does my on-the-spot prohibition last at most` MEANS
+    CONSIDER `my role`
+    WHEN `I work at a casino in Western Australia, as a casino employee or key employee` THEN
+        IF NOT `the casino licensee has authorised me to keep people out of the casino`
+        THEN `does not arise for you`
+        ELSE `up to` `the hours an on-the-spot ban lasts at most`
+    OTHERWISE `does not arise for you`
+
+-- s 27A(1): an authorised person who "suspects on reasonable grounds" that a person, not one to whom s 27(4) applies, is
+-- under 18 may require the person to state their age.
+@export May I require this person to state their age (Casino Control Act 1984 (WA) s 27A(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the casino licensee has authorised me to keep people out of the casino` IS A BOOLEAN @desc Whether the casino licensee has authorised you to prohibit people from entering or staying in the casino, and to require proof of age
+      `I suspect on reasonable grounds that the person is under 18` IS A BOOLEAN @desc Whether you suspect, on reasonable grounds, that the person is under 18
+      `the person's visit` IS A `My visit` @desc The person's visit: their age, why they are there, who is with them, whether they play, and the game
+GIVETH A `Yes or no`
+`May I require this person to state their age` MEANS
+    CONSIDER `my role`
+    WHEN `I work at a casino in Western Australia, as a casino employee or key employee` THEN
+        IF NOT `the casino licensee has authorised me to keep people out of the casino`
+        THEN `does not arise for you`
+        ELSE `yes if` (`I suspect on reasonable grounds that the person is under 18` AND (NOT `Does s 27(4) let me in although I am under 18` `the person's visit`))
+    OTHERWISE `does not arise for you`
+
+@export May I remove this person from the casino with reasonable force (Casino Control Act 1984 (WA) ss 26(1c), (5), 27A(3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the casino licensee has authorised me to keep people out of the casino` IS A BOOLEAN @desc Whether the casino licensee has authorised you to prohibit people from entering or staying in the casino, and to require proof of age
+      `the person's ban` IS A `My ban` @desc Any ban on the person: who made it, how many hours ago, and whether it has been revoked or notified
+      `the person's visit` IS A `My visit` @desc The person's visit: their age, why they are there, who is with them, whether they play, and the game
+      `the person's age check` IS AN `Age check` @desc Whether the person was asked their age, and what happened
+GIVETH A `Yes or no`
+`May I remove this person from the casino with reasonable force` MEANS
+    CONSIDER `my role`
+    WHEN `I work at a casino in Western Australia, as a casino employee or key employee` THEN
+        IF NOT `the casino licensee has authorised me to keep people out of the casino`
+        THEN `does not arise for you`
+        ELSE `yes if` (`May I be removed with reasonable force` `the person's ban` `the person's visit` `the person's age check`)
+    OTHERWISE `does not arise for you`
+
+§§§ `s 27(1), (1a), (2) -- keeping children out, as a manager of the gaming`
+
+-- Situation: concerned in the organisation or management of the gaming operations (s 27(1), (1a)).
+
+@export Have I committed an offence by letting this person under 18 into the casino, or letting them play (Casino Control Act 1984 (WA) s 27(1), (1a), (2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I am concerned in organising or managing the casino's gaming operations` IS A BOOLEAN @desc Whether you are concerned in the organisation or management of the gaming operations of the casino
+      `the person's visit` IS A `My visit` @desc The person's visit: their age, why they are there, who is with them, whether they play, and the game
+      `I had reasonable grounds to believe the person was over 18` IS A BOOLEAN @desc Whether you had reasonable grounds for believing that the person was over 18 (the s 27(2) defence)
+GIVETH A `Yes or no`
+`Have I committed an offence by letting a person under 18 in` MEANS
+    CONSIDER `my role`
+    WHEN `I work at a casino in Western Australia, as a casino employee or key employee` THEN
+        IF NOT `I am concerned in organising or managing the casino's gaming operations`
+        THEN `does not arise for you`
+        ELSE `yes if` (`s 27(1), (1a), (2) -- the manager commits an offence` `the person's visit` `I had reasonable grounds to believe the person was over 18`)
+    OTHERWISE `does not arise for you`
+
+@export What is the most I can be fined for a person under 18 being let in, or playing (Casino Control Act 1984 (WA) s 27(1), (1a))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I am concerned in organising or managing the casino's gaming operations` IS A BOOLEAN @desc Whether you are concerned in the organisation or management of the gaming operations of the casino
+      `they took part in gaming` IS A BOOLEAN @desc Whether the person under 18 took part in gaming in the casino
+GIVETH AN `Amount`
+`What is the most I can be fined for a person under 18 being let in` MEANS
+    CONSIDER `my role`
+    WHEN `I work at a casino in Western Australia, as a casino employee or key employee` THEN
+        IF NOT `I am concerned in organising or managing the casino's gaming operations`
+        THEN `does not arise for you`
+        ELSE amount (`s 27(1), (1a) -- the most fine` `they took part in gaming`)
+    OTHERWISE `does not arise for you`
+
+§§ `For the parent, spouse or guardian of a child`
+
+§§§ `s 27(3), (3a), (4)(b) -- taking a child in for a meal`
+
+@export May the child come into the casino with me for a meal (Casino Control Act 1984 (WA) s 27(4)(b))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the child's age` IS A NUMBER @desc The child's age in completed years
+      `I am over 18 and the child's spouse, parent or guardian, or in place of a parent` IS A BOOLEAN @desc Whether you are over 18 and are the child's spouse or parent, their guardian, or a person in loco parentis to them
+      `the child is there only for a meal` IS A BOOLEAN @desc Whether the child is going in only to have a meal
+      `the child will play` IS A BOOLEAN @desc Whether the child will take part in gaming
+GIVETH A `Yes or no`
+`May the child come into the casino with me for a meal` MEANS
+    CONSIDER `my role`
+    WHEN `I want to take a child under 18 into a casino with me` THEN `yes if` (`Does s 27(4) let me in although I am under 18` (`the child's visit` `the child's age` `I am over 18 and the child's spouse, parent or guardian, or in place of a parent` `the child is there only for a meal` `the child will play`))
+    OTHERWISE `does not arise for you`
+
+@export Would the child commit an offence by playing a game in the casino (Casino Control Act 1984 (WA) s 27(3a))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the child's age` IS A NUMBER @desc The child's age in completed years
+GIVETH A `Yes or no`
+`Would the child commit an offence by playing` MEANS
+    CONSIDER `my role`
+    WHEN `I want to take a child under 18 into a casino with me` THEN `yes if` (`Is it an offence for me to play` `no ban` (`the child's visit` `the child's age` TRUE TRUE TRUE))
+    OTHERWISE `does not arise for you`

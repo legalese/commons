@@ -200,3 +200,44 @@ because the deposit omits the Table of the provisions it applies to.
   turns on, is a separate subject.
 - No case law was searched, for example on whether "over the age of 18 years" in
   s 27(4)(b) includes a person who has just turned 18.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026, following the Graffiti Vandalism Act encoding's design (D2, D4, D8 and D8.1-D8.15 in `subjects/au/wa/graffiti-vandalism-act-2016/encodings/baseline-2026-10/NOTES.md`). The layer is `cca-qa.l4` (imports `prelude`, `cca-patron`); its cases are `cca-qa-cases.l4`. The baseline's files are unchanged: the layer adds, and replaces nothing.
+
+**Roles** (`DECLARE Role`, in the first person; every exported question takes `my role` first, `@desc Which of these describes you`, and answers `does not arise for you` for a role it is not about without reading any other input):
+
+- `I go, or want to go, to a casino in Western Australia`: the baseline's seat, the patron and the child who goes in with a parent. All 17 baseline exports are asked, each calling the baseline function (17 questions).
+- `I work at a casino in Western Australia, as a casino employee or key employee`: s 23(2)(ia), (2a), (2b) bar the employee from playing; a person authorised by the casino licensee may ban on the spot and remove (s 26(1a)-(1c), (5)) and require proof of age (s 27A); a person concerned in managing the gaming must keep children out (s 27(1), (1a), (2)) (9).
+- `I want to take a child under 18 into a casino with me`: s 27(4)(b) lets a child in for a meal with a spouse, parent, guardian or person in loco parentis over 18 (2).
+
+The casino licensee (a company), the Gaming and Wagering Commission, the Commissioner of Police, the Minister and the courts are never a seat: what they may or must do appears as what it means for the person asking. The baseline left the casino's own duties out as binding the licensee; the layer takes s 27(1), (1a) for the employee because they also bind "any other person concerned in the organization or management of the gaming operations", an individual.
+
+**Situation inputs** (all BOOLEAN, each straight after `my role`; FALSE gives `does not arise for you` without reading anything else; same name, type and `@desc` wherever taken):
+
+| Input | Role | Does not arise when | Questions |
+|---|---|---|---|
+| `I have been banned from the casino` | the patron | FALSE | whether the ban is in force, review, its fee, the ban during review (ss 26(1b)-(4), 26A) |
+| `I have been convicted of a casino offence` | the patron | FALSE | forfeiture of winnings (ss 23(2b), 27(3b)) |
+| `the casino licensee has authorised me to keep people out of the casino` | the employee | FALSE | prohibiting on the spot, how long it lasts, requiring a stated age, removing with reasonable force (ss 26(1a)-(1c), (5), 27A) |
+| `I am concerned in organising or managing the casino's gaming operations` | the employee | FALSE | the s 27(1), (1a) offence and its fine |
+| `I have been convicted under s 23(2) of playing in the casino` | the employee | FALSE | forfeiture of winnings (s 23(2b)) |
+
+The other questions arise in every situation of their role and take none: who may keep me out, the family and the right of entry, the fines and infringement amounts, s 27(4), the offences of entering, playing and not leaving, the largest fine, the game, and removal for the patron; whether an employee may play and the fine; and the parent's two.
+
+**Decisions.**
+
+- **Q1. A ban is a situation of the four ban questions, not of removal or the offences.** "Is it an offence for me to enter", "to play", "the largest fine" and "may I be removed" arise also for a child who is not banned, so they keep the baseline's `the ban` input (with `nobody` among its values) and take no situation.
+- **Q2. The child's age is not made a situation.** "Does s 27(4) let me in although I am under 18" reads the age from the visit, as the baseline does; a separate `I am under 18` input could contradict it. An adult who asks is told no.
+- **Q3. The employee's powers call the baseline's functions with the person's facts.** Removal is the baseline's `May I be removed with reasonable force` on `the person's ban`, `the person's visit` and `the person's age check` (mirror cases agree with the patron's). Requiring a stated age is reasonable suspicion and not a child let in by s 27(4), using the baseline's s 27(4) function. The 24 hours is the baseline's own constant.
+- **Q4. s 27(1), (1a), (2) are helpers here.** "Permitted to enter or remain" is read as the child being in the casino; the s 27(2) defence (reasonable grounds for believing the child over 18) is an input. The fine is $50 000 if the child took part in gaming (s 27(1a)), else $20 000 (s 27(1)); where both happen, the larger is given, as the baseline does for the patron's visit.
+- **Q5. The parent's questions build the child's visit.** The child's `My visit` record is made from the parent's facts; `the game` and `it is played to the approved rules` are placeholders no rule called reads. "Would the child commit an offence by playing" uses the baseline's `Is it an offence for me to play` with no ban (a `My ban` whose `who banned me` is `nobody`; its other fields are placeholders no rule reads then).
+- **Q6. Answer types** follow gva-seat.l4: `Yes or no`, `Amount`, `Hours` (`up to` HAS hours) and `What they may do to keep me out`, which maps the baseline's five values one by one, with no OTHERWISE, from "me" to "you".
+- **Q7. Not tested by an ASSUMEd value:** the baseline reads `Why I am there` through OTHERWISE in its s 27(4) function, and `Who banned me` and `Patron offence` with EQUALS; a read of those before the role or situation would not show in the cases (graffiti D8.8). The parameter script and the code show that each question reads the role, and then any situation, first.
+- **Q8. Name clash avoided.** The baseline's `Does s 27(4) let me in although I am under 18` is called by the layer's `Does s 27(4) let me into the casino although I am under 18`; the question text is the baseline's.
+
+**Not covered for the new roles.** The employee: the casino's own exclusion of banned people (s 26(7)), s 32 detention, cheating and forgery (ss 30, 31), employees' licensing, and an officer of the Commission or a police officer acting under s 27A (officials). The parent: whether any other law makes taking a child in an offence (not searched); a child's employment under s 27(4)(a), and the child's fines, are the child's own questions, asked as the patron.
+
+**Cases** (`cca-qa-cases.l4`, 159): 66 for the patron (17 of them asking the baseline export on the same facts); 19 for the employee, with mirror cases of the patron's removal cases; 6 for the parent, mirroring the child's s 27(4) and s 27(3a) cases; 56 asking each of the 28 questions for the two roles it is not about, every other input ASSUMEd; 12 asking each question with a situation input with that situation FALSE, every later input ASSUMEd.
+
+**Checks** (stable `l4` of VS Code extension 1.6.98, `JL4_LIBRARY_PATH` unset): `l4 run` gives 0 errors and 0 warnings for `cca-patron.l4`, `cca-cases-patron.l4` (69 of 69, unchanged), `cca-qa.l4` and `cca-qa-cases.l4` (159 of 159); `l4 check cca-qa.l4` succeeds. A parameter script (scratchpad `check_params.py`) lists the 28 exports with their inputs and confirms that `my role` is first everywhere, that each situation input is second wherever it appears, that every input name has one type and one `@desc` across the file, and that no input is DEONTIC or EVENT.
