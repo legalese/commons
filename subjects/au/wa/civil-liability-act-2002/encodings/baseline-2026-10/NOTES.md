@@ -247,3 +247,13 @@ Added 6 November 2026, following the Graffiti Vandalism Act encoding's design (D
   - `l4 check cla-qa.l4` succeeds.
   - `l4 run` gives 0 errors and 0 warnings for `cla-qa.l4`, `cla-qa-cases.l4`, `cla-damages.l4` and `cla-cases-damages.l4` (51 of 51, unchanged).
   - The parameter script (scratchpad `check_params.py`) confirms that `my role` is first everywhere and that each situation input is identical and second wherever it appears. It also confirms that each role branch reads its situation first, and that no input is DEONTIC or EVENT.
+
+### After the independent check (6 Nov 2026)
+
+- **The site's form keeps 14 questions open for the other role.** The verifier's form-engine run kept 7 questions per role open for the role they are not about, and kept the recreational questions open with that situation FALSE. Examples: the defendant's s 5O question for the injured person, and the s 5I question with no recreational activity.
+  - The layer is not wrong here. Every one of those questions answers `does not arise for you` from `my role` and its situation alone, and no case or evaluation failed.
+  - The cause is the engine. To drop a question it evaluates every combination of its open yes/no and choice inputs, up to 1 024 (`PROBE_CAP` in `interact-engine.ts`). `My claim` alone has 288 combinations (6 causes, 6 dates, 3 yes/no items). `The warning` has 1 024 by itself. So any question that takes `My claim` and two more yes/no facts goes over the cap, and the engine keeps it open.
+  - No change to the layer fixes this without changing what is asked. The s 5I question needs all of `The warning`, and narrowing `My claim` to what Part 1A reads would give the form a second set of inputs for the same facts.
+  - In practice the questions drop once the person answers `My claim` and the recreational facts, which the first questions ask anyway. s 5I is the exception: it only drops once the warning is answered too.
+  - The fix belongs in the engine. One way: when the combinations are over the cap, evaluate one completion with a trace. If the trace reads only answered inputs (the role, and the situation), the answer holds for every completion. That is exact, and it is the promise this layer makes.
+- No file was changed for this finding.
