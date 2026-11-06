@@ -1,0 +1,760 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `ta-nouns`
+IMPORT `ta-logic`
+IMPORT `ta-interpretation`
+IMPORT `ta-offences`
+IMPORT `ta-disclosure`
+IMPORT `ta-regulated-sector`
+IMPORT `ta-voluntary-disclosure`
+IMPORT `ta-tipping-off`
+IMPORT `ta-information-orders`
+IMPORT `ta-forfeiture`
+
+-- Terrorism Act 2000, Part III (Terrorist Property), United Kingdom -- THE SEAT LAYER.
+--
+-- SEAT: a person who handles, funds or deals in money or other property that may be terrorist property -- a donor, a fund-raiser,
+-- a bank or other business in the regulated sector, an insurer, an adviser -- and who asks whether they commit an offence under Part III
+-- or have a defence, and what they must disclose to whom and when.  This layer phrases the rules in the modules imported above as the
+-- questions that person would ask.  Nothing here is new law.
+--
+-- PLAIN INPUTS.  Every question takes plain inputs -- yes/no, a number, a date, a choice from a short list, or a list of dates -- one for each
+-- fact the person can state, each with an @desc worded as the person would be asked.  The records the modules expect are built inside each
+-- question, in its WHERE, from those answers, and the SAME module rule is then called; no rule is restated here.  Every yes/no is a plain
+-- yes/no: there is no "I am not sure", so a person who is unsure whether a fact holds should not answer as if it did not.
+--   * The Act's own figures (the length of the periods, the sum in s 22B(8)) are taken from the modules.
+--   * Figures the Act leaves to other instruments -- the statutory maximum fine, level 5 on the standard scale -- and the bank holidays are asked.
+--   * What turns on Schedule 3A (what is a business in the regulated sector) is asked as a fact.
+--
+-- HOW TO READ A RESULT.  JUST TRUE and JUST FALSE are answers the Act itself gives; NOTHING means the Act does not answer on these facts
+-- (see NOTES.md, "Reading a result: FALSE and NOTHING").  Never read NOTHING as no.
+--
+-- Two questions gather several sections by hand (E1 option B, as guidance; fork F5): "What must I tell the police, and to whom?" and
+-- "Could the court order this property forfeited?".  Every other question is one section's answer (option C).
+
+-- ---------------------------------------------------------------------------
+-- Wiring: the person's answers become the modules' inputs.  Not questions.
+-- ---------------------------------------------------------------------------
+
+-- The four facts the person can state about the property, as the record the modules expect.
+GIVEN likely IS A BOOLEAN
+      proscribed IS A BOOLEAN
+      terrorismProceeds IS A BOOLEAN
+      forTerrorismProceeds IS A BOOLEAN
+GIVETH A `Property facts`
+`my property` MEANS
+    `Property facts` OF likely, proscribed, (`Proceeds facts` OF terrorismProceeds, FALSE, FALSE), (`Proceeds facts` OF forTerrorismProceeds, FALSE, FALSE)
+
+-- What was in the person's mind.
+GIVEN intends IS A BOOLEAN
+      knows IS A BOOLEAN
+      suspects IS A BOOLEAN
+GIVETH A `Mind about use for terrorism`
+`my state of mind` MEANS `Mind about use for terrorism` OF intends, knows, suspects
+
+-- What a person must do about the information they hold, and to whom (ss 19(2) and 21A(4)).  The last constructor is the "not covered" value.
+DECLARE `What I must tell and to whom` IS ONE OF
+    `to a constable as soon as is reasonably practicable (s 19(2))`
+    `to a constable or a nominated officer as soon as is practicable (s 21A(4))`
+    `not obliged under s 19 or s 21A`
+    `the Act does not answer on these facts`
+
+-- An answer of Yes, No or "I am not sure" as a MAYBE BOOLEAN: "I am not sure" becomes NOTHING and a rule that cannot answer without it answers NOTHING.
+DECLARE `My answer` IS ONE OF
+    Yes
+    No
+    `I am not sure`
+
+GIVEN answer IS A `My answer`
+GIVETH A MAYBE BOOLEAN
+`what I say, as a fact` MEANS
+    CONSIDER answer
+    WHEN Yes THEN JUST TRUE -- input mapping
+    WHEN No THEN JUST FALSE -- input mapping
+    WHEN `I am not sure` THEN NOTHING -- input mapping
+
+§ `Terrorism Act 2000 Part III -- my questions`
+
+-- ---------------------------------------------------------------------------
+§§ `Is this money or other property terrorist property? (s 14)`
+-- Situation: asked first by anyone who is about to handle, fund or deal in money or other property and wants to know whether the Act treats it as terrorist property.
+-- ---------------------------------------------------------------------------
+
+-- s 14(1).  Terrorist property is money or other property likely to be used for the purposes of terrorism (including the resources of a proscribed organisation),
+-- the proceeds of acts of terrorism, and the proceeds of acts carried out for the purposes of terrorism.  The text says "means", so if none of the three limbs
+-- holds the property is not terrorist property and the answer is no (fork F1, reading (a)).
+@export Is this money or other property terrorist property (s 14(1))?
+GIVEN `it is likely to be used for the purposes of terrorism` IS A BOOLEAN @desc Is the money or other property likely to be used for the purposes of terrorism?
+      `it is applied or made available for use by a proscribed organisation` IS A BOOLEAN @desc Is the money or other property applied, or made available (or to be), for use by a proscribed organisation?
+      `it is the proceeds of acts of terrorism` IS A BOOLEAN @desc Is the money or other property the proceeds of the commission of acts of terrorism?
+      `it is the proceeds of acts carried out for the purposes of terrorism` IS A BOOLEAN @desc Is the money or other property the proceeds of acts carried out for the purposes of terrorism?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is this terrorist property` IS
+    `s 14(1) the property is terrorist property` (`my property` `it is likely to be used for the purposes of terrorism` `it is applied or made available for use by a proscribed organisation` `it is the proceeds of acts of terrorism` `it is the proceeds of acts carried out for the purposes of terrorism`)
+
+-- s 14(2)(a).  A reference to proceeds of an act includes property that wholly or partly, directly or indirectly, represents the proceeds.
+@export Is this property the proceeds of the act, or something that represents them (s 14(2)(a))?
+GIVEN `it is the proceeds of the act` IS A BOOLEAN @desc Is the money or other property the proceeds of the act itself?
+      `it represents the proceeds, wholly or partly, directly or indirectly` IS A BOOLEAN @desc Does the money or other property represent the proceeds of the act, wholly or partly, directly or indirectly?
+      `it is a payment or reward in connection with the act` IS A BOOLEAN @desc Is the money or other property a payment or other reward in connection with the commission of the act?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is this the proceeds of the act` IS
+    `s 14(2)(a) the property is proceeds of the act` (`Proceeds facts` OF `it is the proceeds of the act`, `it represents the proceeds, wholly or partly, directly or indirectly`, `it is a payment or reward in connection with the act`)
+
+-- ---------------------------------------------------------------------------
+§§ `Do I commit an offence by what I do with money or other property? (ss 15 to 18 and 22)`
+-- Situation: asked by a fund-raiser, a donor, a holder, a person arranging funds, an insurer, or a person helping to hide property.
+-- ---------------------------------------------------------------------------
+
+-- s 15(1).  A person commits an offence if the person invites another to provide money or other property and intends, or has reasonable cause to
+-- suspect, that it will or may be used for the purposes of terrorism.
+@export Do I commit an offence by inviting another to provide money or other property (s 15(1))?
+GIVEN `I invited another to provide money or other property` IS A BOOLEAN @desc Did you invite another person to provide money or other property?
+      `I intended it to be used for the purposes of terrorism` IS A BOOLEAN @desc Did you intend that it should be used for the purposes of terrorism?
+      `I had reasonable cause to suspect it will or may be used for the purposes of terrorism` IS A BOOLEAN @desc Did you have reasonable cause to suspect that it will or may be used for the purposes of terrorism?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Do I commit an offence by inviting` IS
+    `s 15(1) the person commits an offence by inviting another to provide money or other property` (`Fund-raising act` OF `I invited another to provide money or other property`, FALSE, FALSE, FALSE, FALSE, FALSE) (`Mind about use for terrorism` OF `I intended it to be used for the purposes of terrorism`, FALSE, `I had reasonable cause to suspect it will or may be used for the purposes of terrorism`)
+
+-- s 15(2).  A person commits an offence if the person receives money or other property and intends, or has reasonable cause to suspect, that it may be used for the purposes of terrorism.
+@export Do I commit an offence by receiving money or other property (s 15(2))?
+GIVEN `I received money or other property` IS A BOOLEAN @desc Did you receive money or other property?
+      `I intended it to be used for the purposes of terrorism` IS A BOOLEAN @desc Did you intend that it should be used for the purposes of terrorism?
+      `I had reasonable cause to suspect it may be used for the purposes of terrorism` IS A BOOLEAN @desc Did you have reasonable cause to suspect that it may be used for the purposes of terrorism?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Do I commit an offence by receiving` IS
+    `s 15(2) the person commits an offence by receiving money or other property` (`Fund-raising act` OF FALSE, `I received money or other property`, FALSE, FALSE, FALSE, FALSE) (`Mind about use for terrorism` OF `I intended it to be used for the purposes of terrorism`, FALSE, `I had reasonable cause to suspect it may be used for the purposes of terrorism`)
+
+-- s 15(3) with s 15(4).  A person commits an offence if the person provides money or other property and knows or has reasonable cause to suspect that it will or may be used for the purposes of terrorism.
+-- To provide is to give, lend or otherwise make available, whether or not for consideration.
+@export Do I commit an offence by providing money or other property (s 15(3))?
+GIVEN `I gave it` IS A BOOLEAN @desc Did you give money or other property to another?
+      `I lent it` IS A BOOLEAN @desc Did you lend money or other property to another?
+      `I otherwise made it available` IS A BOOLEAN @desc Did you otherwise make money or other property available to another?
+      `it was for consideration` IS A BOOLEAN @desc Was it given, lent or made available for consideration?
+      `I knew it would be used for the purposes of terrorism` IS A BOOLEAN @desc Did you know that it would be used for the purposes of terrorism?
+      `I had reasonable cause to suspect it will or may be used for the purposes of terrorism` IS A BOOLEAN @desc Did you have reasonable cause to suspect that it will or may be used for the purposes of terrorism?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Do I commit an offence by providing` IS
+    `s 15(3) the person commits an offence by providing money or other property` (`Fund-raising act` OF FALSE, FALSE, `I gave it`, `I lent it`, `I otherwise made it available`, `it was for consideration`) (`Mind about use for terrorism` OF FALSE, `I knew it would be used for the purposes of terrorism`, `I had reasonable cause to suspect it will or may be used for the purposes of terrorism`)
+
+-- s 16(1).  A person commits an offence if the person uses money or other property for the purposes of terrorism.
+@export Do I commit an offence by using money or other property for the purposes of terrorism (s 16(1))?
+GIVEN `I used money or other property for the purposes of terrorism` IS A BOOLEAN @desc Did you use money or other property for the purposes of terrorism?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Do I commit an offence by using` IS
+    `s 16(1) the person commits an offence by using money or other property for the purposes of terrorism` (`Use and possession act` OF `I used money or other property for the purposes of terrorism`, FALSE)
+
+-- s 16(2).  A person commits an offence if the person possesses money or other property and intends, or has reasonable cause to suspect, that it may be used for the purposes of terrorism.
+@export Do I commit an offence by possessing money or other property (s 16(2))?
+GIVEN `I possess money or other property` IS A BOOLEAN @desc Do you possess money or other property?
+      `I intend it to be used for the purposes of terrorism` IS A BOOLEAN @desc Do you intend that it should be used for the purposes of terrorism?
+      `I have reasonable cause to suspect it may be used for the purposes of terrorism` IS A BOOLEAN @desc Do you have reasonable cause to suspect that it may be used for the purposes of terrorism?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Do I commit an offence by possessing` IS
+    `s 16(2) the person commits an offence by possessing money or other property` (`Use and possession act` OF FALSE, `I possess money or other property`) (`Mind about use for terrorism` OF `I intend it to be used for the purposes of terrorism`, FALSE, `I have reasonable cause to suspect it may be used for the purposes of terrorism`)
+
+-- s 17.  A person commits an offence if the person enters into or becomes concerned in an arrangement as a result of which money or other property is or is to be made available to another,
+-- and knows or has reasonable cause to suspect that it will or may be used for the purposes of terrorism.
+@export Do I commit an offence by entering into or becoming concerned in an arrangement that makes money or other property available (s 17)?
+GIVEN `I entered into the arrangement` IS A BOOLEAN @desc Did you enter into an arrangement?
+      `I became concerned in the arrangement` IS A BOOLEAN @desc Did you become concerned in an arrangement?
+      `as a result money or other property is or is to be made available to another` IS A BOOLEAN @desc As a result of the arrangement, is money or other property, or is it to be, made available to another?
+      `I knew it would be used for the purposes of terrorism` IS A BOOLEAN @desc Did you know that it would be used for the purposes of terrorism?
+      `I had reasonable cause to suspect it will or may be used for the purposes of terrorism` IS A BOOLEAN @desc Did you have reasonable cause to suspect that it will or may be used for the purposes of terrorism?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Do I commit an offence by a funding arrangement` IS
+    `s 17 the person commits an offence by a funding arrangement` (`Arrangement act` OF `I entered into the arrangement`, `I became concerned in the arrangement`, `as a result money or other property is or is to be made available to another`) (`Mind about use for terrorism` OF FALSE, `I knew it would be used for the purposes of terrorism`, `I had reasonable cause to suspect it will or may be used for the purposes of terrorism`)
+
+-- s 17A(1).  The insurer under an insurance contract commits an offence if it makes a payment under the contract in respect of money or other property handed over in response to a terrorist demand,
+-- and knows or has reasonable cause to suspect that it was.
+@export Do I, as an insurer, commit an offence by paying under the contract (s 17A(1))?
+GIVEN `I am the insurer under an insurance contract` IS A BOOLEAN @desc Are you the insurer under an insurance contract?
+      `I made a payment under the contract or purportedly under it` IS A BOOLEAN @desc Did you make a payment under the contract, or purportedly under it?
+      `it was in respect of property handed over in response to a demand made for the purposes of terrorism` IS A BOOLEAN @desc Was the payment in respect of money or other property handed over, or to be handed over, in response to a demand made wholly or partly for the purposes of terrorism?
+      `the insurer knows or has reasonable cause to suspect that` IS A BOOLEAN @desc Did the insurer know, or have reasonable cause to suspect, that it was or is to be handed over in response to such a demand?
+      `the person who authorised the payment knows or has reasonable cause to suspect that` IS A BOOLEAN @desc Did the person who authorised the payment for the insurer know, or have reasonable cause to suspect, that it was or is to be handed over in response to such a demand?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Do I commit an offence as an insurer` IS
+    `s 17A(1) the insurer commits an offence by paying under the contract` (`Insurance payment facts` OF `I am the insurer under an insurance contract`, `I made a payment under the contract or purportedly under it`, `it was in respect of property handed over in response to a demand made for the purposes of terrorism`, `the insurer knows or has reasonable cause to suspect that`, `the person who authorised the payment knows or has reasonable cause to suspect that`)
+
+-- s 18(1).  A person commits an offence if the person enters into or becomes concerned in an arrangement which facilitates the retention or control of terrorist property by or on behalf of another person
+-- (by concealment, removal from the jurisdiction, transfer to nominees or otherwise).  The property must be terrorist property under s 14(1); if none of its limbs holds it is not, and the answer is no.
+@export Do I commit an offence by an arrangement that helps another keep or control terrorist property (s 18(1))?
+GIVEN `I entered into the arrangement` IS A BOOLEAN @desc Did you enter into an arrangement?
+      `I became concerned in the arrangement` IS A BOOLEAN @desc Did you become concerned in an arrangement?
+      `it helps retention or control by concealment` IS A BOOLEAN @desc Does the arrangement facilitate retention or control of the property by or on behalf of another person by concealment?
+      `it helps retention or control by removal from the jurisdiction` IS A BOOLEAN @desc Does the arrangement facilitate retention or control of the property by or on behalf of another person by removal from the jurisdiction?
+      `it helps retention or control by transfer to nominees` IS A BOOLEAN @desc Does the arrangement facilitate retention or control of the property by or on behalf of another person by transfer to nominees?
+      `it helps retention or control in any other way` IS A BOOLEAN @desc Does the arrangement facilitate retention or control of the property by or on behalf of another person in any other way?
+      `the property is likely to be used for the purposes of terrorism` IS A BOOLEAN @desc Is the property likely to be used for the purposes of terrorism?
+      `the property is made available for use by a proscribed organisation` IS A BOOLEAN @desc Is the property applied, or made available (or to be), for use by a proscribed organisation?
+      `the property is the proceeds of acts of terrorism` IS A BOOLEAN @desc Is the property the proceeds of the commission of acts of terrorism?
+      `the property is the proceeds of acts carried out for the purposes of terrorism` IS A BOOLEAN @desc Is the property the proceeds of acts carried out for the purposes of terrorism?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Do I commit an offence by a laundering arrangement` IS
+    `s 18(1) the person commits an offence by an arrangement that facilitates retention or control of terrorist property` (`Laundering act` OF `I entered into the arrangement`, `I became concerned in the arrangement`, `it helps retention or control by concealment`, `it helps retention or control by removal from the jurisdiction`, `it helps retention or control by transfer to nominees`, `it helps retention or control in any other way`) (`my property` `the property is likely to be used for the purposes of terrorism` `the property is made available for use by a proscribed organisation` `the property is the proceeds of acts of terrorism` `the property is the proceeds of acts carried out for the purposes of terrorism`)
+
+-- s 18(2).  It is a defence for a person charged with an offence under s 18(1) to prove that the person did not know and had no reasonable cause to suspect that the arrangement related to terrorist property.
+-- A JUST FALSE answer means this section gives no defence on these facts (ruling of 2026-11-05, (b)); it does not say there is no defence at all.
+@export Do I have a defence to a charge under s 18(1) (s 18(2))? A no here means only that this section gives no defence on these facts; another provision may still give one.
+GIVEN `I am charged with an offence under s 18(1)` IS A BOOLEAN @desc Are you charged with an offence under section 18(1)?
+      `I prove that I did not know the arrangement related to terrorist property` IS A BOOLEAN @desc Do you prove that you did not know that the arrangement related to terrorist property?
+      `I prove that I had no reasonable cause to suspect it` IS A BOOLEAN @desc Do you prove that you had no reasonable cause to suspect that the arrangement related to terrorist property?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Do I have a defence under s 18(2)` IS
+    `s 18(2) the person has a defence` `I am charged with an offence under s 18(1)` (`Proof about terrorist property` OF `I prove that I did not know the arrangement related to terrorist property`, `I prove that I had no reasonable cause to suspect it`)
+
+-- s 22.  The highest penalty on conviction of an offence under ss 15 to 18: 14 years on indictment, and on summary conviction six months and a fine up to the statutory maximum.
+-- The statutory maximum is not in the Act, so you give it.  The ceiling is a limit, not the sentence a court will pass.
+@export What is the highest penalty for an offence under ss 15 to 18 (s 22)?
+GIVEN `how I was or would be convicted` IS A `Conviction route` @desc How were you, or would you be, convicted: on indictment or summarily?
+      `the statutory maximum fine` IS A NUMBER @desc What is the statutory maximum fine, in pounds? (It is set outside the Act.)
+GIVETH A `Penalty ceiling`
+DECIDE `What is the highest penalty for ss 15 to 18` IS
+    `s 22 the ceiling of the penalty for an offence under any of sections 15 to 18` `how I was or would be convicted` `the statutory maximum fine`
+
+-- ---------------------------------------------------------------------------
+§§ `Telling the police: must I, may I, am I protected? (ss 19 to 21ZC)`
+-- Situation: asked by anyone who has come to believe or suspect, at work or in business, that money or other property is terrorist property or that someone has committed an offence under ss 15 to 18.
+-- ---------------------------------------------------------------------------
+
+-- s 19(1).  Section 19 applies where a person believes or suspects that another has committed an offence under ss 15 to 18 and bases the belief on information that came in the course of a trade, profession,
+-- business or employment.  It does not apply to information that came in the course of a business in the regulated sector (s 19(1A)).
+@export Do I meet the conditions in section 19(1) for the duty to tell a constable (s 19(1))?
+GIVEN `I believe or suspect that another person has committed an offence under any of sections 15 to 18` IS A BOOLEAN @desc Do you believe or suspect that another person has committed an offence under any of sections 15 to 18?
+      `my belief or suspicion is based on information that came in the course of a trade, profession or business` IS A BOOLEAN @desc Is your belief or suspicion based on information that came to you in the course of a trade, profession or business?
+      `my belief or suspicion is based on information that came in the course of my employment` IS A BOOLEAN @desc Is your belief or suspicion based on information that came to you in the course of your employment (paid or unpaid)?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Does section 19 apply to me` IS
+    `s 19(1) this section applies to the person` (`Information facts` OF `I believe or suspect that another person has committed an offence under any of sections 15 to 18`, `my belief or suspicion is based on information that came in the course of a trade, profession or business`, `my belief or suspicion is based on information that came in the course of my employment`, FALSE)
+
+-- s 19(1A).  Section 19 does not apply if the information came to the person in the course of a business in the regulated sector.
+@export Is section 19 switched off because my information came from a business in the regulated sector (s 19(1A))?
+GIVEN `the information came to me in the course of a business in the regulated sector` IS A BOOLEAN @desc Did the information come to you in the course of a business in the regulated sector? (Schedule 3A, which is not among the sources, decides what is one.)
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is section 19 switched off` IS
+    `s 19(1A) this section does not apply to the person` `the information came to me in the course of a business in the regulated sector`
+
+-- s 19(2).  A person to whom s 19 applies commits an offence if the person does not disclose to a constable, as soon as is reasonably practicable, the belief or suspicion and the information on which it is based.
+@export Do I commit an offence by not telling a constable (s 19(2))?
+GIVEN `I believe or suspect that another person has committed an offence under any of sections 15 to 18` IS A BOOLEAN @desc Do you believe or suspect that another person has committed an offence under any of sections 15 to 18?
+      `my belief or suspicion is based on information that came in the course of a trade, profession or business` IS A BOOLEAN @desc Is your belief or suspicion based on information that came to you in the course of a trade, profession or business?
+      `my belief or suspicion is based on information that came in the course of my employment` IS A BOOLEAN @desc Is your belief or suspicion based on information that came to you in the course of your employment (paid or unpaid)?
+      `the information came in the course of a business in the regulated sector` IS A BOOLEAN @desc Did the information come to you in the course of a business in the regulated sector?
+      `I told a constable my belief or suspicion` IS A BOOLEAN @desc Have you told a constable your belief or suspicion?
+      `I told a constable the information it is based on` IS A BOOLEAN @desc Have you told a constable the information on which it is based?
+      `I did so as soon as was reasonably practicable` IS A BOOLEAN @desc Did you do so as soon as was reasonably practicable?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Do I commit an offence under s 19(2)` IS
+    `s 19(2) the person commits an offence by not disclosing to a constable` (`Information facts` OF `I believe or suspect that another person has committed an offence under any of sections 15 to 18`, `my belief or suspicion is based on information that came in the course of a trade, profession or business`, `my belief or suspicion is based on information that came in the course of my employment`, `the information came in the course of a business in the regulated sector`) (`Disclosure facts` OF `I told a constable my belief or suspicion`, `I told a constable the information it is based on`, `I did so as soon as was reasonably practicable`)
+
+-- s 19(3).  It is a defence for a person charged with an offence under s 19(2) to prove that the person had a reasonable excuse for not making the disclosure.
+-- A JUST FALSE answer means this section gives no defence on these facts (ruling of 2026-11-05, (b)); it does not say there is no defence at all.
+@export Do I have a defence of reasonable excuse to a charge under s 19(2) (s 19(3))? A no here means only that this section gives no defence on these facts; another provision may still give one.
+GIVEN `I am charged with an offence under s 19(2)` IS A BOOLEAN @desc Are you charged with an offence under section 19(2)?
+      `I prove that I had a reasonable excuse for not making the disclosure` IS A BOOLEAN @desc Do you prove that you had a reasonable excuse for not making the disclosure?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Do I have a defence under s 19(3)` IS
+    `s 19(3) the person has a defence` `I am charged with an offence under s 19(2)` `I prove that I had a reasonable excuse for not making the disclosure`
+
+-- s 19(4).  An employee charged under s 19(2) has a defence if the employer had established a procedure for disclosures and the employee disclosed in accordance with it.
+-- A JUST FALSE answer means this section gives no defence on these facts (ruling of 2026-11-05, (b)); it does not say there is no defence at all.
+@export Do I have a defence because I told my employer under its procedure (s 19(4))? A no here means only that this section gives no defence on these facts; another provision may still give one.
+GIVEN `I am in employment` IS A BOOLEAN @desc Are you in employment (paid or unpaid)?
+      `my employer has established a procedure for the making of disclosures` IS A BOOLEAN @desc Has your employer established a procedure for the making of disclosures of the kind s 19(2) requires?
+      `I am charged with an offence under s 19(2)` IS A BOOLEAN @desc Are you charged with an offence under section 19(2)?
+      `I disclosed the matters in accordance with the procedure` IS A BOOLEAN @desc Did you disclose the matters in accordance with the procedure?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Do I have a defence under s 19(4)` IS
+    `s 19(4) the person has a defence` (`Procedure facts` OF `I am in employment`, `my employer has established a procedure for the making of disclosures`, `I am charged with an offence under s 19(2)`, `I disclosed the matters in accordance with the procedure`)
+
+-- s 19(5).  Section 19(2) does not require a professional legal adviser to disclose information obtained in privileged circumstances, or a belief or suspicion based on it.
+@export Am I, a legal adviser, required to disclose privileged information (s 19(5))?
+GIVEN `I am a professional legal adviser` IS A BOOLEAN @desc Are you a professional legal adviser?
+      `I obtained the information in privileged circumstances` IS A BOOLEAN @desc Did you obtain the information in privileged circumstances?
+      `my belief or suspicion is based on information obtained in privileged circumstances` IS A BOOLEAN @desc Is your belief or suspicion based on information obtained in privileged circumstances?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Does section 19(2) require me to disclose` IS
+    `s 19(5) subsection (2) requires the professional legal adviser to disclose` `I am a professional legal adviser` (JUST `I obtained the information in privileged circumstances`) (JUST `my belief or suspicion is based on information obtained in privileged circumstances`)
+
+-- s 20(1).  A person may disclose to a constable a suspicion or belief that money or other property is terrorist property or derived from it, or a matter on which it is based, despite any restriction on disclosure.
+@export May I tell a constable what I suspect, despite a duty of confidence (s 20(1))?
+GIVEN `what I would tell is a suspicion or belief that money or other property is terrorist property or is derived from terrorist property` IS A BOOLEAN @desc Is what you would tell a suspicion or belief that money or other property is terrorist property or is derived from terrorist property?
+      `what I would tell is a matter on which the suspicion or belief is based` IS A BOOLEAN @desc Is what you would tell a matter on which that suspicion or belief is based?
+      `I would tell it to a constable` IS A BOOLEAN @desc Would you tell it to a constable?
+GIVETH A MAYBE BOOLEAN
+DECIDE `May I tell a constable` IS
+    `s 20(1) the person may disclose to a constable` `what I would tell is a suspicion or belief that money or other property is terrorist property or is derived from terrorist property` `what I would tell is a matter on which the suspicion or belief is based` `I would tell it to a constable`
+
+-- s 21(1).  A person does not commit an offence under ss 15 to 18 by acting with the express consent of a constable.
+@export Do I avoid an offence under ss 15 to 18 by acting with a constable's express consent (s 21(1))?
+GIVEN `I am acting with the express consent of a constable` IS A BOOLEAN @desc Are you acting with the express consent of a constable?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Do I avoid an offence by consent` IS
+    `s 21(1) the person does not commit an offence under any of sections 15 to 18 by acting with the express consent of a constable` `I am acting with the express consent of a constable`
+
+-- s 21(2) to (4).  A person does not commit an offence under ss 15 to 18 by involvement in a transaction if the person tells a constable about the suspicion on his own initiative, after becoming concerned,
+-- as soon as reasonably practicable, and does not carry on after a constable forbids it.
+@export Do I avoid an offence by telling a constable about my involvement (s 21(2) to (4))?
+GIVEN `I am involved in a transaction or arrangement relating to money or other property` IS A BOOLEAN @desc Are you involved in a transaction or arrangement relating to money or other property?
+      `I told a constable my suspicion or belief that the money or other property is terrorist property` IS A BOOLEAN @desc Have you told a constable your suspicion or belief that the money or other property is terrorist property?
+      `I told a constable the information it is based on` IS A BOOLEAN @desc Have you told a constable the information on which it is based?
+      `I told them after I became concerned in the transaction` IS A BOOLEAN @desc Did you tell them after you became concerned in the transaction?
+      `I told them on my own initiative` IS A BOOLEAN @desc Did you tell them on your own initiative?
+      `I told them as soon as was reasonably practicable` IS A BOOLEAN @desc Did you tell them as soon as was reasonably practicable?
+      `a constable forbade me to continue` IS A BOOLEAN @desc Did a constable forbid you to continue your involvement?
+      `I continued` IS A BOOLEAN @desc Did you continue your involvement?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Do I avoid an offence by telling a constable` IS
+    `s 21(2) the person does not commit an offence under any of sections 15 to 18 by involvement in the transaction` (`Cooperation facts` OF `I am involved in a transaction or arrangement relating to money or other property`, `I told a constable my suspicion or belief that the money or other property is terrorist property`, `I told a constable the information it is based on`, `I told them after I became concerned in the transaction`, `I told them on my own initiative`, `I told them as soon as was reasonably practicable`, `a constable forbade me to continue`, `I continued`)
+
+-- s 21(5).  A defence for a person charged under ss 15(2), 15(3) and 16 to 18 (and 17A, which lies inside "16 to 18": fork F7) who intended to make such a disclosure and has a reasonable excuse for not having done so.
+-- A JUST FALSE answer means this section gives no defence on these facts (ruling of 2026-11-05, (b)); it does not say there is no defence at all.
+@export Do I have a defence because I meant to tell a constable (s 21(5))? A no here means only that this section gives no defence on these facts; another provision may still give one.
+GIVEN `the offence I am charged with` IS AN `Offence of Part III` @desc Which offence are you charged with?
+      `I intended to make a disclosure of the kind in s 21(2) and (3)` IS A BOOLEAN @desc Did you intend to make a disclosure of the kind in s 21(2) and (3)?
+      `I have a reasonable excuse for not having done so` IS A BOOLEAN @desc Do you have a reasonable excuse for your failure to do so?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Do I have a defence under s 21(5)` IS
+    `s 21(5) the person has a defence` `the offence I am charged with` `I intended to make a disclosure of the kind in s 21(2) and (3)` `I have a reasonable excuse for not having done so`
+
+-- s 21ZA(1).  A person does not commit an offence under ss 15 to 18 by involvement in a transaction if, before becoming involved, the person disclosed to an authorised officer and has the officer's consent.
+@export Do I avoid an offence because I disclosed first and have an authorised officer's consent (s 21ZA(1))?
+GIVEN `I am involved in a transaction or arrangement relating to money or other property` IS A BOOLEAN @desc Are you involved in a transaction or arrangement relating to money or other property?
+      `before becoming involved I disclosed my suspicion and the information to an authorised officer` IS A BOOLEAN @desc Before becoming involved, did you disclose to an authorised officer your suspicion or belief that the money or other property is terrorist property and the information it is based on?
+      `I have the authorised officer's consent to becoming involved` IS A BOOLEAN @desc Do you have the authorised officer's consent to becoming involved?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Do I avoid an offence by prior consent` IS
+    `s 21ZA(1) the person does not commit an offence under any of sections 15 to 18 by involvement, having disclosed first and had consent` (`Prior consent facts` OF `I am involved in a transaction or arrangement relating to money or other property`, `before becoming involved I disclosed my suspicion and the information to an authorised officer`, `I have the authorised officer's consent to becoming involved`)
+
+-- s 21ZA(3) with s 21ZA(4).  The notice period is the seven working days after the first working day following the disclosure.  A working day is not a Saturday, Sunday, Christmas Day, Good Friday or a bank holiday.
+-- The bank holidays and Good Friday are not in the Act, so you list them (fork F4).
+@export On what day does the notice period end after my disclosure to an authorised officer (s 21ZA(3))?
+GIVEN `the day I made the disclosure` IS A DATE @desc On what day did you make the disclosure to an authorised officer?
+      `the bank holidays and Good Fridays in the weeks after that day` IS A LIST OF DATE @desc Which days in the weeks after your disclosure are bank holidays or Good Friday where you are? (List the dates; Christmas Day, Saturdays and Sundays need not be listed.)
+GIVETH A DATE
+DECIDE `On what day does the notice period end` IS
+    `s 21ZA(3) the last day of the notice period` `the day I made the disclosure` `the bank holidays and Good Fridays in the weeks after that day`
+
+-- s 21ZA(2).  A person is treated as having an authorised officer's consent if, before the end of the notice period, the person does not receive notice that consent is refused.
+@export Am I treated as having the authorised officer's consent (s 21ZA(2))?
+GIVEN `the day I made the disclosure` IS A DATE @desc On what day did you make the disclosure to an authorised officer?
+      `the bank holidays and Good Fridays in the weeks after that day` IS A LIST OF DATE @desc Which days in the weeks after your disclosure are bank holidays or Good Friday where you are?
+      `I received notice that consent is refused` IS A BOOLEAN @desc Have you received notice that consent is refused?
+      `the day I received that notice` IS A DATE @desc On what day did you receive it? (Any date if you did not receive one.)
+      `the day I am asking about` IS A DATE @desc For which day are you asking?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Am I treated as having consent` IS
+    `s 21ZA(2) the person is treated as having the authorised officer's consent` `the day I made the disclosure` `the bank holidays and Good Fridays in the weeks after that day` refusal `the day I am asking about`
+    WHERE
+        refusal MEANS IF `I received notice that consent is refused` THEN JUST `the day I received that notice` ELSE NOTHING
+
+-- s 21ZB(1) to (3).  A person who has become involved and discloses afterwards does not commit an offence if there is a reasonable excuse for not disclosing before, the disclosure is on the person's own initiative
+-- and as soon as reasonably practicable, and the person does not carry on after an authorised officer forbids it.
+@export Do I avoid an offence by disclosing after I became involved (s 21ZB(1))?
+GIVEN `I am involved in a transaction or arrangement relating to money or other property` IS A BOOLEAN @desc Are you involved in a transaction or arrangement relating to money or other property?
+      `after becoming involved I disclosed my suspicion and the information to an authorised officer` IS A BOOLEAN @desc After becoming involved, did you disclose to an authorised officer your suspicion or belief and the information it is based on?
+      `I had a reasonable excuse for not disclosing before becoming involved` IS A BOOLEAN @desc Did you have a reasonable excuse for not disclosing before becoming involved?
+      `I disclosed on my own initiative` IS A BOOLEAN @desc Did you make the disclosure on your own initiative?
+      `I disclosed as soon as it was reasonably practicable` IS A BOOLEAN @desc Did you make it as soon as it was reasonably practicable?
+      `an authorised officer forbade me to continue` IS A BOOLEAN @desc Did an authorised officer forbid you to continue your involvement?
+      `I continued` IS A BOOLEAN @desc Did you continue your involvement?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Do I avoid an offence by a later disclosure` IS
+    `s 21ZB(1) the person does not commit an offence under any of sections 15 to 18 by involvement, having disclosed afterwards` (`Later disclosure facts` OF `I am involved in a transaction or arrangement relating to money or other property`, `after becoming involved I disclosed my suspicion and the information to an authorised officer`, `I had a reasonable excuse for not disclosing before becoming involved`, `I disclosed on my own initiative`, `I disclosed as soon as it was reasonably practicable`, `an authorised officer forbade me to continue`, `I continued`)
+
+-- s 21ZC.  It is a defence for a person charged under ss 15 to 18 to prove that the person intended to make a disclosure of the kind in s 21ZA or 21ZB and has a reasonable excuse for not having done so.
+-- A JUST FALSE answer means this section gives no defence on these facts (ruling of 2026-11-05, (b)); it does not say there is no defence at all.
+@export Do I have a defence because I meant to disclose to an authorised officer (s 21ZC)? A no here means only that this section gives no defence on these facts; another provision may still give one.
+GIVEN `I am charged with an offence under any of sections 15 to 18` IS A BOOLEAN @desc Are you charged with an offence under any of sections 15 to 18?
+      `I prove that I intended to make a disclosure of the kind in s 21ZA or s 21ZB` IS A BOOLEAN @desc Do you prove that you intended to make a disclosure of the kind in section 21ZA or 21ZB?
+      `I prove that I have a reasonable excuse for the failure to do so` IS A BOOLEAN @desc Do you prove that you have a reasonable excuse for the failure to do so?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Do I have a defence under s 21ZC` IS
+    `s 21ZC the person has a defence` `I am charged with an offence under any of sections 15 to 18` `I prove that I intended to make a disclosure of the kind in s 21ZA or s 21ZB` `I prove that I have a reasonable excuse for the failure to do so`
+
+-- ---------------------------------------------------------------------------
+§§ `A business in the regulated sector: what must I disclose, to whom and when? (ss 21A to 21C)`
+-- Situation: asked by a bank, a financial institution, a legal or accounting adviser or another business in the regulated sector.
+-- ---------------------------------------------------------------------------
+
+-- s 21A(1) and (5), gathered by hand (E1 option B, fork F5).  A person in the regulated sector commits an offence if (1) the person knows or suspects, or has reasonable grounds for knowing or suspecting, that another has committed or attempted
+-- an offence under ss 15 to 18, (2) the information came in the course of a business in the regulated sector, and (3) the person does not disclose it to a constable or a nominated officer as soon as is practicable.
+-- The person does not commit the offence with a reasonable excuse, or as an adviser holding information in privileged circumstances, or as an assistant to such an adviser.
+@export Do I commit an offence by not disclosing in the regulated sector (s 21A)?
+GIVEN `I know or suspect that another person has committed or attempted to commit an offence under any of sections 15 to 18` IS A BOOLEAN @desc Do you know or suspect that another person has committed or attempted to commit an offence under any of sections 15 to 18?
+      `I have reasonable grounds for knowing or suspecting it` IS A BOOLEAN @desc Do you have reasonable grounds for knowing or suspecting that another person has committed or attempted to commit such an offence?
+      `the information came to me in the course of a business in the regulated sector` IS A BOOLEAN @desc Did the information come to you in the course of a business in the regulated sector?
+      `I disclosed it to a constable or a nominated officer as soon as was practicable` IS A BOOLEAN @desc Did you disclose it to a constable or a nominated officer as soon as was practicable after it came to you?
+      `I have a reasonable excuse for not disclosing` IS A BOOLEAN @desc Do you have a reasonable excuse for not disclosing it?
+      `I am a professional legal adviser or a relevant professional adviser` IS A BOOLEAN @desc Are you a professional legal adviser or a relevant professional adviser?
+      `it came to me in privileged circumstances` IS A BOOLEAN @desc Did the information come to you in privileged circumstances?
+      `I am employed by or in partnership with such an adviser to assist them` IS A BOOLEAN @desc Are you employed by, or in partnership with, a professional legal adviser or relevant professional adviser to provide the adviser with assistance or support?
+      `it came to me in connection with that assistance` IS A BOOLEAN @desc Did the information come to you in connection with providing that assistance or support?
+      `it came to the adviser in privileged circumstances` IS A BOOLEAN @desc Did the information come to the adviser in privileged circumstances?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Do I commit an offence under s 21A` IS
+    `s 21A(1) and (5) the person commits an offence under section 21A` (`Regulated sector facts` OF `I know or suspect that another person has committed or attempted to commit an offence under any of sections 15 to 18`, `I have reasonable grounds for knowing or suspecting it`, `the information came to me in the course of a business in the regulated sector`, `I disclosed it to a constable or a nominated officer as soon as was practicable`) (`Exception facts` OF `I have a reasonable excuse for not disclosing`, `I am a professional legal adviser or a relevant professional adviser`, `it came to me in privileged circumstances`) (`Assistance facts` OF `I am employed by or in partnership with such an adviser to assist them`, `it came to me in connection with that assistance`, `it came to the adviser in privileged circumstances`)
+
+-- ss 19(1), 19(5), 21A(2), 21A(3) and 21A(5), gathered by hand (E1 option B, fork F5).  What the Act requires you to tell, and to whom, before you have told anyone: a duty to tell a constable as soon as is reasonably practicable (s 19(2)),
+-- or a constable or nominated officer as soon as is practicable (s 21A(4)), or no duty under either section, or the Act does not answer.
+@export What must I tell the police, and to whom, and when (ss 19(2) and 21A(4))?
+GIVEN `I know or suspect that another person has committed an offence under any of sections 15 to 18` IS A BOOLEAN @desc Do you know, suspect or believe that another person has committed or attempted to commit an offence under any of sections 15 to 18?
+      `I have reasonable grounds for knowing or suspecting it` IS A BOOLEAN @desc Do you have reasonable grounds for knowing or suspecting it?
+      `the information came to me in the course of a business in the regulated sector` IS A `My answer` @desc Did the information come to you in the course of a business in the regulated sector? (Schedule 3A decides what is a business in the regulated sector; answer "I am not sure" if you cannot tell.)
+      `it came to me in the course of a trade, profession or business` IS A BOOLEAN @desc Did it come to you in the course of a trade, profession or business?
+      `it came to me in the course of my employment` IS A BOOLEAN @desc Did it come to you in the course of your employment (paid or unpaid)?
+      `I have a reasonable excuse for not disclosing` IS A BOOLEAN @desc Do you have a reasonable excuse for not disclosing it?
+      `I am a professional legal adviser or a relevant professional adviser` IS A BOOLEAN @desc Are you a professional legal adviser or a relevant professional adviser?
+      `it came to me in privileged circumstances` IS A BOOLEAN @desc Did the information come to you in privileged circumstances?
+      `I am employed by or in partnership with such an adviser to assist them` IS A BOOLEAN @desc Are you employed by, or in partnership with, an adviser to provide the adviser with assistance or support?
+      `it came to me in connection with that assistance` IS A BOOLEAN @desc Did the information come to you in connection with providing that assistance?
+      `it came to the adviser in privileged circumstances` IS A BOOLEAN @desc Did the information come to the adviser in privileged circumstances?
+      `I am a professional legal adviser` IS A BOOLEAN @desc Are you a professional legal adviser (for the duty in section 19)?
+GIVETH A `What I must tell and to whom`
+DECIDE `What must I tell and to whom` IS
+    CONSIDER regulatedFact
+    WHEN JUST TRUE THEN regulatedAnswer
+    WHEN JUST FALSE THEN otherAnswer
+    -- NOTHING-kind (points outside the text): whether the information came in the course of a business in the regulated sector turns on Schedule 3A, which is not among the sources; s 19(1A) and s 21A(3) both turn on it
+    WHEN NOTHING THEN `the Act does not answer on these facts`
+    WHERE
+        regulatedFact MEANS `what I say, as a fact` `the information came to me in the course of a business in the regulated sector`
+        sectorFacts MEANS `Regulated sector facts` OF `I know or suspect that another person has committed an offence under any of sections 15 to 18`, `I have reasonable grounds for knowing or suspecting it`, TRUE, FALSE
+        exceptionFacts MEANS `Exception facts` OF `I have a reasonable excuse for not disclosing`, `I am a professional legal adviser or a relevant professional adviser`, `it came to me in privileged circumstances`
+        assistFacts MEANS `Assistance facts` OF `I am employed by or in partnership with such an adviser to assist them`, `it came to me in connection with that assistance`, `it came to the adviser in privileged circumstances`
+        bothConditions MEANS `the conjunction` (`s 21A(2) the first condition is satisfied` sectorFacts) `and also` (`s 21A(3) the second condition is satisfied` sectorFacts)
+        excused MEANS `s 21A(5) the person does not commit an offence under section 21A` exceptionFacts assistFacts
+        regulatedAnswer MEANS
+            BRANCH
+                IF excused EQUALS JUST TRUE THEN `not obliged under s 19 or s 21A`
+                IF bothConditions EQUALS JUST TRUE THEN `to a constable or a nominated officer as soon as is practicable (s 21A(4))`
+                IF bothConditions EQUALS JUST FALSE THEN `not obliged under s 19 or s 21A`
+                -- (not reached on these inputs: the two conditions are worked out from plain answers; kept so that the branch list is total)
+                OTHERWISE `the Act does not answer on these facts`
+        informationFacts MEANS `Information facts` OF `I know or suspect that another person has committed an offence under any of sections 15 to 18`, `it came to me in the course of a trade, profession or business`, `it came to me in the course of my employment`, FALSE
+        applies MEANS `s 19(1) this section applies to the person` informationFacts
+        adviserDoesNotHaveToDisclose MEANS `s 19(5) subsection (2) requires the professional legal adviser to disclose` `I am a professional legal adviser` (JUST `it came to me in privileged circumstances`) (JUST `it came to me in privileged circumstances`)
+        otherAnswer MEANS
+            BRANCH
+                IF applies EQUALS JUST TRUE AND adviserDoesNotHaveToDisclose EQUALS JUST FALSE THEN `not obliged under s 19 or s 21A`
+                IF applies EQUALS JUST TRUE THEN `to a constable as soon as is reasonably practicable (s 19(2))`
+                IF applies EQUALS JUST FALSE THEN `not obliged under s 19 or s 21A`
+                -- (not reached on these inputs: s 19(1) answers JUST TRUE or JUST FALSE; kept so that the branch list is total)
+                OTHERWISE `the Act does not answer on these facts`
+
+-- s 21A(15).  A relevant professional adviser is an accountant, auditor or tax adviser who is a member of a professional body that tests competence for admission and sets and enforces standards.
+@export Am I a relevant professional adviser (s 21A(15))?
+GIVEN `I am an accountant, auditor or tax adviser` IS A BOOLEAN @desc Are you an accountant, auditor or tax adviser?
+      `I am a member of a professional body established for accountants, auditors or tax advisers` IS A BOOLEAN @desc Are you a member of a professional body established for accountants, auditors or tax advisers (as the case may be)?
+      `the body tests the competence of those seeking admission` IS A BOOLEAN @desc Does the body make provision for testing the competence of those seeking admission to membership, as a condition for admission?
+      `the body imposes and maintains standards and sanctions` IS A BOOLEAN @desc Does the body make provision for imposing and maintaining professional and ethical standards for its members, and sanctions for non-compliance?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Am I a relevant professional adviser` IS
+    `s 21A(15) the person is a relevant professional adviser` (`Professional adviser facts` OF `I am an accountant, auditor or tax adviser`, `I am a member of a professional body established for accountants, auditors or tax advisers`, `the body tests the competence of those seeking admission`, `the body imposes and maintains standards and sanctions`)
+
+-- s 21B(1).  A disclosure that satisfies the three conditions of s 21B is not to be taken to breach any restriction on the disclosure of information.
+@export Is my disclosure protected from breaching a duty of confidence (s 21B)?
+GIVEN `the information came to me in the course of a business in the regulated sector` IS A BOOLEAN @desc Did the information come to you in the course of a business in the regulated sector?
+      `it causes me to know or suspect that another person has committed or attempted to commit an offence under any of sections 15 to 18` IS A BOOLEAN @desc Does the information cause you to know or suspect that another person has committed or attempted to commit an offence under any of sections 15 to 18?
+      `it gives me reasonable grounds for knowing or suspecting it` IS A BOOLEAN @desc Does the information give you reasonable grounds for knowing or suspecting that?
+      `my disclosure is made to a constable or a nominated officer` IS A BOOLEAN @desc Is the disclosure made to a constable or a nominated officer?
+      `I make it as soon as is practicable` IS A BOOLEAN @desc Do you make it as soon as is practicable after the information came to you?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is my disclosure protected` IS
+    `s 21B(1) the disclosure is not to be taken to breach any restriction on the disclosure of information` (`Protected disclosure facts` OF `the information came to me in the course of a business in the regulated sector`, `it causes me to know or suspect that another person has committed or attempted to commit an offence under any of sections 15 to 18`, `it gives me reasonable grounds for knowing or suspecting it`, `my disclosure is made to a constable or a nominated officer`, `I make it as soon as is practicable`)
+
+-- ---------------------------------------------------------------------------
+§§ `Passing information to another business in the regulated sector (ss 21CA to 21CF)`
+-- Situation: asked by a business in the regulated sector that has been asked, or wants to ask, to share information with another such business about a suspected terrorist financing offence.
+-- ---------------------------------------------------------------------------
+
+-- s 21CA(1).  A may disclose information to other persons if conditions 1 to 4 are met and, where applicable, condition 5.  Condition 5 does not apply where a constable made the request (fork F8).
+@export May I disclose information to another business in the regulated sector (s 21CA(1))?
+GIVEN `I carry on a business in the regulated sector as a relevant undertaking` IS A BOOLEAN @desc Do you carry on a business in the regulated sector as a relevant undertaking?
+      `the information came to me in the course of that business` IS A BOOLEAN @desc Did the information come to you in the course of carrying on that business?
+      `each recipient also carries on a business in the regulated sector as a relevant undertaking` IS A BOOLEAN @desc Does each person to whom you would disclose it also carry on a business in the regulated sector as a relevant undertaking?
+      `a constable asked me to disclose it` IS A BOOLEAN @desc Has a constable asked you to make the disclosure?
+      `a recipient asked me to disclose it` IS A BOOLEAN @desc Has the person to whom it would be disclosed (or one of them) asked you to make it?
+      `the required notification has been made to a constable` IS A BOOLEAN @desc Before you make the disclosure, has the required notification been made to a constable?
+      `I am satisfied it will or may assist with a suspicion about a terrorist financing offence` IS A BOOLEAN @desc Are you satisfied that the disclosure will or may assist in determining any matter in connection with a suspicion that a person is involved in the commission of a terrorist financing offence?
+      `I am satisfied it will or may assist in identifying terrorist property` IS A BOOLEAN @desc Are you satisfied that the disclosure will or may assist in determining any matter in connection with the identification of terrorist property or of its movement or use?
+      `the person who asked notified a constable that the request was to be made` IS A BOOLEAN @desc Before making the disclosure request, did the person making it (or one of them) notify a constable that the request was to be made?
+GIVETH A MAYBE BOOLEAN
+DECIDE `May I disclose under s 21CA` IS
+    `s 21CA(1) A may disclose information to one or more other persons` (`Condition 1 facts` OF `I carry on a business in the regulated sector as a relevant undertaking`, `the information came to me in the course of that business`, `each recipient also carries on a business in the regulated sector as a relevant undertaking`) (`Request facts` OF `a constable asked me to disclose it`, `a recipient asked me to disclose it`) `the required notification has been made to a constable` (`Assist facts` OF `I am satisfied it will or may assist with a suspicion about a terrorist financing offence`, `I am satisfied it will or may assist in identifying terrorist property`) `the person who asked notified a constable that the request was to be made`
+
+-- s 21CC(2).  The making of a required notification in good faith is treated as satisfying any requirement to make the required disclosure (subject to the limits in s 21CD).
+@export Does my notification to a constable satisfy my duty to make the required disclosure (s 21CC(2))?
+GIVEN `I made the required notification` IS A BOOLEAN @desc Did you make the required notification to a constable?
+      `I made it in good faith` IS A BOOLEAN @desc Did you make it in good faith?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Does my notification satisfy the duty` IS
+    `s 21CC(2) the required notification satisfies the requirement to make the required disclosure` `I made the required notification` `I made it in good faith`
+
+-- s 21CC(7) with s 21CC(8).  The applicable period for a joint disclosure report: whatever period a constable set, if a constable asked; otherwise 28 days beginning with the day of the notification, which a constable may lengthen or shorten by written notice.
+@export By what day must a joint disclosure report be sent (s 21CC(7))?
+GIVEN `who asked me to disclose` IS A `Who asked for the disclosure` @desc Who asked you to make the disclosure: a constable, or a person mentioned in s 21CA(3)(b)?
+      `the day the required notification was made` IS A DATE @desc On what day was the required notification made?
+      `a constable varied the 28 days by written notice` IS A BOOLEAN @desc Did a constable vary the period of 28 days by written notice to the person who made the required notification?
+      `a constable gave me notice of a different period that was not in writing` IS A BOOLEAN @desc Did a constable give you notice of a different period for the report that was not in writing (for example by telephone)?
+      `the new length in days` IS A NUMBER @desc If so, what length in days did the constable set? (Any number if not.)
+      `a constable set a period when making the request` IS A BOOLEAN @desc If a constable made the request, did the constable specify a period?
+      `the last day of the period the constable set` IS A DATE @desc If so, on what day does it end? (Any date if not.)
+GIVETH A MAYBE DATE
+DECIDE `By what day must the report be sent` IS
+    BRANCH
+        -- NOTHING-kind (limited by its own wording): "by giving written notice" (s 21CC(8): the Act gives a constable the power to vary the 28 days by written notice and says nothing of any other notice, so the end date is not answered)
+        IF oralNotice AND (oralEffect EQUALS NOTHING) THEN NOTHING
+        OTHERWISE calculated
+    WHERE
+        oralNotice MEANS `a constable gave me notice of a different period that was not in writing`
+        oralEffect MEANS `s 21CC(8) the notice varies the period of 28 days` TRUE FALSE TRUE
+        calculated MEANS `s 21CC(7) the last day of the applicable period` `who asked me to disclose` `the day the required notification was made` (`s 21CC(8) the length in days of the period of 28 days` variation) specified
+        variation MEANS IF `a constable varied the 28 days by written notice` THEN JUST `the new length in days` ELSE NOTHING
+        specified MEANS IF `a constable set a period when making the request` THEN JUST `the last day of the period the constable set` ELSE NOTHING
+
+-- s 21CC(4)(d).  A joint disclosure report must be sent to the constable before the end of the applicable period; a report sent on the last day is in time (fork F9).
+@export Was my joint disclosure report sent in time (s 21CC(4)(d))?
+GIVEN `the day I sent the report` IS A DATE @desc On what day did you send the joint disclosure report to the constable?
+      `who asked me to disclose` IS A `Who asked for the disclosure` @desc Who asked you to make the disclosure: a constable, or a person mentioned in s 21CA(3)(b)?
+      `the day the required notification was made` IS A DATE @desc On what day was the required notification made?
+      `a constable varied the 28 days by written notice` IS A BOOLEAN @desc Did a constable vary the period of 28 days by written notice to the person who made the required notification?
+      `a constable gave me notice of a different period that was not in writing` IS A BOOLEAN @desc Did a constable give you notice of a different period for the report that was not in writing (for example by telephone)?
+      `the new length in days` IS A NUMBER @desc If so, what length in days did the constable set? (Any number if not.)
+      `a constable set a period when making the request` IS A BOOLEAN @desc If a constable made the request, did the constable specify a period?
+      `the last day of the period the constable set` IS A DATE @desc If so, on what day does it end? (Any date if not.)
+GIVETH A MAYBE BOOLEAN
+DECIDE `Was my report sent in time` IS
+    BRANCH
+        -- NOTHING-kind (limited by its own wording): "by giving written notice" (s 21CC(8): the Act says nothing of a variation that is not written, so whether the report is in time is not answered)
+        IF oralNotice AND (oralEffect EQUALS NOTHING) THEN NOTHING
+        OTHERWISE calculated
+    WHERE
+        oralNotice MEANS `a constable gave me notice of a different period that was not in writing`
+        oralEffect MEANS `s 21CC(8) the notice varies the period of 28 days` TRUE FALSE TRUE
+        calculated MEANS `s 21CC(4)(d) the report is sent to the constable before the end of the applicable period` `the day I sent the report` (`s 21CC(7) the last day of the applicable period` `who asked me to disclose` `the day the required notification was made` (`s 21CC(8) the length in days of the period of 28 days` variation) specified)
+        variation MEANS IF `a constable varied the 28 days by written notice` THEN JUST `the new length in days` ELSE NOTHING
+        specified MEANS IF `a constable set a period when making the request` THEN JUST `the last day of the period the constable set` ELSE NOTHING
+
+-- s 21CD(9).  If a joint disclosure report is not made before the end of the applicable period, the person who made the required notification must notify a constable that a report is not being made, as soon as reasonably practicable after the period ends.
+@export Must I notify a constable that no joint report is being made (s 21CD(9))?
+GIVEN `no joint disclosure report was sent before the end of the applicable period` IS A BOOLEAN @desc Was no joint disclosure report sent to a constable before the end of the applicable period?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Must I notify that no report is being made` IS
+    `s 21CD(9) the person who made the required notification must notify a constable that a report is not being made` `no joint disclosure report was sent before the end of the applicable period`
+
+-- s 21CE(2).  A relevant disclosure may not include information obtained from a UK law enforcement agency unless that agency consents.
+@export Am I barred from including a law enforcement agency's information in my disclosure (s 21CE(2))?
+GIVEN `the information came from a UK law enforcement agency` IS A BOOLEAN @desc Was the information obtained from a UK law enforcement agency (the National Crime Agency, a police force, or another person charged with preventing, detecting, investigating or prosecuting offences)?
+      `that agency consents to its inclusion` IS A BOOLEAN @desc Does that agency consent to the disclosure?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Am I barred from including that information` IS
+    `s 21CE(2) the relevant disclosure is barred from including the information` `the information came from a UK law enforcement agency` `that agency consents to its inclusion`
+
+-- ---------------------------------------------------------------------------
+§§ `Telling someone else: do I commit the offence of tipping off, and is my disclosure excused? (ss 21D to 21G)`
+-- Situation: asked by a person in the regulated sector who is about to tell a customer, a colleague or another business that a disclosure has been made or an investigation is under way.
+-- ---------------------------------------------------------------------------
+
+-- s 21D(1) with s 21D(2).  A person commits an offence if the person discloses that a disclosure has been made under this Part (to a constable, under the employer's procedure, to a nominated officer or to an authorised National Crime Agency officer)
+-- of information that came to them in the regulated sector, the disclosure is likely to prejudice an investigation, and the information came to the person in the regulated sector.
+@export Do I commit the offence of tipping off by telling someone about a disclosure (s 21D(1))?
+GIVEN `a disclosure under a provision of this Part has been made` IS A BOOLEAN @desc Has a disclosure under a provision of this Part been made, by you or by another person?
+      `it was made to a constable` IS A BOOLEAN @desc Was it made to a constable?
+      `it was made under the employer's procedure for making such disclosures` IS A BOOLEAN @desc Was it made in accordance with a procedure established by that person's employer for making such disclosures?
+      `it was made to a nominated officer` IS A BOOLEAN @desc Was it made to a nominated officer?
+      `it was made to an authorised National Crime Agency officer` IS A BOOLEAN @desc Was it made to a National Crime Agency officer authorised for the purposes of that provision by the Director General?
+      `it was of information that came in the course of a business in the regulated sector` IS A BOOLEAN @desc Was it a disclosure of information that came to that person in the course of a business in the regulated sector?
+      `my telling someone is likely to prejudice an investigation` IS A BOOLEAN @desc Is what you disclose likely to prejudice any investigation that might be conducted following the disclosure?
+      `the information I would tell came to me in the course of a business in the regulated sector` IS A BOOLEAN @desc Did the information on which your disclosure is based come to you in the course of a business in the regulated sector?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Do I commit the offence of tipping off` IS
+    `s 21D(1) the person commits an offence by tipping off` (`s 21D(2) the matter is within subsection (2)` (`Protected matter facts` OF `a disclosure under a provision of this Part has been made`, `it was made to a constable`, `it was made under the employer's procedure for making such disclosures`, `it was made to a nominated officer`, `it was made to an authorised National Crime Agency officer`, `it was of information that came in the course of a business in the regulated sector`)) (`Tipping off facts` OF `my telling someone is likely to prejudice an investigation`, `the information I would tell came to me in the course of a business in the regulated sector`)
+
+-- s 21D(3).  A person commits an offence if the person discloses that an investigation into allegations that an offence under this Part has been committed is being contemplated or carried out, the disclosure is likely to prejudice it,
+-- and the information came to the person in the regulated sector.
+@export Do I commit an offence by telling someone that an investigation is under way (s 21D(3))?
+GIVEN `I disclose that an investigation into an offence under this Part is being contemplated or carried out` IS A BOOLEAN @desc Do you disclose that an investigation into allegations that an offence under this Part has been committed is being contemplated or is being carried out?
+      `it is likely to prejudice that investigation` IS A BOOLEAN @desc Is the disclosure likely to prejudice that investigation?
+      `the information came to me in the course of a business in the regulated sector` IS A BOOLEAN @desc Did the information on which your disclosure is based come to you in the course of a business in the regulated sector?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Do I commit an offence by disclosing an investigation` IS
+    `s 21D(3) the person commits an offence by disclosing an investigation` (`Investigation disclosure facts` OF `I disclose that an investigation into an offence under this Part is being contemplated or carried out`, `it is likely to prejudice that investigation`, `the information came to me in the course of a business in the regulated sector`)
+
+-- s 21E(1).  An employee, officer or partner of an undertaking does not commit an offence under s 21D if the disclosure is to an employee, officer or partner of the same undertaking.
+@export Am I excused from tipping off because I tell someone in my own undertaking (s 21E(1))?
+GIVEN `I am an employee, officer or partner of an undertaking` IS A BOOLEAN @desc Are you an employee, officer or partner of an undertaking?
+      `I tell an employee, officer or partner of the same undertaking` IS A BOOLEAN @desc Is the disclosure to an employee, officer or partner of the same undertaking?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Am I excused by s 21E(1)` IS
+    `s 21E(1) the person does not commit an offence under s 21D` `I am an employee, officer or partner of an undertaking` `I tell an employee, officer or partner of the same undertaking`
+
+-- s 21E(2).  A credit or financial institution does not commit an offence under s 21D by a disclosure to another such institution in the United Kingdom, an EEA state or a country with equivalent money laundering requirements, in the same group.
+@export Am I excused from tipping off because I tell an institution in my group (s 21E(2))?
+GIVEN `I am a credit institution or a financial institution` IS A BOOLEAN @desc Is the disclosure made by a credit institution or a financial institution?
+      `I tell a credit institution or a financial institution` IS A BOOLEAN @desc Is the disclosure to a credit institution or a financial institution?
+      `that institution is in the United Kingdom, an EEA state or a country with equivalent requirements` IS A BOOLEAN @desc Is the institution to which you disclose situated in the United Kingdom, an EEA state, or a country or territory imposing equivalent money laundering requirements?
+      `both institutions belong to the same group` IS A BOOLEAN @desc Do both institutions belong to the same group?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Am I excused by s 21E(2)` IS
+    `s 21E(2) the person does not commit an offence under s 21D by a disclosure within a group` (`Group disclosure facts` OF `I am a credit institution or a financial institution`, `I tell a credit institution or a financial institution`, `that institution is in the United Kingdom, an EEA state or a country with equivalent requirements`, `both institutions belong to the same group`)
+
+-- s 21F.  A disclosure between credit institutions, financial institutions, legal advisers or professional advisers of the same kind, about a shared client, transaction or service, solely to prevent an offence under this Part,
+-- to a recipient in the United Kingdom, an EEA state or an equivalent country, under equivalent duties of confidentiality and data protection, does not commit the offence of tipping off.
+@export Am I excused from tipping off by a disclosure to a peer institution or adviser (s 21F)?
+GIVEN `from one credit institution to another` IS A BOOLEAN @desc Is the disclosure by a credit institution to another credit institution?
+      `from one financial institution to another` IS A BOOLEAN @desc Is the disclosure by a financial institution to another financial institution?
+      `from one professional legal adviser to another` IS A BOOLEAN @desc Is the disclosure by a professional legal adviser to another professional legal adviser?
+      `from one relevant professional adviser to another of the same kind` IS A BOOLEAN @desc Is the disclosure by a relevant professional adviser of a particular kind to another of the same kind?
+      `it relates to a client or former client of us both` IS A BOOLEAN @desc Does it relate to a client or former client of you and the institution or adviser to whom it is made?
+      `it relates to a transaction involving us both` IS A BOOLEAN @desc Does it relate to a transaction involving you both?
+      `it relates to a service involving us both` IS A BOOLEAN @desc Does it relate to the provision of a service involving you both?
+      `it is for the purpose only of preventing an offence under this Part` IS A BOOLEAN @desc Is the disclosure for the purpose only of preventing an offence under this Part of the Act?
+      `the recipient is in the United Kingdom, an EEA state or a country with equivalent requirements` IS A BOOLEAN @desc Is the recipient situated in the United Kingdom, an EEA state, or a country or territory imposing equivalent money laundering requirements?
+      `we are both subject to equivalent duties of confidentiality and data protection` IS A BOOLEAN @desc Are you both subject to equivalent duties of professional confidentiality and the protection of personal data?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Am I excused by s 21F` IS
+    `s 21F(2) the person does not commit an offence under s 21D in respect of the disclosure` (`s 21F(1) this section applies to the disclosure` (`Between institutions facts` OF `from one credit institution to another`, `from one financial institution to another`, `from one professional legal adviser to another`, `from one relevant professional adviser to another of the same kind`)) (`Institution disclosure facts` OF `it relates to a client or former client of us both`, `it relates to a transaction involving us both`, `it relates to a service involving us both`, `it is for the purpose only of preventing an offence under this Part`, `the recipient is in the United Kingdom, an EEA state or a country with equivalent requirements`, `we are both subject to equivalent duties of confidentiality and data protection`)
+
+-- s 21G(1).  A person does not commit an offence under s 21D if the disclosure is to the person's supervisory authority, is made in good faith under s 21CA, or is for the detection, investigation or prosecution of a criminal offence or a Proceeds of Crime Act investigation or order.
+@export Am I excused from tipping off by a disclosure to my supervisor or for an investigation (s 21G(1))?
+GIVEN `I tell my supervisory authority` IS A BOOLEAN @desc Is the disclosure to the authority that is your supervisory authority under the Money Laundering, Terrorist Financing and Transfer of Funds (Information on the Payer) Regulations 2017?
+      `I make it in good faith under s 21CA` IS A BOOLEAN @desc Is the disclosure made in good faith by virtue of section 21CA (disclosures within the regulated sector)?
+      `it is for detecting, investigating or prosecuting a criminal offence` IS A BOOLEAN @desc Is it for the purpose of the detection, investigation or prosecution of a criminal offence, in the United Kingdom or elsewhere?
+      `it is for an investigation under the Proceeds of Crime Act 2002` IS A BOOLEAN @desc Is it for the purpose of an investigation under the Proceeds of Crime Act 2002?
+      `it is for enforcing a court order under that Act` IS A BOOLEAN @desc Is it for the purpose of the enforcement of any order of a court under that Act?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Am I excused by s 21G(1)` IS
+    `s 21G(1) the person does not commit an offence under s 21D` (`Permitted disclosure facts` OF `I tell my supervisory authority`, `I make it in good faith under s 21CA`, `it is for detecting, investigating or prosecuting a criminal offence`, `it is for an investigation under the Proceeds of Crime Act 2002`, `it is for enforcing a court order under that Act`)
+
+-- s 21G(2).  A professional legal adviser or relevant professional adviser does not commit an offence under s 21D if the disclosure is to the adviser's client and is made to dissuade the client from conduct amounting to an offence.
+@export Am I, an adviser, excused from tipping off by telling my client to dissuade them (s 21G(2))?
+GIVEN `I am a professional legal adviser or a relevant professional adviser` IS A BOOLEAN @desc Are you a professional legal adviser or a relevant professional adviser?
+      `I tell my client` IS A BOOLEAN @desc Is the disclosure to your client?
+      `I do it to dissuade the client from conduct amounting to an offence` IS A BOOLEAN @desc Is it made for the purpose of dissuading the client from engaging in conduct amounting to an offence?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Am I excused by s 21G(2)` IS
+    `s 21G(2) the adviser does not commit an offence under s 21D` `I am a professional legal adviser or a relevant professional adviser` `I tell my client` `I do it to dissuade the client from conduct amounting to an offence`
+
+-- s 21G(3).  A person does not commit the offence in s 21D(1) if the person does not know or suspect that the disclosure is likely to have the effect of prejudicing an investigation.
+@export Am I excused from the s 21D(1) offence because I did not know or suspect the effect (s 21G(3))?
+GIVEN `I know or suspect that my disclosure is likely to prejudice an investigation` IS A BOOLEAN @desc Do you know or suspect that your disclosure is likely to prejudice any investigation that might be conducted following the disclosure?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Am I excused by s 21G(3)` IS
+    `s 21G(3) the person does not commit an offence under s 21D(1)` `I know or suspect that my disclosure is likely to prejudice an investigation`
+
+-- ---------------------------------------------------------------------------
+§§ `Being ordered to hand over information (ss 22B to 22F)`
+-- Situation: asked by a business in the regulated sector that has been served with, or is told to expect, an information order.
+-- ---------------------------------------------------------------------------
+
+-- s 22B(4).  Condition 1: the information would relate to a matter arising from a s 21A disclosure, the respondent made that disclosure or otherwise carries on a business in the regulated sector,
+-- the information would assist an investigation into an offence under ss 15 to 18 or identify terrorist property, and it is reasonable for it to be provided.
+@export Is condition 1 for an information order met against me (s 22B(4))?
+GIVEN `it relates to a matter arising from a disclosure made under s 21A` IS A BOOLEAN @desc Would the information required relate to a matter arising from a disclosure made under section 21A?
+      `I am the person who made that disclosure` IS A BOOLEAN @desc Are you the person who made the disclosure?
+      `I otherwise carry on a business in the regulated sector` IS A BOOLEAN @desc Do you otherwise carry on a business in the regulated sector?
+      `it would assist an investigation into an offence under ss 15 to 18` IS A BOOLEAN @desc Would the information assist in investigating whether a person is involved in the commission of an offence under any of sections 15 to 18, or in determining whether such an investigation should be started?
+      `it would assist in identifying terrorist property` IS A BOOLEAN @desc Would the information assist in identifying terrorist property or its movement or use?
+      `it is reasonable in all the circumstances for me to provide it` IS A BOOLEAN @desc Is it reasonable in all the circumstances for the information to be provided?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is condition 1 met against me` IS
+    `s 22B(4) condition 1 is met` (`Info order condition 1 facts` OF `it relates to a matter arising from a disclosure made under s 21A`, `I am the person who made that disclosure`, `I otherwise carry on a business in the regulated sector`, `it would assist an investigation into an offence under ss 15 to 18`, `it would assist in identifying terrorist property`, `it is reasonable in all the circumstances for me to provide it`)
+
+-- s 22B(3).  An information order requires the respondent to provide the information specified in the application, or other information the court thinks appropriate, so far as it is in the respondent's possession or under their control.
+@export Does an information order require me to provide this information (s 22B(3))?
+GIVEN `it is specified or described in the application` IS A BOOLEAN @desc Is the information specified or described in the application for the order?
+      `the court thinks it appropriate` IS A BOOLEAN @desc Is it other information that the court or sheriff making the order thinks appropriate?
+      `it is in my possession or under my control` IS A BOOLEAN @desc Is the information in your possession or under your control?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Does the order require me to provide it` IS
+    `s 22B(3) the order requires the respondent to provide the information` `it is specified or described in the application` `the court thinks it appropriate` `it is in my possession or under my control`
+
+-- s 22B(8).  If a person fails to comply with an information order made by a magistrates' court, the court may order the person to pay an amount not exceeding £5,000 (or the sum substituted by regulations).
+@export May a magistrates court order me to pay an amount for not complying (s 22B(8))?
+GIVEN `I failed to comply with an information order` IS A BOOLEAN @desc Did you fail to comply with an information order?
+      `the order was made by a magistrates court` IS A BOOLEAN @desc Was the order made by a magistrates' court?
+GIVETH A MAYBE BOOLEAN
+DECIDE `May the court order me to pay` IS
+    `s 22B(8) the magistrates court may order the person to pay an amount` `I failed to comply with an information order` `the order was made by a magistrates court`
+
+@export What is the most a magistrates court may order me to pay for not complying (s 22B(8))?
+GIVEN `regulations have substituted another sum` IS A BOOLEAN @desc Have regulations under section 22B(10) substituted another sum for £5,000?
+      `the sum they substituted` IS A NUMBER @desc If so, what sum, in pounds? (Any number if not.)
+GIVETH A NUMBER
+DECIDE `What is the most I may be ordered to pay` IS
+    `s 22B(8) the ceiling of the amount the court may order the person to pay` substituted
+    WHERE
+        substituted MEANS IF `regulations have substituted another sum` THEN JUST `the sum they substituted` ELSE NOTHING
+
+-- s 22E(1) with s 22E(2).  An information order does not confer the right to require privileged information: information a person would be entitled to refuse to provide on grounds of legal professional privilege in High Court proceedings, or, in Scotland, legal privilege under s 412 of the Proceeds of Crime Act 2002.
+@export Can an information order require me to give privileged information (s 22E(1))?
+GIVEN `I would be entitled to refuse on grounds of legal professional privilege in High Court proceedings` IS A BOOLEAN @desc Would you be entitled to refuse to provide the information on grounds of legal professional privilege in proceedings in the High Court?
+      `in Scotland it is legal privilege under s 412 of the Proceeds of Crime Act 2002` IS A BOOLEAN @desc In Scotland, is it legal privilege as defined by section 412 of the Proceeds of Crime Act 2002?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Does the order give a right to require it` IS
+    `s 22E(1) the information order confers the right to require the information` ((`s 22E(2) the information is privileged information` `I would be entitled to refuse on grounds of legal professional privilege in High Court proceedings` `in Scotland it is legal privilege under s 412 of the Proceeds of Crime Act 2002`) EQUALS JUST TRUE)
+
+-- s 22E(3).  Information provided in pursuance of an information order is not to be taken to breach any restriction on the disclosure of information.
+@export Does providing information under an information order breach a duty of confidence (s 22E(3))?
+GIVEN `I provide the information in pursuance of an information order` IS A BOOLEAN @desc Are you providing the information in pursuance of an information order?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Does providing it breach a restriction` IS
+    `s 22E(3) the provision of the information does not breach any restriction on disclosure` `I provide the information in pursuance of an information order`
+
+-- s 22C(1).  A statement made by a person in response to an information order may not be used in evidence against the person in criminal proceedings (subject to s 22C(2)).
+@export Can what I say in response to an information order be used against me (s 22C(1))?
+GIVEN `I made the statement in response to an information order` IS A BOOLEAN @desc Did you make the statement in response to an information order?
+      `it would be used in criminal proceedings against me` IS A BOOLEAN @desc Would it be used in evidence against you in criminal proceedings?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is my statement barred from use against me` IS
+    `s 22C(1) the statement may not be used in evidence against the person` `I made the statement in response to an information order` `it would be used in criminal proceedings against me`
+
+-- s 22D(3).  An appeal lies to the Crown Court from a magistrates' court in England and Wales, a county court from a magistrates' court in Northern Ireland, and the Sheriff Appeal Court from the sheriff.
+@export To which court can I appeal against a decision on an information order (s 22D(3))?
+GIVEN `the court that decided` IS A `Court that decided` @desc Which court decided the application for the information order?
+GIVETH AN `Appeal court`
+DECIDE `To which court do I appeal` IS
+    `s 22D(3) the relevant appeal court` `the court that decided`
+
+-- ---------------------------------------------------------------------------
+§§ `Forfeiture of property after a conviction (ss 23 to 23B)`
+-- Situation: asked by a person convicted of, or facing conviction for, an offence under ss 15 to 18, or by a person who owns or has an interest in property that might be forfeited.
+-- ---------------------------------------------------------------------------
+
+-- ss 23(2) to (7), gathered by hand (E1 option B, fork F5).  Which subsection applies depends on the offence.  The court MAY order forfeiture; a power is not a decision.  The answer is JUST TRUE where one subsection gives the power
+-- on these facts and NOTHING where none does (the Act does not say the court may not forfeit by some other route).  A conviction for an offence a subsection does not name is that subsection's no, but s 23(7) names every offence in ss 15 to 18, so the combined answer is JUST TRUE or NOTHING.
+@export Could the court order this property forfeited after my conviction (ss 23(2) to (7))?
+GIVEN `the offence I was convicted of` IS AN `Offence of Part III` @desc Of which offence were you convicted?
+      `at the time of the offence I had it in my possession or under my control` IS A BOOLEAN @desc At the time of the offence, did you have the property in your possession or under your control?
+      `it had been used for the purposes of terrorism` IS A BOOLEAN @desc Had the property been used for the purposes of terrorism?
+      `I intended it to be used for the purposes of terrorism` IS A BOOLEAN @desc Did you intend that it should be used for the purposes of terrorism?
+      `I had reasonable cause to suspect it might be used for the purposes of terrorism` IS A BOOLEAN @desc Did you have reasonable cause to suspect that it might be used for the purposes of terrorism?
+      `I knew or had reasonable cause to suspect it would or might be used for the purposes of terrorism` IS A BOOLEAN @desc Did you know, or have reasonable cause to suspect, that it would or might be used for the purposes of terrorism?
+      `the arrangement in question related to it` IS A BOOLEAN @desc Is it property to which the arrangement in question related?
+      `it was received as a payment or other reward in connection with the offence` IS A BOOLEAN @desc Was it received by any person as a payment or other reward in connection with the commission of the offence?
+      `it is the amount paid under the insurance contract` IS A BOOLEAN @desc Is it the amount paid under, or purportedly under, the insurance contract?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Could the court order forfeiture` IS
+    `the disjunction` oneToThree `or else` fourToSeven
+    WHERE
+        facts MEANS `Forfeitable property facts` OF `at the time of the offence I had it in my possession or under my control`, `it had been used for the purposes of terrorism`, `I intended it to be used for the purposes of terrorism`, `I had reasonable cause to suspect it might be used for the purposes of terrorism`, `I knew or had reasonable cause to suspect it would or might be used for the purposes of terrorism`, `the arrangement in question related to it`, `it was received as a payment or other reward in connection with the offence`, `it is the amount paid under the insurance contract`
+        twoOrThree MEANS `the disjunction` (`s 23(2) the court may order the forfeiture of the property` `the offence I was convicted of` facts) `or else` (`s 23(3) the court may order the forfeiture of the property` `the offence I was convicted of` facts)
+        four MEANS `s 23(4) the court may order the forfeiture of the property` `the offence I was convicted of` facts
+        five MEANS `s 23(5) the court may order the forfeiture of the property` `the offence I was convicted of` facts
+        fiveA MEANS `s 23(5A) the court may order the forfeiture of the amount` `the offence I was convicted of` facts
+        six MEANS `s 23(6) the court may order the forfeiture of the property` `the offence I was convicted of` facts
+        seven MEANS `s 23(7) the court may order the forfeiture of the payment or reward` TRUE facts
+        oneToThree MEANS `the disjunction` twoOrThree `or else` four
+        fourToSeven MEANS `the disjunction` (`the disjunction` five `or else` fiveA) `or else` (`the disjunction` six `or else` seven)
+
+-- s 23B(1).  Before making a forfeiture order the court must give an opportunity to be heard to any person, other than the convicted person, who claims to be the owner of or otherwise interested in anything that can be forfeited.
+@export Must the court hear me before forfeiting property I claim an interest in (s 23B(1))?
+GIVEN `the court is about to make a forfeiture order under s 23 or 23A` IS A BOOLEAN @desc Is the court about to make an order under section 23 or 23A?
+      `I am the convicted person` IS A BOOLEAN @desc Are you the convicted person?
+      `I claim to be the owner or otherwise interested in the property` IS A BOOLEAN @desc Do you claim to be the owner of, or otherwise interested in, anything that can be forfeited under that section?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Must the court hear me` IS
+    `s 23B(1) the court must give the person an opportunity to be heard` `the court is about to make a forfeiture order under s 23 or 23A` `I am the convicted person` `I claim to be the owner or otherwise interested in the property`

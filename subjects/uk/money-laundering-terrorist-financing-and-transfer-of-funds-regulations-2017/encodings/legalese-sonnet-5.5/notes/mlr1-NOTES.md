@@ -1,0 +1,1275 @@
+# NOTES -- mlr1: regulations 8 to 32 (lines 233-1008)
+
+Money Laundering, Terrorist Financing and Transfer of Funds (Information on the Payer) Regulations 2017, S.I. 2017/692, United Kingdom.
+Part agent `mlr1`, run `iaw-mlr1`, dialect `main`, on top of the keel's `mlr-core.l4`.
+
+STATUS (2026-11-05).
+Revised 2026-11-05 after an independent test pass (396 assertions, 32 failing) and the rulings of that day: forks F-when, F-where, F-period, F-23(2), F-9, F-scope, F-polarity and F-leave record what was changed and what was left; every count in this file is the count after the revision.
+Verified by running: `check.sh` on build 1.6.109 with the main columns on 1.6.108, whose output is pasted at the end of this file; `srcrefs.py check --refs` and `--strict` over every `mlr1-*.l4`; `work/cov.py` (every non-blank line of 233-1008 falls in one coverage row; every encoded name is defined and appears in a test or case file).
+Not verified: anything against the official text.
+The text read is a plain-text rendering made by a converter script; it is not the official text, and nothing here is verified against the official text.
+Where a sentence below depends on a reading, it says so and points to the heading that holds the other reading.
+
+## Files
+
+- Layer 1 (the law, in text order): `mlr1-reg08-09-application.l4`, `mlr1-reg10-14a-kinds.l4`, `mlr1-reg15-exclusions.l4`, `mlr1-reg16-17-authorities.l4`, `mlr1-reg18-20-policies.l4`, `mlr1-reg21-25-controls.l4`, `mlr1-reg26-approvals.l4`, `mlr1-reg27-cdd-when.l4`, `mlr1-reg28-cdd-measures.l4`, `mlr1-reg29-additional-cdd.l4`, `mlr1-reg30-32-timing.l4`.
+- Their tests: `mlr1-tests-<same stem>.l4`, one per module.
+- Layer 2 (the seat): `mlr1-seat.l4` and `mlr1-cases-seat.l4`.
+- Supplied and unchanged: `mlr-core.l4` (the keel), `check.sh`, `srcrefs.py`, `fetch-main-l4.sh`.
+- `PROGRESS.md`: the working log.
+- `NEEDS-CORE.md` was not written: no core type was missing.
+- The `.l4` files were generated from templates kept outside the deposit (`work/src/*.l4t`, `work/expand.py`); every `work/` tool named in this file (`units.py`, `cov.py`, `mkseat.py`, `mknotes.py`) is scratch tooling outside the deposit and is not part of the row.
+
+## Coverage (mlr1)
+
+758 rows, one per unit, each with exactly one disposition: `encoded` 704, `fork` 6, `inert` 37, `repealed or blank in this text` 11.
+
+How the table was built.
+`work/units.py` reads lines 233-1008 of the raw text and cuts them into provision units: part and chapter headings, regulation headings, numbered paragraphs, lettered paragraphs, roman sub-paragraphs, quoted defined terms in regulations 16A, 28 and 30ZA, and the lines of dots that stand for removed text.
+`work/cov.py` maps each unit to the layer-1 declarations whose `@ref` range overlaps it, and checks three things: every non-blank line falls in some unit; every line of every `encoded` or `fork` unit is also quoted by a `-- src:` line in some layer-1 file; every declared name appears in a test or case file.
+A unit takes `encoded` only when it has a quoted `-- src:` line and a declaration; the named rule is the narrowest declaration whose range overlaps the unit, and up to three are listed.
+
+Audit counts.
+Text units counted: 757 on the first parse; the audit found that the unnumbered opening words of regulation 11 ("In these Regulations—", line 298) had been absorbed into the heading's range, so that line became its own unit: 758.
+Rows in the table: before the audit, 757 units of which 750 had a disposition and 7 had none; after, 758 units and 758 rows with a disposition.
+The seven units that came out of the first pass with no disposition were: the four lines of dots that the parser read as numbered paragraphs (256, 419, 584, 975, which now read `repealed or blank in this text`) and the three lead-in lines `reg 10(4)`, `reg 14(1)`, `reg 14A(3)` ("For the purposes of this regulation—", "In these Regulations—").
+The lead-in lines are now quoted at the head of their first limb's run, and so read `encoded`.
+
+Rows left `inert`: all 37 are reason 1 (not operative: headings): 6 part and chapter headings and 31 regulation headings. No row is `inert` for reason 2 (machinery) or reason 3 (text shown repealed).
+The `reg 15` and `reg 27` heading lines (376, 764) are also quoted, as the locator of the two gathering functions (`reg 15 the person comes within the exclusions`, `reg 27 the relevant person is required to apply customer due diligence measures`); the headings remain `inert`, reason 1, because a title creates no rule.
+
+Rows read `repealed or blank in this text`: lines 256 (reg 9(2)), 268 (reg 9(5)(a)), 419 (reg 16(5)), 427, 428, 429 (reg 16(7)(c) to (e)), 463, 464 (reg 17(2)(a), (b)), 584 (reg 20(2)), 635 (the whole body of reg 22), 975 (reg 30A(7)).
+What the text shows there is a row of dots where the rendering has removed the words; nothing was inferred about what stood there.
+
+The coverage table, one row per unit (generated by `work/cov.py` from the text and the files above):
+
+| Lines | Unit | Disposition | L4 name (narrowest first) or note |
+| --- | --- | --- | --- |
+| 233 | part-heading PART 2 — Money Laundering and Terrorist Financing | inert | reason 1 (heading) |
+| 234 | part-heading CHAPTER 1 — Application | inert | reason 1 (heading) |
+| 235 | reg 8 heading | inert | reason 1 (heading) |
+| 236 | reg 8(1) | encoded | `reg 8 the person is a relevant person`, `reg 8(1)(a) the person is listed in paragraph (2)` |
+| 237 | reg 8(1)(a) | encoded | `reg 8 the person is a relevant person`, `reg 8(1)(a) the person is listed in paragraph (2)` |
+| 238 | reg 8(1)(b) | encoded | `reg 8(1)(b) the person does not come within the exclusions set out in regulation 15`, `reg 8 the person is a relevant person`, `reg 8(1)(a) the person is listed in paragraph (2)` |
+| 239 | reg 8(2) | encoded | `reg 8(2) the kind of person is one of those listed in this paragraph` |
+| 240 | reg 8(2)(a) | encoded | `reg 8(2) the kind of person is one of those listed in this paragraph` |
+| 241 | reg 8(2)(b) | encoded | `reg 8(2) the kind of person is one of those listed in this paragraph` |
+| 242 | reg 8(2)(c) | encoded | `reg 8(2) the kind of person is one of those listed in this paragraph` |
+| 243 | reg 8(2)(d) | encoded | `reg 8(2) the kind of person is one of those listed in this paragraph` |
+| 244 | reg 8(2)(e) | encoded | `reg 8(2) the kind of person is one of those listed in this paragraph` |
+| 245 | reg 8(2)(f) | encoded | `reg 8(2) the kind of person is one of those listed in this paragraph` |
+| 246 | reg 8(2)(g) | encoded | `reg 8(2) the kind of person is one of those listed in this paragraph` |
+| 247 | reg 8(2)(h) | encoded | `reg 8(2) the kind of person is one of those listed in this paragraph` |
+| 248 | reg 8(2)(i) | encoded | `reg 8(2) the kind of person is one of those listed in this paragraph` |
+| 249 | reg 8(2)(j) | encoded | `reg 8(2) the kind of person is one of those listed in this paragraph` |
+| 250 | reg 8(2)(k) | encoded | `reg 8(2) the kind of person is one of those listed in this paragraph` |
+| 251 | reg 8(3) | fork | `reg 8(3) the person is a relevant person for the purposes of the regulation`, `reg 8(3) the regulation is one of those that apply to an auction platform` -- fork F-8(3) |
+| 252 | reg 8(3A) | encoded | `reg 8(3A) regulation 29 applies to the customer` |
+| 253 | reg 8(4) | encoded | `reg 8(4) the definition in the regulation applies for the purposes of regulation 8` |
+| 254 | reg 9 heading | inert | reason 1 (heading) |
+| 255 | reg 9(1) | encoded | `reg 9(1) A is regarded as carrying on business in the United Kingdom` |
+| 256 | reg 9(2) | repealed or blank in this text | revoked: the rendering shows a row of dots where text was removed; nothing to encode |
+| 257 | reg 9(3) | encoded | `reg 9(3) the second case where A is regarded as carrying on business in the United Kingdom` |
+| 258 | reg 9(3)(a) | encoded | `reg 9(3) the second case where A is regarded as carrying on business in the United Kingdom` |
+| 259 | reg 9(3)(b) | encoded | `reg 9(3) the second case where A is regarded as carrying on business in the United Kingdom` |
+| 260 | reg 9(3)(b)(i) | encoded | `reg 9(3) the second case where A is regarded as carrying on business in the United Kingdom` |
+| 261 | reg 9(3)(b)(ii) | encoded | `reg 9(3) the second case where A is regarded as carrying on business in the United Kingdom` |
+| 262 | reg 9(4) | encoded | `reg 9(4) the third case where A is regarded as carrying on business in the United Kingdom` |
+| 263 | reg 9(4)(a) | encoded | `reg 9(4) the third case where A is regarded as carrying on business in the United Kingdom` |
+| 264 | reg 9(4)(b) | encoded | `reg 9(4) the third case where A is regarded as carrying on business in the United Kingdom` |
+| 265 | reg 9(4)(b)(i) | encoded | `reg 9(4) the third case where A is regarded as carrying on business in the United Kingdom` |
+| 266 | reg 9(4)(b)(ii) | encoded | `reg 9(4) the third case where A is regarded as carrying on business in the United Kingdom` |
+| 267 | reg 9(5) | encoded | `reg 9(5)(b) the second case, whatever the situation of the person with whom the business is carried on` |
+| 268 | reg 9(5)(a) | repealed or blank in this text | revoked: the rendering shows a row of dots where text was removed; nothing to encode |
+| 269 | reg 9(5)(b) | encoded | `reg 9(5)(b) the second case, whatever the situation of the person with whom the business is carried on` |
+| 270 | reg 10 heading | inert | reason 1 (heading) |
+| 271 | reg 10(1) | encoded | `reg 10(1) the person is a credit institution` |
+| 272 | reg 10(1)(a) | encoded | `reg 10(1) the person is a credit institution` |
+| 273-274 | reg 10(1)(b) | encoded | `reg 10(1) the person is a credit institution` |
+| 275 | reg 10(2) | encoded | `reg 10(2)(a) the person falls within regulation 10(2)(a)`, `reg 10(2)(a) the person is a financial institution as an undertaking carrying out a listed activity`, `reg 10(2) the person is a financial institution` |
+| 276 | reg 10(2)(a) | encoded | `reg 10(2)(a) the person falls within regulation 10(2)(a)`, `reg 10(2)(a) the person is a financial institution as an undertaking carrying out a listed activity`, `reg 10(2) the person is a financial institution` -- calls reg 10(4)(a), so it depends on fork F4 |
+| 277 | reg 10(2)(b) | encoded | `reg 10(2)(b) the person is a financial institution as an insurance undertaking`, `reg 10(2) the person is a financial institution` |
+| 278 | reg 10(2)(c) | encoded | `reg 10(2)(c) the person is a financial institution as an investment firm`, `reg 10(2) the person is a financial institution` |
+| 279 | reg 10(2)(c)(i) | encoded | `reg 10(2)(c) the person is a financial institution as an investment firm`, `reg 10(2) the person is a financial institution` |
+| 280 | reg 10(2)(c)(ii) | encoded | `reg 10(2)(c) the person is a financial institution as an investment firm`, `reg 10(2) the person is a financial institution` |
+| 281 | reg 10(2)(d) | encoded | `reg 10(2)(d) the person is a financial institution as a person within paragraph 1(k) of Part 1 of Schedule 3 to the Regulated Activities Order`, `reg 10(2) the person is a financial institution` |
+| 282 | reg 10(2)(e) | encoded | `reg 10(2)(e) the person is a financial institution as a collective investment undertaking`, `reg 10(2) the person is a financial institution` |
+| 283 | reg 10(2)(f) | encoded | `reg 10(2)(f) the person is a financial institution as an insurance intermediary`, `reg 10(2) the person is a financial institution` |
+| 284 | reg 10(2)(g) | encoded | `reg 10(2)(g) the person is a financial institution as a branch of a person referred to in paragraphs (a) to (f)`, `reg 10(2) the person is a financial institution` |
+| 285 | reg 10(2)(h) | encoded | `reg 10(2)(h) the person is a financial institution as the National Savings Bank`, `reg 10(2) the person is a financial institution` |
+| 286 | reg 10(2)(i) | encoded | `reg 10(2)(i) the person is a financial institution as the Director of Savings`, `reg 10(2) the person is a financial institution` |
+| 287 | reg 10(3) | encoded | `reg 10(3)(a) the undertaking is a credit institution`, `reg 10(3) the undertaking is an institution referred to in paragraph (3)` |
+| 288 | reg 10(3)(a) | encoded | `reg 10(3)(a) the undertaking is a credit institution`, `reg 10(3) the undertaking is an institution referred to in paragraph (3)` |
+| 289 | reg 10(3)(b) | encoded | `reg 10(3)(b) the undertaking is one whose only listed activity is as a creditor under such an agreement`, `reg 10(3) the undertaking is an institution referred to in paragraph (3)` |
+| 290 | reg 10(3)(b)(i) | encoded | `reg 10(3)(b) the undertaking is one whose only listed activity is as a creditor under such an agreement`, `reg 10(3) the undertaking is an institution referred to in paragraph (3)` |
+| 291 | reg 10(3)(b)(ii) | encoded | `reg 10(3)(b) the undertaking is one whose only listed activity is as a creditor under such an agreement`, `reg 10(3) the undertaking is an institution referred to in paragraph (3)` |
+| 292 | reg 10(3)(b)(iii) | encoded | `reg 10(3)(b) the undertaking is one whose only listed activity is as a creditor under such an agreement`, `reg 10(3) the undertaking is an institution referred to in paragraph (3)` |
+| 293 | reg 10(3)(c) | fork | `reg 10(3)(c) the undertaking is one whose only listed activity is trading for its own account`, `reg 10(3) the undertaking is an institution referred to in paragraph (3)` -- fork F4 |
+| 294 | reg 10(4) | encoded | `reg 10(4)(a) the number of the point in Schedule 2 that lists the activity` |
+| 295 | reg 10(4)(a) | fork | `reg 10(4)(a) the activity is a listed activity`, `reg 10(4)(a) the point of Schedule 2 is among points 2 to 12, 14 and 15`, `reg 10(4)(a) the number of the point in Schedule 2 that lists the activity` -- fork F4 |
+| 296 | reg 10(4)(b) | encoded | `reg 10(4)(b) “Regulated Activities Order” means` |
+| 297 | reg 11 heading | inert | reason 1 (heading) |
+| 298 | reg 11 chapeau | encoded | `reg 11(a) the person is an auditor` -- the scope words of the four definitions; quoted with reg 11(a) |
+| 299 | reg 11(a) | encoded | `reg 11(a) the person is an auditor` |
+| 300 | reg 11(a)(i) | encoded | `reg 11(a) the person is an auditor` |
+| 301 | reg 11(a)(ii) | encoded | `reg 11(a) the person is an auditor` |
+| 302 | reg 11(b) | encoded | `reg 11(b) the person is an insolvency practitioner` |
+| 303 | reg 11(c) | encoded | `reg 11(c) the person is an external accountant` |
+| 304 | reg 11(d) | encoded | `reg 11(d) the person is a tax adviser` |
+| 305 | reg 12 heading | inert | reason 1 (heading) |
+| 306 | reg 12(1) | encoded | `reg 12(1) the person is an independent legal professional` |
+| 307 | reg 12(1)(a) | encoded | `reg 12(1) the person is an independent legal professional` |
+| 308 | reg 12(1)(b) | encoded | `reg 12(1) the person is an independent legal professional` |
+| 309 | reg 12(1)(c) | encoded | `reg 12(1) the person is an independent legal professional` |
+| 310 | reg 12(1)(d) | encoded | `reg 12(1) the person is an independent legal professional` |
+| 311-312 | reg 12(1)(e) | encoded | `reg 12(1) the person is an independent legal professional` |
+| 313 | reg 12(2) | encoded | `reg 12(2) the person is a trust or company service provider` |
+| 314 | reg 12(2)(a) | encoded | `reg 12(2) the person is a trust or company service provider` |
+| 315 | reg 12(2)(ab) | encoded | `reg 12(2) the person is a trust or company service provider` |
+| 316 | reg 12(2)(b) | encoded | `reg 12(2) the person is a trust or company service provider` |
+| 317 | reg 12(2)(b)(i) | encoded | `reg 12(2) the person is a trust or company service provider` |
+| 318 | reg 12(2)(b)(ii) | encoded | `reg 12(2) the person is a trust or company service provider` |
+| 319 | reg 12(2)(b)(iii) | encoded | `reg 12(2) the person is a trust or company service provider` |
+| 320 | reg 12(2)(c) | encoded | `reg 12(2) the person is a trust or company service provider` |
+| 321 | reg 12(2)(d) | encoded | `reg 12(2) the person is a trust or company service provider` |
+| 322 | reg 12(2)(d)(i) | encoded | `reg 12(2) the person is a trust or company service provider` |
+| 323 | reg 12(2)(d)(ii) | encoded | `reg 12(2) the person is a trust or company service provider` |
+| 324 | reg 12(3) | encoded | `reg 12(3) the firm is an off-the-shelf firm` |
+| 325 | reg 12(3)(a) | encoded | `reg 12(3) the firm is an off-the-shelf firm` |
+| 326 | reg 12(3)(b) | encoded | `reg 12(3) the firm is an off-the-shelf firm` |
+| 327 | reg 13 heading | inert | reason 1 (heading) |
+| 328 | reg 13(1) | encoded | `reg 13(1) the person is an estate agent` |
+| 329 | reg 13(2) | encoded | `reg 13(2) the dealing counts as disposing of or acquiring an interest in land for estate agency work` |
+| 330 | reg 13(3) | encoded | `reg 13(3) the person is a letting agent` |
+| 331 | reg 13(4) | encoded | `reg 13(4) the work is letting agency work` |
+| 332 | reg 13(4)(a) | encoded | `reg 13(4) the work is letting agency work` |
+| 333 | reg 13(4)(a)(i) | encoded | `reg 13(4) the work is letting agency work` |
+| 334 | reg 13(4)(a)(ii) | encoded | `reg 13(4) the work is letting agency work` |
+| 335 | reg 13(4)(b) | encoded | `reg 13(4) the work is letting agency work` |
+| 336 | reg 13(4)(b)(i) | encoded | `reg 13(4) the work is letting agency work` |
+| 337 | reg 13(4)(b)(ii) | encoded | `reg 13(4)(b)(ii) the monthly rent of 10000 pounds sterling`, `reg 13(4) the work is letting agency work` |
+| 338 | reg 13(5) | encoded | `reg 13(5) the thing done is letting agency work` |
+| 339 | reg 13(6) | encoded | `reg 13(5) the thing done is letting agency work` |
+| 340 | reg 13(6)(a) | encoded | `reg 13(5) the thing done is letting agency work` |
+| 341 | reg 13(6)(b) | encoded | `reg 13(5) the thing done is letting agency work` |
+| 342 | reg 13(6)(c) | encoded | `reg 13(5) the thing done is letting agency work` |
+| 343 | reg 13(6)(d) | encoded | `reg 13(5) the thing done is letting agency work` |
+| 344 | reg 13(7) | encoded | `reg 13(7) the thing let is land for paragraph (4)` |
+| 345 | reg 14 heading | inert | reason 1 (heading) |
+| 346 | reg 14(1) | encoded | `reg 14(1)(a) the cash payments of 10000 pounds sterling in total` |
+| 347 | reg 14(1)(a) | encoded | `reg 14(1)(a) the person is a high value dealer`, `reg 14(1)(a) the cash payments of 10000 pounds sterling in total` -- stated gap: the cash total is a number the caller states; whether a travellers' cheque counts towards it is the question of regulation 3(1) (line 38), and nothing here decides it |
+| 348 | reg 14(1)(b) | encoded | `reg 14(1)(b) the person is a casino` |
+| 349 | reg 14(1)(c) | encoded | `reg 14(1)(c) the person is an auction platform` |
+| 350 | reg 14(1)(d) | encoded | `reg 14(1)(d)(i) the person is an art market participant as a trader or intermediary`, `reg 14(1)(d) the art transaction or storage value of 10000 pounds sterling`, `reg 14(1)(d) the person is an art market participant` |
+| 351 | reg 14(1)(d)(i) | encoded | `reg 14(1)(d)(i) the person is an art market participant as a trader or intermediary`, `reg 14(1)(d) the art transaction or storage value of 10000 pounds sterling`, `reg 14(1)(d) the person is an art market participant` |
+| 352 | reg 14(1)(d)(ii) | encoded | `reg 14(1)(d)(ii) the person is an art market participant as the operator of a freeport`, `reg 14(1)(d) the art transaction or storage value of 10000 pounds sterling`, `reg 14(1)(d) the person is an art market participant` |
+| 353 | reg 14(1)(e) | encoded | `reg 14(1)(e) the place is a freeport` |
+| 354 | reg 14(1)(f) | encoded | `reg 14(1)(f) the thing is a work of art` |
+| 355 | reg 14(2) | encoded | `reg 14(2) the payment is a payment in cash for paragraph (1)(a)` |
+| 356 | reg 14(2)(a) | encoded | `reg 14(2) the payment is a payment in cash for paragraph (1)(a)` |
+| 357 | reg 14(2)(b) | encoded | `reg 14(2) the payment is a payment in cash for paragraph (1)(a)` |
+| 358 | reg 14(3) | encoded | `reg 14(3) the firm or sole practitioner is an art market participant in relation to the sale` |
+| 359 | reg 14A heading | inert | reason 1 (heading) |
+| 360 | reg 14A(1) | encoded | `reg 14A(1) the person is a cryptoasset exchange provider` |
+| 361 | reg 14A(1)(a) | encoded | `reg 14A(1) the person is a cryptoasset exchange provider` |
+| 362 | reg 14A(1)(b) | encoded | `reg 14A(1) the person is a cryptoasset exchange provider` |
+| 363 | reg 14A(1)(c) | encoded | `reg 14A(1) the person is a cryptoasset exchange provider` |
+| 364 | reg 14A(2) | encoded | `reg 14A(2) the person is a custodian wallet provider` |
+| 365 | reg 14A(2)(a) | encoded | `reg 14A(2) the person is a custodian wallet provider` |
+| 366-367 | reg 14A(2)(b) | encoded | `reg 14A(2) the person is a custodian wallet provider` |
+| 368 | reg 14A(3) | encoded | `reg 14A(3)(a) the thing is a cryptoasset` |
+| 369 | reg 14A(3)(a) | encoded | `reg 14A(3)(a) the thing is a cryptoasset` |
+| 370 | reg 14A(3)(b) | encoded | `reg 14A(3)(b) the thing is money` |
+| 371 | reg 14A(3)(b)(i) | encoded | `reg 14A(3)(b) the thing is money` |
+| 372 | reg 14A(3)(b)(ii) | encoded | `reg 14A(3)(b) the thing is money` |
+| 373-374 | reg 14A(3)(b)(iii) | encoded | `reg 14A(3)(b) the thing is money` |
+| 375 | reg 14A(3)(c) | encoded | `reg 14A(3)(c) the thing is a cryptoasset for sub-paragraphs (a), (b) and (c) of paragraph (1)` |
+| 376 | reg 15 heading | inert | reason 1 (heading); its line is also quoted as the head of the first run of the rule named |
+| 377 | reg 15(1) | fork | `reg 15(1) the Part is one of those that do not apply`, `reg 15(1)(a) the Parts do not apply to the registered society` -- fork F-15(1) |
+| 378 | reg 15(1)(a) | encoded | `reg 15(1)(a) the Parts do not apply to the registered society` |
+| 379 | reg 15(1)(a)(i) | encoded | `reg 15(1)(a) the Parts do not apply to the registered society` |
+| 380 | reg 15(1)(a)(ii) | encoded | `reg 15(1)(a) the Parts do not apply to the registered society` |
+| 381 | reg 15(1)(b) | encoded | `reg 15(1)(b) the Parts do not apply to the society registered in Northern Ireland` |
+| 382 | reg 15(1)(b)(i) | encoded | `reg 15(1)(b) the Parts do not apply to the society registered in Northern Ireland` |
+| 383 | reg 15(1)(b)(ii) | encoded | `reg 15(1)(b) the Parts do not apply to the society registered in Northern Ireland` |
+| 384 | reg 15(1)(c) | encoded | `reg 15(1)(c) the Parts do not apply to the person specified in the Exemption Order`, `reg 15(1)(c) the paragraph of the Schedule is one of those named` |
+| 385 | reg 15(1)(d) | encoded | `reg 15(1)(d) the Parts do not apply to the local authority` |
+| 386 | reg 15(1)(e) | encoded | `reg 15(1)(e) the Parts do not apply to the person who was an exempted person under the Financial Services Act 1986` |
+| 387 | reg 15(1)(f) | encoded | `reg 15(1)(f) the Parts do not apply to the high value dealer` |
+| 388 | reg 15(1)(g) | encoded | `reg 15(1)(g) the Parts do not apply to the person preparing a home report` |
+| 389 | reg 15(2) | encoded | `reg 15(2) the Regulations do not apply to the person who falls within regulation 8 solely as a result of financial activity` |
+| 390 | reg 15(3) | encoded | `reg 15(3) the person engages in financial activity on an occasional or very limited basis` |
+| 391 | reg 15(3)(a) | encoded | `reg 15(3)(a) the turnover in respect of the financial activity is within the limit`, `reg 15(3)(a) the turnover limit of 100000 pounds sterling`, `reg 15(3) the person engages in financial activity on an occasional or very limited basis` |
+| 392 | reg 15(3)(b) | encoded | `reg 15(3)(b) the financial activity is limited in relation to any customer to no more than one transaction exceeding 1000 pounds sterling`, `reg 15(3)(b) the transaction size of 1000 pounds sterling`, `reg 15(3) the person engages in financial activity on an occasional or very limited basis` |
+| 393 | reg 15(3)(c) | encoded | `reg 15(3)(c) the financial activity does not exceed 5 per cent of the person's total annual turnover`, `reg 15(3)(c) the share of 5 per cent`, `reg 15(3) the person engages in financial activity on an occasional or very limited basis` |
+| 394 | reg 15(3)(d) | encoded | `reg 15(3)(d) the financial activity is ancillary and directly related to the person's main activity`, `reg 15(3) the person engages in financial activity on an occasional or very limited basis` |
+| 395 | reg 15(3)(e) | encoded | `reg 15(3)(e) the financial activity is not the transmission or remittance of money`, `reg 15(3) the person engages in financial activity on an occasional or very limited basis` |
+| 396 | reg 15(3)(f) | encoded | `reg 15(3)(f) the kind of main activity falls within regulation 8(2)(a) to (f) or (h) to (k)`, `reg 15(3)(f) the person's main activity is not that of a person falling within regulation 8(2)(a) to (f) or (h) to (k)`, `reg 15(3) the person engages in financial activity on an occasional or very limited basis` |
+| 397 | reg 15(3)(g) | encoded | `reg 15(3)(g) the financial activity is provided only to customers of the main activity and is not offered to the public`, `reg 15(3) the person engages in financial activity on an occasional or very limited basis` |
+| 398 | reg 15(4) | encoded | `reg 15(4) the Chapter of the Part is one of those that do not apply to the bodies`, `reg 15(4) the Chapters and Parts do not apply to the body` |
+| 399 | reg 15(4)(a) | encoded | `reg 15(4) the Chapters and Parts do not apply to the body` |
+| 400 | reg 15(4)(b) | encoded | `reg 15(4) the Chapters and Parts do not apply to the body` |
+| 401 | reg 15(4)(c) | encoded | `reg 15(4) the Chapters and Parts do not apply to the body` |
+| 402 | reg 15(4)(d) | encoded | `reg 15(4) the Chapters and Parts do not apply to the body` |
+| 403 | reg 15(4)(e) | encoded | `reg 15(4) the Chapters and Parts do not apply to the body` |
+| 404 | reg 15(4)(f) | encoded | `reg 15(4) the Chapters and Parts do not apply to the body` |
+| 405 | reg 15(4)(g) | encoded | `reg 15(4) the Chapters and Parts do not apply to the body` |
+| 406 | part-heading CHAPTER 2 — Risk assessment and controls | inert | reason 1 (heading) |
+| 407 | reg 16 heading | inert | reason 1 (heading) |
+| 408 | reg 16(1) | encoded | `reg 16(1) the Treasury and the Home Office made the arrangements in time`, `reg 16(1) the bearer of the duty to make the arrangements`, `reg 16(1) the date before which the arrangements must be made` -- the bearer of the duty is named in the text and is returned by `reg 16(1) the bearer of the duty to make the arrangements` |
+| 409 | reg 16(2) | encoded | `reg 16(2) the risk assessment does what paragraph (2) requires` |
+| 410 | reg 16(2)(a) | encoded | `reg 16(2) the risk assessment does what paragraph (2) requires` |
+| 411 | reg 16(2)(b) | encoded | `reg 16(2) the risk assessment does what paragraph (2) requires` |
+| 412 | reg 16(2)(c) | encoded | `reg 16(2) the risk assessment does what paragraph (2) requires` |
+| 413 | reg 16(2)(d) | encoded | `reg 16(2) the risk assessment does what paragraph (2) requires` |
+| 414 | reg 16(3) | encoded | `reg 16(3) the Treasury and the Home Office ensure that the risk assessment is used as paragraph (3) requires` |
+| 415 | reg 16(3)(a) | encoded | `reg 16(3) the Treasury and the Home Office ensure that the risk assessment is used as paragraph (3) requires` |
+| 416 | reg 16(3)(b) | encoded | `reg 16(3) the Treasury and the Home Office ensure that the risk assessment is used as paragraph (3) requires` |
+| 417 | reg 16(3)(c) | encoded | `reg 16(3) the Treasury and the Home Office ensure that the risk assessment is used as paragraph (3) requires` |
+| 418 | reg 16(4) | encoded | `reg 16(4) the person is a provider of gambling services` |
+| 419 | reg 16(5) | repealed or blank in this text | revoked: the rendering shows a row of dots where text was removed; nothing to encode |
+| 420 | reg 16(6) | encoded | `reg 16(6) the Treasury and the Home Office prepare the joint report as paragraph (6) requires` |
+| 421 | reg 16(6A) | encoded | `reg 16(6A) the report sets out what paragraph (6A) requires` |
+| 422 | reg 16(6A)(a) | encoded | `reg 16(6A) the report sets out what paragraph (6A) requires` |
+| 423 | reg 16(6A)(b) | encoded | `reg 16(6A) the report sets out what paragraph (6A) requires` |
+| 424 | reg 16(7) | encoded | `reg 16(7) a copy of the report is laid before Parliament and sent as paragraph (7) requires` |
+| 425 | reg 16(7)(a) | encoded | `reg 16(7) a copy of the report is laid before Parliament and sent as paragraph (7) requires` |
+| 426 | reg 16(7)(b) | encoded | `reg 16(7) a copy of the report is laid before Parliament and sent as paragraph (7) requires` |
+| 427 | reg 16(7)(c) | repealed or blank in this text | revoked: the rendering shows a row of dots; no recipient such as the National Crime Agency appears in this text, so none can be asked |
+| 428 | reg 16(7)(d) | repealed or blank in this text | revoked: the rendering shows a row of dots; no recipient appears in this text, so none can be asked |
+| 429 | reg 16(7)(e) | repealed or blank in this text | revoked: the rendering shows a row of dots; no recipient appears in this text, so none can be asked |
+| 430 | reg 16(8) | encoded | `reg 16(8) the Treasury and the Home Office make information from the risk assessment available to the supervisory authorities` |
+| 431 | reg 16(8)(a) | encoded | `reg 16(8) the Treasury and the Home Office make information from the risk assessment available to the supervisory authorities` |
+| 432 | reg 16(8)(b) | encoded | `reg 16(8) the Treasury and the Home Office make information from the risk assessment available to the supervisory authorities` |
+| 433 | reg 16(9) | encoded | `reg 16(9) the Treasury and the Home Office take the steps paragraph (9) requires` |
+| 434 | reg 16A heading | inert | reason 1 (heading) |
+| 435 | reg 16A(1) | encoded | `reg 16A(1) the Treasury makes arrangements for the proliferation financing risk assessment`, `reg 16A(1) the bearer of the duty to make the arrangements` -- the bearer of the duty is named in the text and is returned by `reg 16A(1) the bearer of the duty to make the arrangements` |
+| 436 | reg 16A(2) | encoded | `reg 16A(2) the proliferation financing risk assessment does what paragraph (2) requires` |
+| 437 | reg 16A(2)(a) | encoded | `reg 16A(2) the proliferation financing risk assessment does what paragraph (2) requires` |
+| 438 | reg 16A(2)(b) | encoded | `reg 16A(2) the proliferation financing risk assessment does what paragraph (2) requires` |
+| 439 | reg 16A(3) | encoded | `reg 16A(3) the Treasury ensures that the proliferation financing risk assessment is used as paragraph (3) requires` |
+| 440 | reg 16A(3)(a) | encoded | `reg 16A(3) the Treasury ensures that the proliferation financing risk assessment is used as paragraph (3) requires` |
+| 441 | reg 16A(3)(b) | encoded | `reg 16A(3) the Treasury ensures that the proliferation financing risk assessment is used as paragraph (3) requires` |
+| 442 | reg 16A(4) | encoded | `reg 16A(4) the Treasury prepares the report as paragraph (4) requires` |
+| 443 | reg 16A(5) | encoded | `reg 16A(5) a copy of the report is laid before Parliament and sent to the supervisory authorities` |
+| 444 | reg 16A(6) | encoded | `reg 16A(6) the Treasury takes the steps paragraph (6) requires` |
+| 445 | reg 16A(7) | encoded | `reg 16A(7) the proliferation financing risk assessment may be included in the risk assessment made under regulation 16` |
+| 446 | reg 16A(8) | encoded | `reg 16A(8) the report may be included within the joint report` |
+| 447 | reg 16A(9) | encoded | `reg 16A(9) the act is proliferation financing` |
+| 448 | reg 16A(10) | encoded | `reg 16A(10) the thing is a biological weapon` |
+| 449 | reg 16A(10) "biological weapon" | encoded | `reg 16A(10) the thing is a biological weapon` |
+| 450 | reg 16A(10) "chemical weapon" | encoded | `reg 16A(10) the thing is a chemical weapon` |
+| 451 | reg 16A(10) "CBRN-related goods and technology" | encoded | `reg 16A(10) the thing is CBRN-related goods and technology` |
+| 452 | reg 16A(10) "dual-use goods" | encoded | `reg 16A(10) the thing is dual-use goods` |
+| 453 | reg 16A(10) "Dual-Use Regulation" | encoded | `reg 16A(10) “Dual-Use Regulation” means` |
+| 454 | reg 16A(10) "dual-use technology" | encoded | `reg 16A(10) the thing is dual-use technology` |
+| 455 | reg 16A(10) "nuclear weapon" | encoded | `reg 16A(10) the thing is a nuclear weapon` |
+| 456 | reg 16A(10) "radiological weapon" | encoded | `reg 16A(10) the thing is a radiological weapon` |
+| 457 | reg 16A(10) "relevant financial sanctions obligation" | encoded | `reg 16A(10) the obligation is a relevant financial sanctions obligation` |
+| 458 | reg 16A(10) "relevant UN obligation" | encoded | `reg 16A(10) the obligation is a relevant UN obligation` |
+| 459 | reg 16A(10) "technology" | encoded | `reg 16A(10) the thing is technology` |
+| 460 | reg 17 heading | inert | reason 1 (heading) |
+| 461 | reg 17(1) | encoded | `reg 17(1) the bearer of the duty to identify and assess the risks`, `reg 17(1) the supervisory authority identifies and assesses the risks to its own sector` -- the bearer of the duty is named in the text and is returned by `reg 17(1) the bearer of the duty to identify and assess the risks` |
+| 462 | reg 17(2) | encoded | `reg 17(2) the supervisory authority takes into account what paragraph (2) requires` |
+| 463 | reg 17(2)(a) | repealed or blank in this text | revoked: the rendering shows a row of dots where text was removed; nothing to encode |
+| 464 | reg 17(2)(b) | repealed or blank in this text | revoked: the rendering shows a row of dots where text was removed; nothing to encode |
+| 465 | reg 17(2)(c) | encoded | `reg 17(2) the supervisory authority takes into account what paragraph (2) requires` |
+| 466 | reg 17(2)(d) | encoded | `reg 17(2) the supervisory authority takes into account what paragraph (2) requires` |
+| 467 | reg 17(3) | encoded | `reg 17(3) the supervisory authority keeps the record paragraph (3) requires` |
+| 468 | reg 17(4) | encoded | `reg 17(4) the supervisory authority develops and records the risk profiles` |
+| 469 | reg 17(5) | encoded | `reg 17(5) the supervisory authority may prepare a single risk profile` |
+| 470 | reg 17(5)(a) | encoded | `reg 17(5) the supervisory authority may prepare a single risk profile` |
+| 471 | reg 17(5)(b) | encoded | `reg 17(5) the supervisory authority may prepare a single risk profile` |
+| 472 | reg 17(6) | encoded | `reg 17(6) the supervisory authority keeps the cluster under review` |
+| 473 | reg 17(7) | encoded | `reg 17(7) the supervisory authority takes full account of the risk of inaction in its sector` |
+| 474 | reg 17(8) | encoded | `reg 17(8) the supervisory authority reviews the risk profiles` |
+| 475 | reg 17(8)(a) | encoded | `reg 17(8) the supervisory authority reviews the risk profiles` |
+| 476 | reg 17(8)(b) | encoded | `reg 17(8) the supervisory authority reviews the risk profiles` |
+| 477 | reg 17(8)(c) | encoded | `reg 17(8) the supervisory authority reviews the risk profiles` |
+| 478 | reg 17(8)(d) | encoded | `reg 17(8) the supervisory authority reviews the risk profiles` |
+| 479 | reg 17(8)(e) | encoded | `reg 17(8) the supervisory authority reviews the risk profiles` |
+| 480 | reg 17(9) | encoded | `reg 17(9) the supervisory authority makes information available to the relevant persons in its sector` |
+| 481 | reg 17(9)(a) | encoded | `reg 17(9) the supervisory authority makes information available to the relevant persons in its sector` |
+| 482 | reg 17(9)(b) | encoded | `reg 17(9) the supervisory authority makes information available to the relevant persons in its sector` |
+| 483 | reg 18 heading | inert | reason 1 (heading) |
+| 484 | reg 18(1) | encoded | `reg 18(1) the relevant person has taken the steps paragraph (1) requires` |
+| 485 | reg 18(2) | encoded | `reg 18(2) the relevant person has taken into account what paragraph (2) requires` |
+| 486 | reg 18(2)(a) | encoded | `reg 18(2) the relevant person has taken into account what paragraph (2) requires` |
+| 487 | reg 18(2)(b) | encoded | `reg 18(2) the relevant person has taken into account what paragraph (2) requires` -- stated gap: "risk factors including factors relating to" is an open list; a risk factor the text does not list cannot be asked, and none is invented |
+| 488 | reg 18(2)(b)(i) | encoded | `reg 18(2) the relevant person has taken into account what paragraph (2) requires` |
+| 489 | reg 18(2)(b)(ii) | encoded | `reg 18(2) the relevant person has taken into account what paragraph (2) requires` |
+| 490 | reg 18(2)(b)(iii) | encoded | `reg 18(2) the relevant person has taken into account what paragraph (2) requires` |
+| 491 | reg 18(2)(b)(iv) | encoded | `reg 18(2) the relevant person has taken into account what paragraph (2) requires` |
+| 492 | reg 18(2)(b)(v) | encoded | `reg 18(2) the relevant person has taken into account what paragraph (2) requires` |
+| 493 | reg 18(3) | encoded | `reg 18(3) the relevant person has taken into account the size and nature of its business` |
+| 494 | reg 18(4) | encoded | `reg 18(4) the relevant person has kept the record paragraph (4) requires` |
+| 495 | reg 18(5) | encoded | `reg 18(5) the supervisory authority may give the notification referred to in paragraph (4)` |
+| 496 | reg 18(6) | encoded | `reg 18(6) the relevant person has provided what paragraph (6) requires on request` |
+| 497 | reg 18A heading | inert | reason 1 (heading) |
+| 498 | reg 18A(1) | encoded | `reg 18A(1) the relevant person has taken the steps paragraph (1) requires` |
+| 499 | reg 18A(2) | encoded | `reg 18A(2) the relevant person has taken into account what paragraph (2) requires` |
+| 500 | reg 18A(2)(a) | encoded | `reg 18A(2) the relevant person has taken into account what paragraph (2) requires` |
+| 501 | reg 18A(2)(b) | encoded | `reg 18A(2) the relevant person has taken into account what paragraph (2) requires` |
+| 502 | reg 18A(2)(b)(i) | encoded | `reg 18A(2) the relevant person has taken into account what paragraph (2) requires` |
+| 503 | reg 18A(2)(b)(ii) | encoded | `reg 18A(2) the relevant person has taken into account what paragraph (2) requires` |
+| 504 | reg 18A(2)(b)(iii) | encoded | `reg 18A(2) the relevant person has taken into account what paragraph (2) requires` |
+| 505 | reg 18A(2)(b)(iv) | encoded | `reg 18A(2) the relevant person has taken into account what paragraph (2) requires` |
+| 506 | reg 18A(2)(b)(v) | encoded | `reg 18A(2) the relevant person has taken into account what paragraph (2) requires` |
+| 507 | reg 18A(3) | encoded | `reg 18A(3) the relevant person has taken into account the size and nature of its business` |
+| 508 | reg 18A(4) | encoded | `reg 18A(4) the relevant person has kept the record paragraph (4) requires` |
+| 509 | reg 18A(5) | encoded | `reg 18A(5) the relevant person has provided what paragraph (5) requires on request` |
+| 510 | reg 19 heading | inert | reason 1 (heading) |
+| 511 | reg 19(1) | encoded | `reg 19(1) the relevant person has done what paragraph (1) requires` |
+| 512 | reg 19(1)(a) | encoded | `reg 19(1) the relevant person has done what paragraph (1) requires` |
+| 513 | reg 19(1)(b) | encoded | `reg 19(1) the relevant person has done what paragraph (1) requires` |
+| 514 | reg 19(1)(c) | encoded | `reg 19(1) the relevant person has done what paragraph (1) requires` |
+| 515 | reg 19(1)(c)(i) | encoded | `reg 19(1) the relevant person has done what paragraph (1) requires` |
+| 516 | reg 19(1)(c)(ii) | encoded | `reg 19(1) the relevant person has done what paragraph (1) requires` |
+| 517 | reg 19(1)(c)(iii) | encoded | `reg 19(1) the relevant person has done what paragraph (1) requires` |
+| 518 | reg 19(2) | encoded | `reg 19(2) the policies, controls and procedures are proportionate and approved` |
+| 519 | reg 19(2)(a) | encoded | `reg 19(2) the policies, controls and procedures are proportionate and approved` |
+| 520 | reg 19(2)(b) | encoded | `reg 19(2) the policies, controls and procedures are proportionate and approved` |
+| 521 | reg 19(3) | encoded | `reg 19(3) the policies, controls and procedures include what paragraph (3) requires` -- stated gap: "must include" is an open list; an item the text does not list cannot be asked, and none is invented |
+| 522 | reg 19(3)(a) | encoded | `reg 19(3) the policies, controls and procedures include what paragraph (3) requires` |
+| 523 | reg 19(3)(b) | encoded | `reg 19(3) the policies, controls and procedures include what paragraph (3) requires` |
+| 524 | reg 19(3)(c) | encoded | `reg 19(3) the policies, controls and procedures include what paragraph (3) requires` |
+| 525 | reg 19(3)(d) | encoded | `reg 19(3) the policies, controls and procedures include what paragraph (3) requires` |
+| 526 | reg 19(3)(e) | encoded | `reg 19(3) the policies, controls and procedures include what paragraph (3) requires` |
+| 527 | reg 19(4) | encoded | `reg 19(4)(a) to (d) the policies, controls and procedures include policies as paragraph (4) requires` |
+| 528 | reg 19(4)(a) | encoded | `reg 19(4)(a) to (d) the policies, controls and procedures include policies as paragraph (4) requires` |
+| 529 | reg 19(4)(a)(i) | encoded | `reg 19(4)(a) to (d) the policies, controls and procedures include policies as paragraph (4) requires` |
+| 530 | reg 19(4)(a)(i)(aa) | encoded | `reg 19(4)(a) to (d) the policies, controls and procedures include policies as paragraph (4) requires` |
+| 531 | reg 19(4)(a)(i)(bb) | encoded | `reg 19(4)(a) to (d) the policies, controls and procedures include policies as paragraph (4) requires` |
+| 532 | reg 19(4)(a)(ii) | encoded | `reg 19(4)(a) to (d) the policies, controls and procedures include policies as paragraph (4) requires` |
+| 533 | reg 19(4)(b) | encoded | `reg 19(4)(a) to (d) the policies, controls and procedures include policies as paragraph (4) requires` |
+| 534 | reg 19(4)(c) | encoded | `reg 19(4)(a) to (d) the policies, controls and procedures include policies as paragraph (4) requires` |
+| 535 | reg 19(4)(d) | encoded | `reg 19(4)(a) to (d) the policies, controls and procedures include policies as paragraph (4) requires` |
+| 536 | reg 19(4)(d)(i) | encoded | `reg 19(4)(a) to (d) the policies, controls and procedures include policies as paragraph (4) requires` |
+| 537 | reg 19(4)(d)(ii) | encoded | `reg 19(4)(a) to (d) the policies, controls and procedures include policies as paragraph (4) requires` |
+| 538 | reg 19(4)(e) | encoded | `reg 19(4)(e) the policies, controls and procedures of a money service business that uses agents include what sub-paragraph (e) requires`, `reg 19(4)(e)(i) the agent would satisfy the fit and proper test provided for in regulation 58` |
+| 539 | reg 19(4)(e)(i) | encoded | `reg 19(4)(e) the policies, controls and procedures of a money service business that uses agents include what sub-paragraph (e) requires`, `reg 19(4)(e)(i) the agent would satisfy the fit and proper test provided for in regulation 58` |
+| 540 | reg 19(4)(e)(ii) | encoded | `reg 19(4)(e) the policies, controls and procedures of a money service business that uses agents include what sub-paragraph (e) requires`, `reg 19(4)(e)(i) the agent would satisfy the fit and proper test provided for in regulation 58` |
+| 541 | reg 19(5) | encoded | `reg 19(5) the relevant person may take the guidance into account` |
+| 542 | reg 19(5)(a) | encoded | `reg 19(5) the relevant person may take the guidance into account` |
+| 543 | reg 19(5)(b) | encoded | `reg 19(5) the relevant person may take the guidance into account` |
+| 544 | reg 19(6) | encoded | `reg 19(6) the relevant person has communicated the policies, controls and procedures to its branches and subsidiary undertakings outside the United Kingdom` |
+| 545 | reg 19A heading | inert | reason 1 (heading) |
+| 546 | reg 19A(1) | encoded | `reg 19A(1) the relevant person has done what paragraph (1) requires` |
+| 547 | reg 19A(1)(a) | encoded | `reg 19A(1) the relevant person has done what paragraph (1) requires` |
+| 548 | reg 19A(1)(b) | encoded | `reg 19A(1) the relevant person has done what paragraph (1) requires` |
+| 549 | reg 19A(1)(c) | encoded | `reg 19A(1) the relevant person has done what paragraph (1) requires` |
+| 550 | reg 19A(1)(c)(i) | encoded | `reg 19A(1) the relevant person has done what paragraph (1) requires` |
+| 551 | reg 19A(1)(c)(ii) | encoded | `reg 19A(1) the relevant person has done what paragraph (1) requires` |
+| 552 | reg 19A(1)(c)(iii) | encoded | `reg 19A(1) the relevant person has done what paragraph (1) requires` |
+| 553 | reg 19A(2) | encoded | `reg 19A(2) the policies, controls and procedures are proportionate and approved` |
+| 554 | reg 19A(2)(a) | encoded | `reg 19A(2) the policies, controls and procedures are proportionate and approved` |
+| 555 | reg 19A(2)(b) | encoded | `reg 19A(2) the policies, controls and procedures are proportionate and approved` |
+| 556 | reg 19A(3) | encoded | `reg 19A(3) the policies, controls and procedures include what paragraph (3) requires` -- stated gap: "must include" is an open list; an item the text does not list cannot be asked, and none is invented |
+| 557 | reg 19A(3)(a) | encoded | `reg 19A(3) the policies, controls and procedures include what paragraph (3) requires` |
+| 558 | reg 19A(3)(b) | encoded | `reg 19A(3) the policies, controls and procedures include what paragraph (3) requires` |
+| 559 | reg 19A(3)(c) | encoded | `reg 19A(3) the policies, controls and procedures include what paragraph (3) requires` |
+| 560 | reg 19A(4) | encoded | `reg 19A(4)(a) to (c) the policies, controls and procedures include policies as paragraph (4) requires` |
+| 561 | reg 19A(4)(a) | encoded | `reg 19A(4)(a) to (c) the policies, controls and procedures include policies as paragraph (4) requires` |
+| 562 | reg 19A(4)(a)(i) | encoded | `reg 19A(4)(a) to (c) the policies, controls and procedures include policies as paragraph (4) requires` |
+| 563 | reg 19A(4)(a)(i)(aa) | encoded | `reg 19A(4)(a) to (c) the policies, controls and procedures include policies as paragraph (4) requires` |
+| 564 | reg 19A(4)(a)(i)(bb) | encoded | `reg 19A(4)(a) to (c) the policies, controls and procedures include policies as paragraph (4) requires` |
+| 565 | reg 19A(4)(a)(ii) | encoded | `reg 19A(4)(a) to (c) the policies, controls and procedures include policies as paragraph (4) requires` |
+| 566 | reg 19A(4)(b) | encoded | `reg 19A(4)(a) to (c) the policies, controls and procedures include policies as paragraph (4) requires` |
+| 567 | reg 19A(4)(c) | encoded | `reg 19A(4)(a) to (c) the policies, controls and procedures include policies as paragraph (4) requires` |
+| 568 | reg 19A(4)(d) | encoded | `reg 19A(4)(d) the policies, controls and procedures of a money service business that uses agents include what sub-paragraph (d) requires`, `reg 19A(4)(d)(i) the agent would satisfy the fit and proper test provided for in regulation 58` |
+| 569 | reg 19A(4)(d)(i) | encoded | `reg 19A(4)(d) the policies, controls and procedures of a money service business that uses agents include what sub-paragraph (d) requires`, `reg 19A(4)(d)(i) the agent would satisfy the fit and proper test provided for in regulation 58` |
+| 570 | reg 19A(4)(d)(ii) | encoded | `reg 19A(4)(d) the policies, controls and procedures of a money service business that uses agents include what sub-paragraph (d) requires`, `reg 19A(4)(d)(i) the agent would satisfy the fit and proper test provided for in regulation 58` |
+| 571 | reg 19A(5) | encoded | `reg 19A(5) the relevant person has communicated the policies, controls and procedures to its branches and subsidiary undertakings outside the United Kingdom` |
+| 572 | reg 20 heading | inert | reason 1 (heading) |
+| 573 | reg 20(1) | encoded | `reg 20(1) the relevant parent undertaking has done what paragraph (1) requires` |
+| 574 | reg 20(1)(a) | encoded | `reg 20(1) the relevant parent undertaking has done what paragraph (1) requires` |
+| 575 | reg 20(1)(a)(i) | encoded | `reg 20(1) the relevant parent undertaking has done what paragraph (1) requires` |
+| 576-577 | reg 20(1)(a)(ii) | encoded | `reg 20(1) the relevant parent undertaking has done what paragraph (1) requires` |
+| 578 | reg 20(1)(b) | encoded | `reg 20(1) the relevant parent undertaking has done what paragraph (1) requires` |
+| 579 | reg 20(1)(c) | encoded | `reg 20(1) the relevant parent undertaking has done what paragraph (1) requires` |
+| 580 | reg 20(1)(d) | encoded | `reg 20(1) the relevant parent undertaking has done what paragraph (1) requires` |
+| 581 | reg 20(1)(d)(i) | encoded | `reg 20(1) the relevant parent undertaking has done what paragraph (1) requires` |
+| 582 | reg 20(1)(d)(ii) | encoded | `reg 20(1) the relevant parent undertaking has done what paragraph (1) requires` |
+| 583 | reg 20(1)(d)(iii) | encoded | `reg 20(1) the relevant parent undertaking has done what paragraph (1) requires` |
+| 584 | reg 20(2) | repealed or blank in this text | revoked: the rendering shows a row of dots where text was removed; nothing to encode |
+| 585 | reg 20(3) | encoded | `reg 20(3) the relevant parent undertaking ensures that its third-country subsidiaries and branches apply equivalent measures` |
+| 586 | reg 20(4) | encoded | `reg 20(4) the relevant parent undertaking informs its supervisory authority and takes additional measures` |
+| 587 | reg 20(4)(a) | encoded | `reg 20(4) the relevant parent undertaking informs its supervisory authority and takes additional measures` |
+| 588 | reg 20(4)(b) | encoded | `reg 20(4) the relevant parent undertaking informs its supervisory authority and takes additional measures` |
+| 589 | reg 20(5) | encoded | `reg 20(5) the relevant parent undertaking ensures that relevant information is shared between members of its group` |
+| 590 | reg 20(6) | encoded | `reg 20(6) the FCA may make the technical standards` |
+| 591 | reg 20(6)(a) | encoded | `reg 20(6) the FCA may make the technical standards` |
+| 592 | reg 20(6)(b) | encoded | `reg 20(6) the FCA may make the technical standards` |
+| 593 | reg 21 heading | inert | reason 1 (heading) |
+| 594 | reg 21(1) | encoded | `reg 21(1) the relevant person has done what paragraph (1) requires` |
+| 595 | reg 21(1)(a) | encoded | `reg 21(1) the relevant person has done what paragraph (1) requires` |
+| 596 | reg 21(1)(b) | encoded | `reg 21(1) the relevant person has done what paragraph (1) requires` |
+| 597 | reg 21(1)(c) | encoded | `reg 21(1) the relevant person has done what paragraph (1) requires` |
+| 598 | reg 21(1)(c)(i) | encoded | `reg 21(1) the relevant person has done what paragraph (1) requires` |
+| 599 | reg 21(1)(c)(ii) | encoded | `reg 21(1) the relevant person has done what paragraph (1) requires` |
+| 600 | reg 21(1)(c)(iii) | encoded | `reg 21(1) the relevant person has done what paragraph (1) requires` |
+| 601 | reg 21(2) | encoded | `reg 21(2)(a) the assessment is screening` |
+| 602 | reg 21(2)(a) | encoded | `reg 21(2)(a) the assessment is screening` |
+| 603 | reg 21(2)(a)(i) | encoded | `reg 21(2)(a) the assessment is screening` |
+| 604 | reg 21(2)(a)(ii) | encoded | `reg 21(2)(a) the assessment is screening` |
+| 605 | reg 21(2)(b) | encoded | `reg 21(2)(b) the employee is a relevant employee` |
+| 606 | reg 21(2)(b)(i) | encoded | `reg 21(2)(b) the employee is a relevant employee` |
+| 607 | reg 21(2)(b)(ii) | encoded | `reg 21(2)(b) the employee is a relevant employee` |
+| 608 | reg 21(2)(b)(ii)(aa) | encoded | `reg 21(2)(b) the employee is a relevant employee` |
+| 609 | reg 21(2)(b)(ii)(bb) | encoded | `reg 21(2)(b) the employee is a relevant employee` |
+| 610 | reg 21(3) | encoded | `reg 21(3) the relevant person has appointed a nominated officer` |
+| 611 | reg 21(4) | encoded | `reg 21(4) the period of 14 days`, `reg 21(4) the relevant person informed its supervisory authority within 14 days of the appointment` |
+| 612 | reg 21(4)(a) | encoded | `reg 21(4) the period of 14 days`, `reg 21(4) the relevant person informed its supervisory authority within 14 days of the appointment` |
+| 613 | reg 21(4)(b) | encoded | `reg 21(4) the period of 14 days`, `reg 21(4) the relevant person informed its supervisory authority within 14 days of the appointment` |
+| 614 | reg 21(4)(c) | encoded | `reg 21(4) the period of 14 days`, `reg 21(4) the relevant person informed its supervisory authority within 14 days of the appointment` |
+| 615 | reg 21(5) | encoded | `reg 21(5) the nominated officer has considered the disclosure` |
+| 616 | reg 21(6) | encoded | `reg 21(6) paragraphs (1) and (3) do not apply to the relevant person` |
+| 617 | reg 21(7) | encoded | `reg 21(7) the electronic money issuer or payment service provider has appointed the individual paragraph (7) requires` |
+| 618 | reg 21(7)(a) | encoded | `reg 21(7) the electronic money issuer or payment service provider has appointed the individual paragraph (7) requires` |
+| 619 | reg 21(7)(b) | encoded | `reg 21(7) the electronic money issuer or payment service provider has appointed the individual paragraph (7) requires` |
+| 620 | reg 21(7)(c) | encoded | `reg 21(7) the electronic money issuer or payment service provider has appointed the individual paragraph (7) requires` |
+| 621 | reg 21(7)(d) | encoded | `reg 21(7) the electronic money issuer or payment service provider has appointed the individual paragraph (7) requires` |
+| 622 | reg 21(8) | encoded | `reg 21(8) the relevant person has established and maintains the systems paragraph (8) requires`, `reg 21(8)(a) the business relationship was maintained during the previous five years` |
+| 623 | reg 21(8)(a) | encoded | `reg 21(8) the relevant person has established and maintains the systems paragraph (8) requires`, `reg 21(8)(a) the business relationship was maintained during the previous five years` |
+| 624 | reg 21(8)(b) | encoded | `reg 21(8) the relevant person has established and maintains the systems paragraph (8) requires`, `reg 21(8)(a) the business relationship was maintained during the previous five years` |
+| 625 | reg 21(9) | encoded | `reg 21(9) the person is specified in this paragraph` |
+| 626 | reg 21(9)(a) | encoded | `reg 21(9) the person is specified in this paragraph` |
+| 627 | reg 21(9)(b) | encoded | `reg 21(9) the person is specified in this paragraph` |
+| 628 | reg 21(9)(c) | encoded | `reg 21(9) the person is specified in this paragraph` |
+| 629 | reg 21(10) | encoded | `reg 21(10)(a) the relevant person has taken into account its risk assessments` |
+| 630 | reg 21(10)(a) | encoded | `reg 21(10)(a) the relevant person has taken into account its risk assessments` |
+| 631 | reg 21(10)(b) | encoded | `reg 21(10)(b) the relevant person may take the guidance into account`, `reg 21(10)(a) the relevant person has taken into account its risk assessments` |
+| 632 | reg 21(10)(b)(i) | encoded | `reg 21(10)(b) the relevant person may take the guidance into account`, `reg 21(10)(a) the relevant person has taken into account its risk assessments` |
+| 633 | reg 21(10)(b)(ii) | encoded | `reg 21(10)(b) the relevant person may take the guidance into account`, `reg 21(10)(a) the relevant person has taken into account its risk assessments` |
+| 634 | reg 22 heading | inert | reason 1 (heading) |
+| 635 | reg 22 [blank] | repealed or blank in this text | revoked: the rendering shows a row of dots where text was removed; nothing to encode |
+| 636 | reg 23 heading | inert | reason 1 (heading) |
+| 637 | reg 23(1) | encoded | `reg 23 the person has notified the FCA that it is acting, or intends to act, as a money service business or a trust or company service provider`, `reg 23(1) the authorised person informed the FCA in time`, `reg 23(1) the period of 28 days` |
+| 638 | reg 23(2) | encoded | `reg 23(2) paragraph (1) does not apply to the authorised person`, `reg 23(2)(b) the period of 30 days` |
+| 639 | reg 23(2)(a) | encoded | `reg 23(2) paragraph (1) does not apply to the authorised person`, `reg 23(2)(b) the period of 30 days` |
+| 640 | reg 23(2)(b) | encoded | `reg 23(2) paragraph (1) does not apply to the authorised person`, `reg 23(2)(b) the period of 30 days` |
+| 641 | reg 23(3) | encoded | `reg 23(3) the authorised person informed the FCA of ceasing to act within 28 days`, `reg 23(3) the period of 28 days` |
+| 642 | reg 23(3A) | encoded | `reg 23(3A) A provided the FCA with the details or correction within 30 days beginning with the date`, `reg 23(3A) the period of 30 days beginning with the date` |
+| 643 | reg 23(3A)(a) | encoded | `reg 23(3A) A provided the FCA with the details or correction within 30 days beginning with the date`, `reg 23(3A) the period of 30 days beginning with the date` |
+| 644-645 | reg 23(3A)(b) | encoded | `reg 23(3A) A provided the FCA with the details or correction within 30 days beginning with the date`, `reg 23(3A) the period of 30 days beginning with the date` |
+| 646 | reg 23(4) | encoded | `reg 23(4) the requirement is to be treated as a requirement imposed by or under FSMA` |
+| 647 | reg 23(5) | encoded | `reg 23(5) the information provided to the FCA is in the form and verified in the manner the FCA specifies` -- stated gap: the form, and the manner of verification, are whatever the FCA specifies; the text gives neither, so they arrive as BOOLEAN inputs |
+| 648 | reg 24 heading | inert | reason 1 (heading) |
+| 649 | reg 24(1) | encoded | `reg 24(1) the relevant person has done what paragraph (1) requires` |
+| 650 | reg 24(1)(a) | encoded | `reg 24(1) the relevant person has done what paragraph (1) requires` -- stated gap: the agents of limb (a) are folded into the relevant-employee inputs and cannot be asked separately |
+| 651 | reg 24(1)(a)(i) | encoded | `reg 24(1) the relevant person has done what paragraph (1) requires` |
+| 652 | reg 24(1)(a)(ii) | encoded | `reg 24(1) the relevant person has done what paragraph (1) requires` |
+| 653 | reg 24(1)(b) | encoded | `reg 24(1) the relevant person has done what paragraph (1) requires` |
+| 654 | reg 24(2) | encoded | `reg 24(2) the employee is a relevant employee` |
+| 655 | reg 24(2)(a) | encoded | `reg 24(2) the employee is a relevant employee` |
+| 656 | reg 24(2)(b) | encoded | `reg 24(2) the employee is a relevant employee` |
+| 657 | reg 24(2)(b)(i) | encoded | `reg 24(2) the employee is a relevant employee` |
+| 658 | reg 24(2)(b)(ii) | encoded | `reg 24(2) the employee is a relevant employee` |
+| 659 | reg 24(3) | encoded | `reg 24(3)(a) the relevant person has taken account of what sub-paragraph (a) requires` |
+| 660 | reg 24(3)(a) | encoded | `reg 24(3)(a) the relevant person has taken account of what sub-paragraph (a) requires` |
+| 661 | reg 24(3)(a)(i) | encoded | `reg 24(3)(a) the relevant person has taken account of what sub-paragraph (a) requires` |
+| 662 | reg 24(3)(a)(ii) | encoded | `reg 24(3)(a) the relevant person has taken account of what sub-paragraph (a) requires` |
+| 663 | reg 24(3)(a)(iii) | encoded | `reg 24(3)(a) the relevant person has taken account of what sub-paragraph (a) requires` |
+| 664 | reg 24(3)(b) | encoded | `reg 24(3)(b) the relevant person may take the guidance into account`, `reg 24(3)(a) the relevant person has taken account of what sub-paragraph (a) requires` |
+| 665 | reg 24(3)(b)(i) | encoded | `reg 24(3)(b) the relevant person may take the guidance into account`, `reg 24(3)(a) the relevant person has taken account of what sub-paragraph (a) requires` |
+| 666 | reg 24(3)(b)(ii) | encoded | `reg 24(3)(b) the relevant person may take the guidance into account`, `reg 24(3)(a) the relevant person has taken account of what sub-paragraph (a) requires` |
+| 667 | reg 25 heading | inert | reason 1 (heading) |
+| 668 | reg 25(1) | encoded | `reg 25(1) the supervisory authority has determined whether the additional measures are sufficient` |
+| 669 | reg 25(2) | encoded | `reg 25(2) the decision is a direction`, `reg 25(2) the direction is one that the supervisory authority must consider whether to give`, `reg 25(2) the supervisory authority has considered whether to give a direction` |
+| 670 | reg 25(2)(a) | encoded | `reg 25(2) the decision is a direction`, `reg 25(2) the direction is one that the supervisory authority must consider whether to give`, `reg 25(2) the supervisory authority has considered whether to give a direction` |
+| 671 | reg 25(2)(b) | encoded | `reg 25(2) the decision is a direction`, `reg 25(2) the direction is one that the supervisory authority must consider whether to give`, `reg 25(2) the supervisory authority has considered whether to give a direction` |
+| 672 | reg 25(2)(c) | encoded | `reg 25(2) the decision is a direction`, `reg 25(2) the direction is one that the supervisory authority must consider whether to give`, `reg 25(2) the supervisory authority has considered whether to give a direction` |
+| 673 | reg 25(2)(d) | encoded | `reg 25(2) the decision is a direction`, `reg 25(2) the direction is one that the supervisory authority must consider whether to give`, `reg 25(2) the supervisory authority has considered whether to give a direction` |
+| 674 | reg 25(2)(e) | encoded | `reg 25(2) the decision is a direction`, `reg 25(2) the direction is one that the supervisory authority must consider whether to give`, `reg 25(2) the supervisory authority has considered whether to give a direction` |
+| 675 | reg 25(2)(e)(i) | encoded | `reg 25(2) the decision is a direction`, `reg 25(2) the direction is one that the supervisory authority must consider whether to give`, `reg 25(2) the supervisory authority has considered whether to give a direction` |
+| 676 | reg 25(2)(e)(ii) | encoded | `reg 25(2) the decision is a direction`, `reg 25(2) the direction is one that the supervisory authority must consider whether to give`, `reg 25(2) the supervisory authority has considered whether to give a direction` |
+| 677 | reg 25(2)(e)(iii) | encoded | `reg 25(2) the decision is a direction`, `reg 25(2) the direction is one that the supervisory authority must consider whether to give`, `reg 25(2) the supervisory authority has considered whether to give a direction` |
+| 678 | reg 25(3) | encoded | `reg 25(3) the direction has taken effect`, `reg 25(3)(b) the date specified in the notice has come` |
+| 679 | reg 25(3)(a) | encoded | `reg 25(3) the direction has taken effect`, `reg 25(3)(b) the date specified in the notice has come` |
+| 680 | reg 25(3)(b) | encoded | `reg 25(3) the direction has taken effect`, `reg 25(3)(b) the date specified in the notice has come` |
+| 681 | reg 25(3)(c) | encoded | `reg 25(3) the direction has taken effect`, `reg 25(3)(b) the date specified in the notice has come` |
+| 682 | reg 25(4) | encoded | `reg 25(4) the matter to which the notice relates is still open to review` |
+| 683 | reg 25(4)(a) | encoded | `reg 25(4) the matter to which the notice relates is still open to review` |
+| 684 | reg 25(4)(b) | encoded | `reg 25(4) the matter to which the notice relates is still open to review` |
+| 685 | reg 25(4)(c) | encoded | `reg 25(4) the matter to which the notice relates is still open to review` |
+| 686 | reg 25(4)(d) | encoded | `reg 25(4) the matter to which the notice relates is still open to review` |
+| 687 | reg 25(5) | encoded | `reg 25(5) the FCA has consulted the PRA` |
+| 688 | reg 25(6) | encoded | `reg 25(6) the supervisory authority has given the relevant parent undertaking a notice in writing` |
+| 689 | reg 25(7) | encoded | `reg 25(7) the notice contains what paragraph (7) requires` |
+| 690 | reg 25(7)(a) | encoded | `reg 25(7) the notice contains what paragraph (7) requires` |
+| 691 | reg 25(7)(b) | encoded | `reg 25(7) the notice contains what paragraph (7) requires` |
+| 692 | reg 25(7)(c) | encoded | `reg 25(7) the notice contains what paragraph (7) requires` -- stated gap: the period for representations is whatever the notice specifies; the text fixes none, so no period is computed |
+| 693 | reg 25(7)(d) | encoded | `reg 25(7) the notice contains what paragraph (7) requires` |
+| 694 | reg 25(7)(e) | encoded | `reg 25(7) the notice contains what paragraph (7) requires` |
+| 695 | reg 25(8) | encoded | `reg 25(8) the supervisory authority may extend the period allowed under the notice for making representations` |
+| 696 | reg 25(9) | encoded | `reg 25(9) the supervisory authority has given A notice in writing of its decision to issue or not to rescind` |
+| 697 | reg 25(9)(a) | encoded | `reg 25(9) the supervisory authority has given A notice in writing of its decision to issue or not to rescind` |
+| 698-699 | reg 25(9)(b) | encoded | `reg 25(9) the supervisory authority has given A notice in writing of its decision to issue or not to rescind` |
+| 700 | reg 25(10) | encoded | `reg 25(10) the supervisory authority has given A notice in writing of its decision not to issue, to issue a different direction or to rescind` |
+| 701 | reg 25(10)(a) | encoded | `reg 25(10) the supervisory authority has given A notice in writing of its decision not to issue, to issue a different direction or to rescind` |
+| 702 | reg 25(10)(b) | encoded | `reg 25(10) the supervisory authority has given A notice in writing of its decision not to issue, to issue a different direction or to rescind` |
+| 703-704 | reg 25(10)(c) | encoded | `reg 25(10) the supervisory authority has given A notice in writing of its decision not to issue, to issue a different direction or to rescind` |
+| 705 | reg 25(11) | encoded | `reg 25(11) the notice under paragraph (9) informs A of A's right to refer the matter to the appropriate tribunal` |
+| 706 | reg 25(12) | encoded | `reg 25(12) the notice under paragraph (10)(b) complies with paragraph (7)` |
+| 707 | reg 25(13) | encoded | `reg 25(13) the notice gives an indication of the procedure on a reference to the appropriate tribunal` |
+| 708 | reg 25(13A) | encoded | `reg 25(13A) the supervisory authority may publish information about the direction` |
+| 709 | reg 25(13B) | encoded | `reg 25(13B) the supervisory authority has published the rescission without delay` |
+| 710 | reg 25(13C) | encoded | `reg 25(13C) the supervisory authority has published the status of the appeal and its outcome without delay` |
+| 711 | reg 25(14) | encoded | `reg 25(14)(a) the appropriate tribunal` |
+| 712 | reg 25(14)(a) | encoded | `reg 25(14)(a) the appropriate tribunal` |
+| 713 | reg 25(14)(a)(i) | encoded | `reg 25(14)(a) the appropriate tribunal` |
+| 714 | reg 25(14)(a)(ii) | encoded | `reg 25(14)(a) the appropriate tribunal` |
+| 715 | reg 25(14)(b) | encoded | `reg 25(14)(b) the person or description is specified`, `reg 25(14)(a) the appropriate tribunal` |
+| 716 | part-heading CHAPTER 3 — Ownership and Management Restrictions | inert | reason 1 (heading) |
+| 717 | reg 26 heading | inert | reason 1 (heading) |
+| 718 | reg 26(1) | encoded | `reg 26(1) the person may be the beneficial owner, officer or manager of the relevant firm, or the relevant sole practitioner` |
+| 719 | reg 26(2) | encoded | `reg 26(2) the kind of firm or sole practitioner is within this paragraph` |
+| 720 | reg 26(2)(a) | encoded | `reg 26(2) the kind of firm or sole practitioner is within this paragraph` |
+| 721 | reg 26(2)(b) | encoded | `reg 26(2) the kind of firm or sole practitioner is within this paragraph` |
+| 722 | reg 26(2)(c) | encoded | `reg 26(2) the kind of firm or sole practitioner is within this paragraph` |
+| 723 | reg 26(2)(d) | encoded | `reg 26(2) the kind of firm or sole practitioner is within this paragraph` |
+| 724 | reg 26(2)(e) | encoded | `reg 26(2) the kind of firm or sole practitioner is within this paragraph` |
+| 725 | reg 26(3) | encoded | `reg 26(3) the date before which the application must have been made`, `reg 26(3) the person does not breach the prohibition in paragraph (1)` |
+| 726 | reg 26(3A) | encoded | `reg 26(3A) the person does not breach the prohibition in paragraph (1)`, `reg 26(3A)(a) the date on which the person must have become a relevant firm or relevant sole practitioner` |
+| 727 | reg 26(3A)(a) | encoded | `reg 26(3A) the person does not breach the prohibition in paragraph (1)`, `reg 26(3A)(a) the date on which the person must have become a relevant firm or relevant sole practitioner` |
+| 728 | reg 26(3A)(b) | encoded | `reg 26(3A) the person does not breach the prohibition in paragraph (1)`, `reg 26(3A)(a) the date on which the person must have become a relevant firm or relevant sole practitioner` |
+| 729 | reg 26(3A)(c) | encoded | `reg 26(3A) the person does not breach the prohibition in paragraph (1)`, `reg 26(3A)(a) the date on which the person must have become a relevant firm or relevant sole practitioner` |
+| 730 | reg 26(4) | encoded | `reg 26(4) the person may be appointed, or continue to act, as an officer or manager of the relevant firm`, `reg 26(4) the relevant firm has taken reasonable care as paragraph (4) requires` |
+| 731 | reg 26(4)(a) | encoded | `reg 26(4) the person may be appointed, or continue to act, as an officer or manager of the relevant firm`, `reg 26(4) the relevant firm has taken reasonable care as paragraph (4) requires` |
+| 732 | reg 26(4)(b) | encoded | `reg 26(4) the person may be appointed, or continue to act, as an officer or manager of the relevant firm`, `reg 26(4) the relevant firm has taken reasonable care as paragraph (4) requires` |
+| 733 | reg 26(5) | encoded | `reg 26(5) the relevant sole practitioner may act, or continue to act, as a sole practitioner` |
+| 734 | reg 26(5)(a) | encoded | `reg 26(5) the relevant sole practitioner may act, or continue to act, as a sole practitioner` |
+| 735 | reg 26(5)(b) | encoded | `reg 26(5) the relevant sole practitioner may act, or continue to act, as a sole practitioner` |
+| 736 | reg 26(6) | encoded | `reg 26(6) the application may be made` |
+| 737 | reg 26(7) | encoded | `reg 26(7) the application for approval meets the requirements of regulation 26(7)`, `reg 26(7) the application is made as paragraph (7) requires` |
+| 738 | reg 26(7)(a) | encoded | `reg 26(7) the application for approval meets the requirements of regulation 26(7)`, `reg 26(7) the application is made as paragraph (7) requires` |
+| 739 | reg 26(7)(b) | encoded | `reg 26(7) the application for approval meets the requirements of regulation 26(7)`, `reg 26(7) the application is made as paragraph (7) requires` |
+| 740 | reg 26(7)(b)(i) | encoded | `reg 26(7) the application for approval meets the requirements of regulation 26(7)`, `reg 26(7) the application is made as paragraph (7) requires` |
+| 741 | reg 26(7)(b)(ii) | encoded | `reg 26(7) the application for approval meets the requirements of regulation 26(7)`, `reg 26(7) the application is made as paragraph (7) requires` |
+| 742 | reg 26(8) | encoded | `reg 26(8)(a) the supervisory authority must grant the application`, `reg 26(8)(b) the supervisory authority may grant the application so as to give approval only for a limited period` |
+| 743 | reg 26(8)(a) | encoded | `reg 26(8)(a) the supervisory authority must grant the application`, `reg 26(8)(b) the supervisory authority may grant the application so as to give approval only for a limited period` |
+| 744 | reg 26(8)(b) | encoded | `reg 26(8)(a) the supervisory authority must grant the application`, `reg 26(8)(b) the supervisory authority may grant the application so as to give approval only for a limited period` |
+| 745 | reg 26(9) | encoded | `reg 26(9) the approval given under paragraph (8) is valid` |
+| 746 | reg 26(9)(a) | encoded | `reg 26(9) the approval given under paragraph (8) is valid` |
+| 747 | reg 26(9)(b) | encoded | `reg 26(9) the approval given under paragraph (8) is valid` |
+| 748 | reg 26(10) | encoded | `reg 26(10) the period of 30 days`, `reg 26(10)(a) P informed the supervisory authority within 30 days of the conviction`, `reg 26(10)(b) the relevant firm informed its supervisory authority within 30 days of becoming aware of the conviction` |
+| 749 | reg 26(10)(a) | encoded | `reg 26(10) the period of 30 days`, `reg 26(10)(a) P informed the supervisory authority within 30 days of the conviction`, `reg 26(10)(b) the relevant firm informed its supervisory authority within 30 days of becoming aware of the conviction` |
+| 750 | reg 26(10)(b) | encoded | `reg 26(10) the period of 30 days`, `reg 26(10)(a) P informed the supervisory authority within 30 days of the conviction`, `reg 26(10)(b) the relevant firm informed its supervisory authority within 30 days of becoming aware of the conviction` |
+| 751 | reg 26(11) | encoded | `reg 26(11) the court may order the sale of the beneficial owner's interest in the firm` |
+| 752 | reg 26(12) | encoded | `reg 26(12) the person is guilty of a criminal offence` |
+| 753 | reg 26(12)(a) | encoded | `reg 26(12) the person is guilty of a criminal offence` |
+| 754-755 | reg 26(12)(b) | encoded | `reg 26(12) the person is guilty of a criminal offence` |
+| 756 | reg 26(13) | encoded | `reg 26(13) the fine is limited to the statutory maximum`, `reg 26(13) the longest term of imprisonment in months` |
+| 757 | reg 26(13)(a) | encoded | `reg 26(13) the fine is limited to the statutory maximum`, `reg 26(13) the longest term of imprisonment in months` |
+| 758 | reg 26(13)(a)(i) | encoded | `reg 26(13) the fine is limited to the statutory maximum`, `reg 26(13) the longest term of imprisonment in months` |
+| 759 | reg 26(13)(a)(ii) | encoded | `reg 26(13) the fine is limited to the statutory maximum`, `reg 26(13) the longest term of imprisonment in months` |
+| 760 | reg 26(13)(b) | encoded | `reg 26(13) the fine is limited to the statutory maximum`, `reg 26(13) the longest term of imprisonment in months` |
+| 761 | reg 26(14) | encoded | `reg 26(14) the offence is a relevant offence for the purposes of this regulation` |
+| 762 | part-heading PART 3 — Customer Due Diligence | inert | reason 1 (heading) |
+| 763 | part-heading CHAPTER 1 — Customer due diligence: general | inert | reason 1 (heading) |
+| 764 | reg 27 heading | inert | reason 1 (heading); its line is also quoted as the head of the first run of the rule named |
+| 765 | reg 27(1) | encoded | `reg 27(1)(a) the relevant person establishes a business relationship` |
+| 766 | reg 27(1)(a) | encoded | `reg 27(1)(a) the relevant person establishes a business relationship` |
+| 767 | reg 27(1)(b) | encoded | `reg 27(1)(b) the relevant person carries out an occasional transaction that is a transfer of funds exceeding 800 pounds`, `reg 27(1)(c) the relevant person suspects money laundering or terrorist financing`, `reg 27(1)(a) the relevant person establishes a business relationship` |
+| 768 | reg 27(1)(c) | encoded | `reg 27(1)(c) the relevant person suspects money laundering or terrorist financing`, `reg 27(1)(a) the relevant person establishes a business relationship` |
+| 769 | reg 27(1)(d) | encoded | `reg 27(1)(d) the relevant person doubts the veracity or adequacy of documents or information previously obtained`, `reg 27(1)(a) the relevant person establishes a business relationship` |
+| 770 | reg 27(2) | fork | `reg 27(2) the amount of 12000 pounds sterling`, `reg 27(2) the relevant person carries out an occasional transaction of 12000 pounds or more` -- fork F-27(2) |
+| 771 | reg 27(3) | encoded | `reg 27(3) the cash amount of 10000 pounds sterling`, `reg 27(3) the high value dealer carries out an occasional transaction in cash of 10000 pounds or more` |
+| 772 | reg 27(4) | encoded | `reg 27(4) the transaction is a transaction in cash for the purposes of paragraph (3)` -- stated gap: regulation 3(1) (line 38) says cash means notes, coins or travellers' cheques; nothing here decides whether a given payment is cash, so `the transaction is paid in cash` is a fact the caller states |
+| 773 | reg 27(4)(a) | encoded | `reg 27(4) the transaction is a transaction in cash for the purposes of paragraph (3)` |
+| 774 | reg 27(4)(b) | encoded | `reg 27(4) the transaction is a transaction in cash for the purposes of paragraph (3)` |
+| 775 | reg 27(5) | encoded | `reg 27(5) the amount of 2000 pounds sterling`, `reg 27(5) the casino carries out a transaction within paragraph (6) of 2000 pounds or more` |
+| 776 | reg 27(6) | encoded | `reg 27(6) the transaction is within this paragraph` |
+| 777 | reg 27(6)(a) | encoded | `reg 27(6) the transaction is within this paragraph` |
+| 778 | reg 27(6)(a)(i) | encoded | `reg 27(6) the transaction is within this paragraph` |
+| 779 | reg 27(6)(a)(ii) | encoded | `reg 27(6) the transaction is within this paragraph` |
+| 780 | reg 27(6)(a)(iii) | encoded | `reg 27(6) the transaction is within this paragraph` |
+| 781 | reg 27(6)(b) | encoded | `reg 27(6) the transaction is within this paragraph` |
+| 782 | reg 27(7) | encoded | `reg 27(7) the amount of the transaction for the purposes of paragraph (5)` |
+| 783 | reg 27(7A) | encoded | `reg 27(7A) the letting agent concludes an agreement for the letting of land for a month or more at a monthly rent of 10000 pounds or more` |
+| 784 | reg 27(7A)(i) | encoded | `reg 27(7A) the letting agent concludes an agreement for the letting of land for a month or more at a monthly rent of 10000 pounds or more` |
+| 785 | reg 27(7A)(ii) | encoded | `reg 27(7A) the letting agent concludes an agreement for the letting of land for a month or more at a monthly rent of 10000 pounds or more` |
+| 786 | reg 27(7B) | encoded | `reg 27(7B) the letting agent must apply customer due diligence measures in relation to the party` |
+| 787 | reg 27(7C) | encoded | `reg 27(7C)(a) the art market participant carries out or acts in respect of an occasional transaction in a work of art of 10000 pounds or more`, `reg 27(7C)(b) the art market participant is the operator of a freeport storing works of art of 10000 pounds or more` |
+| 788 | reg 27(7C)(a) | encoded | `reg 27(7C)(a) the art market participant carries out or acts in respect of an occasional transaction in a work of art of 10000 pounds or more`, `reg 27(7C)(b) the art market participant is the operator of a freeport storing works of art of 10000 pounds or more` |
+| 789 | reg 27(7C)(b) | encoded | `reg 27(7C)(a) the art market participant carries out or acts in respect of an occasional transaction in a work of art of 10000 pounds or more`, `reg 27(7C)(b) the art market participant is the operator of a freeport storing works of art of 10000 pounds or more` |
+| 790 | reg 27(7D) | encoded | `reg 27(7D) the cryptoasset exchange provider carries out a transaction using its machine` |
+| 791 | reg 27(7E) | encoded | `reg 27(7E) the cryptoasset exchange provider or custodian wallet provider carries out a cryptoasset transfer of 800 pounds or more` |
+| 792 | reg 27(8) | encoded | `reg 27(8)(za) the relevant person has a legal duty to contact an existing customer to review beneficial ownership information` |
+| 793 | reg 27(8)(za) | encoded | `reg 27(8)(za) the relevant person has a legal duty to contact an existing customer to review beneficial ownership information` |
+| 794 | reg 27(8)(za)(i) | encoded | `reg 27(8)(za) the relevant person has a legal duty to contact an existing customer to review beneficial ownership information` |
+| 795 | reg 27(8)(za)(ii) | encoded | `reg 27(8)(za) the relevant person has a legal duty to contact an existing customer to review beneficial ownership information` |
+| 796 | reg 27(8)(zb) | encoded | `reg 27(8)(zb) the relevant person has to contact an existing customer to fulfil a duty under the International Tax Compliance Regulations 2015`, `reg 27(8)(za) the relevant person has a legal duty to contact an existing customer to review beneficial ownership information` |
+| 797 | reg 27(8)(a) | encoded | `reg 27(8)(a) it is an appropriate time to apply customer due diligence measures to existing customers`, `reg 27(8)(za) the relevant person has a legal duty to contact an existing customer to review beneficial ownership information` -- stated gap: the text is risk based and fixes no period for re-applying customer due diligence; whether this is an appropriate time arrives as a BOOLEAN input |
+| 798 | reg 27(8)(b) | encoded | `reg 27(8)(b) the relevant person becomes aware that the circumstances of an existing customer have changed`, `reg 27(8)(za) the relevant person has a legal duty to contact an existing customer to review beneficial ownership information` |
+| 799 | reg 27(9) | encoded | `reg 27(9) the relevant person has taken into account what paragraph (9) requires` |
+| 800 | reg 27(9)(a) | encoded | `reg 27(9) the relevant person has taken into account what paragraph (9) requires` |
+| 801 | reg 27(9)(b) | encoded | `reg 27(9) the relevant person has taken into account what paragraph (9) requires` |
+| 802 | reg 27(9)(c) | encoded | `reg 27(9) the relevant person has taken into account what paragraph (9) requires` |
+| 803 | reg 27(9)(d) | encoded | `reg 27(9) the relevant person has taken into account what paragraph (9) requires` |
+| 804 | reg 27(10) | encoded | `reg 27(10) the thing is a cryptoasset`, `reg 27(10) the transfer is a cryptoasset transfer` |
+| 805 | reg 28 heading | inert | reason 1 (heading) |
+| 806 | reg 28(1) | encoded | `reg 28(1) this regulation applies` |
+| 807 | reg 28(2) | encoded | `reg 28(2)(a) the relevant person must identify the customer` |
+| 808 | reg 28(2)(a) | encoded | `reg 28(2)(a) the relevant person must identify the customer` |
+| 809 | reg 28(2)(b) | encoded | `reg 28(2)(b) the relevant person must verify the customer's identity`, `reg 28(2)(a) the relevant person must identify the customer` |
+| 810 | reg 28(2)(c) | encoded | `reg 28(2)(c) the relevant person must assess the purpose and intended nature of the business relationship or occasional transaction`, `reg 28(2)(a) the relevant person must identify the customer` |
+| 811 | reg 28(3) | encoded | `reg 28(3)(a) the relevant person must obtain and verify the particulars of the body corporate` |
+| 812 | reg 28(3)(a) | encoded | `reg 28(3)(a) the particulars the relevant person must obtain and verify`, `reg 28(3)(a) the relevant person must obtain and verify the particulars of the body corporate` |
+| 813 | reg 28(3)(a)(i) | encoded | `reg 28(3)(a) the particulars the relevant person must obtain and verify`, `reg 28(3)(a) the relevant person must obtain and verify the particulars of the body corporate` |
+| 814 | reg 28(3)(a)(ii) | encoded | `reg 28(3)(a) the particulars the relevant person must obtain and verify`, `reg 28(3)(a) the relevant person must obtain and verify the particulars of the body corporate` |
+| 815 | reg 28(3)(a)(iii) | encoded | `reg 28(3)(a) the particulars the relevant person must obtain and verify`, `reg 28(3)(a) the relevant person must obtain and verify the particulars of the body corporate` |
+| 816 | reg 28(3)(b) | encoded | `reg 28(3)(b) the relevant person must take reasonable measures to determine and verify the law, constitution and management of the body corporate` |
+| 817 | reg 28(3)(b)(i) | encoded | `reg 28(3)(b) the matters the relevant person must take reasonable measures to determine and verify`, `reg 28(3)(b) the relevant person must take reasonable measures to determine and verify the law, constitution and management of the body corporate` |
+| 818 | reg 28(3)(b)(ii) | encoded | `reg 28(3)(b) the matters the relevant person must take reasonable measures to determine and verify`, `reg 28(3)(b) the relevant person must take reasonable measures to determine and verify the law, constitution and management of the body corporate` |
+| 819 | reg 28(3A) | encoded | `reg 28(3A) the form of customer is a legal person, trust, company, foundation or similar legal arrangement`, `reg 28(3A) the relevant person must take reasonable measures to understand the ownership and control structure of the customer` |
+| 820 | reg 28(4) | encoded | `reg 28(4) the relevant person must identify the beneficial owner and take reasonable measures to verify the beneficial owner's identity` |
+| 821 | reg 28(4)(a) | encoded | `reg 28(4) the relevant person must identify the beneficial owner and take reasonable measures to verify the beneficial owner's identity` |
+| 822 | reg 28(4)(b) | encoded | `reg 28(4) the relevant person must identify the beneficial owner and take reasonable measures to verify the beneficial owner's identity` |
+| 823 | reg 28(4)(c) | encoded | `reg 28(4)(c) the relevant person must take reasonable measures to understand the ownership and control structure of the beneficial owner`, `reg 28(4) the relevant person must identify the beneficial owner and take reasonable measures to verify the beneficial owner's identity` |
+| 824 | reg 28(5) | encoded | `reg 28(5) paragraphs (3)(b), (3A) and (4) do not apply to the customer` |
+| 825 | reg 28(6) | encoded | `reg 28(6) the relevant person may treat the senior person responsible for managing the body corporate as its beneficial owner` |
+| 826 | reg 28(7) | encoded | `reg 28(7) this paragraph applies` |
+| 827 | reg 28(7)(a) | encoded | `reg 28(7) this paragraph applies` |
+| 828 | reg 28(7)(b) | encoded | `reg 28(7) this paragraph applies` |
+| 829 | reg 28(8) | encoded | `reg 28(8) the relevant person must keep the records and verify the senior person's identity` |
+| 830 | reg 28(8)(a) | encoded | `reg 28(8) the relevant person must keep the records and verify the senior person's identity` |
+| 831 | reg 28(8)(b) | encoded | `reg 28(8) the relevant person must keep the records and verify the senior person's identity` |
+| 832 | reg 28(8)(b)(i) | encoded | `reg 28(8) the relevant person must keep the records and verify the senior person's identity` |
+| 833 | reg 28(8)(b)(ii) | encoded | `reg 28(8) the relevant person must keep the records and verify the senior person's identity` |
+| 834 | reg 28(9) | encoded | `reg 28(9) the relevant person satisfies its requirements under paragraph (4)` |
+| 835 | reg 28(9A) | encoded | `reg 28(9A) the entity is a registrable relevant legal entity`, `reg 28(9A) the individual is a registrable beneficial owner`, `reg 28(9A) the person is a registrable person` |
+| 836 | reg 28(9A) "registrable beneficial owner" | encoded | `reg 28(9A) the entity is a registrable relevant legal entity`, `reg 28(9A) the individual is a registrable beneficial owner`, `reg 28(9A) the person is a registrable person` |
+| 837 | reg 28(9A) "registrable person" | encoded | `reg 28(9A) the entity is a registrable relevant legal entity`, `reg 28(9A) the individual is a registrable beneficial owner`, `reg 28(9A) the person is a registrable person` |
+| 838 | reg 28(9A) "registrable relevant legal entity" | encoded | `reg 28(9A) the entity is a registrable relevant legal entity`, `reg 28(9A) the individual is a registrable beneficial owner`, `reg 28(9A) the person is a registrable person` |
+| 839-841 | reg 28(9A) "registrar" | encoded | `reg 28(9A) the registrar` |
+| 842 | reg 28(10) | encoded | `reg 28(10) the relevant person must verify A's authority, identify A and verify A's identity` |
+| 843 | reg 28(10)(a) | encoded | `reg 28(10) the steps the relevant person must take in relation to A`, `reg 28(10) the relevant person must verify A's authority, identify A and verify A's identity` |
+| 844 | reg 28(10)(b) | encoded | `reg 28(10) the steps the relevant person must take in relation to A`, `reg 28(10) the relevant person must verify A's authority, identify A and verify A's identity` |
+| 845 | reg 28(10)(c) | encoded | `reg 28(10) the steps the relevant person must take in relation to A`, `reg 28(10) the relevant person must verify A's authority, identify A and verify A's identity` |
+| 846 | reg 28(11) | encoded | `reg 28(11) the relevant person must conduct ongoing monitoring of a business relationship` |
+| 847 | reg 28(11)(a) | encoded | `reg 28(11) what ongoing monitoring includes`, `reg 28(11) the relevant person must conduct ongoing monitoring of a business relationship` |
+| 848 | reg 28(11)(b) | encoded | `reg 28(11) what ongoing monitoring includes`, `reg 28(11) the relevant person must conduct ongoing monitoring of a business relationship` |
+| 849 | reg 28(12) | encoded | `reg 28(12)(a) the ways and extent of the measures reflect what sub-paragraph (a) requires` |
+| 850 | reg 28(12)(a) | encoded | `reg 28(12)(a) the ways and extent of the measures reflect what sub-paragraph (a) requires` |
+| 851 | reg 28(12)(a)(i) | encoded | `reg 28(12)(a) the ways and extent of the measures reflect what sub-paragraph (a) requires` |
+| 852 | reg 28(12)(a)(ii) | encoded | `reg 28(12)(a) the ways and extent of the measures reflect what sub-paragraph (a) requires` |
+| 853 | reg 28(12)(b) | encoded | `reg 28(12)(b) the ways and extent of the measures may differ from case to case`, `reg 28(12)(a) the ways and extent of the measures reflect what sub-paragraph (a) requires` |
+| 854 | reg 28(13) | encoded | `reg 28(13) the relevant person has taken account of what paragraph (13) requires` |
+| 855 | reg 28(13)(a) | encoded | `reg 28(13) the relevant person has taken account of what paragraph (13) requires` |
+| 856 | reg 28(13)(b) | encoded | `reg 28(13) the relevant person has taken account of what paragraph (13) requires` |
+| 857 | reg 28(13)(c) | encoded | `reg 28(13) the relevant person has taken account of what paragraph (13) requires` |
+| 858 | reg 28(14) | encoded | `reg 28(14) the relevant person is required to continue to apply customer due diligence measures under paragraph (2) or (10)` |
+| 859 | reg 28(15) | encoded | `reg 28(15) this paragraph applies` |
+| 860 | reg 28(15)(a) | encoded | `reg 28(15) this paragraph applies` |
+| 861 | reg 28(15)(b) | encoded | `reg 28(15) this paragraph applies` |
+| 862 | reg 28(15)(b)(i) | encoded | `reg 28(15) this paragraph applies` |
+| 863 | reg 28(15)(b)(ii) | encoded | `reg 28(15) this paragraph applies` |
+| 864 | reg 28(15)(c) | encoded | `reg 28(15) this paragraph applies` |
+| 865 | reg 28(15)(c)(i) | encoded | `reg 28(15) this paragraph applies` |
+| 866 | reg 28(15)(c)(ii) | encoded | `reg 28(15) this paragraph applies` |
+| 867 | reg 28(16) | encoded | `reg 28(16) the relevant person is able to demonstrate to its supervisory authority that the extent of the measures is appropriate` |
+| 868 | reg 28(16)(a) | encoded | `reg 28(16) the relevant person is able to demonstrate to its supervisory authority that the extent of the measures is appropriate` |
+| 869 | reg 28(16)(b) | encoded | `reg 28(16) the relevant person is able to demonstrate to its supervisory authority that the extent of the measures is appropriate` |
+| 870 | reg 28(17) | encoded | `reg 28(17) paragraph (16) does not apply to the relevant person` |
+| 871 | reg 28(18) | encoded | `reg 28(18)(a) the identity is verified` |
+| 872 | reg 28(18)(a) | encoded | `reg 28(18)(a) the identity is verified` |
+| 873 | reg 28(18)(b) | encoded | `reg 28(18)(b) the documents are to be regarded as independent of the person` |
+| 874 | reg 28(19) | encoded | `reg 28(19) the information may be regarded as obtained from a reliable source independent of the person` |
+| 875 | reg 28(19)(a) | encoded | `reg 28(19) the information may be regarded as obtained from a reliable source independent of the person` |
+| 876 | reg 28(19)(b) | encoded | `reg 28(19) the information may be regarded as obtained from a reliable source independent of the person` |
+| 877 | reg 29 heading | inert | reason 1 (heading) |
+| 878 | reg 29(1) | encoded | `reg 29(1) this regulation applies` |
+| 879 | reg 29(2) | encoded | `reg 29(2) paragraphs (3) to (5) apply` |
+| 880 | reg 29(3) | encoded | `reg 29(3)(a) the relevant person has taken the full name of the beneficiary`, `reg 29(3) the relevant person must act as soon as the beneficiaries of the insurance policy are identified or designated` |
+| 881 | reg 29(3)(a) | encoded | `reg 29(3)(a) the relevant person must take the full name of the beneficiary`, `reg 29(3)(a) the relevant person has taken the full name of the beneficiary`, `reg 29(3) the relevant person must act as soon as the beneficiaries of the insurance policy are identified or designated` |
+| 882 | reg 29(3)(b) | encoded | `reg 29(3)(b) the relevant person has obtained sufficient information about the beneficiaries`, `reg 29(3)(b) the relevant person must obtain sufficient information about the beneficiaries`, `reg 29(3) the relevant person must act as soon as the beneficiaries of the insurance policy are identified or designated` |
+| 883 | reg 29(4) | encoded | `reg 29(4) the relevant person has verified the identity of the beneficiaries as paragraph (4) requires`, `reg 29(4) the relevant person must verify the identity of the beneficiaries before any payment is made` |
+| 884 | reg 29(5) | encoded | `reg 29(5) the relevant person has identified the new beneficiary as paragraph (5) requires`, `reg 29(5) the relevant person must identify the new beneficiary` |
+| 885 | reg 29(6) | encoded | `reg 29(6) the relevant person may set up an anonymous account, an anonymous passbook or an anonymous safe-deposit box for a new or existing customer` |
+| 886 | reg 29(7) | encoded | `reg 29(7) the relevant person has applied customer due diligence measures to the anonymous account or passbook`, `reg 29(7) the relevant person must apply customer due diligence measures to the anonymous account or passbook` |
+| 887 | reg 29(7A) | encoded | `reg 29(7A) the date of 10th January 2019`, `reg 29(7A) the relevant person has applied customer due diligence measures to the anonymous safe-deposit box`, `reg 29(7A) the relevant person must apply customer due diligence measures to the anonymous safe-deposit box` |
+| 888 | reg 29(8) | encoded | `reg 29(8) the relevant person may issue shares evidenced by a share certificate or other documentary evidence of entitlement` |
+| 889 | reg 29(8)(a) | encoded | `reg 29(8) the relevant person may issue shares evidenced by a share certificate or other documentary evidence of entitlement` |
+| 890-891 | reg 29(8)(b) | encoded | `reg 29(8) the relevant person may issue shares evidenced by a share certificate or other documentary evidence of entitlement` |
+| 892 | reg 29(9) | encoded | `reg 29(9) paragraph (8) does not apply to the open-ended investment company` |
+| 893 | reg 29(9)(a) | encoded | `reg 29(9) paragraph (8) does not apply to the open-ended investment company` |
+| 894 | reg 29(9)(b) | encoded | `reg 29(9) paragraph (8) does not apply to the open-ended investment company` |
+| 895 | reg 29(10) | fork | `reg 29(10) paragraphs (11) to (17) apply` -- fork F-29(10) |
+| 896 | reg 29(11) | encoded | `reg 29(11) the relevant person must take the steps that paragraph (11) requires` |
+| 897 | reg 29(11)(a) | encoded | `reg 29(11) the relevant person has taken the steps that paragraph (11) requires`, `reg 29(11) the relevant person must take the steps that paragraph (11) requires` |
+| 898 | reg 29(11)(b) | encoded | `reg 29(11) the relevant person has taken the steps that paragraph (11) requires`, `reg 29(11) the relevant person must take the steps that paragraph (11) requires` |
+| 899 | reg 29(11)(c) | encoded | `reg 29(11) the relevant person has taken the steps that paragraph (11) requires`, `reg 29(11) the relevant person must take the steps that paragraph (11) requires` |
+| 900 | reg 29(12) | encoded | `reg 29(12) the relevant person has considered the appropriateness of imposing controls on the pooled account` |
+| 901 | reg 29(13) | encoded | `reg 29(13) the relevant person is able to demonstrate to its supervisory authority that the extent of the measures is appropriate` |
+| 902 | reg 29(14) | encoded | `reg 29(14) the customer has made the information available to the relevant person`, `reg 29(14) the customer must make information on the persons on whose behalf monies are held available to the relevant person` |
+| 903 | reg 29(15) | encoded | `reg 29(15) the customer maintained the records of the payment for the whole period of five years`, `reg 29(15) the customer must maintain accurate and up-to-date records in writing of the monies paid into and out of the pooled account`, `reg 29(15) the fifth anniversary of the date on which the payment is complete` |
+| 904 | reg 29(16) | encoded | `reg 29(16) the customer has provided the information to the law enforcement authority`, `reg 29(16) the customer must provide information about itself and the pooled account to the law enforcement authority` |
+| 905 | reg 29(17) | encoded | `reg 29(17) the customer is required under paragraph (13), (14) or (16) to provide the information` |
+| 906 | reg 29(18) | encoded | `reg 29(18) the disclosure breaches a duty of confidentiality owed by a professional legal adviser to a client or any other restriction on the disclosure of information` |
+| 907 | reg 30 heading | inert | reason 1 (heading) |
+| 908 | reg 30(1) | encoded | `reg 30(1) this regulation applies` |
+| 909 | reg 30(1A) | encoded | `reg 30(1A) this regulation does not apply to the credit institution in relation to the insolvent bank customer` |
+| 910 | reg 30(2) | encoded | `reg 30(2) the relevant person has verified the identity of the customer, any person purporting to act on its behalf and any beneficial owner at the time paragraph (2) requires`, `reg 30(2) the relevant person must verify the identity of the customer, any person purporting to act on behalf of the customer and any beneficial owner before the business relationship is established or the transaction is carried out` |
+| 911 | reg 30(3) | encoded | `reg 30(3) verification may be completed during the establishment of a business relationship` |
+| 912 | reg 30(3)(a) | encoded | `reg 30(3) verification may be completed during the establishment of a business relationship` |
+| 913 | reg 30(3)(b) | encoded | `reg 30(3) verification may be completed during the establishment of a business relationship` |
+| 914 | reg 30(4) | encoded | `reg 30(4) verification may take place after the account has been opened` |
+| 915 | reg 30(5) | encoded | `reg 30(5) the account is an account for the purposes of paragraph (4)` |
+| 916 | reg 30(6) | encoded | `reg 30(6) paragraph (7) applies` |
+| 917 | reg 30(6)(a) | encoded | `reg 30(6) paragraph (7) applies` |
+| 918 | reg 30(6)(b) | encoded | `reg 30(6) paragraph (7) applies` |
+| 919 | reg 30(7) | encoded | `reg 30(7) the relevant person has established and verified the identity of the beneficiary at the time paragraph (7) requires`, `reg 30(7) the relevant person must establish and verify the identity of any beneficiary before payment or the exercise of vested rights` |
+| 920 | reg 30(7)(a) | encoded | `reg 30(7) the relevant person has established and verified the identity of the beneficiary at the time paragraph (7) requires`, `reg 30(7) the relevant person must establish and verify the identity of any beneficiary before payment or the exercise of vested rights` |
+| 921 | reg 30(7)(b) | encoded | `reg 30(7) the relevant person has established and verified the identity of the beneficiary at the time paragraph (7) requires`, `reg 30(7) the relevant person must establish and verify the identity of any beneficiary before payment or the exercise of vested rights` |
+| 922 | reg 30(8) | encoded | `reg 30(8) the customer is an insolvent bank customer` |
+| 923 | reg 30ZA heading | inert | reason 1 (heading) |
+| 924 | reg 30ZA(1) | encoded | `reg 30ZA(1) the credit institution may permit the insolvent bank customer to open an account and transact from it before completing customer due diligence measures` |
+| 925 | reg 30ZA(2) | encoded | `reg 30ZA(2) the credit institution must identify the customer, and any person acting for the customer, before permitting the account to be opened` |
+| 926 | reg 30ZA(2)(a) | encoded | `reg 30ZA(2) the credit institution has done what paragraph (2) requires`, `reg 30ZA(2) the credit institution must identify the customer, and any person acting for the customer, before permitting the account to be opened` |
+| 927 | reg 30ZA(2)(b) | encoded | `reg 30ZA(2) the credit institution has done what paragraph (2) requires`, `reg 30ZA(2) the credit institution must identify the customer, and any person acting for the customer, before permitting the account to be opened` |
+| 928 | reg 30ZA(3) | encoded | `reg 30ZA(3)(a) the credit institution must apply the other customer due diligence measures required by regulation 28 as soon as practicable` |
+| 929 | reg 30ZA(3)(a) | encoded | `reg 30ZA(3)(a) the credit institution has applied the other customer due diligence measures as soon as practicable`, `reg 30ZA(3)(a) the credit institution must apply the other customer due diligence measures required by regulation 28 as soon as practicable` |
+| 930 | reg 30ZA(3)(b) | encoded | `reg 30ZA(3)(b) the credit institution may carry out further transactions from the insolvent bank customer's account` |
+| 931 | reg 30ZA(4) | encoded | `reg 30ZA(4) the credit institution is to be treated as identifying the insolvent bank customer` |
+| 932 | reg 30ZA(4)(a) | encoded | `reg 30ZA(4) the credit institution is to be treated as identifying the insolvent bank customer` |
+| 933 | reg 30ZA(4)(b) | encoded | `reg 30ZA(4) the credit institution is to be treated as identifying the insolvent bank customer` |
+| 934 | reg 30ZA(4)(b)(i) | encoded | `reg 30ZA(4) the credit institution is to be treated as identifying the insolvent bank customer` |
+| 935 | reg 30ZA(4)(b)(ii) | encoded | `reg 30ZA(4) the credit institution is to be treated as identifying the insolvent bank customer` |
+| 936 | reg 30ZA(5) | encoded | `reg 30ZA(5) the insolvency date in respect of the insolvent bank` |
+| 937 | reg 30ZA(5) "insolvency date" | encoded | `reg 30ZA(5) the insolvency date in respect of the insolvent bank` |
+| 938-940 | reg 30ZA(5) "insolvent bank" | encoded | `reg 30ZA(5) the institution is an insolvent bank` |
+| 941-943 | reg 30ZA(5) "insolvent bank customer" | encoded | `reg 30ZA(5) the customer is an insolvent bank customer`, `reg 30ZA(5) the period of 30 days` |
+| 944 | reg 30A heading | inert | reason 1 (heading) |
+| 945 | reg 30A(1) | encoded | `reg 30A(1) the customer is of a type described in paragraph (1)`, `reg 30A(1) the relevant person has met the requirement of paragraph (1)`, `reg 30A(1) the relevant person must collect an excerpt of the register or establish from its inspection that there is no such information` |
+| 946 | reg 30A(1)(a) | encoded | `reg 30A(1) the customer is of a type described in paragraph (1)`, `reg 30A(1) the relevant person has met the requirement of paragraph (1)`, `reg 30A(1) the relevant person must collect an excerpt of the register or establish from its inspection that there is no such information` |
+| 947 | reg 30A(1)(b) | encoded | `reg 30A(1) the customer is of a type described in paragraph (1)`, `reg 30A(1) the relevant person has met the requirement of paragraph (1)`, `reg 30A(1) the relevant person must collect an excerpt of the register or establish from its inspection that there is no such information` |
+| 948 | reg 30A(1)(c) | encoded | `reg 30A(1) the customer is of a type described in paragraph (1)`, `reg 30A(1) the relevant person has met the requirement of paragraph (1)`, `reg 30A(1) the relevant person must collect an excerpt of the register or establish from its inspection that there is no such information` |
+| 949 | reg 30A(1)(d) | encoded | `reg 30A(1) the customer is of a type described in paragraph (1)`, `reg 30A(1) the relevant person has met the requirement of paragraph (1)`, `reg 30A(1) the relevant person must collect an excerpt of the register or establish from its inspection that there is no such information` |
+| 950 | reg 30A(1)(e) | encoded | `reg 30A(1) the customer is of a type described in paragraph (1)`, `reg 30A(1) the relevant person has met the requirement of paragraph (1)`, `reg 30A(1) the relevant person must collect an excerpt of the register or establish from its inspection that there is no such information` |
+| 951-952 | reg 30A(1)(f) | encoded | `reg 30A(1) the customer is of a type described in paragraph (1)`, `reg 30A(1) the relevant person has met the requirement of paragraph (1)`, `reg 30A(1) the relevant person must collect an excerpt of the register or establish from its inspection that there is no such information` |
+| 953 | reg 30A(1A) | encoded | `reg 30A(1A) the information specified for the type of customer` |
+| 954 | reg 30A(1A)(a) | encoded | `reg 30A(1A) the information specified for the type of customer` |
+| 955 | reg 30A(1A)(b) | encoded | `reg 30A(1A) the information specified for the type of customer` |
+| 956 | reg 30A(2) | encoded | `reg 30A(2) the relevant person has reported the material discrepancy to the person mentioned in paragraph (3)`, `reg 30A(2) the relevant person must report the material discrepancy to the person mentioned in paragraph (3)` |
+| 957 | reg 30A(2)(a) | encoded | `reg 30A(2) the relevant person has reported the material discrepancy to the person mentioned in paragraph (3)`, `reg 30A(2) the relevant person must report the material discrepancy to the person mentioned in paragraph (3)` |
+| 958 | reg 30A(2)(b) | encoded | `reg 30A(2) the relevant person has reported the material discrepancy to the person mentioned in paragraph (3)`, `reg 30A(2) the relevant person must report the material discrepancy to the person mentioned in paragraph (3)` |
+| 959 | reg 30A(2A) | encoded | `reg 30A(2A) the relevant person has collected an excerpt of the register or established from its inspection that there is no such information`, `reg 30A(2A) the relevant person must also collect an excerpt of the register or establish from its inspection that there is no such information` |
+| 960 | reg 30A(2B) | encoded | `reg 30A(2B) the relevant person has reported the material discrepancy to the person mentioned in paragraph (3)`, `reg 30A(2B) the relevant person must report the material discrepancy to the person mentioned in paragraph (3)` |
+| 961 | reg 30A(2B)(a) | encoded | `reg 30A(2B) the relevant person has reported the material discrepancy to the person mentioned in paragraph (3)`, `reg 30A(2B) the relevant person must report the material discrepancy to the person mentioned in paragraph (3)` |
+| 962 | reg 30A(2B)(b) | encoded | `reg 30A(2B) the relevant person has reported the material discrepancy to the person mentioned in paragraph (3)`, `reg 30A(2B) the relevant person must report the material discrepancy to the person mentioned in paragraph (3)` |
+| 963 | reg 30A(3) | encoded | `reg 30A(3) the person to whom the material discrepancy must be reported` |
+| 964 | reg 30A(3)(a) | encoded | `reg 30A(3) the person to whom the material discrepancy must be reported` |
+| 965 | reg 30A(3)(b) | encoded | `reg 30A(3) the person to whom the material discrepancy must be reported` |
+| 966 | reg 30A(3)(c) | encoded | `reg 30A(3) the person to whom the material discrepancy must be reported` |
+| 967 | reg 30A(4) | encoded | `reg 30A(4) the relevant person is required under paragraph (2) or (2B) to report the information` |
+| 968 | reg 30A(5) | encoded | `reg 30A(5) the person to whom the material discrepancy is reported has taken the action that paragraph (5) requires` |
+| 969 | reg 30A(6) | encoded | `reg 30A(6) the discrepancy is material excluded from public inspection`, `reg 30A(6) the provisions for the purposes of which the discrepancy is excluded from public inspection` |
+| 970 | reg 30A(6)(a) | encoded | `reg 30A(6) the discrepancy is material excluded from public inspection`, `reg 30A(6) the provisions for the purposes of which the discrepancy is excluded from public inspection` |
+| 971 | reg 30A(6)(a)(i) | encoded | `reg 30A(6) the discrepancy is material excluded from public inspection`, `reg 30A(6) the provisions for the purposes of which the discrepancy is excluded from public inspection` |
+| 972 | reg 30A(6)(a)(ii) | encoded | `reg 30A(6) the discrepancy is material excluded from public inspection`, `reg 30A(6) the provisions for the purposes of which the discrepancy is excluded from public inspection` |
+| 973 | reg 30A(6)(a)(iii) | encoded | `reg 30A(6) the discrepancy is material excluded from public inspection`, `reg 30A(6) the provisions for the purposes of which the discrepancy is excluded from public inspection` |
+| 974 | reg 30A(6)(b) | encoded | `reg 30A(6) the discrepancy is material excluded from public inspection`, `reg 30A(6) the provisions for the purposes of which the discrepancy is excluded from public inspection` |
+| 975 | reg 30A(7) | repealed or blank in this text | revoked: the rendering shows a row of dots where text was removed; nothing to encode |
+| 976 | reg 30A(8) | encoded | `reg 30A(8) the discrepancy is a material discrepancy` -- stated gap: whether a discrepancy is material is the question of Schedule 3AZA (lines 3043-3048, outside this part's range); it arrives as an input (seam S-6) |
+| 977 | reg 30A(8A) | encoded | `reg 30A(8A) the credit institution may comply with the requirement in paragraph (1) after the establishment of a business relationship` |
+| 978 | reg 30A(8B) | encoded | `reg 30A(8B) the customer is an insolvent bank customer` |
+| 979 | reg 30A(9) | encoded | `reg 30A(9) the register` |
+| 980 | reg 30A(9)(a) | encoded | `reg 30A(9) the register` |
+| 981 | reg 30A(9)(b) | encoded | `reg 30A(9) the register` |
+| 982 | reg 30A(9)(c) | encoded | `reg 30A(9) the register` |
+| 983 | reg 31 heading | inert | reason 1 (heading) |
+| 984 | reg 31(1) | encoded | `reg 31(1)(a) the relevant person may carry out a transaction through a bank account with the customer or on behalf of the customer` |
+| 985 | reg 31(1)(a) | encoded | `reg 31(1)(a) the relevant person may carry out a transaction through a bank account with the customer or on behalf of the customer` |
+| 986 | reg 31(1)(b) | encoded | `reg 31(1)(b) the relevant person may establish a business relationship or carry out a transaction with the customer otherwise than through a bank account` |
+| 987 | reg 31(1)(c) | encoded | `reg 31(1)(c) the relevant person has terminated the existing business relationship with the customer`, `reg 31(1)(c) the relevant person must terminate any existing business relationship with the customer` |
+| 988 | reg 31(1)(d) | encoded | `reg 31(1)(d) the relevant person has considered whether it is required to make a disclosure`, `reg 31(1)(d) the relevant person must consider whether it is required to make a disclosure` |
+| 989 | reg 31(1)(d)(i) | encoded | `reg 31(1)(d) the relevant person has considered whether it is required to make a disclosure`, `reg 31(1)(d) the relevant person must consider whether it is required to make a disclosure` |
+| 990 | reg 31(1)(d)(ii) | encoded | `reg 31(1)(d) the relevant person has considered whether it is required to make a disclosure`, `reg 31(1)(d) the relevant person must consider whether it is required to make a disclosure` |
+| 991 | reg 31(2) | encoded | `reg 31(2) paragraph (1)(a) does not prevent the repayment of the money deposited` |
+| 992 | reg 31(2)(a) | encoded | `reg 31(2) paragraph (1)(a) does not prevent the repayment of the money deposited` |
+| 993 | reg 31(2)(b) | encoded | `reg 31(2) paragraph (1)(a) does not prevent the repayment of the money deposited` |
+| 994 | reg 31(3) | encoded | `reg 31(3) paragraph (1) does not apply` |
+| 995 | reg 31(4) | encoded | `reg 31(4) the person is an other professional adviser` |
+| 996 | reg 31(4)(a) | encoded | `reg 31(4) the person is an other professional adviser` |
+| 997 | reg 31(4)(b) | encoded | `reg 31(4) the person is an other professional adviser` |
+| 998 | reg 31(5) | encoded | `reg 31(5) paragraph (1)(a) to (c) does not apply` |
+| 999 | reg 31(5)(a) | encoded | `reg 31(5) paragraph (1)(a) to (c) does not apply` |
+| 1000 | reg 31(5)(b) | encoded | `reg 31(5) paragraph (1)(a) to (c) does not apply` |
+| 1001 | reg 32 heading | inert | reason 1 (heading) |
+| 1002 | reg 32(1) | encoded | `reg 32(1) the relevant person is required to apply the customer due diligence measure referred to in regulation 28(3) and (4) in respect of the holders of the instruments or securities` -- the text names regulation 28(3) and (4) (line 1005), not 28(2); no function asks about 28(2) because the paragraph says nothing of it (a stated gap) |
+| 1003 | reg 32(1)(a) | encoded | `reg 32(1) the relevant person is required to apply the customer due diligence measure referred to in regulation 28(3) and (4) in respect of the holders of the instruments or securities` |
+| 1004-1005 | reg 32(1)(b) | encoded | `reg 32(1) the relevant person is required to apply the customer due diligence measure referred to in regulation 28(3) and (4) in respect of the holders of the instruments or securities` |
+| 1006 | reg 32(2) | encoded | `reg 32(2) the instruments or securities are specified instruments or securities` |
+| 1007 | reg 32(2)(a) | encoded | `reg 32(2) the instruments or securities are specified instruments or securities` |
+| 1008 | reg 32(2)(b) | encoded | `reg 32(2) the instruments or securities are specified instruments or securities` |
+
+## Fork register (mlr1)
+
+Rulings of 2026-11-04 on negatives and legal effects (bench `commons-negation-1030`), copied word for word from `BRIEF.md`:
+
+- **E1** (bench `commons-negation-1030`; should a legal effect be one definition gathered from every section that gives it?): option B, as guidance for gathering a legal effect's routes by hand only, with no pilot run; option A (gathering by bare name) is withdrawn as a direction for the language, not deferred; option C (per-section answers) applies everywhere else; the Magna Carta pilot in the printed recommendation (chapters 2, 3, 4, 5, 37, 43, 46 and 53, with a blind second reader) is not to be run. Meng's lean, verbatim: "B but generally uncomfortable with this much magic because it takes the language from unopinionated to opinionated in ways that are hard to teach an l4 novice." Meng's note, verbatim: "Fundamentally I feel like we are trying to make the language do work that the human l4 drafter should do. Too much magic. Can’t we just decline to be this opinionated and say the programmer needs to do this thinking?" Marked 2026-11-03T23:19:02.812Z, ruled 2026-11-04. Bench: https://claude.ai/artifact/49q6k2H5xtuJqy5ttkwZ23
+- **N2** (bench `commons-negation-1030`; does a flat negative count as the text's no?): option A as printed: flat negatives count as a no, and where the text names the bearer the prohibition (`SHANT`) is derived from that answer; the Hohfeld kinds stay in each row's "Jural relations" table; option C's wording (the kind typed in the person-facing answer) comes only after a lawyer confirms the typing, decided together with the S/E choice for how "not covered" is said. Meng's lean, verbatim: "Why are we even trying to do this work? Some of these rules are metatextual and require more homoiconicity than we currently have in L4." Meng's note: none written. Marked 2026-11-03T23:22:49.971Z, ruled 2026-11-04. Bench: https://claude.ai/artifact/49q6k2H5xtuJqy5ttkwZ23
+
+What they mean for the work, as the brief prints it:
+- **E1.** Do not look for, or propose, a language construct that gathers a legal effect "by name" from every section that gives it. Where several sections give the same legal effect, encode each section's answer on its own (option C). You may, by hand and in plain L4, write one function that gathers the routes to a legal effect where that helps a reader (option B as guidance for hand-gathering only); say in the fork register where you did. The Magna Carta pilot is not to be run.
+- **N2.** A flat negative in the text ("shall not", "is not", "no person") counts as the text's no, so the answer is `JUST FALSE`, and where the text names who bears a prohibition, the prohibition (`SHANT`) is derived from that answer. Do not type the Hohfeld kind into the person-facing answer. Record the kinds in `NOTES.md` under `## Jural relations`.
+
+Periods, "where" and scope limits (ruled 2026-11-05): (a) a period the text fixes in its own words: outside it JUST FALSE; (b) a "where" condition not met: JUST FALSE; (c) a scope limit with no "only": NOTHING outside the scope. Meng's words, verbatim apart from the trigger word: "i agree with your lean: no for a and b; nothing for c." Typed 2026-11-05T04:30:00.322Z.
+
+Assumed, not ruled (2026-11-05): "when" in a definition that says "means" is read as part of the definition (JUST FALSE outside it), and "when", "upon" and "whenever" elsewhere are read as "where". Every such site is recorded in fork F-when below.
+
+Where E1 option B was used (a function that gathers a legal effect's routes by hand, as guidance only; each route also has its own per-section answer, option C):
+
+- `reg 10(2) the person is a financial institution`: the nine limbs of regulation 10(2).
+- `reg 10(3) the undertaking is an institution referred to in paragraph (3)`: the three limbs of regulation 10(3).
+- `reg 14(1)(d) the person is an art market participant`: limbs (i) and (ii).
+- `reg 15 the person comes within the exclusions`: the limbs of regulation 15, for regulation 8(1)(b).
+- `reg 27 the relevant person is required to apply customer due diligence measures`: the sixteen routes of regulation 27, for seam S-1.
+
+No language construct that gathers by name was looked for or proposed.
+
+### F4 -- Schedule 2: the rendering shows 13 unnumbered items, and regulation 10 speaks of points by number
+
+Raised by the keel (`inputs/KEEL-NOTES.md`, fork F4); the owning rows here are `reg 10(3)(c)` and `reg 10(4)(a)`, and `reg 10(2)(a)` calls `reg 10(4)(a)`.
+Text: line 293 "(c) an undertaking whose only listed activity is trading for its own account in one or more of the products listed in point 7 of ... Schedule 2"; line 295 "(a) a "listed activity" means an activity listed in points 2 to 12, 14 and 15 of ... Schedule 2;".
+- Reading 1: the items are numbered 1 to 13 in print order; "points 2 to 12, 14 and 15" then names points that do not exist.
+- Reading 2: the items carry the numbering of the Schedule's source list, with gaps: the first eleven printed items are points 2 to 12, the twelfth ("Safe custody services") is point 14, the thirteenth ("Issuing electronic money") is point 15; "point 7" is then the sixth printed item, trading for own account.
+- Taken: reading 2.
+  It is the only reading under which "point 7" is a printed item and "points 2 to 12, 14 and 15" is 13 points, the number of items printed.
+  The rendering alone cannot confirm it.
+  Encoded in `reg 10(4)(a)` (`mlr1-reg10-14a-kinds.l4`, the comment headed FORK F4) and in `reg 10(3)(c)`.
+  Both are tested on both sides.
+
+### F-8(3) -- which lettered regulations "17 to 21", "50 to 52", "65 to 82" and "86 to 93" reach
+
+Text, line 251: "Regulations 3, 7, 9, 15, 17 to 21, 24, 25, 46, 47, 50 to 52, 65 to 82, 84, 86 to 93, 101, 102 and 106 apply to an auction platform ...".
+The Regulations contain regulations 18A, 19A (inside 17 to 21), 46A (after the single number 46), 52A and 52B (after the range's last number 52) and 74A (inside 65 to 82); lines 497, 545, 1633, 1749, 1779 and 2383 of the text head them.
+- Reading 1: a range names every regulation numbered between its ends, including lettered ones below the last number: 18A, 19A and 74A apply; 46A, 52A and 52B are not named.
+- Reading 2: only whole numbers are named; no lettered regulation applies to an auction platform.
+- Taken: reading 1.
+  A range "17 to 21" runs from regulation 17 to regulation 21, and 18A and 19A are numbered between 18 and 20; a lettered regulation after the last number of a range or after a single number (46A, 52A, 52B) is outside it.
+  Encoded in `reg 8(3) the regulation is one of those that apply to an auction platform`, which takes a number and a letter suffix (`reg 8(3) Regulation`), and tested for 18A, 19A, 46A, 52A, 52B and 74A.
+- Open question (2026-11-05): `reg 8(3) the regulation is one of those that apply to an auction platform` answers NOTHING for a regulation the paragraph does not list, for example regulation 27 (line 251: the paragraph says an auction platform is a relevant person "for the purposes of those provisions"); reviewer expected JUST FALSE; open question.
+
+### F-15(1) -- regulation 8(1)(b) and regulation 15(1) name different Parts
+
+Text: line 236 "(1) Parts 1 to 6 , 7A and 8 to 11 apply to the persons ("relevant persons") ... who— (a) are listed in paragraph (2); and (b) do not come within the exclusions set out in regulation 15."; line 377 "(1) Parts 1 to 4, 6 and 8 to 11 do not apply to the following persons when carrying on any of the following activities—".
+Part 5 and Part 7A are in the first list and not in the second.
+- Reading 1: regulation 8(1)(b) controls: a person who comes within regulation 15 is not a relevant person, so none of the Parts of regulation 8(1) applies to them, Parts 5 and 7A included.
+- Reading 2: regulation 15(1) controls: the exclusion reaches only the Parts it names, so Parts 5 and 7A still apply to a person within regulation 15.
+- Taken: each paragraph is encoded as it stands and neither is made to override the other.
+  `reg 8 the person is a relevant person` follows 8(1)(b) (reading 1) and answers JUST FALSE for a person who comes within regulation 15.
+  `reg 15(1) the Part is one of those that do not apply` answers JUST TRUE for Parts 1 to 4, 6 and 8 to 11 and NOTHING (silent) for any other Part, so it does not itself decide reading 2.
+  The function takes a Part number, so Part 7A cannot be asked of it.
+  A caller who wants reading 2 for Part 5 has `reg 15(1)` and `reg 15 the person comes within the exclusions` to hand.
+  Regulation 15(2) says "These Regulations do not apply" and is whole.
+
+### F-27(2) -- the kinds regulation 27(2) leaves out
+
+Text, line 770: "(2) A relevant person who is not a letting agent, a high value dealer, an art market participant, a cryptoasset exchange provider of the kind referred to in paragraph (7D) or (7E), a custodian wallet provider of the kind referred to in paragraph (7E) or a casino must also apply customer due diligence measures if the person carries out an occasional transaction that amounts to £12,000 or more ...".
+Line 790 (7D) names the kind "who operates a machine"; line 791 (7E) says "a cryptoasset exchange provider and a custodian wallet provider" without a further limit.
+- Reading 1: because (7E) names both whole kinds, the exclusion in (2) removes every cryptoasset exchange provider and every custodian wallet provider from the 12,000 pound route.
+- Reading 2: the exclusion reaches an exchange provider or custodian wallet provider only as to the activity (7D) and (7E) describe (operating a machine; a cryptoasset transfer of the equivalent of £800 or more), so a provider that does neither is not excluded and the 12,000 pound route applies to it.
+- Taken: reading 1 (the words of (7E) name the whole kinds, "a cryptoasset exchange provider and a custodian wallet provider", and not a kind of transaction).
+  Encoded in `reg 27(2) the relevant person carries out an occasional transaction of 12000 pounds or more` and tested for a person of each excluded kind.
+
+### F-29(10) -- the day on which paragraph (10) comes into force
+
+Text, line 895: "(10) Paragraphs (11) to (17) apply if the relevant person provides a customer with a new account into which monies are pooled ("pooled account") on or after the day on which this paragraph comes into force."
+The rendering does not give that day.
+- Reading 1: the day is a separate date, which the text does not give, so the caller supplies it.
+- Reading 2: the paragraph came into force on the day regulation 1(2) gives for the Regulations, which `reg 1(2) the date these Regulations came into force` would supply.
+- Taken: reading 1.
+  Paragraph (8)(b) at line 890 says "the date on which these Regulations come into force" where paragraph (10) says "the day on which this paragraph comes into force", so the two are worded as different days; the text does not say what this one is, and I did not supply it.
+  Encoded in `reg 29(10) paragraphs (11) to (17) apply`, which takes the day as a required `DATE` input (`the day on which paragraph (10) comes into force`): JUST TRUE from that day on, JUST FALSE before it (tested on the day, the day after and the day before).
+
+### F-when -- "when" read as part of a "means" definition, and "when" read as "where" (assumed, not ruled, 2026-11-05)
+
+The ruling of 2026-11-05 covers periods, "where" and scope limits.
+It does not say what a "when" is.
+Taken, assumed and not ruled: in a definition that says "means", the "when" limb is part of the definition, so outside it the answer is JUST FALSE; elsewhere "when", "upon" and "whenever" are read as "where", so a gate worded with them that is not met answers JUST FALSE.
+Other reading: a "when" is a scope limit (ruling (c)) and outside it the answer is NOTHING; this is how every one of the sites below answered before 2026-11-05.
+Every site, with the words it rests on (each branch carries the comment `assumed 2026-11-05, fork F-when`):
+- "means ... when" in `mlr1-reg10-14a-kinds.l4`: `reg 10(1)` (credit institution: "when it accepts deposits ... or grants credits ..., or when it bids directly in auctions"); `reg 10(2)(a)` ("when it carries out one or more listed activity"; the answer does not wait on paragraph (3), because an undertaking that carries out no listed activity is outside (a) whatever paragraph (3) says), `(b)`, `(c)`, `(d)`, `(e)`, `(f)`, `(g)`, `(i)`; `reg 10(2)` as a whole (JUST FALSE when every one of (a) to (i) answers JUST FALSE, through `reg 8(2) one of the limbs of the list holds`); `reg 11(a)` (statutory auditor "when carrying out statutory audit work", local auditor "when carrying out an audit required by that Act"), `reg 11(c)`, `reg 11(d)`; `reg 12(1)` ("when participating in financial or real property transactions"), `reg 12(2)`; `reg 13(1)`, `reg 13(3)`; `reg 14(1)(a)` ("when ... a payment or payments in cash of at least £10,000 in total"), `reg 14(1)(c)`; `reg 14A(1)`, `reg 14A(2)`.
+  `reg 14(1)(d)(ii)` and `reg 13(4)(b)` already answered JUST FALSE and are unchanged.
+- "when" outside a "means" definition, read as "where": `reg 28(1)` ("This regulation applies when a relevant person is required by regulation 27 ..."), and through it every engaged function in regulation 28 that takes `reg 28(1) this regulation applies` as its gate (`reg 28(2)(a)`, `(b)`, `(c)`, `reg 28(3)(a)`, `(b)`, `reg 28(3A)`, `reg 28(4)`, `reg 28(4)(c)`, `reg 28(10)`); `reg 30(1)` ("this regulation applies when a relevant person is required to take any measures under regulation 27, 28 or 29"), and through it `reg 30(2)`; through `reg 29(1)` ("This regulation applies in addition to regulation 28 where a relevant person is a credit institution or a financial institution": a "where", ruling (b)) every engaged function in regulation 29 that takes `reg 29(1) this regulation applies` as its gate (`reg 29(3)`, `(4)`, `(5)`, `(7)`, `(7A)`, `(11)`); `reg 29(3)` ("As soon as the beneficiaries ... are identified"), `reg 29(5)` ("When the relevant person becomes aware ..."), `reg 29(14)` ("When a customer has a pooled account"), `reg 30A(2A)` ("When taking measures to fulfil the duties ..."), `reg 31(1)(c)` and `(d)` ("Where, in relation to any customer, a relevant person is unable ...").
+- "when" inside an exclusion, left as it was (the reviewer expected JUST FALSE; open question): `reg 15(1)(a)` to `(f)` and `reg 15(4)` (the Official Solicitor "when acting as trustee"); see fork F-leave.
+
+### F-where -- an unmet "where", "if" or "when" that triggers a duty, asked of a compliance function (ruled 2026-11-05 for the engaged form; this part's choice for the compliance form)
+
+Ruling (b) says a "where" condition not met answers JUST FALSE.
+This part has two functions for most duties: an engaged one (`... must ...`: does the duty bind on these facts?) and a compliance one (`... has ...`: has the requirement been met?).
+In the engaged function an unmet "where" answers JUST FALSE, as ruled.
+In the compliance function this part answers JUST TRUE ("the duty does not arise": nothing is unmet), following `reg 18(4)` and `reg 21(3)`, whose "unless" already worked that way.
+The lead is to reconcile this with the other parts at the merge: another part may answer the same case through the engaged function only.
+Compliance-function sites changed on 2026-11-05 from NOTHING to JUST TRUE: `reg 16(8)`, `reg 17(6)`, `reg 17(9)`, `reg 18(6)`, `reg 18A(5)`, `reg 19(6)`, `reg 19A(5)`, `reg 20(3)` ("If any of the subsidiary undertakings or branches ... are established in a third country which does not impose requirements ... as strict ..."), `reg 20(4)` ("Where the law of a third country does not permit ..."), `reg 21(1)`, `reg 21(5)`, `reg 25(2)`, `reg 25(5)`, `reg 25(6)`, `reg 25(9)`, `reg 25(10)`, `reg 25(13)`, `reg 25(13B)`, `reg 25(13C)`, `reg 29(12)`, and the trigger "If an approved person (P) is convicted of a relevant offence" of `reg 26(10)(a)` and `(b)` (JUST TRUE when Schedule 3 says the offence is not a relevant offence).
+Other reading: the compliance function answers JUST FALSE ("like if"), or NOTHING.
+
+### F-period -- periods the text fixes in its own words (ruled 2026-11-05, ruling (a))
+
+Outside the period the answer is JUST FALSE.
+Sites: `reg 16(1)` ("before 26th June 2018", already JUST FALSE); `reg 21(4)` ("within 14 days of the appointment"); `reg 23(2)(b)` ("within 30 days of the relevant date": told 31 days after the relevant date is outside); `reg 23(3)` ("within 28 days"); `reg 23(3A)` ("within 30 days beginning with the date"); `reg 26(3)` ("before 26th June 2018": applied on 26 June 2018 is not before it); `reg 26(3A)(b)` ("before 10th January 2021": applied on 10 January 2021 is not before it); `reg 26(10)(a)` and `(b)` ("within 30 days"); `reg 30ZA(5)` ("within the period of 30 days beginning with the insolvency date", already JUST FALSE); `reg 21(8)(a)` ("during the previous five years", already JUST FALSE); `reg 29(15)` (five years beginning on a date).
+Taken, assumed and not ruled: a date before a period begins is outside it.
+`reg 21(4)`, `reg 23(3)`, `reg 23(3A)` and `reg 26(10)(a)`, `(b)` used to answer NOTHING for an act dated before the event the period runs from; they now answer JUST FALSE.
+Other reading: an act before the event is not outside "within N days of" but before it, and the text does not say; NOTHING.
+`reg 29(8)(b)` ("authorised on or after the date these Regulations come into force") keeps NOTHING: it is a limb of the "may" form of a prohibition (fork F-polarity).
+
+### F-23(2) -- "which (a) ...; and (b) ... within 30 days" is the condition of the exemption
+
+`reg 23(2)` is worded "Paragraph (1) does not apply to an authorised person which (a) ... was acting ... and continues to act ...; and (b) informs the FCA ... within 30 days of the relevant date".
+Taken: (a) and (b) are one condition of the exemption, like the conditions after "if" in `reg 26(3A)`, so an authorised person that fails either limb, not only the period, answers JUST FALSE to "does paragraph (1) not apply to it".
+Other reading: only the period in (b) is ruling (a); a person that fails (a) is outside a scope limit and the answer is NOTHING.
+
+### F-9 -- "The second case is where" and "The third case is where" (regulation 9(3) and (4))
+
+`reg 9(3)` and `reg 9(4)` answer whether A is within that case: JUST TRUE when its "where" conditions are met, JUST FALSE when they are not (ruling (b)).
+`reg 9(1)` is unchanged: it says A is regarded as carrying on business in the United Kingdom in the cases described "even if A would not otherwise be regarded as doing so", so it adds cases and takes none away; a person within no case that would not otherwise be regarded as doing so is NOTHING there (scope limit, ruling (c)).
+Other reading: `reg 9(3)` and `reg 9(4)` answer NOTHING for a person outside the case, because a case that does not fit is not decided by the paragraph.
+
+### F-scope -- what was left as a scope limit (ruling (c): NOTHING outside the scope)
+
+Taken as scope limits with no "only", because the words that limit them are not "where", "if", "when" or a period: `reg 8(3A)`, `reg 8(4)`, `reg 9(1)`, `reg 15(2)` ("solely as a result of ..."), `reg 19(4)(e)` and `reg 19A(4)(d)` ("in the case of a money service business that uses agents"), `reg 19(5)`, `reg 21(10)(b)`, `reg 24(3)(b)` and `reg 20(6)` ("may" lists), `reg 21(7)` ("A relevant person who is an electronic money issuer or a payment service provider"), `reg 23(4)`, `reg 23(5)` ("Any information to be provided ... under this regulation"), `reg 25(1)`, `reg 25(11)`, `reg 25(12)`, `reg 26(1)` ("a firm within paragraph (2)"), `reg 26(6)`, `reg 26(11)` (a power), `reg 28(9)`, `reg 28(11)` ("ongoing monitoring of a business relationship"), `reg 28(18)(b)`, `reg 29(7)` and `reg 29(7A)` ("accounts ... in existence on the date ..."), `reg 29(18)`, `reg 30(1A)` (a person who is not a credit institution, or a customer who is not an insolvent bank customer), `reg 30A(1)` ("before establishing a business relationship with (a) ... (f)"), `reg 30A(2)`, `(2A)` (the type of customer) and `(2B)`, `reg 30A(6)`, `reg 30A(8A)`, `reg 31(2)`, `reg 14(3)`.
+Other reading: any of these is a "where" or a period in disguise and answers JUST FALSE outside it.
+
+### F-polarity -- exceptions, and the "may" form of a prohibition
+
+A function that asks the question an exception answers no to keeps NOTHING when the exception's condition is not met, because the paragraph then says nothing about that question and the rest of the Regulations decide it: `reg 13(5)` ("are not letting agency work ... if neither ... does anything else within paragraph (4)": the answer to "is it letting agency work" is for paragraph (4)), `reg 28(14)` ("If paragraph (15) applies, a relevant person is not required to continue to apply customer due diligence measures"), `reg 29(17)`, `reg 30A(4)`, `reg 32(1)`.
+A function that asks the permission form ("may") of a prohibition keeps NOTHING when the prohibition's own condition is not met, because the prohibition does not speak to that case: `reg 29(6)`, `reg 29(8)`, `reg 30ZA(3)(b)`, `reg 31(1)(a)` and `(b)`.
+`reg 26(3)` and `reg 26(3A)` are worded "does not breach the prohibition ... if" and are different: they answer JUST FALSE when the condition is not met (the reviewer's finding, 2026-11-05; marginal reading (f) is retired).
+Other reading: the exception-polarity and "may" functions answer JUST FALSE ("like if") when the condition is not met.
+
+### F-leave -- left as they were, with the reviewer's expectation
+
+Each entry: reviewer expected JUST FALSE; open question.
+- `reg 8(3)` with regulation 27 (an auction platform; line 251): reviewer expected JUST FALSE; open question. (Fork F-8(3) also records it.)
+- `reg 21(9)` (line 625; "The persons specified in this paragraph are— (a) ... (c)", no "only"): reviewer expected JUST FALSE; open question.
+- `reg 26(2)` (line 719; "The firms and sole practitioners within this paragraph are—", no "only"): reviewer expected JUST FALSE; open question.
+- `reg 15(1)(a)` (line 380; "when it— (i) issues withdrawable share capital within the limit ...; or (ii) accepts deposits ...", a "when" inside an exclusion): reviewer expected JUST FALSE; open question.
+  `reg 15(1)(b)` to `(f)` have the same shape and were left with it.
+- `reg 15(4)(f)` (line 404; the Official Solicitor "when acting as trustee in his or her official capacity"): reviewer expected JUST FALSE; open question.
+- `reg 26(12)(b)` (line 754; an offence defined by a list of acts): reviewer expected JUST FALSE; open question.
+- `reg 28(17)` (line 870; "Paragraph (16) does not apply to the National Savings Bank or the Director of Savings"): reviewer expected JUST FALSE; open question.
+- `reg 30(4)` (line 914; "The verification by a credit institution or a financial institution ..."; scoped to credit and financial institutions, no "only"): reviewer expected JUST FALSE; open question.
+- `reg 30ZA(1)` and `reg 30ZA(2)(a)` (lines 924-926; "Subject to paragraphs (2) and (3)", a do-first duty): reviewer expected JUST FALSE; open question.
+  `reg 30ZA(2)(b)` and `reg 30ZA(3)(a)` have the same shape ("Before permitting ...", "After permitting ...") and were left with it.
+
+### Gaps recorded in the coverage table (2026-11-05)
+
+Each is a row in the coverage table with a note beginning `stated gap` or `revoked`; nothing was invented to fill them.
+- Revoked (a row of dots in this text; no function): `reg 9(2)` (line 256), `reg 20(2)` (line 584), `reg 22` (line 635); also lines 268, 419, 427-429, 463-464 and 975, which were already so marked.
+  The reviewer's note on `reg 16(7)(c)` to `(e)` asks for a recipient such as the National Crime Agency; in this text those three lines are rows of dots, so no recipient can be asked, and `reg 16(7)` takes Parliament, the PRA and the supervisory authorities, which are the three the text names.
+- Who bears the duty: `reg 16(1)`, `reg 16A(1)` and `reg 17(1)` now have a function that returns the bearer as the text names it (`reg 16(1) the bearer of the duty to make the arrangements` is "the Treasury and the Home Office", `reg 16A(1)` "the Treasury", `reg 17(1)` "each supervisory authority, as to the relevant persons in its own sector").
+- Open lists: `reg 18(2)(b)`, `reg 19(3)`, `reg 19A(3)`: a risk factor or item the text does not list cannot be asked.
+- `reg 23(5)`: the FCA sets the form; `reg 24(1)(a)`: agents are folded into the employee inputs; `reg 25(7)(c)`: the notice sets the representation period; `reg 27(8)(a)`: the text is risk based and fixes no re-CDD period.
+- `reg 30A(8)`: whether a discrepancy is material is Schedule 3AZA (lines 3043-3048, outside this part's range); it arrives as an input.
+- `reg 32(1)`: the text (line 1005) names regulation 28(3) and (4); it does not name regulation 28(2), so no function asks about relief from 28(2).
+- `reg 3` "cash" (line 38): cash means notes, coins or travellers' cheques; nothing here decides whether a given payment is cash, so `reg 27(4)` takes `the transaction is paid in cash` as a fact and `reg 14(1)(a)` takes the cash total as a number.
+- Schedule 2 numbering: the rendering prints 13 unnumbered items.
+  This part took them as points 2 to 12, 14 and 15 (fork F4, reading 2), which is the numbering the independent reviewer took; `reg 10(3)(c)` uses point 7 (trading for own account) and `reg 10(4)(a)` uses points 2 to 12, 14 and 15.
+
+## Jural relations (mlr1)
+
+Holder is the person with the claim, power, privilege or immunity; bearer is the person with the duty, liability, no-claim or disability.
+"Not named" means the text does not say who holds the correlative right; nothing was guessed.
+The kinds are not typed into any answer (ruling N2); this table is where they are kept.
+The L4 names are in the coverage table.
+
+| Provisions | Holder | Bearer | Kind |
+| --- | --- | --- | --- |
+| 16(1), (3), (6), (9); 16(7), (8) | not named; (7) names Parliament, the PRA and the supervisory authorities as recipients | the Treasury and the Home Office | duty |
+| 16A(1) to (6) | not named; (5) names the supervisory authorities as recipients | the Treasury | duty |
+| 16A(7), (8) | the Treasury | not named | privilege ("may be included") |
+| 17(1), (3), (4), (6) to (9) | not named | each supervisory authority | duty |
+| 17(5) | the supervisory authority | not named | privilege ("may prepare a single risk profile ... if") |
+| 18(1) to (3), (4), (6); 18A(1) to (5) | not named; (6) names the supervisory authority as the person to whom the assessment is provided on request | the relevant person | duty |
+| 18(4), 18A(4) "unless its supervisory authority notifies it" | the supervisory authority | the relevant person | power (to remove the duty by notice) and liability |
+| 18(5) | not named | the supervisory authority | disability ("may not give the notification ... unless") |
+| 19(1) to (4), (6); 19A(1) to (5) | not named | the relevant person | duty |
+| 19(5) | the relevant person | not named | privilege ("may take into account") |
+| 20(1), (3) to (5) | not named | the relevant parent undertaking | duty |
+| 20(6) | the FCA | credit institutions and financial institutions | power and liability ("may make technical standards") |
+| 21(1), (3), (7), (8), (10)(a) | not named | the relevant person | duty |
+| 21(4) | the supervisory authority | the relevant person | duty, 14 days |
+| 21(5) | not named | the nominated officer | duty |
+| 21(6) | an individual who neither employs nor acts in association with any other person | not named | immunity |
+| 21(10)(b), 24(3)(b) | the relevant person | not named | privilege ("may take into account guidance") |
+| 23(1), (3), (3A) | the FCA | the authorised person | duty, 28 or 30 days |
+| 23(2) | the authorised person described | the FCA | immunity |
+| 23(5) | the FCA | the authorised person | power and liability (form of information) |
+| 24(1), (3)(a) | not named | the relevant person | duty |
+| 25(1), (2) | not named | the supervisory authority | duty (to determine; to consider whether to direct) |
+| 25(2) direction | the supervisory authority | the relevant parent undertaking (A) | power and liability |
+| 25(5) | not named | the FCA | duty (must consult the PRA) |
+| 25(6), (7), (9) to (13), (13B), (13C) | A | the supervisory authority | duty (notice and procedure) |
+| 25(7)(c), (8) | A (representations); the supervisory authority (extension) | the supervisory authority; A | privilege; power |
+| 25(11) | A | not named | power (to refer the matter to the appropriate tribunal) |
+| 25(13A) | the supervisory authority | not named | privilege (may publish) |
+| 26(1) | not named | any person who is a beneficial owner, officer or manager of a relevant firm, or a sole practitioner | duty not to (flat negative; `SHANT`) |
+| 26(3), (3A) | the person concerned | not named | immunity (does not breach the prohibition if ...) |
+| 26(4), (5) | not named | the relevant firm; the relevant sole practitioner | duty |
+| 26(6) | the person concerned, or someone on their behalf | not named | power (to apply for approval) |
+| 26(8)(a) | not named | the supervisory authority | duty (must grant unless the applicant has been convicted of a relevant offence) |
+| 26(8)(b) | the supervisory authority | not named | privilege (may grant for a limited period) |
+| 26(10)(a), (b) | the supervisory authority | P; the relevant firm | duty, 30 days |
+| 26(11) | the supervisory authority (application); the High Court or Court of Session (order) | the beneficial owner of the relevant firm | power and liability |
+| 26(12), (13) | not named | a person in breach of the prohibition | liability (guilty of an offence) |
+| 27(1), (2), (3), (5), (7A) to (7E), (8) | not named | the relevant person; the high value dealer; the casino; the letting agent; the art market participant; the cryptoasset exchange provider; the custodian wallet provider | duty |
+| 28(2) to (4), (8), (10), (11), (13) | not named | the relevant person | duty |
+| 28(6) | the relevant person | not named | privilege ("may treat the senior person ... as the beneficial owner") |
+| 28(14) | the relevant person | not named | immunity ("is not required to continue") |
+| 28(16) | the supervisory authority | the relevant person | duty (be able to demonstrate) |
+| 28(17) | the National Savings Bank; the Director of Savings | not named | immunity |
+| 29(3) to (5), (7), (7A), (11) to (13) | not named; (13) names the supervisory authority | the relevant person | duty |
+| 29(6), 29(8)(b) | not named | the relevant person; an open-ended investment company authorised on or after the day the Regulations came into force | duty not to (flat negative; `SHANT`) |
+| 29(9) | the open-ended investment company described | not named | immunity |
+| 29(14) | the relevant person | the customer | duty |
+| 29(15) | not named | the customer | duty (keep records five years) |
+| 29(16) | any law enforcement authority | the customer | duty |
+| 29(17) | the customer | not named | immunity (legal professional privilege) |
+| 30(2), (7) | not named | the relevant person | duty |
+| 30(3), (4) | the relevant person; the credit institution or financial institution | not named | privilege (may verify later) |
+| 30ZA(1) | the credit institution | not named | privilege |
+| 30ZA(2), (3)(a) | not named | the credit institution | duty |
+| 30ZA(3)(b) | not named | the credit institution | duty not to (flat negative; `SHANT`) |
+| 30A(2), (2A), (2B) | the person named in 30A(3) | the relevant person | duty (report) |
+| 30A(4) | the relevant person | not named | immunity |
+| 30A(5) | not named | the person to whom the discrepancy is reported | duty (such action as it considers appropriate) |
+| 30A(8A) | the credit institution | not named | privilege |
+| 31(1)(a), (b) | not named | the relevant person | duty not to (flat negative; `SHANT`) |
+| 31(1)(c), (d) | not named | the relevant person | duty |
+| 31(2) | the relevant person | not named | privilege (paragraph (1)(a) does not prevent repayment) |
+| 31(3), (5) | an independent legal professional or other professional adviser; an insolvency practitioner | not named | immunity |
+| 32(1) | the relevant person | not named | immunity (not required to apply the measure) |
+
+## Marginal readings for a lawyer (mlr1)
+
+The brief names two readings for a lawyer, not for me to decide, and asks that every branch resting on one be listed with the other reading stated.
+Every branch below carries a comment in the `.l4` file; the comment names the reading by its letter or, for (b), by `NOTHING-kind (limited by its own wording)`.
+Reading (b) was largely settled by the ruling of 2026-11-05 (see the fork register): periods and "where" conditions now answer JUST FALSE, and what stays NOTHING under (b) is the scope limits (ruling (c)), the exception and "may" polarities, and the sites left as they were.
+
+Counts read from the layer-1 files on assembly: 373 `FALSE-kind` comments and 188 `NOTHING-kind` comments; `NOTHING-kind` by kind: limited by its own wording 79, points outside the text 62, silent 22, list not closed 13, undefined term 7, includes 5; branches tagged with a reading: (a) 72, (c) 104, (d) 5, (e) 9, (f) retired, (g) 1, (h) 1; the `limited by its own wording` count, which is what remains of reading (b), is 79.
+
+**(a) A failed "if" counts as the text's no, clause by clause, within the provision that holds the "if"; flat negatives count as the text saying no.**
+Branches: the `FALSE-kind` branches tagged `(Marginal readings, (a))`, in the modules for regulations 15, 16-17, 21-25, 26, 27, 28, 29 and 30-32; for example `reg 27(1)(a)` to `(d)`, `reg 27(2)`, `reg 29(2)` (JUST FALSE when the relevant person is not providing the insurance policy), `reg 29(3)` and `reg 29(4)`; since 2026-11-05 also `reg 15(2)` (it follows `reg 15(3)`), `reg 26(3)` and `reg 26(3A)`.
+Other reading: "if A then B" does not say "if not A then not B", so a failed "if" answers NOTHING and only a flat negative or a "means" says no.
+Under the other reading, every branch tagged (a) would answer NOTHING.
+
+**(b) A prohibition or grant limited by its own wording does not count as the text's no.** (Partly superseded by the ruling of 2026-11-05.)
+Until 2026-11-05 every `NOTHING-kind (limited by its own wording)` branch was a "when", "where" or stated period not reached, and answered NOTHING.
+The ruling moved the periods and the "where" conditions to JUST FALSE (rulings (a) and (b)), and this part moved the "when" of a "means" definition and the other "when"s with them (fork F-when, assumed).
+What still carries `NOTHING-kind (limited by its own wording)` is a scope limit with no "only" (ruling (c); fork F-scope), the exception and "may" polarities (fork F-polarity) and the sites left as they were (fork F-leave); the count is in the line above.
+Other reading, for what remains: the limit is itself a statement that outside the limit the rule does not apply, so the answer is JUST FALSE.
+
+**(c) An unmet requirement in a duty checklist answers JUST FALSE.** (my own)
+Branches: the duty "checklist" functions tagged `(Marginal readings, (c))`, in the modules for regulations 16-17, 18-20, 21-25, 26, 27, 28, 29 and 30-32; for example `reg 18(1)`, `reg 18(4)`, `reg 21(1)`, `reg 21(3)`, `reg 28(12)(a)`, `reg 28(16)`, `reg 29(3)(a)`; `reg 26(10)(a)` and `(b)` carry "(c) and (d)".
+A checklist function answers "has the requirement been met on these facts", and an input that is false makes the answer JUST FALSE.
+Where the requirement is triggered by a "where" or "if" that is not met, the answer is JUST TRUE (the duty does not arise: fork F-where).
+Other reading: "must" does not say what follows if the act is not done, so the answer is NOTHING; the checklist then says only "met" or "not met yet".
+
+**(d) The day of the event is not counted; the last day of "within N days of X" is X plus N; a period of five years beginning on a date ends on the day before the fifth anniversary.** (my own)
+Branches: the date functions of `reg 21(4)`, `reg 23(1)`, `reg 23(3)` and `reg 26(10)(a)`, `(b)` (last day is the event date plus N, as stated in the header comment of `mlr1-reg21-25-controls.l4`); `reg 21(8)(a)` (the last date the relationship was maintained must be on or after the same day five years before the enquiry); and `reg 29(15)` (five years beginning on a date).
+`reg 23(3A)` and `reg 30ZA(5)` are worded "30 days beginning with the date" and "the period of 30 days beginning with the insolvency date", so the date itself is counted and the last day is the date plus 29.
+Other reading: the day of the event is counted, so each deadline is one day earlier.
+The Interpretation Act 1978 is not staged and I did not read it; see `## Dependencies`.
+
+**(e) The limbs of regulation 15 are the whole set of exclusions.** (my own)
+Branches: `reg 15 the person comes within the exclusions` and the branches in `reg 15(1)(a)` to `(g)` that quote "do not come within the exclusions set out in regulation 15".
+Regulation 8(1)(b) says "the exclusions set out in regulation 15"; the list is not closed by "only".
+Other reading: a person who fails every limb is NOTHING (list not closed), not JUST FALSE.
+
+**(f) RETIRED 2026-11-05.** This reading said an exception worded "does not breach ... if" answers NOTHING when its condition fails, and it was applied to `reg 26(3)` and `reg 26(3A)`.
+The independent review found it wrong under the family's convention (a failed "if" is the text's no), and `reg 26(3)` and `reg 26(3A)` now answer JUST FALSE under reading (a).
+Other reading, now the one taken: the condition's failure answers JUST FALSE for "does not breach".
+
+**(g) Regulation 29(1) governs the whole of regulation 29.** (my own)
+Regulation 29(1) says the regulation applies "in addition to regulation 28 where a relevant person is a credit institution or a financial institution"; paragraphs (2) to (5) (insurance) and (10) to (17) (pooled accounts) name the relevant person without repeating that condition, and paragraphs (6) to (9) name no such limit either.
+Other reading: 29(1) limits the insurance and pooled-account paragraphs but not paragraphs (6) to (9), so the prohibition in paragraph (6) binds every relevant person, whether or not it is a credit institution or a financial institution.
+
+**(h) Regulation 27(3) answers NOTHING when the caller gives no answer for paragraph (4).** (my own, narrowed 2026-11-05)
+`reg 27(3)` asks whether a transaction in cash amounts to the figure.
+`reg 27(4)` now answers JUST FALSE for a transaction in which no cash is paid (regulation 3(1): cash means notes, coins or travellers' cheques), so `reg 27(3)` answers JUST FALSE for it; the NOTHING that remains is for a caller who passes no answer for paragraph (4) at all.
+Other reading: a transaction not shown to be in cash is not a cash transaction, and the answer is JUST FALSE even then.
+
+Other places where a reading is taken without a letter:
+- `reg 13(5)` and `reg 13(6)`: "does not include ... if neither ... does anything else within paragraph (4)" is read so that, when someone does something else within paragraph (4), the paragraph (6) things are simply not carved out and paragraph (4) governs; the text does not say more.
+- The unless-quote fallbacks in `reg 28(2)(a)` and `(b)` quote the text's own words ("unless ..."); they are verbatim.
+
+### Reading a result: FALSE and NOTHING (mlr1)
+
+Every layer-1 rule that returns a `MAYBE BOOLEAN` answers one of three things.
+- `JUST TRUE`: the Regulations say yes on the stated facts.
+- `JUST FALSE`: the Regulations say no in their own words.
+  The branch carries `-- FALSE-kind (the text says no in its own words): "<the words>"`, and the words are quoted from the text.
+  What makes a FALSE: a "means" definition, including its "when" limb (assumed, fork F-when); an "if", "only if", "as long as", "unless" or "provided that" condition; a "where" condition not met (ruling (b)); a period the text fixes in its own words and an act outside it (ruling (a)); a list closed with "only"; a flat negative ("does not", "shall not", "may not", "is not entitled", "is not required", "must not").
+- `NOTHING`: the Regulations do not answer on these facts.
+  The branch carries `-- NOTHING-kind (<kind>)`, and the kind is one of six: `silent`, `list not closed`, `includes`, `undefined term`, `points outside the text`, `limited by its own wording`.
+  Since 2026-11-05 `limited by its own wording` means a scope limit with no "only" (ruling (c)), an exception or "may" polarity (fork F-polarity) or a site left as it was (fork F-leave); a "where", a "when" read as "where", or a period is now JUST FALSE.
+  In a compliance function ("has the requirement been met?") a "where" or "if" that triggers the duty and is not met answers JUST TRUE, "the duty does not arise" (fork F-where).
+  The totals in this encoding are in the counts above.
+
+**Silent failures worth knowing.**
+A caller must never turn NOTHING into FALSE: the two are different answers, and a Boolean test on a `MAYBE BOOLEAN` that treats `NOTHING` as false gives an answer with exit code 0 and no warning.
+The seat returns `MAYBE BOOLEAN` directly so the caller sees `null` (the API shape of `NOTHING`) and not `false`.
+The loud failures are the ones the checker catches: a missing `@ref`, a quote that is not in the text, a name that is defined twice.
+
+## Seams (mlr1)
+
+Each seam is named as `inputs/PLAN.md` section 8 names it.
+"Answering" means a rule of mine computes the answer another part takes; "asking" means a rule of mine takes the answer as an input from another part or from the keel.
+
+| Seam | Side | Name | Where |
+| --- | --- | --- | --- |
+| S-1 | answering | `reg 27 the relevant person is required to apply customer due diligence measures`, `MAYBE BOOLEAN` | `mlr1-reg27-cdd-when.l4`, gather of the sixteen routes |
+| S-1 | asking | the same name, as the input of regulation 28(1) | `mlr1-reg28-cdd-measures.l4` |
+| S-2 | answering | the findings of regulations 18(1) and 18A(1), taken by regulations 33, 35 and 37 through the core's `Level of risk` and `Kind of risk` | `mlr1-reg16-17-authorities.l4`, `mlr1-reg18-20-policies.l4` |
+| S-3 | asking | `reg 33(1) enhanced customer due diligence is required`, `MAYBE BOOLEAN`, input of regulation 30ZA | `mlr1-reg30-32-timing.l4` |
+| S-4 | asking | `reg 58 the agent satisfies the fit and proper test`, `MAYBE BOOLEAN`, input of regulations 19(4)(d) and 19A(4)(d) | `mlr1-reg18-20-policies.l4` |
+| S-5 | asking | `sch 3 the offence is a relevant offence`, `MAYBE BOOLEAN`, input of regulation 26(14) | `mlr1-reg26-approvals.l4` |
+| S-6 | asking | `sch 3AZA the discrepancy is a material discrepancy`, `MAYBE BOOLEAN`, input of regulation 30A(8) | `mlr1-reg30-32-timing.l4` |
+| S-7, S-8 | answering | `reg 8 the person is a relevant person`, `MAYBE BOOLEAN`, and the per-regulation `reg 8(3) the person is a relevant person for the purposes of the regulation` | `mlr1-reg08-09-application.l4` |
+| S-9 | answering | `reg 23 the person has notified the FCA that it is acting, or intends to act, as a money service business or a trust or company service provider`, `BOOLEAN` (a fact) | `mlr1-reg21-25-controls.l4` |
+| S-10 | answering | `reg 10(2)(a) the person falls within regulation 10(2)(a)`, `MAYBE BOOLEAN` | `mlr1-reg10-14a-kinds.l4` |
+| S-11 | answering | `reg 26(7) the application for approval meets the requirements of regulation 26(7)`, `MAYBE BOOLEAN` | `mlr1-reg26-approvals.l4` |
+| S-13 | answering | `reg 14A(3)(a) the thing is a cryptoasset`, `MAYBE BOOLEAN` | `mlr1-reg10-14a-kinds.l4` |
+| S-19 | answering | `reg 25(2) the decision is a direction`, `BOOLEAN` (a fact) | `mlr1-reg21-25-controls.l4` |
+| S-K1 | asking | `reg 4(1) to (3) there is a business relationship`, `MAYBE BOOLEAN`, input of `reg 27(1)(a)` and `reg 28(11)` | `mlr1-reg27-cdd-when.l4`, `mlr1-reg28-cdd-measures.l4` |
+| S-K4 | asking | `reg 3(1) the entity is a body corporate` (regulation 28) and `reg 3(1) the contract is a contract of long-term insurance` (regulation 29) | `mlr1-reg28-cdd-measures.l4`, `mlr1-reg29-additional-cdd.l4` |
+
+S-K1 is taken as a function only by `reg 27(1)(a)` and `reg 28(11)`; the other rules of mine that turn on a business relationship (for example regulations 28(13), 30, 30ZA, 30A and 31) take it as a plain `BOOLEAN` or `DATE` input named for the fact.
+
+S-K2 (beneficial owner) and S-K3 (supervisory authority) were not taken as functions.
+Nothing in my range calls the keel's functions for them: where a rule turns on a beneficial owner or on a supervisory authority, the fact enters as a plain `BOOLEAN` input named for the fact (for example `the customer is beneficially owned by another person` in regulation 28(4), or `its supervisory authority has notified it in writing that such a record is not required` in regulation 18(4)).
+A caller who wants consistency with regulations 5 to 7 has to compute those facts from the keel and pass them in.
+Regulation 26 speaks of the "beneficial owner ... of a firm", which is its own sense and is taken as the inputs of regulation 26.
+
+Every seam name listed as "answering" is defined exactly once in my files, and every seam listed as "asking" is a `GIVEN` name of the rule that takes it (checked by `grep -n` on the names against `mlr1-reg*.l4` on 2026-11-05).
+No seam was found that the plan lacks.
+
+## Dependencies
+
+- `mlr-core.l4` (the keel), imported unchanged; `prelude` and `daydate` from the library.
+- The Interpretation Act 1978 is not staged for this text (`inputs/DEPENDENCIES/`: "None"; the Commons row for that Act targets unstable and a main build cannot read it).
+  Reading (d) (counting of days and of the five-year period) is my own reading of "within N days of X", encoded in the date functions listed under (d); it is not taken from the Interpretation Act 1978, whose text I did not read.
+  One to fill later: if the Act's counting provisions are staged, the date functions of regulations 21(4), 23, 26(10), 29(15), 30ZA(5) and 30A should call them.
+- `Date` rolls an impossible date forward: `Date 29 2 2027` reads back as day 1, month 3, year 2027 (measured on build 1.6.109 on 2026-11-05).
+  `reg 29(15) the fifth anniversary of the date on which the payment is complete` therefore returns 1 March for a payment completed on 29 February.
+- Other instruments the text borrows, each asked as a plain fact or a named input and not encoded: Companies Act 2006, Gambling Act 2005, the Financial Services and Markets Act 2000 ("FSMA") and the Regulated Activities Order, Proceeds of Crime Act 2002, Terrorism Act 2000, Economic Crime (Transparency and Enforcement) Act 2022, Banking Act 2009, Data Protection Act 2018, Consumer Credit Act 1974, the capital requirements regulation, the Dual-Use Regulation.
+
+## Unstable dialect
+
+I looked at time, versions and workarounds and wrote no second encoding: the deadlines counted from events (`reg 21(4)` at `mlr1-reg21-25-controls.l4:116-135`, `reg 23`, `reg 26(10)`), the fixed dates (`reg 16(1)` at `mlr1-reg16-17-authorities.l4:25`, `reg 26(3)` at `mlr1-reg26-approvals.l4:65`, `reg 29(7A)` at `mlr1-reg29-additional-cdd.l4:221`) and the date regulation 29(10) leaves out (`mlr1-reg29-additional-cdd.l4:302`, an input) are all expressed on main with `Date`, `MINUS` and a `#TRACE`, and the text gives no rule in force on two different dates that main forced into a workaround.
+
+## Seat
+
+Layer 2 is `mlr1-seat.l4` with `mlr1-cases-seat.l4`: 75 questions and 137 cases.
+The seat is a business that is a relevant person, and its compliance officer.
+They ask, on facts they can state, whether the Regulations apply to them, what customer due diligence is required for a customer or transaction, what to record and keep, and by when.
+Every question has an `@export` whose text is the question, and every input has an `@desc` worded as a question (the one question with no input, `Under regulation 28(3)(a), what particulars of a body corporate must I obtain and verify`, has none to describe).
+Inputs are plain: a Yes/No/I am not sure choice for a fact that the keel or another part would decide, and an ordinary true/false, number, date or named choice for the rest.
+A question returns `MAYBE BOOLEAN` directly, with three exceptions: `Under regulation 28(3)(a), what particulars ...` returns the list of particulars, `Under regulation 29(15), ...` returns a plain `BOOLEAN` (it is arithmetic on two dates and has no unknown), and `Under regulation 30A(3), ...` returns a `MAYBE` of the person to whom the discrepancy must be reported.
+Questions are grouped under `§` and `§§` headings in text order; the one exception to the order is `Under regulation 27`, which gathers the regulation 27 routes and so follows the paragraphs it gathers.
+The `DECIDE` name and the `@export` text both begin "Under regulation N,".
+The seat only calls layer-1 rules.
+A business that carries on several kinds of business is asked one kind at a time, and a list is asked one item at a time.
+
+Groups: "Do the Regulations apply to me? (regulations 8 to 15)", "My risk assessment, policies, controls and records (regulations 18 to 24)", "Approval of beneficial owners, officers and managers (regulation 26)", "When must I apply customer due diligence? (regulation 27)", "What customer due diligence measures must I apply? (regulation 28)", "Additional measures for credit institutions and financial institutions (regulation 29)", and "Timing of verification, insolvent bank customers, register discrepancies, ceasing transactions and trustees of debt issues (regulations 30 to 32)".
+
+There is no seat for an official: regulations 16, 16A, 17 and 25 (the Treasury, the Home Office, the supervisory authority and the FCA acting as authority) have layer-1 rules and no question.
+Layer-1 paragraphs that have no seat question of their own are reached through the coverage table, where each has its layer-1 name.
+
+Seat design note.
+No duty question asks whether the person is a relevant person, or whether regulation 8(3) limits an auction platform to the regulation asked about; the caller asks `Under regulation 8` (and, for an auction platform, `Under regulation 8(3)`) first.
+The seat does not carry that answer forward into the other questions.
+
+Cases.
+Every question has at least one case; the cases include `NOTHING` answers where the text is silent, where a scope limit is not reached, or where an input is "I am not sure".
+Expected values were written by hand from the text before each run; where a run disagreed, the text was re-read and the expectation changed only where the text supported the change.
+`l4 batch` on the seat evaluates an `@export` row through the API shape (checked with `Under regulation 8`: `true`, `false` and `null` for JUST TRUE, JUST FALSE and NOTHING).
+
+## What the text turns out to say
+
+1. Regulation 29(17) says "A customer is not required under paragraph (13), (14) or (16) to provide information ...", but paragraph (13) (line 901) binds the relevant person ("The relevant person must be able to demonstrate to its supervisory authority ...") and not the customer.
+   Encoded as written; the customer's immunity in (17) reaches (14) and (16) and has nothing to bite on in (13).
+2. Regulation 30A(9) defines "the register" for customer types (1)(a), (1)(b) to (d) and (1)(f), and for none other, although (1)(e) is a trust registered under Part 5 and (1) and (2A) ask for an excerpt "of the register" for every type in (1)(a) to (f) (lines 947-953, 977-982).
+   For a trust the register is not defined; the encoding asks for it as an input.
+3. Regulation 29(10) refers to "the day on which this paragraph comes into force" and the text does not give it (fork F-29(10)).
+4. Regulation 27(2) leaves out "a cryptoasset exchange provider of the kind referred to in paragraph (7D) or (7E)" and (7E) names the whole kinds (fork F-27(2)).
+5. Regulation 15(1) lists Parts 1 to 4, 6 and 8 to 11, while regulation 8(1)(b) takes a person within regulation 15 out of "relevant persons" for the Parts of 8(1) (fork F-15(1)).
+6. Regulation 8(3) lists regulations as ranges; whether a lettered regulation falls inside a range is not said (fork F-8(3)).
+7. Regulation 23(3A) counts "30 days beginning with the date", unlike the other deadlines in this range, which run "within N days" of an event; the last day is the date plus 29, and the trace for `reg 23(3A)` waits to 30 for the breach.
+8. Regulation 13(5) and (6): "does not include the things listed in paragraph (6) when done by ... a firm ... if neither the firm ... nor any of their employees, does anything else within paragraph (4)"; the text does not say what the carve-out does when someone does something else within (4).
+9. Regulation 22 is blank in this text (a row of dots), though its heading ("Central contact points: electronic money issuers and payment service providers") is present; so are regulations 9(2), 9(5)(a), 16(5), 16(7)(c) to (e), 17(2)(a), (b), 20(2) and 30A(7).
+10. Paragraph (2) of regulation 8 lists fifteen kinds of person and says nothing of the auction platform; paragraph (3) makes an auction platform a relevant person only "for the purposes of those provisions" it lists, and paragraph (2) is not closed by "only", so the encoding answers NOTHING (list not closed) when asked whether an auction platform is "listed in paragraph (2)".
+
+## What the main binary does not accept
+
+Loud failures (a parse or type error; the file does not run):
+1. `ELSE IF ... ELSE` after a stair-stepped `THEN` does not parse; use `BRANCH ... OTHERWISE`.
+2. `CONSIDER` inside a `BRANCH` arm does not parse.
+3. `reg 8(3) Regulation WITH ...` inside a call is a parse error; write ``(`reg 8(3) Regulation` OF n, s)``.
+4. There is no `length` in the prelude; a count is `sum (map (GIVEN s YIELD 1) list)`.
+
+Silent failures (the file runs, the answer is wrong):
+5. `NOT (x) AND y` parses as `NOT ((x) AND y)`; it compiles and answers differently.
+   Write `(NOT (x)) AND y`.
+   Every `NOT` in the layer-1 files is parenthesised; the fifteen that stood before a backtick name and ended at `THEN` were harmless and were parenthesised for uniformity.
+6. A deontic `#TRACE` prints its outcome as an Info diagnostic, which `check.sh` and `#ASSERT` do not see; `check.sh` says so in its closing line.
+   Twenty-four `#TRACE` directives (twelve rules, two each) were read by eye, not asserted.
+   The reading: for a `MUST ... WITHIN n` rule, an act on day n gives FULFILLED and waiting to day n+1 gives BREACH with the BECAUSE text; for a `SHANT` rule, the act gives BREACH and waiting leaves the prohibition standing.
+
+## Regulative rules and their traces (read by eye)
+
+| Rule | Kind | Act traced | Wait traced |
+| --- | --- | --- | --- |
+| `reg 21(4)` inform the supervisory authority within 14 days | MUST WITHIN 14 | at 14: FULFILLED | to 15: BREACH |
+| `reg 23(1)` inform the FCA within 28 days of beginning to act | MUST WITHIN 28 | at 28: FULFILLED | to 29: BREACH |
+| `reg 23(3)` inform the FCA within 28 days of ceasing to act | MUST WITHIN 28 | at 28: FULFILLED | to 29: BREACH |
+| `reg 23(3A)` provide details or a correction within 30 days beginning with the date | MUST WITHIN 29 | at 29: FULFILLED | to 30: BREACH |
+| `reg 26(10)(a)` P informs the supervisory authority within 30 days | MUST WITHIN 30 | at 30: FULFILLED | to 31: BREACH |
+| `reg 26(10)(b)` the relevant firm informs its supervisory authority within 30 days | MUST WITHIN 30 | at 30: FULFILLED | to 31: BREACH |
+| `reg 26(1)`, `reg 29(6)`, `reg 29(8)`, `reg 30ZA(3)(b)`, `reg 31(1)(a)`, `reg 31(1)(b)` | SHANT | the act: BREACH | the wait: the prohibition stands |
+
+Each row was read from the `Info` diagnostics of `l4 run` on build 1.6.109 on 2026-11-05 (twelve rules, one act trace and one wait trace each).
+The `SHANT` rows were traced with the act at 5 and a wait until 5.
+
+## What check.sh prints
+
+Run with `L4=.../bin/l4-main-109 L4_MAIN=.../bin/l4-main-108 ./check.sh` on 2026-11-05; it exited 0.
+The block below is check.sh's output exactly, with nothing added.
+No baseline was recorded: `grep -n -i baseline BRIEF.md check.sh fetch-main-l4.sh` finds only the word in unrelated sentences, and `inputs/KEEL-NOTES.md` (line 3) says the keel's `check.sh` numbers are in its final report, which I was not given.
+The only baseline I can state is the supplied core's own line in the table below (`mlr-core.l4` 0 errors, 0 satisfied, 0 failed).
+
+```
+target: main. Each module is run with your l4 and with the main build below; the main columns must match.
+main build: 1.6.108 (main, 2ae7c9b, 2026-11-02)
+module                                    errors satisfied  failed  refused  expected | errors satisfied  failed  refused  main
+mlr-core.l4                                    0         0       0        0         0 |      0         0       0        0  same
+mlr1-cases-seat.l4                             0       137       0        0         0 |      0       137       0        0  same
+mlr1-reg08-09-application.l4                   0         0       0        0         0 |      0         0       0        0  same
+mlr1-reg10-14a-kinds.l4                        0         0       0        0         0 |      0         0       0        0  same
+mlr1-reg15-exclusions.l4                       0         0       0        0         0 |      0         0       0        0  same
+mlr1-reg16-17-authorities.l4                   0         0       0        0         0 |      0         0       0        0  same
+mlr1-reg18-20-policies.l4                      0         0       0        0         0 |      0         0       0        0  same
+mlr1-reg21-25-controls.l4                      0         0       0        0         0 |      0         0       0        0  same
+mlr1-reg26-approvals.l4                        0         0       0        0         0 |      0         0       0        0  same
+mlr1-reg27-cdd-when.l4                         0         0       0        0         0 |      0         0       0        0  same
+mlr1-reg28-cdd-measures.l4                     0         0       0        0         0 |      0         0       0        0  same
+mlr1-reg29-additional-cdd.l4                   0         0       0        0         0 |      0         0       0        0  same
+mlr1-reg30-32-timing.l4                        0         0       0        0         0 |      0         0       0        0  same
+mlr1-seat.l4                                   0         0       0        0         0 |      0         0       0        0  same
+mlr1-tests-reg08-09-application.l4             0       110       0        0         0 |      0       110       0        0  same
+mlr1-tests-reg10-14a-kinds.l4                  0       230       0        0         0 |      0       230       0        0  same
+mlr1-tests-reg15-exclusions.l4                 0       120       0        0         0 |      0       120       0        0  same
+mlr1-tests-reg16-17-authorities.l4             0       122       0        0         0 |      0       122       0        0  same
+mlr1-tests-reg18-20-policies.l4                0       139       0        0         0 |      0       139       0        0  same
+mlr1-tests-reg21-25-controls.l4                0       188       0        0         0 |      0       188       0        0  same
+mlr1-tests-reg26-approvals.l4                  0        89       0        0         0 |      0        89       0        0  same
+mlr1-tests-reg27-cdd-when.l4                   0       103       0        0         0 |      0       103       0        0  same
+mlr1-tests-reg28-cdd-measures.l4               0       129       0        0         0 |      0       129       0        0  same
+mlr1-tests-reg29-additional-cdd.l4             0       127       0        0         0 |      0       127       0        0  same
+mlr1-tests-reg30-32-timing.l4                  0       208       0        0         0 |      0       208       0        0  same
+TOTAL (25 modules)                             0      1702       0        0           |      0      1702       0        0
+(a failed assertion is also an error; any other error, or any refused assertion, makes the run red)
+(target main: every module has the same four counts on the main build. That rules out a module main rejects and a difference an assertion shows; it does not see a different TRACE outcome, or any difference no assertion exercises)
+```

@@ -1,0 +1,850 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `poca-nouns`
+
+-- Proceeds of Crime Act 2002, Part 7, sections 335 to 336D (appropriate consent; nominated officer's consent; the moratorium period and its
+-- extension) -- LAYER 1.   Target: main (checked on build 1.6.109).
+--
+-- DATES.  A "working day" (ss 335(7), 336(9), 336D(9)) is a day other than a Saturday, a Sunday, Christmas Day, Good Friday or a bank holiday in
+-- the part of the United Kingdom the text names.  No library knows Good Friday or the bank holidays, so they are an INPUT, `LIST OF DATE`:
+-- the person lists Good Friday and the bank holidays of the right part of the UK for the weeks that matter.  Christmas Day is computed (25 December).
+-- The notice period and the moratorium period are counted inclusively at both edges: "a period of 31 days starting with the day on which ..." has that
+-- day as its first day, so its last day is 30 days later; "before the end of the notice period" is satisfied by a notice received on the last day.
+--
+-- THE QUESTION ASKED, AND THE DAY IT IS ASKED.  Whether a person "must be treated as having the appropriate consent" depends on what has happened by the day
+-- asked about, so the functions that decide it take that day.  Before the notice period has ended the condition in s 335(3) is not satisfied, and
+-- while the moratorium period runs the condition in s 335(4) is not satisfied: the answer is then JUST FALSE on lawyer-reading (a) of NOTES.md
+-- (a failed "if" counts as the text's no), not NOTHING.
+
+§ `Sections 335 to 336D: consent and the moratorium period`
+
+§§ `Working days (helpers, not rules)`
+
+-- Whether a day is a working day: not a Saturday, a Sunday, Christmas Day, or on the list the person gives of Good Friday and the bank holidays.
+GIVEN d IS A DATE
+      holidays IS A LIST OF DATE
+GIVETH A BOOLEAN
+`the day is a working day` MEANS
+        (NOT (`is weekend` d))
+    AND (NOT (DATE_DAY d EQUALS 25 AND DATE_MONTH d EQUALS 12))
+    AND (NOT (any (GIVEN x YIELD x EQUALS d) holidays))
+
+-- The first working day on or after a day.
+GIVEN d IS A DATE
+      holidays IS A LIST OF DATE
+GIVETH A DATE
+`the first working day on or after` MEANS
+    IF `the day is a working day` d holidays
+    THEN d
+    ELSE `the first working day on or after` (d PLUS 1) holidays
+
+-- The nth working day, counting the first working day on or after d as the first.
+GIVEN n IS A NUMBER
+      d IS A DATE
+      holidays IS A LIST OF DATE
+GIVETH A DATE
+`the nth working day counting from` MEANS
+    IF n AT MOST 1
+    THEN `the first working day on or after` d holidays
+    ELSE `the nth working day counting from` (n - 1) ((`the first working day on or after` d holidays) PLUS 1) holidays
+
+§§ `s 335: appropriate consent`
+
+-- src:340 | (1) The appropriate consent is—
+-- src:341 | (a) the consent of a nominated officer to do a prohibited act if an authorised disclosure is made to the nominated officer;
+-- src:342 | (b) the consent of a constable to do a prohibited act if an authorised disclosure is made to a constable;
+-- src:343 | (c) the consent of a customs officer to do a prohibited act if an authorised disclosure is made to a customs officer.
+@ref s 335(1) (src:340-343)
+GIVEN `who gave the consent` IS A `Person to whom a disclosure is made`
+      `to whom the authorised disclosure was made` IS A `Person to whom a disclosure is made`
+GIVETH A MAYBE BOOLEAN
+`s 335(1) the consent is the appropriate consent` MEANS
+    BRANCH
+        IF `who gave the consent` EQUALS `a nominated officer` AND `to whom the authorised disclosure was made` EQUALS `a nominated officer` THEN JUST TRUE
+        IF (`who gave the consent` EQUALS `a constable` OR `who gave the consent` EQUALS `a person authorised for the purposes of this Part by the Director General of the National Crime Agency`)
+             AND (`to whom the authorised disclosure was made` EQUALS `a constable` OR `to whom the authorised disclosure was made` EQUALS `a person authorised for the purposes of this Part by the Director General of the National Crime Agency`)
+        THEN JUST TRUE -- s 340(13): "References to a constable include references to a person authorised for the purposes of this Part by the Director General of the National Crime Agency"
+        IF `who gave the consent` EQUALS `a customs officer` AND `to whom the authorised disclosure was made` EQUALS `a customs officer` THEN JUST TRUE
+        OTHERWISE JUST FALSE -- FALSE-kind (the text says no in its own words): "The appropriate consent is" (a closed definition: fork register)
+
+-- src:351 | (5) The notice period is the period of seven working days starting with the first working day after the person makes the disclosure.
+@ref s 335(5) (src:351)
+GIVEN `the day the person makes the disclosure` IS A DATE
+      `Good Friday and the bank holidays in the part of the United Kingdom in which the person is when he makes the disclosure` IS A LIST OF DATE
+GIVETH A DATE
+`s 335(5) the first day of the notice period` MEANS
+    `the first working day on or after` ((`the day the person makes the disclosure`) PLUS 1) `Good Friday and the bank holidays in the part of the United Kingdom in which the person is when he makes the disclosure`
+
+@ref s 335(5) (src:351)
+GIVEN `the day the person makes the disclosure` IS A DATE
+      `Good Friday and the bank holidays in the part of the United Kingdom in which the person is when he makes the disclosure` IS A LIST OF DATE
+GIVETH A DATE
+`s 335(5) the last day of the notice period` MEANS
+    `the nth working day counting from` 7 ((`the day the person makes the disclosure`) PLUS 1) `Good Friday and the bank holidays in the part of the United Kingdom in which the person is when he makes the disclosure`
+
+-- src:352 | (6) The moratorium period is the period of 31 days starting with the day on which the person receives notice that consent to the doing of the act is refused.
+@ref s 335(6) (src:352)
+GIVEN `the day on which the person receives notice that consent is refused` IS A DATE
+      `the days by which the period has been extended under section 336A or 336C` IS A NUMBER
+GIVETH A DATE
+`s 335(6) the last day of the moratorium period` MEANS
+    (`the day on which the person receives notice that consent is refused`) PLUS (30 + `the days by which the period has been extended under section 336A or 336C`)
+
+-- s 335(6A) says that (6) is subject to ss 336A and 336C: the days of extension are an input of the rule above, and are worked out by the rules of those sections.
+
+-- src:356 | (7) A working day is a day other than a Saturday, a Sunday, Christmas Day, Good Friday or a day which is a bank holiday under the Banking and Financial Dealings Act 1971 (c. 80) in the part of the United Kingdom in which the person is when he makes the disclosure.
+@ref s 335(7) (src:356)
+GIVEN day IS A DATE
+      `Good Friday and the bank holidays in the part of the United Kingdom in which the person is when he makes the disclosure` IS A LIST OF DATE
+GIVETH A MAYBE BOOLEAN
+`s 335(7) the day is a working day` MEANS
+    BRANCH
+        IF `the day is a working day` day `Good Friday and the bank holidays in the part of the United Kingdom in which the person is when he makes the disclosure` THEN JUST TRUE
+        OTHERWISE JUST FALSE -- FALSE-kind (the text says no in its own words): "A working day is a day other than a Saturday, a Sunday, Christmas Day, Good Friday or a day which is a bank holiday"
+
+-- src:347 | (3) The condition is that before the end of the notice period he does not receive notice from a constable or customs officer that consent to the doing of the act is refused.
+@ref s 335(3) (src:347)
+GIVEN `the day on which the person receives notice that consent is refused, if he has` IS A MAYBE DATE
+      `the last day of the notice period` IS A DATE
+      `the day you are asking about` IS A DATE
+GIVETH A BOOLEAN
+`s 335(3) the condition is satisfied` MEANS
+        (`the day you are asking about` GREATER THAN `the last day of the notice period`)
+    AND (CONSIDER `the day on which the person receives notice that consent is refused, if he has`
+         WHEN NOTHING THEN TRUE
+         WHEN JUST received THEN received GREATER THAN `the last day of the notice period`)
+
+-- src:348 | (4) The condition is that—
+-- src:349 | (a) before the end of the notice period he receives notice from a constable or customs officer that consent to the doing of the act is refused, and
+-- src:350 | (b) the moratorium period has expired.
+@ref s 335(4) (src:348-350)
+GIVEN `the day on which the person receives notice that consent is refused, if he has` IS A MAYBE DATE
+      `the last day of the notice period` IS A DATE
+      `the days by which the moratorium period has been extended under section 336A or 336C` IS A NUMBER
+      `the day you are asking about` IS A DATE
+GIVETH A BOOLEAN
+`s 335(4) the condition is satisfied` MEANS
+    CONSIDER `the day on which the person receives notice that consent is refused, if he has`
+    WHEN NOTHING THEN FALSE
+    WHEN JUST received THEN
+            (received AT MOST `the last day of the notice period`)
+        AND (`the day you are asking about` GREATER THAN (`s 335(6) the last day of the moratorium period` received `the days by which the moratorium period has been extended under section 336A or 336C`))
+
+-- src:344 | (2) A person must be treated as having the appropriate consent if—
+-- src:345 | (a) he makes an authorised disclosure to a constable or a customs officer, and
+-- src:346 | (b) the condition in subsection (3) or the condition in subsection (4) is satisfied.
+@ref s 335(2) (src:344-346)
+GIVEN `he makes an authorised disclosure to a constable or a customs officer` IS A BOOLEAN
+      `the day he makes the disclosure` IS A DATE
+      `the day on which he receives notice that consent is refused, if he has` IS A MAYBE DATE
+      `Good Friday and the bank holidays in the part of the United Kingdom in which the person is when he makes the disclosure` IS A LIST OF DATE
+      `the days by which the moratorium period has been extended under section 336A or 336C` IS A NUMBER
+      `the day you are asking about` IS A DATE
+GIVETH A MAYBE BOOLEAN
+`s 335(2) the person must be treated as having the appropriate consent` MEANS
+    BRANCH
+        IF NOT `he makes an authorised disclosure to a constable or a customs officer`
+        THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "A person must be treated as having the appropriate consent if" (a failed "if" read as the text's no: marginal reading (a))
+        IF `s 335(3) the condition is satisfied` `the day on which he receives notice that consent is refused, if he has` (`s 335(5) the last day of the notice period` `the day he makes the disclosure` `Good Friday and the bank holidays in the part of the United Kingdom in which the person is when he makes the disclosure`) `the day you are asking about`
+        THEN JUST TRUE
+        IF `s 335(4) the condition is satisfied` `the day on which he receives notice that consent is refused, if he has` (`s 335(5) the last day of the notice period` `the day he makes the disclosure` `Good Friday and the bank holidays in the part of the United Kingdom in which the person is when he makes the disclosure`) `the days by which the moratorium period has been extended under section 336A or 336C` `the day you are asking about`
+        THEN JUST TRUE
+        OTHERWISE JUST FALSE -- FALSE-kind (the text says no in its own words): "if (a) he makes an authorised disclosure ... and (b) the condition in subsection (3) or the condition in subsection (4) is satisfied" (neither condition is satisfied on the day asked about: marginal reading (a))
+
+-- s 335(2)(a) asks to whom the authorised disclosure was made.  The rule above takes the answer as one fact; this rule works it out from the recipient,
+-- and s 340(13) ("References to a constable include references to a person authorised for the purposes of this Part by the Director General of the National Crime Agency") brings the NCA-authorised person in.
+@ref s 335(2)(a) (src:345)
+GIVEN `he makes an authorised disclosure` IS A BOOLEAN
+      recipient IS A `Person to whom a disclosure is made`
+GIVETH A MAYBE BOOLEAN
+`s 335(2)(a) he makes an authorised disclosure to a constable or a customs officer` MEANS
+    BRANCH
+        IF `he makes an authorised disclosure` AND (recipient EQUALS `a constable` OR recipient EQUALS `a person authorised for the purposes of this Part by the Director General of the National Crime Agency` OR recipient EQUALS `a customs officer`)
+        THEN JUST TRUE
+        OTHERWISE JUST FALSE -- FALSE-kind (the text says no in its own words): "he makes an authorised disclosure to a constable or a customs officer" (a failed 'if' read as the text's no: marginal reading (a))
+
+-- src:357 | (8) References to a prohibited act are to an act mentioned in section 327(1), 328(1) or 329(1) (as the case may be).
+@ref s 335(8) (src:357)
+GIVEN `it is an act mentioned in section 327(1)` IS A BOOLEAN
+      `it is an act mentioned in section 328(1)` IS A BOOLEAN
+      `it is an act mentioned in section 329(1)` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 335(8) the act is a prohibited act` MEANS
+    BRANCH
+        IF `it is an act mentioned in section 327(1)` OR `it is an act mentioned in section 328(1)` OR `it is an act mentioned in section 329(1)` THEN JUST TRUE
+        OTHERWISE JUST FALSE -- FALSE-kind (the text says no in its own words): "References to a prohibited act are to an act mentioned in section 327(1), 328(1) or 329(1)"
+
+-- s 335(8A) repeats (6A) for (8): the extension of the period by ss 336A and 336C (see those rules).
+
+-- src:361 | (9) A nominated officer is a person nominated to receive disclosures under section 338.
+@ref s 335(9) (src:361)
+GIVEN `the person is nominated to receive disclosures under section 338` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 335(9) the person is a nominated officer` MEANS
+    BRANCH
+        IF `the person is nominated to receive disclosures under section 338` THEN JUST TRUE
+        OTHERWISE JUST FALSE -- FALSE-kind (the text says no in its own words): "A nominated officer is a person nominated to receive disclosures under section 338"
+
+-- s 335(10) "Subsections (1) to (4) apply for the purposes of this Part" fixes where those subsections are used: a signpost that creates no rule (coverage table: inert, reason 1).
+
+§§ `s 336: the nominated officer's consent`
+
+-- src:365 | (2) The condition is that—
+-- src:366 | (a) he makes a disclosure that property is criminal property to a person authorised for the purposes of this Part by the Director General of the National Crime Agency, and
+-- src:367 | (b) such a person gives consent to the doing of the act.
+@ref s 336(2) (src:365-367)
+GIVEN `he makes a disclosure that property is criminal property to a person authorised for the purposes of this Part by the Director General of the National Crime Agency` IS A BOOLEAN
+      `such a person gives consent to the doing of the act` IS A BOOLEAN
+GIVETH A BOOLEAN
+`s 336(2) the condition is satisfied` MEANS
+    `he makes a disclosure that property is criminal property to a person authorised for the purposes of this Part by the Director General of the National Crime Agency` AND `such a person gives consent to the doing of the act`
+
+-- src:381 | (7) The notice period is the period of seven working days starting with the first working day after the nominated officer makes the disclosure.
+@ref s 336(7) (src:381)
+GIVEN `the day the nominated officer makes the disclosure` IS A DATE
+      `Good Friday and the bank holidays in the part of the United Kingdom in which the nominated officer is when he gives the appropriate consent` IS A LIST OF DATE
+GIVETH A DATE
+`s 336(7) the last day of the notice period` MEANS
+    `the nth working day counting from` 7 ((`the day the nominated officer makes the disclosure`) PLUS 1) `Good Friday and the bank holidays in the part of the United Kingdom in which the nominated officer is when he gives the appropriate consent`
+
+-- src:382 | (8) The moratorium period is the period of 31 days starting with the day on which the nominated officer is given notice that consent to the doing of the act is refused.
+@ref s 336(8) (src:382)
+GIVEN `the day on which the nominated officer is given notice that consent is refused` IS A DATE
+      `the days by which the period has been extended under section 336A or 336C` IS A NUMBER
+GIVETH A DATE
+`s 336(8) the last day of the moratorium period` MEANS
+    (`the day on which the nominated officer is given notice that consent is refused`) PLUS (30 + `the days by which the period has been extended under section 336A or 336C`)
+
+-- src:383 | (9) A working day is a day other than a Saturday, a Sunday, Christmas Day, Good Friday or a day which is a bank holiday under the Banking and Financial Dealings Act 1971 (c. 80) in the part of the United Kingdom in which the nominated officer is when he gives the appropriate consent.
+@ref s 336(9) (src:383)
+GIVEN day IS A DATE
+      `Good Friday and the bank holidays in the part of the United Kingdom in which the nominated officer is when he gives the appropriate consent` IS A LIST OF DATE
+GIVETH A MAYBE BOOLEAN
+`s 336(9) the day is a working day` MEANS
+    BRANCH
+        IF `the day is a working day` day `Good Friday and the bank holidays in the part of the United Kingdom in which the nominated officer is when he gives the appropriate consent` THEN JUST TRUE
+        OTHERWISE JUST FALSE -- FALSE-kind (the text says no in its own words): "A working day is a day other than a Saturday, a Sunday, Christmas Day, Good Friday or a day which is a bank holiday"
+
+-- src:368 | (3) The condition is that—
+-- src:369 | (a) he makes a disclosure that property is criminal property to a person authorised for the purposes of this Part by the Director General of the National Crime Agency, and
+-- src:370 | (b) before the end of the notice period he does not receive notice from such a person that consent to the doing of the act is refused.
+@ref s 336(3) (src:368-370)
+GIVEN `he makes a disclosure that property is criminal property to a person authorised for the purposes of this Part by the Director General of the National Crime Agency` IS A BOOLEAN
+      `the day on which he receives notice from such a person that consent is refused, if he has` IS A MAYBE DATE
+      `the last day of the notice period` IS A DATE
+      `the day you are asking about` IS A DATE
+GIVETH A BOOLEAN
+`s 336(3) the condition is satisfied` MEANS
+        `he makes a disclosure that property is criminal property to a person authorised for the purposes of this Part by the Director General of the National Crime Agency`
+    AND (`the day you are asking about` GREATER THAN `the last day of the notice period`)
+    AND (CONSIDER `the day on which he receives notice from such a person that consent is refused, if he has`
+         WHEN NOTHING THEN TRUE
+         WHEN JUST received THEN received GREATER THAN `the last day of the notice period`)
+
+-- src:371 | (4) The condition is that—
+-- src:372 | (a) he makes a disclosure that property is criminal property to a person authorised for the purposes of this Part by the Director General of the National Crime Agency,
+-- src:373 | (b) before the end of the notice period he receives notice from such a person that consent to the doing of the act is refused, and
+-- src:374 | (c) the moratorium period has expired.
+@ref s 336(4) (src:371-374)
+GIVEN `he makes a disclosure that property is criminal property to a person authorised for the purposes of this Part by the Director General of the National Crime Agency` IS A BOOLEAN
+      `the day on which he receives notice from such a person that consent is refused, if he has` IS A MAYBE DATE
+      `the last day of the notice period` IS A DATE
+      `the days by which the moratorium period has been extended under section 336A or 336C` IS A NUMBER
+      `the day you are asking about` IS A DATE
+GIVETH A BOOLEAN
+`s 336(4) the condition is satisfied` MEANS
+        `he makes a disclosure that property is criminal property to a person authorised for the purposes of this Part by the Director General of the National Crime Agency`
+    AND (CONSIDER `the day on which he receives notice from such a person that consent is refused, if he has`
+         WHEN NOTHING THEN FALSE
+         WHEN JUST received THEN
+                 (received AT MOST `the last day of the notice period`)
+             AND (`the day you are asking about` GREATER THAN (`s 336(8) the last day of the moratorium period` received `the days by which the moratorium period has been extended under section 336A or 336C`)))
+
+-- s 336(1): the prohibition.  A flat "must not ... unless": the prohibition bites when none of the three conditions is satisfied.
+-- The decision function answers "is he prohibited?"; the regulative rule is the same prohibition as a SHANT (ruling N2: derived from the answer).
+-- src:364 | (1) A nominated officer must not give the appropriate consent to the doing of a prohibited act unless the condition in subsection (2), the condition in subsection (3) or the condition in subsection (4) is satisfied.
+@ref s 336(1) (src:364)
+GIVEN `the condition in subsection (2) is satisfied` IS A BOOLEAN
+      `the condition in subsection (3) is satisfied` IS A BOOLEAN
+      `the condition in subsection (4) is satisfied` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 336(1) the nominated officer is prohibited from giving the appropriate consent` MEANS
+    BRANCH
+        IF `the condition in subsection (2) is satisfied` OR `the condition in subsection (3) is satisfied` OR `the condition in subsection (4) is satisfied`
+        THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "must not give the appropriate consent ... unless the condition in subsection (2), the condition in subsection (3) or the condition in subsection (4) is satisfied"
+        OTHERWISE JUST TRUE -- the text's own prohibition: "A nominated officer must not give the appropriate consent to the doing of a prohibited act"
+
+@ref s 336(1) (src:364)
+GIVEN `a condition in subsection (2), (3) or (4) is satisfied` IS A BOOLEAN
+GIVETH A DEONTIC `Party under Part 7` `Act under Part 7`
+`s 336(1) the nominated officer must not give the appropriate consent unless a condition is satisfied` MEANS
+    IF `a condition in subsection (2), (3) or (4) is satisfied`
+    THEN FULFILLED
+    ELSE PARTY `the nominated officer`
+         SHANT `give the appropriate consent to a prohibited act`
+         HENCE FULFILLED
+         LEST BREACH BY `the nominated officer` BECAUSE "s 336(1): the appropriate consent was given when none of the conditions in subsections (2), (3) and (4) was satisfied"
+
+-- src:375 | (5) A person who is a nominated officer commits an offence if—
+-- src:376 | (a) he gives consent to a prohibited act in circumstances where none of the conditions in subsections (2), (3) and (4) is satisfied, and
+-- src:377 | (b) he knows or suspects that the act is a prohibited act.
+@ref s 336(5) (src:375-377)
+GIVEN `the person is a nominated officer` IS A BOOLEAN
+      `he gives consent to a prohibited act` IS A BOOLEAN
+      `the condition in subsection (2) is satisfied` IS A BOOLEAN
+      `the condition in subsection (3) is satisfied` IS A BOOLEAN
+      `the condition in subsection (4) is satisfied` IS A BOOLEAN
+      `he knows or suspects that the act is a prohibited act` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 336(5) the nominated officer commits an offence` MEANS
+    BRANCH
+        IF NOT `the person is a nominated officer` THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "A person who is a nominated officer commits an offence if" (a failed "if" read as the text's no: marginal reading (a))
+        IF NOT `he gives consent to a prohibited act` THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "commits an offence if (a) he gives consent" (marginal reading (a))
+        IF `the condition in subsection (2) is satisfied` OR `the condition in subsection (3) is satisfied` OR `the condition in subsection (4) is satisfied`
+        THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "in circumstances where none of the conditions in subsections (2), (3) and (4) is satisfied" (marginal reading (a))
+        IF NOT `he knows or suspects that the act is a prohibited act` THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "(b) he knows or suspects that the act is a prohibited act" (marginal reading (a))
+        OTHERWISE JUST TRUE
+
+-- src:378 | (6) A person guilty of such an offence is liable—
+-- src:379 | (a) on summary conviction, to imprisonment for a term not exceeding six months or to a fine not exceeding the statutory maximum or to both, or
+-- src:380 | (b) on conviction on indictment, to imprisonment for a term not exceeding five years or to a fine or to both.
+@ref s 336(6) (src:378-380)
+GIVEN way IS A `Way of being convicted`
+GIVETH A `Penalty ceiling`
+`s 336(6) the most that can be imposed on a person guilty of the offence` MEANS
+    CONSIDER way
+    WHEN `on summary conviction` THEN `Penalty ceiling` WITH `months of imprisonment` IS 6, `ceiling of the fine` IS `the statutory maximum`, `imprisonment and a fine may both be imposed` IS TRUE
+    WHEN `on conviction on indictment` THEN `Penalty ceiling` WITH `months of imprisonment` IS 60, `ceiling of the fine` IS `a fine with no ceiling stated`, `imprisonment and a fine may both be imposed` IS TRUE
+
+-- src:384 | (10) References to a prohibited act are to an act mentioned in section 327(1), 328(1) or 329(1) (as the case may be).
+@ref s 336(10) (src:384)
+GIVEN `it is an act mentioned in section 327(1)` IS A BOOLEAN
+      `it is an act mentioned in section 328(1)` IS A BOOLEAN
+      `it is an act mentioned in section 329(1)` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 336(10) the act is a prohibited act` MEANS
+    BRANCH
+        IF `it is an act mentioned in section 327(1)` OR `it is an act mentioned in section 328(1)` OR `it is an act mentioned in section 329(1)` THEN JUST TRUE
+        OTHERWISE JUST FALSE -- FALSE-kind (the text says no in its own words): "References to a prohibited act are to an act mentioned in section 327(1), 328(1) or 329(1)"
+
+-- src:385 | (11) A nominated officer is a person nominated to receive disclosures under section 338.
+@ref s 336(11) (src:385)
+GIVEN `the person is nominated to receive disclosures under section 338` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 336(11) the person is a nominated officer` MEANS
+    BRANCH
+        IF `the person is nominated to receive disclosures under section 338` THEN JUST TRUE
+        OTHERWISE JUST FALSE -- FALSE-kind (the text says no in its own words): "A nominated officer is a person nominated to receive disclosures under section 338"
+
+§§ `s 336A: the court's power to extend the moratorium period`
+
+-- src:387 | (1) The court may, on an application under this section, grant an extension of a moratorium period if satisfied that—
+-- src:388 | (a) an investigation is being carried out in relation to a relevant disclosure (but has not been completed),
+-- src:389 | (b) the investigation is being conducted diligently and expeditiously,
+-- src:390 | (c) further time is needed for conducting the investigation, and
+-- src:391 | (d) it is reasonable in all the circumstances for the moratorium period to be extended.
+@ref s 336A(1) (src:387-391)
+GIVEN `an application has been made under this section` IS A BOOLEAN
+      `an investigation is being carried out in relation to a relevant disclosure (but has not been completed)` IS A BOOLEAN
+      `the investigation is being conducted diligently and expeditiously` IS A BOOLEAN
+      `further time is needed for conducting the investigation` IS A BOOLEAN
+      `it is reasonable in all the circumstances for the moratorium period to be extended` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 336A(1) the court may grant an extension of a moratorium period` MEANS
+    BRANCH
+        IF       `an application has been made under this section`
+             AND `an investigation is being carried out in relation to a relevant disclosure (but has not been completed)`
+             AND `the investigation is being conducted diligently and expeditiously`
+             AND `further time is needed for conducting the investigation`
+             AND `it is reasonable in all the circumstances for the moratorium period to be extended`
+        THEN JUST TRUE
+        OTHERWISE JUST FALSE -- FALSE-kind (the text says no in its own words): "The court may, on an application under this section, grant an extension of a moratorium period if satisfied that" (a failed "if" read as the text's no: marginal reading (a))
+
+-- src:392 | (2) An application under this section may be made only by a senior officer.
+@ref s 336A(2) (src:392)
+GIVEN `the person is a senior officer` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 336A(2) the person may make an application under this section` MEANS
+    BRANCH
+        IF `the person is a senior officer` THEN JUST TRUE
+        OTHERWISE JUST FALSE -- FALSE-kind (the text says no in its own words): "An application under this section may be made only by a senior officer"
+
+-- src:393 | (3) The application must be made before the moratorium period would otherwise end.
+@ref s 336A(3) (src:393)
+GIVEN `the day the application is made` IS A DATE
+      `the last day of the moratorium period before the extension` IS A DATE
+GIVETH A MAYBE BOOLEAN
+`s 336A(3) the application is made in time` MEANS
+    BRANCH
+        IF `the day the application is made` AT MOST `the last day of the moratorium period before the extension` THEN JUST TRUE
+        OTHERWISE JUST FALSE -- FALSE-kind (the text says no in its own words): "The application must be made before the moratorium period would otherwise end" (the period ends at the end of its last day)
+
+-- src:394 | (4) An extension of a moratorium period must end no later than 31 days beginning with the day after the day on which the period would otherwise end.
+@ref s 336A(4) (src:394)
+GIVEN `the last day of the moratorium period before the extension` IS A DATE
+GIVETH A DATE
+`s 336A(4) the latest day on which an extension may end` MEANS
+    (`the last day of the moratorium period before the extension`) PLUS 31
+
+@ref s 336A(4) (src:394)
+GIVEN `the last day of the moratorium period before the extension` IS A DATE
+      `the last day of the moratorium period as extended` IS A DATE
+GIVETH A MAYBE BOOLEAN
+`s 336A(4) the extension ends in time` MEANS
+    BRANCH
+        IF `the last day of the moratorium period as extended` AT MOST (`s 336A(4) the latest day on which an extension may end` `the last day of the moratorium period before the extension`) THEN JUST TRUE
+        OTHERWISE JUST FALSE -- FALSE-kind (the text says no in its own words): "An extension of a moratorium period must end no later than 31 days beginning with the day after the day on which the period would otherwise end"
+
+-- src:395 | (5) Where a moratorium period is extended by the court under this section, it may be further extended by the court (on one or more occasions) on the making of another application.
+@ref s 336A(5) (src:395)
+GIVEN `the moratorium period has been extended by the court under this section` IS A BOOLEAN
+      `another application is made` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 336A(5) the court may further extend the moratorium period` MEANS
+    BRANCH
+        IF `the moratorium period has been extended by the court under this section` AND `another application is made` THEN JUST TRUE
+        OTHERWISE JUST FALSE -- FALSE-kind (the text says no in its own words): "Where a moratorium period is extended by the court under this section, it may be further extended by the court (on one or more occasions) on the making of another application" (ruling of 2026-11-05 (b): a 'where' condition not met is the text's no, like 'if')
+
+-- src:396 | (6) A moratorium period extended in accordance with subsection (2) or (4) of section 336C may also be further extended by the court on the making of an application under this section.
+@ref s 336A(6) (src:396)
+GIVEN `the moratorium period was extended in accordance with section 336C(2) or (4)` IS A BOOLEAN
+      `an application is made under this section` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 336A(6) the court may further extend a period extended under section 336C` MEANS
+    BRANCH
+        IF `the moratorium period was extended in accordance with section 336C(2) or (4)` AND `an application is made under this section` THEN JUST TRUE
+        OTHERWISE NOTHING -- NOTHING-kind (limited by its own wording): the further extension is given for a period "extended in accordance with subsection (2) or (4) of section 336C" on "the making of an application under this section"
+
+-- src:397 | (7) But the court may not grant a further extension of a moratorium period if the effect would be to extend the period by more than 186 days (in total) beginning with the day after the end of the 31 day period mentioned in section 335(6) or (as the case may be) section 336(8).
+@ref s 336A(7) (src:397)
+GIVEN `the days by which the grant would extend the period in total, counted from the day after the end of the 31 day period` IS A NUMBER
+GIVETH A MAYBE BOOLEAN
+`s 336A(7) the court may grant a further extension` MEANS
+    BRANCH
+        IF `the days by which the grant would extend the period in total, counted from the day after the end of the 31 day period` GREATER THAN 186
+        THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "the court may not grant a further extension of a moratorium period if the effect would be to extend the period by more than 186 days (in total)"
+        OTHERWISE NOTHING -- NOTHING-kind (limited by its own wording): the prohibition speaks only of an extension of more than 186 days in total; within that, this subsection says nothing
+
+-- s 336A(7) counts the 186 days "beginning with the day after the end of the 31 day period": the last day to which the period may be extended in total is the last day of the
+-- 31 day period plus 186 days (the same counting as s 336A(4): 31 days beginning with the day after the day on which the period would otherwise end).
+@ref s 336A(7) (src:397)
+GIVEN `the last day of the 31 day period mentioned in section 335(6) or (as the case may be) section 336(8)` IS A DATE
+GIVETH A DATE
+`s 336A(7) the latest day to which the moratorium period may be extended in total` MEANS
+    (`the last day of the 31 day period mentioned in section 335(6) or (as the case may be) section 336(8)`) PLUS 186
+
+@ref s 336A(7) (src:397)
+GIVEN `the last day of the 31 day period mentioned in section 335(6) or (as the case may be) section 336(8)` IS A DATE
+      `the last day to which the grant would extend the period` IS A DATE
+GIVETH A MAYBE BOOLEAN
+`s 336A(7) the court may grant a further extension to that day` MEANS
+    BRANCH
+        IF `the last day to which the grant would extend the period` GREATER THAN (`s 336A(7) the latest day to which the moratorium period may be extended in total` `the last day of the 31 day period mentioned in section 335(6) or (as the case may be) section 336(8)`)
+        THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "the court may not grant a further extension of a moratorium period if the effect would be to extend the period by more than 186 days (in total) beginning with the day after the end of the 31 day period" (ruling of 2026-11-05 (a): outside the period the text fixes, the text's no)
+        OTHERWISE NOTHING -- NOTHING-kind (limited by its own wording): the prohibition speaks only of an extension beyond 186 days in total; within that, this subsection says nothing (the permission comes from subsections (1) and (8))
+
+-- src:398 | (8) Subsections (1) to (4) apply to any further extension of a moratorium period as they apply to the first extension of the period under this section.
+@ref s 336A(8) (src:398)
+GIVEN `it is a further extension of a moratorium period` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 336A(8) subsections (1) to (4) apply to the extension` MEANS
+    BRANCH
+        IF `it is a further extension of a moratorium period` THEN JUST TRUE
+        OTHERWISE NOTHING -- NOTHING-kind (limited by its own wording): the subsection speaks only of "any further extension of a moratorium period"
+
+-- src:399 | (9) An application under this section may be made by an immigration officer only if the officer has reasonable grounds for suspecting that conduct constituting the prohibited act in relation to which the moratorium period in question applies—
+-- src:400 | (a) relates to the entitlement of one or more persons who are not nationals of the United Kingdom to enter, transit across, or be in, the United Kingdom (including conduct which relates to conditions or other controls on any such entitlement), or
+-- src:401 | (b) is undertaken for the purposes of, or otherwise in relation to, a relevant nationality enactment.
+@ref s 336A(9) (src:399-401)
+GIVEN `the officer has reasonable grounds for suspecting that the conduct relates to the entitlement of one or more persons who are not nationals of the United Kingdom to enter, transit across, or be in, the United Kingdom (including conduct which relates to conditions or other controls on any such entitlement)` IS A BOOLEAN
+      `the officer has reasonable grounds for suspecting that the conduct is undertaken for the purposes of, or otherwise in relation to, a relevant nationality enactment` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 336A(9) an immigration officer may make an application` MEANS
+    BRANCH
+        IF `the officer has reasonable grounds for suspecting that the conduct relates to the entitlement of one or more persons who are not nationals of the United Kingdom to enter, transit across, or be in, the United Kingdom (including conduct which relates to conditions or other controls on any such entitlement)` OR `the officer has reasonable grounds for suspecting that the conduct is undertaken for the purposes of, or otherwise in relation to, a relevant nationality enactment`
+        THEN JUST TRUE
+        OTHERWISE JUST FALSE -- FALSE-kind (the text says no in its own words): "An application under this section may be made by an immigration officer only if the officer has reasonable grounds for suspecting"
+
+-- src:402 | (10) In subsection (9)—
+-- src:403 | “prohibited act” has the meaning given by section 335(8) or (as the case may be) section 336(10);
+-- src:404 | “relevant nationality enactment” means any enactment in—
+-- src:405 | the British Nationality Act 1981,
+-- src:406 | the Hong Kong Act 1985,
+-- src:407 | the Hong Kong (War Wives and Widows) Act 1996,
+-- src:408 | the British Nationality (Hong Kong) Act 1997,
+-- src:409 | the British Overseas Territories Act 2002, or
+-- src:410 | an instrument made under any of those Acts.
+@ref s 336A(10) (src:402-410)
+DECLARE `Enactment considered under section 336A(10)` IS ONE OF
+    `the British Nationality Act 1981`
+    `the Hong Kong Act 1985`
+    `the Hong Kong (War Wives and Widows) Act 1996`
+    `the British Nationality (Hong Kong) Act 1997`
+    `the British Overseas Territories Act 2002`
+    `an instrument made under any of those Acts`
+    `another enactment`
+
+GIVEN enactment IS A `Enactment considered under section 336A(10)`
+GIVETH A MAYBE BOOLEAN
+`s 336A(10) the enactment is a relevant nationality enactment` MEANS
+    CONSIDER enactment
+    WHEN `another enactment` THEN JUST FALSE -- FALSE-kind (the text says no in its own words): the definition of the relevant nationality enactment: "means any enactment in" (the Acts listed there) "or an instrument made under any of those Acts"
+    OTHERWISE JUST TRUE
+
+§§ `s 336B: proceedings under s 336A`
+
+-- s 336B(1) says the section applies to proceedings on an application under s 336A: a lead-in that creates no rule (coverage table: inert, reason 1).
+
+-- src:413 | (2) The court must determine the proceedings as soon as reasonably practicable.
+@ref s 336B(2) (src:413)
+GIVEN `the court determines the proceedings as soon as reasonably practicable` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 336B(2) the court has determined the proceedings as it must` MEANS
+    BRANCH
+        IF `the court determines the proceedings as soon as reasonably practicable` THEN JUST TRUE
+        OTHERWISE JUST FALSE -- FALSE-kind (the text says no in its own words): "The court must determine the proceedings as soon as reasonably practicable" (ruling of 2026-11-05 (a) read to cover 'as soon as ... practicable': a court that has not determined the proceedings as soon as reasonably practicable has not determined them as it must)
+
+-- src:414 | (3) The court may exclude from any part of the hearing—
+-- src:415 | (a) an interested person;
+-- src:416 | (b) anyone representing that person.
+@ref s 336B(3) (src:414-416)
+GIVEN `the person is an interested person` IS A BOOLEAN
+      `the person represents an interested person` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 336B(3) the court may exclude the person from any part of the hearing` MEANS
+    BRANCH
+        IF `the person is an interested person` OR `the person represents an interested person` THEN JUST TRUE
+        OTHERWISE NOTHING -- NOTHING-kind (limited by its own wording): the power is given over "an interested person" and "anyone representing that person" only
+
+-- src:417 | (4) The person who made the application may apply to the court for an order that specified information upon which he or she intends to rely be withheld from—
+-- src:418 | (a) an interested person;
+-- src:419 | (b) anyone representing that person.
+@ref s 336B(4) (src:417-419)
+GIVEN `the person made the application under section 336A` IS A BOOLEAN
+      `the information is specified information upon which he or she intends to rely` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 336B(4) the person may apply for an order that the information be withheld from an interested person` MEANS
+    BRANCH
+        IF `the person made the application under section 336A` AND `the information is specified information upon which he or she intends to rely` THEN JUST TRUE
+        OTHERWISE NOTHING -- NOTHING-kind (limited by its own wording): the right is given to "The person who made the application" over "specified information upon which he or she intends to rely"
+
+-- src:420 | (5) The court may make such an order only if satisfied that there are reasonable grounds to believe that if the specified information were disclosed—
+-- src:421 | (a) evidence of an offence would be interfered with or harmed,
+-- src:422 | (b) the gathering of information about the possible commission of an offence would be interfered with,
+-- src:423 | (c) a person would be interfered with or physically injured,
+-- src:424 | (d) the recovery of property under this Act would be hindered, or
+-- src:425 | (e) national security would be put at risk.
+@ref s 336B(5) (src:420-425)
+GIVEN `the court is satisfied that there are reasonable grounds to believe the following` IS A BOOLEAN
+      `evidence of an offence would be interfered with or harmed` IS A BOOLEAN
+      `the gathering of information about the possible commission of an offence would be interfered with` IS A BOOLEAN
+      `a person would be interfered with or physically injured` IS A BOOLEAN
+      `the recovery of property under this Act would be hindered` IS A BOOLEAN
+      `national security would be put at risk` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 336B(5) the court may make an order that the information be withheld` MEANS
+    BRANCH
+        IF       `the court is satisfied that there are reasonable grounds to believe the following`
+             AND (   `evidence of an offence would be interfered with or harmed`
+                  OR `the gathering of information about the possible commission of an offence would be interfered with`
+                  OR `a person would be interfered with or physically injured`
+                  OR `the recovery of property under this Act would be hindered`
+                  OR `national security would be put at risk`)
+        THEN JUST TRUE
+        OTHERWISE JUST FALSE -- FALSE-kind (the text says no in its own words): "The court may make such an order only if satisfied that there are reasonable grounds to believe that if the specified information were disclosed"
+
+-- src:426 | (6) The court must direct that the following be excluded from the hearing of an application under subsection (4)—
+-- src:427 | (a) the interested person to whom that application relates;
+-- src:428 | (b) anyone representing that person.
+@ref s 336B(6) (src:426-428)
+GIVEN `the hearing is of an application under subsection (4)` IS A BOOLEAN
+      `the person is the interested person to whom that application relates, or anyone representing that person` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 336B(6) the court must direct that the person be excluded from the hearing` MEANS
+    BRANCH
+        IF `the hearing is of an application under subsection (4)` AND `the person is the interested person to whom that application relates, or anyone representing that person` THEN JUST TRUE
+        OTHERWISE NOTHING -- NOTHING-kind (limited by its own wording): the direction is given for "the hearing of an application under subsection (4)" and for those persons only
+
+-- s 336B(7) lets rules of court make provision as to practice and procedure: machinery (coverage table: inert, reason 2).
+
+-- src:430 | (8) An appeal lies to the appropriate appeal court on a point of law arising from a decision made by the Crown Court in Northern Ireland or by the sheriff.
+@ref s 336B(8) (src:430)
+DECLARE `Decision-maker in a section 336A matter` IS ONE OF
+    `the Crown Court in Northern Ireland`
+    `the sheriff`
+    `the Crown Court in England and Wales`
+    `another body`
+
+GIVEN `who made the decision` IS A `Decision-maker in a section 336A matter`
+      `the appeal is on a point of law arising from the decision` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 336B(8) an appeal lies to the appropriate appeal court` MEANS
+    BRANCH
+        IF (`who made the decision` EQUALS `the Crown Court in Northern Ireland` OR `who made the decision` EQUALS `the sheriff`) AND `the appeal is on a point of law arising from the decision` THEN JUST TRUE
+        OTHERWISE NOTHING -- NOTHING-kind (limited by its own wording): the appeal is given "on a point of law arising from a decision made by the Crown Court in Northern Ireland or by the sheriff" and the subsection says nothing of any other decision-maker or ground
+
+-- src:431 | (9) The appropriate appeal court may on such an appeal make any order that it considers appropriate (subject to the restriction mentioned in section 336A(7)).
+@ref s 336B(9) (src:431)
+GIVEN `the days by which the order would extend the period in total, counted from the day after the end of the 31 day period` IS A NUMBER
+GIVETH A MAYBE BOOLEAN
+`s 336B(9) the appropriate appeal court may make the order` MEANS
+    BRANCH
+        IF `the days by which the order would extend the period in total, counted from the day after the end of the 31 day period` GREATER THAN 186
+        THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "(subject to the restriction mentioned in section 336A(7))": no order may extend the period by more than 186 days in total
+        OTHERWISE JUST TRUE -- the text's own grant: "may on such an appeal make any order that it considers appropriate"
+
+-- src:432 | (10) The appropriate appeal court is—
+-- src:433 | (a) in the case of a decision of the Crown Court in Northern Ireland, the Court of Appeal in Northern Ireland;
+-- src:434 | (b) in the case of a decision of the sheriff, the Sheriff Appeal Court.
+@ref s 336B(10) (src:432-434)
+DECLARE `Appeal court under section 336B` IS ONE OF
+    `the Court of Appeal in Northern Ireland`
+    `the Sheriff Appeal Court`
+
+GIVEN `who made the decision` IS A `Decision-maker in a section 336A matter`
+GIVETH A MAYBE `Appeal court under section 336B`
+`s 336B(10) the appropriate appeal court` MEANS
+    CONSIDER `who made the decision`
+    WHEN `the Crown Court in Northern Ireland` THEN JUST `the Court of Appeal in Northern Ireland`
+    WHEN `the sheriff` THEN JUST `the Sheriff Appeal Court`
+    WHEN `the Crown Court in England and Wales` THEN NOTHING -- NOTHING-kind (points outside the text): subsection (11) sends the reader to section 28 of the Senior Courts Act 1981
+    WHEN `another body` THEN NOTHING -- NOTHING-kind (silent): paragraphs (a) and (b) name two decision-makers only
+
+-- src:435 | (11) For rights of appeal in the case of decisions made by the Crown Court in England and Wales, see section 28 of the Senior Courts Act 1981 (appeals from Crown Court and inferior courts).
+@ref s 336B(11) (src:435)
+GIVEN `who made the decision` IS A `Decision-maker in a section 336A matter`
+GIVETH A MAYBE BOOLEAN
+`s 336B(11) there is a right of appeal from the decision` MEANS
+    BRANCH
+        IF `who made the decision` EQUALS `the Crown Court in England and Wales` THEN NOTHING -- NOTHING-kind (points outside the text): "see section 28 of the Senior Courts Act 1981", which is not among the sources
+        OTHERWISE NOTHING -- NOTHING-kind (silent): the subsection speaks only of decisions of the Crown Court in England and Wales
+
+§§ `s 336C: extension pending determination of proceedings`
+
+-- The extensions of s 336C each run "from the time when [the period] would otherwise end until" a later event, but by no more than the cap in (5).
+-- The functions below give the last day of the period so extended.  A period extended "until the court determines the application" runs to the
+-- day of determination; the cap of subsection (5) is 31 days beginning with the day after the day on which the period would otherwise have ended.
+
+-- src:437 | (1) A moratorium period is extended in accordance with subsection (2) where—
+-- src:438 | (a) an application is made to the court under section 336A for the extension (or further extension) of the moratorium period, and
+-- src:439 | (b) the period would (apart from that subsection) end before the court determines the application or it is otherwise disposed of.
+-- src:440 | (2) The moratorium period is extended from the time when it would otherwise end until the court determines the application or it is otherwise disposed of.
+@ref s 336C(1) (src:437-440)
+GIVEN `an application is made to the court under section 336A for the extension (or further extension) of the moratorium period` IS A BOOLEAN
+      `the period would, apart from this subsection, end before the court determines the application or it is otherwise disposed of` IS A BOOLEAN
+      `the last day of the moratorium period before this extension` IS A DATE
+      `the day on which the court determines the application or it is otherwise disposed of` IS A DATE
+GIVETH A MAYBE DATE
+`s 336C(2) the last day of the moratorium period extended pending the application` MEANS
+    BRANCH
+        IF `an application is made to the court under section 336A for the extension (or further extension) of the moratorium period` AND `the period would, apart from this subsection, end before the court determines the application or it is otherwise disposed of`
+        THEN JUST (`s 336C(5) the earlier of the day the proceedings end and the cap` `the last day of the moratorium period before this extension` `the day on which the court determines the application or it is otherwise disposed of`)
+        OTHERWISE NOTHING -- NOTHING-kind (limited by its own wording): where the conditions of s 336C(1) fail there is no extension and so no extended last day to give; `s 336C(1) the moratorium period is extended in accordance with subsection (2)` answers that question, and says JUST FALSE then
+
+@ref s 336C(1) (src:437-439)
+GIVEN `an application is made to the court under section 336A for the extension (or further extension) of the moratorium period` IS A BOOLEAN
+      `the period would, apart from this subsection, end before the court determines the application or it is otherwise disposed of` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 336C(1) the moratorium period is extended in accordance with subsection (2)` MEANS
+    BRANCH
+        IF `an application is made to the court under section 336A for the extension (or further extension) of the moratorium period` AND `the period would, apart from this subsection, end before the court determines the application or it is otherwise disposed of` THEN JUST TRUE
+        OTHERWISE JUST FALSE -- FALSE-kind (the text says no in its own words): "A moratorium period is extended in accordance with subsection (2) where" (ruling of 2026-11-05 (b): a 'where' condition not met is the text's no, like 'if')
+
+-- src:441 | (3) A moratorium period is extended in accordance with subsection (4) where—
+-- src:442 | (a) proceedings on an appeal in respect of a decision on an application under section 336A have been brought, and
+-- src:443 | (b) the period would (apart from that subsection) end before the proceedings are finally determined or otherwise disposed of.
+-- src:444 | (4) The moratorium period is extended from the time when it would otherwise end until the proceedings are finally determined or otherwise disposed of.
+@ref s 336C(3) (src:441-444)
+GIVEN `proceedings on an appeal in respect of a decision on an application under section 336A have been brought` IS A BOOLEAN
+      `the period would, apart from this subsection, end before the proceedings are finally determined or otherwise disposed of` IS A BOOLEAN
+      `the last day of the moratorium period before this extension` IS A DATE
+      `the day on which the proceedings are finally determined or otherwise disposed of` IS A DATE
+GIVETH A MAYBE DATE
+`s 336C(4) the last day of the moratorium period extended pending the appeal` MEANS
+    BRANCH
+        IF `proceedings on an appeal in respect of a decision on an application under section 336A have been brought` AND `the period would, apart from this subsection, end before the proceedings are finally determined or otherwise disposed of`
+        THEN JUST (`s 336C(5) the earlier of the day the proceedings end and the cap` `the last day of the moratorium period before this extension` `the day on which the proceedings are finally determined or otherwise disposed of`)
+        OTHERWISE NOTHING -- NOTHING-kind (limited by its own wording): where the conditions of s 336C(3) fail there is no extension and so no extended last day to give; `s 336C(3) the moratorium period is extended in accordance with subsection (4)` answers that question, and says JUST FALSE then
+
+@ref s 336C(3) (src:441-443)
+GIVEN `proceedings on an appeal in respect of a decision on an application under section 336A have been brought` IS A BOOLEAN
+      `the period would, apart from this subsection, end before the proceedings are finally determined or otherwise disposed of` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 336C(3) the moratorium period is extended in accordance with subsection (4)` MEANS
+    BRANCH
+        IF `proceedings on an appeal in respect of a decision on an application under section 336A have been brought` AND `the period would, apart from this subsection, end before the proceedings are finally determined or otherwise disposed of` THEN JUST TRUE
+        OTHERWISE JUST FALSE -- FALSE-kind (the text says no in its own words): "A moratorium period is extended in accordance with subsection (4) where" (ruling of 2026-11-05 (b): a 'where' condition not met is the text's no, like 'if')
+
+-- src:445 | (5) But the maximum period by which the moratorium period is extended by virtue of subsection (2) or (4) is 31 days beginning with the day after the day on which the period would otherwise have ended.
+@ref s 336C(5) (src:445)
+GIVEN `the last day of the moratorium period before this extension` IS A DATE
+      `the day on which the proceedings end` IS A DATE
+GIVETH A DATE
+`s 336C(5) the earlier of the day the proceedings end and the cap` MEANS
+    IF `the day on which the proceedings end` AT MOST ((`the last day of the moratorium period before this extension`) PLUS 31)
+    THEN `the day on which the proceedings end`
+    ELSE (`the last day of the moratorium period before this extension`) PLUS 31
+
+-- src:446 | (6) A moratorium period is extended in accordance with subsection (7) where—
+-- src:447 | (a) an application is made to the court under section 336A for an extension of the period,
+-- src:448 | (b) the court refuses to grant the application, and
+-- src:449 | (c) the period would (apart from that subsection) end before the end of the 5 day period.
+@ref s 336C(6) (src:446-449)
+GIVEN `an application is made to the court under section 336A for an extension of the period` IS A BOOLEAN
+      `the court refuses to grant the application` IS A BOOLEAN
+      `the period would, apart from this subsection, end before the end of the 5 day period` IS A BOOLEAN
+GIVETH A BOOLEAN
+`s 336C(6) the moratorium period is extended in accordance with subsection (7)` MEANS
+    `an application is made to the court under section 336A for an extension of the period` AND `the court refuses to grant the application` AND `the period would, apart from this subsection, end before the end of the 5 day period`
+
+-- src:453 | (8) The “5 day period” is the period of 5 working days beginning with the day on which the court refuses to grant the application.
+@ref s 336C(8) (src:453)
+GIVEN `the day on which the court refuses to grant the application` IS A DATE
+      `Good Friday and the bank holidays in the part of the United Kingdom in which the application under section 336A is made` IS A LIST OF DATE
+GIVETH A DATE
+`s 336C(8) the last day of the 5 day period` MEANS
+    `the nth working day counting from` 5 `the day on which the court refuses to grant the application` `Good Friday and the bank holidays in the part of the United Kingdom in which the application under section 336A is made`
+
+-- src:450 | (7) The moratorium period is extended from the time when it would otherwise end until—
+-- src:451 | (a) the end of the 5 day period, or
+-- src:452 | (b) if proceedings on an appeal against the decision are brought before the end of the 5 day period, the time when those proceedings are brought.
+@ref s 336C(7) (src:450-452)
+GIVEN `the last day of the 5 day period` IS A DATE
+      `the day on which proceedings on an appeal against the decision are brought, if they are brought before the end of the 5 day period` IS A MAYBE DATE
+GIVETH A DATE
+`s 336C(7) the day until which the moratorium period is extended` MEANS
+    CONSIDER `the day on which proceedings on an appeal against the decision are brought, if they are brought before the end of the 5 day period`
+    WHEN NOTHING THEN `the last day of the 5 day period`
+    WHEN JUST brought THEN brought
+
+-- src:454 | (9) This restriction on the overall extension of a moratorium period mentioned in section 336A(7) applies to an extension of a moratorium period in accordance with any provision of this section as it applies to an extension under an order of the court.
+@ref s 336C(9) (src:454)
+GIVEN `the days by which the extension would extend the period in total, counted from the day after the end of the 31 day period` IS A NUMBER
+GIVETH A MAYBE BOOLEAN
+`s 336C(9) the extension is within the restriction in section 336A(7)` MEANS
+    BRANCH
+        IF `the days by which the extension would extend the period in total, counted from the day after the end of the 31 day period` GREATER THAN 186
+        THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "This restriction on the overall extension of a moratorium period mentioned in section 336A(7) applies to an extension ... in accordance with any provision of this section"
+        OTHERWISE NOTHING -- NOTHING-kind (limited by its own wording): the restriction speaks only of an overall extension beyond 186 days
+
+§§ `s 336D: interpretation of ss 336A to 336C`
+
+-- s 336D(1) says what the section provides: a lead-in that creates no rule (coverage table: inert, reason 1).
+
+-- src:457 | (2) “The court” means—
+-- src:458 | (a) in relation to England and Wales or Northern Ireland, the Crown Court;
+-- src:459 | (b) in relation to Scotland, the sheriff.
+@ref s 336D(2) (src:457-459)
+DECLARE `Court named in section 336D` IS ONE OF
+    `the Crown Court`
+    `the sheriff`
+
+GIVEN part IS A `Part of the United Kingdom`
+GIVETH A `Court named in section 336D`
+`s 336D(2) the court` MEANS
+    CONSIDER part
+    WHEN `England and Wales` THEN `the Crown Court`
+    WHEN `Northern Ireland` THEN `the Crown Court`
+    WHEN Scotland THEN `the sheriff`
+
+-- src:460 | (3) “Interested person” means—
+-- src:461 | (a) the person who made the relevant disclosure, and
+-- src:462 | (b) any other person who appears to the person making the application under section 336A to have an interest in the relevant property.
+@ref s 336D(3) (src:460-462)
+GIVEN `the person made the relevant disclosure` IS A BOOLEAN
+      `the person appears to the person making the application under section 336A to have an interest in the relevant property` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 336D(3) the person is an interested person` MEANS
+    BRANCH
+        IF `the person made the relevant disclosure` OR `the person appears to the person making the application under section 336A to have an interest in the relevant property` THEN JUST TRUE
+        OTHERWISE JUST FALSE -- FALSE-kind (the text says no in its own words): "“Interested person” means"
+
+-- src:463 | (4) “Moratorium period” means the period of 31 days mentioned in section 335(6) or (as the case may be) section 336(8), or any such period as extended or further extended by virtue of an order under section 336A or in accordance with any provision of section 336C.
+@ref s 336D(4) (src:463)
+GIVEN `it is the period of 31 days mentioned in section 335(6) or (as the case may be) section 336(8)` IS A BOOLEAN
+      `it is such a period as extended or further extended by virtue of an order under section 336A or in accordance with any provision of section 336C` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 336D(4) the period is a moratorium period` MEANS
+    BRANCH
+        IF `it is the period of 31 days mentioned in section 335(6) or (as the case may be) section 336(8)` OR `it is such a period as extended or further extended by virtue of an order under section 336A or in accordance with any provision of section 336C` THEN JUST TRUE
+        OTHERWISE JUST FALSE -- FALSE-kind (the text says no in its own words): "“Moratorium period” means the period of 31 days ... or any such period as extended"
+
+-- src:464 | (5) “Relevant disclosure” means—
+-- src:465 | (a) where the application under section 336A relates to the moratorium period mentioned in section 335(6), the authorised disclosure mentioned in section 335(2)(a);
+-- src:466 | (b) where the application under section 336A relates to the moratorium period mentioned in section 336(8), the disclosure mentioned in section 336(4)(a).
+@ref s 336D(5) (src:464-466)
+DECLARE `Moratorium period an application relates to` IS ONE OF
+    `the moratorium period mentioned in section 335(6)`
+    `the moratorium period mentioned in section 336(8)`
+
+DECLARE `Relevant disclosure` IS ONE OF
+    `the authorised disclosure mentioned in section 335(2)(a)`
+    `the disclosure mentioned in section 336(4)(a)`
+
+GIVEN period IS A `Moratorium period an application relates to`
+GIVETH A `Relevant disclosure`
+`s 336D(5) the relevant disclosure` MEANS
+    CONSIDER period
+    WHEN `the moratorium period mentioned in section 335(6)` THEN `the authorised disclosure mentioned in section 335(2)(a)`
+    WHEN `the moratorium period mentioned in section 336(8)` THEN `the disclosure mentioned in section 336(4)(a)`
+
+-- src:467 | (6) “Relevant property” means any property that would be the subject of the prohibited act (within the meaning of section 335(8) or (as the case may be) section 336(10)) in relation to which the moratorium period in question applies.
+@ref s 336D(6) (src:467)
+GIVEN `it is property that would be the subject of the prohibited act in relation to which the moratorium period in question applies` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 336D(6) the property is relevant property` MEANS
+    BRANCH
+        IF `it is property that would be the subject of the prohibited act in relation to which the moratorium period in question applies` THEN JUST TRUE
+        OTHERWISE JUST FALSE -- FALSE-kind (the text says no in its own words): "“Relevant property” means any property that would be the subject of the prohibited act"
+
+-- src:468 | (7) In the case of an application to the Crown Court, “senior officer” means—
+-- src:469 | (a) the Director General of the National Crime Agency,
+-- src:470 | (b) any other National Crime Agency officer authorised by the Director General (whether generally or specifically) for this purpose,
+-- src:471 | (c) a police officer of at least the rank of inspector,
+-- src:472 | (d) an officer of Revenue and Customs who is not below such grade as is designated by the Commissioners for Her Majesty's Revenue and Customs as equivalent to that rank,
+-- src:473 | (e) an immigration officer who is not below such grade as is designated by the Secretary of State as equivalent to that rank,
+-- src:474 | (f) a member of staff of the Financial Conduct Authority who is not below such grade as is designated by the Treasury for the purposes of this Part,
+-- src:475 | (g) the Director of the Serious Fraud Office (or a member of staff of that Office authorised for the purposes of section 336A by virtue of section 2C(2)), or
+-- src:476 | (h) an accredited financial investigator who falls within a description specified in an order made for the purposes of section 336A by the Secretary of State or the Welsh Ministers under section 453.
+@ref s 336D(7) (src:468-476)
+DECLARE `Officer considered under section 336D(7)` IS ONE OF
+    `the Director General of the National Crime Agency`
+    `any other National Crime Agency officer authorised by the Director General (whether generally or specifically) for this purpose`
+    `a police officer of at least the rank of inspector`
+    `an officer of Revenue and Customs not below the grade designated by the Commissioners as equivalent to that rank`
+    `an immigration officer not below the grade designated by the Secretary of State as equivalent to that rank`
+    `a member of staff of the Financial Conduct Authority not below the grade designated by the Treasury for the purposes of this Part`
+    `the Director of the Serious Fraud Office, or a member of its staff authorised for the purposes of section 336A by virtue of section 2C(2)`
+    `an accredited financial investigator who falls within a description specified in an order made for the purposes of section 336A under section 453`
+    `another officer`
+
+GIVEN officer IS A `Officer considered under section 336D(7)`
+GIVETH A MAYBE BOOLEAN
+`s 336D(7) the officer is a senior officer for an application to the Crown Court` MEANS
+    CONSIDER officer
+    WHEN `another officer` THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "In the case of an application to the Crown Court, “senior officer” means" the eight listed
+    OTHERWISE JUST TRUE
+
+-- src:477 | (8) In the case of an application to the sheriff, “senior officer” means a procurator fiscal.
+@ref s 336D(8) (src:477)
+GIVEN `the officer is a procurator fiscal` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 336D(8) the officer is a senior officer for an application to the sheriff` MEANS
+    BRANCH
+        IF `the officer is a procurator fiscal` THEN JUST TRUE
+        OTHERWISE JUST FALSE -- FALSE-kind (the text says no in its own words): "In the case of an application to the sheriff, “senior officer” means a procurator fiscal"
+
+-- src:478 | (9) “Working day” means a day other than—
+-- src:479 | (a) a Saturday,
+-- src:480 | (b) a Sunday,
+-- src:481 | (c) Christmas Day,
+-- src:482 | (d) Good Friday, or
+-- src:483 | (e) a day which is a bank holiday under the Banking and Financial Dealings Act 1971 in the part of the United Kingdom in which the application in question under section 336A is made.
+@ref s 336D(9) (src:478-483)
+GIVEN day IS A DATE
+      `Good Friday and the bank holidays in the part of the United Kingdom in which the application in question under section 336A is made` IS A LIST OF DATE
+GIVETH A MAYBE BOOLEAN
+`s 336D(9) the day is a working day` MEANS
+    BRANCH
+        IF `the day is a working day` day `Good Friday and the bank holidays in the part of the United Kingdom in which the application in question under section 336A is made` THEN JUST TRUE
+        OTHERWISE JUST FALSE -- FALSE-kind (the text says no in its own words): "“Working day” means a day other than"
