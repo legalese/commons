@@ -121,3 +121,77 @@ Not encoded:
 - The order of s 11(4)(a) and (b) for cumulative sentences is a reading, not settled.
 - How Schedule 2's absence of Victoria, South Australia, Tasmania and the Territories is handled in practice needs checking against those jurisdictions' own laws and any later Schedule 2 amendments.
 - The 29th-to-31st day edge cases in the month arithmetic are not handled.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026 as a layer: `sca-qa.l4` (IMPORTs `prelude`, `daydate` and `sca-spent`) and `sca-qa-cases.l4`
+(IMPORTs those and `sca-qa`). The baseline's files are unchanged. The design is the Graffiti Vandalism Act 2016
+encoding's (its NOTES.md D2, D4, D8 and D8.1-D8.15): every exported question takes `my role` IS A Role first (`@desc
+Which of these describes you`), and answers `does not arise for you` for a role it is not about without reading any
+other input; a question that arises only in a situation takes that situation's fact second and answers `does not arise
+for you` when it does not hold, reading nothing else. No exported question takes a DEONTIC or EVENT input. One
+deployment serves every role.
+
+### Roles, and why
+
+| Role | Why | Questions |
+|---|---|---|
+| `I was convicted of an offence, or charged with one` | the baseline's seat | 13 |
+| `I employ, engage, license or deal with someone who has an old conviction or charge` | new: Part 3 binds the other side. A question put about a spent conviction is taken not to relate to it (s 27(1)); employers, principals, organisations, licensing authorities and employment agencies may not discriminate over it (ss 18-23); no one may obtain it from an official record without lawful reason (s 28(1), $1 000); Schedule 3's exceptions reach the employer or authority on the other side (cl 1(2)) | 6 |
+
+19 questions in all. The Commissioner of Police, a District Court judge and the Equal Opportunity Commission are not
+seats. The employer, principal, organisation, licensing authority and employment agency are one role, told apart by an
+input (`what I am to them`), since the Act's rules for them differ only in which section of Division 3 applies.
+
+### Situation inputs
+
+| Name | Type | Gives `does not arise for you` | Questions |
+|---|---|---|---|
+| `I was convicted` | BOOLEAN | FALSE | person, 5: `What kind of conviction is mine under the Act` (ss 4(2), 9, 10), `How long is the prescribed period for my conviction` (s 11), `From what day may I apply to have my conviction spent` (ss 6, 7, 11, 32), `How can my conviction become spent, and may I apply now` (ss 4, 6, 7, 8, Sch 2), `Is my conviction spent under the Act` |
+| `I have applied, or will apply, to a District Court judge to have a serious conviction spent` | BOOLEAN | FALSE | person, 2: `Will my application to a District Court judge be heard in private` (Sch 1 cl 3(1)), `Can I be ordered to pay costs on my application to a District Court judge` (Sch 1 cll 7, 8) |
+| `the person was convicted` | BOOLEAN | FALSE | employer: `Is the person's conviction spent` |
+
+The questions on a matter (what Part 3 protects, disclosure, counting against the person, discrimination, records) take
+the baseline's `My matter`, which says how the matter ended (a conviction, a charge withdrawn or without a conviction, a
+dismissal, or nothing in court), and arise in every situation: for a matter that never came to court they answer that
+the Act has nothing to act on, which the person wants to know (k036, k082). Every situation input is a BOOLEAN.
+
+### Decisions
+
+- **The baseline's input `my role` is renamed.** The baseline's disclosure, character, discrimination and records
+  questions take `my role` IS A `My role` (the Schedule 3 job, licence or role). The layer's `my role` is the seat, so
+  that input is asked as `the job, licence or role concerned`, one name and one `@desc` across the seven questions that
+  take it (the baseline words its `@desc` three ways).
+- **A conviction is the person's situation for Part 2.** ss 4 and 6-11 are about a conviction; a person whose charge
+  was withdrawn or who was dealt with by a juvenile justice team is told those questions do not arise, and is answered by
+  `What in my matter does Part 3 protect`. The Schedule 1 application is a second situation: its hearing and costs arise
+  only for a person who applies to a judge.
+- **The employer's own enumerations.** `Where my question comes from` (a question, a written law, an agreement: the
+  three sources the other side controls) and `What I am to the person` (ss 18-23 and "someone else") are mapped value
+  for value onto the baseline's person-side ones; the baseline's answer to the person (`Must I disclose`) is carried
+  into `What the Act says of their answer`, from the employer's side. The baseline's court, bail and own-application
+  values cannot arise from the employer's three sources and map to one value.
+- **The baseline's records describe the other person in their own words.** For the employer, `their matter` and `their
+  conviction` are the baseline's `My matter` and `My conviction`; their `@desc` says the fields are worded from the
+  person's side.
+- **"May it count against me under a law of Western Australia" is not asked of the employer.** It is a licensing or
+  character question for an authority applying a written law; the employer side of s 22 is covered by the
+  discrimination question.
+
+### Not covered for the new roles
+
+For the employer or other person: s 26 (character tests applied by an authority) from the authority's side; the Equal
+Opportunity Act 1984 complaint procedure (s 24); s 29; the Schedule 3 "other side" extensions beyond cl 1(2) as the
+baseline encodes them (cl 1(4), (6), (8), (10), (11), (13), cl 2(4), (5)); the Schedule 3 roles the baseline leaves out.
+
+### Cases
+
+`sca-qa-cases.l4`: 183 assertions, all satisfied. 89 written by hand for the role each question is about (67 for the
+person, 22 for the employer; the person's from the baseline's own cases, on its fixtures, copied in); 67 that assert,
+for each of the person's hand-written cases, that the answer equals the baseline export's on the same facts, carried in
+the answer type; 19 for the role a question is not about, every other input ASSUMEd; 8 for the situation values that do
+not hold, the inputs after them ASSUMEd. The last two groups and the baseline comparisons were generated by a scratch
+script from the parameter list and the table above. Checked on stable l4 1.6.98: 0 errors and 0 warnings in all four
+files, 67 + 183 assertions satisfied, `l4 check sca-qa.l4` succeeds, and a parameter script confirms `my role` first
+everywhere, each shared situation input identical in name, type and @desc, each situation second and read first in
+each role branch, and no DEONTIC or EVENT input.
