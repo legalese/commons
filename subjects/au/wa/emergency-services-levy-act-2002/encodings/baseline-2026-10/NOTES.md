@@ -105,3 +105,76 @@ Left out, because no owner in the lives meets them: local government finance, ES
 - Deposit and encode the FES regulations on ESL categories (s 36F(1)) and exemptions (s 36D), and the Rates and Charges (Rebates and Deferments) Act 1992 for pensioners and seniors.
 - Correct the citations in Chloe's facts (ESL Act "ss 5-7") and in the annual-determination index entry ("s 4") to ESL Act s 3 and FES Act Part 6A.
 - An independent test pass, a coverage table of Part 6A, and a human gate.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026, after the graffiti encoding's design (Graffiti Vandalism Act 2016, `gva-seat.l4`, its NOTES D2,
+D4 and D8). The layer is `esl-qa.l4` (imports `prelude` and `esl-levy`), with its cases in `esl-qa-cases.l4` (imports
+`prelude`, `esl-levy` and `esl-qa`). The baseline's files are unchanged: no rule or export of `esl-levy.l4` was touched,
+and its 39 cases still pass. The layer calls the baseline's functions and restates none.
+
+**Why.** The site's question form asks only the inputs that can still change an open question. Every exported question
+takes `my role` first ("Which of these describes you"); for the role it is not about, it answers `does not arise for
+you` without reading any other input. Within a role, a question that arises only in a situation takes that situation's
+fact second, and answers `does not arise for you` when it does not hold, again reading nothing else.
+
+**Roles** (`Role`):
+
+- `I own land in Western Australia`: the baseline's seat. "Owner" is the FES Act s 3A owner, so the role takes in a
+  mortgagee in possession and a lessee or occupier of Crown land; the baseline's own "Am I an owner" question sorts them.
+- `I rent or occupy land that someone else owns`: Part 6A puts no duty on a tenant of freehold land, who is not an
+  owner (s 3A(d)), but gives a person who pays levy on land they do not own a right to be paid back by the owner
+  (s 36T(2)); and a lessee or occupier of Crown land is an owner (s 3A(a)(i)), liable and open to recovery.
+
+The Minister, the local government and the FES Commissioner are not seats. The buyer of land is not a separate role: the
+baseline's owner seat already asks the buyer's questions (apportionment, s 36T(1)(a); recovery from a later owner,
+s 36Z(1)(b); the charge on the land, s 36O), and a buyer is an owner once the land is theirs. A mortgagee not in
+possession is not a role: the Act gives it nothing to ask beyond "am I an owner", which the owner's question answers.
+
+**Situation inputs.** All are BOOLEAN; FALSE gives `does not arise for you`; each is the second input wherever it is
+taken, with the same name, type and `@desc` in every question.
+
+| Name | Role | Questions that take it |
+|---|---|---|
+| `I own the land with others` | owner | Can I be made to pay all of the levy on land I own with others, as a co-owner; Is a levy notice served on my co-owner taken to be served on me |
+| `levy on my land has fallen due and is unpaid` | owner | Does interest run on the levy I have not paid; Can the unpaid levy on this land be recovered from me; Is the unpaid levy a charge on my land; Can my land be sold for unpaid levy; Can a caveat be lodged against my land for the unpaid levy |
+| `the land changed owners during the levy year` | owner | What part of the year's levy falls to me as a successive owner |
+| `I have objected to my levy` | owner | Was my objection in time; May I apply to the State Administrative Tribunal for a review of the objection decision; Must I still pay the levy while my objection is decided; How much is refunded to me when my levy is adjusted down; For how many days after an adjustment notice am I safe from recovery of an underpayment |
+| `I have paid levy on land I do not own` | tenant or occupier | Must the owner pay me back the levy I paid |
+
+The Act ties these rules to those facts: s 36P(3) and s 36J(3) to land "owned by 2 or more persons"; ss 36S, 36Z, 36O,
+36ZC and 36ZD to levy unpaid after it falls due; s 36T(1)(a) to "successive owners"; ss 36ZE(2)(d), (3), 36ZF and 36ZH
+to an objection; s 36T(2) to a part of the levy "paid by a person other than the owner".
+
+**Decisions.**
+
+1. **The situation replaces the baseline input it is.** The two co-owner questions and the caveat question took one
+   input, which is now the situation, and the layer passes TRUE for it, so the question settles on the role and the
+   situation alone. The baseline's answer for FALSE (no) becomes `does not arise for you`.
+2. **Interest takes the unpaid situation.** "Does interest run" took `it is unpaid after its due date` first. That is
+   the situation, so the layer passes TRUE for it and asks only the rebate and the prescribed-person inputs.
+3. **s 36O, the charge, is in the unpaid situation.** It is fixed (yes) once levy is unpaid, so it reads nothing else.
+   Before any levy is unpaid there is nothing for it to charge.
+4. **The tenant's questions call the owner's functions.** "Am I liable for the levy on the land I rent or occupy" calls
+   the baseline's s 36P(1) function with the interest the answer fixes (Crown lessee or occupier, or tenant of freehold
+   land); "Can the levy ... be recovered from me" reads nothing else for a tenant of freehold land; "Must the owner pay
+   me back" calls the baseline's s 36T(2) function with its first input TRUE.
+5. **Answer types** carry `does not arise for you`: `Yes or no`, `Amount`, `Day answer` (a day written YYYYMMDD, as the
+   baseline writes it), `Days answer`, and `Notice answer`, the baseline's three notice routes reworded to the second
+   person, through a helper that lists every value with no OTHERWISE.
+6. **Names.** Each question's name is a plain first-person question, different from the baseline function's name so
+   the two modules can be imported together.
+
+**Not covered for the tenant or occupier.** Whether a lease can make the tenant pay the levy (a question of the lease,
+not the Act; s 36T(2)'s "agreement ... to the contrary" is asked as a fact); a Crown land occupier's other questions
+(the amount, the notice, objection), which are the owner's questions, asked as the owner. The baseline's own gaps
+stand.
+
+**Checks.** 32 exported questions: 29 for the owner, 3 for the tenant or occupier. `esl-qa-cases.l4` has 182 assertions,
+all satisfied: 32 asking each question for the role it is not about, every other input ASSUMEd; 14 asking each
+situation question with FALSE and every later input ASSUMEd; for the owner 64 hand-worked cases, each also asserted
+equal to the baseline export's answer on the same facts (64); for the tenant or occupier 8 hand-worked cases. 0 errors
+and 0 warnings in all four files (`esl-levy.l4`; `esl-cases-levy.l4`, 39 satisfied; `esl-qa.l4`; `esl-qa-cases.l4`);
+`l4 check esl-qa.l4` succeeds. A script listed every `@export` with its inputs and checked `my role` first everywhere,
+the five situation inputs identical wherever they occur, each role branch reading its situation first, and no DEONTIC
+or EVENT input. Negative control: a case reading an ASSUMEd input fails.
