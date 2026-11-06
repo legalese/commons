@@ -1,0 +1,1008 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `rta-renting`
+
+-- Residential Tenancies Act 1987 (WA) -- the Q&A layer: the questions people ask, with the seat and the situation as
+-- parameters.
+--
+-- PURPOSE. One module whose exported questions serve every seat from one deployment. Every exported question takes
+-- `my role` first ("Which of these describes you"). A question about another role answers `does not arise for you`
+-- without reading any other input, so the site's question form never asks those inputs and drops the question.
+--
+-- ROLES. The Act's operative provisions are addressed to the lessor or the property manager (ss 27-29, 27B, 27C, 30,
+-- 31, 61-64, 80, 81C) and give the tenant rights and deadlines (ss 26B, 27C(2), 64(3), 67-70A). Two people ask it
+-- questions:
+--   - the tenant: the baseline's seat (rta-renting.l4). Each answer is the baseline export's own answer, wrapped in
+--     this layer's answer types;
+--   - the lessor, or the property manager acting for the lessor (ss 27B, 27C, 29(4) and 81C(5) put the same duty on
+--     both): the same rules seen from the other side -- what I may ask for, by when I must do things, whether my
+--     notice works, and the fine if I do not keep a rule. The answers that the baseline words for the tenant are
+--     reworded for the lessor, value for value.
+-- The bond administrator, the Commissioner and the court are never a seat: what they must or may do appears as what
+-- it means for the person asking.
+--
+-- SITUATIONS (design D8 of the Graffiti Vandalism Act encoding). Within a role, a question that arises only in a
+-- situation takes that situation's fact straight after `my role`, and answers `does not arise for you` when it is
+-- FALSE, without reading anything else. The questions of one situation share one input, with the same name, type and
+-- @desc for both roles, so the form asks it once. Each is a BOOLEAN; FALSE gives does not arise:
+--   - `the lessor has given a notice of termination`: what the notice does (both roles), and the tenant's time to ask a
+--     court to extend a no-grounds notice and the most extra time (s 64(3), (4)), for both roles;
+--   - `the tenant has given a notice of termination`: the lessor's question whether the tenant's notice is valid;
+--   - `the tenancy is for a fixed term`: the three s 70A questions (last day to give notice for the expiry day, what
+--     happens at expiry, which possession day counts), for both roles;
+--   - `the tenancy has ended`: the final condition report (s 27C(4)), for both roles;
+--   - `the tenant has been given the condition report`: the tenant's 7 days to return a marked copy and whether the
+--     tenant is taken to accept it (s 27C(2), (3));
+--   - `a rent increase notice has been given or is proposed`: whether the increase takes effect (ss 30, 99);
+--   - `a bond increase has been proposed`: whether the bond may rise as proposed (s 31);
+--   - `a bond release application has been made`: what happens to it (ss 81I, 81K).
+-- The situations are those the Act ties the rule to: a notice of termination given (s 61 onwards), a fixed term (s 70A),
+-- the termination of the tenancy (s 27C(4)), copies of the report given (s 27C(2)), a notice of increase (s 30(1)), a
+-- bond notice (s 31(1A)), an application (s 81C). Questions that arise in every situation of their role (what I may be
+-- asked to pay, the bond limit, the earliest rent rise, how much notice a ground needs, may I end by notice) take none.
+--
+-- The rules are in rta-renting.l4. This module calls them and restates none. Its own helpers only reword answers or
+-- give the fines the Act sets (ss 27, 27B, 27C, 28, 29, 80, 81C). No exported question takes a DEONTIC or EVENT input.
+-- The lessor's questions take the baseline's records (`My arrangement`, `My tenancy, for a rent increase`, `My lessor's
+-- notice`, ...), whose items are worded as the tenant would answer them; their @desc says so.
+--
+-- BASELINE. Not for public use as advice. See NOTES.md, "Q&A layer (seat and situations as parameters)".
+
+§ `Residential Tenancies Act 1987 (WA) -- the questions people ask`
+
+§§ `Who is asking, and the shape of the answers`
+
+DECLARE Role IS ONE OF
+    `I am the tenant: I rent the home`
+    `I am the lessor, or the property manager acting for the lessor`
+
+DECLARE `Yes or no` IS ONE OF
+    yes
+    no
+    `does not arise for you`
+
+DECLARE `Amount` IS ONE OF
+    `does not arise for you`
+    amount HAS dollars IS A NUMBER
+
+DECLARE `Date answer` IS ONE OF
+    `does not arise for you`
+    `by` HAS `the last day` IS A DATE
+    `on` HAS `the day` IS A DATE
+
+DECLARE `Days` IS ONE OF
+    `does not arise for you`
+    `at least` HAS `days` IS A NUMBER
+    `up to` HAS `days` IS A NUMBER
+
+-- The baseline's own answer types, with `does not arise for you`.
+DECLARE `Where the bond must go, if it arises` IS ONE OF
+    `does not arise for you`
+    `the answer is` HAS `the answer` IS A `Where my bond must go`
+
+DECLARE `What becomes of my rent increase, if it arises` IS ONE OF
+    `does not arise for you`
+    `the answer is` HAS `the answer` IS A `What becomes of my rent increase`
+
+DECLARE `What my lessor's notice does, if it arises` IS ONE OF
+    `does not arise for you`
+    `the answer is` HAS `the answer` IS A `What my lessor's notice does`
+
+DECLARE `What happens at the end of the fixed term, if it arises` IS ONE OF
+    `does not arise for you`
+    `the answer is` HAS `the answer` IS A `What happens at the end of my fixed term`
+
+DECLARE `What happens to the bond release application, if it arises` IS ONE OF
+    `does not arise for you`
+    `the answer is` HAS `the answer` IS A `What happens to my bond release application`
+
+-- The lessor's answers: the baseline's tenant-worded answers, value for value, from the lessor's side.
+DECLARE `What becomes of the rent increase I give` IS ONE OF
+    `does not arise for you`
+    `the new rent is payable from the day in your notice`
+    `the increase is not covered: the rent is calculated by the tenant's income, so section 31A governs`
+    `the increase is not covered: regulation 5B takes the agreement out of section 30(1)`
+    `the increase is not covered: section 99 keeps the former section 30 for the current fixed term`
+    `the increase has no effect: the notice is not in writing in the approved form stating the new rent and its day`
+    `the increase has no effect: the fixed term does not set out the increase or how to work it out`
+    `the increase has no effect: the agreement excludes or limits this increase`
+    `the increase has no effect: the new rent starts less than 60 days after the notice`
+    `the increase has no effect: the new rent starts less than 12 months after the tenancy began or the rent last rose`
+
+DECLARE `What my notice of termination does` IS ONE OF
+    `does not arise for you`
+    `your notice is valid: if the tenant has not left by the day it names, you must apply to a court`
+    `your notice is valid as an immediate rent notice: if the tenant pays all rent owing before the day it names, you may not apply to a court`
+    `your notice is ineffectual: not in the form section 61 requires`
+    `your notice is ineffectual: this ground cannot end the fixed term during its currency`
+    `your notice is ineffectual: there is no fixed term to end`
+    `your notice is ineffectual: the possession day is earlier than the expiry day`
+    `your notice is ineffectual: excessive-rent proceedings or an order (section 65)`
+    `your notice is ineffectual: no notice to remedy was given at least 14 days before`
+    `your notice is ineffectual: too little notice`
+
+-- The rules the Act backs with a fine that a lessor or property manager most often meets.
+DECLARE `A rule the Act puts on me` IS ONE OF
+    `not to ask for or take any amount but rent and a security bond (s 27(1))`
+    `to give the tenant the prescribed information (s 27B)`
+    `to give the tenant the condition report at the start (s 27C(1))`
+    `to give the tenant the final condition report (s 27C(4))`
+    `not to ask for more than 2 weeks rent in advance (s 28)`
+    `not to ask for more than one bond, or a bond above the limit (s 29(1))`
+    `to give a bond receipt and pay the bond to the bond administrator within 14 days (s 29(4))`
+    `not to enter to recover possession without a court order (s 80)`
+    `not to ask the tenant to sign a bond release application before it may be made, or without the amounts (s 81C(5))`
+
+§§ `Helpers`
+
+GIVEN `it holds` IS A BOOLEAN
+GIVETH A `Yes or no`
+`yes if` `it holds` MEANS
+    IF `it holds` THEN yes ELSE no
+
+-- The rewordings and the fines list every value and have no OTHERWISE (graffiti finding 31: a CONSIDER with OTHERWISE
+-- takes the OTHERWISE branch for an ASSUMEd value instead of failing, so a case could not show the value was not read).
+GIVEN `the answer` IS A `What becomes of my rent increase`
+GIVETH A `What becomes of the rent increase I give`
+`for the lessor, the rent answer` `the answer` MEANS
+    CONSIDER `the answer`
+    WHEN `the new rent is payable from the day in the notice` THEN `the new rent is payable from the day in your notice`
+    WHEN `not covered: my rent is calculated by my income, so section 31A governs` THEN `the increase is not covered: the rent is calculated by the tenant's income, so section 31A governs`
+    WHEN `not covered: regulation 5B takes my agreement out of section 30(1)` THEN `the increase is not covered: regulation 5B takes the agreement out of section 30(1)`
+    WHEN `not covered: section 99 keeps the former section 30 for my current fixed term` THEN `the increase is not covered: section 99 keeps the former section 30 for the current fixed term`
+    WHEN `no effect: the notice is not in writing in the approved form stating the new rent and its day` THEN `the increase has no effect: the notice is not in writing in the approved form stating the new rent and its day`
+    WHEN `no effect: my fixed term does not set out the increase or how to work it out` THEN `the increase has no effect: the fixed term does not set out the increase or how to work it out`
+    WHEN `no effect: my agreement excludes or limits this increase` THEN `the increase has no effect: the agreement excludes or limits this increase`
+    WHEN `no effect: the new rent starts less than 60 days after the notice` THEN `the increase has no effect: the new rent starts less than 60 days after the notice`
+    WHEN `no effect: the new rent starts less than 12 months after my tenancy began or the rent last rose` THEN `the increase has no effect: the new rent starts less than 12 months after the tenancy began or the rent last rose`
+
+GIVEN `the answer` IS A `What my lessor's notice does`
+GIVETH A `What my notice of termination does`
+`for the lessor, the notice answer` `the answer` MEANS
+    CONSIDER `the answer`
+    WHEN `valid: if I have not left by the day it names, my lessor must apply to a court` THEN `your notice is valid: if the tenant has not left by the day it names, you must apply to a court`
+    WHEN `valid as an immediate rent notice: if I pay all rent owing before the day it names, my lessor may not apply to a court` THEN `your notice is valid as an immediate rent notice: if the tenant pays all rent owing before the day it names, you may not apply to a court`
+    WHEN `ineffectual: not in the form section 61 requires` THEN `your notice is ineffectual: not in the form section 61 requires`
+    WHEN `ineffectual: this ground cannot end my fixed term during its currency` THEN `your notice is ineffectual: this ground cannot end the fixed term during its currency`
+    WHEN `ineffectual: there is no fixed term to end` THEN `your notice is ineffectual: there is no fixed term to end`
+    WHEN `ineffectual: the possession day is earlier than the expiry day` THEN `your notice is ineffectual: the possession day is earlier than the expiry day`
+    WHEN `ineffectual: excessive-rent proceedings or an order (section 65)` THEN `your notice is ineffectual: excessive-rent proceedings or an order (section 65)`
+    WHEN `ineffectual: no notice to remedy was given at least 14 days before` THEN `your notice is ineffectual: no notice to remedy was given at least 14 days before`
+    WHEN `ineffectual: too little notice` THEN `your notice is ineffectual: too little notice`
+
+-- The fines: "Penalty: a fine of $5 000" (ss 27(1), 27B, 27C(1), 27C(4), 28(1), 29(1), 81C(5)); "a fine of $20 000"
+-- (ss 29(4), 80).
+GIVEN `the rule` IS A `A rule the Act puts on me`
+GIVETH A NUMBER
+`the fine for breaking` `the rule` MEANS
+    CONSIDER `the rule`
+    WHEN `not to ask for or take any amount but rent and a security bond (s 27(1))` THEN 5000
+    WHEN `to give the tenant the prescribed information (s 27B)` THEN 5000
+    WHEN `to give the tenant the condition report at the start (s 27C(1))` THEN 5000
+    WHEN `to give the tenant the final condition report (s 27C(4))` THEN 5000
+    WHEN `not to ask for more than 2 weeks rent in advance (s 28)` THEN 5000
+    WHEN `not to ask for more than one bond, or a bond above the limit (s 29(1))` THEN 5000
+    WHEN `to give a bond receipt and pay the bond to the bond administrator within 14 days (s 29(4))` THEN 20000
+    WHEN `not to enter to recover possession without a court order (s 80)` THEN 20000
+    WHEN `not to ask the tenant to sign a bond release application before it may be made, or without the amounts (s 81C(5))` THEN 5000
+
+§§ `For the tenant`
+
+§§§ `5 -- does the Act cover my tenancy`
+
+@export Does the Residential Tenancies Act 1987 (WA) cover my tenancy (Residential Tenancies Act 1987 (WA) s 3, s 5)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my arrangement` IS A `My arrangement` @desc What you pay, what kind of place it is, and the kind of arrangement
+GIVETH A `Yes or no`
+`Does the Residential Tenancies Act cover my tenancy` MEANS
+    CONSIDER `my role`
+    WHEN `I am the tenant: I rent the home` THEN `yes if` (`Does the Act apply to my tenancy` `my arrangement`)
+    OTHERWISE `does not arise for you`
+
+§§§ `27B, 27C -- what I must be given at the start and the end`
+
+@export Must my lessor give me the prescribed tenancy information (Residential Tenancies Act 1987 (WA) s 27B; Regulations reg 10ABA)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the agreement is a renewal or extension` IS A BOOLEAN @desc Whether this agreement renews or extends an earlier one
+      `the parties have changed` IS A BOOLEAN @desc Whether any lessor or tenant is different from the earlier agreement
+GIVETH A `Yes or no`
+`Must my lessor give me the prescribed tenancy information` MEANS
+    CONSIDER `my role`
+    WHEN `I am the tenant: I rent the home` THEN `yes if` (`Must I be given the prescribed tenancy information` `the agreement is a renewal or extension` `the parties have changed`)
+    OTHERWISE `does not arise for you`
+
+@export By when must my lessor give me the prescribed tenancy information (Residential Tenancies Act 1987 (WA) s 27B)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the agreement is in writing` IS A BOOLEAN @desc Whether there is a written tenancy agreement
+      `the day the agreement was entered into` IS A DATE @desc The day the agreement was signed (entered into)
+      `the day the tenant took possession` IS A DATE @desc The day the tenant took possession of the home
+GIVETH A `Date answer`
+`By when must my lessor give me the prescribed tenancy information` MEANS
+    CONSIDER `my role`
+    WHEN `I am the tenant: I rent the home` THEN `by` (`By when must I be given the prescribed tenancy information` `the agreement is in writing` `the day the agreement was entered into` `the day the tenant took possession`)
+    OTHERWISE `does not arise for you`
+
+@export By when must my lessor give me two copies of the property condition report (Residential Tenancies Act 1987 (WA) s 27C(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the day the tenant moved in` IS A DATE @desc The day the tenant entered into occupation of the premises
+GIVETH A `Date answer`
+`By when must my lessor give me the condition report` MEANS
+    CONSIDER `my role`
+    WHEN `I am the tenant: I rent the home` THEN `by` (`By when must I be given the property condition report` `the day the tenant moved in`)
+    OTHERWISE `does not arise for you`
+
+@export By when must I give back a marked copy of the property condition report if I disagree with it (Residential Tenancies Act 1987 (WA) s 27C(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the tenant has been given the condition report` IS A BOOLEAN @desc Whether the lessor or property manager has given the tenant the two copies of the property condition report
+      `the day the tenant received the copies` IS A DATE @desc The day the tenant received the two copies of the report
+GIVETH A `Date answer`
+`By when must I give back my marked copy of the condition report` MEANS
+    CONSIDER `my role`
+    WHEN `I am the tenant: I rent the home` THEN
+        IF NOT `the tenant has been given the condition report`
+        THEN `does not arise for you`
+        ELSE `by` (`By when must I return my marked copy of the report` `the day the tenant received the copies`)
+    OTHERWISE `does not arise for you`
+
+@export Am I taken to have accepted the property condition report as accurate (Residential Tenancies Act 1987 (WA) s 27C(3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the tenant has been given the condition report` IS A BOOLEAN @desc Whether the lessor or property manager has given the tenant the two copies of the property condition report
+      `the day the tenant received the copies` IS A DATE @desc The day the tenant received the two copies of the report
+      `a marked copy was given back` IS A BOOLEAN @desc Whether the tenant gave back a copy marked to show what they disagree with
+      `the day it was given back` IS A DATE @desc The day the marked copy was given back (ignored if it was not)
+GIVETH A `Yes or no`
+`Am I taken to have accepted the condition report` MEANS
+    CONSIDER `my role`
+    WHEN `I am the tenant: I rent the home` THEN
+        IF NOT `the tenant has been given the condition report`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Am I taken to accept the condition report` `the day the tenant received the copies` `a marked copy was given back` `the day it was given back`)
+    OTHERWISE `does not arise for you`
+
+@export By when must my lessor give me the final property condition report (Residential Tenancies Act 1987 (WA) s 27C(4))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the tenancy has ended` IS A BOOLEAN @desc Whether the tenancy, or the tenant's interest in it, has terminated
+      `the day the tenancy ended` IS A DATE @desc The day the tenancy (or the tenant's interest in it) terminated
+GIVETH A `Date answer`
+`By when must my lessor give me the final condition report` MEANS
+    CONSIDER `my role`
+    WHEN `I am the tenant: I rent the home` THEN
+        IF NOT `the tenancy has ended`
+        THEN `does not arise for you`
+        ELSE `by` (`By when must I be given the final condition report` `the day the tenancy ended`)
+    OTHERWISE `does not arise for you`
+
+§§§ `27, 28 -- what I can be asked to pay`
+
+@export What is the most I can be charged for an option to rent (Residential Tenancies Act 1987 (WA) s 27(2)(a); Regulations reg 10AD)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the weekly rent` IS A NUMBER @desc The weekly rent, in dollars
+      `the home is south of the 26th parallel` IS A BOOLEAN @desc Whether the premises are south of latitude 26 degrees south (Perth is)
+GIVETH AN `Amount`
+`What is the most I can be charged for an option to rent` MEANS
+    CONSIDER `my role`
+    WHEN `I am the tenant: I rent the home` THEN amount (`the most an option fee may be` `the weekly rent` `the home is south of the 26th parallel`)
+    OTHERWISE `does not arise for you`
+
+@export May my lessor ask me to pay this (Residential Tenancies Act 1987 (WA) s 27)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the payment` IS A `A payment asked of me` @desc What the payment is for
+      `the amount` IS A NUMBER @desc The amount asked, in dollars
+      `the weekly rent` IS A NUMBER @desc The weekly rent, in dollars
+      `the home is south of the 26th parallel` IS A BOOLEAN @desc Whether the premises are south of latitude 26 degrees south (Perth is)
+GIVETH A `Yes or no`
+`May my lessor ask me to pay this` MEANS
+    CONSIDER `my role`
+    WHEN `I am the tenant: I rent the home` THEN `yes if` (`May I be asked to pay this` `the payment` `the amount` `the weekly rent` `the home is south of the 26th parallel`)
+    OTHERWISE `does not arise for you`
+
+@export What is the most rent my lessor may ask me to pay up front (Residential Tenancies Act 1987 (WA) s 28(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the weekly rent` IS A NUMBER @desc The weekly rent, in dollars
+GIVETH AN `Amount`
+`What is the most rent my lessor may ask me to pay up front` MEANS
+    CONSIDER `my role`
+    WHEN `I am the tenant: I rent the home` THEN amount (`the most rent I can be asked to pay in advance` `the weekly rent`)
+    OTHERWISE `does not arise for you`
+
+§§§ `29 -- my security bond, and where it must go`
+
+@export What is the most security bond my lessor may ask me for (Residential Tenancies Act 1987 (WA) s 29(1)(b); Regulations reg 10A)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the weekly rent` IS A NUMBER @desc The weekly rent, in dollars
+      `the tenant is permitted to keep a pet` IS A BOOLEAN @desc Whether the tenant is permitted to keep a pet at the premises
+GIVETH AN `Amount`
+`What is the most security bond my lessor may ask me for` MEANS
+    CONSIDER `my role`
+    WHEN `I am the tenant: I rent the home` THEN amount (`the most security bond I can be asked for` `the weekly rent` `the tenant is permitted to keep a pet`)
+    OTHERWISE `does not arise for you`
+
+@export Does the limit on the bond apply to my tenancy (Residential Tenancies Act 1987 (WA) s 29(2); Regulations reg 11)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the weekly rent` IS A NUMBER @desc The weekly rent, in dollars
+GIVETH A `Yes or no`
+`Does the limit on the bond apply to my tenancy` MEANS
+    CONSIDER `my role`
+    WHEN `I am the tenant: I rent the home` THEN `yes if` (`Does the bond limit apply to me` `the weekly rent`)
+    OTHERWISE `does not arise for you`
+
+@export Is the bond I am asked for lawful (Residential Tenancies Act 1987 (WA) s 29(1), (2), (2A))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the weekly rent` IS A NUMBER @desc The weekly rent, in dollars
+      `the tenant is permitted to keep a pet` IS A BOOLEAN @desc Whether the tenant is permitted to keep a pet at the premises
+      `the bond asked` IS A NUMBER @desc The total security bond asked (all instalments), in dollars
+      `the number of separate bonds asked` IS A NUMBER @desc How many separate security bonds are asked for this agreement (instalments of one bond count as one)
+GIVETH A `Yes or no`
+`Is the bond I am asked for lawful` MEANS
+    CONSIDER `my role`
+    WHEN `I am the tenant: I rent the home` THEN `yes if` (`Is my bond within the law` `the weekly rent` `the tenant is permitted to keep a pet` `the bond asked` `the number of separate bonds asked`)
+    OTHERWISE `does not arise for you`
+
+@export By when must my bond be paid to the bond administrator (Residential Tenancies Act 1987 (WA) s 29(4)(b))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the day the bond was received` IS A DATE @desc The day the lessor or property manager received the bond (or an instalment)
+GIVETH A `Date answer`
+`By when must my bond reach the bond administrator` MEANS
+    CONSIDER `my role`
+    WHEN `I am the tenant: I rent the home` THEN `by` (`By when must my bond be paid to the bond administrator` `the day the bond was received`)
+    OTHERWISE `does not arise for you`
+
+@export Does my bond receipt state what it must (Residential Tenancies Act 1987 (WA) s 29(4)(a))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the receipt` IS A `My bond receipt` @desc What the bond receipt states
+GIVETH A `Yes or no`
+`Does my bond receipt show what the Act requires` MEANS
+    CONSIDER `my role`
+    WHEN `I am the tenant: I rent the home` THEN `yes if` (`Does my bond receipt state what it must` `the receipt`)
+    OTHERWISE `does not arise for you`
+
+@export How must my bond reach the bond administrator (Residential Tenancies Act 1987 (WA) s 29(4)(b), (5); Regulations reg 11A)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `a property manager manages the premises` IS A BOOLEAN @desc Whether a licensed real estate agent manages the premises for the lessor
+      `the tenant lacks an exclusive mobile, exclusive email, internet access, competence with them, or sound English` IS A BOOLEAN @desc Whether the tenant lacks at least one of the things in reg 11A(4)(a)
+      `the bond administrator agreed to another way` IS A BOOLEAN @desc Whether the bond administrator has agreed to payment other than through BondsOnline
+GIVETH A `Where the bond must go, if it arises`
+`How must my bond reach the bond administrator` MEANS
+    CONSIDER `my role`
+    WHEN `I am the tenant: I rent the home` THEN `the answer is` (`Where must my bond go` `a property manager manages the premises` `the tenant lacks an exclusive mobile, exclusive email, internet access, competence with them, or sound English` `the bond administrator agreed to another way`)
+    OTHERWISE `does not arise for you`
+
+§§§ `30, 31, 31B, 99 -- my rent and my bond rising`
+
+@export What is the earliest day my rent can go up (Residential Tenancies Act 1987 (WA) s 30(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the day the notice is given` IS A DATE @desc The day the rent increase notice is (or will be) given to the tenant
+      `the day the tenancy commenced or the rent last rose` IS A DATE @desc The day the tenancy began or, if the rent has been increased under s 30, the day it was last increased
+GIVETH A `Date answer`
+`From what day at the earliest can my rent go up` MEANS
+    CONSIDER `my role`
+    WHEN `I am the tenant: I rent the home` THEN `on` (`the earliest day my rent can go up` `the day the notice is given` `the day the tenancy commenced or the rent last rose`)
+    OTHERWISE `does not arise for you`
+
+@export Does the rent increase I was given take effect (Residential Tenancies Act 1987 (WA) ss 30, 99)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `a rent increase notice has been given or is proposed` IS A BOOLEAN @desc Whether the lessor has given the tenant, or proposes to give, written notice of a rent increase
+      `the notice` IS A `My rent increase notice` @desc The rent increase notice
+      `the tenancy` IS A `My tenancy, for a rent increase` @desc The tenancy's dates and terms (each item worded as the tenant would answer it)
+GIVETH A `What becomes of my rent increase, if it arises`
+`Does the rent increase I was given take effect` MEANS
+    CONSIDER `my role`
+    WHEN `I am the tenant: I rent the home` THEN
+        IF NOT `a rent increase notice has been given or is proposed`
+        THEN `does not arise for you`
+        ELSE `the answer is` (`Is my rent increase valid` `the notice` `the tenancy`)
+    OTHERWISE `does not arise for you`
+
+@export Does my new agreement count as a continuation of my old one, for rent increases (Residential Tenancies Act 1987 (WA) s 31B)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the lessor is the same` IS A BOOLEAN @desc Whether the lessor is the same under both agreements
+      `at least one tenant is the same` IS A BOOLEAN @desc Whether the tenant, or at least one cotenant, is a tenant under both
+      `the premises are the same` IS A BOOLEAN @desc Whether both agreements are for the same home
+      `it starts immediately after the old term ends` IS A BOOLEAN @desc Whether the new agreement starts straight after the old term ended
+GIVETH A `Yes or no`
+`Is my new agreement a continuation of my old one for rent increases` MEANS
+    CONSIDER `my role`
+    WHEN `I am the tenant: I rent the home` THEN `yes if` (`Is my new agreement a continuation of my old one` `the lessor is the same` `at least one tenant is the same` `the premises are the same` `it starts immediately after the old term ends`)
+    OTHERWISE `does not arise for you`
+
+@export May my lessor increase my bond as proposed (Residential Tenancies Act 1987 (WA) s 31; Regulations reg 5CB)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `a bond increase has been proposed` IS A BOOLEAN @desc Whether the lessor has given, or proposes to give, the tenant notice increasing the security bond
+      `the increase` IS A `My bond increase` @desc The proposed increase in the security bond
+GIVETH A `Yes or no`
+`May my lessor increase my bond as proposed` MEANS
+    CONSIDER `my role`
+    WHEN `I am the tenant: I rent the home` THEN
+        IF NOT `a bond increase has been proposed`
+        THEN `does not arise for you`
+        ELSE `yes if` (`May my bond be increased this way` `the increase`)
+    OTHERWISE `does not arise for you`
+
+§§§ `26B, 60-65, 80 -- retaliation, and how my lessor may end my tenancy`
+
+@export May I ask a court for relief because my lessor is retaliating (Residential Tenancies Act 1987 (WA) s 26B)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the lessor gave a breach notice (not for rent), raised the rent, moved to end the tenancy, or refused a new agreement` IS A BOOLEAN @desc Whether the lessor took one of the actions in s 26A(a)
+      `the tenant had enforced their rights, complained to a government entity, or a court order is in force` IS A BOOLEAN @desc Whether one of the matters in s 26B(2)(a)-(c) arose before the action
+      `the tenant reasonably believes the action was motivated by that` IS A BOOLEAN @desc Whether the tenant reasonably believes the lessor acted wholly or partly because of that matter
+GIVETH A `Yes or no`
+`May I ask a court for relief from my lessor's retaliation` MEANS
+    CONSIDER `my role`
+    WHEN `I am the tenant: I rent the home` THEN `yes if` (`May I apply for relief from retaliatory action` `the lessor gave a breach notice (not for rent), raised the rent, moved to end the tenancy, or refused a new agreement` `the tenant had enforced their rights, complained to a government entity, or a court order is in force` `the tenant reasonably believes the action was motivated by that`)
+    OTHERWISE `does not arise for you`
+
+@export May my lessor enter and take back my home without a court order (Residential Tenancies Act 1987 (WA) ss 60, 80)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `a court has ordered possession` IS A BOOLEAN @desc Whether a competent court has made an order for possession against the tenant
+GIVETH A `Yes or no`
+`May my lessor enter and take my home back` MEANS
+    CONSIDER `my role`
+    WHEN `I am the tenant: I rent the home` THEN `yes if` (`May my lessor enter to recover possession` `a court has ordered possession`)
+    OTHERWISE `does not arise for you`
+
+@export How many days' notice must my lessor give me on this ground (Residential Tenancies Act 1987 (WA) ss 62-64, 69, 70A)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the ground` IS A `My lessor's ground` @desc The ground on which the lessor ends the tenancy
+GIVETH A `Days`
+`How many days notice must my lessor give me on this ground` MEANS
+    CONSIDER `my role`
+    WHEN `I am the tenant: I rent the home` THEN `at least` (`How many days notice must my lessor give me` `the ground`)
+    OTHERWISE `does not arise for you`
+
+@export What does the notice of termination I was given do (Residential Tenancies Act 1987 (WA) ss 60-65, 69, 70A)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the lessor has given a notice of termination` IS A BOOLEAN @desc Whether the lessor (or the property manager) has given the tenant a notice of termination
+      `the ground` IS A `My lessor's ground` @desc The ground the notice gives
+      `the notice` IS A `My lessor's notice` @desc The notice of termination (each item worded as the tenant would answer it)
+      `the tenancy` IS A `My tenancy, for a notice` @desc Whether the tenancy is in a fixed term, its expiry day, and any excessive-rent proceedings (each item worded as the tenant would answer it)
+GIVETH A `What my lessor's notice does, if it arises`
+`What does the notice of termination I was given do` MEANS
+    CONSIDER `my role`
+    WHEN `I am the tenant: I rent the home` THEN
+        IF NOT `the lessor has given a notice of termination`
+        THEN `does not arise for you`
+        ELSE `the answer is` (`What does my lessor's notice do` `the ground` `the notice` `the tenancy`)
+    OTHERWISE `does not arise for you`
+
+@export By when must I apply to a court to extend a no-grounds notice (Residential Tenancies Act 1987 (WA) s 64(3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the lessor has given a notice of termination` IS A BOOLEAN @desc Whether the lessor (or the property manager) has given the tenant a notice of termination
+      `the day the tenant received the no-grounds notice` IS A DATE @desc The day the tenant received the lessor's notice given without a ground (s 64)
+GIVETH A `Date answer`
+`By when may I ask a court to extend a no-grounds notice` MEANS
+    CONSIDER `my role`
+    WHEN `I am the tenant: I rent the home` THEN
+        IF NOT `the lessor has given a notice of termination`
+        THEN `does not arise for you`
+        ELSE `by` (`By when must I apply to extend a no-grounds notice` `the day the tenant received the no-grounds notice`)
+    OTHERWISE `does not arise for you`
+
+@export What is the most extra time a court may give me on a no-grounds notice (Residential Tenancies Act 1987 (WA) s 64(3), (4)(a))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the lessor has given a notice of termination` IS A BOOLEAN @desc Whether the lessor (or the property manager) has given the tenant a notice of termination
+GIVETH A `Days`
+`How much extra time may a court give me on a no-grounds notice` MEANS
+    CONSIDER `my role`
+    WHEN `I am the tenant: I rent the home` THEN
+        IF NOT `the lessor has given a notice of termination`
+        THEN `does not arise for you`
+        ELSE `up to` `the most extra days a court may give me on a no-grounds notice`
+    OTHERWISE `does not arise for you`
+
+§§§ `67-70A, 76C -- how I may end my tenancy, and the end of a fixed term`
+
+@export May I end my tenancy by notice on this ground (Residential Tenancies Act 1987 (WA) ss 68-70A)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my ground` IS A `My ground for ending` @desc The ground on which you want to end the tenancy
+      `the fixed term is still running` IS A BOOLEAN @desc Whether a fixed term of the tenancy is still running
+GIVETH A `Yes or no`
+`Can I end my tenancy by notice on this ground` MEANS
+    CONSIDER `my role`
+    WHEN `I am the tenant: I rent the home` THEN `yes if` (`May I end my tenancy by notice on this ground` `my ground` `the fixed term is still running`)
+    OTHERWISE `does not arise for you`
+
+@export How many days' notice must I give to end my tenancy (Residential Tenancies Act 1987 (WA) ss 68, 69, 70A)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my ground` IS A `My ground for ending` @desc The ground on which you want to end the tenancy
+GIVETH A `Days`
+`How many days notice must I give to end my tenancy` MEANS
+    CONSIDER `my role`
+    WHEN `I am the tenant: I rent the home` THEN `at least` (`How many days notice must I give` `my ground`)
+    OTHERWISE `does not arise for you`
+
+@export Is my notice to end the tenancy valid (Residential Tenancies Act 1987 (WA) ss 67-70A)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my ground` IS A `My ground for ending` @desc The ground on which you want to end the tenancy
+      `the fixed term is still running` IS A BOOLEAN @desc Whether a fixed term of the tenancy is still running
+      `the tenant's notice is in writing, signed, and names the premises and the day of leaving` IS A BOOLEAN @desc Whether the tenant's notice meets s 67(1)
+      `the day the tenant gives notice` IS A DATE @desc The day the tenant gives the notice
+      `the day the tenant will leave` IS A DATE @desc The day the tenant's notice says they will deliver up possession
+      `the expiry day` IS A DATE @desc The day the fixed term ends (ignored if there is none)
+GIVETH A `Yes or no`
+`Is my notice ending my tenancy valid` MEANS
+    CONSIDER `my role`
+    WHEN `I am the tenant: I rent the home` THEN `yes if` (`Is my notice to end the tenancy valid` `my ground` `the fixed term is still running` `the tenant's notice is in writing, signed, and names the premises and the day of leaving` `the day the tenant gives notice` `the day the tenant will leave` `the expiry day`)
+    OTHERWISE `does not arise for you`
+
+@export What is the last day I can give notice to end my fixed term on its expiry day (Residential Tenancies Act 1987 (WA) s 70A(3), (4))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the tenancy is for a fixed term` IS A BOOLEAN @desc Whether the agreement creates a tenancy for a fixed term (a lease for a set period)
+      `the expiry day` IS A DATE @desc The day the fixed term ends (ignored if there is none)
+GIVETH A `Date answer`
+`What is the last day to give notice ending my fixed term on its expiry day` MEANS
+    CONSIDER `my role`
+    WHEN `I am the tenant: I rent the home` THEN
+        IF NOT `the tenancy is for a fixed term`
+        THEN `does not arise for you`
+        ELSE `by` (`the last day to give notice ending my term on its expiry day` `the expiry day`)
+    OTHERWISE `does not arise for you`
+
+@export What happens to my tenancy when my fixed term expires (Residential Tenancies Act 1987 (WA) ss 70A, 76C)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the tenancy is for a fixed term` IS A BOOLEAN @desc Whether the agreement creates a tenancy for a fixed term (a lease for a set period)
+      `a notice under section 70A was given` IS A BOOLEAN @desc Whether the tenant or the lessor gave notice ending the fixed term
+      `the expiry day` IS A DATE @desc The day the fixed term ends (ignored if there is none)
+      `the possession day` IS A DATE @desc The day the notice names for the tenant to give possession (ignored if no notice)
+GIVETH A `What happens at the end of the fixed term, if it arises`
+`What happens to my tenancy when the fixed term expires` MEANS
+    CONSIDER `my role`
+    WHEN `I am the tenant: I rent the home` THEN
+        IF NOT `the tenancy is for a fixed term`
+        THEN `does not arise for you`
+        ELSE `the answer is` (`What happens when my fixed term expires` `a notice under section 70A was given` `the expiry day` `the possession day`)
+    OTHERWISE `does not arise for you`
+
+@export If my lessor and I both give notice ending the fixed term, which possession day counts (Residential Tenancies Act 1987 (WA) s 70A(6))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the tenancy is for a fixed term` IS A BOOLEAN @desc Whether the agreement creates a tenancy for a fixed term (a lease for a set period)
+      `the tenant's possession day` IS A DATE @desc The possession day the tenant's notice names
+      `the lessor's possession day` IS A DATE @desc The possession day the lessor's notice names
+GIVETH A `Date answer`
+`If my lessor and I both give notice ending the fixed term, which possession day counts` MEANS
+    CONSIDER `my role`
+    WHEN `I am the tenant: I rent the home` THEN
+        IF NOT `the tenancy is for a fixed term`
+        THEN `does not arise for you`
+        ELSE `on` (`Which possession day counts` `the tenant's possession day` `the lessor's possession day`)
+    OTHERWISE `does not arise for you`
+
+§§§ `81C-81K -- getting my bond back`
+
+@export Does the Act entitle my lessor to this from my bond (Residential Tenancies Act 1987 (WA) s 81E)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the claim` IS A `A claim on my bond` @desc What the lessor wants paid from the bond (worded as the tenant would say it)
+      `the bond includes the pet amount` IS A BOOLEAN @desc Whether the bond includes the $350 pet amount (s 29(1)(b)(ii))
+GIVETH A `Yes or no`
+`Is my lessor entitled to this from my bond under the Act` MEANS
+    CONSIDER `my role`
+    WHEN `I am the tenant: I rent the home` THEN `yes if` (`Is my lessor entitled to this from my bond` `the claim` `the bond includes the pet amount`)
+    OTHERWISE `does not arise for you`
+
+@export May I be asked to sign a bond release application (Residential Tenancies Act 1987 (WA) ss 81C(5), 81D)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the agreement has terminated` IS A BOOLEAN @desc Whether the tenancy agreement has ended
+      `all tenants have given vacant possession and the parties agreed in writing to end it` IS A BOOLEAN @desc Whether s 81C(4) is met
+      `the rent was reduced or the pet bond is no longer needed, and this is a partial release` IS A BOOLEAN @desc Whether s 81D(2)(a) or (b) is met for a partial release
+      `the application states how much goes to the lessor and to each tenant` IS A BOOLEAN @desc Whether the form states the amounts
+GIVETH A `Yes or no`
+`May I be asked to sign this bond release application` MEANS
+    CONSIDER `my role`
+    WHEN `I am the tenant: I rent the home` THEN `yes if` (`May I be asked to sign a bond release application` `the agreement has terminated` `all tenants have given vacant possession and the parties agreed in writing to end it` `the rent was reduced or the pet bond is no longer needed, and this is a partial release` `the application states how much goes to the lessor and to each tenant`)
+    OTHERWISE `does not arise for you`
+
+@export What happens to my bond release application (Residential Tenancies Act 1987 (WA) ss 81I, 81K)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `a bond release application has been made` IS A BOOLEAN @desc Whether a security bond release application has been made to the bond administrator
+      `every known party applied, agreed or withdrew their dispute` IS A BOOLEAN @desc Whether every party known to the bond administrator made, agreed to, or stopped disputing the application
+      `a party has disputed it` IS A BOOLEAN @desc Whether another party gave notice of dispute (and has not withdrawn it)
+      `the notice period has ended` IS A BOOLEAN @desc Whether the notice period stated by the bond administrator has ended
+GIVETH A `What happens to the bond release application, if it arises`
+`What will happen to my bond release application` MEANS
+    CONSIDER `my role`
+    WHEN `I am the tenant: I rent the home` THEN
+        IF NOT `a bond release application has been made`
+        THEN `does not arise for you`
+        ELSE `the answer is` (`What happens to my bond application` `every known party applied, agreed or withdrew their dispute` `a party has disputed it` `the notice period has ended`)
+    OTHERWISE `does not arise for you`
+
+§§ `For the lessor, or the property manager acting for the lessor`
+
+§§§ `5 -- does the Act cover the tenancy`
+
+@export Does the Residential Tenancies Act 1987 (WA) cover the tenancy I grant (Residential Tenancies Act 1987 (WA) s 3, s 5)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the tenant's arrangement` IS A `My arrangement` @desc What the tenant pays, what kind of place it is, and the kind of arrangement (each item worded as the tenant would answer it)
+GIVETH A `Yes or no`
+`Does the Residential Tenancies Act cover the tenancy I grant` MEANS
+    CONSIDER `my role`
+    WHEN `I am the lessor, or the property manager acting for the lessor` THEN `yes if` (`Does the Act apply to my tenancy` `the tenant's arrangement`)
+    OTHERWISE `does not arise for you`
+
+§§§ `27B, 27C -- what I must give the tenant at the start and the end`
+
+@export Must I give the tenant the prescribed tenancy information (Residential Tenancies Act 1987 (WA) s 27B; Regulations reg 10ABA)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the agreement is a renewal or extension` IS A BOOLEAN @desc Whether this agreement renews or extends an earlier one
+      `the parties have changed` IS A BOOLEAN @desc Whether any lessor or tenant is different from the earlier agreement
+GIVETH A `Yes or no`
+`Must I give the tenant the prescribed tenancy information` MEANS
+    CONSIDER `my role`
+    WHEN `I am the lessor, or the property manager acting for the lessor` THEN `yes if` (`Must I be given the prescribed tenancy information` `the agreement is a renewal or extension` `the parties have changed`)
+    OTHERWISE `does not arise for you`
+
+@export By when must I give the tenant the prescribed tenancy information (Residential Tenancies Act 1987 (WA) s 27B)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the agreement is in writing` IS A BOOLEAN @desc Whether there is a written tenancy agreement
+      `the day the agreement was entered into` IS A DATE @desc The day the agreement was signed (entered into)
+      `the day the tenant took possession` IS A DATE @desc The day the tenant took possession of the home
+GIVETH A `Date answer`
+`By when must I give the tenant the prescribed tenancy information` MEANS
+    CONSIDER `my role`
+    WHEN `I am the lessor, or the property manager acting for the lessor` THEN `by` (`By when must I be given the prescribed tenancy information` `the agreement is in writing` `the day the agreement was entered into` `the day the tenant took possession`)
+    OTHERWISE `does not arise for you`
+
+@export By when must I give the tenant two copies of the property condition report (Residential Tenancies Act 1987 (WA) s 27C(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the day the tenant moved in` IS A DATE @desc The day the tenant entered into occupation of the premises
+GIVETH A `Date answer`
+`By when must I give the tenant the condition report` MEANS
+    CONSIDER `my role`
+    WHEN `I am the lessor, or the property manager acting for the lessor` THEN `by` (`By when must I be given the property condition report` `the day the tenant moved in`)
+    OTHERWISE `does not arise for you`
+
+@export Is the tenant taken to have accepted my property condition report as accurate (Residential Tenancies Act 1987 (WA) s 27C(2), (3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the tenant has been given the condition report` IS A BOOLEAN @desc Whether the lessor or property manager has given the tenant the two copies of the property condition report
+      `the day the tenant received the copies` IS A DATE @desc The day the tenant received the two copies of the report
+      `a marked copy was given back` IS A BOOLEAN @desc Whether the tenant gave back a copy marked to show what they disagree with
+      `the day it was given back` IS A DATE @desc The day the marked copy was given back (ignored if it was not)
+GIVETH A `Yes or no`
+`Is the tenant taken to have accepted my condition report` MEANS
+    CONSIDER `my role`
+    WHEN `I am the lessor, or the property manager acting for the lessor` THEN
+        IF NOT `the tenant has been given the condition report`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Am I taken to accept the condition report` `the day the tenant received the copies` `a marked copy was given back` `the day it was given back`)
+    OTHERWISE `does not arise for you`
+
+@export By when must I inspect and give the tenant the final property condition report (Residential Tenancies Act 1987 (WA) s 27C(4), (5))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the tenancy has ended` IS A BOOLEAN @desc Whether the tenancy, or the tenant's interest in it, has terminated
+      `the day the tenancy ended` IS A DATE @desc The day the tenancy (or the tenant's interest in it) terminated
+GIVETH A `Date answer`
+`By when must I give the tenant the final condition report` MEANS
+    CONSIDER `my role`
+    WHEN `I am the lessor, or the property manager acting for the lessor` THEN
+        IF NOT `the tenancy has ended`
+        THEN `does not arise for you`
+        ELSE `by` (`By when must I be given the final condition report` `the day the tenancy ended`)
+    OTHERWISE `does not arise for you`
+
+§§§ `27, 28 -- what I may ask the tenant to pay`
+
+@export What is the most I may charge for an option to rent (Residential Tenancies Act 1987 (WA) s 27(2)(a); Regulations reg 10AD)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the weekly rent` IS A NUMBER @desc The weekly rent, in dollars
+      `the home is south of the 26th parallel` IS A BOOLEAN @desc Whether the premises are south of latitude 26 degrees south (Perth is)
+GIVETH AN `Amount`
+`What is the most I may charge for an option to rent` MEANS
+    CONSIDER `my role`
+    WHEN `I am the lessor, or the property manager acting for the lessor` THEN amount (`the most an option fee may be` `the weekly rent` `the home is south of the 26th parallel`)
+    OTHERWISE `does not arise for you`
+
+@export May I ask the tenant to pay this (Residential Tenancies Act 1987 (WA) s 27)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the payment` IS A `A payment asked of me` @desc What the payment is for
+      `the amount` IS A NUMBER @desc The amount asked, in dollars
+      `the weekly rent` IS A NUMBER @desc The weekly rent, in dollars
+      `the home is south of the 26th parallel` IS A BOOLEAN @desc Whether the premises are south of latitude 26 degrees south (Perth is)
+GIVETH A `Yes or no`
+`May I ask the tenant to pay this` MEANS
+    CONSIDER `my role`
+    WHEN `I am the lessor, or the property manager acting for the lessor` THEN `yes if` (`May I be asked to pay this` `the payment` `the amount` `the weekly rent` `the home is south of the 26th parallel`)
+    OTHERWISE `does not arise for you`
+
+@export What is the most rent I may ask the tenant to pay up front (Residential Tenancies Act 1987 (WA) s 28(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the weekly rent` IS A NUMBER @desc The weekly rent, in dollars
+GIVETH AN `Amount`
+`What is the most rent I may ask the tenant to pay up front` MEANS
+    CONSIDER `my role`
+    WHEN `I am the lessor, or the property manager acting for the lessor` THEN amount (`the most rent I can be asked to pay in advance` `the weekly rent`)
+    OTHERWISE `does not arise for you`
+
+§§§ `29 -- the security bond, and where I must pay it`
+
+@export What is the most security bond I may ask the tenant for (Residential Tenancies Act 1987 (WA) s 29(1)(b); Regulations reg 10A)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the weekly rent` IS A NUMBER @desc The weekly rent, in dollars
+      `the tenant is permitted to keep a pet` IS A BOOLEAN @desc Whether the tenant is permitted to keep a pet at the premises
+GIVETH AN `Amount`
+`What is the most security bond I may ask the tenant for` MEANS
+    CONSIDER `my role`
+    WHEN `I am the lessor, or the property manager acting for the lessor` THEN amount (`the most security bond I can be asked for` `the weekly rent` `the tenant is permitted to keep a pet`)
+    OTHERWISE `does not arise for you`
+
+@export Does the limit on the bond apply to the tenancy I grant (Residential Tenancies Act 1987 (WA) s 29(2); Regulations reg 11)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the weekly rent` IS A NUMBER @desc The weekly rent, in dollars
+GIVETH A `Yes or no`
+`Does the limit on the bond apply to the tenancy I grant` MEANS
+    CONSIDER `my role`
+    WHEN `I am the lessor, or the property manager acting for the lessor` THEN `yes if` (`Does the bond limit apply to me` `the weekly rent`)
+    OTHERWISE `does not arise for you`
+
+@export Is the bond I ask for lawful (Residential Tenancies Act 1987 (WA) s 29(1), (2), (2A))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the weekly rent` IS A NUMBER @desc The weekly rent, in dollars
+      `the tenant is permitted to keep a pet` IS A BOOLEAN @desc Whether the tenant is permitted to keep a pet at the premises
+      `the bond asked` IS A NUMBER @desc The total security bond asked (all instalments), in dollars
+      `the number of separate bonds asked` IS A NUMBER @desc How many separate security bonds are asked for this agreement (instalments of one bond count as one)
+GIVETH A `Yes or no`
+`Is the bond I ask for lawful` MEANS
+    CONSIDER `my role`
+    WHEN `I am the lessor, or the property manager acting for the lessor` THEN `yes if` (`Is my bond within the law` `the weekly rent` `the tenant is permitted to keep a pet` `the bond asked` `the number of separate bonds asked`)
+    OTHERWISE `does not arise for you`
+
+@export By when must I pay the bond I received to the bond administrator (Residential Tenancies Act 1987 (WA) s 29(4)(b))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the day the bond was received` IS A DATE @desc The day the lessor or property manager received the bond (or an instalment)
+GIVETH A `Date answer`
+`By when must I pay the bond to the bond administrator` MEANS
+    CONSIDER `my role`
+    WHEN `I am the lessor, or the property manager acting for the lessor` THEN `by` (`By when must my bond be paid to the bond administrator` `the day the bond was received`)
+    OTHERWISE `does not arise for you`
+
+@export Does the bond receipt I give state what it must (Residential Tenancies Act 1987 (WA) s 29(4)(a))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the receipt` IS A `My bond receipt` @desc What the bond receipt states
+GIVETH A `Yes or no`
+`Does the bond receipt I give state what it must` MEANS
+    CONSIDER `my role`
+    WHEN `I am the lessor, or the property manager acting for the lessor` THEN `yes if` (`Does my bond receipt state what it must` `the receipt`)
+    OTHERWISE `does not arise for you`
+
+@export How must I pay the bond to the bond administrator (Residential Tenancies Act 1987 (WA) s 29(4)(b), (5); Regulations reg 11A)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `a property manager manages the premises` IS A BOOLEAN @desc Whether a licensed real estate agent manages the premises for the lessor
+      `the tenant lacks an exclusive mobile, exclusive email, internet access, competence with them, or sound English` IS A BOOLEAN @desc Whether the tenant lacks at least one of the things in reg 11A(4)(a)
+      `the bond administrator agreed to another way` IS A BOOLEAN @desc Whether the bond administrator has agreed to payment other than through BondsOnline
+GIVETH A `Where the bond must go, if it arises`
+`How must I pay the bond to the bond administrator` MEANS
+    CONSIDER `my role`
+    WHEN `I am the lessor, or the property manager acting for the lessor` THEN `the answer is` (`Where must my bond go` `a property manager manages the premises` `the tenant lacks an exclusive mobile, exclusive email, internet access, competence with them, or sound English` `the bond administrator agreed to another way`)
+    OTHERWISE `does not arise for you`
+
+§§§ `30, 31, 31B, 99 -- raising the rent and the bond`
+
+@export What is the earliest day I can raise the rent (Residential Tenancies Act 1987 (WA) s 30(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the day the notice is given` IS A DATE @desc The day the rent increase notice is (or will be) given to the tenant
+      `the day the tenancy commenced or the rent last rose` IS A DATE @desc The day the tenancy began or, if the rent has been increased under s 30, the day it was last increased
+GIVETH A `Date answer`
+`What is the earliest day I can raise the rent` MEANS
+    CONSIDER `my role`
+    WHEN `I am the lessor, or the property manager acting for the lessor` THEN `on` (`the earliest day my rent can go up` `the day the notice is given` `the day the tenancy commenced or the rent last rose`)
+    OTHERWISE `does not arise for you`
+
+@export Does the rent increase I give take effect (Residential Tenancies Act 1987 (WA) ss 30, 99)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `a rent increase notice has been given or is proposed` IS A BOOLEAN @desc Whether the lessor has given the tenant, or proposes to give, written notice of a rent increase
+      `the notice` IS A `My rent increase notice` @desc The rent increase notice
+      `the tenancy` IS A `My tenancy, for a rent increase` @desc The tenancy's dates and terms (each item worded as the tenant would answer it)
+GIVETH A `What becomes of the rent increase I give`
+`Does the rent increase I give take effect` MEANS
+    CONSIDER `my role`
+    WHEN `I am the lessor, or the property manager acting for the lessor` THEN
+        IF NOT `a rent increase notice has been given or is proposed`
+        THEN `does not arise for you`
+        ELSE `for the lessor, the rent answer` (`Is my rent increase valid` `the notice` `the tenancy`)
+    OTHERWISE `does not arise for you`
+
+@export Does a new agreement with the same tenant count as a continuation of the old one, for rent increases (Residential Tenancies Act 1987 (WA) s 31B)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the lessor is the same` IS A BOOLEAN @desc Whether the lessor is the same under both agreements
+      `at least one tenant is the same` IS A BOOLEAN @desc Whether the tenant, or at least one cotenant, is a tenant under both
+      `the premises are the same` IS A BOOLEAN @desc Whether both agreements are for the same home
+      `it starts immediately after the old term ends` IS A BOOLEAN @desc Whether the new agreement starts straight after the old term ended
+GIVETH A `Yes or no`
+`Does a new agreement with the same tenant count as a continuation` MEANS
+    CONSIDER `my role`
+    WHEN `I am the lessor, or the property manager acting for the lessor` THEN `yes if` (`Is my new agreement a continuation of my old one` `the lessor is the same` `at least one tenant is the same` `the premises are the same` `it starts immediately after the old term ends`)
+    OTHERWISE `does not arise for you`
+
+@export May I increase the bond as I propose (Residential Tenancies Act 1987 (WA) s 31; Regulations reg 5CB)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `a bond increase has been proposed` IS A BOOLEAN @desc Whether the lessor has given, or proposes to give, the tenant notice increasing the security bond
+      `the increase` IS A `My bond increase` @desc The proposed increase in the security bond
+GIVETH A `Yes or no`
+`May I increase the bond as I propose` MEANS
+    CONSIDER `my role`
+    WHEN `I am the lessor, or the property manager acting for the lessor` THEN
+        IF NOT `a bond increase has been proposed`
+        THEN `does not arise for you`
+        ELSE `yes if` (`May my bond be increased this way` `the increase`)
+    OTHERWISE `does not arise for you`
+
+§§§ `26B, 60-65, 80 -- retaliation, and ending the tenancy`
+
+@export Could the tenant ask a court for relief, saying I retaliated (Residential Tenancies Act 1987 (WA) s 26B)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the lessor gave a breach notice (not for rent), raised the rent, moved to end the tenancy, or refused a new agreement` IS A BOOLEAN @desc Whether the lessor took one of the actions in s 26A(a)
+      `the tenant had enforced their rights, complained to a government entity, or a court order is in force` IS A BOOLEAN @desc Whether one of the matters in s 26B(2)(a)-(c) arose before the action
+      `the tenant reasonably believes the action was motivated by that` IS A BOOLEAN @desc Whether the tenant reasonably believes the lessor acted wholly or partly because of that matter
+GIVETH A `Yes or no`
+`Could the tenant ask a court for relief, saying I retaliated` MEANS
+    CONSIDER `my role`
+    WHEN `I am the lessor, or the property manager acting for the lessor` THEN `yes if` (`May I apply for relief from retaliatory action` `the lessor gave a breach notice (not for rent), raised the rent, moved to end the tenancy, or refused a new agreement` `the tenant had enforced their rights, complained to a government entity, or a court order is in force` `the tenant reasonably believes the action was motivated by that`)
+    OTHERWISE `does not arise for you`
+
+@export May I enter the home and take it back without a court order (Residential Tenancies Act 1987 (WA) ss 60, 80)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `a court has ordered possession` IS A BOOLEAN @desc Whether a competent court has made an order for possession against the tenant
+GIVETH A `Yes or no`
+`May I enter the home and take it back` MEANS
+    CONSIDER `my role`
+    WHEN `I am the lessor, or the property manager acting for the lessor` THEN `yes if` (`May my lessor enter to recover possession` `a court has ordered possession`)
+    OTHERWISE `does not arise for you`
+
+@export How many days' notice must I give the tenant on this ground (Residential Tenancies Act 1987 (WA) ss 62-64, 69, 70A)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the ground` IS A `My lessor's ground` @desc The ground on which the lessor ends the tenancy (worded as the tenant would say it)
+GIVETH A `Days`
+`How many days notice must I give the tenant on this ground` MEANS
+    CONSIDER `my role`
+    WHEN `I am the lessor, or the property manager acting for the lessor` THEN `at least` (`How many days notice must my lessor give me` `the ground`)
+    OTHERWISE `does not arise for you`
+
+@export What does my notice of termination do (Residential Tenancies Act 1987 (WA) ss 60-65, 69, 70A)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the lessor has given a notice of termination` IS A BOOLEAN @desc Whether the lessor (or the property manager) has given the tenant a notice of termination
+      `the ground` IS A `My lessor's ground` @desc The ground the notice gives
+      `the notice` IS A `My lessor's notice` @desc The notice of termination (each item worded as the tenant would answer it)
+      `the tenancy` IS A `My tenancy, for a notice` @desc Whether the tenancy is in a fixed term, its expiry day, and any excessive-rent proceedings (each item worded as the tenant would answer it)
+GIVETH A `What my notice of termination does`
+`What does my notice of termination do` MEANS
+    CONSIDER `my role`
+    WHEN `I am the lessor, or the property manager acting for the lessor` THEN
+        IF NOT `the lessor has given a notice of termination`
+        THEN `does not arise for you`
+        ELSE `for the lessor, the notice answer` (`What does my lessor's notice do` `the ground` `the notice` `the tenancy`)
+    OTHERWISE `does not arise for you`
+
+@export By when may the tenant ask a court to extend my no-grounds notice (Residential Tenancies Act 1987 (WA) s 64(3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the lessor has given a notice of termination` IS A BOOLEAN @desc Whether the lessor (or the property manager) has given the tenant a notice of termination
+      `the day the tenant received the no-grounds notice` IS A DATE @desc The day the tenant received the lessor's notice given without a ground (s 64)
+GIVETH A `Date answer`
+`By when may the tenant ask a court to extend my no-grounds notice` MEANS
+    CONSIDER `my role`
+    WHEN `I am the lessor, or the property manager acting for the lessor` THEN
+        IF NOT `the lessor has given a notice of termination`
+        THEN `does not arise for you`
+        ELSE `by` (`By when must I apply to extend a no-grounds notice` `the day the tenant received the no-grounds notice`)
+    OTHERWISE `does not arise for you`
+
+@export What is the most extra time a court may give the tenant on my no-grounds notice (Residential Tenancies Act 1987 (WA) s 64(3), (4)(a))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the lessor has given a notice of termination` IS A BOOLEAN @desc Whether the lessor (or the property manager) has given the tenant a notice of termination
+GIVETH A `Days`
+`How much extra time may a court give the tenant on my no-grounds notice` MEANS
+    CONSIDER `my role`
+    WHEN `I am the lessor, or the property manager acting for the lessor` THEN
+        IF NOT `the lessor has given a notice of termination`
+        THEN `does not arise for you`
+        ELSE `up to` `the most extra days a court may give me on a no-grounds notice`
+    OTHERWISE `does not arise for you`
+
+§§§ `67-70A, 76C -- the tenant's notice, and the end of a fixed term`
+
+@export Is the tenant's notice ending the tenancy valid (Residential Tenancies Act 1987 (WA) ss 67-70A)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the tenant has given a notice of termination` IS A BOOLEAN @desc Whether the tenant has given the lessor (or the property manager) a notice of termination
+      `the tenant's ground` IS A `My ground for ending` @desc The ground on which the tenant ends the tenancy
+      `the fixed term is still running` IS A BOOLEAN @desc Whether a fixed term of the tenancy is still running
+      `the tenant's notice is in writing, signed, and names the premises and the day of leaving` IS A BOOLEAN @desc Whether the tenant's notice meets s 67(1)
+      `the day the tenant gives notice` IS A DATE @desc The day the tenant gives the notice
+      `the day the tenant will leave` IS A DATE @desc The day the tenant's notice says they will deliver up possession
+      `the expiry day` IS A DATE @desc The day the fixed term ends (ignored if there is none)
+GIVETH A `Yes or no`
+`Is the tenant's notice ending the tenancy valid` MEANS
+    CONSIDER `my role`
+    WHEN `I am the lessor, or the property manager acting for the lessor` THEN
+        IF NOT `the tenant has given a notice of termination`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Is my notice to end the tenancy valid` `the tenant's ground` `the fixed term is still running` `the tenant's notice is in writing, signed, and names the premises and the day of leaving` `the day the tenant gives notice` `the day the tenant will leave` `the expiry day`)
+    OTHERWISE `does not arise for you`
+
+@export What is the last day I can give notice to end the fixed term on its expiry day (Residential Tenancies Act 1987 (WA) s 70A(3), (4))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the tenancy is for a fixed term` IS A BOOLEAN @desc Whether the agreement creates a tenancy for a fixed term (a lease for a set period)
+      `the expiry day` IS A DATE @desc The day the fixed term ends (ignored if there is none)
+GIVETH A `Date answer`
+`What is the last day I can give notice ending the fixed term on its expiry day` MEANS
+    CONSIDER `my role`
+    WHEN `I am the lessor, or the property manager acting for the lessor` THEN
+        IF NOT `the tenancy is for a fixed term`
+        THEN `does not arise for you`
+        ELSE `by` (`the last day to give notice ending my term on its expiry day` `the expiry day`)
+    OTHERWISE `does not arise for you`
+
+@export What happens to the tenancy when the fixed term expires (Residential Tenancies Act 1987 (WA) ss 70A, 76C)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the tenancy is for a fixed term` IS A BOOLEAN @desc Whether the agreement creates a tenancy for a fixed term (a lease for a set period)
+      `a notice under section 70A was given` IS A BOOLEAN @desc Whether the tenant or the lessor gave notice ending the fixed term
+      `the expiry day` IS A DATE @desc The day the fixed term ends (ignored if there is none)
+      `the possession day` IS A DATE @desc The day the notice names for the tenant to give possession (ignored if no notice)
+GIVETH A `What happens at the end of the fixed term, if it arises`
+`What happens to the tenancy I grant when the fixed term expires` MEANS
+    CONSIDER `my role`
+    WHEN `I am the lessor, or the property manager acting for the lessor` THEN
+        IF NOT `the tenancy is for a fixed term`
+        THEN `does not arise for you`
+        ELSE `the answer is` (`What happens when my fixed term expires` `a notice under section 70A was given` `the expiry day` `the possession day`)
+    OTHERWISE `does not arise for you`
+
+@export If the tenant and I both give notice ending the fixed term, which possession day counts (Residential Tenancies Act 1987 (WA) s 70A(6))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the tenancy is for a fixed term` IS A BOOLEAN @desc Whether the agreement creates a tenancy for a fixed term (a lease for a set period)
+      `the tenant's possession day` IS A DATE @desc The possession day the tenant's notice names
+      `the lessor's possession day` IS A DATE @desc The possession day the lessor's notice names
+GIVETH A `Date answer`
+`If the tenant and I both give notice ending the fixed term, which possession day counts` MEANS
+    CONSIDER `my role`
+    WHEN `I am the lessor, or the property manager acting for the lessor` THEN
+        IF NOT `the tenancy is for a fixed term`
+        THEN `does not arise for you`
+        ELSE `on` (`Which possession day counts` `the tenant's possession day` `the lessor's possession day`)
+    OTHERWISE `does not arise for you`
+
+§§§ `81C-81K -- the bond at the end`
+
+@export Does the Act entitle me to this from the bond (Residential Tenancies Act 1987 (WA) s 81E)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the claim` IS A `A claim on my bond` @desc What the lessor wants paid from the bond (worded as the tenant would say it)
+      `the bond includes the pet amount` IS A BOOLEAN @desc Whether the bond includes the $350 pet amount (s 29(1)(b)(ii))
+GIVETH A `Yes or no`
+`Does the Act entitle me to this from the bond` MEANS
+    CONSIDER `my role`
+    WHEN `I am the lessor, or the property manager acting for the lessor` THEN `yes if` (`Is my lessor entitled to this from my bond` `the claim` `the bond includes the pet amount`)
+    OTHERWISE `does not arise for you`
+
+@export May I ask the tenant to sign a bond release application (Residential Tenancies Act 1987 (WA) ss 81C(5), 81D)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the agreement has terminated` IS A BOOLEAN @desc Whether the tenancy agreement has ended
+      `all tenants have given vacant possession and the parties agreed in writing to end it` IS A BOOLEAN @desc Whether s 81C(4) is met
+      `the rent was reduced or the pet bond is no longer needed, and this is a partial release` IS A BOOLEAN @desc Whether s 81D(2)(a) or (b) is met for a partial release
+      `the application states how much goes to the lessor and to each tenant` IS A BOOLEAN @desc Whether the form states the amounts
+GIVETH A `Yes or no`
+`May I ask the tenant to sign a bond release application` MEANS
+    CONSIDER `my role`
+    WHEN `I am the lessor, or the property manager acting for the lessor` THEN `yes if` (`May I be asked to sign a bond release application` `the agreement has terminated` `all tenants have given vacant possession and the parties agreed in writing to end it` `the rent was reduced or the pet bond is no longer needed, and this is a partial release` `the application states how much goes to the lessor and to each tenant`)
+    OTHERWISE `does not arise for you`
+
+@export What happens to the bond release application (Residential Tenancies Act 1987 (WA) ss 81I, 81K)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `a bond release application has been made` IS A BOOLEAN @desc Whether a security bond release application has been made to the bond administrator
+      `every known party applied, agreed or withdrew their dispute` IS A BOOLEAN @desc Whether every party known to the bond administrator made, agreed to, or stopped disputing the application
+      `a party has disputed it` IS A BOOLEAN @desc Whether another party gave notice of dispute (and has not withdrawn it)
+      `the notice period has ended` IS A BOOLEAN @desc Whether the notice period stated by the bond administrator has ended
+GIVETH A `What happens to the bond release application, if it arises`
+`What will happen to the bond release application I am party to` MEANS
+    CONSIDER `my role`
+    WHEN `I am the lessor, or the property manager acting for the lessor` THEN
+        IF NOT `a bond release application has been made`
+        THEN `does not arise for you`
+        ELSE `the answer is` (`What happens to my bond application` `every known party applied, agreed or withdrew their dispute` `a party has disputed it` `the notice period has ended`)
+    OTHERWISE `does not arise for you`
+
+§§§ `The fines`
+
+@export What is the most I can be fined for breaking this rule (Residential Tenancies Act 1987 (WA) ss 27(1), 27B, 27C(1), (4), 28(1), 29(1), (4), 80, 81C(5))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the rule` IS A `A rule the Act puts on me` @desc The rule you broke, or may break
+GIVETH AN `Amount`
+`What is the most I can be fined for breaking this rule` MEANS
+    CONSIDER `my role`
+    WHEN `I am the lessor, or the property manager acting for the lessor` THEN amount (`the fine for breaking` `the rule`)
+    OTHERWISE `does not arise for you`

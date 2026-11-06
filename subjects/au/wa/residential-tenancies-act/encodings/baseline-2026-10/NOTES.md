@@ -178,3 +178,56 @@ Not encoded:
 - Encode the standard terms (Part IV Division 2), pets and modifications (Divisions 2A, 2B), family violence (Part V Division 2A), court orders (Division 4), abandonment, and the Commissioner's bond decisions (Part 5A Division 3).
 - Supply a SOURCE-LICENSE.md for the subject folder itself; this row carries its own.
 - An independent test pass and the human gates.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026, following the Graffiti Vandalism Act encoding's design (D2, D4, D8). Nothing in `rta-renting.l4` or `rta-cases-renting.l4` was changed: the layer is added, nothing is replaced.
+
+- **Files.** `rta-qa.l4` (imports `prelude`, `daydate` and `rta-renting`) and `rta-qa-cases.l4` (imports those, `rta-qa`, and `rta-cases-renting` for its fixtures only; an imported module's assertions are not run).
+- **Roles** (`DECLARE Role`). Every exported question takes `my role` first, with `@desc Which of these describes you`:
+  - `I am the tenant: I rent the home`. This is the baseline's seat. All 35 baseline exports are asked. Each calls the baseline function and wraps its answer (`yes`/`no`, `amount`, `by`/`on` a date, `at least`/`up to` days, `the answer is` for the baseline's enumerations).
+  - `I am the lessor, or the property manager acting for the lessor`. ss 27, 27B, 27C, 28, 29, 31, 61-64, 80 and 81C put the duties on "a person", "a lessor or property manager" or "the lessor and property manager". 33 questions: the same rules from the other side, plus the fine for the rules a lessor most often meets.
+  - Not seats: the bond administrator, the Commissioner and the court. What they must or may do (pay the bond as stated, decide a dispute, extend a notice) appears as what it means for the tenant or the lessor.
+- **Situation inputs.** All are BOOLEAN and all come straight after `my role`. FALSE gives `does not arise for you`, and nothing else is read. Each has one name, type and @desc for both roles, so the form asks it once.
+
+  | Name | Questions (tenant / lessor) |
+  |---|---|
+  | `the lessor has given a notice of termination` | what the notice does; by when the tenant may ask a court to extend a no-grounds notice; the most extra time (s 64(3), (4)): 3 / 3 |
+  | `the tenant has given a notice of termination` | is the tenant's notice valid: 0 / 1 |
+  | `the tenancy is for a fixed term` | the last day to give notice for the expiry day; what happens at expiry; which possession day counts (s 70A): 3 / 3 |
+  | `the tenancy has ended` | the final condition report (s 27C(4)): 1 / 1 |
+  | `the tenant has been given the condition report` | the tenant's 7 days to return a marked copy; taken to accept (s 27C(2), (3)): 2 / 1 |
+  | `a rent increase notice has been given or is proposed` | does the increase take effect (ss 30, 99): 1 / 1 |
+  | `a bond increase has been proposed` | may the bond rise as proposed (s 31): 1 / 1 |
+  | `a bond release application has been made` | what happens to it (ss 81I, 81K): 1 / 1 |
+
+  Each situation is what the Act ties the rule to: a notice of termination (s 61 onwards), a fixed term (s 70A), the termination (s 27C(4)), copies of the report given (s 27C(2)), a notice of increase (s 30(1)), a bond notice (s 31(1A)), an application (s 81C). Some questions arise in every situation of their role and take none: the tenant's own "Is my notice to end the tenancy valid", the earliest day the rent can rise, what may be charged, the bond limit and the notice periods.
+- **Decisions.**
+  - The lessor's questions take the baseline's records (`My arrangement`, `My tenancy, for a rent increase`, `My lessor's notice`, `My tenancy, for a notice`, `My bond increase`) and enumerations (`My lessor's ground`, `A claim on my bond`, `A payment asked of me`, `My ground for ending`). Their items are worded as the tenant would answer them, and the @desc says so. Restating the records from the lessor's side would restate the baseline's rules, which the brief bars. A lessor-worded form is for a later pass.
+  - Two baseline answers are worded for the tenant ("my lessor must apply to a court"). The lessor gets them reworded value for value (`What becomes of the rent increase I give`, `What my notice of termination does`), through helpers that list every value with no OTHERWISE (graffiti finding 31). Neutral answers (where the bond goes, the end of a fixed term, the bond application) are wrapped unchanged.
+  - The lessor's fine question takes an enumeration of nine rules (`A rule the Act puts on me`) and gives the Act's penalty: $5 000 for ss 27(1), 27B, 27C(1), 27C(4), 28(1), 29(1) and 81C(5), and $20 000 for ss 29(4) and 80. These are new values, read from the deposit.
+  - Some baseline inputs are worded "I" or "my" (the day I moved in, the day I received the copies). The layer renames them to name the tenant, so both roles share one input where they ask the same fact.
+  - `Date answer` has the graffiti shape plus `on` a day, for "the earliest day" and "which possession day counts". `Days` has `at least` (a notice period) and `up to` (the court's extension).
+- **Not covered for the lessor:**
+  - s 27AA (advertising at a fixed rent);
+  - the standard terms of Part IV Division 2 (repairs, entry, quiet enjoyment);
+  - pets and modifications (Divisions 2A, 2B);
+  - family violence (Part V Division 2A);
+  - abandonment;
+  - claims on the bond beyond the Act's list (s 81E(3));
+  - the Commissioner's decision;
+  - tenancy databases (Part VIA);
+  - fines under sections not listed above.
+
+  Everything the baseline leaves out is also out here.
+- **Cases** (`rta-qa-cases.l4`): 288 assertions, 288 satisfied.
+  - 68 ask each question for the role it is not about, every other input ASSUMEd.
+  - 24 ask each situation question for its own role with the situation FALSE, every later input ASSUMEd.
+  - 110 are for the tenant where the situation holds. 38 of them assert the answer equal to the baseline export's on the same facts, at least one per question.
+  - 86 are for the lessor, worked by hand.
+
+  Two deliberately wrong assertions both failed: an ASSUMEd date read after a TRUE situation, and a wrong amount.
+- **Checks.**
+  - `l4 check rta-qa.l4` succeeds.
+  - `l4 run` gives 0 errors and 0 warnings for `rta-qa.l4`, `rta-qa-cases.l4`, `rta-renting.l4` and `rta-cases-renting.l4` (69 of 69, unchanged).
+  - A parameter script (scratchpad `check_params.py`) lists every export. It confirms that `my role` is first everywhere, and that each situation input is identical in name, type and @desc and second wherever it appears. It also confirms that each role branch reads its situation first, and that no input is DEONTIC or EVENT.
