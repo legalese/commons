@@ -1,0 +1,416 @@
+IMPORT prelude
+IMPORT `bca-gambler`
+
+-- Betting Control Act 1954 (WA) -- the Q&A layer: the questions people ask, with the seat and the situation as
+-- parameters.
+--
+-- PURPOSE. One module whose exported questions serve every seat from one deployment, following the Graffiti Vandalism
+-- Act encoding's design (D2, D4, D8). Every exported question takes `my role` first ("Which of these describes you"); a
+-- question about another role answers `does not arise for you` without reading any other input, so the site's question
+-- form never asks those inputs and drops the question.
+--
+-- ROLES. Two people the Act puts duties on or gives rights to who would ask it questions:
+--   - the gambler, and the child who wants to bet (the baseline's seat): what the Act makes of a bet, the offences laid on
+--     the person who bets (ss 22-27A), what an operator may not do to me (ss 10J, 21), the s 25 court order, forfeiture
+--     (s 28(2)) and disputes with a racecourse bookmaker (s 32);
+--   - the bookmaker licensed under the Act, or the bookmaker's licensed manager or employee: where and when bets may be
+--     taken on a racecourse (s 12), betting with a person apparently under 18 or drunk (s 21(1)), a s 25 order (s 25(3)),
+--     and disputes (s 32).
+-- The Gaming and Wagering Commission, the stewards, RWWA, the wagering licensee, the Magistrates Court and the police are
+-- never a seat: what they may or must do appears as what it means for the person asking. (RWWA and the wagering licensee
+-- are bodies whose duties are the baseline's "what the operator may not do to me".)
+--
+-- SITUATIONS (design D8). A question that arises only in a situation takes that situation's fact straight after
+-- `my role`, and answers `does not arise for you` when it is FALSE, without reading anything else. The questions of one
+-- situation share one input with the same name, type and @desc. There are four, all BOOLEAN:
+--   - `there is a dispute about a bet made with a bookmaker on a racecourse` (both roles): the appeal days and the part
+--     to be paid now (s 32(2), (3)), and for the bookmaker the written acknowledgment (s 32(4)(a)). s 32 turns on "a
+--     question or dispute" about such a bet;
+--   - `a court has ordered under s 25 that no bookmaker bet with me` (the gambler): renewal (s 25(2)) and whether betting
+--     under the order is an offence by me (s 25(3));
+--   - `I have been convicted of betting contrary to the Act` (the gambler): forfeiture of the money (s 28(2));
+--   - `I have been given notice of a s 25 order naming a person` (the bookmaker): whether it stops me betting with this
+--     person, and the fine (s 25(3), which runs "after notice of the making of an order").
+-- The other questions arise in every situation of their role and take none.
+--
+-- The rules are in bca-gambler.l4. This module calls them and restates none: for the gambler, each answer is the
+-- baseline export's own answer, wrapped in this layer's answer types. For the bookmaker the baseline's functions are
+-- called where they answer the bookmaker's question (ss 21(1), 32(2), (3)); the rest (ss 12(1), (3)-(3b), 21 with
+-- s 30(1)(b), 25(3), 32(4)(a)) are helpers here. No exported question takes a DEONTIC or EVENT input.
+--
+-- BASELINE. Not for public use as advice. See NOTES.md, "Q&A layer (seat and situations as parameters)".
+
+§ `Betting Control Act 1954 (WA) -- the questions people ask`
+
+§§ `Who is asking, and the shape of the answers`
+
+DECLARE Role IS ONE OF
+    `I bet, or want to bet, on races or other events`
+    `I am a bookmaker licensed under the Act, or a bookmaker's licensed manager or employee`
+
+DECLARE `Yes or no` IS ONE OF
+    yes
+    no
+    `does not arise for you`
+
+DECLARE `Amount` IS ONE OF
+    `does not arise for you`
+    amount HAS dollars IS A NUMBER
+
+DECLARE `Days` IS ONE OF
+    `does not arise for you`
+    `within` HAS `days` IS A NUMBER
+
+DECLARE `Years` IS ONE OF
+    `does not arise for you`
+    `up to` HAS `years` IS A NUMBER
+
+DECLARE `What the Act makes of it` IS ONE OF
+    `does not arise for you`
+    `outside the Act: you are not in WA`
+    `lawful: the Act allows it`
+    `an offence by you`
+    `uncertain: ss 23(1) or 24(1)(b) read literally reach it, though the Act licenses or tolerates it elsewhere`
+
+§§ `Helpers`
+
+GIVEN `it holds` IS A BOOLEAN
+GIVETH A `Yes or no`
+`yes if` `it holds` MEANS
+    IF `it holds` THEN yes ELSE no
+
+GIVEN `what` IS A `What the Act makes of my bet`
+GIVETH A `What the Act makes of it`
+`the answer for` `what` MEANS
+    CONSIDER `what`
+    WHEN `outside the Act: I am not in WA` THEN `outside the Act: you are not in WA`
+    WHEN `lawful: the Act allows it` THEN `lawful: the Act allows it`
+    WHEN `an offence by me` THEN `an offence by you`
+    WHEN `uncertain: ss 23(1) or 24(1)(b) read literally reach it, though the Act licenses or tolerates it elsewhere` THEN `uncertain: ss 23(1) or 24(1)(b) read literally reach it, though the Act licenses or tolerates it elsewhere`
+
+-- s 12(1): nothing "authorises a bookmaker ... to bet or carry on business as such on a racecourse without first having
+-- obtained a permit to do so from the committee or other authority controlling it". (3): "No bookmaker shall bet or carry
+-- on business as such on a racecourse, except on such parts of it as are specially set apart for that purpose by the
+-- committee or other authority controlling it, and then only (except as regards betting on sporting events as authorised
+-- and approved under section 4B) -- (a) during any day on which a race meeting is conducted at the racecourse; or (b) on
+-- other days, at times approved by both the Commission and the committee". (3a): not "unless a steward is present ... to
+-- supervise". (3b): telephone or internet betting "in accordance with the regulations" may be taken "whether or not a
+-- steward is present". The s 4B sporting-event exception is not encoded; the regulations are not deposited, so whether a
+-- telephone or internet bet is taken in accordance with them is one fact.
+GIVEN `I have a permit from the racecourse's controlling authority` IS A BOOLEAN
+      `I am on a part of the racecourse set apart for bookmaking` IS A BOOLEAN
+      `a race meeting is held there that day, or the time is approved by the Commission and the club` IS A BOOLEAN
+      `a steward is present to supervise` IS A BOOLEAN
+      `the bet is by telephone or internet in accordance with the regulations` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `s 12(1), (3)-(3b) -- the bookmaker may bet here and now` IF
+        `I have a permit from the racecourse's controlling authority`
+    AND `I am on a part of the racecourse set apart for bookmaking`
+    AND `a race meeting is held there that day, or the time is approved by the Commission and the club`
+    AND (`a steward is present to supervise` OR `the bet is by telephone or internet in accordance with the regulations`)
+
+-- s 30(1)(b): where "no penalty is expressly provided for the offence", "a penalty not exceeding $5 000". s 21 states no
+-- penalty of its own.
+GIVETH A NUMBER
+`s 30(1)(b) -- the general penalty` MEANS 5000
+
+-- s 25(3): "neither RWWA nor any such person shall, after notice of the making of an order under subsection (1), bet with
+-- the person named therein. Penalty for this subsection: a fine of $20 000."
+GIVETH A NUMBER
+`s 25(3) -- the fine for betting with a person named in an order` MEANS 20000
+
+§§ `For the gambler`
+
+§§§ `s 27A -- interstate and offshore bets`
+
+@export Is my bet an interstate or offshore bet (Betting Control Act 1954 (WA) s 27A(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my bet` IS A `My bet` @desc Your bet: who you bet with, your age, where you are, the event, how you bet, and what you knew
+GIVETH A `Yes or no`
+`Is my bet an interstate or offshore bet under the Act` MEANS
+    CONSIDER `my role`
+    WHEN `I bet, or want to bet, on races or other events` THEN `yes if` (`Is my bet an interstate or offshore bet` `my bet`)
+    OTHERWISE `does not arise for you`
+
+@export Is the operator I bet with an authorised person (Betting Control Act 1954 (WA) s 27A(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my bet` IS A `My bet` @desc Your bet: who you bet with, your age, where you are, the event, how you bet, and what you knew
+GIVETH A `Yes or no`
+`Is the operator I bet with an authorised person` MEANS
+    CONSIDER `my role`
+    WHEN `I bet, or want to bet, on races or other events` THEN `yes if` (`Is the operator an authorised person` `my bet`)
+    OTHERWISE `does not arise for you`
+
+@export Is the event a permitted event or contingency (Betting Control Act 1954 (WA) s 27A(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my bet` IS A `My bet` @desc Your bet: who you bet with, your age, where you are, the event, how you bet, and what you knew
+GIVETH A `Yes or no`
+`Is the event I bet on a permitted event` MEANS
+    CONSIDER `my role`
+    WHEN `I bet, or want to bet, on races or other events` THEN `yes if` (`Is it a permitted event` `my bet`)
+    OTHERWISE `does not arise for you`
+
+@export Do I commit an offence under s 27A by making this bet (Betting Control Act 1954 (WA) s 27A(2), (2A))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my bet` IS A `My bet` @desc Your bet: who you bet with, your age, where you are, the event, how you bet, and what you knew
+GIVETH A `Yes or no`
+`Do I commit an offence under s 27A by this bet` MEANS
+    CONSIDER `my role`
+    WHEN `I bet, or want to bet, on races or other events` THEN `yes if` (`Do I commit an offence under s 27A` `my bet`)
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 5, 22, 23, 24, 27A, 28, 30 -- what the Act makes of my bet, and the fines`
+
+@export What does the Betting Control Act 1954 (WA) make of my bet (ss 22, 23, 24, 27A)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my bet` IS A `My bet` @desc Your bet: who you bet with, your age, where you are, the event, how you bet, and what you knew
+GIVETH A `What the Act makes of it`
+`What does the Act make of this bet of mine` MEANS
+    CONSIDER `my role`
+    WHEN `I bet, or want to bet, on races or other events` THEN `the answer for` (`What does the Act make of my bet` `my bet`)
+    OTHERWISE `does not arise for you`
+
+@export What is the most I can be fined for this bet (Betting Control Act 1954 (WA) ss 22, 23, 24, 27A; for an uncertain bet, the most the literal reading of ss 23(1) and 24(1) exposes me to)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my bet` IS A `My bet` @desc Your bet: who you bet with, your age, where you are, the event, how you bet, and what you knew
+GIVETH AN `Amount`
+`What is the most I can be fined for this bet of mine` MEANS
+    CONSIDER `my role`
+    WHEN `I bet, or want to bet, on races or other events` THEN amount (`What is the most I can be fined for this bet` `my bet`)
+    OTHERWISE `does not arise for you`
+
+@export What is the most I can be fined for this (Betting Control Act 1954 (WA) ss 21-27A, 30)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what I did` IS A `Something I might do` @desc What you did
+GIVETH AN `Amount`
+`What is the most I can be fined for doing this` MEANS
+    CONSIDER `my role`
+    WHEN `I bet, or want to bet, on races or other events` THEN amount (`What is the most I can be fined for` `what I did`)
+    OTHERWISE `does not arise for you`
+
+-- Situation: a conviction for betting contrary to the Act (s 28(2) "an offender convicted of betting").
+@export Must money I received from unlawful betting be forfeited (Betting Control Act 1954 (WA) s 28(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have been convicted of betting contrary to the Act` IS A BOOLEAN @desc Whether a court has convicted you of betting contrary to the Betting Control Act 1954
+      `the money was found on me and proved to be from that betting` IS A BOOLEAN @desc Whether the money was found in your possession and proved to have been received in connection with that betting
+GIVETH A `Yes or no`
+`Must my money from unlawful betting be forfeited` MEANS
+    CONSIDER `my role`
+    WHEN `I bet, or want to bet, on races or other events` THEN
+        IF NOT `I have been convicted of betting contrary to the Act`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Must my betting money be forfeited` TRUE `the money was found on me and proved to be from that betting`)
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 10J, 21 -- what the operator may not do to me`
+
+@export May a WA bookmaker or the TAB knowingly take my bet (Betting Control Act 1954 (WA) s 21(1), (3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I appear to be under 18` IS A BOOLEAN @desc Whether you appear to be under 18
+      `I appear to be drunk` IS A BOOLEAN @desc Whether you appear to be under the influence of liquor
+GIVETH A `Yes or no`
+`May a WA bookmaker or the TAB knowingly take my bet` MEANS
+    CONSIDER `my role`
+    WHEN `I bet, or want to bet, on races or other events` THEN `yes if` (`May a bookmaker or the TAB take my bet` `I appear to be under 18` `I appear to be drunk`)
+    OTHERWISE `does not arise for you`
+
+@export May the wagering licensee give me credit for a bet (Betting Control Act 1954 (WA) s 10J(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH A `Yes or no`
+`May the wagering licensee give me credit for a bet` MEANS
+    CONSIDER `my role`
+    WHEN `I bet, or want to bet, on races or other events` THEN `yes if` `May the wagering licensee give me credit`
+    OTHERWISE `does not arise for you`
+
+§§§ `s 25 -- an order that no bookmaker bet with me`
+
+@export Can the Magistrates Court order that no bookmaker bet with me (Betting Control Act 1954 (WA) s 25(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the Court is satisfied my betting is likely to leave me or my family in want` IS A BOOLEAN @desc Whether the Magistrates Court is satisfied that by excessive betting you are likely to be impoverished so that you or a member of your family is in want
+GIVETH A `Yes or no`
+`Can the Magistrates Court order that no bookmaker bet with me` MEANS
+    CONSIDER `my role`
+    WHEN `I bet, or want to bet, on races or other events` THEN `yes if` (`Can the Court order that no bookmaker bet with me` `the Court is satisfied my betting is likely to leave me or my family in want`)
+    OTHERWISE `does not arise for you`
+
+@export For how long at most can each s 25 order last (Betting Control Act 1954 (WA) s 25(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH A `Years`
+`For how long at most can a s 25 order on me last` MEANS
+    CONSIDER `my role`
+    WHEN `I bet, or want to bet, on races or other events` THEN `up to` `For how many years at most can the order last`
+    OTHERWISE `does not arise for you`
+
+@export Does the Act say who may ask the Court for a s 25 order (Betting Control Act 1954 (WA) s 25)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH A `Yes or no`
+`Does the Act say who may ask for a s 25 order` MEANS
+    CONSIDER `my role`
+    WHEN `I bet, or want to bet, on races or other events` THEN `yes if` `Does the Act say who may apply for the order`
+    OTHERWISE `does not arise for you`
+
+-- Situation: an order made on me under s 25(1).
+@export Can the order on me be renewed (Betting Control Act 1954 (WA) s 25(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `a court has ordered under s 25 that no bookmaker bet with me` IS A BOOLEAN @desc Whether the Magistrates Court has made an order under s 25 that no bookmaker bet with you
+      `the Court thinks I have not reformed` IS A BOOLEAN @desc Whether the Court is of the opinion that you have not reformed
+GIVETH A `Yes or no`
+`Can the s 25 order on me be renewed` MEANS
+    CONSIDER `my role`
+    WHEN `I bet, or want to bet, on races or other events` THEN
+        IF NOT `a court has ordered under s 25 that no bookmaker bet with me`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Can the order on me be renewed` `the Court thinks I have not reformed`)
+    OTHERWISE `does not arise for you`
+
+@export Do I commit an offence under the Act by betting while a s 25 order is on me (Betting Control Act 1954 (WA) s 25(3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `a court has ordered under s 25 that no bookmaker bet with me` IS A BOOLEAN @desc Whether the Magistrates Court has made an order under s 25 that no bookmaker bet with you
+GIVETH A `Yes or no`
+`Do I commit an offence by betting while the s 25 order is on me` MEANS
+    CONSIDER `my role`
+    WHEN `I bet, or want to bet, on races or other events` THEN
+        IF NOT `a court has ordered under s 25 that no bookmaker bet with me`
+        THEN `does not arise for you`
+        ELSE `yes if` `Do I commit an offence by betting while under the order`
+    OTHERWISE `does not arise for you`
+
+§§§ `s 32 -- a dispute with a racecourse bookmaker`
+
+-- Situation: a dispute about a bet with a bookmaker on a racecourse (s 32(1)).
+@export Within how many days must I appeal the stewards' decision to the Commission (Betting Control Act 1954 (WA) s 32(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `there is a dispute about a bet made with a bookmaker on a racecourse` IS A BOOLEAN @desc Whether there is a question or dispute about whether a bet with a bookmaker on a racecourse was made, or about the amount payable on it (s 32(1))
+      `the racecourse is in the metropolitan region` IS A BOOLEAN @desc Whether the racecourse is in the metropolitan region (Planning and Development Act 2005 s 4)
+GIVETH A `Days`
+`Within how many days must I appeal to the Commission` MEANS
+    CONSIDER `my role`
+    WHEN `I bet, or want to bet, on races or other events` THEN
+        IF NOT `there is a dispute about a bet made with a bookmaker on a racecourse`
+        THEN `does not arise for you`
+        ELSE `within` (`Within how many days must I appeal` `the racecourse is in the metropolitan region`)
+    OTHERWISE `does not arise for you`
+
+@export How much of a part-disputed bet must the bookmaker pay me now (Betting Control Act 1954 (WA) s 32(3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `there is a dispute about a bet made with a bookmaker on a racecourse` IS A BOOLEAN @desc Whether there is a question or dispute about whether a bet with a bookmaker on a racecourse was made, or about the amount payable on it (s 32(1))
+      `the amount claimed on the bet` IS A NUMBER @desc The amount the punter says is payable on the bet, in dollars
+      `the amount in dispute` IS A NUMBER @desc The part of that amount that is questioned or disputed, in dollars
+GIVETH AN `Amount`
+`How much of the part-disputed bet must the bookmaker pay me now` MEANS
+    CONSIDER `my role`
+    WHEN `I bet, or want to bet, on races or other events` THEN
+        IF NOT `there is a dispute about a bet made with a bookmaker on a racecourse`
+        THEN `does not arise for you`
+        ELSE amount (`How much must the bookmaker pay me now` `the amount claimed on the bet` `the amount in dispute`)
+    OTHERWISE `does not arise for you`
+
+§§ `For the bookmaker`
+
+§§§ `ss 12, 21 -- where, when and with whom I may bet`
+
+@export May I bet or carry on business as a bookmaker here and now on this racecourse (Betting Control Act 1954 (WA) s 12(1), (3)-(3b); the s 4B sporting-event exception is not covered)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have a permit from the racecourse's controlling authority` IS A BOOLEAN @desc Whether the committee or other authority controlling the racecourse has granted you a permit to bet there (s 12(1), (2))
+      `I am on a part of the racecourse set apart for bookmaking` IS A BOOLEAN @desc Whether you are on a part of the racecourse specially set apart for bookmaking by its controlling authority
+      `a race meeting is held there that day, or the time is approved by the Commission and the club` IS A BOOLEAN @desc Whether a race meeting is conducted at the racecourse that day or, on another day, the time is approved by both the Commission and the controlling authority
+      `a steward is present to supervise` IS A BOOLEAN @desc Whether a steward is present at the racecourse to supervise the betting
+      `the bet is by telephone or internet in accordance with the regulations` IS A BOOLEAN @desc Whether you take the bet by telephone or internet betting in accordance with the Betting Control Regulations (not deposited)
+GIVETH A `Yes or no`
+`May I take bets on this racecourse here and now` MEANS
+    CONSIDER `my role`
+    WHEN `I am a bookmaker licensed under the Act, or a bookmaker's licensed manager or employee` THEN `yes if` (`s 12(1), (3)-(3b) -- the bookmaker may bet here and now` `I have a permit from the racecourse's controlling authority` `I am on a part of the racecourse set apart for bookmaking` `a race meeting is held there that day, or the time is approved by the Commission and the club` `a steward is present to supervise` `the bet is by telephone or internet in accordance with the regulations`)
+    OTHERWISE `does not arise for you`
+
+@export May I knowingly bet with, or pay out to, this person (Betting Control Act 1954 (WA) s 21(1)(a), (b))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the person appears to be under 18` IS A BOOLEAN @desc Whether the person appears to be under 18
+      `the person appears to be drunk` IS A BOOLEAN @desc Whether the person appears to be under the influence of liquor
+GIVETH A `Yes or no`
+`May I knowingly bet with this person` MEANS
+    CONSIDER `my role`
+    WHEN `I am a bookmaker licensed under the Act, or a bookmaker's licensed manager or employee` THEN `yes if` (`May a bookmaker or the TAB take my bet` `the person appears to be under 18` `the person appears to be drunk`)
+    OTHERWISE `does not arise for you`
+
+@export What is the most I can be fined for knowingly betting with a person apparently under 18 or drunk (Betting Control Act 1954 (WA) ss 21(1), 30(1)(b))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH AN `Amount`
+`What is the most I can be fined for betting with a person apparently under 18 or drunk` MEANS
+    CONSIDER `my role`
+    WHEN `I am a bookmaker licensed under the Act, or a bookmaker's licensed manager or employee` THEN amount `s 30(1)(b) -- the general penalty`
+    OTHERWISE `does not arise for you`
+
+§§§ `s 25(3) -- a court order that no bookmaker bet with a person`
+
+-- Situation: notice of a s 25 order (s 25(3) runs "after notice of the making of an order").
+@export Does a s 25 order stop me betting with this person (Betting Control Act 1954 (WA) s 25(3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have been given notice of a s 25 order naming a person` IS A BOOLEAN @desc Whether you have notice that the Magistrates Court has ordered under s 25 that no bookmaker bet with a person
+      `this person is the one named in the order` IS A BOOLEAN @desc Whether the person you would bet with is the person named in the order
+GIVETH A `Yes or no`
+`Does a s 25 order stop me betting with this person` MEANS
+    CONSIDER `my role`
+    WHEN `I am a bookmaker licensed under the Act, or a bookmaker's licensed manager or employee` THEN
+        IF NOT `I have been given notice of a s 25 order naming a person`
+        THEN `does not arise for you`
+        ELSE `yes if` `this person is the one named in the order`
+    OTHERWISE `does not arise for you`
+
+@export What is the most I can be fined for betting with a person named in a s 25 order after notice of it (Betting Control Act 1954 (WA) s 25(3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have been given notice of a s 25 order naming a person` IS A BOOLEAN @desc Whether you have notice that the Magistrates Court has ordered under s 25 that no bookmaker bet with a person
+GIVETH AN `Amount`
+`What is the most I can be fined for betting with a person named in a s 25 order` MEANS
+    CONSIDER `my role`
+    WHEN `I am a bookmaker licensed under the Act, or a bookmaker's licensed manager or employee` THEN
+        IF NOT `I have been given notice of a s 25 order naming a person`
+        THEN `does not arise for you`
+        ELSE amount `s 25(3) -- the fine for betting with a person named in an order`
+    OTHERWISE `does not arise for you`
+
+§§§ `s 32 -- a dispute about a bet I took on a racecourse`
+
+-- Situation: a dispute about a bet with a bookmaker on a racecourse (s 32(1)).
+@export Within how many days may a party appeal the stewards' decision to the Commission (Betting Control Act 1954 (WA) s 32(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `there is a dispute about a bet made with a bookmaker on a racecourse` IS A BOOLEAN @desc Whether there is a question or dispute about whether a bet with a bookmaker on a racecourse was made, or about the amount payable on it (s 32(1))
+      `the racecourse is in the metropolitan region` IS A BOOLEAN @desc Whether the racecourse is in the metropolitan region (Planning and Development Act 2005 s 4)
+GIVETH A `Days`
+`Within how many days may a party appeal to the Commission` MEANS
+    CONSIDER `my role`
+    WHEN `I am a bookmaker licensed under the Act, or a bookmaker's licensed manager or employee` THEN
+        IF NOT `there is a dispute about a bet made with a bookmaker on a racecourse`
+        THEN `does not arise for you`
+        ELSE `within` (`Within how many days must I appeal` `the racecourse is in the metropolitan region`)
+    OTHERWISE `does not arise for you`
+
+@export How much of a part-disputed bet must I pay now (Betting Control Act 1954 (WA) s 32(3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `there is a dispute about a bet made with a bookmaker on a racecourse` IS A BOOLEAN @desc Whether there is a question or dispute about whether a bet with a bookmaker on a racecourse was made, or about the amount payable on it (s 32(1))
+      `the amount claimed on the bet` IS A NUMBER @desc The amount the punter says is payable on the bet, in dollars
+      `the amount in dispute` IS A NUMBER @desc The part of that amount that is questioned or disputed, in dollars
+GIVETH AN `Amount`
+`How much of the part-disputed bet must I pay now` MEANS
+    CONSIDER `my role`
+    WHEN `I am a bookmaker licensed under the Act, or a bookmaker's licensed manager or employee` THEN
+        IF NOT `there is a dispute about a bet made with a bookmaker on a racecourse`
+        THEN `does not arise for you`
+        ELSE amount (`How much must the bookmaker pay me now` `the amount claimed on the bet` `the amount in dispute`)
+    OTHERWISE `does not arise for you`
+
+-- s 32(4)(a): "if it is the intention of the bookmaker to withhold payment of the bet pending a decision of the Commission
+-- on an appeal ..., the bookmaker shall give to any other party to the question or dispute an acknowledgment in writing
+-- setting out the amount, nature and circumstances of the bet as alleged by the bookmaker and the fact of any determination
+-- made".
+@export If I withhold payment pending an appeal, must I give the other party a written acknowledgment of the bet (Betting Control Act 1954 (WA) s 32(4)(a))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `there is a dispute about a bet made with a bookmaker on a racecourse` IS A BOOLEAN @desc Whether there is a question or dispute about whether a bet with a bookmaker on a racecourse was made, or about the amount payable on it (s 32(1))
+      `I intend to withhold payment pending the Commission's decision on an appeal` IS A BOOLEAN @desc Whether you mean to withhold payment of the bet until the Commission decides an appeal under s 32(2)
+GIVETH A `Yes or no`
+`Must I give a written acknowledgment of the disputed bet` MEANS
+    CONSIDER `my role`
+    WHEN `I am a bookmaker licensed under the Act, or a bookmaker's licensed manager or employee` THEN
+        IF NOT `there is a dispute about a bet made with a bookmaker on a racecourse`
+        THEN `does not arise for you`
+        ELSE `yes if` `I intend to withhold payment pending the Commission's decision on an appeal`
+    OTHERWISE `does not arise for you`

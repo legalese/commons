@@ -214,3 +214,41 @@ not do to them (ss 10J(2), 21), the s 25 order and s 32 disputes.
 - Check the uncommenced TAB (Disposal) Act 2019 provisions, and whether a wagering
   licence has been granted, before relying on findings 3 and 7.
 - An independent test pass and the two human gates.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026, following the Graffiti Vandalism Act encoding's design (D2, D4, D8 and D8.1-D8.15 in `subjects/au/wa/graffiti-vandalism-act-2016/encodings/baseline-2026-10/NOTES.md`). The layer is `bca-qa.l4` (imports `prelude`, `bca-gambler`); its cases are `bca-qa-cases.l4`. The baseline's files are unchanged: the layer adds, and replaces nothing.
+
+**Roles** (`DECLARE Role`, in the first person; every exported question takes `my role` first, `@desc Which of these describes you`, and answers `does not arise for you` for a role it is not about without reading any other input):
+
+- `I bet, or want to bet, on races or other events`: the baseline's seat, the gambler and the child who wants to bet. All 17 baseline exports are asked, each calling the baseline function (17 questions).
+- `I am a bookmaker licensed under the Act, or a bookmaker's licensed manager or employee`: s 12 (where and when on a racecourse), s 21(1) (a person apparently under 18 or drunk), s 25(3) (a court order naming a person) and s 32 (disputes) lay duties on the bookmaker and those acting for one (8).
+
+RWWA, the wagering licensee, the Gaming and Wagering Commission, the stewards, the racing club, the Magistrates Court and the police are never a seat: what they may or must do appears as what it means for the person asking (the baseline's "what the operator may not do to me"). The person who places a bet for a child (s 22A) or keeps watch (s 26B) is the gambler's "Something I might do", as the baseline has it. The Act does not say who may apply for a s 25 order, so a family member is not a seat.
+
+**Situation inputs** (all BOOLEAN, each straight after `my role`; FALSE gives `does not arise for you` without reading anything else; same name, type and `@desc` wherever taken):
+
+| Input | Role | Does not arise when | Questions |
+|---|---|---|---|
+| `there is a dispute about a bet made with a bookmaker on a racecourse` | both | FALSE | the gambler's two of s 32(2), (3); the bookmaker's three of s 32(2), (3), (4)(a) |
+| `a court has ordered under s 25 that no bookmaker bet with me` | the gambler | FALSE | renewal (s 25(2)); whether betting under the order is my offence (s 25(3)) |
+| `I have been convicted of betting contrary to the Act` | the gambler | FALSE | forfeiture of the money (s 28(2)) |
+| `I have been given notice of a s 25 order naming a person` | the bookmaker | FALSE | whether it stops me betting with this person; the $20 000 fine (s 25(3)) |
+
+The other questions arise in every situation of their role and take none: what the Act makes of a bet and its fine, the s 27A definitions, the fines table, s 21, s 10J, whether a s 25 order can be made, its length and who may apply; for the bookmaker, s 12 and s 21.
+
+**Decisions.**
+
+- **Q1. One dispute input for both roles.** s 32 runs from "a question or dispute as to whether a bet alleged to have been made with a bookmaker on a racecourse was so made, or as to the amount payable"; the gambler and the bookmaker are parties to the same dispute, so the input has one neutral name and `@desc`. The baseline's `the amount I say is payable` is asked as `the amount claimed on the bet` for the same reason.
+- **Q2. s 28(2)'s conviction is a situation.** The baseline's first input, `convicted of betting contrary to the Act`, is the situation `I have been convicted of betting contrary to the Act`; the baseline function is called with TRUE once it holds.
+- **Q3. s 25(3) from the bookmaker's seat runs "after notice".** The situation is the notice of an order; within it, whether the order stops me is whether the person is the one named. A person not named is not stopped by the order, which says nothing of the rest of the Act.
+- **Q4. s 12 is a helper here**, since the baseline asks it only as the gambler's single fact `the bookmaker takes it as the Act allows`. The bookmaker needs a permit (s 12(1)), the part set apart, a race day or an approved time (s 12(3)), and a steward present (s 12(3a)) unless the bet is by telephone or internet under the regulations (s 12(3b)). The s 4B sporting-event exception is not covered; the question text says so.
+- **Q5. s 21(1) states no penalty, so s 30(1)(b)'s $5 000 applies.** The bookmaker's s 21 question calls the baseline's `May a bookmaker or the TAB take my bet`, so the two seats answer alike on the same facts (mirror cases).
+- **Q6. Answer types** follow gva-seat.l4: `Yes or no`, `Amount`, `Days` (`within` HAS days), `Years` (`up to` HAS years) and `What the Act makes of it`, which maps the baseline's four values one by one, with no OTHERWISE, from "my"/"I" to "you".
+- **Q7. Not tested by an ASSUMEd value:** the baseline reads `Who I bet with` and `Something I might do` through OTHERWISE, so a read of an ASSUMEd bet or thing before the role would not show in the cases (graffiti D8.8). The parameter script and the code show that each question reads the role, and then any situation, first.
+
+**Not covered for the bookmaker.** Licensing and its conditions (Part 2), advertising (s 21(1)(e)), the levies, the duties of RWWA staff and licensed premises, a bookmaker's own staff (s 12(4), (4a)), the s 4B sporting-event exception to s 12(3), the s 32(5) direction, discipline (s 32A), and the regulations (not deposited).
+
+**Cases** (`bca-qa-cases.l4`, 117): 63 for the gambler (17 of them asking the baseline export on the same facts); 19 for the bookmaker, with mirror cases of the gambler's s 21 and s 32 cases; 25 asking each of the 25 questions for the role it is not about, every other input ASSUMEd; 10 asking each question with a situation input with that situation FALSE, every later input ASSUMEd.
+
+**Checks** (stable `l4` of VS Code extension 1.6.98, `JL4_LIBRARY_PATH` unset): `l4 run` gives 0 errors and 0 warnings for `bca-gambler.l4`, `bca-cases-gambler.l4` (39 of 39, unchanged), `bca-qa.l4` and `bca-qa-cases.l4` (117 of 117); `l4 check bca-qa.l4` succeeds. A parameter script (scratchpad `check_params.py`) lists the 25 exports with their inputs and confirms that `my role` is first everywhere, that each situation input is second wherever it appears, that every input name has one type and one `@desc` across the file, and that no input is DEONTIC or EVENT.
