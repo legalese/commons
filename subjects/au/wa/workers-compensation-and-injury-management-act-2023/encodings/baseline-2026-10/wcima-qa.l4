@@ -1,0 +1,805 @@
+IMPORT prelude
+IMPORT `wcima-compensation`
+
+-- Workers Compensation and Injury Management Act 2023 (WA) -- the Q&A layer: the questions people ask, with the seat and
+-- the situation as parameters.
+--
+-- SEATS (`my role`, "Which of these describes you"): the person injured at work (the baseline's seat); and the employer,
+-- with the principal who contracted the employer for the work (s 215 makes the principal an employer of the
+-- contractor's worker). Every exported question takes `my role` first. A question about the other role answers
+-- `does not arise for you` without reading any other input, so the form never asks those inputs. The insurer, the
+-- self-insurer, WorkCover WA, the Director, the arbitrator, the approved assessor and the court are never a seat: what
+-- they decide is asked as a fact, or appears as what it means for the worker or the employer.
+--
+-- SITUATIONS (graffiti design D8). Within a role, a question that arises only in a situation takes that situation's
+-- fact straight after `my role`, and when it does not hold answers `does not arise for you` without reading anything
+-- else. The questions of one situation share one input, the same name, type and @desc, so the form asks it once:
+--   - for the worker, `I have claimed compensation from my employer` (FALSE: does not arise): the six questions of
+--     ss 25-29, 36 and 47, which the Act ties to a claim made under s 25;
+--   - for the worker, `my election to seek damages has been registered` (FALSE: does not arise): the two questions of
+--     s 423, which the Act ties to the registration of the election. "Is my lump sum for permanent impairment payable"
+--     arises either way and takes the same input third, as an ordinary input, so the form asks it once;
+--   - for the employer, `my worker has claimed compensation from me` (FALSE: does not arise): the eight questions of
+--     ss 26, 28, 29, 31, 36 and 47.
+-- Every situation input is a BOOLEAN. No question that arises in every situation of its role takes one.
+--
+-- For the worker, each question calls the baseline function of the same subject in wcima-compensation.l4 and restates
+-- no rule; where its situation holds its answer is the baseline export's, carried in the answer types below. The
+-- baseline's reg 4 rounding function is not asked as a question: it is a step inside the amounts, not something a
+-- person asks (NOTES.md). The employer's questions call the same functions where the baseline has them, and the
+-- helpers below where it does not (ss 26, 27, 31). No exported question takes a DEONTIC or EVENT input.
+--
+-- BASELINE. Not for public use as advice. See NOTES.md.
+
+§ `Workers Compensation and Injury Management Act 2023 (WA) -- the questions people ask`
+
+§§ `Who is asking, and the shape of the answers`
+
+DECLARE Role IS ONE OF
+    `I was injured at work, or in work I do for someone`
+    `I employ someone who was injured at work, or contracted their employer for the work`
+
+DECLARE `Yes or no` IS ONE OF
+    yes
+    no
+    `does not arise for you`
+
+DECLARE `Amount` IS ONE OF
+    `does not arise for you`
+    amount HAS dollars IS A NUMBER
+
+-- reg 90, carried: the baseline's three answers, and `does not arise for you`.
+DECLARE `Who pays` IS ONE OF
+    `does not arise for you`
+    `the insurer or self-insurer that asked for the assessment pays`
+    `you pay`
+    `it is compensated as a miscellaneous expense under s 91, which this layer does not cover`
+
+-- How the employer stands for the liability (ss 26, 31, 265; s 241 refusal of indemnity).
+DECLARE `How I am insured` IS ONE OF
+    `I hold a workers compensation policy from a licensed insurer`
+    `I am a licensed self-insurer, or a related entity covered by a self-insurer licence`
+    `I am uninsured for this liability`
+    `I am uninsured because my insurer refused to indemnify me under s 241`
+
+DECLARE `What I must do with the claim` IS ONE OF
+    `does not arise for you`
+    `give the claim form and certificate of capacity to your insurer, within this many days after the claim` HAS `days` IS A NUMBER
+    `give notice to WorkCover WA in the approved form, within this many days after receiving the claim` HAS `days` IS A NUMBER
+    `nothing under ss 26 or 31(2): as a self-insurer you deal with the claim yourself (s 28)`
+    `nothing under s 31(2): your insurer's refusal to indemnify you is notified to WorkCover WA by the insurer (ss 31(3), 241(3))`
+
+§§ `Carrying the baseline's answers, and the helpers the employer's questions need`
+
+GIVEN `it holds` IS A BOOLEAN
+GIVETH A `Yes or no`
+`yes if` `it holds` MEANS
+    IF `it holds` THEN yes ELSE no
+
+GIVEN `the payer` IS A `Who pays for the assessment`
+GIVETH A `Who pays`
+`who pays, carried` `the payer` MEANS
+    CONSIDER `the payer`
+    WHEN `the insurer or self-insurer that asked for it` THEN `the insurer or self-insurer that asked for the assessment pays`
+    WHEN `I do` THEN `you pay`
+    WHEN `it is compensated as a miscellaneous expense under s 91, which this encoding does not cover` THEN `it is compensated as a miscellaneous expense under s 91, which this layer does not cover`
+
+-- s 26(1): "An insured employer must, within 7 days after a worker claims compensation from the employer in accordance
+-- with section 25, give the worker's claim to the insurer." s 27(1): if it "fails to give the claim to the insurer in
+-- accordance with section 26, the worker may give the claim to the insurer". Counting the day of the claim as day 0, the
+-- 7 days after it are days 1 to 7 (Interpretation Act 1984 s 61(1)(b)), so the employer has failed from day 8.
+GIVEN `the employer is insured with a licensed insurer` IS A BOOLEAN
+      `days since the claim` IS A NUMBER
+      `the claim has been given to the insurer` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `the employer has failed to give the claim to the insurer under s 26` IF
+        `the employer is insured with a licensed insurer`
+    AND (NOT `the claim has been given to the insurer`)
+    AND `days since the claim` GREATER THAN 7
+
+-- ss 26(1), 31(2), (3): an insured employer gives the claim to its insurer, and an uninsured employer gives notice to
+-- WorkCover WA, each within 7 days; an employer uninsured only because its insurer refused indemnity under s 241 need
+-- not (s 31(3)); a self-insurer has neither duty and deals with the claim itself under s 28. Every value is listed, with
+-- no OTHERWISE, so a read of an ASSUMEd value in the cases fails (graffiti finding 31).
+GIVEN `how I am insured` IS A `How I am insured`
+GIVETH A `What I must do with the claim`
+`what I must do with my worker's claim` `how I am insured` MEANS
+    CONSIDER `how I am insured`
+    WHEN `I hold a workers compensation policy from a licensed insurer` THEN `give the claim form and certificate of capacity to your insurer, within this many days after the claim` 7
+    WHEN `I am a licensed self-insurer, or a related entity covered by a self-insurer licence` THEN `nothing under ss 26 or 31(2): as a self-insurer you deal with the claim yourself (s 28)`
+    WHEN `I am uninsured for this liability` THEN `give notice to WorkCover WA in the approved form, within this many days after receiving the claim` 7
+    WHEN `I am uninsured because my insurer refused to indemnify me under s 241` THEN `nothing under s 31(2): your insurer's refusal to indemnify you is notified to WorkCover WA by the insurer (ss 31(3), 241(3))`
+
+GIVEN `how I am insured` IS A `How I am insured`
+      `days since my worker claimed` IS A NUMBER
+      `I have passed the claim on` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `I am late in passing on the claim` IF
+    CONSIDER `how I am insured`
+    WHEN `I hold a workers compensation policy from a licensed insurer` THEN (NOT `I have passed the claim on`) AND `days since my worker claimed` GREATER THAN 7
+    WHEN `I am a licensed self-insurer, or a related entity covered by a self-insurer licence` THEN FALSE
+    WHEN `I am uninsured for this liability` THEN (NOT `I have passed the claim on`) AND `days since my worker claimed` GREATER THAN 7
+    WHEN `I am uninsured because my insurer refused to indemnify me under s 241` THEN FALSE
+
+§§ `For the person injured at work (the baseline's seat)`
+
+-- Each question calls the baseline's function of the same subject (wcima-compensation.l4) and restates no rule: for
+-- this role, and where its situation holds, its answer is the baseline's, carried in the answer types above. The one
+-- question the baseline has no function for, s 27, is worked out in the helper above.
+
+§§§ `ss 538, 566; regs 23, 122, 134 -- the amounts`
+
+@export What is this year's general maximum amount, or maximum damages amount, varied by the WA Wage Price Index (Workers Compensation and Injury Management Regulations 2024 regs 122, 134; Act s 538(5))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `last year's amount` IS A NUMBER @desc The amount for the previous financial year (for 2024-25, the starting figure in the regulation: $252 724 for the general maximum amount, $530 724 for the maximum damages amount)
+      `the WPI change in per cent` IS A NUMBER @desc The percentage by which the WA Wage Price Index varied between the last two December quarters before the year
+GIVETH AN `Amount`
+`What is this year's amount, varied by the WA Wage Price Index` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured at work, or in work I do for someone` THEN `amount` (`the amount varied by the WPI` `last year's amount` `the WPI change in per cent`)
+    OTHERWISE `does not arise for you`
+
+@export What is the most I can be paid in income compensation a week this year (Workers Compensation and Injury Management Act 2023 (WA) ss 53, 56; reg 23)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the May average weekly total earnings` IS A NUMBER @desc ABS all employees average weekly total earnings, WA, for pay periods ending in May before the year
+      `the November average weekly total earnings` IS A NUMBER @desc The same figure for pay periods ending in November before the year
+      `last year's maximum weekly rate` IS A NUMBER @desc The maximum weekly rate for the previous financial year
+GIVETH AN `Amount`
+`What is the most I can be paid in income compensation a week this year` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured at work, or in work I do for someone` THEN `amount` (`the maximum weekly rate of income compensation` `the May average weekly total earnings` `the November average weekly total earnings` `last year's maximum weekly rate`)
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 12, 13, 215; regs 13-18 -- am I a worker, and who is my employer`
+
+@export Am I a worker under the Workers Compensation and Injury Management Act 2023 (WA) (ss 12, 13; regs 13-18)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the engagement` IS A `My engagement` @desc How you are engaged to do the work
+      `my class` IS A `Prescribed class` @desc Whether you fall in a class the regulations make a worker or not a worker
+      `I died as a result of the injury` IS A BOOLEAN @desc Only matters for a police officer or Aboriginal police liaison officer
+GIVETH A `Yes or no`
+`Am I a worker under the Act` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured at work, or in work I do for someone` THEN `yes if` (`Am I a worker` `the engagement` `my class` `I died as a result of the injury`)
+    OTHERWISE `does not arise for you`
+
+@export Is this person my employer (Workers Compensation and Injury Management Act 2023 (WA) s 12(3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I am a worker` IS A BOOLEAN @desc Whether you are a worker
+      `the person is the other party to my contract` IS A BOOLEAN @desc Whether you contracted with the person, or work for the person under the contract
+GIVETH A `Yes or no`
+`Is this person my employer under the Act` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured at work, or in work I do for someone` THEN `yes if` (`Is this person my employer` `I am a worker` `the person is the other party to my contract`)
+    OTHERWISE `does not arise for you`
+
+@export Is this person also taken to be my employer, as the principal who contracted my employer (Workers Compensation and Injury Management Act 2023 (WA) s 215)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the person contracted my employer for the work` IS A BOOLEAN @desc Whether the person contracted your employer to do the work
+      `I was employed in that work` IS A BOOLEAN @desc Whether you were employed in performing that work
+      `the work is directly part of the person's trade or business` IS A BOOLEAN @desc Whether the work is directly a part of or process in the person's trade or business
+      `the premises are under the person's control or management` IS A BOOLEAN @desc Whether the injury arose on premises where the person undertook the work or that it controls or manages
+GIVETH A `Yes or no`
+`Is this person also taken to be my employer as principal` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured at work, or in work I do for someone` THEN `yes if` (`Is this person also my employer as principal` `the person contracted my employer for the work` `I was employed in that work` `the work is directly part of the person's trade or business` `the premises are under the person's control or management`)
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 6, 17, 19, 20 -- is my employer liable`
+
+@export Is my personal injury by accident an injury from employment (Workers Compensation and Injury Management Act 2023 (WA) s 6(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `it arose out of or in the course of my employment` IS A BOOLEAN @desc Whether the injury arose out of or in the course of your employment
+      `I was acting under my employer's instructions` IS A BOOLEAN @desc Whether you were acting under your employer's instructions
+GIVETH A `Yes or no`
+`Is my personal injury an injury from employment` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured at work, or in work I do for someone` THEN `yes if` (`Is my injury an injury from employment` `it arose out of or in the course of my employment` `I was acting under my employer's instructions`)
+    OTHERWISE `does not arise for you`
+
+@export Is my employer liable to compensate me (Workers Compensation and Injury Management Act 2023 (WA) ss 17, 19, 20)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I am a worker` IS A BOOLEAN @desc Whether you are a worker
+      `an injury from employment` IS A BOOLEAN @desc Whether your injury is an injury from employment with this employer
+      `my employment is connected with WA` IS A BOOLEAN @desc Whether your employment is connected with Western Australia
+      `an arbitrator found the injury attributable to my misconduct under s 20` IS A BOOLEAN @desc Whether it was proved before an arbitrator that the injury came from impairing alcohol or drugs, not using protective equipment provided, or serious and wilful misconduct
+      `serious and permanent effects` IS A BOOLEAN @desc Whether the injury has serious and permanent effects on you
+GIVETH A `Yes or no`
+`Is my employer liable to compensate me for my injury` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured at work, or in work I do for someone` THEN `yes if` (`Is my employer liable to compensate me` `I am a worker` `an injury from employment` `my employment is connected with WA` `an arbitrator found the injury attributable to my misconduct under s 20` `serious and permanent effects`)
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 25, 27, 28, 29, 36, 47; regs 19, 22 -- my claim`
+
+@export Is my claim made within 12 months after my injury (Workers Compensation and Injury Management Act 2023 (WA) s 25(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have claimed compensation from my employer` IS A BOOLEAN @desc Whether you have claimed workers compensation from your employer, by giving it the claim form and a certificate of capacity (s 25)
+      `the day of my injury` IS A DATE @desc The day the injury occurred
+      `the day I made my claim` IS A DATE @desc The day you gave your employer the claim form and certificate of capacity
+GIVETH A `Yes or no`
+`Did I make my claim within 12 months of my injury` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured at work, or in work I do for someone` THEN
+        IF `I have claimed compensation from my employer`
+        THEN `yes if` (`Is my claim made within 12 months` `the day of my injury` `the day I made my claim`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+@export Does the timing of my claim leave it valid (Workers Compensation and Injury Management Act 2023 (WA) s 25(1), (5))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have claimed compensation from my employer` IS A BOOLEAN @desc Whether you have claimed workers compensation from your employer, by giving it the claim form and a certificate of capacity (s 25)
+      `the day of my injury` IS A DATE @desc The day the injury occurred
+      `the day I made my claim` IS A DATE @desc The day you gave your employer the claim form and certificate of capacity
+      `the lateness came from mistake, absence from WA or another reasonable cause` IS A BOOLEAN @desc Whether a late claim results from mistake, absence from the State or another reasonable cause
+      `the lateness would not prejudice my employer's defence` IS A BOOLEAN @desc Whether a late claim would not prejudice your employer's defence
+GIVETH A `Yes or no`
+`Does the timing of my claim leave it valid` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured at work, or in work I do for someone` THEN
+        IF `I have claimed compensation from my employer`
+        THEN `yes if` (`Is my claim valid as to time` `the day of my injury` `the day I made my claim` `the lateness came from mistake, absence from WA or another reasonable cause` `the lateness would not prejudice my employer's defence`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+-- s 27(1): if an insured employer "fails to give the claim to the insurer in accordance with section 26" -- within 7 days
+-- after the claim, s 26(1) -- "the worker may give the claim to the insurer". The baseline has no s 27 function; the
+-- helper is in this file.
+@export My employer has not passed my claim on to its insurer: may I give the claim to the insurer myself (Workers Compensation and Injury Management Act 2023 (WA) ss 26, 27)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have claimed compensation from my employer` IS A BOOLEAN @desc Whether you have claimed workers compensation from your employer, by giving it the claim form and a certificate of capacity (s 25)
+      `my employer is insured with a licensed insurer` IS A BOOLEAN @desc Whether your employer holds a workers compensation policy from a licensed insurer (not a self-insurer, and not uninsured)
+      `days since I made my claim` IS A NUMBER @desc Days since you gave your employer the claim form and certificate of capacity, that day being day 0
+      `my employer has given my claim to its insurer` IS A BOOLEAN @desc Whether your employer has given your claim form and certificate of capacity to its insurer
+GIVETH A `Yes or no`
+`May I give my claim to the insurer myself` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured at work, or in work I do for someone` THEN
+        IF `I have claimed compensation from my employer`
+        THEN `yes if` (`the employer has failed to give the claim to the insurer under s 26` `my employer is insured with a licensed insurer` `days since I made my claim` `my employer has given my claim to its insurer`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+@export Is my employer's insurer taken to have accepted liability for my claim (Workers Compensation and Injury Management Act 2023 (WA) ss 28(6), 29(3); reg 19)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have claimed compensation from my employer` IS A BOOLEAN @desc Whether you have claimed workers compensation from your employer, by giving it the claim form and a certificate of capacity (s 25)
+      `a liability decision notice has been given` IS A BOOLEAN @desc Whether the insurer has given you a liability decision notice (accepting or not)
+      `a deferred decision notice was given within 14 days` IS A BOOLEAN @desc Whether the insurer gave you a deferred decision notice within 14 days after receiving the claim
+      `days since the insurer received my claim` IS A NUMBER @desc Days since the insurer received the claim, the day of receipt being day 0
+GIVETH A `Yes or no`
+`Is my employer's insurer taken to have accepted liability` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured at work, or in work I do for someone` THEN
+        IF `I have claimed compensation from my employer`
+        THEN `yes if` (`Is liability taken to be accepted` `a liability decision notice has been given` `a deferred decision notice was given within 14 days` `days since the insurer received my claim`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+@export Must my employer make provisional payments to me (Workers Compensation and Injury Management Act 2023 (WA) s 36(1); reg 22)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have claimed compensation from my employer` IS A BOOLEAN @desc Whether you have claimed workers compensation from your employer, by giving it the claim form and a certificate of capacity (s 25)
+      `a deferred decision notice was given` IS A BOOLEAN @desc Whether the insurer gave a deferred decision notice
+      `a liability decision notice has been given` IS A BOOLEAN @desc Whether the insurer has since given a liability decision notice
+      `days since the insurer received my claim` IS A NUMBER @desc Days since the insurer received the claim, the day of receipt being day 0
+GIVETH A `Yes or no`
+`Must my employer make provisional payments to me` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured at work, or in work I do for someone` THEN
+        IF `I have claimed compensation from my employer`
+        THEN `yes if` (`Must my employer make provisional payments` `a deferred decision notice was given` `a liability decision notice has been given` `days since the insurer received my claim`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+@export Is my first payment of income compensation overdue (Workers Compensation and Injury Management Act 2023 (WA) s 47(2)(a))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have claimed compensation from my employer` IS A BOOLEAN @desc Whether you have claimed workers compensation from your employer, by giving it the claim form and a certificate of capacity (s 25)
+      `days since the obligation to pay me arose` IS A NUMBER @desc Days since liability for income compensation was accepted, taken to be accepted, or determined
+      `I have been paid` IS A BOOLEAN @desc Whether the first payment has been made
+GIVETH A `Yes or no`
+`Is my first payment of income compensation overdue` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured at work, or in work I do for someone` THEN
+        IF `I have claimed compensation from my employer`
+        THEN `yes if` (`Is my first payment overdue` `days since the obligation to pay me arose` `I have been paid`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 46, 48, 51, 55-57; reg 24 -- my income compensation`
+
+@export Is there a minimum weekly rate of income compensation for me (Workers Compensation and Injury Management Act 2023 (WA) s 57(7); reg 24)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `an industrial instrument applies to me` IS A BOOLEAN @desc Whether an award, industrial agreement or fair work instrument applies to you
+      `a minimum amount applies to me under the Minimum Conditions of Employment Act 1993` IS A BOOLEAN @desc Whether that Act sets a minimum amount for you
+      `my earnings are only board and lodging` IS A BOOLEAN @desc Whether board and lodging is the only part of your pre-injury earnings
+      `I am a working director or a jockey` IS A BOOLEAN @desc Whether you are a working director of a company or a jockey
+GIVETH A `Yes or no`
+`Is there a minimum weekly rate of income compensation for me` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured at work, or in work I do for someone` THEN `yes if` (`Is there a minimum weekly rate for me` `an industrial instrument applies to me` `a minimum amount applies to me under the Minimum Conditions of Employment Act 1993` `my earnings are only board and lodging` `I am a working director or a jockey`)
+    OTHERWISE `does not arise for you`
+
+@export How much income compensation do I get for this week (Workers Compensation and Injury Management Act 2023 (WA) ss 48, 55, 56, 57)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my preinjury weekly rate of income` IS A NUMBER @desc Your average weekly earnings over the year before the injury (s 54)
+      `which week of compensation this is` IS A NUMBER @desc 1 for the first week in which income compensation is payable, and so on
+      `the maximum weekly rate` IS A NUMBER @desc The maximum weekly rate of income compensation for the year (reg 23)
+      `the minimum weekly rate` IS A NUMBER @desc Your minimum weekly rate under s 57(3), or 0 if none applies
+      `what I earn or can earn in suitable employment` IS A NUMBER @desc For partial incapacity, what you earn or are able to earn a week in suitable employment; 0 if totally incapacitated
+GIVETH AN `Amount`
+`How much income compensation do I get for this week` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured at work, or in work I do for someone` THEN `amount` (`How much income compensation do I get this week` `my preinjury weekly rate of income` `which week of compensation this is` `the maximum weekly rate` `the minimum weekly rate` `what I earn or can earn in suitable employment`)
+    OTHERWISE `does not arise for you`
+
+@export How much income compensation do I get for my first weeks off work, totally incapacitated (Workers Compensation and Injury Management Act 2023 (WA) ss 55, 56)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my preinjury weekly rate of income` IS A NUMBER @desc Your average weekly earnings over the year before the injury (s 54)
+      `weeks off` IS A NUMBER @desc The number of weeks in which income compensation is payable, counted from the first
+      `the maximum weekly rate` IS A NUMBER @desc The maximum weekly rate of income compensation for the year (reg 23)
+GIVETH AN `Amount`
+`How much income compensation do I get for my first weeks off work` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured at work, or in work I do for someone` THEN `amount` (`How much income compensation do I get for my first weeks off` `my preinjury weekly rate of income` `weeks off` `the maximum weekly rate`)
+    OTHERWISE `does not arise for you`
+
+@export Has my income compensation run out (Workers Compensation and Injury Management Act 2023 (WA) s 51(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `income compensation paid to me so far` IS A NUMBER @desc The total income compensation paid for this incapacity
+      `the general maximum amount` IS A NUMBER @desc The general maximum amount that applies (s 538; reg 134)
+GIVETH A `Yes or no`
+`Has my income compensation reached its limit` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured at work, or in work I do for someone` THEN `yes if` (`Has my income compensation run out` `income compensation paid to me so far` `the general maximum amount`)
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 69, 75-78 -- my medical and health expenses`
+
+@export How much can I be paid in total for medical and health expenses (Workers Compensation and Injury Management Act 2023 (WA) ss 69, 75)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the general maximum amount` IS A NUMBER @desc The general maximum amount that applies (s 538; reg 134)
+GIVETH AN `Amount`
+`How much can I be paid in total for medical and health expenses` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured at work, or in work I do for someone` THEN `amount` (`How much can I be paid for medical and health expenses` `the general maximum amount`)
+    OTHERWISE `does not arise for you`
+
+@export By how much more can an arbitrator raise my medical expenses limit by standard increases (Workers Compensation and Injury Management Act 2023 (WA) ss 69, 77)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the general maximum amount` IS A NUMBER @desc The general maximum amount that applies (s 538; reg 134)
+GIVETH AN `Amount`
+`By how much can my medical limit be raised by standard increases` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured at work, or in work I do for someone` THEN `amount` (`the standard increase limit amount` `the general maximum amount`)
+    OTHERWISE `does not arise for you`
+
+@export By how much more can an arbitrator raise my medical expenses limit by special increases (Workers Compensation and Injury Management Act 2023 (WA) ss 69, 78)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the general maximum amount` IS A NUMBER @desc The general maximum amount that applies (s 538; reg 134)
+GIVETH AN `Amount`
+`By how much can my medical limit be raised by special increases` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured at work, or in work I do for someone` THEN `amount` (`the special increase limit amount` `the general maximum amount`)
+    OTHERWISE `does not arise for you`
+
+@export Must I be told that 60% of my medical expenses limit has been used (Workers Compensation and Injury Management Act 2023 (WA) s 76)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `medical expenses paid so far` IS A NUMBER @desc The total medical and health expenses compensation paid for the injury
+      `the general maximum amount` IS A NUMBER @desc The general maximum amount that applies (s 538; reg 134)
+GIVETH A `Yes or no`
+`Must I be told that 60% of my medical limit has been used` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured at work, or in work I do for someone` THEN `yes if` (`Must I be told 60% of my medical limit is used` `medical expenses paid so far` `the general maximum amount`)
+    OTHERWISE `does not arise for you`
+
+@export May an arbitrator give me a special increase in my medical expenses limit (Workers Compensation and Injury Management Act 2023 (WA) s 78)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have had a standard increase` IS A BOOLEAN @desc Whether your limit has already been raised by a standard increase
+      `my whole of person impairment` IS A NUMBER @desc Your degree of permanent whole of person impairment, in per cent, as determined under s 79
+      `my special expenses exceed what a standard increase covers` IS A BOOLEAN @desc Whether your reasonable special expenses exceed what a standard increase can provide
+      `the arbitrator is satisfied of the rest` IS A BOOLEAN @desc Whether the arbitrator is satisfied of the reg 33 matters and of your needs
+      `within 5 years of the determination of liability` IS A BOOLEAN @desc Whether you apply within 5 years after liability was accepted or determined
+GIVETH A `Yes or no`
+`May an arbitrator give me a special increase in my medical limit` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured at work, or in work I do for someone` THEN `yes if` (`May I get a special increase` `I have had a standard increase` `my whole of person impairment` `my special expenses exceed what a standard increase covers` `the arbitrator is satisfied of the rest` `within 5 years of the determination of liability`)
+    OTHERWISE `does not arise for you`
+
+§§§ `s 186; reg 90 -- who assesses my impairment, and who pays`
+
+@export Is my permanent impairment assessed by someone the Act allows (Workers Compensation and Injury Management Act 2023 (WA) s 186)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the assessor` IS AN Assessor @desc Who made the assessment
+      `a dust disease` IS A BOOLEAN @desc Whether the injury is a dust disease
+GIVETH A `Yes or no`
+`Is my permanent impairment assessed by someone the Act allows` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured at work, or in work I do for someone` THEN `yes if` (`Is my assessment made by someone the Act allows` `the assessor` `a dust disease`)
+    OTHERWISE `does not arise for you`
+
+@export Who pays for my permanent impairment assessment (Workers Compensation and Injury Management Regulations 2024 reg 90)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the requester` IS A `Who requested the assessment` @desc Who asked for the assessment
+      `it is a miscellaneous expense under s 91` IS A BOOLEAN @desc Whether the assessment is a miscellaneous expense under s 91 of the Act
+GIVETH A `Who pays`
+`Who pays for my permanent impairment assessment` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured at work, or in work I do for someone` THEN `who pays, carried` (`Who pays for my assessment` `the requester` `it is a miscellaneous expense under s 91`)
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 97, 98, 100, 101 -- my lump sum`
+
+@export How much is my lump sum for this permanent impairment (Workers Compensation and Injury Management Act 2023 (WA) ss 98, 100, 101)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the item` IS A `Table item` @desc The kind of permanent impairment, as described in the Table to s 101
+      `my degree of permanent impairment` IS A NUMBER @desc The degree, in per cent, of impairment of that part or faculty of the body (for scarring, of the whole person)
+      `the general maximum amount on the day of my injury` IS A NUMBER @desc The general maximum amount applying on the day of the injury (s 538; reg 134)
+GIVETH AN `Amount`
+`How much is my lump sum for this permanent impairment` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured at work, or in work I do for someone` THEN `amount` (`How much is my lump sum` `the item` `my degree of permanent impairment` `the general maximum amount on the day of my injury`)
+    OTHERWISE `does not arise for you`
+
+@export How much is my lump sum for all my impairments from one injury (Workers Compensation and Injury Management Act 2023 (WA) s 100)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the sum of the separate amounts` IS A NUMBER @desc The lump sums worked out for each impairment, added up
+      `the general maximum amount on the day of my injury` IS A NUMBER @desc The general maximum amount applying on the day of the injury (s 538; reg 134)
+GIVETH AN `Amount`
+`How much is my lump sum for all my impairments` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured at work, or in work I do for someone` THEN `amount` (`How much is my total lump sum` `the sum of the separate amounts` `the general maximum amount on the day of my injury`)
+    OTHERWISE `does not arise for you`
+
+-- This question arises whether or not an election is registered, so the election is not its situation; it takes the
+-- same input as the two s 423 questions, third, so the form asks it once.
+@export Is my lump sum for permanent impairment payable (Workers Compensation and Injury Management Act 2023 (WA) ss 97, 423(1)(c))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `a personal injury by accident` IS A BOOLEAN @desc Whether the injury is a personal injury by accident
+      `my liability is commuted by a registered settlement agreement` IS A BOOLEAN @desc Whether your employer's liability has been commuted by a settlement agreement registered under Division 12
+      `my election to seek damages has been registered` IS A BOOLEAN @desc Whether the Director has registered your election to retain the right to seek damages from your employer (ss 421, 423)
+      `my assessed whole of person impairment` IS A NUMBER @desc Your degree of permanent whole of person impairment, in per cent, as assessed by an approved assessor
+GIVETH A `Yes or no`
+`Is my lump sum for permanent impairment payable` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured at work, or in work I do for someone` THEN `yes if` (`Is my lump sum payable` `a personal injury by accident` `my liability is commuted by a registered settlement agreement` `my election to seek damages has been registered` `my assessed whole of person impairment`)
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 202, 204 -- must my employer insure me`
+
+@export Must my employer hold a current workers compensation policy covering me (Workers Compensation and Injury Management Act 2023 (WA) s 202)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my employer is a self-insurer` IS A BOOLEAN @desc Whether your employer is a licensed self-insurer
+GIVETH A `Yes or no`
+`Must my employer hold a workers compensation policy covering me` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured at work, or in work I do for someone` THEN `yes if` (`Must my employer insure me` `my employer is a self-insurer`)
+    OTHERWISE `does not arise for you`
+
+@export What is the most my employer can be fined for not insuring its workers (Workers Compensation and Injury Management Act 2023 (WA) s 204(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `number of workers` IS A NUMBER @desc The number of the employer's workers the failure relates to
+GIVETH AN `Amount`
+`What is the most my employer can be fined for not insuring its workers` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured at work, or in work I do for someone` THEN `amount` (`the most my employer can be fined for being uninsured` `number of workers`)
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 415, 416, 421, 422, 424, 434 -- when may I sue`
+
+@export Does the 15% threshold and the rest of Part 7 Division 2 apply to my claim for damages against this person (Workers Compensation and Injury Management Act 2023 (WA) ss 415, 416)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the defendant` IS A Defendant @desc Whom you would sue
+      `compensation is paid or payable` IS A BOOLEAN @desc Whether workers compensation for the injury has been paid or is payable
+      `the injury caused my death` IS A BOOLEAN @desc Whether the injury results in death
+      `the Motor Vehicle (Third Party Insurance) Act 1943 applies` IS A BOOLEAN @desc Whether the damages are a motor vehicle third party insurance claim
+GIVETH A `Yes or no`
+`Does Division 2 apply to my claim for damages` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured at work, or in work I do for someone` THEN `yes if` (`Does Division 2 apply to my claim` `the defendant` `compensation is paid or payable` `the injury caused my death` `the Motor Vehicle (Third Party Insurance) Act 1943 applies`)
+    OTHERWISE `does not arise for you`
+
+@export May I start court proceedings for damages against this person (Workers Compensation and Injury Management Act 2023 (WA) ss 421(1), 422(2); regs 120, 121)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `Division 2 applies` IS A BOOLEAN @desc Whether Part 7 Division 2 applies to the claim (asked in the question before)
+      `my assessed whole of person impairment` IS A NUMBER @desc Your degree of permanent whole of person impairment, in per cent, in the supporting assessment
+      `my election is registered and I have been notified` IS A BOOLEAN @desc Whether the Director has registered your election and notified you in writing
+      `I have a terminal disease under s 422` IS A BOOLEAN @desc Whether a respiratory specialist has diagnosed a s 422 disease and certified death likely within 2 years
+GIVETH A `Yes or no`
+`May I start court proceedings for damages` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured at work, or in work I do for someone` THEN `yes if` (`May I start court proceedings` `Division 2 applies` `my assessed whole of person impairment` `my election is registered and I have been notified` `I have a terminal disease under s 422`)
+    OTHERWISE `does not arise for you`
+
+@export Can the court award me damages against this person (Workers Compensation and Injury Management Act 2023 (WA) s 421(4), (5))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `Division 2 applies` IS A BOOLEAN @desc Whether Part 7 Division 2 applies to the claim (asked in the question before)
+      `the impairment the court finds` IS A NUMBER @desc The degree of permanent whole of person impairment, in per cent, the court is satisfied of
+GIVETH A `Yes or no`
+`Can the court award me damages against this person` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured at work, or in work I do for someone` THEN `yes if` (`Can the court award me damages` `Division 2 applies` `the impairment the court finds`)
+    OTHERWISE `does not arise for you`
+
+@export Are my damages against my employer capped (Workers Compensation and Injury Management Act 2023 (WA) s 424)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `Division 2 applies` IS A BOOLEAN @desc Whether Part 7 Division 2 applies to the claim (asked in the question before)
+      `the impairment the court finds` IS A NUMBER @desc The degree of permanent whole of person impairment, in per cent, the court is satisfied of
+GIVETH A `Yes or no`
+`Are my damages against my employer capped` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured at work, or in work I do for someone` THEN `yes if` (`Are my damages capped` `Division 2 applies` `the impairment the court finds`)
+    OTHERWISE `does not arise for you`
+
+@export May I sue a third party for damages while I claim compensation (Workers Compensation and Injury Management Act 2023 (WA) s 434)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the third party is liable to pay me damages` IS A BOOLEAN @desc Whether a person other than your employer is liable in damages for the injury (a question for the general law)
+      `compensation is payable` IS A BOOLEAN @desc Whether workers compensation is payable for the injury
+GIVETH A `Yes or no`
+`May I sue a third party while I claim compensation` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured at work, or in work I do for someone` THEN `yes if` (`May I sue a third party as well` `the third party is liable to pay me damages` `compensation is payable`)
+    OTHERWISE `does not arise for you`
+
+§§§ `s 423 -- what an election under 25% costs me`
+
+@export How much income compensation do I get after my election to seek damages is registered (Workers Compensation and Injury Management Act 2023 (WA) s 423)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my election to seek damages has been registered` IS A BOOLEAN @desc Whether the Director has registered your election to retain the right to seek damages from your employer (ss 421, 423)
+      `my assessed whole of person impairment` IS A NUMBER @desc Your degree of permanent whole of person impairment, in per cent, as assessed by an approved assessor
+      `whole months since registration` IS A NUMBER @desc Whole months completed since the day the election was registered
+      `what I would otherwise get` IS A NUMBER @desc The income compensation you would get without s 423
+GIVETH AN `Amount`
+`How much income compensation do I get after my election is registered` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured at work, or in work I do for someone` THEN
+        IF `my election to seek damages has been registered`
+        THEN `amount` (`How much income compensation do I get after my election` `my assessed whole of person impairment` `whole months since registration` `what I would otherwise get`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+@export Does my registered election end compensation for medical expenses I incur afterwards (Workers Compensation and Injury Management Act 2023 (WA) s 423(1)(d))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my election to seek damages has been registered` IS A BOOLEAN @desc Whether the Director has registered your election to retain the right to seek damages from your employer (ss 421, 423)
+      `my assessed whole of person impairment` IS A NUMBER @desc Your degree of permanent whole of person impairment, in per cent, as assessed by an approved assessor
+GIVETH A `Yes or no`
+`Does my election end my compensation for later medical expenses` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured at work, or in work I do for someone` THEN
+        IF `my election to seek damages has been registered`
+        THEN `yes if` (`Does my election end my medical expenses compensation` `my assessed whole of person impairment`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+§§ `For the employer, or the principal who contracted the employer (ss 12, 17, 19, 20, 26, 31, 36, 47, 159, 202, 204, 215, 415, 421, 424)`
+
+-- The Act puts the duties to pass on a claim (ss 26, 31(2)), to make provisional payments (s 36) and the first payment
+-- (s 47(2)(a)), to insure (s 202) and to have an injury management system (s 159) on the employer, and makes a
+-- principal an employer of a contractor's worker (s 215). The insurer, WorkCover WA, the Director and the arbitrator are
+-- never a seat: what they decide is asked as a fact, or appears as what it means for the employer.
+
+§§§ `ss 12, 13, 215 -- is this person my worker, and am I their employer`
+
+-- s 12(2) asks the same of the person whoever asks it; the employer's question calls the same function.
+@export Is this person my worker under the Workers Compensation and Injury Management Act 2023 (WA) (ss 12, 13; regs 13-18)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the person's engagement` IS A `My engagement` @desc How the person is engaged to do the work for you (the fields are worded from the person's side)
+      `the person's class` IS A `Prescribed class` @desc Whether the person falls in a class the regulations make a worker or not a worker
+      `the person died as a result of the injury` IS A BOOLEAN @desc Only matters for a police officer or Aboriginal police liaison officer
+GIVETH A `Yes or no`
+`Is this person my worker` MEANS
+    CONSIDER `my role`
+    WHEN `I employ someone who was injured at work, or contracted their employer for the work` THEN `yes if` (`Am I a worker` `the person's engagement` `the person's class` `the person died as a result of the injury`)
+    OTHERWISE `does not arise for you`
+
+@export I contracted another business for this work: am I also taken to be the employer of its injured worker, as principal (Workers Compensation and Injury Management Act 2023 (WA) s 215)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I contracted the worker's employer for the work` IS A BOOLEAN @desc Whether you contracted the worker's employer to do the work
+      `the worker was employed in that work` IS A BOOLEAN @desc Whether the worker was employed in performing that work
+      `the work is directly part of my trade or business` IS A BOOLEAN @desc Whether the work is directly a part of or process in your trade or business
+      `the premises are under my control or management` IS A BOOLEAN @desc Whether the injury arose on premises where you undertook to do the work, or that you control or manage
+GIVETH A `Yes or no`
+`Am I taken to be the employer of my contractor's worker, as principal` MEANS
+    CONSIDER `my role`
+    WHEN `I employ someone who was injured at work, or contracted their employer for the work` THEN `yes if` (`Is this person also my employer as principal` `I contracted the worker's employer for the work` `the worker was employed in that work` `the work is directly part of my trade or business` `the premises are under my control or management`)
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 6, 17, 19, 20 -- am I liable to compensate my worker`
+
+@export Is my worker's personal injury by accident an injury from employment (Workers Compensation and Injury Management Act 2023 (WA) s 6(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `it arose out of or in the course of the worker's employment` IS A BOOLEAN @desc Whether the injury arose out of or in the course of the worker's employment
+      `the worker was acting under my instructions` IS A BOOLEAN @desc Whether the worker was acting under your instructions
+GIVETH A `Yes or no`
+`Is my worker's injury an injury from employment` MEANS
+    CONSIDER `my role`
+    WHEN `I employ someone who was injured at work, or contracted their employer for the work` THEN `yes if` (`Is my injury an injury from employment` `it arose out of or in the course of the worker's employment` `the worker was acting under my instructions`)
+    OTHERWISE `does not arise for you`
+
+@export Am I liable to compensate my worker for the injury (Workers Compensation and Injury Management Act 2023 (WA) ss 17, 19, 20)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the person is my worker` IS A BOOLEAN @desc Whether the injured person is your worker (s 12)
+      `an injury from employment with me` IS A BOOLEAN @desc Whether the injury is an injury from employment with you (s 6)
+      `the employment is connected with WA` IS A BOOLEAN @desc Whether the worker's employment is connected with Western Australia (s 19)
+      `an arbitrator found the injury attributable to the worker's misconduct under s 20` IS A BOOLEAN @desc Whether it was proved before an arbitrator that the injury came from the worker's impairing alcohol or drugs, not using protective equipment you provided, or serious and wilful misconduct
+      `the injury has serious and permanent effects` IS A BOOLEAN @desc Whether the injury has serious and permanent effects on the worker, or caused their death
+GIVETH A `Yes or no`
+`Am I liable to compensate my worker` MEANS
+    CONSIDER `my role`
+    WHEN `I employ someone who was injured at work, or contracted their employer for the work` THEN `yes if` (`Is my employer liable to compensate me` `the person is my worker` `an injury from employment with me` `the employment is connected with WA` `an arbitrator found the injury attributable to the worker's misconduct under s 20` `the injury has serious and permanent effects`)
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 26, 28, 29, 31, 36, 47 -- my worker's claim`
+
+-- "Within 7 days after" the claim: the day of the claim is left out (Interpretation Act 1984 s 61(1)(b)), so the
+-- answer is a count of days after it, not a date.
+@export My worker has claimed compensation from me: what must I do with the claim, and within how many days after it (Workers Compensation and Injury Management Act 2023 (WA) ss 26, 31(2), (3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my worker has claimed compensation from me` IS A BOOLEAN @desc Whether a worker has claimed workers compensation from you, by giving you the claim form and a certificate of capacity (s 25)
+      `how I am insured` IS A `How I am insured` @desc How you are insured for this liability
+GIVETH A `What I must do with the claim`
+`What must I do with my worker's claim` MEANS
+    CONSIDER `my role`
+    WHEN `I employ someone who was injured at work, or contracted their employer for the work` THEN
+        IF `my worker has claimed compensation from me`
+        THEN `what I must do with my worker's claim` `how I am insured`
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+@export Am I late in giving my worker's claim to my insurer, or notice of it to WorkCover WA if I am uninsured (Workers Compensation and Injury Management Act 2023 (WA) ss 26(1), 31(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my worker has claimed compensation from me` IS A BOOLEAN @desc Whether a worker has claimed workers compensation from you, by giving you the claim form and a certificate of capacity (s 25)
+      `how I am insured` IS A `How I am insured` @desc How you are insured for this liability
+      `days since my worker claimed` IS A NUMBER @desc Days since your worker gave you the claim form and certificate of capacity, that day being day 0
+      `I have passed the claim on` IS A BOOLEAN @desc Whether you have given the claim to your insurer (or, if uninsured, notice of it to WorkCover WA)
+GIVETH A `Yes or no`
+`Am I late in passing on my worker's claim` MEANS
+    CONSIDER `my role`
+    WHEN `I employ someone who was injured at work, or contracted their employer for the work` THEN
+        IF `my worker has claimed compensation from me`
+        THEN `yes if` (`I am late in passing on the claim` `how I am insured` `days since my worker claimed` `I have passed the claim on`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+@export What is the most I can be fined for not giving my worker's claim to my insurer, or notice of it to WorkCover WA, within 7 days (Workers Compensation and Injury Management Act 2023 (WA) ss 26(1), 31(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my worker has claimed compensation from me` IS A BOOLEAN @desc Whether a worker has claimed workers compensation from you, by giving you the claim form and a certificate of capacity (s 25)
+GIVETH AN `Amount`
+`What is the most I can be fined for not passing on my worker's claim in time` MEANS
+    CONSIDER `my role`
+    WHEN `I employ someone who was injured at work, or contracted their employer for the work` THEN
+        IF `my worker has claimed compensation from me`
+        THEN amount 5000
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+@export Is my insurer taken to have accepted liability for my worker's claim (Workers Compensation and Injury Management Act 2023 (WA) ss 28(6), 29(3); reg 19)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my worker has claimed compensation from me` IS A BOOLEAN @desc Whether a worker has claimed workers compensation from you, by giving you the claim form and a certificate of capacity (s 25)
+      `a liability decision notice has been given` IS A BOOLEAN @desc Whether the insurer has given the worker a liability decision notice (accepting or not)
+      `a deferred decision notice was given within 14 days` IS A BOOLEAN @desc Whether the insurer gave the worker a deferred decision notice within 14 days after receiving the claim
+      `days since the insurer received the claim` IS A NUMBER @desc Days since the insurer received the claim, the day of receipt being day 0
+GIVETH A `Yes or no`
+`Is my insurer taken to have accepted liability for my worker's claim` MEANS
+    CONSIDER `my role`
+    WHEN `I employ someone who was injured at work, or contracted their employer for the work` THEN
+        IF `my worker has claimed compensation from me`
+        THEN `yes if` (`Is liability taken to be accepted` `a liability decision notice has been given` `a deferred decision notice was given within 14 days` `days since the insurer received the claim`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+@export Must I make provisional payments to my worker (Workers Compensation and Injury Management Act 2023 (WA) s 36(1); reg 22)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my worker has claimed compensation from me` IS A BOOLEAN @desc Whether a worker has claimed workers compensation from you, by giving you the claim form and a certificate of capacity (s 25)
+      `a deferred decision notice was given` IS A BOOLEAN @desc Whether the insurer (or you, as a self-insurer) gave a deferred decision notice for the claim
+      `a liability decision notice has been given` IS A BOOLEAN @desc Whether a liability decision notice has since been given
+      `days since the insurer received the claim` IS A NUMBER @desc Days since the insurer received the claim, the day of receipt being day 0
+GIVETH A `Yes or no`
+`Must I make provisional payments to my worker` MEANS
+    CONSIDER `my role`
+    WHEN `I employ someone who was injured at work, or contracted their employer for the work` THEN
+        IF `my worker has claimed compensation from me`
+        THEN `yes if` (`Must my employer make provisional payments` `a deferred decision notice was given` `a liability decision notice has been given` `days since the insurer received the claim`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+@export What is the most I can be fined for not making a provisional payment as and when required (Workers Compensation and Injury Management Act 2023 (WA) s 36(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my worker has claimed compensation from me` IS A BOOLEAN @desc Whether a worker has claimed workers compensation from you, by giving you the claim form and a certificate of capacity (s 25)
+GIVETH AN `Amount`
+`What is the most I can be fined for not making a provisional payment` MEANS
+    CONSIDER `my role`
+    WHEN `I employ someone who was injured at work, or contracted their employer for the work` THEN
+        IF `my worker has claimed compensation from me`
+        THEN amount 10000
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+-- s 47(3): the duty holds whether or not the insurer has indemnified the employer.
+@export Is my first payment of income compensation to my worker overdue (Workers Compensation and Injury Management Act 2023 (WA) s 47(2)(a))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my worker has claimed compensation from me` IS A BOOLEAN @desc Whether a worker has claimed workers compensation from you, by giving you the claim form and a certificate of capacity (s 25)
+      `days since my obligation to pay arose` IS A NUMBER @desc Days since liability for income compensation was accepted, taken to be accepted, or determined (s 47(1))
+      `I have made the first payment` IS A BOOLEAN @desc Whether you have made the first payment, with what has accrued since the worker was first incapacitated
+GIVETH A `Yes or no`
+`Is my first payment of income compensation to my worker overdue` MEANS
+    CONSIDER `my role`
+    WHEN `I employ someone who was injured at work, or contracted their employer for the work` THEN
+        IF `my worker has claimed compensation from me`
+        THEN `yes if` (`Is my first payment overdue` `days since my obligation to pay arose` `I have made the first payment`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+@export What is the most I can be fined for each income compensation payment not made when due (Workers Compensation and Injury Management Act 2023 (WA) s 47(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my worker has claimed compensation from me` IS A BOOLEAN @desc Whether a worker has claimed workers compensation from you, by giving you the claim form and a certificate of capacity (s 25)
+GIVETH AN `Amount`
+`What is the most I can be fined for each income compensation payment not made when due` MEANS
+    CONSIDER `my role`
+    WHEN `I employ someone who was injured at work, or contracted their employer for the work` THEN
+        IF `my worker has claimed compensation from me`
+        THEN amount 5000
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 159, 202, 204 -- insurance and injury management`
+
+@export Must I hold a current workers compensation policy from a licensed insurer (Workers Compensation and Injury Management Act 2023 (WA) s 202)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I am a self-insurer` IS A BOOLEAN @desc Whether you hold a self-insurer licence, or are a related entity covered by one
+GIVETH A `Yes or no`
+`Must I hold a workers compensation policy` MEANS
+    CONSIDER `my role`
+    WHEN `I employ someone who was injured at work, or contracted their employer for the work` THEN `yes if` (`Must my employer insure me` `I am a self-insurer`)
+    OTHERWISE `does not arise for you`
+
+@export What is the most I can be fined for not holding a workers compensation policy (Workers Compensation and Injury Management Act 2023 (WA) s 204(1); the same again for each week the failure continues after a conviction, s 204(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `number of workers` IS A NUMBER @desc The number of your workers the failure relates to
+GIVETH AN `Amount`
+`What is the most I can be fined for not insuring my workers` MEANS
+    CONSIDER `my role`
+    WHEN `I employ someone who was injured at work, or contracted their employer for the work` THEN amount (`the most my employer can be fined for being uninsured` `number of workers`)
+    OTHERWISE `does not arise for you`
+
+-- s 159(2) binds every employer, so the answer is settled by the role alone.
+@export Must I have an injury management system for my workers, described in a document they can see (Workers Compensation and Injury Management Act 2023 (WA) s 159(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH A `Yes or no`
+`Must I have an injury management system` MEANS
+    CONSIDER `my role`
+    WHEN `I employ someone who was injured at work, or contracted their employer for the work` THEN yes
+    OTHERWISE `does not arise for you`
+
+@export What is the most I can be fined for not having an injury management system (Workers Compensation and Injury Management Act 2023 (WA) s 159(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH AN `Amount`
+`What is the most I can be fined for not having an injury management system` MEANS
+    CONSIDER `my role`
+    WHEN `I employ someone who was injured at work, or contracted their employer for the work` THEN amount 5000
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 415, 416, 421, 424 -- may my worker sue me`
+
+-- Asked of the worker's employer, so the defendant is `my employer` by the question's own terms (s 415).
+@export Can the court award my worker damages against me for the injury (Workers Compensation and Injury Management Act 2023 (WA) ss 415, 416, 421(4), (5))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `compensation is paid or payable to the worker` IS A BOOLEAN @desc Whether workers compensation for the injury has been paid or is payable
+      `the injury caused the worker's death` IS A BOOLEAN @desc Whether the injury results in the worker's death
+      `it is a motor vehicle third party insurance claim` IS A BOOLEAN @desc Whether the damages are a claim under the Motor Vehicle (Third Party Insurance) Act 1943
+      `the impairment the court finds` IS A NUMBER @desc The degree of the worker's permanent whole of person impairment, in per cent, the court is satisfied of
+GIVETH A `Yes or no`
+`Can the court award my worker damages against me` MEANS
+    CONSIDER `my role`
+    WHEN `I employ someone who was injured at work, or contracted their employer for the work` THEN `yes if` (`Can the court award me damages` (`Does Division 2 apply to my claim` `my employer` `compensation is paid or payable to the worker` `the injury caused the worker's death` `it is a motor vehicle third party insurance claim`) `the impairment the court finds`)
+    OTHERWISE `does not arise for you`
+
+@export Are the damages my worker can get from me capped (Workers Compensation and Injury Management Act 2023 (WA) ss 415, 416, 424)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `compensation is paid or payable to the worker` IS A BOOLEAN @desc Whether workers compensation for the injury has been paid or is payable
+      `the injury caused the worker's death` IS A BOOLEAN @desc Whether the injury results in the worker's death
+      `it is a motor vehicle third party insurance claim` IS A BOOLEAN @desc Whether the damages are a claim under the Motor Vehicle (Third Party Insurance) Act 1943
+      `the impairment the court finds` IS A NUMBER @desc The degree of the worker's permanent whole of person impairment, in per cent, the court is satisfied of
+GIVETH A `Yes or no`
+`Are the damages against me capped` MEANS
+    CONSIDER `my role`
+    WHEN `I employ someone who was injured at work, or contracted their employer for the work` THEN `yes if` (`Are my damages capped` (`Does Division 2 apply to my claim` `my employer` `compensation is paid or payable to the worker` `the injury caused the worker's death` `it is a motor vehicle third party insurance claim`) `the impairment the court finds`)
+    OTHERWISE `does not arise for you`

@@ -140,3 +140,83 @@ resolution, double recovery, choice of law, and administration. 18 of the 45 Tab
 - k044's motor claim (Motor Vehicle (Third Party Insurance) Act 1943; s 416(b)) and the third-party path in finding 1
   (Civil Liability Act 2002, occupiers' liability) are separate subjects.
 - An independent test pass and a human gate.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026, after the graffiti encoding's design (Graffiti Vandalism Act 2016, `gva-seat.l4`, its NOTES D2,
+D4 and D8). The layer is `wcima-qa.l4` (imports `prelude` and `wcima-compensation`), with its cases in
+`wcima-qa-cases.l4` (imports `prelude`, `wcima-compensation` and `wcima-qa`). The baseline's files are unchanged: no rule
+or export of `wcima-compensation.l4` was touched, and its 70 cases still pass. The layer imports no daydate of its own;
+its cases write dates with the built-in `DATE_FROM_DMY`.
+
+**Why.** The site's question form asks only the inputs that can still change an open question. Every exported question
+takes `my role` first ("Which of these describes you"); for the role it is not about, it answers `does not arise for
+you` without reading any other input. Within a role, a question that arises only in a situation takes that situation's
+fact second, and answers `does not arise for you` when it does not hold, again reading nothing else.
+
+**Roles** (`Role`):
+
+- `I was injured at work, or in work I do for someone`: the baseline's seat, the injured worker (or a person who may be
+  one: the first questions ask whether they are a worker at all).
+- `I employ someone who was injured at work, or contracted their employer for the work`: the employer, on whom the Act
+  puts the duties to pass on a claim (ss 26, 31(2)), to make provisional payments (s 36) and the first payment of income
+  compensation (s 47), to insure (s 202) and to have an injury management system (s 159); and the principal, whom s 215
+  makes an employer of the contractor's worker, jointly and severally liable with the contractor.
+
+The insurer and self-insurer, WorkCover WA, the Director, the arbitrator, the approved assessor and the court are not
+seats: what they decide is asked as a fact. A dependant of a worker who died is not a seat: the baseline does not encode
+death benefits, and the layer keeps to the subjects the baseline encodes.
+
+**Situation inputs.** All are BOOLEAN; FALSE gives `does not arise for you`; each is the second input wherever it is a
+situation, with the same name, type and `@desc` in every question.
+
+| Name | Role | Questions that take it |
+|---|---|---|
+| `I have claimed compensation from my employer` | worker | Did I make my claim within 12 months of my injury; Does the timing of my claim leave it valid; May I give my claim to the insurer myself; Is my employer's insurer taken to have accepted liability; Must my employer make provisional payments to me; Is my first payment of income compensation overdue |
+| `my election to seek damages has been registered` | worker | How much income compensation do I get after my election is registered; Does my election end my compensation for later medical expenses (and, as an ordinary fourth input, Is my lump sum for permanent impairment payable) |
+| `my worker has claimed compensation from me` | employer | What must I do with my worker's claim; Am I late in passing on my worker's claim; What is the most I can be fined for not passing on my worker's claim in time; Is my insurer taken to have accepted liability for my worker's claim; Must I make provisional payments to my worker; What is the most I can be fined for not making a provisional payment; Is my first payment of income compensation to my worker overdue; What is the most I can be fined for each income compensation payment not made when due |
+
+The Act ties ss 26-29, 31, 36 and 47 to a claim made under s 25 ("within 7 days after a worker claims compensation",
+s 26(1); "within 14 days after a claim is given to an insurer", s 28(1)), and the s 423 consequences to the registration
+of the election. Nothing else in the encoded text turns on a situation of that kind: liability, income compensation,
+medical expenses, the lump sum and suing arise for every injured worker, so those questions take none.
+
+**Decisions.**
+
+1. **reg 4 rounding is not a question.** The baseline exports `rounded to the nearest whole dollar`, a step inside the
+   reg 122, 134 and 23 amounts. No person asks it, so the layer asks the two amounts it feeds (the WPI-varied amount and
+   the maximum weekly rate) and not the rounding. Each of the other 35 baseline exports is asked by the worker, through
+   the baseline function.
+2. **The lump sum question takes the election as an ordinary input.** "Is my lump sum for permanent impairment payable"
+   arises whether or not an election is registered (ss 97(3), 423(1)(c)), so the election is not its situation. It
+   takes `my election to seek damages has been registered` fourth, with the same type and `@desc`, so the form asks it
+   once (as the graffiti layer does with consent, its D8.10 (2)). The baseline's input for the same fact has another
+   name (`I have a registered election to seek damages`); the layer passes its answer there.
+3. **s 27 is new.** The worker's "May I give my claim to the insurer myself" has no baseline function; a helper in the
+   layer works it from ss 26(1) and 27(1). Day 0 is the day of the claim, so the employer's 7 days are days 1-7 and the
+   worker may act from day 8.
+4. **The employer's 7 days are a count, not a date.** "What must I do with my worker's claim" answers a number of days
+   after the claim (7). The claim day is left out (Interpretation Act 1984 s 61(1)(b)), and a last day on a weekend or
+   public holiday would move (s 61(1)(e)), which this layer does not work out.
+5. **Fixed answers settle on the role.** "Must I have an injury management system" (s 159(2)) and the s 159 fine read
+   nothing but the role; the three claim fines read the role and the situation.
+6. **The employer's damages questions fix the defendant.** "Can the court award my worker damages against me" and "Are
+   the damages my worker can get from me capped" call the baseline's s 415/416 function with `my employer`, by the
+   questions' own terms, and then its ss 421(4), (5) and 424 functions.
+7. **Names.** Each question's name is a plain first-person question, different from the baseline function's name so
+   the two modules can be imported together.
+
+**Not covered for the employer.** Return to work programs (s 160); reducing, suspending or discontinuing income
+compensation (ss 62-67); agreeing or disputing the degree of permanent impairment (s 105); dust disease claims
+(Division 9); settlement agreements (ss 149-157); information to the insurer and records (ss 203, 209); the certificate
+of currency (s 212); indemnity from a third party (ss 435-437). Nothing the baseline covers is missing for the worker.
+
+**Checks.** 54 exported questions: 36 for the worker, 18 for the employer. `wcima-qa-cases.l4` has 281 assertions, all
+satisfied: 54 asking each question for the role it is not about, every other input ASSUMEd; 16 asking each situation
+question with FALSE and every later input ASSUMEd; for the worker 87 hand-worked cases, 83 of them also asserted equal
+to the baseline export's answer on the same facts (the four s 27 cases have no baseline function); for the employer 41
+hand-worked cases. 0 errors and 0 warnings in all four files (`wcima-compensation.l4`; `wcima-cases-compensation.l4`,
+70 satisfied; `wcima-qa.l4`; `wcima-qa-cases.l4`); `l4 check wcima-qa.l4` succeeds. A script listed every `@export`
+with its inputs and checked `my role` first everywhere, the three situation inputs identical wherever they occur, each
+role branch reading its situation first, and no DEONTIC or EVENT input. Negative controls: a wrong expected value, and a
+question asked of its own role with ASSUMEd inputs, each fail.
