@@ -137,3 +137,42 @@ None of these is met by a buyer in the lives.
 - Work out "relevant interest" (s 6) and "residential property" (s 3(2)) from facts rather than asking them, with Regulations rr 4 and 5.
 - Add the objection and review procedure (ss 29-32) and the charge's priority and sale (ss 56-59).
 - Link the Duties Act baseline's fact "each transferee is a concessional first home owner" to this encoding's `Am I a concessional first home owner for duty`.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026, following the Graffiti Vandalism Act encoding's design (D2, D4, D8). Nothing in `fhog-grant.l4` or `fhog-cases-grant.l4` was changed: the layer is added, nothing is replaced.
+
+- **Files.** `fhog-qa.l4` (imports `prelude` and `fhog-grant`) and `fhog-qa-cases.l4` (imports those, `fhog-qa`, and `fhog-cases-grant` for its fixtures only; an imported module's assertions are not run).
+- **Role.** `DECLARE Role` has one value: `I am buying or building my first home in Western Australia`. Every exported question takes `my role` first, with `@desc Which of these describes you`.
+  - The Act has one natural seat: the first home buyer, who applies (s 15), owns or will own the home (s 16) and must live in it (s 13). The buyer must give notice and repay if the cap or the residence requirement fails (ss 18(3), 21(2)), may be required to repay (s 51), may object and seek review (ss 28, 31), and commits an offence by false information (s 47).
+  - A spouse or de facto partner matters only within the buyer's own eligibility (ss 3, 7, 11, 12). A partner who also owns the home is an applicant (s 16) and asks as a buyer.
+  - The Act puts no duty on a seller or builder. The garnishee of s 54A is machinery.
+  - The Commissioner and the State Administrative Tribunal are never a seat.
+
+  So the one value is kept, and every Act's layer has the same shape. All 29 baseline exports are asked. Each calls the baseline function and wraps its answer.
+- **Situation inputs.** All are BOOLEAN and all come straight after `my role`. FALSE gives `does not arise for you`, and nothing else is read.
+
+  | Name | Questions |
+  |---|---|
+  | `a grant has been paid on my application` | 8: the s 18(3) and s 21(2) duties to notify and repay, and their 30 days; whether the Commissioner can require repayment (s 51(1)); its 28 days (s 51(4)); the most penalty; the interest under an arrangement (s 52, r 8(3)); the charge on the home (s 55) |
+  | `I have a spouse or a partner I live with` | 1: whether that person is my spouse or de facto partner for the Act (ss 3, 7) |
+  | `I have been given notice of a decision on my application` | 1: the 60 days to object (s 28(1)(a)) |
+  | `my objection has been decided` | 1: the 60 days to apply to the State Administrative Tribunal (s 31(2)) |
+
+  Each of ss 18(3), 21(2), 51, 52 and 55 speaks of a grant paid. The objection time runs from the notice of the decision (s 28(1)(a)), and the review time from notice of the objection decision (s 31(2)). The eligibility, cap, amount and application questions, and the fine, arise for every buyer and take none.
+- **Decisions.**
+  - The baseline's own inputs `paid before completion` (s 18(3)) and `paid in anticipation of residence` (s 21(2), s 55) are kept as ordinary inputs after the situation. They say how the grant was paid, not whether it was.
+  - The 28 days of s 51(4) run from a notice requiring repayment. That notice was not made a separate situation: the question gives a number of days and reads nothing else.
+  - The baseline's fixed answers (12 months, 30 and 28 days, 12.4%, $20 000, 60 days) take no input after the role and situation, so the form can settle them on those alone.
+  - Answer types: `Yes or no`, `Amount`, `Months`, `Days`, and `Rate` (`per cent a year`).
+- **Not covered:** everything the baseline leaves out (the s 14B windows, movable buildings, guardians and death of an applicant, the objection procedure beyond its deadlines, the charge's priority and sale, Part 6A). No question is asked from the partner's own seat.
+- **Cases** (`fhog-qa-cases.l4`): 102 assertions, 102 satisfied.
+  - 11 ask each situation question with the situation FALSE, every later input ASSUMEd.
+  - 91 are where the situation holds. Every question has at least one hand-worked answer, and 29 assert the answer equal to the baseline export's on the same facts, one per question.
+  - There is no other role, so there are no other-role cases.
+
+  Two deliberately wrong assertions both failed: an ASSUMEd applicant read after a TRUE situation, and 30 days for s 51(4).
+- **Checks.**
+  - `l4 check fhog-qa.l4` succeeds.
+  - `l4 run` gives 0 errors and 0 warnings for `fhog-qa.l4`, `fhog-qa-cases.l4`, `fhog-grant.l4` and `fhog-cases-grant.l4` (68 of 68, unchanged).
+  - The parameter script (scratchpad `check_params.py`) confirms that `my role` is first everywhere and that each situation input is identical and second wherever it appears. It also confirms that each role branch reads its situation first, and that no input is DEONTIC or EVENT.
