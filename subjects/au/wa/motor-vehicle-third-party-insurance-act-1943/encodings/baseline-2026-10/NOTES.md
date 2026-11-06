@@ -271,8 +271,9 @@ conveyance; s 8(1) to the judgment. No question takes a situation that arises in
 1. **One question, several roles.** Where the Act gives two roles the same answer from the same rule (what the policy
    covers, s 6(1)(b); the s 10 duties; the s 4(3A) offence), one exported question serves both. The s 6A CISS question
    serves all three: s 6A(2) insures "any person (the injured person)", the at-fault owner or driver included.
-2. **Record inputs are kept.** The baseline's questions take records (`My vehicle`, `The incident`, `What happened to me`
-   and others). The layer takes the same records, so its answers are the baseline's by construction.
+2. **Record inputs are kept, where the form can work with them.** The baseline's questions take records (`My vehicle`,
+   `The incident` and others). The layer takes the same records, so its answers are the baseline's by construction. Three
+   questions take smaller records instead (decision 9).
 3. **The s 10 notice for an owner who was driving** passes the baseline `the driver or person in charge of the vehicle`
    (s 10(1), forthwith); otherwise `the owner, not driving or in charge` (s 10(2)). The repay question does the same with
    `My part in the accident`.
@@ -288,6 +289,37 @@ conveyance; s 8(1) to the judgment. No question takes a situation that arises in
    baseline's own answer types (`Cover answer`, `Employer answer`, `Accident notice answer`, `Claim answer`).
 8. **Questions with a fixed answer** (s 20, s 7(4), s 26, s 29(3), s 30(4), s 3FB) take only the role, so they settle on
    it and the form can drop them.
+9. **Smaller inputs for the form** (fixed 6 November 2026, after verification). The site's form proves that a question
+   does not arise for a role by trying every combination of its open yes/no and choice inputs, and gives up past 1 024.
+   Three questions had more, so the form kept them open for roles they are not about, although the code answers `does
+   not arise for you` from the role alone: the e-bike question for the driver and the injured person (`My vehicle` and
+   the licence: 1 536 combinations), and the two claim questions for the owner and the driver (`What happened to me` and
+   `My claim steps`: 7 168). The layer now asks:
+   - `my e-bike or eRideable` IS A `My e-bike or eRideable`: the four facts the baseline's s 4(9)/(10) rule reads besides
+     the licence (what drives it; whether it must be licensed, and complies; a s 4(9) policy). `the baseline's vehicle
+     for` gives the baseline FALSE for a towed caravan or trailer (an e-bike is neither) and for the four facts the rule
+     does not read (on a road; Crown, visiting, defence). 48 combinations. The owner's two other vehicle questions keep
+     `the vehicle`.
+   - `how I was hurt` IS A `How I was hurt`: the baseline's `What happened to me` with the s 3(7) consequence of the
+     driving and the negligence as one fact, since the baseline reads them only joined by AND. Both claim questions take
+     it, so the form asks it once.
+   - `what I have done about my claim` IS A `What I have done about my claim`: the baseline's `My claim steps` with the
+     s 7(3)(a) search and the s 7(3)(b) notice as one (read only together) and the two bars, s 30(5) and s 29(7), as one
+     (read only as "neither"). 896 combinations with `how I was hurt`.
+   Helpers build the baseline's records, so the answers are the baseline's for every input; cases check the folds
+   against the baseline (a hit-and-run with both s 7(3) steps; a missed time a judge fixed; the door not part of the
+   driving).
+10. **The baseline's `Must I give notice of the accident` on the site: not fixable in the layer.** Found by verification
+   (6 November 2026); the first version of these notes said `my role` was consistent everywhere, which held only inside
+   the layer. The baseline's export `Must I give notice of the accident` (mvtpi-ctp.l4) takes an input named `my role`,
+   of the baseline's type `My role` (the driver or person in charge, the owner not driving, the injured person, a
+   passenger or witness). A deployment lists the exports of the modules the layer imports, and the site's form keeps
+   every export that takes the seat's input by name, so it sends the seat's answer (a `Role` value) to that export, which
+   fails for every role ("unknown enum variant"). The layer cannot rename the baseline's input: layers add, they do not
+   replace. The layer's own s 10 question, "Must I give the Insurance Commission notice of the accident", is right and
+   calls the baseline's function with the baseline's type. The remedy is in the form engine (keep an export for a seat
+   only when its input accepts the seat's value) or a change to the baseline's input name, which Michael would have to
+   approve. The Spent Convictions Act layer meets the same thing.
 
 **Not covered for the driver:** s 14 (recovery of emergency payments from the driver of an uninsured vehicle), the
 s 7(5) proviso, the s 10(3) claim notice as a question of its own, and the driver's own injuries beyond CISS (a driver
@@ -295,10 +327,10 @@ hurt by another vehicle asks as the injured person).
 
 **Checks.** 39 exported questions: 22 asked by the owner, 12 by the driver and 17 by the injured person (the CISS
 question by all three; ten questions by both the owner and the driver). `l4 check mvtpi-qa.l4` succeeds; `l4 run` of
-all four files shows no error and no warning. `mvtpi-qa-cases.l4` has 219 assertions, 219 satisfied: every question for
+all four files shows no error and no warning. `mvtpi-qa-cases.l4` has 225 assertions, 225 satisfied: every question for
 every role it is not about, with every other input ASSUMEd; every situation question with its situation FALSE and every
 later input ASSUMEd; hand-worked answers for each role; and, for each of the baseline's questions, a case that the
 layer's answer equals the baseline export's on the same facts. A script (`check_params.py`, in the session's scratch
-folder) listed every export's parameters and confirmed: `my role` first everywhere; each situation parameter identical
+folder) listed every export's parameters and confirmed: `my role` first everywhere in the layer (but see decision 10); each situation parameter identical
 in name, type and `@desc`, and second, wherever taken; every other shared parameter identical too; no DEONTIC or EVENT
 input.
