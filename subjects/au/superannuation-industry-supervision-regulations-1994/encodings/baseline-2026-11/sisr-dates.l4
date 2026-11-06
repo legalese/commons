@@ -1,0 +1,108 @@
+IMPORT prelude
+
+-- Superannuation Industry (Supervision) Regulations 1994 (Cth) -- the date arithmetic for the claimant's encoding, in one
+-- small module. It uses only the built-in date functions (DATE_FROM_DMY, DATE_SERIAL, DATE_FROM_SERIAL, DATE_DAY,
+-- DATE_MONTH, DATE_YEAR), not the daydate library. Dates are compared by serial.
+--
+-- "N days after" a day is read with that day excluded (Acts Interpretation Act 1901 s 36(1), borrowed, not deposited):
+-- the last day is the day N days later. "N months after" a day ends on the same day of the month N months later; where that
+-- month has no such day, on its last day. A "business day" is read as a day that is not a Saturday or a Sunday; public
+-- holidays need a calendar of the place, which is not deposited, so they are not skipped (NOTES.md, fork register).
+--
+-- Sourced from the Federal Register of Legislation, Commonwealth of Australia, CC BY 4.0 (SOURCE-LICENSE.md).
+-- BASELINE ENCODING. Not for public use as advice. See NOTES.md.
+
+§ `Dates for the SIS Regulations claimant encoding`
+
+GIVEN d IS A NUMBER, m IS A NUMBER, y IS A NUMBER
+GIVETH A DATE
+`the calendar date` d m y MEANS DATE_FROM_DMY d m y
+
+-- Plain days from one day to another (negative if the second is earlier).
+GIVEN `the start` IS A DATE, `the end` IS A DATE
+GIVETH A NUMBER
+`the days from` `the start` `to` `the end` MEANS DATE_SERIAL `the end` MINUS DATE_SERIAL `the start`
+
+-- The day a given number of plain days after a day.
+GIVEN n IS A NUMBER, `the start` IS A DATE
+GIVETH A DATE
+`the date` n `days after` `the start` MEANS DATE_FROM_SERIAL (DATE_SERIAL `the start` PLUS n)
+
+GIVEN a IS A DATE, b IS A DATE
+GIVETH A BOOLEAN
+DECIDE `the day` a `is after` b IF DATE_SERIAL a GREATER THAN DATE_SERIAL b
+
+GIVEN a IS A DATE, b IS A DATE
+GIVETH A BOOLEAN
+DECIDE `the day` a `is on or before` b IF DATE_SERIAL a AT MOST DATE_SERIAL b
+
+GIVEN a IS A DATE, b IS A DATE
+GIVETH A DATE
+`the earlier of` a `and` b MEANS
+    IF DATE_SERIAL a AT MOST DATE_SERIAL b
+    THEN a
+    ELSE b
+
+GIVEN a IS A DATE, b IS A DATE
+GIVETH A DATE
+`the later of` a `and` b MEANS
+    IF DATE_SERIAL a AT LEAST DATE_SERIAL b
+    THEN a
+    ELSE b
+
+-- The number of days in a calendar month (the first of the next month, less the first of this month).
+GIVEN m IS A NUMBER, y IS A NUMBER
+GIVETH A NUMBER
+`the length of month` m `of` y MEANS
+    IF m EQUALS 12
+    THEN 31
+    ELSE DATE_SERIAL (DATE_FROM_DMY 1 (m PLUS 1) y) MINUS DATE_SERIAL (DATE_FROM_DMY 1 m y)
+
+-- A day in a month and year, carried back to the month's last day where the month is shorter.
+GIVEN d IS A NUMBER, m IS A NUMBER, y IS A NUMBER
+GIVETH A DATE
+`the day` d `of month` m `of` y `or the last day` MEANS
+    IF d AT MOST `the length of month` m `of` y
+    THEN DATE_FROM_DMY d m y
+    ELSE DATE_FROM_DMY (`the length of month` m `of` y) m y
+
+-- The same day of the month n months later (n a whole number, 0 or more); a day the later month lacks becomes its last day
+-- (31 January + 1 month is 28 or 29 February; 29 February + 12 months is 28 February).
+GIVEN n IS A NUMBER, `the start` IS A DATE
+GIVETH A DATE
+`the same day` n `months after` `the start` MEANS
+    IF `the month count` GREATER THAN 12
+    THEN `the same day` (n MINUS 12) `months after` (`the day` (DATE_DAY `the start`) `of month` (DATE_MONTH `the start`) `of` (DATE_YEAR `the start` PLUS 1) `or the last day`)
+    ELSE `the day` (DATE_DAY `the start`) `of month` `the month count` `of` (DATE_YEAR `the start`) `or the last day`
+    WHERE
+        `the month count` MEANS DATE_MONTH `the start` PLUS n
+
+-- The day a person born on a day reaches an age in whole years: the anniversary of the birth. Born on 29 February, the
+-- anniversary in a common year is taken as 1 March (the day after 28 February; NOTES.md, fork register).
+GIVEN `the age` IS A NUMBER, `born on` IS A DATE
+GIVETH A DATE
+`the day of reaching age` `the age` `if born on` `born on` MEANS
+    IF DATE_DAY `born on` EQUALS 29 AND DATE_MONTH `born on` EQUALS 2 AND (NOT (`the length of month` 2 `of` (DATE_YEAR `born on` PLUS `the age`) EQUALS 29))
+    THEN DATE_FROM_DMY 1 3 (DATE_YEAR `born on` PLUS `the age`)
+    ELSE DATE_FROM_DMY (DATE_DAY `born on`) (DATE_MONTH `born on`) (DATE_YEAR `born on` PLUS `the age`)
+
+-- DATE_SERIAL of a Monday leaves 1 when divided by 7 (2 November 2026, a Monday, is serial 740286); a Saturday leaves 6 and a
+-- Sunday 0.
+GIVEN d IS A DATE
+GIVETH A BOOLEAN
+DECIDE `is a business day` d IF
+        (NOT (DATE_SERIAL d MODULO 7 EQUALS 6))
+    AND (NOT (DATE_SERIAL d MODULO 7 EQUALS 0))
+
+-- The n-th business day after a day (the day itself is not counted).
+GIVEN n IS A NUMBER, `the start` IS A DATE
+GIVETH A DATE
+`the business day` n `after` `the start` MEANS
+    IF n AT MOST 0
+    THEN `the start`
+    ELSE
+        IF `is a business day` `the next day`
+        THEN `the business day` (n MINUS 1) `after` `the next day`
+        ELSE `the business day` n `after` `the next day`
+    WHERE
+        `the next day` MEANS `the date` 1 `days after` `the start`
