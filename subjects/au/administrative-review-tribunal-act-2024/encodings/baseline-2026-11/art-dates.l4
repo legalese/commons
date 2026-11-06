@@ -1,0 +1,107 @@
+IMPORT prelude
+
+-- Administrative Review Tribunal Act 2024 (Cth) -- the dates, in one small module.
+--
+-- It uses only the built-in date functions (DATE_FROM_DMY, DATE_SERIAL, DATE_FROM_SERIAL, DATE_DAY, DATE_MONTH,
+-- DATE_YEAR), not the daydate library. The stable l4 has no comparison on dates, so dates are compared by serial.
+--
+-- "Within 28 days after" a day is read with that day excluded (Acts Interpretation Act 1901 s 36(1), borrowed, not
+-- deposited): the last day is the day 28 days later. "Within 3 months after" a day (s 84(4)(b)) is read with the
+-- Acts Interpretation Act's month (s 2G, borrowed): the period starts with the next day and ends immediately before the
+-- corresponding day three calendar months on, or at the end of that month if it has no corresponding day.
+--
+-- Sourced from the Federal Register of Legislation, Commonwealth of Australia, CC BY 4.0 (SOURCE-LICENSE.md).
+-- BASELINE ENCODING. Not for public use as advice. See NOTES.md.
+
+§ `Dates for the Administrative Review Tribunal Act 2024`
+
+GIVEN d IS A NUMBER, m IS A NUMBER, y IS A NUMBER
+GIVETH A DATE
+`the calendar date` d m y MEANS DATE_FROM_DMY d m y
+
+-- Plain days from one day to another (negative if the second is earlier).
+GIVEN `the start` IS A DATE, `the end` IS A DATE
+GIVETH A NUMBER
+`the days from` `the start` `to` `the end` MEANS DATE_SERIAL `the end` MINUS DATE_SERIAL `the start`
+
+-- The day a given number of plain days after a day.
+GIVEN n IS A NUMBER, `the start` IS A DATE
+GIVETH A DATE
+`the date` n `days after` `the start` MEANS DATE_FROM_SERIAL (DATE_SERIAL `the start` PLUS n)
+
+GIVEN a IS A DATE, b IS A DATE
+GIVETH A BOOLEAN
+DECIDE `the day` a `is after` b IF DATE_SERIAL a GREATER THAN DATE_SERIAL b
+
+GIVEN a IS A DATE, b IS A DATE
+GIVETH A BOOLEAN
+DECIDE `the day` a `is on or before` b IF DATE_SERIAL a AT MOST DATE_SERIAL b
+
+GIVEN a IS A DATE, b IS A DATE
+GIVETH A DATE
+`the later of` a `and` b MEANS
+    IF DATE_SERIAL a AT LEAST DATE_SERIAL b
+    THEN a
+    ELSE b
+
+-- The number of days in a calendar month (the first of the next month, less the first of this month).
+GIVEN m IS A NUMBER, y IS A NUMBER
+GIVETH A NUMBER
+`the length of month` m `of` y MEANS
+    IF m EQUALS 12
+    THEN 31
+    ELSE DATE_SERIAL (DATE_FROM_DMY 1 (m PLUS 1) y) MINUS DATE_SERIAL (DATE_FROM_DMY 1 m y)
+
+-- The last day of a period of n whole months (n at most 12) after a day, under the Acts Interpretation Act 1901 ss 2G, 36.
+GIVEN n IS A NUMBER, `the day of the event` IS A DATE
+GIVETH A DATE
+`the last day of` n `months after` `the day of the event` MEANS
+    IF `the day number` AT MOST `the length of month` `the target month` `of` `the target year`
+    THEN `the date` (0 MINUS 1) `days after` (DATE_FROM_DMY `the day number` `the target month` `the target year`)
+    ELSE DATE_FROM_DMY (`the length of month` `the target month` `of` `the target year`) `the target month` `the target year`
+    WHERE
+        `the first day` MEANS `the date` 1 `days after` `the day of the event`
+        `the day number` MEANS DATE_DAY `the first day`
+        `the month count` MEANS DATE_MONTH `the first day` PLUS n
+        `the target month` MEANS
+            IF `the month count` GREATER THAN 12
+            THEN `the month count` MINUS 12
+            ELSE `the month count`
+        `the target year` MEANS
+            IF `the month count` GREATER THAN 12
+            THEN DATE_YEAR `the first day` PLUS 1
+            ELSE DATE_YEAR `the first day`
+
+-- s 174(2A): "do not take into account any day in the period starting on 24 December in a year and ending on 14 January
+-- in the next year."
+GIVEN d IS A DATE
+GIVETH A BOOLEAN
+DECIDE `the day falls in the 24 December to 14 January break` d IF
+        (DATE_MONTH d EQUALS 12 AND DATE_DAY d AT LEAST 24)
+    OR  (DATE_MONTH d EQUALS 1 AND DATE_DAY d AT MOST 14)
+
+-- A day inside an excluded window, both ends counted (fork F5 in NOTES.md: "between" the two days read inclusively).
+GIVEN d IS A DATE, `it applies` IS A BOOLEAN, `from` IS A DATE, `to` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `the day` d `falls in the window` `it applies` `from` `to` IF
+        `it applies`
+    AND DATE_SERIAL d AT LEAST DATE_SERIAL `from`
+    AND DATE_SERIAL d AT MOST DATE_SERIAL `to`
+
+-- The last day of a period of n counted days after a day, skipping the days in the break and in up to two windows.
+GIVEN n IS A NUMBER, `the base day` IS A DATE
+      `window one applies` IS A BOOLEAN, `window one from` IS A DATE, `window one to` IS A DATE
+      `window two applies` IS A BOOLEAN, `window two from` IS A DATE, `window two to` IS A DATE
+GIVETH A DATE
+`the last of` n `counted days after` `the base day` `skipping` `window one applies` `window one from` `window one to` `and` `window two applies` `window two from` `window two to` MEANS
+    IF `skipped`
+    THEN `the last of` n `counted days after` `the next day` `skipping` `window one applies` `window one from` `window one to` `and` `window two applies` `window two from` `window two to`
+    ELSE IF n AT MOST 1
+         THEN `the next day`
+         ELSE `the last of` (n MINUS 1) `counted days after` `the next day` `skipping` `window one applies` `window one from` `window one to` `and` `window two applies` `window two from` `window two to`
+    WHERE
+        `the next day` MEANS `the date` 1 `days after` `the base day`
+        `skipped` MEANS
+               `the day falls in the 24 December to 14 January break` `the next day`
+            OR `the day` `the next day` `falls in the window` `window one applies` `window one from` `window one to`
+            OR `the day` `the next day` `falls in the window` `window two applies` `window two from` `window two to`
