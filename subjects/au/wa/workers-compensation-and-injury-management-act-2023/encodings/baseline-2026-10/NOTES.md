@@ -203,20 +203,41 @@ medical expenses, the lump sum and suing arise for every injured worker, so thos
 6. **The employer's damages questions fix the defendant.** "Can the court award my worker damages against me" and "Are
    the damages my worker can get from me capped" call the baseline's s 415/416 function with `my employer`, by the
    questions' own terms, and then its ss 421(4), (5) and 424 functions.
-7. **Names.** Each question's name is a plain first-person question, different from the baseline function's name so
-   the two modules can be imported together.
+7. **Names.** Each question's name is a plain first-person question, different from every baseline function's name
+   even after the site shortens names to their first 60 characters (letters and digits, the rest as hyphens), so the
+   site never runs the baseline's function in the question's place. The first version broke this once: "How much income
+   compensation do I get for my first weeks off work" shortened to the baseline's "... for my first weeks off", so the
+   site answered the employer with the baseline's function and could not drop the question. It is now "For my first
+   weeks off work, how much income compensation do I get" (fixed 6 November 2026, after verification).
+8. **The police officer's death is part of the class** (fixed 6 November 2026). "Am I a worker under the Act" and "Is
+   this person my worker" took the `My engagement` record (7 yes/no fields), the `Prescribed class` (7 values) and a
+   yes/no for whether a police officer died of the injury: 1792 combinations, more than the 1024 the site's form tries
+   before it gives up dropping a question for the other role, so each stayed open for the role it is not about. The
+   death matters only for the police class (reg 16(2)), so the layer asks `Class under the regulations`, whose 8
+   values split the police class in two, and passes the baseline's class and yes/no through two helpers that list
+   every value: 2^7 x 8 = 1024 combinations.
+9. **The s 26(1)/31(2) fine depends on how the employer is insured** (fixed 6 November 2026). The first version
+   answered $5000 to every employer with a claim. Only an insured employer (s 26(1)) and an uninsured employer
+   (s 31(2)) have the duty the fine is for; a self-insurer has neither, and s 31(3) takes out an employer uninsured
+   because its insurer refused indemnity under s 241. The question now takes `how I am insured` and answers `a fine of
+   at most` 5000 or `no fine: you have no duty under s 26(1) or s 31(2) to pass the claim on` (`Fine answer`).
+10. **One description per input name** (fixed 6 November 2026). Inputs that share a name now share one description,
+   worded for either role: `a liability decision notice has been given`, `a deferred decision notice was given`, `a
+   deferred decision notice was given within 14 days`, `my assessed whole of person impairment`, `number of workers`
+   and `the impairment the court finds`.
 
 **Not covered for the employer.** Return to work programs (s 160); reducing, suspending or discontinuing income
 compensation (ss 62-67); agreeing or disputing the degree of permanent impairment (s 105); dust disease claims
 (Division 9); settlement agreements (ss 149-157); information to the insurer and records (ss 203, 209); the certificate
 of currency (s 212); indemnity from a third party (ss 435-437). Nothing the baseline covers is missing for the worker.
 
-**Checks.** 54 exported questions: 36 for the worker, 18 for the employer. `wcima-qa-cases.l4` has 281 assertions, all
+**Checks.** 54 exported questions: 36 for the worker, 18 for the employer. `wcima-qa-cases.l4` has 286 assertions, all
 satisfied: 54 asking each question for the role it is not about, every other input ASSUMEd; 16 asking each situation
-question with FALSE and every later input ASSUMEd; for the worker 87 hand-worked cases, 83 of them also asserted equal
-to the baseline export's answer on the same facts (the four s 27 cases have no baseline function); for the employer 41
+question with FALSE and every later input ASSUMEd; for the worker 88 hand-worked cases, 84 of them also asserted equal
+to the baseline export's answer on the same facts (the four s 27 cases have no baseline function); for the employer 44
 hand-worked cases. 0 errors and 0 warnings in all four files (`wcima-compensation.l4`; `wcima-cases-compensation.l4`,
 70 satisfied; `wcima-qa.l4`; `wcima-qa-cases.l4`); `l4 check wcima-qa.l4` succeeds. A script listed every `@export`
 with its inputs and checked `my role` first everywhere, the three situation inputs identical wherever they occur, each
-role branch reading its situation first, and no DEONTIC or EVENT input. Negative controls: a wrong expected value, and a
+role branch reading its situation first, no DEONTIC or EVENT input, one type and one description per input name,
+and no two exported names (layer or baseline) that shorten to the same first 60 characters. Negative controls: a wrong expected value, and a
 question asked of its own role with ASSUMEd inputs, each fail.
