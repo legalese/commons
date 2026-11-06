@@ -17,7 +17,7 @@ Three files and a case file:
 
 - `fsc-dates.l4` -- the date helpers (built-in date functions only, no daydate import, no `YMD`): plain days, 6 years,
   weekdays and business days;
-- `fsc-claimant.l4` -- 32 exported questions of the claimant, in six `§§` groups, with the s 1056A(1) duty as one
+- `fsc-claimant.l4` -- 34 exported questions of the claimant, in seven `§§` groups, with the s 1056A(1) duty as one
   regulative rule and its trace helper;
 - `fsc-cases.l4` -- the cases.
 
@@ -42,7 +42,7 @@ deliberately wrong assertion was run once in a scratch file, since deleted, and 
 |---|---|---|---|---|
 | `fsc-dates.l4` | 0 | 0 | 0 | 0 |
 | `fsc-claimant.l4` | 0 | 0 | 0 | 0 |
-| `fsc-cases.l4` | 0 | 0 | 199 | 199 |
+| `fsc-cases.l4` | 0 | 0 | 217 | 217 |
 
 Every expected value was worked by hand from the text, and every date from the calendar. The edges: 6 years from 29
 February (to 28 February) and from 31 December; the fifth business day from a Monday, a Saturday and across Easter 2026
@@ -52,7 +52,10 @@ time who complains late, neither notice and one notice; the s 1056A duty done on
 day 28 and late on day 29; the s 1057 28th day and the day after, with and without a Court extension; the 90 days of s
 1317AAD on the 90th and 91st day after; every s 917B, 917C and 917D outcome; each s 961B shortcut and its limits; each
 exclusion in ss 961J(2), (3), 1041H(3), (4), 1053(4), 1317AADA, 1317AAE(2) to (4); the s 1041I(1B) reduction at 0%, 12.5%,
-25% and 100%; the full and short lists of s 1317AE orders.
+25% and 100%; the full and short lists of s 1317AE orders; the s 1317HA order for table provisions and for a provision
+outside the table; the s 1043L(3), (4) amounts for a seller and a buyer, with the price moving each way, and each
+condition of s 1043L(1) failing; the self managed fund answer for a death benefit and for RSA complaints; a complainant and
+a joined person under s 1051(4)(e); a product provided outside this jurisdiction (s 1019A(1)(a)).
 
 ## Seat
 
@@ -64,7 +67,8 @@ exclusion in ss 961J(2), (3), 1041H(3), (4), 1053(4), 1317AADA, 1317AAE(2) to (4
 - the **retail client who bought a financial product** and wants out: "Can I return it, and by what day?";
 - the **investor** misled or kept uninformed: "Can I recover for misleading conduct, how much after my share, by when?",
   "Can I get a compensation order against a listed company, or a director involved, that kept the market uninformed, and by
-  when?";
+  when?", "Can I get a compensation order for a breach of any other financial services civil penalty provision?", "How much
+  can I recover from an insider who traded with me?";
 - the **superannuation member, or person with an interest in a death benefit**, at AFCA: "Is mine a superannuation
   complaint?", "Am I bound by the determination?", "What must AFCA do?", "Can I complain about the death benefit decision,
   and by when must I object or complain?", "Was I told of someone else's complaint in time, and by when must I apply to be
@@ -107,9 +111,13 @@ The 2026-10-18 defaults:
 - **Departure D1: two of the Act's own definitions asked.** "Personal advice" (s 766B(3)) and "retail client" (s 761G,
   with its regulations) are the Act's own, but long and dependent on regulations that are not deposited; they are asked,
   with a gloss. They could be worked out in a later layer.
-- **Departure D2: chained answers as inputs (fork F12).** Five questions take the answer of an earlier one as an input
-  whose description names it (was a Division 2 duty broken; am I an eligible whistleblower; does my disclosure qualify, and
-  how; can the court order a remedy), instead of repeating its facts. The form should ask the earlier question first.
+- **Departure D2: chained answers as inputs (fork F12).** Six questions take the answer of an earlier one as an input
+  whose description names it, instead of repeating its facts: `Which licensee can be ordered to compensate me under s 961M`
+  (was a Division 2 duty broken), `Does my disclosure qualify for protection` (am I an eligible whistleblower), `Am I
+  protected from liability for my disclosure`, `Is my disclosure kept out of evidence against me` and `Was revealing my
+  identity unlawful` (does my disclosure qualify, and how), and `What orders can the court make for me` (can the court
+  order a remedy). The general s 1317HA question takes the contravention itself as an input (for ss 674A(2), (3) the
+  failure-to-disclose question works it out); that is a judgment asked, not a chained answer. The form should ask the earlier question first.
 
 ## Scope
 
@@ -121,7 +129,10 @@ focus names and the claims machinery around them.
 representative). Part 7.7A Division 2, ss 961, 961B (with 961C, 961E in the descriptions), 961F, 961G, 961H, 961J, 961M,
 961P (961K, 961L, 961Q read for finding 1). Part 7.9 Division 5, ss 1019A, 1019B. Part 7.10 ss 1041H, 1041I. s 674A(2),
 (3), (4), with s 1317E(3) (the table, read for which provisions are financial services civil penalty provisions), ss
-1317HA(1), (2), 1317K. Part 7.10A: s 1051(2)(d), (4)(e) (with s 1052), and Division 3, ss 1053, 1053A, 1053B, 1055, 1056,
+1317HA(1), (2), 1317K. s 1317HA(1) also for every other row of the table that column 3 marks "financial services" (ss
+848C(4), 963E to 965, 985E to 985M, 993D(4), 994B to 994J, 1012A(5), 1012B(6), 1012C(11), 1017BA(4B), 1017BB(5AA), 1020A(5),
+1021E(8), 1021G(3), 1023P, 1041A to 1041D, 1043A, 1101AC and regulations under s 1101AD), grouped as one choice, with the
+contravention asked. s 1043L(1), (3), (4) (the insider trading amounts recovered by action under s 1317HA). Part 7.10A: s 1051(2)(d), (4)(e), (f) (with s 1052), and Division 3, ss 1053, 1053A, 1053B, 1055, 1056,
 1056A, 1057. Part 9.4AAA: ss 1317AA, 1317AAA, 1317AAB, 1317AAC, 1317AAD, 1317AADA, 1317AAE, 1317AB, 1317AD, 1317ADA,
 1317AE, 1317AH.
 
@@ -131,8 +142,19 @@ which takes only dates and yes/no facts.
 
 **Out, and why:**
 - Part 7.7A Division 3 (ongoing fee arrangements, ss 962 to 962S) and Divisions 4 and 5 (conflicted remuneration, ss 963
-  to 963L): duties of the licensee, met by the client mostly as an AFCA or s 1317HA claim; s 962S (fees deducted without
-  consent) and s 963E could be added.
+  to 963L): duties of the licensee. Their elements are not encoded; where a row of the s 1317E(3) table makes one a
+  financial services civil penalty provision (ss 963E to 965), the client's s 1317HA claim is asked through the general
+  compensation question with the contravention as a fact. s 962S (fees deducted without consent) could be added.
+- The elements of the other financial services civil penalty provisions (secrecy, s 848C(4); margin lending, ss 985E to
+  985M; s 993D(4); design and distribution, ss 994B to 994J; PDS obligations, ss 1012A(5), 1012B(6), 1012C(11);
+  superannuation dashboards, ss 1017BA, 1017BB; s 1020A(5); ss 1021E(8), 1021G(3); product intervention, s 1023P; market
+  misconduct, ss 1041A to 1041D; insider trading, s 1043A; enforceable codes, s 1101AC): duties of issuers, distributors,
+  lenders, trustees and traders, each a Part of its own. The claimant meets them through s 1317HA, which is encoded with
+  their contravention asked; working out each contravention could be added provision by provision.
+- s 1043L(2), (5), (6) (the issuer's recovery, and ASIC's action for it): the issuer is a company, not this seat. s
+  1043L(7) (relief from liability): for the court. s 1043L(8) onward (registered schemes and passport funds).
+- s 1317H (compensation for corporation/scheme civil penalty provisions) and s 1317HB (market integrity rules and client
+  money reporting rules): other compensation routes, outside the focus.
 - ss 953B, 953C (liability for a defective Financial Services Guide or Statement of Advice) and s 1022B (defective PDS):
   a claimant's route, with a 6-year limit; next to add.
 - ss 1041E, 1041F, 1041G (false statements, inducing by false statements, dishonest conduct): also under s 1041I; could be
@@ -185,7 +207,7 @@ Each line: the provision, the function, the answer taken, the other reading.
   JUST FALSE -- NOTHING (the regulations, not deposited, may allow it).
 - **F11** s 1041I(1) "who suffers loss or damage by conduct ... in contravention of section ... 1041H" -- `Can I recover
   my loss for misleading or deceptive conduct` -- conduct that is not misleading, or no loss, is JUST FALSE -- NOTHING.
-- **F12** chained answers -- five questions (departure D2) -- an earlier answer taken as an input -- the earlier facts
+- **F12** chained answers -- six questions (departure D2) -- an earlier answer taken as an input -- the earlier facts
   repeated.
 - **F13** s 1053(1) "is a superannuation complaint if the complaint is" (a) to (j) -- `Is my complaint a superannuation
   complaint` -- JUST FALSE outside the list (an "if"); s 1053B keeps an ordinary AFCA complaint open -- NOTHING (the list
@@ -213,12 +235,15 @@ Each ruling is recorded again, word for word, in the `NOTES.md` of each row that
 
 **How this encoding applies them.** JUST FALSE where the text says no in its own words: s 961G ("must only ... if"), the
 s 961J(2), (3) exclusions ("does not apply"), s 1019A(1) ("applies if") and s 1019B(3), (5) ("can only", "cannot"), s
-1041H(3), (4) ("does not contravene"), s 674A(2) and s 1317HA(1) ("if"), s 1053(1), (4), s 1056(1), (2), (3) ("cannot
+1041H(3), (4) ("does not contravene"), s 674A(2) and s 1317HA(1) ("if", including a provision that is not a
+financial services civil penalty provision), s 1043L(1), (3), (4) ("If", "the amount (if any)": 0 where they fail), s
+1051(4)(e)(ii) ("not binding on complainants"), s 1053(1), (4), s 1056(1), (2), (3) ("cannot
 ... unless", "cannot ... if"), s 1057(2) (a period the text fixes), s 1317AAA ("is ... if"), ss 1317AA, 1317AAD ("qualifies
 ... if"), s 1317AAE(1), (2), (4), s 1317AD(1), (2), (2A) ("if"), s 1317AH(3) ("only if"). NOTHING, tagged, where the text
 does not answer: outside s 961(1) (limited by its own wording); outside s 1041H(1)'s "in this jurisdiction ... in
 relation to a financial product or a financial service" (limited by its own wording); an entity not under s 674A(1)
-(limited by its own wording); a non-party or a question of fact under s 1057(1) (a grant limited in its own wording); an
+(limited by its own wording); a non-party or a question of fact under s 1057(1) (a grant limited in its own wording); a person joined to a
+superannuation complaint under s 1051(4)(e) (silent); an
 entity outside s 1317AAB (open list); s 1317AB for a non-qualifying disclosure, and s 1317AB(1)(c) for the routes it does
 not name (silent). The s 917A(1) case returns the constructor `Division 6 does not reach this conduct`, which is read as
 NOTHING-kind (limited by its own wording).
@@ -278,3 +303,22 @@ NOTHING-kind (limited by its own wording).
 - ss 953B, 1022B and 1041E to 1041G added beside s 1041H, and Division 2A, so that a misled investor's whole claim can be
   answered.
 - The AFCA Rules are not the Act; they set most of a non-superannuation complainant's limits and are not in Commons.
+
+## Corrections after the independent verification (2026-11-07)
+
+- s 1317HA was encoded only for ss 674A(2), (3). It now has a general question for every financial services civil penalty
+  provision in the s 1317E(3) table, and s 1043L(3), (4) give the insider trading amounts; the rest of the table is listed
+  under Scope with its reason.
+- `Am I bound by AFCA's determination` offered the financial firm as the user's role, a second seat. It now offers the
+  complainant (JUST FALSE) and a person joined to a superannuation complaint (NOTHING, the text being silent).
+- The cooling-off question now asks s 1019A(1)(a)'s "provided in this jurisdiction".
+- The self managed fund answer in s 1053 is no longer used for the RSA complaints of s 1053(1)(f) to (i), which s 1053(4)
+  cannot reach. It is still used for (a), (b), (e) and (j) as well as (c) and (d): s 1053(4)(a) takes out any "decision made
+  by a trustee of a self managed superannuation fund", which can be a decision of those kinds.
+- s 1051(4)(f) (no limits on the value of superannuation claims or remedies) is now in the AFCA question's description.
+- The counts above (seven groups; six chained questions) are corrected. The commit that added this encoding (908982763)
+  listed Part 7.10A without ss 1053A and 1053B; this file and `encoding.json` always included them, and
+  `fsc-claimant.l4`'s header now does too.
+- Not changed: the "relative" connection in `Am I an eligible whistleblower`. s 1317AAA(g) makes "a relative of an
+  individual referred to in any of paragraphs (a) to (f)" eligible; (a) to (e) apply to every regulated entity, so a
+  relative qualifies for any entity, not only a superannuation entity.
