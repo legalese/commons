@@ -219,3 +219,107 @@ later encoding of Part 4.
   warrant of commitment inquiries) deserves its own encoding from the seat of the
   offender.
 - No decided cases were searched.
+
+## Q&A layer (seat and situations as parameters)
+
+Added on 6 November 2026 (batch qa1), on Michael's approval of the design of the graffiti encoding's seat layer
+(`subjects/au/wa/graffiti-vandalism-act-2016/encodings/baseline-2026-10/`, its D2, D4 and D8). The layer is
+`fpine-qa.l4`, and its cases are in `fpine-qa-cases.l4`. It imports `prelude` and `fpine-infringements`. The baseline's
+files are unchanged: the layer adds to them and replaces nothing.
+
+**Roles.** Every exported question takes `my role` IS A `Role` first ("Which of these describes you"). A question about
+the other role answers `does not arise for you` without reading any other input.
+
+- `I have been given an infringement notice`: the baseline's seat, the "alleged offender" (s 11). It has 22 questions:
+  - 21 of the baseline's exports, each calling the baseline function;
+  - "Can an approved sponsor apply for a work and development permit for my infringement", which is settled on the role
+    alone (finding 1: no).
+
+  The baseline's court-fine branch of that question, and its mentoring question (s 46A(e)), are asked of the second seat.
+- `I have been fined by a court`: a court fine is a Part 4 fine (s 28(1)). Two kinds of question arise for this person:
+  - the work and development permit (ss 4A, 46A-46C);
+  - once a warrant issues, what the Sheriff cannot seize. Part 7 applies to "an enforcement warrant issued under Part 3,
+    4 or 6" (s 63, "warrant"), and so s 75 with r 8 does.
+
+  4 questions.
+
+The Registrar, the prosecuting authority, the Sheriff, the Magistrates Court and an approved sponsor are not seats.
+Neither is a body corporate (s 19(4)): the baseline does not encode it.
+
+**Situation inputs.**
+
+| Name | Type | Role | Questions, and the values that give `does not arise for you` |
+|---|---|---|---|
+| `the latest document I have been given` | `Stage` (the baseline's) | notice | 13 gated questions. Each arises only at the stage the Act ties its step to, and every other stage gives `does not arise for you`:<br>- a final demand (s 14): `the infringement notice`;<br>- registration (ss 15, 16): `a final demand`;<br>- a notice of intention to enforce (s 18): `an order to pay or elect`;<br>- suspension (s 19): `a notice of intention to enforce`;<br>- asking for, and the duty of, cancellation (ss 20, 20A): `a licence suspension order`;<br>- a warrant (s 21A): `a notice of intention to enforce` or `a licence suspension order`;<br>- a time to pay order, applying and must the Registrar give one (ss 21B, 21C): any stage from `an order to pay or elect` on;<br>- the election (ss 14(4)(b), 21): any stage but `the infringement notice`;<br>- the warrant's cancellation (s 101AA), the protected value and seizure (s 75): `an enforcement warrant`.<br>4 more take the stage as an ordinary input, with no gate: the days a step gives, the fees, what I must pay now, and whether I am taken to be convicted. |
+| `the proceedings were withdrawn` (the baseline's own input) | BOOLEAN | notice | 1: the s 22(5)(a) refund. FALSE gives `does not arise for you` |
+| `an enforcement warrant has been issued against me` | BOOLEAN | court fine | 2: the protected value and seizure (s 75, r 8). FALSE gives `does not arise for you` |
+
+The `@desc` texts are in `fpine-qa.l4`, and in `encoding.json` under `qa_layer.situation_parameters`, which lists for
+each stage-gated question the stages that give `does not arise for you`.
+
+**Decisions.**
+
+- QA1. **The stage is the situation.** Part 3 is a sequence: each step may be taken only after the document before it
+  (ss 14, 15, 18, 19, 21A). So a step's question arises at the stage it is tied to.
+  - Before that stage the step is not yet open. After it, the step is past. Both give `does not arise for you`.
+  - Where a stage the question covers still answers no, the no is kept. The election (s 21(1)(d)) and a time to pay
+    order (s 21B(3)(b)(i)) are both barred once a warrant issues, and a person at that stage is told no, as the
+    baseline says (graffiti D8.1).
+  - The questions that do not belong to one step (Part 3's application, the days, the fees, what I owe, s 26, the
+    remote test, s 24) take the stage, where they need it, as an ordinary input under the same name. So the form asks
+    for it once.
+- QA2. **The baseline's record is built from plain inputs.** `My infringement` has 18 fields. Each question takes, as
+  plain inputs, only the fields its rule reads (worked out from the baseline's functions, `Does Part 3 apply` and
+  `the matter is still live` included). The layer's `the infringement from` passes a fixed placeholder for the rest,
+  which those rules never read. The stage field is the input `the latest document I have been given`, renamed so that
+  no input is spelled like a record field.
+- QA3. **The work and development permit.** For the person given a notice, the question is settled on the role: no
+  (finding 1). The baseline is asked with the debt `an unpaid infringement notice under Part 3` and placeholders for
+  its other two inputs, which it does not read for that debt. The court-fine question and the mentoring question are
+  the second seat's.
+- QA4. **The answer types carry the baseline's sentinels as words.**
+  - The baseline's 0 days, "no period set by this Act", is `no period is set by this Act`.
+  - Its -1 protected value is `protected whatever its value`, and its 0 is `not protected`.
+
+  Each comparison case still checks that the layer's answer is the baseline's, carried into these types.
+
+**Not covered for the person fined by a court.**
+
+- Part 4 beyond the work and development permit: the court-fine process, ss 41-55, and its licence suspension;
+- the publication of names (Part 4A);
+- Part 5;
+- Part 7 beyond s 75: seizure and sale, land, vehicles, garnishee orders, and the protected earnings of rr 8AA and 8AC;
+- time to pay for a court fine.
+
+The baseline encodes none of these, and the deposit was read here only to confirm that s 75 reaches a Part 4 warrant
+(s 63).
+
+**Cases.** `fpine-qa-cases.l4` has 216 assertions. All 216 are satisfied, with 0 errors and 0 warnings, on the stable
+`l4` of VS Code extension 1.6.98 with `JL4_LIBRARY_PATH` unset. They are:
+
+- 26 cases that ask each question for the role it is not about, with every other input ASSUMEd;
+- 55 cases that ask each question with a situation input, for its own role, with each value under which it does not
+  hold and every later input ASSUMEd: 54 stage values and one refund case for the person given a notice, and 2 for
+  the person fined by a court (57 in all);
+- 62 cases for the person given a notice against values worked by hand, most taken from the baseline's cases (Jake's
+  eRideable notice, k042). The same 62 are asserted again against the baseline export's own answer on the same facts.
+  For those comparisons the cases build the baseline's record field by field (`a notice with`), apart from the
+  layer's builder;
+- 9 cases for the person fined by a court, worked by hand from the text.
+
+**Negative controls.** Each of these fails, as it should:
+
+- a stage question for its own role with an ASSUMEd stage, which shows that the stage helpers have no OTHERWISE;
+- a registration question with the stage holding and an ASSUMEd number of days;
+- a wrong fee.
+
+**Other checks.**
+
+- The parameter script (`check_params.py`, in the batch scratchpad) checked that:
+  - `my role` is first in each of the 26 questions;
+  - the three situation inputs are second, and identical in name, type and `@desc` wherever they occur;
+  - each gated role branch reads its situation input first (17 questions take the stage, 13 of them gated);
+  - no input is DEONTIC or EVENT.
+- No input name carries two `@desc` texts.
+- `l4 check fpine-qa.l4` succeeds.
+- `fpine-infringements.l4` and `fpine-cases-infringements.l4` (48 of 48) still run with no error or warning.
