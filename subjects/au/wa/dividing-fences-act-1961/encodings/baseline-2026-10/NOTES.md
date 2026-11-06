@@ -168,3 +168,92 @@ in. Everything else is either rare for the seat or machinery.
   add any procedure or limit to applications under ss 9, 13 and 15.
 - Read the Community Titles Act 2018 bylaws regime for the townhouse in Chloe's
   chapter 8. There, s 6(2) hands the question to the bylaws.
+
+## Q&A layer (seat and situations as parameters)
+
+Added on 6 November 2026, following the graffiti encoding's design (D2, D4, D8).
+
+- **Files.** The layer is `dfa-qa.l4`. Its cases are in `dfa-qa-cases.l4`.
+- **Imports.** It imports `prelude` and `dfa-fences`. It changes none of the baseline's rules or exports.
+- **The role comes first.** Every exported question takes `my role` first ("Which of these describes you").
+- **Other roles.** For a role a question is not about, the answer is `does not arise for you`, and no other input is read.
+
+**Roles.** The baseline's one seat, the neighbouring owner, is two people who ask different questions. The Act adds a third.
+
+- `I own land and want a dividing fence built or repaired`. This owner gives the notices, builds, claims half, and enters
+  the neighbour's land.
+- `I own land and my neighbour wants me to share the cost of a dividing fence`. This owner receives the notices and claims.
+  They can be made to pay under ss 7, 10, 13 and 15.
+- `I rent land that a dividing fence borders`. s 19 divides an owner's contribution between landlord and tenant. A tenant
+  with 5 or more years left is an owner (s 5).
+
+The Magistrates Court is never a seat.
+
+**Situation inputs.** All three are BOOLEANs, and FALSE gives `does not arise for you`. Each comes straight after `my role`.
+Each is identical in name, type and `@desc` in both owner roles.
+
+| Name | Questions |
+| --- | --- |
+| `a notice to fence has been given between my neighbour and me` | s 9, applying to the court (both owners). s 10, building the whole fence (wanting the fence), and its mirror, the neighbour building it against me (asked to pay). 4 questions. The baseline's `a notice to fence was given by me or to me` is TRUE by it |
+| `my neighbour has claimed half the value of a fence they built` | s 13(3), (4), (7): must I pay the claim (asked to pay) |
+| `my land is let to a tenant` | The landlord's part of the contribution, s 19(1) (both owners) |
+
+**Decisions.**
+
+- **D-QA1. The baseline's 13 questions are spread over the roles.** 11 go to the owner wanting the fence. "I have
+  received a claim for half ... must I pay it" (s 13(3)) goes to the owner asked to pay. s 19's tenant question goes to the
+  tenant. The questions about who is an owner, the sufficient fence, the share, the contribution, the notice's validity,
+  s 9 and s 21 are asked in both owner roles, by the same functions.
+- **D-QA2. The s 15 rule is turned round for the owner asked to pay.** "What can my neighbour recover from me for
+  repairing" uses three helpers, each listing every value with no OTHERWISE:
+  - the first turns the person's own facts into the baseline's frame. "My neglect" becomes "my neighbour's neglect", and
+    the person's reply becomes the baseline's reply;
+  - the second calls the baseline's function;
+  - the third turns its answer back into the person's frame (`What my neighbour can recover from me for a repair`).
+
+  The amount question for this role takes the facts and the cost. The baseline's amount question takes the answer itself
+  as an input, which the layer keeps for the owner wanting the fence.
+- **D-QA3. s 10 against me.** "Can my neighbour build the whole fence and recover half from me" is the baseline's s 10
+  function. My own part not done is the part the other owner has not done.
+- **D-QA4. Added from the text.**
+  - The landlord's part is one less the tenant's part under s 19(1): the whole, three-fourths, one-half or none.
+  - The tenant's recovery or set-off of an excess comes from s 19(2).
+  - "Am I, as a tenant, treated as an owner" is the baseline's s 5 function with `I hold a lease`.
+- **D-QA5. No situation for s 13(2) or s 15.** The s 13(2) claim settles on `I gave a notice to fence before building` as
+  the baseline does. The s 15 questions settle on the cause: a storm or accident needs no notice (s 15(7)(b)). Both arise
+  for every owner in their role.
+
+**Not covered for the new roles.**
+
+- The owner asked to pay: s 11 (an owner who cannot be found, and what follows for the owner found later), s 12 surveys,
+  s 16 road fences, and s 20 (a purchaser under an option, which the baseline leaves out).
+- The tenant: what a tenancy agreement says, beyond "unless otherwise agreed" (s 19(1)).
+- The tenant: the residential tenancy law.
+
+**Counts.** There are 27 questions: 12 for the owner wanting the fence, 12 for the owner asked to pay, and 3 for the
+tenant. `dfa-qa-cases.l4` has 157 cases:
+
+- 54 ask each question for the two roles it is not about, with every other input ASSUMEd;
+- 7 ask each situation with FALSE, with every later input ASSUMEd;
+- 96 are worked by hand where the situation holds: 51 for the owner wanting the fence, 36 for the owner asked to pay, and
+  9 for the tenant.
+
+Of the 96, 13 assert that the answer equals the baseline export's on the same facts. There is one for each baseline
+question, in the role it went to.
+
+**What the "not read" cases cannot show.** The baseline reads its enumerations through CONSIDER, some with OTHERWISE
+(graffiti finding 31). For those inputs, "not read" rests on the parameter script's check that each question reads the
+role first and then the situation.
+
+**Checks.** Stable l4 (VS Code extension 1.6.98), with `JL4_LIBRARY_PATH` unset:
+
+- 0 errors and 0 warnings in all four files;
+- 197 assertions satisfied (40 baseline + 157 layer);
+- `l4 check dfa-qa.l4` succeeds.
+
+The parameter script (`check_params.py`, session scratchpad) checked all 27 questions:
+
+- `my role` comes first in each;
+- every shared parameter is identical in type and `@desc`;
+- each situation comes straight after the role;
+- no question takes a DEONTIC or EVENT input.
