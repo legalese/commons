@@ -153,3 +153,95 @@ So the encoding covers:
 - Only a security officer's licence is worked through the issue test. The other licence types share s 52, but differ in courses, examinations and age (s 52(1)(b) sets 18 only for agent's, security officer's and crowd controller's licences).
 - The State Administrative Tribunal's powers (s 67), the court's powers (s 69) and the endorsement cancellation procedure (s 68) are named, not worked out.
 - There has been no independent test pass and no human gate. The fixture facts the scenario does not state (course, examination, no baton) are assumptions.
+
+## Q&A layer (seat and situations as parameters)
+
+Added on 6 November 2026, after the graffiti encoding's design (D2, D4, D8). The baseline's files are unchanged; the layer is added beside them.
+
+- `sarca-qa.l4` imports `prelude`, `daydate` and `sarca-licensing`. It has 42 exported questions.
+- `sarca-qa-cases.l4` imports the same and `sarca-qa`. It has 250 cases.
+
+### Roles
+
+`my role` (`Role`, "Which of these describes you") is the first input of every question. A question about another role answers `does not arise for you` and reads nothing else.
+
+- **`I work, or want to work, as a security officer`**: the baseline's seat (Jake, k060). It has 31 questions, one for each baseline export. Each calls the baseline's function and wraps the answer: `yes if` for a BOOLEAN, `amount` or `disqualified for` for a number, and `the answer is` for the baseline's own enumerations.
+- **`I run a business that supplies security officers to others`**: a security agent (s 11). The Act puts four duties on it:
+  - s 15: its own licence, held for a company by a director or officer (s 43);
+  - s 19: the licensed officers it supplies must be its employees;
+  - s 20: it must not employ an unlicensed officer;
+  - s 21: it must not advertise without the licence.
+
+  It has 6 questions.
+- **`I hire or employ security for my own property`**: the client (d04b's Jarrah). It meets three provisions:
+  - s 12(2): an in-house guard is not a security officer unless the guard has another employer or carries a firearm or baton;
+  - s 20: such a guard may be employed only with a licence;
+  - s 15: the firm it hires must be licensed.
+
+  It has 5 questions.
+
+The licensing officer, the Commissioner, the State Administrative Tribunal and the courts are not seats.
+
+### Situation inputs
+
+Each comes straight after `my role`. When it does not hold, the question answers `does not arise for you` without reading anything else.
+
+| Input | Type | Does not arise when | Questions |
+|---|---|---|---|
+| `I hold a security officer's licence` | BOOLEAN | FALSE | The officer's 11 licensee questions: s 19 terms, baton, firearm, renewal on time, may it be renewed, the shift, the identity card, must I tell, did I tell in time, s 67A, the drug sample |
+| the same | | TRUE | "May I be employed as a security officer before my licence is issued" (s 20). The question is about the time before issue. While no licence is held, it gives the baseline's answer on FALSE (no) |
+| `I have a past charge or other matter for an offence` | BOOLEAN | FALSE | The three questions on one past matter (ss 4A, 4B, reg 25) |
+| `the licensing officer refused to issue me a licence` | BOOLEAN | FALSE | The s 57(1) reasons question |
+| `the licensing officer refused to renew my licence` | BOOLEAN | FALSE | The s 57(2) notice question |
+| `I am said to have committed an offence under this Act` | BOOLEAN | FALSE | The officer's 3 penalty questions and the business's 2 |
+| `how I get security for my property` | `How I get security for my property` | `I hire a security firm to supply guards` (the 4 own-guard questions); `I employ my own guard` (the hired-firm question) | The client's 5. `I do both` opens all five |
+
+These questions take no situation input, because they arise in every situation of their role:
+
+- what my work is, may I do it unlicensed, and must the business I work for be licensed;
+- "Am I a prohibited person on this day", over all my matters;
+- the issue test, the training course, the fee and the term;
+- review.
+
+### Decisions
+
+- **One input with two meanings of not arising.** The licence input serves both kinds of question. The s 20 question takes it inverted, because it asks about the time before issue. Its name, type and @desc are the same as everywhere else, so the form asks it once.
+- **The offence input is shared by two roles.** The officer and the business use the same input, word for word.
+- **Two helpers read the client's situation.** They are `I employ my own guard, in` and `I hire a security firm, in`. Each lists every value, with no OTHERWISE (graffiti finding 31).
+- **The client's s 12 question runs the baseline's test.** It builds a `My work` record (`the work of my own guard`) and runs the baseline's `Am I a security officer` on it. It does not restate s 12.
+- **The business's s 19 question runs the baseline's s 19 function.** It passes the role's facts: the officer is licensed, and the business supplies officers' services.
+- **New helpers give the business's fines.** s 15, s 20 and s 21 each carry $15 000. The modified penalty is $500 under Sch 5 Div 1, items 1, 7 and 8. The fine is the one each section states. Whether the Sentencing Act 1995 sets a higher maximum for a body corporate is not in the deposit and is not encoded.
+
+### Not covered for the new roles
+
+For the security business:
+
+- the agent's licence application and its fees (not encoded in the baseline either);
+- records (ss 78, 84-87);
+- crowd control and inquiry agents (Parts 4, 5);
+- the firearms it provides (Sch 1 cl 9(1)), apart from the officer's own question.
+
+For the client: crowd controllers at a venue (s 35), and whether the client is itself a security agent. A client who is a security agent should take the business role.
+
+### Cases
+
+The 250 cases in `sarca-qa-cases.l4` are:
+
+| Kind | Cases |
+|---|---|
+| Each question for the two roles it is not about, every other input ASSUMEd | 84 |
+| Each situation question for its own role, with each value under which the situation does not hold, later inputs ASSUMEd | 27 |
+| Own role, worked by hand | 76 |
+| Officer answer equal to the baseline export's answer on the same facts | 56 |
+| Mirror cases and `I do both` | 7 |
+
+The mirror cases are d04b's in-house guard, asked from the guard's seat and the client's, and Sentinel's licence, asked from all three seats.
+
+All 250 cases are satisfied, as are the baseline's 69. There are 0 errors and 0 warnings. `l4 check sarca-qa.l4` succeeds.
+
+A scratch script checked every @export:
+
+- `my role` is first;
+- each situation input is identical in name, type and @desc wherever it is used;
+- no input is DEONTIC or EVENT;
+- each role branch reads its situation first.
