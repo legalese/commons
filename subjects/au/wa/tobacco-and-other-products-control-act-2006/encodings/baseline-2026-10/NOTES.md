@@ -158,3 +158,80 @@ addressed to businesses or regulates places, and is left out:
   possession as no federal offence below the commercial quantity. The WA personal
   use quantity is a separate line, set by WA regulations that are not deposited.
   Its relation to the Commonwealth figure is not known here.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026 (batch qa11), following the graffiti model
+(`../../../graffiti-vandalism-act-2016/encodings/baseline-2026-10/`, D2, D4, D8). The baseline files are unchanged;
+the layer is added beside them: `topca-qa.l4` (imports `prelude` and `topca-minor`) and `topca-qa-cases.l4` (which
+also imports `daydate`, for the dates in its cases, as the baseline cases do).
+
+### Roles
+
+Every exported question takes `my role` IS A `Role` first ("Which of these describes you"), and answers
+`does not arise for you` for a role it is not about without reading any other input.
+
+| Role | Why | Questions |
+|---|---|---|
+| `I am under 18, and have or want tobacco, a smoking implement or a vape` | the baseline's seat | 18 |
+| `I sell or supply tobacco products, smoking implements or vapes` | ss 6, 12, 13, 15(1), 30A and 106 are the seller's | 8 |
+| `I am a parent or other adult asked to buy, give or pass on tobacco or a vape for someone under 18` | ss 6, 7 and 30A reach the adult who buys for, gives to or passes on to a young person ("supply" includes giving); s 101 lets a parent be told | 5 |
+
+Investigators and police officers are not seats. There are 25 questions; two (the edition, and whether an item is a
+prohibited product) are asked of all three roles, one (s 101) of the young person and the adult, and one (the sale or
+supply offence) of the seller and the adult.
+
+### Situation inputs
+
+Each is placed straight after `my role`; when it does not hold the question answers `does not arise for you` and reads
+nothing else. A shared input has one name, type and `@desc`.
+
+| Input | Type | Does not arise when | Questions |
+|---|---|---|---|
+| `someone sold or supplied the item to me` | BOOLEAN | FALSE | Was selling or supplying this item to me an offence; Was selling me this look-alike an offence; What is the most the seller who sold to me can be fined under s 6; Does the seller who sold me tobacco have the s 13 defence |
+| `who found the young person` | `Who found me` (the baseline's) | `someone else` | May the item be taken from me by an investigator or police officer; May force be used to take the item from me; Must I give my details when asked; What is the most I can be fined for refusing or lying when asked; May a parent be told of the finding (young person, adult) |
+| `the item was taken from me` | BOOLEAN | FALSE | What happens to my item after it is taken |
+| `I am said to have sold or supplied tobacco to someone under 18` | BOOLEAN | FALSE | Do I have the s 13 defence (seller) |
+
+### Decisions
+
+- **Who found the young person is the situation of ss 99-101.** The baseline's own `Who found me` enum is the input; only
+  an investigator or a police officer (s 79(1)) has the powers, so `someone else` gives `does not arise for you`. The
+  test reads the enum with EQUALS (no OTHERWISE, graffiti finding 31). Where it holds, the baseline is called with the
+  same value, so its answers are unchanged.
+- **The seller's and the adult's sale or supply question** builds the baseline's `My item` from the item, the day, the
+  age of the person it goes to and the s 30A(3) conditions, with the quantities 0 (the sale and supply rule reads no
+  quantity), and runs the baseline's `Was the supply to me an offence`. Mirror cases show it answers as the young
+  person's question on the same facts.
+- **The adult's words.** One of the four answers of the baseline's s 7 question speaks as the young person ("s 30A, by
+  supplying it to me"). For the adult, a helper rewords that one answer "s 30A, by supplying it to the young person";
+  the young person's question keeps the baseline's words.
+- **The edition and prohibited-product questions** arise for every role and take no situation.
+- **The young person's possession questions** take no situation: the role is someone with, or wanting, the item, and
+  the baseline's `My item` record states it.
+- **The seller's s 6 fine** takes the seller's own inputs ("I am a body corporate", "it would be my second or later
+  offence"); the young person's question keeps the baseline's wording about the seller.
+
+### Not covered for the new roles
+
+- **Seller:** licensing (Pt 2 Div 2, Pt 4), possession for sale (s 18AA), display and signage
+  (ss 22-26), advertising (Pt 3), prosecutions and closure orders; the seller's own s 30B possession.
+- **Adult:** smoking in a car with a child under 17 (s 107A-107D, not in the baseline), and what a parent is told or
+  given under s 101(b) (the approved guide).
+
+### Cases
+
+`topca-qa-cases.l4` has 151 cases, all satisfied:
+
+- 44 ask each question for each role it is not about, with every other input ASSUMEd;
+- 12 ask each situation question, for its own roles, with each value under which the situation does not hold, the
+  later inputs ASSUMEd;
+- 95 are worked by hand from the text; 18 of them assert the young person's answer equal to the baseline export's own
+  on the same facts, and 3 are mirror cases between two seats.
+
+The items are the baseline cases' own fixtures, copied unchanged. The role and situation cases are generated from the
+exports' parameter lists by a script in the batch's scratch folder, which also checked every export: `my role` first;
+each parameter name with one type and one `@desc` across the file; each situation second and read first in every role
+branch; no DEONTIC or EVENT input. Three negative controls (an ASSUMEd finder read, the adult's answer in the young
+person's words, an ASSUMEd date read) failed as they should. All four files of the encoding run with 0 errors and 0
+warnings, and `l4 check topca-qa.l4` succeeds.
