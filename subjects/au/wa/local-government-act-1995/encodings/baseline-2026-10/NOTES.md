@@ -105,3 +105,42 @@ Left out:
 - Encode the Rates and Charges (Rebates and Deferments) Act 1992 as its own encoding, and link its entitlement to the `I am entitled to a rebate or deferment` input here.
 - Check whether the COVID-19 Response Order modifications still have any effect.
 - Run the Legalese Studio stages this baseline skipped: Resolve, Refine and Test, an independent test pass, and the human gates.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026 (qa2). Two files, beside the baseline, which is unchanged: `lga-qa.l4` (IMPORTs `prelude` and `lga-rates`) and its cases `lga-qa-cases.l4` (IMPORTs `prelude`, `lga-rates` and `lga-qa`). It follows the design of the Graffiti Vandalism Act layer (`../../../graffiti-vandalism-act-2016/encodings/baseline-2026-10/`, D2, D4 and D8): one deployment serves every seat, so the site's question form can drop the questions that do not arise.
+
+**Roles.** Every exported question takes `my role` IS A Role first (`@desc Which of these describes you`), and answers `does not arise for you` for the other role without reading any other input.
+
+- `I own land in a local government district`: the baseline's seat, the ratepayer (s 6.44(1)). 41 questions.
+- `I rent or occupy land that someone else owns`: the lessee or occupier, on whom Division 6 puts its own duties and liabilities: rent paid to the local government on a s 6.60 notice, disclosing the owner on request (s 6.61), a service charge on occupiers (s 6.38(1)(b)). 10 questions.
+- The local government, the Minister, the Valuer-General and the State Administrative Tribunal are not seats. A buyer is an owner, so the buyer's s 6.52 questions are the owner's, in a situation.
+
+**Situation inputs.** Each comes straight after `my role`, and when it does not hold the question answers `does not arise for you` and reads nothing else. One input per situation, the same name, type and `@desc` wherever it is taken.
+
+| Input | Type | Does not arise when | Questions |
+|---|---|---|---|
+| `my land became rateable during the financial year` | BOOLEAN | FALSE | s 6.53 share |
+| `I became the owner part way through the period the rates are for` | BOOLEAN | FALSE | s 6.52(1)(a) share; s 6.52(3) |
+| `my local government imposes differential general rates` | BOOLEAN | FALSE | s 6.33(3) limit. Also an ordinary input (3rd) of "Where does my complaint go", read only for a rating-category complaint |
+| `my rates for this year have been reassessed` | BOOLEAN | FALSE | s 6.40(3)(a) refund. Also the ordinary input of "How may I pay my rates" (s 6.45(2)), which every owner asks |
+| `I pay my rates by instalments` | BOOLEAN | FALSE | s 6.45 instalment amount; s 6.50(3) instalment due date; s 6.41(2)(b) instalment notice |
+| `my unpaid rates` | `My unpaid rates`: `none of my rates is unpaid after its due date`, `some of my rates are unpaid after their due date`, `the local government has taken possession of my land for unpaid rates` | the first value for six questions (s 6.51 interest runs, highest rate, amount; s 6.56 suing; s 6.64(1) possession; s 6.64(3) caveat); the first two values for two (s 6.67(1) giving the land back; s 6.69 stopping a sale) | 8 |
+| `my objection to the rate record` | `My objection`: `I have not objected to the rate record`, `I have objected, and my objection has not yet been decided`, `the local government has decided my objection` | the first two values for s 6.77 (review in time); the first and third for s 6.81 (pay meanwhile) | 2 |
+| `I was given a notice to pay my rent to the local government` | BOOLEAN | FALSE | the tenant's six s 6.60 questions |
+| `the local government has asked me who owns the property` | BOOLEAN | FALSE | the tenant's two s 6.61 questions |
+
+The helpers that read the two enumerations list every value and have no OTHERWISE (the graffiti finding 31).
+
+**Decisions.**
+
+- Each owner question calls the baseline export of the same section and wraps its answer: BOOLEAN as `Yes or no`, dollars as `Amount`, days as `Days`, the interest rate as `Interest rate`, the two STRING answers as `Text answer`, and each of the baseline's six answer enumerations in an answer type of its own (`Valuation answer`, `Which valuation answer`, `Overpayment answer`, `Paying answer`, `Stopping the sale answer`, `Complaint answer`), since a constructor of the baseline's types cannot be redeclared.
+- Where the situation makes a baseline input true by its own terms it is passed TRUE, with a comment, and not asked again: "the rates are unpaid after the due date" in the interest, suing and caveat questions, and "I was given a notice under s 6.60" in the s 6.60(2) question.
+- The baseline asked two tenant questions from the owner's seat ("As a tenant, must I pay my rent to the local government", s 6.60; the s 6.61 fine). Here they are the tenant's, and call the same baseline functions; the s 6.61 fine is answered from the s 6.61 request, which s 6.61(2) ties the offence to.
+- The s 6.60 and s 6.61 questions take the notice and the request as their situations because the Act ties each rule to them (s 6.60(2)-(6) "the notice"; s 6.61(1) "On the request of a local government").
+- s 6.36(3) (submissions on proposed differential rates or minimum payments) and the objection-validity question (s 6.76) take no situation: any owner may ask them before the event.
+- The tenant's s 1.4 question asks one fact, a lease that makes the land rateable only in the tenant's hands (s 1.4 "owner" (a)(ii)), and calls the baseline's s 6.44(1) rule with it. The tenant's helpers (s 6.38(1)(b), s 6.60(4), (5)(a)-(c), (6), s 6.61(1)(a)) are in `lga-qa.l4`, quoted from the deposit.
+
+**Not covered for the tenant or occupier.** A service charge's amount (s 6.38 charges are prescribed; not deposited); the occupier's objection to the rate record (s 6.76(3) lets only the owner named, or their agent, object); the agent of an owner and the person receiving rent under s 6.61(1)(a), (b) (they are not seats here); a lessee who holds a right to buy the fee simple (s 1.4 "owner" (a)(i)), who is an owner and should answer as one.
+
+**Checks.** Stable l4 1.6.98, `JL4_LIBRARY_PATH` unset. `lga-rates.l4` and `lga-qa.l4`: no diagnostics. `lga-cases-rates.l4`: 70 of 70 satisfied. `lga-qa-cases.l4`: 203 of 203 satisfied, no error or warning. `l4 check lga-qa.l4`: Check succeeded. The 203 are 51 for the role a question is not about (every other input ASSUMEd), 30 for a situation value that does not hold (later inputs ASSUMEd), and 122 where role and situation hold, of which 43 assert that the answer equals the baseline export's on the same facts (one for each of the 43 questions that call a baseline export). A parameter script (`check_params.py`, kept in the session scratchpad) listed all 51 exports and found `my role` first everywhere, every shared input identical in type and `@desc`, each situation input read straight after the role, and no DEONTIC or EVENT input. Negative controls on a scratch copy (an ASSUMEd situation for the owner, a tenant question asked as owner, a wrong amount) each failed.
