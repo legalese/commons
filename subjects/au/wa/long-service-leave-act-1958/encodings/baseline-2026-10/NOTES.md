@@ -238,6 +238,7 @@ taken, with the same name, type and `@desc` in every question.
 | `I have had an absence or break in my employment` | employee | Is my employment still continuous after this absence or break; Does this absence count towards my length of service |
 | `I have moved to a new employer` | employee | Does my service carry over to my new employer |
 | `I am taking, or about to take, long service leave` | employee | How many weeks of leave do I get if my request is granted; What fraction of my ordinary pay am I paid during my leave; Must I be paid for my leave before it starts; How many days longer is my leave because of public holidays; Do I forfeit the rest of my leave by working elsewhere during it |
+| `my employee has had an absence or break in their employment` | employer | Is my employee's employment still continuous after this absence; Does my employee's absence count towards their length of service |
 | `my employee's employment has ended` | employer | How many weeks of long service leave must I pay out to my employee; How much must I pay my employee for long service leave now their employment has ended; How many weeks of leave taken in advance may I deduct from my employee's final pay |
 
 The Act ties these rules to those facts: ss 8(3), 9(2), (2A) and 10(2) to the termination of the employment; s 6 to an
@@ -246,8 +247,8 @@ who "becomes employed by the new employer"; ss 9(1C), (1D), (3), (4) and 27 to a
 
 **Decisions.**
 
-1. **The employer's questions about the employee's facts take the baseline's records.** `AbsenceFacts` and
-   `ChangeOfEmployer` keep their first-person field names ("my employment with the old employer ended"); the employer's
+1. **The employer's questions about the employee's facts take the baseline's records** (but see 8 for the absence).
+   `ChangeOfEmployer` keeps their first-person field names ("my employment with the old employer ended"); the employer's
    `@desc` says the fields are worded from the employee's side. Restating them would restate the rules.
 2. **s 7I is new.** "Must I pass my former employees' records to the new employer" uses the baseline's carry-over
    function: a transfer of business under s 7E is exactly the case where service carries over, and for a business
@@ -263,8 +264,27 @@ who "becomes employed by the new employer"; ss 9(1C), (1D), (3), (4) and 27 to a
 6. **Answer types** carry `does not arise for you`: `Yes or no`, `Amount`, `Weeks answer`, `Days answer`, `Fraction
    answer`, `Years answer`, `Text answer` (the baseline's s 26A(3)(d) answer is a STRING) and `Service answer`, the
    baseline's three carry-over answers worded so either party can read them, through a helper that lists every value.
-7. **Names.** Each question's name is a plain first-person question, different from the baseline function's name so the
-   two modules can be imported together.
+7. **Names.** Each question's name is a plain first-person question, different from every baseline function's name
+   even after the site shortens names to their first 60 characters, so the site never runs the baseline's function in
+   the question's place (checked by script; none clashed).
+8. **The absence is asked as `My absence`, with three yes/no fields folded into its kind** (fixed 6 November 2026,
+   after verification). The baseline's `AbsenceFacts` has 10 kinds of absence and 7 yes/no fields: 1280 combinations,
+   more than the 1024 the site's form tries before it gives up dropping a question for a role it is not about, so the
+   four s 6 and 6A questions stayed open for the two other roles. Whether s 6(1) leave was paid, and whether a dismissal
+   was to avoid leave or for slackness of trade, each matter for one kind only, so `Kind of absence` has 13 values (paid
+   and unpaid leave; a dismissal to avoid leave, for slackness of trade, or on another ground; and the baseline's other
+   eight) and `My absence` keeps the other four yes/no fields and the months: 208 combinations, 416 with the situation.
+   `the baseline's facts for` builds the baseline's record through four helpers that list every kind, and the layer
+   passes it to the baseline's functions, so the rules are not restated. A dismissal both to avoid leave and for
+   slackness of trade is asked as the first, which is what the baseline decides (s 6(2)(a) first). The cases ask the
+   layer the folded records and the baseline the original ones, and assert the answers equal.
+9. **The employer's s 6 and 6A questions take a situation** (fixed 6 November 2026), as the employee's do: `my
+   employee has had an absence or break in their employment`.
+10. **One input, one meaning, one description** (fixed 6 November 2026). The employer's two transfer questions both
+   called their record `the change`, one for an employee who came to the employer and one for an employee who left; the
+   form would have asked it once. They are now `the employee's move to me` and `the employee's move away from me`. The
+   descriptions of `the employee's years of continuous employment`, `the employee's weekly ordinary pay` and `the
+   agreement is in writing signed by both of us` are now one each, worded for every role that asks them.
 
 **Not covered for the new roles.** For the employer: what goes in the records (s 26(1)) and the regulations on keeping
 them; the industrial magistrate's court and civil penalties (ss 11, 26(3)); leave taken in separate periods (s 9(1)(b));
@@ -273,11 +293,11 @@ question for the law of succession), and records (s 26A names only the employee,
 inspector).
 
 **Checks.** 39 exported questions: 20 for the employee, 16 for the employer, 3 for the personal representative.
-`lsl-qa-cases.l4` has 245 assertions, all satisfied: 78 asking each question for the two roles it is not about, every
-other input ASSUMEd; 15 asking each situation question with FALSE and every later input ASSUMEd; for the employee 58
+`lsl-qa-cases.l4` has 247 assertions, all satisfied: 78 asking each question for the two roles it is not about, every
+other input ASSUMEd; 17 asking each situation question with FALSE and every later input ASSUMEd; for the employee 58
 hand-worked cases, each also asserted equal to the baseline export's answer on the same facts (58); for the employer 30
 and for the personal representative 6 hand-worked cases. 0 errors and 0 warnings in all four files (`lsl-employee.l4`;
 `lsl-cases-employee.l4`, 68 satisfied; `lsl-qa.l4`; `lsl-qa-cases.l4`); `l4 check lsl-qa.l4` succeeds. A script listed
-every `@export` with its inputs and checked `my role` first everywhere, the five situation inputs identical wherever
+every `@export` with its inputs and checked `my role` first everywhere, the six situation inputs identical wherever
 they occur, each role branch reading its situation first, and no DEONTIC or EVENT input. Negative control: a case
 reading an ASSUMEd input fails.
