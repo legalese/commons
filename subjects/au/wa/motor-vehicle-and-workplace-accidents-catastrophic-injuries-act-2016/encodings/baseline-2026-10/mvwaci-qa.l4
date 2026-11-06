@@ -1,0 +1,968 @@
+IMPORT prelude
+IMPORT `mvwaci-ciss`
+
+-- Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 (WA), with Civil Liability Act 2002 s 13A and
+-- Motor Vehicle (Third Party Insurance) Act 1943 ss 3EA, 3FB -- the Q&A layer: the questions people ask about the
+-- catastrophic injuries support scheme (CISS), with the seat and the situation as parameters, for the site's question form.
+--
+-- PURPOSE. One deployment serves every seat. Every exported question takes `my role` first ("Which of these describes
+-- you"). A question about another role answers `does not arise for you` without reading any other input, so the form
+-- never asks those inputs and drops the question. The baseline's questions take records (`The accident`, `The work
+-- injury`, `My case`, `The expense`); here every input is one plain fact, and the records are built inside L4.
+--
+-- ROLES. (1) `I was injured in a motor vehicle accident or at work`: the baseline's seat, the person who may be
+-- catastrophically injured. (2) `I act for, or care for, someone who was injured`: a person with lawful authority to act
+-- for the injured person (s 3(2): an application by, or a notice to, the injured person includes one by or to that person),
+-- or a family member who gives care free (s 19(2)(a), (3); Civil Liability Act s 13A(3)). (3) `I provide treatment, care
+-- or support to people in the scheme`: a provider, who may need to be registered (ss 19(2)(d), 23) and whose fees the
+-- regulations may cap (s 20). The Insurance Commission, hospitals, insurers, WorkCover WA and the District Court are never
+-- seats; what they may or must do appears as what it means for the person asking. The two offences (ss 31, 32) bind
+-- everyone, and are asked of every role.
+--
+-- SITUATIONS (as in the Graffiti Vandalism Act layer, design D8). Within a role, a question that arises only in a
+-- situation takes that situation's fact straight after `my role` and answers `does not arise for you` without reading
+-- anything else when it does not hold; the questions of one situation share one input. The injured person's: how I was
+-- injured (a motor vehicle, as a worker, or both: ss 4, 5, 5A, 30A(5), MVTPI s 3FB); my place in the scheme (never
+-- accepted, an interim or lifetime participant, a former participant: ss 9-19). The carer's: the injured person's place
+-- in the scheme (s 19). The provider's: I am a registered provider (s 23(6), (7)).
+--
+-- The rules are in mvwaci-ciss.l4. For the injured person this module calls them and restates none; each answer equals
+-- the baseline export's wherever the role and situation hold. The other roles use the baseline's rules where they exist
+-- (ss 18-19, CLA s 13A, ss 31, 32) and helpers below, quoted from the deposit, where they do not (ss 3(2), 20, 23).
+-- No exported question takes a DEONTIC or EVENT input.
+--
+-- BASELINE. Not for public use as advice. See NOTES.md, "Q&A layer (seat and situations as parameters)".
+
+§ `Catastrophic injuries support scheme -- the questions people ask`
+
+§§ `Who is asking, and the shape of the answers`
+
+DECLARE Role IS ONE OF
+    `I was injured in a motor vehicle accident or at work`
+    `I act for, or care for, someone who was injured`
+    `I provide treatment, care or support to people in the scheme`
+
+DECLARE `Yes or no` IS ONE OF
+    yes
+    no
+    `does not arise for you`
+
+DECLARE `Amount` IS ONE OF
+    `does not arise for you`
+    amount HAS dollars IS A NUMBER
+
+DECLARE `Days` IS ONE OF
+    `does not arise for you`
+    `a number of days` HAS `how many days` IS A NUMBER
+
+-- The baseline's own answer types, each carried inside an answer that can also say `does not arise for you`.
+DECLARE `How the Act takes it answer` IS ONE OF
+    `does not arise for you`
+    `the Act takes my injury` HAS `how it is taken` IS A `How the Act takes my injury`
+
+DECLARE `Time limit answer` IS ONE OF
+    `does not arise for you`
+    `as to the time for applying` HAS `the time limit` IS A `The time limit for applying`
+
+DECLARE `Acceptance answer` IS ONE OF
+    `does not arise for you`
+    `the Commission must accept me as` HAS `my acceptance` IS A `My participation`
+
+DECLARE `Payment answer` IS ONE OF
+    `does not arise for you`
+    `as to payment` HAS `the payment position` IS A `The answer on payment`
+
+DECLARE `Appeal answer` IS ONE OF
+    `does not arise for you`
+    `the appeal open to me is` HAS `the appeal` IS A `My appeal`
+
+DECLARE `Care funding answer` IS ONE OF
+    `does not arise for you`
+    `my care is paid from` HAS `the source` IS A `Where my care is paid from`
+
+GIVEN `it holds` IS A BOOLEAN
+GIVETH A `Yes or no`
+`yes if` `it holds` MEANS
+    IF `it holds` THEN yes ELSE no
+
+§§ `The situations a question arises in`
+
+-- The injured person's first situation: how I was injured. The s 4 and s 5 questions and MVTPI s 3FB arise only where a
+-- motor vehicle was involved; the s 5A questions and the worker's s 30A(5) duty only for a worker. The questions that take
+-- both kinds of injury (how the Act takes it, eligibility, applying, acceptance, where care is paid from) take it as an
+-- ordinary input, and build from it the baseline's records: with no motor vehicle the accident is one the Act cannot take
+-- (`none of these`), and for someone not injured as a worker the work injury is one it cannot take; the facts of the
+-- other kind are then not read. "As a worker" is a worker under the Workers Compensation and Injury Management Act 2023
+-- (s 3(1), borrowed): that fact is TRUE by the situation's terms.
+DECLARE `How I was injured` IS ONE OF
+    `in an incident involving a motor vehicle, and not as a worker`
+    `as a worker, in an incident not involving a motor vehicle`
+    `as a worker, in an incident involving a motor vehicle`
+
+-- The injured person's second situation: my place in the scheme. It serves as the baseline's `My participation`
+-- (ss 10-12) and `My standing in the scheme` (CLA s 13A), so the form asks it once.
+DECLARE `My place in the scheme` IS ONE OF
+    `I have not been accepted into the scheme`
+    `I am an interim participant`
+    `I am a lifetime participant`
+    `my interim participation has ended, and I was not made a lifetime participant`
+    `I was a lifetime participant until notified that I am no longer eligible`
+
+-- The carer's situation, the same in the third person.
+DECLARE `Their place in the scheme` IS ONE OF
+    `they have not been accepted into the scheme`
+    `they are an interim or lifetime participant`
+    `they were an interim participant and were not made a lifetime participant`
+    `they were a lifetime participant and were notified they are no longer eligible`
+
+DECLARE `When I give the care` IS ONE OF
+    `before they became a participant`
+    `while they are, or were, a participant`
+    `after their participation ended`
+    `in future`
+
+-- Every helper below that reads one of these enumerations lists every value and has no OTHERWISE: on the stable l4 a
+-- CONSIDER with OTHERWISE quietly takes the OTHERWISE branch for an ASSUMEd value (Graffiti Vandalism Act layer, finding
+-- 31), so the cases could not show that an ASSUMEd situation is never read.
+GIVEN `how I was injured` IS A `How I was injured`
+GIVETH A BOOLEAN
+DECIDE `no motor vehicle was involved` IF
+    CONSIDER `how I was injured`
+    WHEN `in an incident involving a motor vehicle, and not as a worker` THEN FALSE
+    WHEN `as a worker, in an incident not involving a motor vehicle` THEN TRUE
+    WHEN `as a worker, in an incident involving a motor vehicle` THEN FALSE
+
+GIVEN `how I was injured` IS A `How I was injured`
+GIVETH A BOOLEAN
+DECIDE `I was not injured as a worker` IF
+    CONSIDER `how I was injured`
+    WHEN `in an incident involving a motor vehicle, and not as a worker` THEN TRUE
+    WHEN `as a worker, in an incident not involving a motor vehicle` THEN FALSE
+    WHEN `as a worker, in an incident involving a motor vehicle` THEN FALSE
+
+GIVEN `my place in the scheme` IS A `My place in the scheme`
+GIVETH A BOOLEAN
+DECIDE `I am not in the scheme now` IF
+    CONSIDER `my place in the scheme`
+    WHEN `I have not been accepted into the scheme` THEN TRUE
+    WHEN `I am an interim participant` THEN FALSE
+    WHEN `I am a lifetime participant` THEN FALSE
+    WHEN `my interim participation has ended, and I was not made a lifetime participant` THEN TRUE
+    WHEN `I was a lifetime participant until notified that I am no longer eligible` THEN TRUE
+
+GIVEN `my place in the scheme` IS A `My place in the scheme`
+GIVETH A BOOLEAN
+DECIDE `I am in the scheme now` IF
+    CONSIDER `my place in the scheme`
+    WHEN `I have not been accepted into the scheme` THEN FALSE
+    WHEN `I am an interim participant` THEN TRUE
+    WHEN `I am a lifetime participant` THEN TRUE
+    WHEN `my interim participation has ended, and I was not made a lifetime participant` THEN FALSE
+    WHEN `I was a lifetime participant until notified that I am no longer eligible` THEN FALSE
+
+-- s 11(3), s 13: arises for an interim participant (whose interim period will end) and a former interim participant.
+GIVEN `my place in the scheme` IS A `My place in the scheme`
+GIVETH A BOOLEAN
+DECIDE `I am not, and was not, an interim participant` IF
+    CONSIDER `my place in the scheme`
+    WHEN `I have not been accepted into the scheme` THEN TRUE
+    WHEN `I am an interim participant` THEN FALSE
+    WHEN `I am a lifetime participant` THEN TRUE
+    WHEN `my interim participation has ended, and I was not made a lifetime participant` THEN FALSE
+    WHEN `I was a lifetime participant until notified that I am no longer eligible` THEN TRUE
+
+GIVEN `my place in the scheme` IS A `My place in the scheme`
+GIVETH A BOOLEAN
+DECIDE `I have never been accepted into the scheme` IF
+    CONSIDER `my place in the scheme`
+    WHEN `I have not been accepted into the scheme` THEN TRUE
+    WHEN `I am an interim participant` THEN FALSE
+    WHEN `I am a lifetime participant` THEN FALSE
+    WHEN `my interim participation has ended, and I was not made a lifetime participant` THEN FALSE
+    WHEN `I was a lifetime participant until notified that I am no longer eligible` THEN FALSE
+
+GIVEN `my place in the scheme` IS A `My place in the scheme`
+GIVETH A `My participation`
+`the baseline's participation for` `my place in the scheme` MEANS
+    CONSIDER `my place in the scheme`
+    WHEN `I have not been accepted into the scheme` THEN `not a participant`
+    WHEN `I am an interim participant` THEN `an interim participant`
+    WHEN `I am a lifetime participant` THEN `a lifetime participant`
+    WHEN `my interim participation has ended, and I was not made a lifetime participant` THEN `not a participant`
+    WHEN `I was a lifetime participant until notified that I am no longer eligible` THEN `not a participant`
+
+GIVEN `my place in the scheme` IS A `My place in the scheme`
+GIVETH A `My standing in the scheme`
+`the baseline's standing for` `my place in the scheme` MEANS
+    CONSIDER `my place in the scheme`
+    WHEN `I have not been accepted into the scheme` THEN `I have never been a participant`
+    WHEN `I am an interim participant` THEN `I am an interim or lifetime participant`
+    WHEN `I am a lifetime participant` THEN `I am an interim or lifetime participant`
+    WHEN `my interim participation has ended, and I was not made a lifetime participant` THEN `I was an interim participant and was not made a lifetime participant`
+    WHEN `I was a lifetime participant until notified that I am no longer eligible` THEN `I was a lifetime participant and was notified I am no longer eligible`
+
+GIVEN `their place in the scheme` IS A `Their place in the scheme`
+GIVETH A BOOLEAN
+DECIDE `they have never been accepted into the scheme` IF
+    CONSIDER `their place in the scheme`
+    WHEN `they have not been accepted into the scheme` THEN TRUE
+    WHEN `they are an interim or lifetime participant` THEN FALSE
+    WHEN `they were an interim participant and were not made a lifetime participant` THEN FALSE
+    WHEN `they were a lifetime participant and were notified they are no longer eligible` THEN FALSE
+
+GIVEN `their place in the scheme` IS A `Their place in the scheme`
+GIVETH A `My standing in the scheme`
+`the baseline's standing for their place` `their place in the scheme` MEANS
+    CONSIDER `their place in the scheme`
+    WHEN `they have not been accepted into the scheme` THEN `I have never been a participant`
+    WHEN `they are an interim or lifetime participant` THEN `I am an interim or lifetime participant`
+    WHEN `they were an interim participant and were not made a lifetime participant` THEN `I was an interim participant and was not made a lifetime participant`
+    WHEN `they were a lifetime participant and were notified they are no longer eligible` THEN `I was a lifetime participant and was notified I am no longer eligible`
+
+GIVEN `when I give the care` IS A `When I give the care`
+GIVETH A `When the care need arises`
+`the baseline's time for` `when I give the care` MEANS
+    CONSIDER `when I give the care`
+    WHEN `before they became a participant` THEN `before I became a participant`
+    WHEN `while they are, or were, a participant` THEN `while I was a participant`
+    WHEN `after their participation ended` THEN `after my participation ended`
+    WHEN `in future` THEN `in future`
+
+§§ `Building the baseline's records from plain answers`
+
+-- With no motor vehicle involved, an accident the Act cannot take as one (s 4(2)): no other field is read.
+`an accident without a motor vehicle` MEANS `The accident` WITH
+    `how it happened` IS `none of these`
+    `it happened in Western Australia` IS FALSE
+    `it happened on or after 1 July 2016` IS FALSE
+    `an owner or driver is liable in negligence for my injury` IS FALSE
+    `it happened on private land` IS FALSE
+    `a vehicle involved had WA compulsory third party insurance` IS FALSE
+    `a vehicle involved was licensed interstate and under that place's compulsory scheme` IS FALSE
+    `a vehicle involved was in a motor sports event` IS FALSE
+    `it resulted from a terrorist act` IS FALSE
+
+-- For someone not injured as a worker, a work injury the Act cannot take (s 5A): no other field is read.
+`an injury not suffered as a worker` MEANS `The work injury` WITH
+    `I am a worker under the Workers Compensation and Injury Management Act 2023` IS FALSE
+    `workers' compensation is payable for my injury` IS FALSE
+    `it happened on or after 1 July 2024` IS FALSE
+    `I have claimed workers' compensation for it` IS FALSE
+    `liability was accepted, taken to be accepted, or decided by an arbitrator` IS FALSE
+
+GIVEN `how I was injured` IS A `How I was injured`
+      `how the incident happened` IS A `How it happened`
+      `the accident happened in Western Australia` IS A BOOLEAN
+      `the accident happened on or after 1 July 2016` IS A BOOLEAN
+      `an owner or driver of a motor vehicle is liable in negligence for my injury` IS A BOOLEAN
+      `the accident happened on private land` IS A BOOLEAN
+      `a vehicle involved had WA compulsory third party insurance` IS A BOOLEAN
+      `a vehicle involved was licensed interstate and under that place's compulsory scheme` IS A BOOLEAN
+      `a vehicle involved was in a motor sports event` IS A BOOLEAN
+      `the accident resulted from a terrorist act` IS A BOOLEAN
+GIVETH A `The accident`
+`the accident from my answers` MEANS
+    IF `no motor vehicle was involved` `how I was injured`
+    THEN `an accident without a motor vehicle`
+    ELSE `The accident` WITH
+        `how it happened` IS `how the incident happened`
+        `it happened in Western Australia` IS `the accident happened in Western Australia`
+        `it happened on or after 1 July 2016` IS `the accident happened on or after 1 July 2016`
+        `an owner or driver is liable in negligence for my injury` IS `an owner or driver of a motor vehicle is liable in negligence for my injury`
+        `it happened on private land` IS `the accident happened on private land`
+        `a vehicle involved had WA compulsory third party insurance` IS `a vehicle involved had WA compulsory third party insurance`
+        `a vehicle involved was licensed interstate and under that place's compulsory scheme` IS `a vehicle involved was licensed interstate and under that place's compulsory scheme`
+        `a vehicle involved was in a motor sports event` IS `a vehicle involved was in a motor sports event`
+        `it resulted from a terrorist act` IS `the accident resulted from a terrorist act`
+
+GIVEN `how I was injured` IS A `How I was injured`
+      `workers' compensation is payable for my injury` IS A BOOLEAN
+      `my work injury happened on or after 1 July 2024` IS A BOOLEAN
+      `I have claimed workers' compensation for my injury` IS A BOOLEAN
+      `liability for my claim was accepted, taken to be accepted, or decided by an arbitrator` IS A BOOLEAN
+GIVETH A `The work injury`
+`the work injury from my answers` MEANS
+    IF `I was not injured as a worker` `how I was injured`
+    THEN `an injury not suffered as a worker`
+    ELSE `The work injury` WITH
+        `I am a worker under the Workers Compensation and Injury Management Act 2023` IS TRUE
+        `workers' compensation is payable for my injury` IS `workers' compensation is payable for my injury`
+        `it happened on or after 1 July 2024` IS `my work injury happened on or after 1 July 2024`
+        `I have claimed workers' compensation for it` IS `I have claimed workers' compensation for my injury`
+        `liability was accepted, taken to be accepted, or decided by an arbitrator` IS `liability for my claim was accepted, taken to be accepted, or decided by an arbitrator`
+
+-- My case, from plain answers (the baseline's `My case` record).
+GIVEN `how I was injured` IS A `How I was injured`
+      `how the incident happened` IS A `How it happened`
+      `the accident happened in Western Australia` IS A BOOLEAN
+      `the accident happened on or after 1 July 2016` IS A BOOLEAN
+      `an owner or driver of a motor vehicle is liable in negligence for my injury` IS A BOOLEAN
+      `the accident happened on private land` IS A BOOLEAN
+      `a vehicle involved had WA compulsory third party insurance` IS A BOOLEAN
+      `a vehicle involved was licensed interstate and under that place's compulsory scheme` IS A BOOLEAN
+      `a vehicle involved was in a motor sports event` IS A BOOLEAN
+      `the accident resulted from a terrorist act` IS A BOOLEAN
+      `workers' compensation is payable for my injury` IS A BOOLEAN
+      `my work injury happened on or after 1 July 2024` IS A BOOLEAN
+      `I have claimed workers' compensation for my injury` IS A BOOLEAN
+      `liability for my claim was accepted, taken to be accepted, or decided by an arbitrator` IS A BOOLEAN
+      `the injury meets the catastrophic criteria` IS A BOOLEAN
+      `I meet the lifetime criteria` IS A BOOLEAN
+      `future care damages have been awarded` IS A BOOLEAN
+      `I live in Australia` IS A BOOLEAN
+GIVETH A `My case`
+`my case from my answers` MEANS `My case` WITH
+    `the accident` IS `the accident from my answers` `how I was injured` `how the incident happened` `the accident happened in Western Australia` `the accident happened on or after 1 July 2016` `an owner or driver of a motor vehicle is liable in negligence for my injury` `the accident happened on private land` `a vehicle involved had WA compulsory third party insurance` `a vehicle involved was licensed interstate and under that place's compulsory scheme` `a vehicle involved was in a motor sports event` `the accident resulted from a terrorist act`
+    `the work injury` IS `the work injury from my answers` `how I was injured` `workers' compensation is payable for my injury` `my work injury happened on or after 1 July 2024` `I have claimed workers' compensation for my injury` `liability for my claim was accepted, taken to be accepted, or decided by an arbitrator`
+    `my injury meets the prescribed criteria for a catastrophic injury` IS `the injury meets the catastrophic criteria`
+    `I meet the prescribed criteria for lifetime participation` IS `I meet the lifetime criteria`
+    `I have been awarded damages for my future care by final judgment or binding settlement` IS `future care damages have been awarded`
+    `I reside in Australia` IS `I live in Australia`
+
+-- The expense, from plain answers (the baseline's `The expense` record).
+GIVEN `need` IS A `The kind of need`
+      `excluded kind` IS A BOOLEAN
+      `assessed` IS A BOOLEAN
+      `necessary and reasonable` IS A BOOLEAN
+      `while a participant` IS A BOOLEAN
+      `while suspended` IS A BOOLEAN
+      `free` IS A BOOLEAN
+      `abroad` IS A BOOLEAN
+      `a child's ordinary cost` IS A BOOLEAN
+      `not from a registered provider as required` IS A BOOLEAN
+      `in breach of the regulations` IS A BOOLEAN
+      `excluded from payment` IS A BOOLEAN
+      `the Commission elects` IS A BOOLEAN
+GIVETH A `The expense`
+`the expense from my answers` MEANS `The expense` WITH
+    `the kind of need` IS `need`
+    `it is of a kind the regulations exclude` IS `excluded kind`
+    `the Commission assessed it as a necessary and reasonable need related to my injury` IS `assessed`
+    `the expense is necessary and reasonable` IS `necessary and reasonable`
+    `I was a participant when it was incurred` IS `while a participant`
+    `my participation was suspended at the time` IS `while suspended`
+    `it was given to me free` IS `free`
+    `it was given while I was outside Australia` IS `abroad`
+    `I am a child and it is an ordinary cost of raising a child` IS `a child's ordinary cost`
+    `it had to come from a registered provider and did not` IS `not from a registered provider as required`
+    `it was provided in breach of the regulations` IS `in breach of the regulations`
+    `the regulations exclude it from payment` IS `excluded from payment`
+    `the Commission elects to pay it anyway` IS `the Commission elects`
+
+§§ `For the person injured in a motor vehicle accident or at work`
+
+§§§ `ss 4, 5, 5A -- does the Act apply to my injury`
+
+@export Was I injured in a "motor vehicle accident" under the Act (Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 (WA) s 4)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `how I was injured` IS A `How I was injured` @desc How you were injured: in an incident involving a motor vehicle (a car, motorcycle, truck or the like), as a worker (a worker under the Workers Compensation and Injury Management Act 2023, in an injury for which workers' compensation may be payable), or both
+      `how the incident happened` IS A `How it happened` @desc How the incident that injured you happened: the driving of a motor vehicle, a vehicle running out of control, a collision (or action to avoid one) with a vehicle, moving or stationary, helping at the scene of a motor vehicle accident, or none of these
+GIVETH A `Yes or no`
+`Was I injured in a motor vehicle accident under the Act` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured in a motor vehicle accident or at work` THEN
+        IF `no motor vehicle was involved` `how I was injured`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Was I injured in a motor vehicle accident` `how the incident happened`)
+    WHEN `I act for, or care for, someone who was injured` THEN `does not arise for you`
+    WHEN `I provide treatment, care or support to people in the scheme` THEN `does not arise for you`
+
+@export Does the Act apply to the injury I suffered in a motor vehicle accident (Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 (WA) ss 4, 5)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `how I was injured` IS A `How I was injured` @desc How you were injured: in an incident involving a motor vehicle (a car, motorcycle, truck or the like), as a worker (a worker under the Workers Compensation and Injury Management Act 2023, in an injury for which workers' compensation may be payable), or both
+      `how the incident happened` IS A `How it happened` @desc How the incident that injured you happened: the driving of a motor vehicle, a vehicle running out of control, a collision (or action to avoid one) with a vehicle, moving or stationary, helping at the scene of a motor vehicle accident, or none of these
+      `the accident happened in Western Australia` IS A BOOLEAN @desc Whether the accident happened in Western Australia
+      `the accident happened on or after 1 July 2016` IS A BOOLEAN @desc Whether the accident happened on or after 1 July 2016, when the scheme began
+      `an owner or driver of a motor vehicle is liable in negligence for my injury` IS A BOOLEAN @desc Whether the owner or driver of a motor vehicle is liable in negligence for your injury, because of the driving of the vehicle or its running out of control (for a court, or the Commission, to decide; you cannot be liable to yourself)
+      `the accident happened on private land` IS A BOOLEAN @desc Whether the accident happened on private land, such as a farm paddock or a private driveway, rather than a road or other public place
+      `a vehicle involved had WA compulsory third party insurance` IS A BOOLEAN @desc Whether at least one vehicle involved had Western Australian compulsory third party insurance in force
+      `a vehicle involved was licensed interstate and under that place's compulsory scheme` IS A BOOLEAN @desc Whether at least one vehicle involved was licensed in another State or Territory and covered by its compulsory insurance or accident compensation scheme
+      `a vehicle involved was in a motor sports event` IS A BOOLEAN @desc Whether a vehicle involved was taking part in a motor sports event
+      `the accident resulted from a terrorist act` IS A BOOLEAN @desc Whether the injury resulted from a terrorist act
+GIVETH A `Yes or no`
+`Does the Act apply to my injury in a motor vehicle accident` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured in a motor vehicle accident or at work` THEN
+        IF `no motor vehicle was involved` `how I was injured`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Does the Act apply to my motor vehicle injury` (`the accident from my answers` `how I was injured` `how the incident happened` `the accident happened in Western Australia` `the accident happened on or after 1 July 2016` `an owner or driver of a motor vehicle is liable in negligence for my injury` `the accident happened on private land` `a vehicle involved had WA compulsory third party insurance` `a vehicle involved was licensed interstate and under that place's compulsory scheme` `a vehicle involved was in a motor sports event` `the accident resulted from a terrorist act`))
+    WHEN `I act for, or care for, someone who was injured` THEN `does not arise for you`
+    WHEN `I provide treatment, care or support to people in the scheme` THEN `does not arise for you`
+
+@export Does the Act apply to my injury as a workplace injury (Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 (WA) s 5A)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `how I was injured` IS A `How I was injured` @desc How you were injured: in an incident involving a motor vehicle (a car, motorcycle, truck or the like), as a worker (a worker under the Workers Compensation and Injury Management Act 2023, in an injury for which workers' compensation may be payable), or both
+      `workers' compensation is payable for my injury` IS A BOOLEAN @desc Whether compensation under the Workers Compensation and Injury Management Act 2023 is payable for your injury
+      `my work injury happened on or after 1 July 2024` IS A BOOLEAN @desc Whether the incident that injured you at work happened on or after 1 July 2024, when workplace injuries joined the scheme
+      `I have claimed workers' compensation for my injury` IS A BOOLEAN @desc Whether you have made a claim for workers' compensation for the injury
+      `liability for my claim was accepted, taken to be accepted, or decided by an arbitrator` IS A BOOLEAN @desc Whether the insurer or self-insurer accepted liability for your claim (or is taken to have accepted it), or an arbitrator decided it
+      `how the incident happened` IS A `How it happened` @desc How the incident that injured you happened: the driving of a motor vehicle, a vehicle running out of control, a collision (or action to avoid one) with a vehicle, moving or stationary, helping at the scene of a motor vehicle accident, or none of these
+      `the accident happened in Western Australia` IS A BOOLEAN @desc Whether the accident happened in Western Australia
+      `the accident happened on or after 1 July 2016` IS A BOOLEAN @desc Whether the accident happened on or after 1 July 2016, when the scheme began
+      `an owner or driver of a motor vehicle is liable in negligence for my injury` IS A BOOLEAN @desc Whether the owner or driver of a motor vehicle is liable in negligence for your injury, because of the driving of the vehicle or its running out of control (for a court, or the Commission, to decide; you cannot be liable to yourself)
+      `the accident happened on private land` IS A BOOLEAN @desc Whether the accident happened on private land, such as a farm paddock or a private driveway, rather than a road or other public place
+      `a vehicle involved had WA compulsory third party insurance` IS A BOOLEAN @desc Whether at least one vehicle involved had Western Australian compulsory third party insurance in force
+      `a vehicle involved was licensed interstate and under that place's compulsory scheme` IS A BOOLEAN @desc Whether at least one vehicle involved was licensed in another State or Territory and covered by its compulsory insurance or accident compensation scheme
+      `a vehicle involved was in a motor sports event` IS A BOOLEAN @desc Whether a vehicle involved was taking part in a motor sports event
+      `the accident resulted from a terrorist act` IS A BOOLEAN @desc Whether the injury resulted from a terrorist act
+GIVETH A `Yes or no`
+`Does the Act apply to my injury as a workplace injury` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured in a motor vehicle accident or at work` THEN
+        IF `I was not injured as a worker` `how I was injured`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Does the Act apply to my workplace injury` (`the work injury from my answers` `how I was injured` `workers' compensation is payable for my injury` `my work injury happened on or after 1 July 2024` `I have claimed workers' compensation for my injury` `liability for my claim was accepted, taken to be accepted, or decided by an arbitrator`) (`the accident from my answers` `how I was injured` `how the incident happened` `the accident happened in Western Australia` `the accident happened on or after 1 July 2016` `an owner or driver of a motor vehicle is liable in negligence for my injury` `the accident happened on private land` `a vehicle involved had WA compulsory third party insurance` `a vehicle involved was licensed interstate and under that place's compulsory scheme` `a vehicle involved was in a motor sports event` `the accident resulted from a terrorist act`))
+    WHEN `I act for, or care for, someone who was injured` THEN `does not arise for you`
+    WHEN `I provide treatment, care or support to people in the scheme` THEN `does not arise for you`
+
+-- Asked of every injured person; how I was injured is an ordinary input here (the same input as the situation above).
+@export Does the Act take my injury as a motor vehicle injury, a workplace injury, or not at all (Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 (WA) ss 5, 5A(4))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `how I was injured` IS A `How I was injured` @desc How you were injured: in an incident involving a motor vehicle (a car, motorcycle, truck or the like), as a worker (a worker under the Workers Compensation and Injury Management Act 2023, in an injury for which workers' compensation may be payable), or both
+      `how the incident happened` IS A `How it happened` @desc How the incident that injured you happened: the driving of a motor vehicle, a vehicle running out of control, a collision (or action to avoid one) with a vehicle, moving or stationary, helping at the scene of a motor vehicle accident, or none of these
+      `the accident happened in Western Australia` IS A BOOLEAN @desc Whether the accident happened in Western Australia
+      `the accident happened on or after 1 July 2016` IS A BOOLEAN @desc Whether the accident happened on or after 1 July 2016, when the scheme began
+      `an owner or driver of a motor vehicle is liable in negligence for my injury` IS A BOOLEAN @desc Whether the owner or driver of a motor vehicle is liable in negligence for your injury, because of the driving of the vehicle or its running out of control (for a court, or the Commission, to decide; you cannot be liable to yourself)
+      `the accident happened on private land` IS A BOOLEAN @desc Whether the accident happened on private land, such as a farm paddock or a private driveway, rather than a road or other public place
+      `a vehicle involved had WA compulsory third party insurance` IS A BOOLEAN @desc Whether at least one vehicle involved had Western Australian compulsory third party insurance in force
+      `a vehicle involved was licensed interstate and under that place's compulsory scheme` IS A BOOLEAN @desc Whether at least one vehicle involved was licensed in another State or Territory and covered by its compulsory insurance or accident compensation scheme
+      `a vehicle involved was in a motor sports event` IS A BOOLEAN @desc Whether a vehicle involved was taking part in a motor sports event
+      `the accident resulted from a terrorist act` IS A BOOLEAN @desc Whether the injury resulted from a terrorist act
+      `workers' compensation is payable for my injury` IS A BOOLEAN @desc Whether compensation under the Workers Compensation and Injury Management Act 2023 is payable for your injury
+      `my work injury happened on or after 1 July 2024` IS A BOOLEAN @desc Whether the incident that injured you at work happened on or after 1 July 2024, when workplace injuries joined the scheme
+      `I have claimed workers' compensation for my injury` IS A BOOLEAN @desc Whether you have made a claim for workers' compensation for the injury
+      `liability for my claim was accepted, taken to be accepted, or decided by an arbitrator` IS A BOOLEAN @desc Whether the insurer or self-insurer accepted liability for your claim (or is taken to have accepted it), or an arbitrator decided it
+GIVETH A `How the Act takes it answer`
+`Does the Act take my injury as a motor vehicle injury, a workplace injury, or not at all` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured in a motor vehicle accident or at work` THEN `the Act takes my injury` (`How does the Act take my injury` (`the accident from my answers` `how I was injured` `how the incident happened` `the accident happened in Western Australia` `the accident happened on or after 1 July 2016` `an owner or driver of a motor vehicle is liable in negligence for my injury` `the accident happened on private land` `a vehicle involved had WA compulsory third party insurance` `a vehicle involved was licensed interstate and under that place's compulsory scheme` `a vehicle involved was in a motor sports event` `the accident resulted from a terrorist act`) (`the work injury from my answers` `how I was injured` `workers' compensation is payable for my injury` `my work injury happened on or after 1 July 2024` `I have claimed workers' compensation for my injury` `liability for my claim was accepted, taken to be accepted, or decided by an arbitrator`))
+    WHEN `I act for, or care for, someone who was injured` THEN `does not arise for you`
+    WHEN `I provide treatment, care or support to people in the scheme` THEN `does not arise for you`
+
+§§§ `ss 3, 8, 9, 34(2)(a) -- am I eligible, and may I apply`
+
+-- My case, from plain answers. The rule for eligibility (s 8) reads neither the lifetime criteria nor residence, and the
+-- rule for applying (s 9) reads neither the criteria nor damages; fields a rule does not read get the fixed placeholder
+-- FALSE, so the question does not ask them.
+@export Am I eligible to be a participant in the catastrophic injuries support scheme (Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 (WA) ss 3, 5, 5A, 8)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `how I was injured` IS A `How I was injured` @desc How you were injured: in an incident involving a motor vehicle (a car, motorcycle, truck or the like), as a worker (a worker under the Workers Compensation and Injury Management Act 2023, in an injury for which workers' compensation may be payable), or both
+      `my injury meets the prescribed criteria for a catastrophic injury` IS A BOOLEAN @desc Whether your injury meets the criteria the regulations prescribe for a catastrophic injury (for example a spinal cord injury, a brain injury, multiple amputations, severe burns or permanent blindness, as the regulations define them; not deposited)
+      `I have been awarded damages for my future care by final judgment or binding settlement` IS A BOOLEAN @desc Whether a court, by final judgment, or a binding settlement has already awarded you damages for your future treatment, care and support for this injury
+      `how the incident happened` IS A `How it happened` @desc How the incident that injured you happened: the driving of a motor vehicle, a vehicle running out of control, a collision (or action to avoid one) with a vehicle, moving or stationary, helping at the scene of a motor vehicle accident, or none of these
+      `the accident happened in Western Australia` IS A BOOLEAN @desc Whether the accident happened in Western Australia
+      `the accident happened on or after 1 July 2016` IS A BOOLEAN @desc Whether the accident happened on or after 1 July 2016, when the scheme began
+      `an owner or driver of a motor vehicle is liable in negligence for my injury` IS A BOOLEAN @desc Whether the owner or driver of a motor vehicle is liable in negligence for your injury, because of the driving of the vehicle or its running out of control (for a court, or the Commission, to decide; you cannot be liable to yourself)
+      `the accident happened on private land` IS A BOOLEAN @desc Whether the accident happened on private land, such as a farm paddock or a private driveway, rather than a road or other public place
+      `a vehicle involved had WA compulsory third party insurance` IS A BOOLEAN @desc Whether at least one vehicle involved had Western Australian compulsory third party insurance in force
+      `a vehicle involved was licensed interstate and under that place's compulsory scheme` IS A BOOLEAN @desc Whether at least one vehicle involved was licensed in another State or Territory and covered by its compulsory insurance or accident compensation scheme
+      `a vehicle involved was in a motor sports event` IS A BOOLEAN @desc Whether a vehicle involved was taking part in a motor sports event
+      `the accident resulted from a terrorist act` IS A BOOLEAN @desc Whether the injury resulted from a terrorist act
+      `workers' compensation is payable for my injury` IS A BOOLEAN @desc Whether compensation under the Workers Compensation and Injury Management Act 2023 is payable for your injury
+      `my work injury happened on or after 1 July 2024` IS A BOOLEAN @desc Whether the incident that injured you at work happened on or after 1 July 2024, when workplace injuries joined the scheme
+      `I have claimed workers' compensation for my injury` IS A BOOLEAN @desc Whether you have made a claim for workers' compensation for the injury
+      `liability for my claim was accepted, taken to be accepted, or decided by an arbitrator` IS A BOOLEAN @desc Whether the insurer or self-insurer accepted liability for your claim (or is taken to have accepted it), or an arbitrator decided it
+GIVETH A `Yes or no`
+`Am I eligible to be a participant in the scheme` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured in a motor vehicle accident or at work` THEN `yes if` (`Am I eligible to participate in the CISS` (`my case from my answers` `how I was injured` `how the incident happened` `the accident happened in Western Australia` `the accident happened on or after 1 July 2016` `an owner or driver of a motor vehicle is liable in negligence for my injury` `the accident happened on private land` `a vehicle involved had WA compulsory third party insurance` `a vehicle involved was licensed interstate and under that place's compulsory scheme` `a vehicle involved was in a motor sports event` `the accident resulted from a terrorist act` `workers' compensation is payable for my injury` `my work injury happened on or after 1 July 2024` `I have claimed workers' compensation for my injury` `liability for my claim was accepted, taken to be accepted, or decided by an arbitrator` `my injury meets the prescribed criteria for a catastrophic injury` FALSE `I have been awarded damages for my future care by final judgment or binding settlement` FALSE))
+    WHEN `I act for, or care for, someone who was injured` THEN `does not arise for you`
+    WHEN `I provide treatment, care or support to people in the scheme` THEN `does not arise for you`
+
+@export I am not in the scheme now: may I apply to the Insurance Commission to join it (Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 (WA) s 9)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my place in the scheme` IS A `My place in the scheme` @desc Whether you have been accepted into the catastrophic injuries support scheme, and as what: not accepted (or not yet applied), an interim or a lifetime participant now, or a former participant
+      `how I was injured` IS A `How I was injured` @desc How you were injured: in an incident involving a motor vehicle (a car, motorcycle, truck or the like), as a worker (a worker under the Workers Compensation and Injury Management Act 2023, in an injury for which workers' compensation may be payable), or both
+      `I reside in Australia` IS A BOOLEAN @desc Whether you live in Australia now (a worker may apply only while residing in Australia, s 9(1A))
+      `how the incident happened` IS A `How it happened` @desc How the incident that injured you happened: the driving of a motor vehicle, a vehicle running out of control, a collision (or action to avoid one) with a vehicle, moving or stationary, helping at the scene of a motor vehicle accident, or none of these
+      `the accident happened in Western Australia` IS A BOOLEAN @desc Whether the accident happened in Western Australia
+      `the accident happened on or after 1 July 2016` IS A BOOLEAN @desc Whether the accident happened on or after 1 July 2016, when the scheme began
+      `an owner or driver of a motor vehicle is liable in negligence for my injury` IS A BOOLEAN @desc Whether the owner or driver of a motor vehicle is liable in negligence for your injury, because of the driving of the vehicle or its running out of control (for a court, or the Commission, to decide; you cannot be liable to yourself)
+      `the accident happened on private land` IS A BOOLEAN @desc Whether the accident happened on private land, such as a farm paddock or a private driveway, rather than a road or other public place
+      `a vehicle involved had WA compulsory third party insurance` IS A BOOLEAN @desc Whether at least one vehicle involved had Western Australian compulsory third party insurance in force
+      `a vehicle involved was licensed interstate and under that place's compulsory scheme` IS A BOOLEAN @desc Whether at least one vehicle involved was licensed in another State or Territory and covered by its compulsory insurance or accident compensation scheme
+      `a vehicle involved was in a motor sports event` IS A BOOLEAN @desc Whether a vehicle involved was taking part in a motor sports event
+      `the accident resulted from a terrorist act` IS A BOOLEAN @desc Whether the injury resulted from a terrorist act
+      `workers' compensation is payable for my injury` IS A BOOLEAN @desc Whether compensation under the Workers Compensation and Injury Management Act 2023 is payable for your injury
+      `my work injury happened on or after 1 July 2024` IS A BOOLEAN @desc Whether the incident that injured you at work happened on or after 1 July 2024, when workplace injuries joined the scheme
+      `I have claimed workers' compensation for my injury` IS A BOOLEAN @desc Whether you have made a claim for workers' compensation for the injury
+      `liability for my claim was accepted, taken to be accepted, or decided by an arbitrator` IS A BOOLEAN @desc Whether the insurer or self-insurer accepted liability for your claim (or is taken to have accepted it), or an arbitrator decided it
+GIVETH A `Yes or no`
+`May I apply to the Insurance Commission to join the scheme` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured in a motor vehicle accident or at work` THEN
+        IF `I am in the scheme now` `my place in the scheme`
+        THEN `does not arise for you`
+        ELSE `yes if` (`May I apply to join the CISS` (`my case from my answers` `how I was injured` `how the incident happened` `the accident happened in Western Australia` `the accident happened on or after 1 July 2016` `an owner or driver of a motor vehicle is liable in negligence for my injury` `the accident happened on private land` `a vehicle involved had WA compulsory third party insurance` `a vehicle involved was licensed interstate and under that place's compulsory scheme` `a vehicle involved was in a motor sports event` `the accident resulted from a terrorist act` `workers' compensation is payable for my injury` `my work injury happened on or after 1 July 2024` `I have claimed workers' compensation for my injury` `liability for my claim was accepted, taken to be accepted, or decided by an arbitrator` FALSE FALSE FALSE `I reside in Australia`))
+    WHEN `I act for, or care for, someone who was injured` THEN `does not arise for you`
+    WHEN `I provide treatment, care or support to people in the scheme` THEN `does not arise for you`
+
+@export I am not in the scheme now: by when must I apply to join it (Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 (WA) ss 9, 34(2)(a))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my place in the scheme` IS A `My place in the scheme` @desc Whether you have been accepted into the catastrophic injuries support scheme, and as what: not accepted (or not yet applied), an interim or a lifetime participant now, or a former participant
+GIVETH A `Time limit answer`
+`By when must I apply to join the scheme` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured in a motor vehicle accident or at work` THEN
+        IF `I am in the scheme now` `my place in the scheme`
+        THEN `does not arise for you`
+        ELSE `as to the time for applying` `By when must I apply`
+    WHEN `I act for, or care for, someone who was injured` THEN `does not arise for you`
+    WHEN `I provide treatment, care or support to people in the scheme` THEN `does not arise for you`
+
+§§§ `ss 10-14 -- acceptance, interim and lifetime participation, and suspension`
+
+@export I am not in the scheme now: if I apply, what must the Commission accept me as (Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 (WA) ss 10, 12(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my place in the scheme` IS A `My place in the scheme` @desc Whether you have been accepted into the catastrophic injuries support scheme, and as what: not accepted (or not yet applied), an interim or a lifetime participant now, or a former participant
+      `how I was injured` IS A `How I was injured` @desc How you were injured: in an incident involving a motor vehicle (a car, motorcycle, truck or the like), as a worker (a worker under the Workers Compensation and Injury Management Act 2023, in an injury for which workers' compensation may be payable), or both
+      `the Commission is satisfied I am eligible` IS A BOOLEAN @desc Whether the Commission is satisfied you are eligible
+      `my application was duly made` IS A BOOLEAN @desc Whether your application was made in the Commission's manner and form, with the information it requires
+      `my injury meets the prescribed criteria for a catastrophic injury` IS A BOOLEAN @desc Whether your injury meets the criteria the regulations prescribe for a catastrophic injury (for example a spinal cord injury, a brain injury, multiple amputations, severe burns or permanent blindness, as the regulations define them; not deposited)
+      `I meet the prescribed criteria for lifetime participation` IS A BOOLEAN @desc Whether you meet the criteria the regulations prescribe for lifetime, rather than interim, participation (not deposited)
+      `I have been awarded damages for my future care by final judgment or binding settlement` IS A BOOLEAN @desc Whether a court, by final judgment, or a binding settlement has already awarded you damages for your future treatment, care and support for this injury
+      `how the incident happened` IS A `How it happened` @desc How the incident that injured you happened: the driving of a motor vehicle, a vehicle running out of control, a collision (or action to avoid one) with a vehicle, moving or stationary, helping at the scene of a motor vehicle accident, or none of these
+      `the accident happened in Western Australia` IS A BOOLEAN @desc Whether the accident happened in Western Australia
+      `the accident happened on or after 1 July 2016` IS A BOOLEAN @desc Whether the accident happened on or after 1 July 2016, when the scheme began
+      `an owner or driver of a motor vehicle is liable in negligence for my injury` IS A BOOLEAN @desc Whether the owner or driver of a motor vehicle is liable in negligence for your injury, because of the driving of the vehicle or its running out of control (for a court, or the Commission, to decide; you cannot be liable to yourself)
+      `the accident happened on private land` IS A BOOLEAN @desc Whether the accident happened on private land, such as a farm paddock or a private driveway, rather than a road or other public place
+      `a vehicle involved had WA compulsory third party insurance` IS A BOOLEAN @desc Whether at least one vehicle involved had Western Australian compulsory third party insurance in force
+      `a vehicle involved was licensed interstate and under that place's compulsory scheme` IS A BOOLEAN @desc Whether at least one vehicle involved was licensed in another State or Territory and covered by its compulsory insurance or accident compensation scheme
+      `a vehicle involved was in a motor sports event` IS A BOOLEAN @desc Whether a vehicle involved was taking part in a motor sports event
+      `the accident resulted from a terrorist act` IS A BOOLEAN @desc Whether the injury resulted from a terrorist act
+      `workers' compensation is payable for my injury` IS A BOOLEAN @desc Whether compensation under the Workers Compensation and Injury Management Act 2023 is payable for your injury
+      `my work injury happened on or after 1 July 2024` IS A BOOLEAN @desc Whether the incident that injured you at work happened on or after 1 July 2024, when workplace injuries joined the scheme
+      `I have claimed workers' compensation for my injury` IS A BOOLEAN @desc Whether you have made a claim for workers' compensation for the injury
+      `liability for my claim was accepted, taken to be accepted, or decided by an arbitrator` IS A BOOLEAN @desc Whether the insurer or self-insurer accepted liability for your claim (or is taken to have accepted it), or an arbitrator decided it
+GIVETH AN `Acceptance answer`
+`If I apply, what must the Commission accept me as` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured in a motor vehicle accident or at work` THEN
+        IF `I am in the scheme now` `my place in the scheme`
+        THEN `does not arise for you`
+        ELSE `the Commission must accept me as` (`What must the Commission accept me as` (`my case from my answers` `how I was injured` `how the incident happened` `the accident happened in Western Australia` `the accident happened on or after 1 July 2016` `an owner or driver of a motor vehicle is liable in negligence for my injury` `the accident happened on private land` `a vehicle involved had WA compulsory third party insurance` `a vehicle involved was licensed interstate and under that place's compulsory scheme` `a vehicle involved was in a motor sports event` `the accident resulted from a terrorist act` `workers' compensation is payable for my injury` `my work injury happened on or after 1 July 2024` `I have claimed workers' compensation for my injury` `liability for my claim was accepted, taken to be accepted, or decided by an arbitrator` `my injury meets the prescribed criteria for a catastrophic injury` `I meet the prescribed criteria for lifetime participation` `I have been awarded damages for my future care by final judgment or binding settlement` FALSE) `the Commission is satisfied I am eligible` `my application was duly made`)
+    WHEN `I act for, or care for, someone who was injured` THEN `does not arise for you`
+    WHEN `I provide treatment, care or support to people in the scheme` THEN `does not arise for you`
+
+@export I am in the scheme: am I still a participant (Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 (WA) ss 11, 12)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my place in the scheme` IS A `My place in the scheme` @desc Whether you have been accepted into the catastrophic injuries support scheme, and as what: not accepted (or not yet applied), an interim or a lifetime participant now, or a former participant
+      `my interim period under the regulations has ended` IS A BOOLEAN @desc Whether the period the regulations set for interim participation has run out (interim participants only)
+      `I have been notified that I am no longer eligible` IS A BOOLEAN @desc Whether the Commission has notified you of a decision that you are no longer eligible
+GIVETH A `Yes or no`
+`Am I still a participant in the scheme` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured in a motor vehicle accident or at work` THEN
+        IF `I am not in the scheme now` `my place in the scheme`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Am I still a participant` (`the baseline's participation for` `my place in the scheme`) `my interim period under the regulations has ended` `I have been notified that I am no longer eligible`)
+    WHEN `I act for, or care for, someone who was injured` THEN `does not arise for you`
+    WHEN `I provide treatment, care or support to people in the scheme` THEN `does not arise for you`
+
+@export I am, or was, an interim participant: when my interim participation ends, may I apply again for the same injury (Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 (WA) ss 11(3), 13)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my place in the scheme` IS A `My place in the scheme` @desc Whether you have been accepted into the catastrophic injuries support scheme, and as what: not accepted (or not yet applied), an interim or a lifetime participant now, or a former participant
+GIVETH A `Yes or no`
+`When my interim participation ends, may I apply again` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured in a motor vehicle accident or at work` THEN
+        IF `I am not, and was not, an interim participant` `my place in the scheme`
+        THEN `does not arise for you`
+        ELSE `yes if` `May I apply again after my interim participation ends`
+    WHEN `I act for, or care for, someone who was injured` THEN `does not arise for you`
+    WHEN `I provide treatment, care or support to people in the scheme` THEN `does not arise for you`
+
+@export I am in the scheme: is my participation suspended (Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 (WA) s 14)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my place in the scheme` IS A `My place in the scheme` @desc Whether you have been accepted into the catastrophic injuries support scheme, and as what: not accepted (or not yet applied), an interim or a lifetime participant now, or a former participant
+      `how the Act takes my injury` IS A `How the Act takes my injury` @desc Whether you are in the scheme for a motor vehicle injury or a workplace injury
+      `I am absent from Australia` IS A BOOLEAN @desc Whether you are now outside Australia
+      `the Commission considers it appropriate to suspend me while I am away` IS A BOOLEAN @desc Whether the Commission considers suspension appropriate (motor vehicle injury only)
+      `the Commission has suspended me in circumstances the regulations prescribe` IS A BOOLEAN @desc Whether the Commission has suspended you under the regulations
+GIVETH A `Yes or no`
+`Is my participation in the scheme suspended` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured in a motor vehicle accident or at work` THEN
+        IF `I am not in the scheme now` `my place in the scheme`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Is my participation suspended` `how the Act takes my injury` `I am absent from Australia` `the Commission considers it appropriate to suspend me while I am away` `the Commission has suspended me in circumstances the regulations prescribe`)
+    WHEN `I act for, or care for, someone who was injured` THEN `does not arise for you`
+    WHEN `I provide treatment, care or support to people in the scheme` THEN `does not arise for you`
+
+§§§ `ss 6, 15, 17, 18, 19 -- what the Commission must pay for`
+
+@export Is this one of my "treatment, care and support needs" (Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 (WA) s 6)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the kind of need` IS A `The kind of need` @desc What the need is for: medical treatment, dental treatment, rehabilitation, ambulance transport, respite care, domestic assistance, attendant care, aids and appliances, prostheses, education and vocational training, home and transport modification, or something else
+      `it is of a kind the regulations exclude` IS A BOOLEAN @desc Whether the regulations prescribe it as an excluded kind of treatment, care or support (not deposited)
+GIVETH A `Yes or no`
+`Is this one of my treatment, care and support needs` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured in a motor vehicle accident or at work` THEN `yes if` (`Is it one of my treatment, care and support needs` `the kind of need` `it is of a kind the regulations exclude`)
+    WHEN `I act for, or care for, someone who was injured` THEN `does not arise for you`
+    WHEN `I provide treatment, care or support to people in the scheme` THEN `does not arise for you`
+
+@export I am in the scheme: must I be told the Commission's assessment of my needs, and its reasons (Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 (WA) s 15(3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my place in the scheme` IS A `My place in the scheme` @desc Whether you have been accepted into the catastrophic injuries support scheme, and as what: not accepted (or not yet applied), an interim or a lifetime participant now, or a former participant
+GIVETH A `Yes or no`
+`Must I be told the assessment of my needs and its reasons` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured in a motor vehicle accident or at work` THEN
+        IF `I am not in the scheme now` `my place in the scheme`
+        THEN `does not arise for you`
+        ELSE `yes if` `Must I be told my assessment and its reasons`
+    WHEN `I act for, or care for, someone who was injured` THEN `does not arise for you`
+    WHEN `I provide treatment, care or support to people in the scheme` THEN `does not arise for you`
+
+@export I am in the scheme: will the Commission pay my lawyer for help with my needs assessment (Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 (WA) s 17)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my place in the scheme` IS A `My place in the scheme` @desc Whether you have been accepted into the catastrophic injuries support scheme, and as what: not accepted (or not yet applied), an interim or a lifetime participant now, or a former participant
+GIVETH A `Yes or no`
+`Will the Commission pay my lawyer for my needs assessment` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured in a motor vehicle accident or at work` THEN
+        IF `I am not in the scheme now` `my place in the scheme`
+        THEN `does not arise for you`
+        ELSE `yes if` `Will the Commission pay my legal costs for my assessment`
+    WHEN `I act for, or care for, someone who was injured` THEN `does not arise for you`
+    WHEN `I provide treatment, care or support to people in the scheme` THEN `does not arise for you`
+
+-- Arises for anyone who is or was a participant: an expense incurred while one may be asked about afterwards.
+@export I am, or was, in the scheme: must the Insurance Commission pay this expense for me (Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 (WA) ss 6, 18, 19)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my place in the scheme` IS A `My place in the scheme` @desc Whether you have been accepted into the catastrophic injuries support scheme, and as what: not accepted (or not yet applied), an interim or a lifetime participant now, or a former participant
+      `the kind of need` IS A `The kind of need` @desc What the need is for: medical treatment, dental treatment, rehabilitation, ambulance transport, respite care, domestic assistance, attendant care, aids and appliances, prostheses, education and vocational training, home and transport modification, or something else
+      `it is of a kind the regulations exclude` IS A BOOLEAN @desc Whether the regulations prescribe it as an excluded kind of treatment, care or support (not deposited)
+      `the Commission assessed it as a necessary and reasonable need related to my injury` IS A BOOLEAN @desc Whether the Commission's assessment of your needs found this need necessary and reasonable and related to your injury
+      `the expense is necessary and reasonable` IS A BOOLEAN @desc Whether the expense itself is necessary and reasonable
+      `I was a participant when it was incurred` IS A BOOLEAN @desc Whether you were a participant in the scheme when the expense was incurred
+      `my participation was suspended at the time` IS A BOOLEAN @desc Whether your participation was suspended when the expense was incurred
+      `it was given to me free` IS A BOOLEAN @desc Whether the treatment, care or support was given to you free (for example by a family member)
+      `it was given while I was outside Australia` IS A BOOLEAN @desc Whether it was provided while you were outside Australia
+      `I am a child and it is an ordinary cost of raising a child` IS A BOOLEAN @desc Whether you are a child and the expense is an ordinary cost of raising a child
+      `it had to come from a registered provider and did not` IS A BOOLEAN @desc Whether the regulations required it to come from a provider registered with the Commission, and it did not
+      `it was provided in breach of the regulations` IS A BOOLEAN @desc Whether it was provided in breach of the regulations
+      `the regulations exclude it from payment` IS A BOOLEAN @desc Whether the regulations exclude it from what the Commission must pay
+      `the Commission elects to pay it anyway` IS A BOOLEAN @desc Whether the Commission has elected to pay it although it need not (s 19(3))
+GIVETH A `Payment answer`
+`Must the Insurance Commission pay this expense for me` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured in a motor vehicle accident or at work` THEN
+        IF `I have never been accepted into the scheme` `my place in the scheme`
+        THEN `does not arise for you`
+        ELSE `as to payment` (`Must the Commission pay this expense` (`the expense from my answers` `the kind of need` `it is of a kind the regulations exclude` `the Commission assessed it as a necessary and reasonable need related to my injury` `the expense is necessary and reasonable` `I was a participant when it was incurred` `my participation was suspended at the time` `it was given to me free` `it was given while I was outside Australia` `I am a child and it is an ordinary cost of raising a child` `it had to come from a registered provider and did not` `it was provided in breach of the regulations` `the regulations exclude it from payment` `the Commission elects to pay it anyway`))
+    WHEN `I act for, or care for, someone who was injured` THEN `does not arise for you`
+    WHEN `I provide treatment, care or support to people in the scheme` THEN `does not arise for you`
+
+@export I am in the scheme: may the Commission pay me a sum to cover my expenses over a fixed period instead (Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 (WA) s 18(5))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my place in the scheme` IS A `My place in the scheme` @desc Whether you have been accepted into the catastrophic injuries support scheme, and as what: not accepted (or not yet applied), an interim or a lifetime participant now, or a former participant
+      `I have agreed this with the Commission` IS A BOOLEAN @desc Whether you and the Commission have made an agreement for you to pay the expenses yourself from a sum
+GIVETH A `Yes or no`
+`May the Commission pay me a sum for a fixed period instead` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured in a motor vehicle accident or at work` THEN
+        IF `I am not in the scheme now` `my place in the scheme`
+        THEN `does not arise for you`
+        ELSE `yes if` (`May I be paid a sum for a fixed period` `I have agreed this with the Commission`)
+    WHEN `I act for, or care for, someone who was injured` THEN `does not arise for you`
+    WHEN `I provide treatment, care or support to people in the scheme` THEN `does not arise for you`
+
+§§§ `ss 24-27 -- challenging the Commission's decisions`
+
+@export Can I ask the Commission to review this decision (Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 (WA) ss 24, 25, 26)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the decision` IS A `The decision` @desc Which decision of the Commission you dispute
+GIVETH A `Yes or no`
+`Can I ask the Commission to review this decision` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured in a motor vehicle accident or at work` THEN `yes if` (`Can I ask the Commission to review the decision` `the decision`)
+    WHEN `I act for, or care for, someone who was injured` THEN `does not arise for you`
+    WHEN `I provide treatment, care or support to people in the scheme` THEN `does not arise for you`
+
+@export After the Commission's review, can I appeal to the District Court (Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 (WA) s 27)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the decision` IS A `The decision` @desc Which decision of the Commission you dispute
+GIVETH AN `Appeal answer`
+`After the review, can I appeal to the District Court` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured in a motor vehicle accident or at work` THEN `the appeal open to me is` (`What appeal do I have to the District Court` `the decision`)
+    WHEN `I act for, or care for, someone who was injured` THEN `does not arise for you`
+    WHEN `I provide treatment, care or support to people in the scheme` THEN `does not arise for you`
+
+§§§ `s 30A(5) -- what I must do as an injured worker`
+
+-- In the worker's situation the baseline's "I am a worker whose injury is catastrophic" is the worker (TRUE by the
+-- situation) and the prescribed criteria (asked).
+@export As an injured worker, must I notify the Insurance Commission (Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 (WA) s 30A(5))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `how I was injured` IS A `How I was injured` @desc How you were injured: in an incident involving a motor vehicle (a car, motorcycle, truck or the like), as a worker (a worker under the Workers Compensation and Injury Management Act 2023, in an injury for which workers' compensation may be payable), or both
+      `my injury meets the prescribed criteria for a catastrophic injury` IS A BOOLEAN @desc Whether your injury meets the criteria the regulations prescribe for a catastrophic injury (for example a spinal cord injury, a brain injury, multiple amputations, severe burns or permanent blindness, as the regulations define them; not deposited)
+      `I have elected to keep my right to seek damages` IS A BOOLEAN @desc Whether you have made an election under the Workers Compensation and Injury Management Act 2023 s 421 to keep your right to seek damages
+      `I have received or settled damages that include future care` IS A BOOLEAN @desc Whether you have received damages, or settled a damages claim, that include an amount for future treatment, care and support
+GIVETH A `Yes or no`
+`As an injured worker, must I notify the Commission` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured in a motor vehicle accident or at work` THEN
+        IF `I was not injured as a worker` `how I was injured`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Must I notify the Commission` `my injury meets the prescribed criteria for a catastrophic injury` `I have elected to keep my right to seek damages` `I have received or settled damages that include future care`)
+    WHEN `I act for, or care for, someone who was injured` THEN `does not arise for you`
+    WHEN `I provide treatment, care or support to people in the scheme` THEN `does not arise for you`
+
+@export As an injured worker, how many days do I have to notify the Commission after the election or the damages (Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 (WA) s 30A(5))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `how I was injured` IS A `How I was injured` @desc How you were injured: in an incident involving a motor vehicle (a car, motorcycle, truck or the like), as a worker (a worker under the Workers Compensation and Injury Management Act 2023, in an injury for which workers' compensation may be payable), or both
+GIVETH A `Days`
+`As an injured worker, how many days do I have to notify the Commission` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured in a motor vehicle accident or at work` THEN
+        IF `I was not injured as a worker` `how I was injured`
+        THEN `does not arise for you`
+        ELSE `a number of days` `How many days do I have to notify the Commission`
+    WHEN `I act for, or care for, someone who was injured` THEN `does not arise for you`
+    WHEN `I provide treatment, care or support to people in the scheme` THEN `does not arise for you`
+
+§§§ `The scheme and my common-law claim (ss 5, 5A, 8; Civil Liability Act s 13A; MVTPI Act ss 3EA, 3FB)`
+
+@export Will my lifetime care be paid by the scheme, or must I claim damages from whoever was at fault (Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 (WA) ss 5, 5A, 8)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `how I was injured` IS A `How I was injured` @desc How you were injured: in an incident involving a motor vehicle (a car, motorcycle, truck or the like), as a worker (a worker under the Workers Compensation and Injury Management Act 2023, in an injury for which workers' compensation may be payable), or both
+      `my injury meets the prescribed criteria for a catastrophic injury` IS A BOOLEAN @desc Whether your injury meets the criteria the regulations prescribe for a catastrophic injury (for example a spinal cord injury, a brain injury, multiple amputations, severe burns or permanent blindness, as the regulations define them; not deposited)
+      `I have been awarded damages for my future care by final judgment or binding settlement` IS A BOOLEAN @desc Whether a court, by final judgment, or a binding settlement has already awarded you damages for your future treatment, care and support for this injury
+      `how the incident happened` IS A `How it happened` @desc How the incident that injured you happened: the driving of a motor vehicle, a vehicle running out of control, a collision (or action to avoid one) with a vehicle, moving or stationary, helping at the scene of a motor vehicle accident, or none of these
+      `the accident happened in Western Australia` IS A BOOLEAN @desc Whether the accident happened in Western Australia
+      `the accident happened on or after 1 July 2016` IS A BOOLEAN @desc Whether the accident happened on or after 1 July 2016, when the scheme began
+      `an owner or driver of a motor vehicle is liable in negligence for my injury` IS A BOOLEAN @desc Whether the owner or driver of a motor vehicle is liable in negligence for your injury, because of the driving of the vehicle or its running out of control (for a court, or the Commission, to decide; you cannot be liable to yourself)
+      `the accident happened on private land` IS A BOOLEAN @desc Whether the accident happened on private land, such as a farm paddock or a private driveway, rather than a road or other public place
+      `a vehicle involved had WA compulsory third party insurance` IS A BOOLEAN @desc Whether at least one vehicle involved had Western Australian compulsory third party insurance in force
+      `a vehicle involved was licensed interstate and under that place's compulsory scheme` IS A BOOLEAN @desc Whether at least one vehicle involved was licensed in another State or Territory and covered by its compulsory insurance or accident compensation scheme
+      `a vehicle involved was in a motor sports event` IS A BOOLEAN @desc Whether a vehicle involved was taking part in a motor sports event
+      `the accident resulted from a terrorist act` IS A BOOLEAN @desc Whether the injury resulted from a terrorist act
+      `workers' compensation is payable for my injury` IS A BOOLEAN @desc Whether compensation under the Workers Compensation and Injury Management Act 2023 is payable for your injury
+      `my work injury happened on or after 1 July 2024` IS A BOOLEAN @desc Whether the incident that injured you at work happened on or after 1 July 2024, when workplace injuries joined the scheme
+      `I have claimed workers' compensation for my injury` IS A BOOLEAN @desc Whether you have made a claim for workers' compensation for the injury
+      `liability for my claim was accepted, taken to be accepted, or decided by an arbitrator` IS A BOOLEAN @desc Whether the insurer or self-insurer accepted liability for your claim (or is taken to have accepted it), or an arbitrator decided it
+GIVETH A `Care funding answer`
+`Will my care be paid by the scheme, or must I claim damages` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured in a motor vehicle accident or at work` THEN `my care is paid from` (`Where is my care paid from` (`my case from my answers` `how I was injured` `how the incident happened` `the accident happened in Western Australia` `the accident happened on or after 1 July 2016` `an owner or driver of a motor vehicle is liable in negligence for my injury` `the accident happened on private land` `a vehicle involved had WA compulsory third party insurance` `a vehicle involved was licensed interstate and under that place's compulsory scheme` `a vehicle involved was in a motor sports event` `the accident resulted from a terrorist act` `workers' compensation is payable for my injury` `my work injury happened on or after 1 July 2024` `I have claimed workers' compensation for my injury` `liability for my claim was accepted, taken to be accepted, or decided by an arbitrator` `my injury meets the prescribed criteria for a catastrophic injury` FALSE `I have been awarded damages for my future care by final judgment or binding settlement` FALSE))
+    WHEN `I act for, or care for, someone who was injured` THEN `does not arise for you`
+    WHEN `I provide treatment, care or support to people in the scheme` THEN `does not arise for you`
+
+-- Asked of every injured person: CLA s 13A answers for a participant, a former one and someone never accepted.
+@export Can a court award me damages for this care need, given the scheme (Civil Liability Act 2002 (WA) s 13A; Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 3EA)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my place in the scheme` IS A `My place in the scheme` @desc Whether you have been accepted into the catastrophic injuries support scheme, and as what: not accepted (or not yet applied), an interim or a lifetime participant now, or a former participant
+      `when it arises` IS A `When the care need arises` @desc When the treatment, care or support need arose or will arise
+GIVETH A `Yes or no`
+`Can a court award me damages for this care need` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured in a motor vehicle accident or at work` THEN `yes if` (`Can I be awarded damages for this care need` (`the baseline's standing for` `my place in the scheme`) `when it arises`)
+    WHEN `I act for, or care for, someone who was injured` THEN `does not arise for you`
+    WHEN `I provide treatment, care or support to people in the scheme` THEN `does not arise for you`
+
+@export A motor vehicle was involved: can my damages be reduced because I was partly to blame (Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 3FB)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `how I was injured` IS A `How I was injured` @desc How you were injured: in an incident involving a motor vehicle (a car, motorcycle, truck or the like), as a worker (a worker under the Workers Compensation and Injury Management Act 2023, in an injury for which workers' compensation may be payable), or both
+      `my injury is catastrophic and was caused by the driving of a motor vehicle` IS A BOOLEAN @desc Whether the injury is catastrophic and directly caused by, or by the driving of, a motor vehicle
+      `the damages are for my treatment, care and support needs` IS A BOOLEAN @desc Whether these damages are for care needs, past or future, rather than another head of loss
+GIVETH A `Yes or no`
+`Can my damages be reduced because I was partly to blame` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured in a motor vehicle accident or at work` THEN
+        IF `no motor vehicle was involved` `how I was injured`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Can my damages be reduced for my own fault` `my injury is catastrophic and was caused by the driving of a motor vehicle` `the damages are for my treatment, care and support needs`)
+    WHEN `I act for, or care for, someone who was injured` THEN `does not arise for you`
+    WHEN `I provide treatment, care or support to people in the scheme` THEN `does not arise for you`
+
+§§ `For the person who acts for, or cares for, someone who was injured`
+
+-- Helpers from the deposited text where the baseline has no rule.
+--
+-- s 3(2): "A reference in this Act to an injured person or a participant in the CISS (the relevant person), in relation to
+-- the making of an application by, or the giving of a notice or other document to, the relevant person, includes a
+-- reference to another person with lawful authority to act on the relevant person's behalf."
+GIVEN `I have lawful authority to act for them` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `s 3(2) -- a person with lawful authority may apply, and be given notices, for the injured person` IF
+    `I have lawful authority to act for them`
+
+§§§ `ss 3(2), 9 -- acting for the injured person`
+
+@export May I make the application to join the scheme for the injured person (Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 (WA) ss 3(2), 9)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have lawful authority to act for them` IS A BOOLEAN @desc Whether you have lawful authority to act on the injured person's behalf, for example as their guardian or administrator, their attorney, or the parent of a child
+GIVETH A `Yes or no`
+`May I make the application for the injured person` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured in a motor vehicle accident or at work` THEN `does not arise for you`
+    WHEN `I act for, or care for, someone who was injured` THEN `yes if` (`s 3(2) -- a person with lawful authority may apply, and be given notices, for the injured person` `I have lawful authority to act for them`)
+    WHEN `I provide treatment, care or support to people in the scheme` THEN `does not arise for you`
+
+@export May the Commission give its notices and decisions about the injured person to me (Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 (WA) s 3(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have lawful authority to act for them` IS A BOOLEAN @desc Whether you have lawful authority to act on the injured person's behalf, for example as their guardian or administrator, their attorney, or the parent of a child
+GIVETH A `Yes or no`
+`May the Commission give its notices about the injured person to me` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured in a motor vehicle accident or at work` THEN `does not arise for you`
+    WHEN `I act for, or care for, someone who was injured` THEN `yes if` (`s 3(2) -- a person with lawful authority may apply, and be given notices, for the injured person` `I have lawful authority to act for them`)
+    WHEN `I provide treatment, care or support to people in the scheme` THEN `does not arise for you`
+
+§§§ `s 19(2)(a), (3); Civil Liability Act s 13A(3) -- care I give free`
+
+-- The care is given free, so s 19(2)(a) holds and the other s 19(2) items cannot change the answer: they are fixed FALSE.
+-- The s 18 limbs (a need, assessed, necessary and reasonable, while a participant, not excluded) and s 19(5)
+-- (suspension) still decide whether the Commission could be liable at all.
+@export They are, or were, in the scheme: must the Commission pay for the care I give them free (Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 (WA) ss 18, 19(2)(a), (3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the injured person's place in the scheme` IS A `Their place in the scheme` @desc Whether the person you act for or care for has been accepted into the catastrophic injuries support scheme, and as what
+      `the kind of care I give` IS A `The kind of need` @desc What the care you give is: attendant care, domestic assistance, respite care, or another kind of treatment, care or support
+      `the care is of a kind the regulations exclude` IS A BOOLEAN @desc Whether the regulations prescribe it as an excluded kind of treatment, care or support (not deposited)
+      `the Commission assessed the care as a necessary and reasonable need` IS A BOOLEAN @desc Whether the Commission's assessment of their needs found this care necessary and reasonable and related to their injury
+      `the care is necessary and reasonable` IS A BOOLEAN @desc Whether the care itself, as you give it, is necessary and reasonable
+      `they were a participant when I gave the care` IS A BOOLEAN @desc Whether they were a participant in the scheme when you gave the care
+      `their participation was suspended at the time` IS A BOOLEAN @desc Whether their participation was suspended when you gave the care
+      `the regulations exclude the care from payment` IS A BOOLEAN @desc Whether the regulations exclude it from what the Commission must pay
+      `the Commission elects to pay for the care anyway` IS A BOOLEAN @desc Whether the Commission has elected to pay for it although it need not (s 19(3))
+GIVETH A `Payment answer`
+`Must the Commission pay for the care I give free` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured in a motor vehicle accident or at work` THEN `does not arise for you`
+    WHEN `I act for, or care for, someone who was injured` THEN
+        IF `they have never been accepted into the scheme` `the injured person's place in the scheme`
+        THEN `does not arise for you`
+        ELSE `as to payment` (`Must the Commission pay this expense` (`the expense from my answers` `the kind of care I give` `the care is of a kind the regulations exclude` `the Commission assessed the care as a necessary and reasonable need` `the care is necessary and reasonable` `they were a participant when I gave the care` `their participation was suspended at the time` TRUE FALSE FALSE FALSE FALSE `the regulations exclude the care from payment` `the Commission elects to pay for the care anyway`))
+    WHEN `I provide treatment, care or support to people in the scheme` THEN `does not arise for you`
+
+-- CLA s 13A(3): the treatment, care and support needs "include" gratuitous domestic, nursing and attendance services by a
+-- member of the household or family; so the same s 13A(5)-(8) answer as for any other care need.
+@export Can a court award the injured person damages for the care I give them free (Civil Liability Act 2002 (WA) s 13A(3)-(8); Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 3EA)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the injured person's place in the scheme` IS A `Their place in the scheme` @desc Whether the person you act for or care for has been accepted into the catastrophic injuries support scheme, and as what
+      `when I give the care` IS A `When I give the care` @desc When you gave, or will give, the care: before they became a participant, while they are or were one, after their participation ended, or in future
+GIVETH A `Yes or no`
+`Can a court award them damages for the care I give free` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured in a motor vehicle accident or at work` THEN `does not arise for you`
+    WHEN `I act for, or care for, someone who was injured` THEN `yes if` (`Can I be awarded damages for this care need` (`the baseline's standing for their place` `the injured person's place in the scheme`) (`the baseline's time for` `when I give the care`))
+    WHEN `I provide treatment, care or support to people in the scheme` THEN `does not arise for you`
+
+§§ `For the provider of treatment, care or support`
+
+-- s 23(1): the Commission "may register specified persons, or persons of a specified class, to provide the treatment,
+-- care, support or services under the CISS that are identified under the regulations as treatment, care, support or
+-- services to be provided by a registered provider." s 19(2)(d): the Commission is not required to pay for something
+-- "required by the regulations to be provided by a registered provider" that was not. (6): "A registered provider must
+-- not, without reasonable excuse, contravene a condition of its registration. Penalty for this subsection: a fine of
+-- $10 000." (7): the Commission "may, in accordance with the regulations -- (a) vary, add to or cancel any conditions of
+-- a registration; or (b) revoke a registration."
+`s 23(6) -- the maximum fine for contravening a condition of registration` MEANS 10000
+
+`s 23(7) -- the Commission may vary the conditions of a registration, or revoke it` MEANS TRUE
+
+-- s 20(2): the section "applies to a fee payable for any of the following treatment or services provided to a participant
+-- -- (a) medical treatment; (b) dental treatment; (c) rehabilitation services; (d) attendant care services." (3): "also
+-- applies to a fee payable to a private hospital for any treatment provided to a participant". (4): "does not apply to a
+-- fee payable for treatment or services referred to in subsection (2) if -- (a) the treatment or services are provided
+-- ... at a public hospital ...; and (b) the fee is payable to the public hospital and not to the provider". (5): "The
+-- regulations may fix the maximum amount for which the Commission is liable in respect of any claim for a fee to which
+-- this section applies." The regulations are not deposited.
+DECLARE `Kind of service` IS ONE OF
+    `medical treatment`
+    `dental treatment`
+    `rehabilitation services`
+    `attendant care services`
+    `treatment at a private hospital, for a fee payable to the hospital`
+    `another kind of treatment, care or support`
+
+GIVEN `the kind of service I provide` IS A `Kind of service`
+      `I provide it at a public hospital, and the fee is payable to the hospital, not to me` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `s 20 -- the regulations may cap the fee` IF
+    CONSIDER `the kind of service I provide`
+    WHEN `medical treatment` THEN NOT `I provide it at a public hospital, and the fee is payable to the hospital, not to me`
+    WHEN `dental treatment` THEN NOT `I provide it at a public hospital, and the fee is payable to the hospital, not to me`
+    WHEN `rehabilitation services` THEN NOT `I provide it at a public hospital, and the fee is payable to the hospital, not to me`
+    WHEN `attendant care services` THEN NOT `I provide it at a public hospital, and the fee is payable to the hospital, not to me`
+    WHEN `treatment at a private hospital, for a fee payable to the hospital` THEN TRUE
+    WHEN `another kind of treatment, care or support` THEN FALSE
+
+§§§ `ss 19(2)(d), 23 -- registration`
+
+-- The baseline's s 19(2) rule, over an expense whose only s 19(2) fact is (d); the other fields are not read by that rule
+-- and get fixed placeholders.
+@export Can the Commission refuse to pay for my services because I am not a registered provider (Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 (WA) ss 19(2)(d), (3), 23(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the regulations say my kind of service must come from a registered provider` IS A BOOLEAN @desc Whether the regulations identify the treatment, care or support you provide as one to be provided by a provider registered with the Commission (not deposited)
+      `I am a registered provider` IS A BOOLEAN @desc Whether the Insurance Commission has registered you (or your class of provider) under s 23
+GIVETH A `Yes or no`
+`Can the Commission refuse to pay for my services because I am not registered` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured in a motor vehicle accident or at work` THEN `does not arise for you`
+    WHEN `I act for, or care for, someone who was injured` THEN `does not arise for you`
+    WHEN `I provide treatment, care or support to people in the scheme` THEN `yes if` (`s 19(2) lets the Commission decline it` (`the expense from my answers` `something else, not approved by the Commission` FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE (`the regulations say my kind of service must come from a registered provider` AND (NOT `I am a registered provider`)) FALSE FALSE FALSE))
+
+@export I am a registered provider: what is the most I can be fined for contravening a condition of my registration without reasonable excuse (Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 (WA) s 23(6))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I am a registered provider` IS A BOOLEAN @desc Whether the Insurance Commission has registered you (or your class of provider) under s 23
+GIVETH AN `Amount`
+`What is the most I can be fined for contravening a condition of my registration` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured in a motor vehicle accident or at work` THEN `does not arise for you`
+    WHEN `I act for, or care for, someone who was injured` THEN `does not arise for you`
+    WHEN `I provide treatment, care or support to people in the scheme` THEN
+        IF `I am a registered provider`
+        THEN amount `s 23(6) -- the maximum fine for contravening a condition of registration`
+        ELSE `does not arise for you`
+
+@export I am a registered provider: can the Commission change the conditions of my registration, or revoke it (Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 (WA) s 23(7))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I am a registered provider` IS A BOOLEAN @desc Whether the Insurance Commission has registered you (or your class of provider) under s 23
+GIVETH A `Yes or no`
+`Can the Commission change the conditions of my registration, or revoke it` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured in a motor vehicle accident or at work` THEN `does not arise for you`
+    WHEN `I act for, or care for, someone who was injured` THEN `does not arise for you`
+    WHEN `I provide treatment, care or support to people in the scheme` THEN
+        IF `I am a registered provider`
+        THEN `yes if` `s 23(7) -- the Commission may vary the conditions of a registration, or revoke it`
+        ELSE `does not arise for you`
+
+§§§ `s 20 -- fees`
+
+@export Can the regulations cap what the Commission pays on my fee (Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 (WA) s 20)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the kind of service I provide` IS A `Kind of service` @desc What you provide to the participant: medical treatment, dental treatment, rehabilitation services, attendant care services, treatment at a private hospital (for a fee payable to the hospital), or another kind
+      `I provide it at a public hospital, and the fee is payable to the hospital, not to me` IS A BOOLEAN @desc Whether you provide the treatment or service at a public hospital and the fee is payable to that hospital rather than to you
+GIVETH A `Yes or no`
+`Can the regulations cap what the Commission pays on my fee` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured in a motor vehicle accident or at work` THEN `does not arise for you`
+    WHEN `I act for, or care for, someone who was injured` THEN `does not arise for you`
+    WHEN `I provide treatment, care or support to people in the scheme` THEN `yes if` (`s 20 -- the regulations may cap the fee` `the kind of service I provide` `I provide it at a public hospital, and the fee is payable to the hospital, not to me`)
+
+§§ `For everyone: the offences (ss 31, 32)`
+
+-- s 31(1) binds "a person" who provides false or misleading information under the Act, and s 32(2) "a person who
+-- obstructs or hinders" a Commission officer: every role meets them, so no role answers `does not arise for you`.
+@export What is the most I can be fined for giving the Commission false or misleading information (Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 (WA) s 31)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH AN `Amount`
+`What is the most I can be fined for giving the Commission false or misleading information` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured in a motor vehicle accident or at work` THEN amount `What is the most I can be fined for false or misleading information`
+    WHEN `I act for, or care for, someone who was injured` THEN amount `What is the most I can be fined for false or misleading information`
+    WHEN `I provide treatment, care or support to people in the scheme` THEN amount `What is the most I can be fined for false or misleading information`
+
+@export What is the most I can be fined for obstructing or hindering a Commission officer (Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 (WA) s 32)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH AN `Amount`
+`What is the most I can be fined for obstructing a Commission officer` MEANS
+    CONSIDER `my role`
+    WHEN `I was injured in a motor vehicle accident or at work` THEN amount `What is the most I can be fined for obstruction`
+    WHEN `I act for, or care for, someone who was injured` THEN amount `What is the most I can be fined for obstruction`
+    WHEN `I provide treatment, care or support to people in the scheme` THEN amount `What is the most I can be fined for obstruction`

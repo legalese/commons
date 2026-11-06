@@ -177,3 +177,50 @@ The baseline is kept moderate (45 assertions), as asked.
 - Encode WCIMA 2023 ss 80, 92, 96 and 151 (the employer's liability for expenses ends
   on joining the CISS) in the WCIMA baseline, and cross-reference.
 - An independent test pass, and the human gates.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026 (qa2). Two files, beside the baseline, which is unchanged: `mvwaci-qa.l4` (IMPORTs `prelude` and `mvwaci-ciss`) and its cases `mvwaci-qa-cases.l4` (IMPORTs `prelude`, `mvwaci-ciss` and `mvwaci-qa`). It follows the design of the Graffiti Vandalism Act layer (`../../../graffiti-vandalism-act-2016/encodings/baseline-2026-10/`, D2, D4 and D8): one deployment serves every seat, so the site's question form can drop the questions that do not arise.
+
+**Roles.** Every exported question takes `my role` IS A Role first (`@desc Which of these describes you`), and answers `does not arise for you` for a role it is not about without reading any other input.
+
+- `I was injured in a motor vehicle accident or at work`: the baseline's seat. 23 questions of its own.
+- `I act for, or care for, someone who was injured`: a person with lawful authority to act for the injured person, who may apply and be given notices for them (s 3(2)), or a family member who gives care free (s 19(2)(a), (3); CLA s 13A(3)). 4 questions of its own.
+- `I provide treatment, care or support to people in the scheme`: a provider, who may need to be registered (ss 19(2)(d), 23) and whose fee the regulations may cap (s 20). 4 questions of its own.
+- The two offences (s 31 false or misleading information, s 32 obstruction) bind "a person", so they are asked of all three roles and never answer `does not arise for you`. That makes 25, 6 and 6 questions per role, 33 exported.
+- Not seats: the Insurance Commission, hospitals (s 30), WorkCover WA and insurers (s 30A(3), (4)), the District Court.
+
+**Plain inputs.** The baseline's questions take records (`The accident`, `The work injury`, `My case`, `The expense`). Here every input is one fact, and the records are built inside L4 (`the accident from my answers`, `the work injury from my answers`, `my case from my answers`, `the expense from my answers`). A record field that the rule called does not read gets a fixed placeholder FALSE, with a comment: the lifetime criteria and residence for eligibility (s 8), the criteria and damages for applying (s 9), residence for acceptance, and the s 19(2) items other than (d) for the provider's registration question.
+
+**Situation inputs.** Each comes straight after `my role` (the place in the scheme before how I was injured where a question takes both). When it does not hold, the question answers `does not arise for you` and reads nothing else. The same name, type and `@desc` wherever taken.
+
+| Input | Type and values | Does not arise when | Questions |
+|---|---|---|---|
+| `how I was injured` | `How I was injured`: `in an incident involving a motor vehicle, and not as a worker`; `as a worker, in an incident not involving a motor vehicle`; `as a worker, in an incident involving a motor vehicle` | the second value, for the s 4 and s 5 questions and MVTPI s 3FB; the first value, for the s 5A question and the two s 30A(5) questions | 6 as a situation. It is an ordinary input (it builds the records) of the s 5A(4) "how the Act takes it", eligibility, applying, acceptance and "where my care is paid from" questions: with no motor vehicle the accident is built as one the Act cannot take (`none of these`) and the accident facts are not read; for someone not injured as a worker the work facts are not read. "As a worker" makes the borrowed "worker" fact TRUE |
+| `my place in the scheme` | `My place in the scheme`: `I have not been accepted into the scheme`; `I am an interim participant`; `I am a lifetime participant`; `my interim participation has ended, and I was not made a lifetime participant`; `I was a lifetime participant until notified that I am no longer eligible` | the two current values, for applying, by when, and acceptance (3); the first and the two former values, for still a participant, suspension, the s 15(3) assessment, s 17 costs and the s 18(5) sum (5); all but the interim and former interim values, for applying again (ss 11(3), 13); the first value only, for "must the Commission pay this expense" | 10 as a situation; the CLA s 13A question takes it as an ordinary input (mapped to the baseline's `My standing in the scheme`) |
+| `the injured person's place in the scheme` | `Their place in the scheme`: `they have not been accepted into the scheme`; `they are an interim or lifetime participant`; `they were an interim participant and were not made a lifetime participant`; `they were a lifetime participant and were notified they are no longer eligible` | the first value, for the carer's s 19 question | 1 as a situation; the carer's CLA s 13A question takes it as an ordinary input |
+| `I am a registered provider` | BOOLEAN | FALSE | the s 23(6) fine and s 23(7); an ordinary input of the s 19(2)(d) question |
+
+The helpers that read these enumerations list every value and have no OTHERWISE (the graffiti finding 31).
+
+**Decisions.**
+
+- `My place in the scheme` stands for both the baseline's `My participation` (ss 10-12) and its `My standing in the scheme` (CLA s 13A), so the form asks one question. Its two former values are worded apart from the baseline's (`I was an interim participant and was not made a lifetime participant` is a constructor of the baseline's type): a constructor name defined in both modules is ambiguous wherever its type is not known.
+- The baseline's answer enumerations are each carried in an answer type of its own (`How the Act takes it answer`, `Time limit answer`, `Acceptance answer`, `Payment answer`, `Appeal answer`, `Care funding answer`); BOOLEANs as `Yes or no`, the 7 days as `Days`, fines as `Amount`.
+- "Must the Commission pay this expense" arises for a former participant too, since an expense incurred while a participant can be asked about afterwards.
+- "Is this one of my treatment, care and support needs" (s 6), the review and appeal questions (ss 24-27) and the s 13A damages question take no situation: they arise before, during and after participation.
+- The suspension question keeps the baseline's input `how the Act takes my injury` (motor vehicle or workplace), since a worker in a road incident may be either (s 5A(4)) and the participant knows which.
+- The carer's free-care question passes TRUE for s 19(2)(a) and FALSE for the other s 19(2) items, which cannot change the answer once (2)(a) holds; the s 18 limbs and s 19(5) are still asked.
+
+**Not covered for the new roles.** For the carer: payment to a family carer under the Commission's guidelines or the regulations (not deposited); whether a particular person has "lawful authority" (guardianship and powers of attorney are other Acts). For the provider: registration itself and its conditions (regulations and Commission decisions, not deposited); the amount of any fee cap (s 20(5), regulations); the s 23(6) reasonable excuse. Hospitals' and insurers' notices (ss 30, 30A(3), (4)) are bodies' powers and duties, not seats.
+
+**Checks.** Stable l4 1.6.98, `JL4_LIBRARY_PATH` unset.
+
+- `mvwaci-ciss.l4` and `mvwaci-qa.l4`: no diagnostics. `l4 check mvwaci-qa.l4`: Check succeeded.
+- `mvwaci-cases-ciss.l4`: 45 of 45 satisfied.
+- `mvwaci-qa-cases.l4`: 213 of 213 satisfied, no error or warning. It was written by the scratchpad script `gen_mv_cases.py`, which only spells out argument lists; the values are hand-worked.
+  - 62 for the roles a question is not about (every other input ASSUMEd);
+  - 34 for a situation value that does not hold (later inputs ASSUMEd);
+  - 117 where role and situation hold. 27 of these assert equality with the baseline export on the same facts, built as the baseline's own records: one for each of the injured person's 23 questions, the carer's two that call a baseline rule, and the two offences. Several ASSUME the facts of the other kind of injury, which shows they are not read.
+- A parameter script (`check_params.py`, session scratchpad) listed all 33 exports. It found `my role` first everywhere, every shared input identical in type and `@desc`, each situation read in the first check after the role, and no DEONTIC or EVENT input.
+- Negative controls on a scratch copy each failed: an ASSUMEd place in the scheme for a participant's question; a wrong payment answer; ASSUMEd work facts where s 5(3) excludes the motor vehicle injury.
