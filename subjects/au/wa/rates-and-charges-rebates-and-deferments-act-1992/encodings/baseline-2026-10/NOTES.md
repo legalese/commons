@@ -95,3 +95,84 @@ Left out, because no ratepayer in the lives meets them: administration and revie
 - Link `Am I entitled to a rebate or deferment` to the `I am entitled to a rebate or deferment` inputs in the Local Government Act 1995 and Emergency Services Levy baselines.
 - Correct Jake's facts and the plan, which cite "ss 24-25", to s 23(1).
 - An independent test pass, a coverage table and a human gate.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026 as a layer: `rcrd-qa.l4` (IMPORTs `prelude` and `rcrd-rebates`) and `rcrd-qa-cases.l4` (IMPORTs
+those and `rcrd-qa`). The baseline's files are unchanged. The design is the Graffiti Vandalism Act 2016 encoding's (its
+NOTES.md D2, D4, D8 and D8.1-D8.15): every exported question takes `my role` IS A Role first (`@desc Which of these
+describes you`), and answers `does not arise for you` for a role it is not about without reading any other input; a
+question that arises only in a situation takes that situation's fact second and answers `does not arise for you` when it
+does not hold, reading nothing else. No exported question takes a DEONTIC or EVENT input. One deployment serves every
+role.
+
+### Roles, and why
+
+| Role | Why | Questions |
+|---|---|---|
+| `I am a pensioner or senior, and I own or live in my home` | the baseline's seat | 27 |
+| `My spouse or de facto partner is, or was, the pensioner or senior registered for our home` | new: s 45 keeps deferred charges deferred for the partner, eligible or not, after the pensioner's death or move; s 32A treats a surviving partner as registered | 5 |
+| `I am buying, inheriting, lending on or administering a home on which rates or charges were deferred` | new: the deferred charges are a charge on the land (s 46) that falls due on death, sale or a move (s 44(2)), may be recorded on the title (s 48) and is not barred by time (s 49) | 5 |
+
+37 questions in all. The administrative authority (the local government, the Water Corporation), the Minister, the
+Registrar of Titles and the CEO who issues State concession cards are not seats. A relative of a disabled occupant
+(s 23(5)) and a dependant left in the home (s 31(1)) are not separate roles: the first is a limb of the baseline's
+eligible pensioner, asked through its cards record, and the second is an eligible person who would ask the baseline's
+questions.
+
+### Situation inputs
+
+| Name | Type | Gives `does not arise for you` | Questions |
+|---|---|---|---|
+| `I have deferred rates or charges on my home` | BOOLEAN | FALSE | ratepayer, 4: `Do my deferred rates and charges become payable now` (ss 44(2), 45), `Are my unpaid deferred charges a charge on my home` (s 46(1)), `Can the passage of time stop my deferred charges being recovered` (s 49), `May I keep the deferment I already have if my income or assets rose` (s 35(4)) |
+| `what has happened to my spouse or de facto partner` | `What has happened to my partner` (new: `my partner has died`, `my partner has stopped living in our home`, `neither of these`) | `neither of these`; and `my partner has stopped living in our home` for the four death questions, `my partner has died` for the s 45(2) question | partner, 5: the four of the death (s 45(1) payable now; s 32A(2) treated as registered; s 32A(5) the day to pay; s 32A(4A)-(4B) water back-dating) and the one of the move (ss 44(2)(c), 45(2) payable now) |
+
+The partner's two situations are one input, so the form asks it once and one answer settles all five questions; it is
+read through `my partner has died, as I say` and `my partner has moved out, as I say`, which list every value with no
+OTHERWISE (graffiti finding 31). The buyer or executor has no situation input: the role is itself the situation (a home
+with deferred charges), and each of its questions arises for every such person.
+
+### Decisions
+
+- **Deferred charges are the ratepayer's one situation.** ss 44(2), 45, 46, 49 and 35(4) are about charges already
+  deferred, so a ratepayer with none is told they do not arise. Arrears (s 33) are not a situation: "may I still pay only
+  the rebated amount" answers yes for a ratepayer with no arrears, which is what they want to know, and arrears are an
+  ordinary input of the entitlement question too.
+- **The pensioner's role keeps its baseline wording** for every question; only the s 33(3) arrears-arrangement input has
+  one `@desc` across the two questions that take it (the baseline words it two ways), so the form asks it once.
+- **Answer types.** The baseline's -1 for "no limit" is carried as `no limit` (`Limit`); its YYYYMMDD days stay numbers
+  inside `Day answer`; its fraction is carried as `Share`.
+- **The partner after the death (s 45(1)).** "Further deferred until that surviving spouse or de facto partner (c) dies;
+  or (d) ceases to be a person to whom the land ... belongs." The partner who asks is alive, so (c) is not asked;
+  (d) is an input. The baseline's `I die` branch is called for the rest.
+- **The partner after a move (s 45(2)).** The baseline's `I stop living there` branch is called with the partner's
+  staying as the spouse fact and the pensioner's ill-health as the reason; a family court order providing for payment
+  (s 45(2)(e)) ends the s 45(2) deferral but not the s 44(2)(c)(ii) one (worked by hand: both keep the charges deferred
+  independently). A dependant staying on (s 44(2)(c)(i)) is not asked of the partner and is passed as FALSE.
+- **s 32A(2)** is asked as five facts, the two-period limb ((c)(ii), (d)(ii), (e)(ii)) folded into one input; the
+  Minister's declaration for a late registration (s 32A(3), (4C)) is not encoded. s 32A(5) is answered as the later of
+  two YYYYMMDD days, as the baseline counts days.
+- **s 46 ranking** is answered against one other claim at a time: ahead of a mortgage or any charge not created by an
+  Act; equally with another statutory charge; behind the Housing Authority (s 46(2)) and the Defence Homes Corporation
+  (s 46(3)).
+- **s 48** is answered yes for the buyer or executor: the Registrar "is empowered to record and register" the charge.
+
+### Not covered for the new roles
+
+For the partner: separation and former joint occupation (s 31(2), (3)); the Minister's declarations for late
+registration (s 32A(3), (4C)); the partner's own rebate as a new registered person (the baseline's questions, asked from
+the ratepayer's seat). For the buyer or executor: the tenants-in-common rule (s 44(3)); s 44(2)(d) (a person to whom
+s 19 applies); the amount of the deferred charges, which the Act does not compute; how the authority recovers them.
+
+### Cases
+
+`rcrd-qa-cases.l4`: 262 assertions, all satisfied. 101 written by hand for the role each question is about (73 for the
+ratepayer, 16 for the partner, 12 for the buyer or executor; the ratepayer's from the baseline's own cases, on its
+fixtures, copied in); 73 that assert, for each of the ratepayer's hand-written cases, that the answer equals the baseline
+export's on the same facts, carried in the answer type; 74 for the two roles a question is not about, every other input
+ASSUMEd; 14 for the situation values that do not hold (4 for the ratepayer, 10 for the partner), the inputs after them
+ASSUMEd. The last two groups and the baseline comparisons were generated by a scratch script from the parameter list and
+the table above. Checked on stable l4 1.6.98: 0 errors and 0 warnings in all four files, 43 + 262 assertions satisfied,
+`l4 check rcrd-qa.l4` succeeds, and a parameter script confirms `my role` first everywhere, each shared situation input
+identical in name, type and @desc, each situation second and read first in each role branch, and no DEONTIC or EVENT
+input.
