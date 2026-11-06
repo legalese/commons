@@ -2,7 +2,7 @@
 
 Northern Territory (Australia) legislation, one subject-id per body of law, following the subject-sidecar shape described in [`subjects/README.md`](../README.md).
 
-The subjects here were laid out on 2026-09-22 for the legislation governing twelve everyday topics. Each was checked against the Northern Territory Legislation (legislation.nt.gov.au); the check is recorded in each subject's `registers/source-bundle/*.meta.json`. No statute text was deposited at that stage. On 2026-10-19 text was deposited for the benefits-and-individual-taxes sample described below; nothing is encoded yet.
+The subjects here were laid out on 2026-09-22 for the legislation governing twelve everyday topics. Each was checked against the Northern Territory Legislation (legislation.nt.gov.au); the check is recorded in each subject's `registers/source-bundle/*.meta.json`. No statute text was deposited at that stage. On 2026-10-19 text was deposited for the benefits-and-individual-taxes sample described below, and on 2026-11-06 for sixteen Acts of claims, injury and compensation law (also below).
 
 **Licence category: conditional.** Reproduction is permitted on the conditions above, but the terms do not expressly grant a right to ADAPT. An L4 encoding that quotes the statute is arguably an adaptation. **Licence ruling, Michael, 24 Oct 2026:** the NT terms permit reproduction but are silent on adaptation; as for Canada, the texts may be quoted in L4 encodings in Commons, keeping the NT attribution and the unofficial-copy notice.
 
@@ -70,9 +70,45 @@ The register offers each reprint as a PDF and as a Word 97-2003 `.doc`; the `.do
 
 - **Reprints lag amendments.** Four texts are more than a year old: the Motor Accidents (Compensation) Act reprint (31 May 2019), the Return to Work Act and Victims of Crime Assistance Regulations reprints (25 March 2024), and the Taxation Administration Act reprint (1 July 2024). An amendment that commenced after a reprint's date is not in it. Check each against the register's history listing before relying on a number.
 - **The concession card scheme is not in statute.** Stamp Duty Act s 89A relies on the *NT Pensioner and Carer Concession Card* and the *Northern Territory Concession Scheme Card*. No NT Act on the register's Acts-by-title list (385 titles, fetched 2026-10-19) sets up a concession scheme, so the card scheme is administrative and its eligibility rules are not sourced here.
-- **Not sourced**: the Motor Accidents (Compensation) Commission Act 2014 (the insurer's machinery) and the Compensation (Fatal Injuries) Act 1974 (a common-law damages claim, not a benefit). The NT Rates Act 1971 and local government rates were also left out: they fall on owners of land, but their concessions are council or administrative matters.
+- **Not sourced in this sample**: the Motor Accidents (Compensation) Commission Act 2014 (the insurer's machinery) and the Compensation (Fatal Injuries) Act 1974 (a common-law damages claim, not a benefit). Both were deposited on 2026-11-06 for claims, injury and compensation law (below). The NT Rates Act 1971 and local government rates were also left out: they fall on owners of land, but their concessions are council or administrative matters.
 - **Indexed amounts**: Return to Work weekly payments and several Motor Accidents (Compensation) benefits are indexed to average weekly earnings or CPI by figures published outside these texts (by the Australian Statistician and in Gazette notices). An encoding has to take those figures as inputs.
 - Nothing in this sample is encoded yet.
+
+## Claims, injury and compensation law (sourced 2026-11-06)
+
+Sixteen Acts deposited for claims, injury and compensation law: courts and procedure, time limits, damages and costs; workplace, road and institutional injury; health complaints and records; discrimination at work; long service leave; wills and estates. Fifteen subjects are new; the Long Service Leave Act 1981 was indexed on 2026-09-22 and now carries its text. Nothing here is encoded yet.
+
+| Subject | Reprint | As in force at | Characters | Why it is in the set |
+|---|---|---|---|---|
+| `jurisdiction-of-courts-cross-vesting-act-1987` (new) | REPJ005 | 1 January 2022 | 32,949 | Cross-vesting: transfer of proceedings between the Territory and other superior courts |
+| `choice-of-law-limitation-periods-act-1994` (new) | REPC071 | 7 November 1994 | 3,614 | Another place's limitation law applies as substantive law (title year 1994, not 1993) |
+| `legal-profession-act-2006` (new) | REPL007 | 1 August 2025 | 766,808 | Costs disclosure, costs agreements (conditional, uplift fees) and costs assessment (Part 3.3) |
+| `limitation-act-1981` (new) | REPL026 | 11 August 2025 | 73,701 | Limitation periods and extensions of time; s 5A, no limitation period for child abuse actions |
+| `personal-injuries-liabilities-and-damages-act-2003` (new) | REPP078 | 25 March 2024 | 83,574 | Personal injury damages: thresholds and caps; Part 3A, institutional liability for child abuse |
+| `compensation-fatal-injuries-act-1974` (new) | REPC010 | 28 November 2022 | 17,126 | Dependants' damages claim after a wrongful death |
+| `law-reform-miscellaneous-provisions-act-1956` (new) | REPL004 | 6 December 2018 | 39,588 | Survival of causes of action on death (Part II); contribution; contributory negligence; nervous shock |
+| `coroners-act-1993` (new) | REPC019 | 28 November 2022 | 48,239 | Reportable deaths, investigations, inquests and findings |
+| `work-health-and-safety-national-uniform-legislation-act-2011` (new) | REPW025 | 1 February 2020 | 283,617 | Model WHS duties, incident notification and offences |
+| `motor-accidents-compensation-commission-act-2014` (new) | REPM059 | 1 July 2021 | 26,553 | The Commission that runs the no-fault motor accidents scheme |
+| `health-and-community-services-complaints-act-1998` (new) | REPH016 | 13 August 2026 | 99,591 | Complaints about health and community services to the Commissioner |
+| `information-act-2002` (new) | REPI013 | 1 June 2026 | 212,407 | The nearest NT equivalent of a health records Act: access, correction and the Information Privacy Principles |
+| `anti-discrimination-act-1992` (new) | REPA027 | 27 July 2026 | 127,384 | Discrimination and sexual harassment at work and elsewhere; complaints |
+| `long-service-leave-act-1981` | REPL021 | 14 October 2015 | 31,648 | Long service leave entitlement (indexed 2026-09-22; text now deposited) |
+| `family-provision-act-1970` (new) | REPF002 | 17 March 2004 | 28,844 | Family provision claims against a deceased estate |
+| `wills-act-2000` (new) | REPW007 | 1 January 2022 | 60,624 | Making, altering and revoking wills; informal wills and rectification |
+
+Total 1,936,267 characters. Each text is at `<subject>/registers/source-bundle/<stem>.txt`, with a `.meta.json` recording the same fields as the 2026-10-19 sample. Each was the register's current reprint on 2026-11-06.
+
+- **Method**: as for the 2026-10-19 sample. Terms of Use and robots.txt were read again on 2026-11-06 12:03 UTC and are unchanged: the same conditional permission, no rule for other agents, no Crawl-delay. The same User-Agent was used, with at least 3 s between requests. There were 40 requests in all (robots.txt, the terms page, the Acts-by-title list and its repealed list, 18 landing pages, the repealed Personal Injuries (Civil Claims) Act's page, 16 Word reprints and 1 historical Word reprint). Every one returned 200 except one landing page, a 404 for a title no longer in force (below). No block, challenge or rate limit was met. The same conversion was used: Word COM `.doc` to `.docx`, then python-docx over body paragraphs and tables, with the unofficial-copy notice prepended. The licence ruling of 24 October 2026 applies to these texts as to the others.
+- **Child abuse claims**: there is no separate NT Act. Limitation Act 1981 s 5A removes the limitation period for child abuse actions, and Personal Injuries (Liabilities and Damages) Act 2003 Part 3A sets out institutional liability for child abuse. Both are deposited above.
+- **Health complaints and health records**: the Health and Community Services Complaints Act 1998 is the complaints Act. The NT has no separate health records Act, so the Information Act 2002 (privacy principles and access to personal information held by public sector organisations) is deposited as the nearest equivalent.
+- **Reprints lag amendments**: the Choice of Law (Limitation Periods) Act reprint is as in force at 7 November 1994, the Family Provision Act reprint at 17 March 2004 and the Long Service Leave Act reprint at 14 October 2015. These are small Acts that may not have been amended since. The Work Health and Safety Act reprint (1 February 2020) is the one most likely to be behind its amendments. Check each against the register's history listing.
+
+### Not deposited
+
+- **Personal Injuries (Civil Claims) Act 2003**: repealed. The register's repealed list gives "Repealed by the Statute Law Revision and Repeals Act 2019, No. 33, which commenced on 07/11/2019" (sic, "STATUE" on the register). Its last reprint, REPP077 (as in force at 1 May 2016), shows that most of its pre-action claim procedure (ss 5, 7-11, 16-21) never commenced. No in-force Act replaced it. The landing URL for the in-force title returns 404.
+- **Aboriginals Ordinance 1918**: a historical, repealed Commonwealth-made Ordinance of the Territory, relevant to stolen wages claims. It is on neither the register's in-force list nor its repealed list. It is generally recorded as repealed by the Welfare Ordinance 1953, in operation from 1957, which has itself been repealed; this was not checked against a primary source here. Either way, there is no in-force text to deposit. Historical texts are a matter for a separate archival source.
+- **Choice of Law (Limitation Periods) Act**: the list called it the 1993 Act, but the register's title is the Choice of Law (Limitation Periods) Act 1994 (Act No. 45 of 1994). That Act is deposited.
 
 ## Encodings (2026-10-24)
 
