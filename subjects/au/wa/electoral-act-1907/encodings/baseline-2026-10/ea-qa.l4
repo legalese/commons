@@ -1,0 +1,704 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `ea-elector`
+
+-- Electoral Act 1907 (WA) -- the Q&A layer: the questions people ask, with the seat and the situation as parameters.
+--
+-- PURPOSE. One module whose exported questions serve every seat from one deployment, following the Graffiti Vandalism
+-- Act encoding's design (D2, D4, D8). Every exported question takes `my role` first ("Which of these describes you"); a
+-- question about another role answers `does not arise for you` without reading any other input, so the site's question
+-- form never asks those inputs and drops the question.
+--
+-- ROLES. Three people the Act puts duties on or gives rights to:
+--   - the State elector, or a person who may be entitled to enrol (the baseline's seat): entitlement, enrolment, the
+--     duty to vote, the penalty notice (ss 4, 17, 17AA, 18, 31, 31A, 35A, 45, 156), and, as an employee, the right to
+--     leave to vote (s 196(1), (2));
+--   - the employer of an elector, who must allow leave of absence to vote (s 196);
+--   - the candidate, who must lodge a deposit (ss 81, 81A), may withdraw (s 82) and gets the deposit back or loses it
+--     (s 84).
+-- The Electoral Commissioner, returning officers, the Australian Electoral Officer and the courts are never a seat: what
+-- they may or must do appears as what it means for the person asking. A registered political party nominates its
+-- candidate (s 81A) but is not a seat here; its nomination appears as a fact about the candidate.
+--
+-- SITUATIONS (design D8). A question that arises only in a situation takes that situation's fact straight after
+-- `my role`, and answers `does not arise for you` when it is FALSE, without reading anything else. The questions of one
+-- situation share one input with the same name, type and @desc. There are six, all BOOLEAN:
+--   - `I have been sent a penalty notice for not voting`: the seven elector questions of s 156(6)-(15) (the response
+--     date, the modified penalty's cap, the response, the infringement notice, a prosecution after the notice, another
+--     elector responding, removal from the register). Each turns on a penalty notice sent under s 156(4);
+--   - `I have changed my address within my district`: the two s 45(2) questions, which run from "the change";
+--   - `I am on the Commonwealth roll for an address in Western Australia`: the ss 31, 31A, 35A question;
+--   - `I am an employee`: the elector's two s 196 questions;
+--   - `an employee has asked me for leave to vote`: the employer's three s 196 questions, which turn on the employee's
+--     notification (s 196(1));
+--   - `the election has been held and the votes counted`: the candidate's s 84 question ("after the election").
+-- The other questions arise in every situation of their role and take none.
+--
+-- The elector's rules are in ea-elector.l4. This module calls them and restates none: for the elector, each answer is
+-- the baseline export's own answer, wrapped in this layer's answer types. The employer's and the candidate's rules are
+-- not in the baseline; they are written here from the deposited text (ss 81, 81A, 82, 84, 190, 196) as helpers. No
+-- exported question takes a DEONTIC or EVENT input. The layer does no date arithmetic of its own.
+--
+-- BASELINE. Not for public use as advice. See NOTES.md, "Q&A layer (seat and situations as parameters)".
+
+§ `Electoral Act 1907 (WA) -- the questions people ask`
+
+§§ `Who is asking, and the shape of the answers`
+
+DECLARE Role IS ONE OF
+    `I am, or may be entitled to be, a State elector`
+    `I employ someone who is a State elector`
+    `I am a candidate, or want to stand, at a State election`
+
+DECLARE `Yes or no` IS ONE OF
+    yes
+    no
+    `does not arise for you`
+
+DECLARE `Amount` IS ONE OF
+    `does not arise for you`
+    amount HAS dollars IS A NUMBER
+
+DECLARE `Hours` IS ONE OF
+    `does not arise for you`
+    `up to` HAS `hours` IS A NUMBER
+
+DECLARE `Day answer` IS ONE OF
+    `does not arise for you`
+    `on` HAS `the day` IS A DATE
+    `by the end of` HAS `the last day` IS A DATE
+    `no day comes: you are not qualified to be enrolled apart from your age and residence`
+
+DECLARE `Where my Commonwealth enrolment goes` IS ONE OF
+    `does not arise for you`
+    `it reaches the register: your Commonwealth claim is also your State claim, received by the Australian Electoral Officer`
+    `it may reach the register: the Electoral Commissioner may enrol you on the information the Commonwealth sends`
+    `it does not reach the register: you must send a State claim`
+
+-- The kind of election a candidate stands at (s 4: "election means a Council election or an election in a district").
+DECLARE `Kind of election` IS ONE OF
+    `an election in a district, for the Legislative Assembly`
+    `a Council election, for the Legislative Council`
+
+DECLARE `When my deposit is due` IS ONE OF
+    `does not arise for you`
+    `at or before the close of nominations, lodged with the returning officer`
+    `not later than 24 hours before the close of nominations, lodged with the Electoral Commissioner`
+
+DECLARE `What happens to my deposit` IS ONE OF
+    `does not arise for you`
+    `it is returned to you, or to a person you authorise in writing`
+    `it is returned to the person who paid it, or to a person they authorise in writing`
+    `it is forfeited to the Crown`
+
+§§ `Helpers`
+
+GIVEN `it holds` IS A BOOLEAN
+GIVETH A `Yes or no`
+`yes if` `it holds` MEANS
+    IF `it holds` THEN yes ELSE no
+
+-- s 196(1): "If an employee who is an elector notifies the elector's employer before polling day that the elector would
+-- like a leave of absence to enable them to vote in any election, the employer must, if the absence desired is necessary
+-- to enable the employee to vote in the election, allow them a leave of absence without any penalty or disproportionate
+-- deduction of pay for such reasonable period not exceeding 2 hours as is necessary". (3): "This section shall not apply
+-- to any elector whose absence may cause danger or substantial loss in respect of the employment".
+GIVEN `the employee is an elector`                    IS A BOOLEAN
+      `they asked before polling day`                 IS A BOOLEAN
+      `the absence is necessary for them to vote`     IS A BOOLEAN
+      `the absence may cause danger or substantial loss` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `s 196(1), (3) -- the employer must allow leave of absence to vote` IF
+        `the employee is an elector`
+    AND `they asked before polling day`
+    AND `the absence is necessary for them to vote`
+    AND (NOT `the absence may cause danger or substantial loss`)
+
+-- s 196(1): "not exceeding 2 hours".
+GIVETH A NUMBER
+`s 196(1) -- the most leave to vote, in hours` MEANS 2
+
+-- s 190: "Any contravention of this Act for which no other punishment is provided. Penalty not exceeding $1 000."
+-- s 196 provides no punishment of its own, so a contravention of s 196(1) by the employer, or of s 196(2) by the
+-- employee, falls under this line (INFERENCE: the Act calls neither an offence in its own words).
+GIVETH A NUMBER
+`s 190 -- the most fine for a contravention with no other punishment` MEANS 1000
+
+-- s 81(2): "the required deposit is -- (a) in the case of an election in a district -- $250 or any greater amount that is
+-- prescribed; or (b) in the case of a Council election -- $2 000 or any greater amount that is prescribed." (3): "Despite
+-- subsection (2)(b), if the candidate is included in a group consisting of more than 5 candidates the required deposit is
+-- the amount obtained by dividing $10 000, or any greater amount that is prescribed, by the number of candidates included
+-- in the group." The Electoral Regulations 1996 are not deposited, so the Act's own amounts are used: a greater amount
+-- prescribed would change the answer.
+GIVEN `the election` IS A `Kind of election`
+      `the number of candidates in the group` IS A NUMBER
+GIVETH A NUMBER
+`s 81(2), (3) -- the required deposit` MEANS
+    CONSIDER `the election`
+    WHEN `an election in a district, for the Legislative Assembly` THEN 250
+    WHEN `a Council election, for the Legislative Council` THEN
+        IF `the number of candidates in the group` GREATER THAN 5
+        THEN 10000 DIVIDED BY `the number of candidates in the group`
+        ELSE 2000
+
+-- s 84(1): the deposit "shall be returned ... if the person is elected or" the votes polled in the person's favour (in a
+-- Council election, the person's or the person's group's first preferences; in a single member election, the person's
+-- first preferences, or votes where there are only 2 candidates) are "more than 4%" of the total; "otherwise it shall be
+-- forfeited to the Crown". (3): a candidate nominated under s 81A(2) -- the deposit is "returned to the person who paid
+-- it, or to a person authorised in writing by the person who paid it". (4): "In all other cases, the deposit shall be
+-- returned to the candidate, or to a person authorised in writing by the candidate". s 84(2) (a candidate who dies) is
+-- not encoded.
+GIVEN `I was elected`                    IS A BOOLEAN
+      `the votes for me`                 IS A NUMBER
+      `the total votes`                  IS A NUMBER
+      `it is a party nomination`         IS A BOOLEAN
+GIVETH A `What happens to my deposit`
+`s 84(1), (3), (4) -- what happens to the deposit` MEANS
+    IF `I was elected` OR ((`the votes for me` TIMES 100) GREATER THAN (`the total votes` TIMES 4))
+    THEN IF `it is a party nomination`
+         THEN `it is returned to the person who paid it, or to a person they authorise in writing`
+         ELSE `it is returned to you, or to a person you authorise in writing`
+    ELSE `it is forfeited to the Crown`
+
+§§ `For the State elector, or a person who may be entitled to enrol`
+
+§§§ `ss 17, 17AA, 18 -- entitlement to be enrolled and to vote`
+
+@export Have I reached a given age on a given day (Electoral Act 1907 (WA) ss 17(1)(b), 17AA(1)(a))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `me` IS A `My circumstances` @desc Your circumstances: your date of birth, citizenship, the matters in s 18, the day you began living in your district, and your enrolment
+      `the age` IS A NUMBER @desc The age in whole years
+      `the day` IS A DATE @desc The day the question is about, ISO 8601 (for example today, the polling day, or the day you would claim)
+GIVETH A `Yes or no`
+`Have I reached this age on this day` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or may be entitled to be, a State elector` THEN `yes if` (`Have I reached the age` `me` `the age` `the day`)
+    OTHERWISE `does not arise for you`
+
+@export Have I lived in my district for at least 1 month on a given day (Electoral Act 1907 (WA) s 17(1)(c))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `me` IS A `My circumstances` @desc Your circumstances: your date of birth, citizenship, the matters in s 18, the day you began living in your district, and your enrolment
+      `the day` IS A DATE @desc The day the question is about, ISO 8601 (for example today, the polling day, or the day you would claim)
+GIVETH A `Yes or no`
+`Have I lived in my district for a month on this day` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or may be entitled to be, a State elector` THEN `yes if` (`Have I lived in my district for a month` `me` `the day`)
+    OTHERWISE `does not arise for you`
+
+@export Am I barred from being enrolled (Electoral Act 1907 (WA) s 18(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `me` IS A `My circumstances` @desc Your circumstances: your date of birth, citizenship, the matters in s 18, the day you began living in your district, and your enrolment
+GIVETH A `Yes or no`
+`Am I barred from being enrolled` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or may be entitled to be, a State elector` THEN `yes if` (`Am I barred from enrolment` `me`)
+    OTHERWISE `does not arise for you`
+
+@export Am I barred from voting at State elections (Electoral Act 1907 (WA) s 18(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `me` IS A `My circumstances` @desc Your circumstances: your date of birth, citizenship, the matters in s 18, the day you began living in your district, and your enrolment
+GIVETH A `Yes or no`
+`Am I barred from voting at State elections` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or may be entitled to be, a State elector` THEN `yes if` (`Am I barred from voting` `me`)
+    OTHERWISE `does not arise for you`
+
+@export Apart from my age and residence, am I qualified to be enrolled (Electoral Act 1907 (WA) ss 17(1)(a), 18(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `me` IS A `My circumstances` @desc Your circumstances: your date of birth, citizenship, the matters in s 18, the day you began living in your district, and your enrolment
+GIVETH A `Yes or no`
+`Apart from my age and residence, am I qualified to be enrolled` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or may be entitled to be, a State elector` THEN `yes if` (`Am I qualified apart from age and residence` `me`)
+    OTHERWISE `does not arise for you`
+
+@export Am I entitled to be enrolled for my district on a given day (Electoral Act 1907 (WA) s 17(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `me` IS A `My circumstances` @desc Your circumstances: your date of birth, citizenship, the matters in s 18, the day you began living in your district, and your enrolment
+      `the day` IS A DATE @desc The day the question is about, ISO 8601 (for example today, the polling day, or the day you would claim)
+GIVETH A `Yes or no`
+`Am I entitled to be enrolled for my district on this day` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or may be entitled to be, a State elector` THEN `yes if` (`Am I entitled to be enrolled` `me` `the day`)
+    OTHERWISE `does not arise for you`
+
+@export On what day did I become entitled to be enrolled for my district (Electoral Act 1907 (WA) s 17(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `me` IS A `My circumstances` @desc Your circumstances: your date of birth, citizenship, the matters in s 18, the day you began living in your district, and your enrolment
+GIVETH A `Day answer`
+`On what day did I become entitled to be enrolled for my district` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or may be entitled to be, a State elector` THEN `on` (`On what day did I become entitled to be enrolled` `me`)
+    OTHERWISE `does not arise for you`
+
+@export Am I an elector on polling day (Electoral Act 1907 (WA) ss 4, 17AA(2)(a))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `me` IS A `My circumstances` @desc Your circumstances: your date of birth, citizenship, the matters in s 18, the day you began living in your district, and your enrolment
+      `the polling day` IS A DATE @desc The polling day of the State election, ISO 8601
+GIVETH A `Yes or no`
+`Am I an elector on this polling day` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or may be entitled to be, a State elector` THEN `yes if` (`Am I an elector` `me` `the polling day`)
+    OTHERWISE `does not arise for you`
+
+@export Am I entitled to vote at a State election with this polling day (Electoral Act 1907 (WA) ss 17(1)(e), 17AA(2), 18(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `me` IS A `My circumstances` @desc Your circumstances: your date of birth, citizenship, the matters in s 18, the day you began living in your district, and your enrolment
+      `the polling day` IS A DATE @desc The polling day of the State election, ISO 8601
+GIVETH A `Yes or no`
+`Am I entitled to vote at this State election` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or may be entitled to be, a State elector` THEN `yes if` (`Am I entitled to vote` `me` `the polling day`)
+    OTHERWISE `does not arise for you`
+
+@export Can I enrol on polling day and vote as a provisional voter (Electoral Act 1907 (WA) s 17(2), (3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `me` IS A `My circumstances` @desc Your circumstances: your date of birth, citizenship, the matters in s 18, the day you began living in your district, and your enrolment
+      `the polling day` IS A DATE @desc The polling day of the State election, ISO 8601
+      `I present at a place to vote and make a State or Commonwealth claim` IS A BOOLEAN @desc Whether on that day you present at a place to vote and make a claim for enrolment under this Act or under the Commonwealth Electoral Act 1918
+GIVETH A `Yes or no`
+`Can I enrol on polling day and vote as a provisional voter` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or may be entitled to be, a State elector` THEN `yes if` (`Can I enrol on polling day and vote provisionally` `me` `the polling day` `I present at a place to vote and make a State or Commonwealth claim`)
+    OTHERWISE `does not arise for you`
+
+@export May I enrol for my district at 16 or 17 (Electoral Act 1907 (WA) s 17AA(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `me` IS A `My circumstances` @desc Your circumstances: your date of birth, citizenship, the matters in s 18, the day you began living in your district, and your enrolment
+      `the day` IS A DATE @desc The day the question is about, ISO 8601 (for example today, the polling day, or the day you would claim)
+GIVETH A `Yes or no`
+`May I enrol for my district at 16 or 17` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or may be entitled to be, a State elector` THEN `yes if` (`May I enrol at 16 or 17` `me` `the day`)
+    OTHERWISE `does not arise for you`
+
+@export If I enrolled at 16 or 17, am I treated as a silent elector on a given day (Electoral Act 1907 (WA) s 17AA(2)(c))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `me` IS A `My circumstances` @desc Your circumstances: your date of birth, citizenship, the matters in s 18, the day you began living in your district, and your enrolment
+      `the day` IS A DATE @desc The day the question is about, ISO 8601 (for example today, the polling day, or the day you would claim)
+GIVETH A `Yes or no`
+`Am I treated as a silent elector because I am under 18` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or may be entitled to be, a State elector` THEN `yes if` (`Am I taken to be a silent elector because of my age` `me` `the day`)
+    OTHERWISE `does not arise for you`
+
+§§§ `s 45 -- compulsory enrolment and a new address`
+
+@export Must I be enrolled for my district (Electoral Act 1907 (WA) s 45(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `me` IS A `My circumstances` @desc Your circumstances: your date of birth, citizenship, the matters in s 18, the day you began living in your district, and your enrolment
+      `the day` IS A DATE @desc The day the question is about, ISO 8601 (for example today, the polling day, or the day you would claim)
+GIVETH A `Yes or no`
+`Must I be enrolled for my district` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or may be entitled to be, a State elector` THEN `yes if` (`Must I enrol` `me` `the day`)
+    OTHERWISE `does not arise for you`
+
+@export By the end of what day must I be enrolled to avoid the offence of not being enrolled (Electoral Act 1907 (WA) s 45(1): 21 days beginning on the day I became entitled)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `me` IS A `My circumstances` @desc Your circumstances: your date of birth, citizenship, the matters in s 18, the day you began living in your district, and your enrolment
+GIVETH A `Day answer`
+`By the end of what day must I be enrolled` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or may be entitled to be, a State elector` THEN
+        CONSIDER `What is the last day by which I must be enrolled` `me`
+        WHEN JUST `the last day` THEN `by the end of` `the last day`
+        WHEN NOTHING THEN `no day comes: you are not qualified to be enrolled apart from your age and residence`
+    OTHERWISE `does not arise for you`
+
+@export Have I committed the offence of not being enrolled (Electoral Act 1907 (WA) s 45(1), (4), (5))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `me` IS A `My circumstances` @desc Your circumstances: your date of birth, citizenship, the matters in s 18, the day you began living in your district, and your enrolment
+      `the day` IS A DATE @desc The day the question is about, ISO 8601 (for example today, the polling day, or the day you would claim)
+      `I can prove it is not because I failed to send a claim` IS A BOOLEAN @desc Whether you can prove that you are not enrolled for some reason other than your own failure to send a claim
+      `I am not enrolled because of a physical or mental impairment` IS A BOOLEAN @desc Whether you are not enrolled because you have a physical or mental impairment
+GIVETH A `Yes or no`
+`Have I committed the offence of not being enrolled for my district` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or may be entitled to be, a State elector` THEN `yes if` (`Have I committed the offence of not being enrolled` `me` `the day` `I can prove it is not because I failed to send a claim` `I am not enrolled because of a physical or mental impairment`)
+    OTHERWISE `does not arise for you`
+
+@export Can I still be prosecuted for not being enrolled (Electoral Act 1907 (WA) s 45(1), (4), (5), (7))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `me` IS A `My circumstances` @desc Your circumstances: your date of birth, citizenship, the matters in s 18, the day you began living in your district, and your enrolment
+      `the day` IS A DATE @desc The day the question is about, ISO 8601 (for example today, the polling day, or the day you would claim)
+      `I can prove it is not because I failed to send a claim` IS A BOOLEAN @desc Whether you can prove that you are not enrolled for some reason other than your own failure to send a claim
+      `I am not enrolled because of a physical or mental impairment` IS A BOOLEAN @desc Whether you are not enrolled because you have a physical or mental impairment
+      `I have since sent a State claim or lodged a Commonwealth claim, or been enrolled` IS A BOOLEAN @desc Whether since then you have sent a claim to the Electoral Commissioner, lodged a claim under the Commonwealth Electoral Act 1918, or been enrolled
+GIVETH A `Yes or no`
+`Can I still be prosecuted for not being enrolled for my district` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or may be entitled to be, a State elector` THEN `yes if` (`Can I be prosecuted for not being enrolled` `me` `the day` `I can prove it is not because I failed to send a claim` `I am not enrolled because of a physical or mental impairment` `I have since sent a State claim or lodged a Commonwealth claim, or been enrolled`)
+    OTHERWISE `does not arise for you`
+
+-- Situation: a change of primary residential address within the district (s 45(2) runs "within 21 days after the change").
+@export By when must I give written notice of my new address in the same district (Electoral Act 1907 (WA) s 45(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have changed my address within my district` IS A BOOLEAN @desc Whether you are enrolled and have moved your primary residential address from one address in your district to another in the same district
+      `the day I moved` IS A DATE @desc The day you changed your primary residential address within your district, ISO 8601
+GIVETH A `Day answer`
+`By when must I tell the Electoral Commissioner my new address` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or may be entitled to be, a State elector` THEN
+        IF NOT `I have changed my address within my district`
+        THEN `does not arise for you`
+        ELSE `by the end of` (`By when must I give notice of my new address` `the day I moved`)
+    OTHERWISE `does not arise for you`
+
+@export Can I be prosecuted for not giving notice of my new address (Electoral Act 1907 (WA) s 45(2), (5), (8))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have changed my address within my district` IS A BOOLEAN @desc Whether you are enrolled and have moved your primary residential address from one address in your district to another in the same district
+      `the day I moved` IS A DATE @desc The day you changed your primary residential address within your district, ISO 8601
+      `the day` IS A DATE @desc The day the question is about, ISO 8601 (for example today, the polling day, or the day you would claim)
+      `my failure to give notice is because of a physical or mental impairment` IS A BOOLEAN @desc Whether you have not given notice of the new address because you have a physical or mental impairment
+      `I have since given notice or lodged a Commonwealth claim` IS A BOOLEAN @desc Whether you have since given written notice of the new address, or lodged a claim for enrolment under the Commonwealth Electoral Act 1918
+GIVETH A `Yes or no`
+`Can I be prosecuted for not telling the Electoral Commissioner my new address` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or may be entitled to be, a State elector` THEN
+        IF NOT `I have changed my address within my district`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Can I be prosecuted for not notifying my new address` `the day I moved` `the day` `my failure to give notice is because of a physical or mental impairment` `I have since given notice or lodged a Commonwealth claim`)
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 31, 31A, 35A -- the Commonwealth roll and the State register`
+
+-- Situation: being on the Commonwealth roll for an address in the State; the question asks what that enrolment does.
+@export If I am enrolled on the Commonwealth roll, does that reach the State register (Electoral Act 1907 (WA) ss 31, 31A, 35A)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I am on the Commonwealth roll for an address in Western Australia` IS A BOOLEAN @desc Whether you are enrolled on the Commonwealth roll (Commonwealth Electoral Act 1918) for an address in Western Australia
+      `how` IS A `How I came onto the Commonwealth roll` @desc How you came onto the Commonwealth roll for an address in Western Australia
+      `a single enrolment procedure is in operation` IS A BOOLEAN @desc Whether a Gazette order under s 31(3) declares a single enrolment procedure in operation
+      `an information-sharing arrangement is in operation` IS A BOOLEAN @desc Whether an arrangement under s 31A(1) for notifying direct Commonwealth enrolments is in operation
+GIVETH A `Where my Commonwealth enrolment goes`
+`Does my Commonwealth enrolment reach the State register of electors` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or may be entitled to be, a State elector` THEN
+        IF NOT `I am on the Commonwealth roll for an address in Western Australia`
+        THEN `does not arise for you`
+        ELSE CONSIDER `Does my Commonwealth enrolment reach the State register` `how` `a single enrolment procedure is in operation` `an information-sharing arrangement is in operation`
+             WHEN `my claim is also my State claim, received by the Australian Electoral Officer` THEN `it reaches the register: your Commonwealth claim is also your State claim, received by the Australian Electoral Officer`
+             WHEN `the Electoral Commissioner may enrol me on the notified information` THEN `it may reach the register: the Electoral Commissioner may enrol you on the information the Commonwealth sends`
+             WHEN `nothing reaches it: I must send a State claim` THEN `it does not reach the register: you must send a State claim`
+    OTHERWISE `does not arise for you`
+
+§§§ `s 156(1), (1A), (16) -- the duty to vote`
+
+@export Must I vote at a State election with this polling day (Electoral Act 1907 (WA) s 156(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `me` IS A `My circumstances` @desc Your circumstances: your date of birth, citizenship, the matters in s 18, the day you began living in your district, and your enrolment
+      `the polling day` IS A DATE @desc The polling day of the State election, ISO 8601
+      `what happened` IS A `What happened at the election` @desc What happened at the election: whether you voted, whether absence from the State or an impairment prevented you, your reasons, and whether the Electoral Commissioner is satisfied of them
+GIVETH A `Yes or no`
+`Must I vote at this State election` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or may be entitled to be, a State elector` THEN `yes if` (`Must I vote` `me` `the polling day` `what happened`)
+    OTHERWISE `does not arise for you`
+
+@export Do I have a valid and sufficient reason for not voting (Electoral Act 1907 (WA) s 156(1A))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what happened` IS A `What happened at the election` @desc What happened at the election: whether you voted, whether absence from the State or an impairment prevented you, your reasons, and whether the Electoral Commissioner is satisfied of them
+GIVETH A `Yes or no`
+`Do I have a valid and sufficient reason for not voting at this election` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or may be entitled to be, a State elector` THEN `yes if` (`Do I have a valid and sufficient reason` `what happened`)
+    OTHERWISE `does not arise for you`
+
+@export Have I committed the offence of failing to vote (Electoral Act 1907 (WA) s 156(16))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `me` IS A `My circumstances` @desc Your circumstances: your date of birth, citizenship, the matters in s 18, the day you began living in your district, and your enrolment
+      `the polling day` IS A DATE @desc The polling day of the State election, ISO 8601
+      `what happened` IS A `What happened at the election` @desc What happened at the election: whether you voted, whether absence from the State or an impairment prevented you, your reasons, and whether the Electoral Commissioner is satisfied of them
+GIVETH A `Yes or no`
+`Have I committed the offence of failing to vote at this election` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or may be entitled to be, a State elector` THEN `yes if` (`Have I committed the offence of failing to vote` `me` `the polling day` `what happened`)
+    OTHERWISE `does not arise for you`
+
+@export Must the Electoral Commissioner send me a penalty notice (Electoral Act 1907 (WA) s 156(2), (4), (5))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `me` IS A `My circumstances` @desc Your circumstances: your date of birth, citizenship, the matters in s 18, the day you began living in your district, and your enrolment
+      `the polling day` IS A DATE @desc The polling day of the State election, ISO 8601
+      `what happened` IS A `What happened at the election` @desc What happened at the election: whether you voted, whether absence from the State or an impairment prevented you, your reasons, and whether the Electoral Commissioner is satisfied of them
+GIVETH A `Yes or no`
+`Must the Electoral Commissioner send me a penalty notice for not voting` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or may be entitled to be, a State elector` THEN `yes if` (`Must I be sent a penalty notice` `me` `the polling day` `what happened`)
+    OTHERWISE `does not arise for you`
+
+§§§ `s 156(6)-(15A) -- after a penalty notice`
+
+-- Situation: a penalty notice sent under s 156(4). Each of these seven questions turns on it.
+
+@export Is the response date in my notice lawful (Electoral Act 1907 (WA) s 156(7), (13): at least 21 days after the notice is sent)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have been sent a penalty notice for not voting` IS A BOOLEAN @desc Whether the Electoral Commissioner has sent you a penalty notice (s 156(4)) because you appear not to have voted at a State election
+      `the day the notice was sent` IS A DATE @desc The day the penalty notice or infringement notice was sent, ISO 8601
+      `the response date` IS A DATE @desc The response date set out in the notice, ISO 8601
+GIVETH A `Yes or no`
+`Is the response date in my notice lawful under the Act` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or may be entitled to be, a State elector` THEN
+        IF NOT `I have been sent a penalty notice for not voting`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Is the response date lawful` `the day the notice was sent` `the response date`)
+    OTHERWISE `does not arise for you`
+
+@export What is the most the modified penalty in my notice can be (Electoral Act 1907 (WA) s 156(8), (13))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have been sent a penalty notice for not voting` IS A BOOLEAN @desc Whether the Electoral Commissioner has sent you a penalty notice (s 156(4)) because you appear not to have voted at a State election
+      `I have paid a modified penalty or been convicted under section 156 before` IS A BOOLEAN @desc Whether you have previously paid a modified penalty under s 156 of this Act, or been convicted of an offence against it (a Commonwealth penalty does not count)
+GIVETH AN `Amount`
+`How much at most can the modified penalty in my notice be` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or may be entitled to be, a State elector` THEN
+        IF NOT `I have been sent a penalty notice for not voting`
+        THEN `does not arise for you`
+        ELSE amount (`What is the most the modified penalty can be` `I have paid a modified penalty or been convicted under section 156 before`)
+    OTHERWISE `does not arise for you`
+
+@export Does my response to the penalty notice stop a prosecution for not voting (Electoral Act 1907 (WA) s 156(11))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have been sent a penalty notice for not voting` IS A BOOLEAN @desc Whether the Electoral Commissioner has sent you a penalty notice (s 156(4)) because you appear not to have voted at a State election
+      `my response` IS A `My response to the penalty notice` @desc How you responded to the penalty notice by its response date
+GIVETH A `Yes or no`
+`Does my response to the penalty notice stop a prosecution for not voting` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or may be entitled to be, a State elector` THEN
+        IF NOT `I have been sent a penalty notice for not voting`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Does my response stop a prosecution` `my response`)
+    OTHERWISE `does not arise for you`
+
+@export May the Electoral Commissioner send me an infringement notice (Electoral Act 1907 (WA) s 156(12), (13A))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have been sent a penalty notice for not voting` IS A BOOLEAN @desc Whether the Electoral Commissioner has sent you a penalty notice (s 156(4)) because you appear not to have voted at a State election
+      `my response` IS A `My response to the penalty notice` @desc How you responded to the penalty notice by its response date
+GIVETH A `Yes or no`
+`May the Electoral Commissioner send me an infringement notice` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or may be entitled to be, a State elector` THEN
+        IF NOT `I have been sent a penalty notice for not voting`
+        THEN `does not arise for you`
+        ELSE `yes if` (`May I be sent an infringement notice` `my response`)
+    OTHERWISE `does not arise for you`
+
+@export Can I still be prosecuted for failing to vote (Electoral Act 1907 (WA) s 156(11), (14), (16))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have been sent a penalty notice for not voting` IS A BOOLEAN @desc Whether the Electoral Commissioner has sent you a penalty notice (s 156(4)) because you appear not to have voted at a State election
+      `I failed to vote without a valid and sufficient reason` IS A BOOLEAN @desc Whether you failed to vote without a valid and sufficient reason (s 156(16))
+      `my response` IS A `My response to the penalty notice` @desc How you responded to the penalty notice by its response date
+      `I paid the infringement notice in time` IS A BOOLEAN @desc Whether you were sent an infringement notice and paid its modified penalty by its response date
+GIVETH A `Yes or no`
+`Can I still be prosecuted for failing to vote at this election` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or may be entitled to be, a State elector` THEN
+        IF NOT `I have been sent a penalty notice for not voting`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Can I be prosecuted for failing to vote` `I failed to vote without a valid and sufficient reason` `my response` `I paid the infringement notice in time`)
+    OTHERWISE `does not arise for you`
+
+@export If I cannot respond to my notice myself, may another elector respond for me (Electoral Act 1907 (WA) s 156(14a))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have been sent a penalty notice for not voting` IS A BOOLEAN @desc Whether the Electoral Commissioner has sent you a penalty notice (s 156(4)) because you appear not to have voted at a State election
+      `I am away from my place of living or physically incapacitated` IS A BOOLEAN @desc Whether absence from your place of living or physical incapacity stops you responding by the response date
+      `they are an elector with personal knowledge of the facts` IS A BOOLEAN @desc Whether the other person is an elector who personally knows the facts
+GIVETH A `Yes or no`
+`May another elector respond to my notice for me` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or may be entitled to be, a State elector` THEN
+        IF NOT `I have been sent a penalty notice for not voting`
+        THEN `does not arise for you`
+        ELSE `yes if` (`May another elector respond for me` `I am away from my place of living or physically incapacitated` `they are an elector with personal knowledge of the facts`)
+    OTHERWISE `does not arise for you`
+
+@export Must my name be removed from the register for not responding to my notice (Electoral Act 1907 (WA) s 156(15), (15A))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have been sent a penalty notice for not voting` IS A BOOLEAN @desc Whether the Electoral Commissioner has sent you a penalty notice (s 156(4)) because you appear not to have voted at a State election
+      `I failed to respond to a penalty or infringement notice` IS A BOOLEAN @desc Whether you failed or neglected to respond to a penalty notice or an infringement notice
+      `the Commissioner is satisfied I no longer live at my roll address` IS A BOOLEAN @desc Whether the Commissioner is satisfied that you no longer live at the address shown in the roll
+GIVETH A `Yes or no`
+`Must my name be removed from the register for not responding to my notice` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or may be entitled to be, a State elector` THEN
+        IF NOT `I have been sent a penalty notice for not voting`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Must my name be removed from the register` `I failed to respond to a penalty or infringement notice` `the Commissioner is satisfied I no longer live at my roll address`)
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 45, 156(16), (16A) -- the elector's fines`
+
+@export What is the most I can be fined for this offence (Electoral Act 1907 (WA) ss 45(1), (2), 156(16), (16A))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the offence` IS A `My offence` @desc The offence
+GIVETH AN `Amount`
+`What is the most I can be fined for this electoral offence` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or may be entitled to be, a State elector` THEN amount (`What is the most I can be fined` `the offence`)
+    OTHERWISE `does not arise for you`
+
+§§§ `s 196 -- leave from work to vote`
+
+-- Situation: being an employee. s 196(1) gives the right to "an employee who is an elector"; whether I am an elector on
+-- polling day is the baseline's own answer (s 4, s 17AA(2)(a)).
+@export May I have leave from work, without penalty or a disproportionate deduction of pay, for up to 2 hours to vote (Electoral Act 1907 (WA) s 196(1), (3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I am an employee` IS A BOOLEAN @desc Whether you work for an employer
+      `me` IS A `My circumstances` @desc Your circumstances: your date of birth, citizenship, the matters in s 18, the day you began living in your district, and your enrolment
+      `the polling day` IS A DATE @desc The polling day of the State election, ISO 8601
+      `I told my employer before polling day that I would like leave to vote` IS A BOOLEAN @desc Whether, before polling day, you told your employer that you would like a leave of absence to vote
+      `the absence is necessary for me to vote` IS A BOOLEAN @desc Whether you need to be absent from work to be able to vote at the election
+      `my absence may cause danger or substantial loss in my employment` IS A BOOLEAN @desc Whether your absence may cause danger or substantial loss in respect of the employment you are engaged in (s 196(3))
+GIVETH A `Yes or no`
+`May I have leave from work to vote` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or may be entitled to be, a State elector` THEN
+        IF NOT `I am an employee`
+        THEN `does not arise for you`
+        ELSE `yes if` (`s 196(1), (3) -- the employer must allow leave of absence to vote` (`Am I an elector` `me` `the polling day`) `I told my employer before polling day that I would like leave to vote` `the absence is necessary for me to vote` `my absence may cause danger or substantial loss in my employment`)
+    OTHERWISE `does not arise for you`
+
+@export What is the most I can be fined for getting leave to vote when I do not mean to vote (Electoral Act 1907 (WA) ss 196(2), 190)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I am an employee` IS A BOOLEAN @desc Whether you work for an employer
+GIVETH AN `Amount`
+`What is the most I can be fined for getting leave to vote without meaning to vote` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or may be entitled to be, a State elector` THEN
+        IF NOT `I am an employee`
+        THEN `does not arise for you`
+        ELSE amount `s 190 -- the most fine for a contravention with no other punishment`
+    OTHERWISE `does not arise for you`
+
+§§ `For the employer of an elector`
+
+§§§ `s 196 -- leave of absence to vote`
+
+-- Situation: an employee's request for leave to vote. s 196(1) turns on the employee's notification.
+
+@export Must I allow my employee leave of absence to vote, without penalty or a disproportionate deduction of pay (Electoral Act 1907 (WA) s 196(1), (3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `an employee has asked me for leave to vote` IS A BOOLEAN @desc Whether an employee has told you that they would like a leave of absence to vote in a State election
+      `the employee is an elector` IS A BOOLEAN @desc Whether the employee is enrolled as a State elector
+      `they asked before polling day` IS A BOOLEAN @desc Whether the employee asked you before polling day
+      `the absence is necessary for them to vote` IS A BOOLEAN @desc Whether the employee needs to be absent from work to be able to vote at the election
+      `their absence may cause danger or substantial loss in the employment` IS A BOOLEAN @desc Whether the employee's absence may cause danger or substantial loss in respect of the employment they are engaged in (s 196(3))
+GIVETH A `Yes or no`
+`Must I allow my employee leave of absence to vote` MEANS
+    CONSIDER `my role`
+    WHEN `I employ someone who is a State elector` THEN
+        IF NOT `an employee has asked me for leave to vote`
+        THEN `does not arise for you`
+        ELSE `yes if` (`s 196(1), (3) -- the employer must allow leave of absence to vote` `the employee is an elector` `they asked before polling day` `the absence is necessary for them to vote` `their absence may cause danger or substantial loss in the employment`)
+    OTHERWISE `does not arise for you`
+
+@export How long a leave of absence to vote must I allow, at the most (Electoral Act 1907 (WA) s 196(1): a reasonable period, as is necessary to vote)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `an employee has asked me for leave to vote` IS A BOOLEAN @desc Whether an employee has told you that they would like a leave of absence to vote in a State election
+GIVETH A `Hours`
+`How long a leave of absence to vote must I allow at the most` MEANS
+    CONSIDER `my role`
+    WHEN `I employ someone who is a State elector` THEN
+        IF NOT `an employee has asked me for leave to vote`
+        THEN `does not arise for you`
+        ELSE `up to` `s 196(1) -- the most leave to vote, in hours`
+    OTHERWISE `does not arise for you`
+
+@export What is the most I can be fined for not allowing leave to vote (Electoral Act 1907 (WA) ss 196(1), 190)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `an employee has asked me for leave to vote` IS A BOOLEAN @desc Whether an employee has told you that they would like a leave of absence to vote in a State election
+GIVETH AN `Amount`
+`What is the most I can be fined for not allowing leave to vote` MEANS
+    CONSIDER `my role`
+    WHEN `I employ someone who is a State elector` THEN
+        IF NOT `an employee has asked me for leave to vote`
+        THEN `does not arise for you`
+        ELSE amount `s 190 -- the most fine for a contravention with no other punishment`
+    OTHERWISE `does not arise for you`
+
+§§ `For the candidate`
+
+§§§ `ss 81, 81A, 82 -- nomination and the deposit`
+
+@export How much is the deposit I must lodge to be nominated (Electoral Act 1907 (WA) s 81(2), (3); unless a greater amount is prescribed)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the election I am standing in` IS A `Kind of election` @desc Whether you are standing for a district (Legislative Assembly) or at a Council election (Legislative Council)
+      `the number of candidates in my group` IS A NUMBER @desc At a Council election, the number of candidates in the group you are included in (0 if you are not in a group)
+GIVETH AN `Amount`
+`How much is the deposit I must lodge to be nominated` MEANS
+    CONSIDER `my role`
+    WHEN `I am a candidate, or want to stand, at a State election` THEN amount (`s 81(2), (3) -- the required deposit` `the election I am standing in` `the number of candidates in my group`)
+    OTHERWISE `does not arise for you`
+
+-- s 81(1)(b): the deposit is lodged "at or before the close of nominations ... with the returning officer". s 81A(2)(c):
+-- for a party nomination, "not later than 24 hours before the close of nominations ... with the Electoral Commissioner".
+@export By when, and with whom, must my deposit be lodged (Electoral Act 1907 (WA) ss 81(1)(b), 81A(2)(c))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my nomination is a party nomination` IS A BOOLEAN @desc Whether a registered political party nominates you, or nominated you, as its endorsed candidate under s 81A(2)
+GIVETH A `When my deposit is due`
+`By when and with whom must my deposit be lodged` MEANS
+    CONSIDER `my role`
+    WHEN `I am a candidate, or want to stand, at a State election` THEN
+        IF `my nomination is a party nomination`
+        THEN `not later than 24 hours before the close of nominations, lodged with the Electoral Commissioner`
+        ELSE `at or before the close of nominations, lodged with the returning officer`
+    OTHERWISE `does not arise for you`
+
+-- s 81(1): "A nomination is not valid unless -- (a) the nomination paper is received by the returning officer after the
+-- issue of the writ and before the close of nominations; and (b) at or before the close of nominations, the required
+-- deposit is lodged". Only these two conditions are encoded; a nomination failing either is not valid ("not valid
+-- unless"). The party nomination route (s 81A(2)) and s 79's contents of the paper are not encoded.
+@export Is my nomination valid as to its paper and its deposit (Electoral Act 1907 (WA) s 81(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my nomination paper was received after the writ and before the close of nominations` IS A BOOLEAN @desc Whether the returning officer received your nomination paper after the issue of the writ and before the close of nominations
+      `my deposit was lodged by the close of nominations` IS A BOOLEAN @desc Whether the required deposit was lodged with the returning officer by you or for you at or before the close of nominations
+GIVETH A `Yes or no`
+`Is my nomination valid as to its paper and its deposit` MEANS
+    CONSIDER `my role`
+    WHEN `I am a candidate, or want to stand, at a State election` THEN
+        `yes if` (`my nomination paper was received after the writ and before the close of nominations` AND `my deposit was lodged by the close of nominations`)
+    OTHERWISE `does not arise for you`
+
+-- s 82(1): a candidate may withdraw "by lodging with the returning officer notice in writing of the withdrawal of the
+-- nomination at any time before the close of nominations"; (2): "The withdrawal of the nomination of a candidate included
+-- in a group has no effect unless each other candidate included in the group has consented in writing".
+@export Can I withdraw my nomination (Electoral Act 1907 (WA) s 82)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `it is before the close of nominations` IS A BOOLEAN @desc Whether nominations have not yet closed
+      `I am included in a group` IS A BOOLEAN @desc Whether you are included in a group of candidates (s 80)
+      `every other candidate in my group has consented in writing` IS A BOOLEAN @desc Whether each other candidate in your group has consented in writing to your withdrawal
+GIVETH A `Yes or no`
+`Can I withdraw my nomination` MEANS
+    CONSIDER `my role`
+    WHEN `I am a candidate, or want to stand, at a State election` THEN
+        `yes if` (`it is before the close of nominations` AND ((NOT `I am included in a group`) OR `every other candidate in my group has consented in writing`))
+    OTHERWISE `does not arise for you`
+
+-- s 82(1): on withdrawal "the nomination is cancelled and the deposit lodged with the nomination is forfeited to the
+-- Crown".
+@export If I withdraw my nomination, what happens to my deposit (Electoral Act 1907 (WA) s 82(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH A `What happens to my deposit`
+`If I withdraw my nomination what happens to my deposit` MEANS
+    CONSIDER `my role`
+    WHEN `I am a candidate, or want to stand, at a State election` THEN `it is forfeited to the Crown`
+    OTHERWISE `does not arise for you`
+
+§§§ `s 84 -- the deposit after the election`
+
+-- Situation: the election held and the votes counted (s 84(1): "after the election").
+@export After the election, is my deposit returned, and to whom (Electoral Act 1907 (WA) s 84(1), (3), (4): more than 4% of the votes, or elected)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the election has been held and the votes counted` IS A BOOLEAN @desc Whether the election you stood at has been held and the votes counted
+      `I was elected` IS A BOOLEAN @desc Whether you were elected
+      `the votes for me` IS A NUMBER @desc The first preference votes polled for you (at a Council election, for you or the group you are in; where only 2 candidates stood for a single seat, the votes polled for you)
+      `the total votes` IS A NUMBER @desc The total of those votes polled for all the candidates in the election
+      `my nomination is a party nomination` IS A BOOLEAN @desc Whether a registered political party nominates you, or nominated you, as its endorsed candidate under s 81A(2)
+GIVETH A `What happens to my deposit`
+`After the election is my deposit returned and to whom` MEANS
+    CONSIDER `my role`
+    WHEN `I am a candidate, or want to stand, at a State election` THEN
+        IF NOT `the election has been held and the votes counted`
+        THEN `does not arise for you`
+        ELSE `s 84(1), (3), (4) -- what happens to the deposit` `I was elected` `the votes for me` `the total votes` `my nomination is a party nomination`
+    OTHERWISE `does not arise for you`

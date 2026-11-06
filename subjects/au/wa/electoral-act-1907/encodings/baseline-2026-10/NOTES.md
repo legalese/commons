@@ -81,3 +81,45 @@ The text in force on 13 March 2021 was not deposited, so c024 is answered on the
 - Check what the Act says about voting after a move out of the district (finding 15).
 - Search case law on "valid and sufficient reason" and on whether an ineligible elector commits the s 156(16) offence.
 - An independent test pass.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026, following the Graffiti Vandalism Act encoding's design (D2, D4, D8 and D8.1-D8.15 in `subjects/au/wa/graffiti-vandalism-act-2016/encodings/baseline-2026-10/NOTES.md`). The layer is `ea-qa.l4` (imports `prelude`, `daydate`, `ea-elector`); its cases are `ea-qa-cases.l4`. The baseline's files are unchanged: the layer adds, and replaces nothing.
+
+**Roles** (`DECLARE Role`, in the first person; every exported question takes `my role` first, `@desc Which of these describes you`, and answers `does not arise for you` for a role it is not about without reading any other input):
+
+- `I am, or may be entitled to be, a State elector`: the baseline's seat. All 31 baseline exports are asked, each calling the baseline function, plus two s 196 questions for the elector as an employee (33).
+- `I employ someone who is a State elector`: s 196(1) lays the duty to allow leave to vote on the employer (3).
+- `I am a candidate, or want to stand, at a State election`: ss 81, 81A, 82 and 84 lay the deposit, its time and its return or forfeiture on the candidate (6).
+
+The Electoral Commissioner, returning officers, the Australian Electoral Officer and the courts are never a seat. A registered political party's nomination (s 81A) appears as a fact about the candidate. The other elector who may respond for an absent one (s 156(14a)) is asked from the absent elector's side, as the baseline asks it.
+
+**Situation inputs** (all BOOLEAN, each straight after `my role`; FALSE gives `does not arise for you` without reading anything else; same name, type and `@desc` wherever taken):
+
+| Input | Does not arise when | Questions |
+|---|---|---|
+| `I have been sent a penalty notice for not voting` | FALSE | the seven of s 156(6)-(15A): the response date, the modified penalty's cap, the response, the infringement notice, a prosecution after the notice, another elector responding, removal from the register |
+| `I have changed my address within my district` | FALSE | the two of s 45(2): by when to give notice, and a prosecution for not giving it |
+| `I am on the Commonwealth roll for an address in Western Australia` | FALSE | the ss 31, 31A, 35A question |
+| `I am an employee` | FALSE | the elector's two s 196 questions: leave to vote, and the fine for leave under pretence (s 196(2)) |
+| `an employee has asked me for leave to vote` | FALSE | the employer's three s 196 questions |
+| `the election has been held and the votes counted` | FALSE | the candidate's s 84 question |
+
+The other questions arise in every situation of their role and take none. Entitlement, enrolment, the duty to vote and whether a penalty notice must be sent arise for every elector or would-be elector; the deposit, its time, validity and withdrawal arise for every candidate.
+
+**Decisions.**
+
+- **Q1. The penalty notice, not the election, is the situation of s 156(6)-(15A).** Each of those subsections runs from a notice sent under s 156(4). "Must the Electoral Commissioner send me a penalty notice" stays outside it, since it asks whether one must be sent.
+- **Q2. The employee is the elector, not a fourth role.** s 196(1) gives the right to "an employee who is an elector". The elector's s 196 question uses the baseline's own `Am I an elector` on the polling day, so a person not enrolled is told no. The employer's question asks the same fact as `the employee is an elector`. The mirror cases agree: Chloe's facts give yes from both seats; asked only on polling day, no from both; Jake (not enrolled) and the employer of a non-elector, no.
+- **Q3. s 196 has no penalty of its own; s 190's line "Any contravention of this Act for which no other punishment is provided" gives up to $1 000.** That this line reaches a contravention of s 196(1) by the employer, or of s 196(2) by the employee, is an INFERENCE: the Act calls neither an offence in its own words.
+- **Q4. The deposit amounts are the Act's own** ($250; $2 000; $10 000 divided by the group's number for a Council group of more than 5). s 81(2), (3) allow "any greater amount that is prescribed"; the Electoral Regulations 1996 are not deposited, so a prescribed amount would change the answer. The question text says so.
+- **Q5. s 84's "more than 4%" is strict:** 400 of 10 000 forfeits; 401 does not. An elected candidate gets the deposit back without the votes being read. In a two-candidate election the votes are the votes polled (s 84(1)(c)), in other single member elections the first preferences (s 84(1)(b)); the one input's `@desc` says so.
+- **Q6. Answer types** follow gva-seat.l4: `Yes or no`, `Amount` (amount HAS dollars), `Hours` (`up to` HAS hours), `Day answer` (`on`, `by the end of`, and `no day comes: ...` for the baseline's NOTHING), and three enumerations with an explicit `does not arise for you`. The baseline's own enumeration answer (ss 31, 31A, 35A) is mapped value by value, with no OTHERWISE.
+- **Q7. One name, one type, one `@desc`.** The baseline gives `me`, `the day` and the impairment input different `@desc` texts in different questions; the layer gives each one text, since the form merges inputs by name. The impairment inputs of s 45(1) and s 45(2) are different facts and have different names (`I am not enrolled because of a physical or mental impairment`; `my failure to give notice is because of a physical or mental impairment`).
+- **Q8. No date arithmetic in the layer.** Every date is computed by the baseline; the layer only wraps it.
+
+**Not covered for the new roles.** Employer: whether a deduction of pay is "disproportionate" (a judgment; the duty's question text carries it). Candidate: the contents of the nomination paper (s 79) and the party nomination route to validity (s 81A(2)); grouping (s 80); a candidate who dies (s 84(2)); electoral funding and disclosure (Part VI); electoral advertising (s 187); and anything the regulations prescribe.
+
+**Cases** (`ea-qa-cases.l4`, 237): 111 for the elector (33 of them asking the baseline export on the same facts, or the baseline's own answer that the layer wraps); 7 for the employer, mirror cases included; 19 for the candidate; 84 asking each of the 42 questions for the two roles it is not about, every other input ASSUMEd; 16 asking each question with a situation input with that situation FALSE, every later input ASSUMEd. A negative control (an ASSUMEd input read in an employer case) failed as it should.
+
+**Checks** (stable `l4` of VS Code extension 1.6.98, `JL4_LIBRARY_PATH` unset): `l4 run` gives 0 errors and 0 warnings for `ea-elector.l4`, `ea-cases-elector.l4` (66 of 66, unchanged), `ea-qa.l4` and `ea-qa-cases.l4` (237 of 237); `l4 check ea-qa.l4` succeeds. A parameter script (scratchpad `check_params.py`) lists the 42 exports with their inputs and confirms that `my role` is first everywhere, that each situation input is second wherever it appears, that every input name has one type and one `@desc` across the file, and that no input is DEONTIC or EVENT.
