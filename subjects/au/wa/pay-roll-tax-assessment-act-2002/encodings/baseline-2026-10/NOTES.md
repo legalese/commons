@@ -189,3 +189,61 @@ Jarrah is a single-State employer far under the threshold in the life.
   apprentices (s 41D).
 - Encode tracing of interests (ss 34-37) and the DGE (s 39) for larger groups.
 - An independent test pass and the human gates.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026, after the model of the Graffiti Vandalism Act 2016 encoding's seat layer (its design decisions D2, D4 and D8). The baseline's files are unchanged: the layer is added, nothing is replaced. Two new files:
+
+- `prt-qa.l4` imports `prelude` and `prt-payroll`. It has 27 exported questions.
+- `prt-qa-cases.l4` imports the same and `prt-qa`. It has 148 cases.
+
+### Roles
+
+`DECLARE Role IS ONE OF`:
+
+- `I employ people, or pay directors, through my business (an employer)`: the baseline's seat, the employer-founder (25 questions, one for each baseline export).
+- `I place workers with clients and pay them (an employment agent)`: the employment agent of s 4, taken to pay its placed workers' wages "as an employer" (s 9GA) (27 questions: the same 25, and 2 of its own).
+
+Why: the Act puts the tax on "an employer who pays or is liable to pay WA taxable wages" (s 7(1)), and "employer ... includes ... an employment agent" (s 4). So every employer question is the agent's question too, and arises for both roles; only the agent's own two (am I an employment agent; what s 9GA makes my wages) are asked of the agent alone, and answer `does not arise for you` for the employer without reading anything else. The Commissioner is never a seat. The worker, who pays no payroll tax, is not one either, and a group member is a situation of either role rather than a seat. Every exported question takes `my role` IS A Role first, with `@desc Which of these describes you`.
+
+### The situation input
+
+One input, shared by both roles with one name, type and `@desc`, always second: `the kind of employer I am`, of type `Kind of employer`:
+
+- `a local nongroup employer: not in a group, and paying taxable wages only in WA`
+- `an interstate nongroup employer: not in a group, and paying taxable wages in WA and in another State or Territory`
+- `a member of a group of employers under Part 4`
+
+The Act ties each annual liability to one of these (s 4 "local nongroup employer", "interstate nongroup employer", "nongroup employer"; s 17 and s 7(2) for a group).
+
+| Questions | Arise for | Does not arise for |
+|---|---|---|
+| `What is my annual threshold for the year`, `Which band of s 10 is my business in`, `What is my deductable amount for the year`, `How much payroll tax must my business pay for the year`, `Does my business pay any payroll tax for the year` (ss 10, 11A) | a local nongroup employer | an interstate nongroup employer; a member of a group |
+| `Which band of s 17 is my group in`, `What is my group's deductable amount for the year`, `How much WA payroll tax must my group pay for the year` (s 17), `Can I be made to pay payroll tax owed on another group member's wages` (s 7(2)) | a member of a group | a local or an interstate nongroup employer |
+
+9 questions take it. The other 18 arise in every situation: wages (Part 2 Div 2), WA taxable wages (s 6A), the grouping questions (ss 30-33, 38, which are how a business finds out whether it is in a group), the thresholds and the rate, registration and returns (Part 3), and the agent's two.
+
+### Decisions
+
+- **Q1. The agent is a seat although it is also an employer.** The brief's alternative, a single seat with the agent as a situation, would hide nothing, since every employer question is also the agent's. The second role lets the form show the agent's two questions only to agents, and states the s 4 inclusion in the role list. Michael may prefer one role.
+- **Q2. An interstate nongroup employer gets no annual tax answer.** ss 13-16 are not encoded (baseline, "What would need doing"). For that value the s 10 questions answer `does not arise for you`, which is right (s 10 does not apply to it) but leaves the business with no answer. Said here so the form's silence is not read as nil tax.
+- **Q3. The baseline's -1 is said in words.** The two tax-for-the-year questions answer `Tax for the year`: `tax of` the baseline's amount, or `not encoded: this assessment year` where the baseline answers -1 (a year before 2020-21). Every other answer is the baseline export's own, wrapped (`Yes or no`, `Amount`, `Days`, `Rate, if it arises`, `Band, if it arises`).
+- **Q4. The grouping fact is asked twice.** `My month` (registration and returns) carries its own `I am a member of a group`, from the baseline; the layer does not change the baseline's record, so the form may ask it again beside `the kind of employer I am`. The two should agree; the layer does not check that they do.
+- **Q5. s 9GA's condition is a helper in the layer.** The baseline counts an agent's payment as wages without asking s 9GA's condition, that the agent "receives payment ... in relation to the period during which the services are performed". The agent's question asks it first; if it does not hold the answer is `not wages under s 9GA`. Where it holds, the amount is the baseline's wages rule on a `My payment` built in the layer, with fixed placeholders, commented, for the four fields that rule does not read for an agent's payment. The s 4 definition of "employment agent" is also a helper (four facts).
+
+### Not covered for the employment agent
+
+- Whether the client, as well as the agent, can be liable (the Act says only that the agent is taken to be the employer, s 9GA); s 43 (agents and trustees); interstate placements (ss 13-16).
+- Everything the baseline leaves out for any employer: Part 5 exempt wages head by head, the monthly progressive calculation, annual reconciliation, tracing of interests and the designated group employer.
+
+### Cases
+
+148 in `prt-qa-cases.l4`, all satisfied, with 0 errors and 0 warnings:
+
+- 2 ask the agent's two questions for the employer, every other input ASSUMEd: `does not arise for you`;
+- 24 ask each situation question, for both roles, with each value of `the kind of employer I am` under which it does not arise, the year, group year or membership ASSUMEd: `does not arise for you`;
+- 28 assert that an answer equals the baseline export's on the same facts (every one of the 25 employer questions, three of them twice, and the agent's s 9GA amount);
+- 2 mirror cases ask the same facts from both seats;
+- 92 are worked by hand from the text (or from the recovered formulas, marked FORMULA), for both roles, on d044 and the baseline's fixtures (copied into the case file, since a case file cannot be imported without running its assertions).
+
+Checked with the stable `l4` of VS Code extension 1.6.98, `JL4_LIBRARY_PATH` unset: `prt-qa.l4`, `prt-qa-cases.l4`, and the baseline's `prt-payroll.l4` and `prt-cases-payroll.l4` (46 of 46, unchanged) give 0 errors and 0 warnings; `l4 check prt-qa.l4` succeeds. A script listed every `@export` of `prt-qa.l4` with its inputs and checked that `my role` is first in all 27, that `the kind of employer I am` has one name, type and `@desc` in all 9 questions that take it, and that no input is DEONTIC or EVENT. A negative control (a wrong group tax, and the five interstate cases given a local nongroup employer with the year still ASSUMEd) gave 6 failures out of 148.

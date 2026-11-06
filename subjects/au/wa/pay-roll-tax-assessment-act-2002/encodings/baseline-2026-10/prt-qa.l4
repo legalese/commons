@@ -1,0 +1,453 @@
+IMPORT prelude
+IMPORT `prt-payroll`
+
+-- Pay-roll Tax Assessment Act 2002 (WA), with the Pay-roll Tax Act 2002 s 5 -- the Q&A layer: the questions people
+-- ask, with the seat and the situation as parameters.
+--
+-- PURPOSE. One module whose exported questions serve every seat from one deployment. Every exported question takes
+-- `my role` first ("Which of these describes you"). A question about another role answers `does not arise for you`
+-- without reading any other input, so the site's question form never asks those inputs and drops the question.
+--
+-- ROLES. The Act puts the tax on "an employer who pays or is liable to pay WA taxable wages" (s 7(1)), and "employer"
+-- includes "an employment agent" (s 4). Two kinds of business ask it questions:
+--   - the employer that pays its own employees and directors: the baseline's seat (prt-payroll.l4, Daniel founding
+--     Jarrah Legal Technologies);
+--   - the employment agent, who procures a worker's services for a client and pays the worker (s 4), and is taken to pay
+--     those wages "as an employer" (s 9GA).
+-- An employment agent is an employer, so every baseline question arises for both roles; the agent has two more, whether
+-- it is an employment agent and what s 9GA makes its wages. The Commissioner is never a seat: registration, exclusion
+-- from a group and exemption from returns appear as what they mean for the business. The worker, who pays no payroll
+-- tax, is not a seat.
+--
+-- SITUATION (design D8 of the Graffiti Vandalism Act encoding). Within a role, a question that arises only in a
+-- situation takes that situation's fact straight after `my role`, and answers `does not arise for you` when it does not
+-- hold, without reading anything else. There is one situation input, shared by both roles with one name, type and
+-- @desc, so the form asks it once: `the kind of employer I am` (`Kind of employer`). The Act ties each annual liability
+-- to it: s 10 (and its apportioned threshold, s 11A) to "a local nongroup employer", ss 13-16 to "an interstate nongroup
+-- employer", s 17 and s 7(2) to "a group" and its members (s 4: "nongroup employer means an employer who is not a member
+-- of a group under Part 4").
+--   - The five s 10 questions arise only for a local nongroup employer.
+--   - The three s 17 questions and s 7(2) arise only for a member of a group.
+--   - The interstate nongroup employer's liability (ss 13-16) is not encoded, so for that value neither set arises.
+-- The questions that decide grouping (ss 30-33, 38) arise in every situation, since they are how a business finds out
+-- which value is its own; so do the questions of wages (Part 2 Div 2), WA taxable wages (s 6A), the thresholds and the
+-- rate, registration and returns (Part 3).
+--
+-- The rules are in prt-payroll.l4. This module calls them and restates none; for each role each answer, where its
+-- situation holds, is the baseline export's own answer, wrapped. Where the baseline answers -1 for "not encoded" (a year
+-- before 2020-21) the layer says `not encoded: this assessment year`. No exported question takes a DEONTIC or EVENT
+-- input.
+--
+-- BASELINE. Not for public use as advice. See NOTES.md, "Q&A layer (seat and situations as parameters)".
+
+§ `Pay-roll Tax Assessment Act 2002 (WA) -- the questions people ask`
+
+§§ `Who is asking, and the shape of the answers`
+
+DECLARE Role IS ONE OF
+    `I employ people, or pay directors, through my business (an employer)`
+    `I place workers with clients and pay them (an employment agent)`
+
+-- The situation: which kind of employer the Act makes the business (s 4, Part 4).
+DECLARE `Kind of employer` IS ONE OF
+    `a local nongroup employer: not in a group, and paying taxable wages only in WA`
+    `an interstate nongroup employer: not in a group, and paying taxable wages in WA and in another State or Territory`
+    `a member of a group of employers under Part 4`
+
+DECLARE `Yes or no` IS ONE OF
+    yes
+    no
+    `does not arise for you`
+
+DECLARE `Amount` IS ONE OF
+    `does not arise for you`
+    amount HAS dollars IS A NUMBER
+
+DECLARE `Days` IS ONE OF
+    `does not arise for you`
+    days HAS `how many days` IS A NUMBER
+
+-- The tax for a year: the baseline's -1 ("not encoded") is said in words.
+DECLARE `Tax for the year` IS ONE OF
+    `does not arise for you`
+    `tax of` HAS dollars IS A NUMBER
+    `not encoded: this assessment year`
+
+DECLARE `Rate, if it arises` IS ONE OF
+    `does not arise for you`
+    `the answer is` HAS `the answer` IS A `My payroll tax rate`
+
+DECLARE `Band, if it arises` IS ONE OF
+    `does not arise for you`
+    `the answer is` HAS `the answer` IS A `Which band I am in`
+
+-- s 9GA: what the employment agent pays a placed worker.
+DECLARE `Agent's wages` IS ONE OF
+    `does not arise for you`
+    `wages paid by you as the employer` HAS dollars IS A NUMBER
+    `not wages under s 9GA: you receive no payment from the client for the period of the worker's services`
+
+§§ `Helpers`
+
+GIVEN `it holds` IS A BOOLEAN
+GIVETH A `Yes or no`
+`yes if` `it holds` MEANS
+    IF `it holds` THEN yes ELSE no
+
+-- Both roles are employers (s 4), so a question of every employer arises for either.
+GIVEN `my role` IS A Role
+GIVETH A BOOLEAN
+DECIDE `I am an employer under the Act` IF
+    CONSIDER `my role`
+    WHEN `I employ people, or pay directors, through my business (an employer)` THEN TRUE
+    WHEN `I place workers with clients and pay them (an employment agent)` THEN TRUE
+
+-- The situation checks list every value and have no OTHERWISE (graffiti finding 31: a CONSIDER with OTHERWISE takes the
+-- OTHERWISE branch for an ASSUMEd value instead of failing, so a case could not show the value was not read).
+GIVEN `the kind of employer I am` IS A `Kind of employer`
+GIVETH A BOOLEAN
+DECIDE `I am not a local nongroup employer` IF
+    CONSIDER `the kind of employer I am`
+    WHEN `a local nongroup employer: not in a group, and paying taxable wages only in WA` THEN FALSE
+    WHEN `an interstate nongroup employer: not in a group, and paying taxable wages in WA and in another State or Territory` THEN TRUE
+    WHEN `a member of a group of employers under Part 4` THEN TRUE
+
+GIVEN `the kind of employer I am` IS A `Kind of employer`
+GIVETH A BOOLEAN
+DECIDE `I am not a member of a group` IF
+    CONSIDER `the kind of employer I am`
+    WHEN `a local nongroup employer: not in a group, and paying taxable wages only in WA` THEN TRUE
+    WHEN `an interstate nongroup employer: not in a group, and paying taxable wages in WA and in another State or Territory` THEN TRUE
+    WHEN `a member of a group of employers under Part 4` THEN FALSE
+
+-- The baseline's -1 means "not encoded".
+GIVEN `the tax` IS A NUMBER
+GIVETH A `Tax for the year`
+`the tax for the year, from` `the tax` MEANS
+    IF `the tax` LESS THAN 0 THEN `not encoded: this assessment year` ELSE `tax of` `the tax`
+
+-- s 4: "employment agent means a person (the agent) who procures the services of another person (the worker) for a
+-- third person (the client) under an arrangement where -- (a) the worker does not become the employee of either the
+-- agent or the client, but does perform duties of a similar nature to those of an employee; and (b) remuneration is paid
+-- directly or indirectly by the agent to the worker or to some other person for the services performed by the worker".
+-- Not in the baseline.
+GIVEN `I procure a worker's services for a client` IS A BOOLEAN
+      `the worker becomes the employee of me or of the client` IS A BOOLEAN
+      `the worker performs duties like an employee's` IS A BOOLEAN
+      `I pay the worker, or someone else, for the worker's services` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `s 4 -- an employment agent` IF
+        `I procure a worker's services for a client`
+    AND (NOT (`the worker becomes the employee of me or of the client`))
+    AND `the worker performs duties like an employee's`
+    AND `I pay the worker, or someone else, for the worker's services`
+
+-- s 9GA: an amount the agent pays the worker (or another person) for the services, "as a result of which engagement the
+-- employment agent receives payment ... in relation to the period during which the services are performed for the
+-- client", is "taken to be wages paid or payable by the agent (as an employer)". The amount is the baseline's wages
+-- rule for an agent's payment (with GST taken out, s 9HB); the baseline's `My payment` is built here, with the fields
+-- its rule reads for that kind and fixed placeholders for the fields it does not read for that kind (the contractor
+-- and fringe benefit fields).
+GIVEN `the amount` IS A NUMBER
+      `the GST` IS A NUMBER
+GIVETH A `My payment`
+`an agent's payment of` `the amount` `with GST of` `the GST` MEANS
+    `My payment` WITH
+        `kind` IS `a payment by me as an employment agent to a worker I placed with a client`
+        `amount` IS `the amount`
+        `the contract is a ship or boat builder's contract procuring persons to provide mainly labour` IS FALSE  -- not read for this kind
+        `the contract is excluded by regulation 6` IS FALSE                                                       -- not read for this kind
+        `part attributable to labour` IS 0                                                                        -- not read for this kind
+        `the benefit is an exempt benefit under the FBTA Act` IS FALSE                                            -- not read for this kind
+        `GST the payee must pay on it` IS `the GST`
+        `it is exempt wages under Part 5` IS FALSE                                                                -- not read by the wages rule
+
+§§ `For every employer: what counts as wages (Part 2 Div 2, s 6A)`
+
+§§§ `ss 9AA, 9BA, 9CB, 9GA, 9HB; regs 5-6 -- wages`
+
+@export How much of this payment counts as wages for payroll tax (Pay-roll Tax Assessment Act 2002 (WA) ss 9AA, 9BA, 9CB, 9GA, 9HB; Pay-roll Tax Assessment Regulations 2003 rr 5-6)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the payment` IS A `My payment` @desc The payment and what it is for
+GIVETH AN `Amount`
+`How much of this payment counts as wages` MEANS
+    IF `I am an employer under the Act` `my role`
+    THEN amount (`How much of this payment is wages` `the payment`)
+    ELSE `does not arise for you`
+
+@export Is this payment wages for payroll tax (Pay-roll Tax Assessment Act 2002 (WA) s 9AA)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the payment` IS A `My payment` @desc The payment and what it is for
+GIVETH A `Yes or no`
+`Is this payment wages for payroll tax` MEANS
+    IF `I am an employer under the Act` `my role`
+    THEN `yes if` (`Is this payment wages` `the payment`)
+    ELSE `does not arise for you`
+
+§§§ `ss 5, 6A -- WA taxable wages`
+
+@export Are these wages taxable in WA (Pay-roll Tax Assessment Act 2002 (WA) s 6A(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the work` IS A `Where the work was done and paid` @desc Where the work was done and paid in the month
+GIVETH A `Yes or no`
+`Are these wages taxable in WA` MEANS
+    IF `I am an employer under the Act` `my role`
+    THEN `yes if` (`Are the wages taxable in WA` `the work`)
+    ELSE `does not arise for you`
+
+@export How much of this payment is WA taxable wages (Pay-roll Tax Assessment Act 2002 (WA) s 5(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the payment` IS A `My payment` @desc The payment and what it is for
+      `the work` IS A `Where the work was done and paid` @desc Where the work was done and paid in the month
+GIVETH AN `Amount`
+`How much of this payment is WA taxable wages, as I ask it` MEANS
+    IF `I am an employer under the Act` `my role`
+    THEN amount (`How much of this payment is WA taxable wages` `the payment` `the work`)
+    ELSE `does not arise for you`
+
+§§ `For every employer: groups (Part 4, s 7(2))`
+
+§§§ `ss 30-33, 38 -- am I in a group`
+
+@export Does this person hold a controlling interest in the business (Pay-roll Tax Assessment Act 2002 (WA) s 33)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the hold` IS A `A person's hold on a business` @desc How the person holds the business
+GIVETH A `Yes or no`
+`Does this person hold a controlling interest in the business` MEANS
+    IF `I am an employer under the Act` `my role`
+    THEN `yes if` (`Does the person hold a controlling interest` `the hold`)
+    ELSE `does not arise for you`
+
+@export Is my business grouped with the other business for payroll tax (Pay-roll Tax Assessment Act 2002 (WA) ss 30-33, 38)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the two` IS A `My business and another` @desc My business and the other business
+GIVETH A `Yes or no`
+`Is my business grouped with the other business` MEANS
+    IF `I am an employer under the Act` `my role`
+    THEN `yes if` (`Am I grouped with the other business` `the two`)
+    ELSE `does not arise for you`
+
+§§§ `s 7(2) -- a group member's liability`
+
+@export Can I be made to pay payroll tax owed on another group member's wages (Pay-roll Tax Assessment Act 2002 (WA) s 7(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the kind of employer I am` IS A `Kind of employer` @desc Whether your business is a member of a group of employers under Part 4 (related companies, common control or shared employees; the grouping questions help decide), and if it is not, whether it pays taxable wages only in WA or in another State or Territory too
+      `I was a member of the group when those wages became payable` IS A BOOLEAN @desc Whether you were a member of the group during the period in which the wages became payable
+GIVETH A `Yes or no`
+`Can I be made to pay payroll tax owed on another group member's wages` MEANS
+    IF `I am an employer under the Act` `my role`
+    THEN IF `I am not a member of a group` `the kind of employer I am`
+         THEN `does not arise for you`
+         ELSE `yes if` (`Can I be made to pay the group's payroll tax` `I was a member of the group when those wages became payable`)
+    ELSE `does not arise for you`
+
+§§ `For every employer: the thresholds and the rate (s 8; Pay-roll Tax Act 2002 s 5)`
+
+@export What is the annual threshold amount (Pay-roll Tax Assessment Act 2002 (WA) s 8(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH AN `Amount`
+`What is the annual threshold amount` MEANS
+    IF `I am an employer under the Act` `my role` THEN amount `the annual threshold amount` ELSE `does not arise for you`
+
+@export What is the monthly threshold amount (Pay-roll Tax Assessment Act 2002 (WA) s 8(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH AN `Amount`
+`What is the monthly threshold amount` MEANS
+    IF `I am an employer under the Act` `my role` THEN amount `the monthly threshold amount` ELSE `does not arise for you`
+
+@export What is the upper threshold amount (Pay-roll Tax Assessment Act 2002 (WA) s 8(3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH AN `Amount`
+`What is the upper threshold amount` MEANS
+    IF `I am an employer under the Act` `my role` THEN amount `the upper threshold amount` ELSE `does not arise for you`
+
+@export What payroll tax rate applies to my assessment year (Pay-roll Tax Act 2002 (WA) s 5)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the assessment year` IS A NUMBER @desc The assessment year, named by the calendar year in which it ends (2031-32 is 2032)
+      `wages for the rate table` IS A NUMBER @desc Your WA taxable wages for the year (for a group, the group's Australian taxable wages)
+      `fraction of the year with wages` IS A NUMBER @desc The days in the year on which wages were paid or payable, divided by the days in the year (1 for a whole year)
+GIVETH A `Rate, if it arises`
+`What payroll tax rate applies to my assessment year` MEANS
+    IF `I am an employer under the Act` `my role`
+    THEN `the answer is` (`What is my payroll tax rate` `the assessment year` `wages for the rate table` `fraction of the year with wages`)
+    ELSE `does not arise for you`
+
+§§ `For a local nongroup employer: the tax for the year (ss 10, 11A)`
+
+@export What is my annual threshold for the year, apportioned if I was a local nongroup employer for only part of it (Pay-roll Tax Assessment Act 2002 (WA) ss 10, 11A(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the kind of employer I am` IS A `Kind of employer` @desc Whether your business is a member of a group of employers under Part 4 (related companies, common control or shared employees; the grouping questions help decide), and if it is not, whether it pays taxable wages only in WA or in another State or Territory too
+      `the year` IS A `My year as a local nongroup employer` @desc Your year as an employer
+GIVETH AN `Amount`
+`What is my annual threshold for the year` MEANS
+    IF `I am an employer under the Act` `my role`
+    THEN IF `I am not a local nongroup employer` `the kind of employer I am`
+         THEN `does not arise for you`
+         ELSE amount (`What is my threshold for the year` `the year`)
+    ELSE `does not arise for you`
+
+@export Which band of s 10 is my business in for the year: nil, tapered or full (Pay-roll Tax Assessment Act 2002 (WA) s 10)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the kind of employer I am` IS A `Kind of employer` @desc Whether your business is a member of a group of employers under Part 4 (related companies, common control or shared employees; the grouping questions help decide), and if it is not, whether it pays taxable wages only in WA or in another State or Territory too
+      `the year` IS A `My year as a local nongroup employer` @desc Your year as an employer
+GIVETH A `Band, if it arises`
+`Which band of s 10 is my business in` MEANS
+    IF `I am an employer under the Act` `my role`
+    THEN IF `I am not a local nongroup employer` `the kind of employer I am`
+         THEN `does not arise for you`
+         ELSE `the answer is` (`Which band am I in` `the year`)
+    ELSE `does not arise for you`
+
+@export What is my deductable amount for the year (Pay-roll Tax Assessment Act 2002 (WA) s 10(2), (4))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the kind of employer I am` IS A `Kind of employer` @desc Whether your business is a member of a group of employers under Part 4 (related companies, common control or shared employees; the grouping questions help decide), and if it is not, whether it pays taxable wages only in WA or in another State or Territory too
+      `the year` IS A `My year as a local nongroup employer` @desc Your year as an employer
+GIVETH AN `Amount`
+`What is my deductable amount for the year` MEANS
+    IF `I am an employer under the Act` `my role`
+    THEN IF `I am not a local nongroup employer` `the kind of employer I am`
+         THEN `does not arise for you`
+         ELSE amount (`What is my deductable amount` `the year`)
+    ELSE `does not arise for you`
+
+@export How much payroll tax must my business pay for the year (Pay-roll Tax Assessment Act 2002 (WA) s 10)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the kind of employer I am` IS A `Kind of employer` @desc Whether your business is a member of a group of employers under Part 4 (related companies, common control or shared employees; the grouping questions help decide), and if it is not, whether it pays taxable wages only in WA or in another State or Territory too
+      `the year` IS A `My year as a local nongroup employer` @desc Your year as an employer
+GIVETH A `Tax for the year`
+`How much payroll tax must my business pay for the year` MEANS
+    IF `I am an employer under the Act` `my role`
+    THEN IF `I am not a local nongroup employer` `the kind of employer I am`
+         THEN `does not arise for you`
+         ELSE `the tax for the year, from` (`How much payroll tax must I pay for the year` `the year`)
+    ELSE `does not arise for you`
+
+@export Does my business pay any payroll tax for the year (Pay-roll Tax Assessment Act 2002 (WA) s 10)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the kind of employer I am` IS A `Kind of employer` @desc Whether your business is a member of a group of employers under Part 4 (related companies, common control or shared employees; the grouping questions help decide), and if it is not, whether it pays taxable wages only in WA or in another State or Territory too
+      `the year` IS A `My year as a local nongroup employer` @desc Your year as an employer
+GIVETH A `Yes or no`
+`Does my business pay any payroll tax for the year` MEANS
+    IF `I am an employer under the Act` `my role`
+    THEN IF `I am not a local nongroup employer` `the kind of employer I am`
+         THEN `does not arise for you`
+         ELSE `yes if` (`Does my company pay payroll tax for the year` `the year`)
+    ELSE `does not arise for you`
+
+§§ `For a member of a group: the group's tax for the year (s 17)`
+
+@export Which band of s 17 is my group in for the year: nil, tapered or full (Pay-roll Tax Assessment Act 2002 (WA) s 17)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the kind of employer I am` IS A `Kind of employer` @desc Whether your business is a member of a group of employers under Part 4 (related companies, common control or shared employees; the grouping questions help decide), and if it is not, whether it pays taxable wages only in WA or in another State or Territory too
+      `the group` IS A `My group's year` @desc The group's wages for the year
+GIVETH A `Band, if it arises`
+`Which band of s 17 is my group in` MEANS
+    IF `I am an employer under the Act` `my role`
+    THEN IF `I am not a member of a group` `the kind of employer I am`
+         THEN `does not arise for you`
+         ELSE `the answer is` (`Which band is my group in` `the group`)
+    ELSE `does not arise for you`
+
+@export What is my group's deductable amount for the year (Pay-roll Tax Assessment Act 2002 (WA) s 17(3A))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the kind of employer I am` IS A `Kind of employer` @desc Whether your business is a member of a group of employers under Part 4 (related companies, common control or shared employees; the grouping questions help decide), and if it is not, whether it pays taxable wages only in WA or in another State or Territory too
+      `the group` IS A `My group's year` @desc The group's wages for the year
+GIVETH AN `Amount`
+`What is my group's deductable amount for the year` MEANS
+    IF `I am an employer under the Act` `my role`
+    THEN IF `I am not a member of a group` `the kind of employer I am`
+         THEN `does not arise for you`
+         ELSE amount (`What is my group's deductable amount` `the group`)
+    ELSE `does not arise for you`
+
+@export How much WA payroll tax must my group pay for the year (Pay-roll Tax Assessment Act 2002 (WA) s 17(2); every member is liable for it, s 7(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the kind of employer I am` IS A `Kind of employer` @desc Whether your business is a member of a group of employers under Part 4 (related companies, common control or shared employees; the grouping questions help decide), and if it is not, whether it pays taxable wages only in WA or in another State or Territory too
+      `the group` IS A `My group's year` @desc The group's wages for the year
+GIVETH A `Tax for the year`
+`How much WA payroll tax must my group pay for the year` MEANS
+    IF `I am an employer under the Act` `my role`
+    THEN IF `I am not a member of a group` `the kind of employer I am`
+         THEN `does not arise for you`
+         ELSE `the tax for the year, from` (`How much payroll tax must my group pay for the year` `the group`)
+    ELSE `does not arise for you`
+
+§§ `For every employer: registration and returns (Part 3, s 6)`
+
+§§§ `s 24 -- registration`
+
+@export Must my business apply to register for payroll tax (Pay-roll Tax Assessment Act 2002 (WA) s 24(1), (2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the month` IS A `My month` @desc Your wages in a month
+GIVETH A `Yes or no`
+`Must my business apply to register for payroll tax` MEANS
+    IF `I am an employer under the Act` `my role`
+    THEN `yes if` (`Must I apply to register for payroll tax` `the month`)
+    ELSE `does not arise for you`
+
+@export How many days after the end of the month do I have to apply for registration (Pay-roll Tax Assessment Act 2002 (WA) s 24(5))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH A `Days`
+`How many days after the month do I have to apply for registration` MEANS
+    IF `I am an employer under the Act` `my role` THEN days `How many days after the month do I have to apply` ELSE `does not arise for you`
+
+@export What is the most I can be fined for not applying for registration (Pay-roll Tax Assessment Act 2002 (WA) s 24(1), (2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH AN `Amount`
+`What is the most I can be fined for not applying for registration` MEANS
+    IF `I am an employer under the Act` `my role` THEN amount `What is the most I can be fined for not registering` ELSE `does not arise for you`
+
+§§§ `ss 26, 6 -- monthly returns, and when the tax is due`
+
+@export Must my business lodge a monthly return (Pay-roll Tax Assessment Act 2002 (WA) s 26(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the month` IS A `My month` @desc Your wages in a month
+      `the Commissioner has exempted me from monthly returns` IS A BOOLEAN @desc Whether you hold an exemption under s 29
+GIVETH A `Yes or no`
+`Must my business lodge a monthly return` MEANS
+    IF `I am an employer under the Act` `my role`
+    THEN `yes if` (`Must I lodge a monthly return` `the month` `the Commissioner has exempted me from monthly returns`)
+    ELSE `does not arise for you`
+
+@export How many days after the end of the month do I have to lodge the return and pay the tax (Pay-roll Tax Assessment Act 2002 (WA) ss 26(3), 6)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the month` IS A `My month` @desc Your wages in a month
+GIVETH A `Days`
+`How many days after the month do I have to lodge the return and pay the tax` MEANS
+    IF `I am an employer under the Act` `my role`
+    THEN days (`How many days after the month do I have to lodge and pay` `the month`)
+    ELSE `does not arise for you`
+
+@export What is the most I can be fined for not lodging a monthly return in time (Pay-roll Tax Assessment Act 2002 (WA) s 26(3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH AN `Amount`
+`What is the most I can be fined for not lodging a monthly return in time` MEANS
+    IF `I am an employer under the Act` `my role` THEN amount `What is the most I can be fined for a late return` ELSE `does not arise for you`
+
+§§ `For an employment agent (ss 4, 9GA)`
+
+@export Am I an employment agent for payroll tax: do I procure a worker's services for a client, without the worker becoming anyone's employee, and pay for those services (Pay-roll Tax Assessment Act 2002 (WA) s 4)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I procure a worker's services for a client` IS A BOOLEAN @desc Whether you procure the services of a worker for a client under an arrangement
+      `the worker becomes the employee of me or of the client` IS A BOOLEAN @desc Whether under the arrangement the worker becomes your employee or the client's employee
+      `the worker performs duties like an employee's` IS A BOOLEAN @desc Whether the worker performs duties of a similar nature to those of an employee
+      `I pay the worker, or someone else, for the worker's services` IS A BOOLEAN @desc Whether you pay remuneration, directly or indirectly, to the worker or to some other person for the worker's services
+GIVETH A `Yes or no`
+`Am I an employment agent for payroll tax` MEANS
+    CONSIDER `my role`
+    WHEN `I place workers with clients and pay them (an employment agent)` THEN `yes if` (`s 4 -- an employment agent` `I procure a worker's services for a client` `the worker becomes the employee of me or of the client` `the worker performs duties like an employee's` `I pay the worker, or someone else, for the worker's services`)
+    OTHERWISE `does not arise for you`
+
+@export How much of what I pay a worker I placed with a client is taken to be wages paid by me as their employer (Pay-roll Tax Assessment Act 2002 (WA) ss 9GA, 9HB)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I receive payment from the client for the period of the worker's services` IS A BOOLEAN @desc Whether, as a result of the engagement, you receive payment from the client (directly or indirectly, as a lump sum or an ongoing fee) for the period during which the worker performs the services
+      `what I pay for the worker's services` IS A NUMBER @desc The amount you pay or must pay the worker (or another person) for the services, in dollars
+      `the GST the payee must pay on it` IS A NUMBER @desc The GST the worker (or other payee) is liable to pay on that supply, in dollars (nil if none)
+GIVETH AN `Agent's wages`
+`How much of what I pay a placed worker is wages paid by me` MEANS
+    CONSIDER `my role`
+    WHEN `I place workers with clients and pay them (an employment agent)` THEN
+        IF `I receive payment from the client for the period of the worker's services`
+        THEN `wages paid by you as the employer` (`How much of this payment is wages` (`an agent's payment of` `what I pay for the worker's services` `with GST of` `the GST the payee must pay on it`))
+        ELSE `not wages under s 9GA: you receive no payment from the client for the period of the worker's services`
+    OTHERWISE `does not arise for you`
