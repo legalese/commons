@@ -214,3 +214,90 @@ Left out:
   interstate recognition, and heavy vehicle classes.
 - The dollar value of a penalty unit is not in these instruments.
 - No case law or Department of Transport guidance was searched.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026 (batch qa13), on the pattern of the Graffiti Vandalism Act 2016 encoding's `gva-seat.l4` (its
+design D2, D4 and D8). The layer is `rtad-qa.l4`, with cases in `rtad-qa-cases.l4`. It imports `prelude`, `daydate`
+and `rtad-drivers`; `rtad-drivers.l4` and `rtad-cases-drivers.l4` are unchanged. Every exported question takes
+`my role` first (`@desc Which of these describes you`) and answers `does not arise for you`, reading nothing else, for
+the role it is not about. Every answer type carries that value: `Yes or no`, and `Penalty units`, `Demerit points`,
+`Months`, `Speed`, `Date answer`, with four wrappers round the baseline's own answer types (`Permit answer`,
+`Novice answer`, `Plates answer`, `Licence answer`). No exported question takes a DEONTIC or EVENT input.
+
+### Roles
+
+- `I am learning to drive, or hold a driver's licence`: the baseline's seat. Its 35 questions are the baseline's 35
+  exports, each calling the baseline function and wrapping its answer. Where its situation holds, each answer is the
+  baseline export's.
+- `I supervise a learner driver, or ride with a new driver`: 8 questions. They cover who may supervise (s 10(2),
+  r 43(2)), whether the learner is authorised with me (r 47(3)(a), r 48(1)), the learner's 100 km/h limit (r 47(3)(b)),
+  and whether my hours count towards the 50 logbook hours (r 16A(2)(a), (b)). They also cover the L plates of r 49(3)
+  (my duty as the person in charge of the vehicle, and its 2 PU fine) and of r 49(4) (when I may drive with L plates
+  up), and whether I am an "experienced driver" who lifts a type 1A novice's passenger limit (r 11(3)(a), (4)). They
+  use the baseline's rules: `May this person supervise me`, `Does my learner's permit authorise this drive`, and
+  `May I carry these passengers`, run for a type 1A novice on 1 December 2024 with two passengers, so that only my
+  years decide it. Two helpers are added in the layer: `the supervisor I am`, which maps my standing to the baseline's
+  `Supervisor`, and r 49(4)(b).
+- Not seats: the CEO, the police and the courts. The employer and the parent are not seats either. They give the
+  documents of r 11(3)(c) and r 22(3), (4), but the regulations put no duty on them that they would ask about.
+
+### Situation inputs
+
+Each is a BOOLEAN, placed second, straight after `my role`. FALSE gives `does not arise for you`, and nothing else is
+read. Each has one name and `@desc` in all its questions (checked by script).
+
+| Input | Role | Questions that take it |
+|---|---|---|
+| `I hold a learner's permit` | driver | 5: permit in force, may this person supervise me, does my permit authorise this drive, fastest on a permit, fine for a permit condition |
+| `I hold a driver's licence` | driver | 5: novice type, provisional, P plates, midnight to 5 a.m., passengers |
+| `I have committed, or am said to have committed, a traffic offence` | driver | 9: speeding points, modified penalty, Road Traffic Act offence points, dealt with by infringement notice, registry jurisdiction, points recorded, points current, s 49 months, s 50 novice notice |
+| `I have been given a demerit points notice` | driver | 2: earliest start of the disqualification, the s 51 election |
+| `I have made a good behaviour election` | driver | 2: broken election, its doubled period |
+| `I have been convicted of a driving offence, or disqualified` | driver | 5: s 23, what happens to my licence (s 16, 17, r 53B, 53C), the s 16(2) period, s 18, s 24 |
+| `I am the person in charge of the vehicle the learner drives` | supervisor | 2: must I see L plates are displayed, the r 49(3) fine |
+
+These driver questions take no situation input, since they arise in every situation of the role: s 2, s 66, the two
+learner's permit questions (r 44-46), the two licence questions (r 15, r 22, r 16A), and authorisation to drive at all
+(r 35(1)). Nor do the supervisor's other six.
+
+### Decisions
+
+- **Q1. The situations follow what the text ties each rule to.** These are the permit (s 10, Part 3), the licence
+  (r 9, 10, 11, 36), the offence (Part 4), the notice (s 49-51), the election (s 52), and a conviction or
+  disqualification (s 16-18, 23, 24). Getting a permit or licence arises for anyone, including a licence holder learning
+  a new class, so it takes none. The baseline's s 18 and s 51 questions keep their own `I hold a driver's licence` input,
+  renamed `I hold a driver's licence now`, as an ordinary input after the situation. It is not the licence situation:
+  s 18 is about someone who does not hold one.
+- **Q2. Shared non-situation inputs were made identical,** so that a form merging by name cannot mix them. `the day` is
+  "The day the question is about" throughout. The baseline's two `months held` texts became one. `the drive` of r 35(1)
+  became `my drive`, since its type (`My drive`) differs from the learner's `the drive` (`My learning drive`).
+  `provisional` has one text.
+- **Q3. A person in charge of the vehicle (r 49(3)) is a borrowed term,** and is asked as a fact (the 2026-10-18
+  default). The supervisor's two r 49(3) questions answer on the situation alone: yes, and 2 PU.
+- **Q4. r 16A hours, moped:** r 16A is for a car (or restricted motor cycle) licence, so the hours question passes
+  "not a moped" to r 43, and the 4-year rule applies.
+
+### Not covered for the supervisor
+
+The supervisor's blood alcohol limit and any offence of supervising while impaired (Road Traffic Act 1974; not
+deposited). Whether a provisional licence counts towards the 4 years is answered as the baseline reads r 43(3) (an
+Australian driver licence, which a provisional licence is). r 49(1) as it applies to the learner, and the modified
+penalties of r 49 (1 PU). A youth driver education course instructor's own conditions.
+
+### Checks
+
+- `l4 run rtad-qa.l4`, `l4 run rtad-qa-cases.l4`, and the baseline's `rtad-drivers.l4` and `rtad-cases-drivers.l4`
+  (unchanged): 0 errors and 0 warnings. `l4 check rtad-qa.l4` succeeds.
+- `rtad-qa-cases.l4`: 216 assertions, 216 satisfied. They break down as 43 asking each question for the role it is not
+  about, with every other input ASSUMEd, and 30 asking each situation question with its situation FALSE (28 for the
+  driver, 2 for the supervisor), every later input ASSUMEd. The other 143 are in the role and situation that hold, and
+  35 of them check the answer against the baseline export's own answer on the same facts. With the baseline's 70, the
+  encoding has 286 assertions.
+- A parameter script (scratchpad `qa/b13/check_params.py`) listed the 43 exports. It found `my role` first in each,
+  each situation input second and identical in name, type and `@desc`, and each situation's role branch reading it
+  first. It found no DEONTIC or EVENT input, and no shared input with two types or texts.
+- Limit (graffiti finding 31): the baseline reads `Supervisor`, `Night purpose`, `How I am disqualified`, `What I was
+  convicted of` and `How my offence ended` through OTHERWISE, so an ASSUMEd value of those types that is read is not
+  caught. The situation inputs are all BOOLEAN and are caught, and the layer's one enumeration helper
+  (`the supervisor I am`) lists every value.

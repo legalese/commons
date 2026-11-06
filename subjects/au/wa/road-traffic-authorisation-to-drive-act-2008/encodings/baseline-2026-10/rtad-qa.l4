@@ -1,0 +1,748 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `rtad-drivers`
+
+-- Road Traffic (Authorisation to Drive) Act 2008 (WA), with the Regulations 2014 and Road Traffic Code 2000 r 17 -- the
+-- Q&A layer: the questions people ask, with the seat and the situation as parameters.
+--
+-- PURPOSE. One module whose exported questions serve every seat from one deployment. Every exported question takes
+-- `my role` first ("Which of these describes you"). A question about another role answers `does not arise for you`
+-- without reading any other input, so the site's question form never asks those inputs and drops the question.
+--
+-- ROLES. The Act and the regulations put duties on, and give standing to, two kinds of person who would ask them:
+--   - the learner and the licensed driver: the baseline's seat (rtad-drivers.l4);
+--   - the person who supervises a learner, or rides with a new driver: the r 43 instructor who must accompany the
+--     learner (s 10(2), r 47(3)(a)), whose supervised hours go in the logbook (r 16A(2)(a), (b)), who may be "the person
+--     in charge" who must see that L plates are displayed (r 49(3)), who may drive with L plates only while instructing
+--     (r 49(4)), and who may be the "experienced driver" that lifts a new driver's passenger limit (r 11(3)(a), (4)).
+-- The CEO of the Department of Transport, the police and the courts are never seats: their powers appear as what they
+-- mean for the person asking. An employer or parent who gives the written document of r 11(3)(c) or r 22(3), (4) is not
+-- a seat here (NOTES.md, "Q&A layer").
+--
+-- SITUATIONS (design D8 of the Graffiti Vandalism Act encoding). Within a role, a question that arises only in a
+-- situation takes that situation's fact straight after `my role`, and answers `does not arise for you` when it does not
+-- hold, without reading anything else. The questions of one situation share one input, with one name, type and @desc.
+-- For the learner and driver:
+--   - `I hold a learner's permit` (BOOLEAN): the permit's force, supervision, the drive it authorises, its speed limit
+--     and its condition fine (s 10, r 42-48);
+--   - `I hold a driver's licence` (BOOLEAN): novice type, provisional licence, P plates, the night-time and passenger
+--     restrictions (s 40, r 4, 9, 10, 11, 36);
+--   - `I have committed, or am said to have committed, a traffic offence` (BOOLEAN): points, modified penalty, when they
+--     are recorded and expire, and whether a points notice follows (s 40(1A), 41, 43-50; r 65, 66; Code r 17);
+--   - `I have been given a demerit points notice` (BOOLEAN): when the disqualification may start, and the s 51 election;
+--   - `I have made a good behaviour election` (BOOLEAN): breaking it, and its doubled disqualification (s 51(3), 52);
+--   - `I have been convicted of a driving offence, or disqualified` (BOOLEAN): what happens to the licence, the s 16(2)
+--     period, s 18, s 23 and s 24.
+-- For the supervisor: `I am the person in charge of the vehicle the learner drives` (BOOLEAN), for the two questions of
+-- r 49(3). The questions of commencement (s 2, s 66), of getting a permit or licence (r 44-46, r 15, r 16A) and of
+-- authorisation to drive at all (r 35(1)) arise in every situation of the driver's role, and the supervisor's other
+-- questions in every situation of theirs, so they take no situation input.
+--
+-- The rules are in rtad-drivers.l4. This module calls them and restates none; where a supervisor's question needs a
+-- rule the baseline does not export from that seat, a helper here builds it from the baseline's own functions. For the
+-- learner and driver, where the situation holds, each answer is the baseline export's own, wrapped in a type that can
+-- also say `does not arise for you`. No exported question takes a DEONTIC or EVENT input.
+--
+-- BASELINE. Not for public use as advice. See NOTES.md, "Q&A layer (seat and situations as parameters)".
+
+§ `Road Traffic (Authorisation to Drive) Act 2008 (WA) -- the questions people ask`
+
+§§ `Who is asking, and the shape of the answers`
+
+DECLARE Role IS ONE OF
+    `I am learning to drive, or hold a driver's licence`
+    `I supervise a learner driver, or ride with a new driver`
+
+DECLARE `Yes or no` IS ONE OF
+    yes
+    no
+    `does not arise for you`
+
+DECLARE `Penalty units` IS ONE OF
+    `does not arise for you`
+    `penalty units` HAS `the number of penalty units` IS A NUMBER
+
+DECLARE `Demerit points` IS ONE OF
+    `does not arise for you`
+    `demerit points` HAS `the number of points` IS A NUMBER
+
+DECLARE `Months` IS ONE OF
+    `does not arise for you`
+    `for months` HAS `the number of months` IS A NUMBER
+
+DECLARE `Speed` IS ONE OF
+    `does not arise for you`
+    `km/h` HAS `the speed in km/h` IS A NUMBER
+
+DECLARE `Date answer` IS ONE OF
+    `does not arise for you`
+    `on or after` HAS `the earliest day` IS A DATE
+
+DECLARE `Permit answer` IS ONE OF
+    `does not arise for you`
+    `the permit answer` HAS `what the Act says of my permit` IS A `Learner's permit answer`
+
+DECLARE `Novice answer` IS ONE OF
+    `does not arise for you`
+    `I am a` HAS `my novice status` IS A `Novice status`
+
+DECLARE `Plates answer` IS ONE OF
+    `does not arise for you`
+    `I must display` HAS `the plates` IS A `P plates`
+
+DECLARE `Licence answer` IS ONE OF
+    `does not arise for you`
+    `my licence or permit is` HAS `what happens to it` IS A `What happens to my licence`
+
+-- The supervisor's standing (s 10(2), r 43(2)), in the supervisor's own words. Read only through the helper below, which
+-- lists every value and has no OTHERWISE (graffiti finding 31).
+DECLARE `My standing to supervise` IS ONE OF
+    `I hold a driving instructor's licence (Motor Vehicle Drivers Instructors Act 1963)`
+    `I am an instructor in a youth driver education course run or supervised by a body the CEO authorised`
+    `I hold an Australian driver licence or a foreign driving authorisation for this kind of driving`
+    `I hold only a learner's permit for it, or no licence for it`
+
+§§ `Building the baseline's inputs`
+
+GIVEN `it holds` IS A BOOLEAN
+GIVETH A `Yes or no`
+`yes if` `it holds` MEANS
+    IF `it holds` THEN yes ELSE no
+
+GIVEN `my standing` IS A `My standing to supervise`
+GIVETH A Supervisor
+`the supervisor I am` `my standing` MEANS
+    CONSIDER `my standing`
+    WHEN `I hold a driving instructor's licence (Motor Vehicle Drivers Instructors Act 1963)` THEN `a licensed driving instructor`
+    WHEN `I am an instructor in a youth driver education course run or supervised by a body the CEO authorised` THEN `a youth driver education course instructor`
+    WHEN `I hold an Australian driver licence or a foreign driving authorisation for this kind of driving` THEN `another licensed driver`
+    WHEN `I hold only a learner's permit for it, or no licence for it` THEN `nobody qualified`
+
+-- r 49(4)(b): the driver "is authorised to give, and is driving in the course of giving, driving instruction to the
+-- learner", with the learner "sitting beside the driver". Authorised to give instruction: s 10(2) and r 43(2), the
+-- baseline's own test.
+GIVEN `my standing` IS A `My standing to supervise`
+      `years I have held a licence for this kind of driving` IS A NUMBER
+      `the learner is learning to ride a moped` IS A BOOLEAN
+      `the learner is sitting beside me` IS A BOOLEAN
+      `I am driving in the course of instructing the learner` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `r 49(4)(b) -- I may drive with L plates while instructing the learner beside me` IF
+        `May this person supervise me` (`the supervisor I am` `my standing`) `years I have held a licence for this kind of driving` `the learner is learning to ride a moped`
+    AND `the learner is sitting beside me`
+    AND `I am driving in the course of instructing the learner`
+
+§§ `For the learner and the licensed driver`
+
+§§§ `ss 2, 66 -- does this Act govern me`
+
+@export Does the Road Traffic (Authorisation to Drive) Act 2008 govern my permit or licence on this day (s 2)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the day` IS A DATE @desc The day the question is about
+GIVETH A `Yes or no`
+`Does this Act govern my permit or licence on this day` MEANS
+    CONSIDER `my role`
+    WHEN `I am learning to drive, or hold a driver's licence` THEN `yes if` (`Does this Act govern my authorisation to drive on` `the day`)
+    OTHERWISE `does not arise for you`
+
+@export Is my learner's permit from before 27 April 2015 now taken to be a learner's permit under this Act (s 66)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `issued under the Road Traffic Act 1974 section 43(1)` IS A BOOLEAN @desc Whether your permit was issued under the Road Traffic Act 1974 s 43(1)
+      `in effect immediately before 27 April 2015` IS A BOOLEAN @desc Whether it was still in effect the day before the Act began
+GIVETH A `Yes or no`
+`Is my permit from before 27 April 2015 taken to be a learner's permit under this Act` MEANS
+    CONSIDER `my role`
+    WHEN `I am learning to drive, or hold a driver's licence` THEN `yes if` (`Is my old permit taken to be a learner's permit under this Act` `issued under the Road Traffic Act 1974 section 43(1)` `in effect immediately before 27 April 2015`)
+    OTHERWISE `does not arise for you`
+
+§§§ `s 10, s 11A; r 44-46 -- getting a learner's permit`
+
+@export Am I old enough to hold a learner's permit (Regulations r 44)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my date of birth` IS A DATE @desc Your date of birth
+      `the day` IS A DATE @desc The day the question is about
+      `for a moped only` IS A BOOLEAN @desc Whether the permit is to learn to ride only a moped
+      `the CEO waived the age for undue hardship` IS A BOOLEAN @desc Whether the CEO has waived the minimum age because refusing would cause you undue hardship
+GIVETH A `Yes or no`
+`Am I old enough for a learner's permit` MEANS
+    CONSIDER `my role`
+    WHEN `I am learning to drive, or hold a driver's licence` THEN `yes if` (`Am I old enough to hold a learner's permit` `my date of birth` `the day` `for a moped only` `the CEO waived the age for undue hardship`)
+    OTHERWISE `does not arise for you`
+
+@export Can I be issued a learner's permit (s 10, s 11A; Regulations r 44 to r 46)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `old enough` IS A BOOLEAN @desc Whether you meet the minimum age (see the learner's permit age question)
+      `passed the theory test or had it waived` IS A BOOLEAN @desc Whether you have shown the CEO knowledge of the traffic laws and safe driving, or the CEO waived it
+      `hold any prerequisite licence Schedule 8 requires` IS A BOOLEAN @desc Whether you hold the licence Schedule 8 requires for this class (nothing is required for a car or a moped)
+      `gave identity, WA address, photograph and signature` IS A BOOLEAN @desc Whether you have given proof of identity and WA address, and a photograph and signature
+GIVETH A `Permit answer`
+`Can I get a learner's permit` MEANS
+    CONSIDER `my role`
+    WHEN `I am learning to drive, or hold a driver's licence` THEN `the permit answer` (`Can I be issued a learner's permit` `old enough` `passed the theory test or had it waived` `hold any prerequisite licence Schedule 8 requires` `gave identity, WA address, photograph and signature`)
+    OTHERWISE `does not arise for you`
+
+§§§ `s 10(2), (4); r 42, 43, 47, 48 -- driving on my learner's permit`
+
+@export Is my learner's permit in force on this day (s 10(4); Regulations r 42(3), r 53)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I hold a learner's permit` IS A BOOLEAN @desc Whether you hold a learner's permit (or held one, if the question is whether it is still in force)
+      `the day it was issued` IS A DATE @desc The day your learner's permit was issued
+      `the day` IS A DATE @desc The day the question is about
+      `cancelled or suspended by the CEO` IS A BOOLEAN @desc Whether the CEO has cancelled or suspended it by written notice
+      `granted a licence for the driving I was learning` IS A BOOLEAN @desc Whether you have since been granted a driver's licence for that kind of driving
+GIVETH A `Yes or no`
+`Is my learner's permit in force on this day` MEANS
+    CONSIDER `my role`
+    WHEN `I am learning to drive, or hold a driver's licence` THEN
+        IF NOT `I hold a learner's permit`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Is my learner's permit in force` `the day it was issued` `the day` `cancelled or suspended by the CEO` `granted a licence for the driving I was learning`)
+    OTHERWISE `does not arise for you`
+
+@export May this person supervise my driving on a learner's permit (s 10(2); Regulations r 43)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I hold a learner's permit` IS A BOOLEAN @desc Whether you hold a learner's permit (or held one, if the question is whether it is still in force)
+      `the supervisor` IS A Supervisor @desc Who is supervising you
+      `years held` IS A NUMBER @desc For another licensed driver: years they have held a licence for the kind of driving you are learning
+      `learning a moped` IS A BOOLEAN @desc Whether you are learning to ride a moped
+GIVETH A `Yes or no`
+`May this person supervise my driving` MEANS
+    CONSIDER `my role`
+    WHEN `I am learning to drive, or hold a driver's licence` THEN
+        IF NOT `I hold a learner's permit`
+        THEN `does not arise for you`
+        ELSE `yes if` (`May this person supervise me` `the supervisor` `years held` `learning a moped`)
+    OTHERWISE `does not arise for you`
+
+@export Does my learner's permit authorise this drive (s 10; Regulations r 42, r 47, r 48(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I hold a learner's permit` IS A BOOLEAN @desc Whether you hold a learner's permit (or held one, if the question is whether it is still in force)
+      `the drive` IS A `My learning drive` @desc The drive you are asking about
+GIVETH A `Yes or no`
+`Does my learner's permit authorise this drive of mine` MEANS
+    CONSIDER `my role`
+    WHEN `I am learning to drive, or hold a driver's licence` THEN
+        IF NOT `I hold a learner's permit`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Does my learner's permit authorise this drive` `the drive`)
+    OTHERWISE `does not arise for you`
+
+@export What is the fastest I may drive on a learner's permit (Regulations r 47(3)(b))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I hold a learner's permit` IS A BOOLEAN @desc Whether you hold a learner's permit (or held one, if the question is whether it is still in force)
+GIVETH A `Speed`
+`What is the fastest I may drive on a learner's permit` MEANS
+    CONSIDER `my role`
+    WHEN `I am learning to drive, or hold a driver's licence` THEN
+        IF NOT `I hold a learner's permit`
+        THEN `does not arise for you`
+        ELSE `km/h` `What is the fastest I may drive on my learner's permit`
+    OTHERWISE `does not arise for you`
+
+@export What is the most I can be fined for breaking a learner's permit condition (Regulations r 48(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I hold a learner's permit` IS A BOOLEAN @desc Whether you hold a learner's permit (or held one, if the question is whether it is still in force)
+GIVETH A `Penalty units`
+`What is the most I can be fined for breaking a learner's permit condition` MEANS
+    CONSIDER `my role`
+    WHEN `I am learning to drive, or hold a driver's licence` THEN
+        IF NOT `I hold a learner's permit`
+        THEN `does not arise for you`
+        ELSE `penalty units` `What is the most I can be fined for breaking a learner's condition`
+    OTHERWISE `does not arise for you`
+
+§§§ `r 15, 22, 16A -- getting a driver's licence`
+
+@export Am I old enough to hold a driver's licence (Regulations r 15, r 22(2) to (4))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my date of birth` IS A DATE @desc Your date of birth
+      `the day` IS A DATE @desc The day the question is about
+      `a moped licence` IS A BOOLEAN @desc Whether the licence is a moped licence
+      `the CEO waived the age for undue hardship` IS A BOOLEAN @desc Whether the CEO has waived the minimum age because refusing would cause you undue hardship
+      `the written consent or employer confirmation r 22 requires was given` IS A BOOLEAN @desc Whether a parent (or, if none lives in WA, a parent or employer) gave the written consent or confirmation r 22 requires
+GIVETH A `Yes or no`
+`Am I old enough for a driver's licence` MEANS
+    CONSIDER `my role`
+    WHEN `I am learning to drive, or hold a driver's licence` THEN `yes if` (`Am I old enough to hold a driver's licence` `my date of birth` `the day` `a moped licence` `the CEO waived the age for undue hardship` `the written consent or employer confirmation r 22 requires was given`)
+    OTHERWISE `does not arise for you`
+
+@export Have I shown I can drive safely, as a new applicant under 25 for a car licence (Regulations r 16A)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my experience` IS A `My driving experience` @desc Your logbook hours and test results
+GIVETH A `Yes or no`
+`Have I shown I can drive safely, as a new applicant under 25` MEANS
+    CONSIDER `my role`
+    WHEN `I am learning to drive, or hold a driver's licence` THEN `yes if` (`Have I shown I can drive safely for a car licence` `my experience`)
+    OTHERWISE `does not arise for you`
+
+§§§ `s 40; r 4, 9, 10, 11, 36 -- my licence while I am new to it`
+
+@export What kind of novice driver am I (s 40(2), (3); Regulations r 4)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I hold a driver's licence` IS A BOOLEAN @desc Whether you hold a driver's licence (a provisional licence counts; a learner's permit does not)
+      `months held` IS A NUMBER @desc Months you have held a driver's licence (not a learner's permit), not counting months you were excluded by law from driving
+GIVETH A `Novice answer`
+`What kind of novice driver am I now` MEANS
+    CONSIDER `my role`
+    WHEN `I am learning to drive, or hold a driver's licence` THEN
+        IF NOT `I hold a driver's licence`
+        THEN `does not arise for you`
+        ELSE `I am a` (`What kind of novice driver am I` `months held`)
+    OTHERWISE `does not arise for you`
+
+@export Must my licence be (or stay) provisional (Regulations r 9)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I hold a driver's licence` IS A BOOLEAN @desc Whether you hold a driver's licence (a provisional licence counts; a learner's permit does not)
+      `my date of birth` IS A DATE @desc Your date of birth
+      `the day` IS A DATE @desc The day the question is about
+      `months held` IS A NUMBER @desc Months you have held a driver's licence (not a learner's permit), not counting months you were excluded by law from driving
+GIVETH A `Yes or no`
+`Must my licence be or stay provisional` MEANS
+    CONSIDER `my role`
+    WHEN `I am learning to drive, or hold a driver's licence` THEN
+        IF NOT `I hold a driver's licence`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Must my licence be provisional` `my date of birth` `the day` `months held`)
+    OTHERWISE `does not arise for you`
+
+@export What P plates must I display (Regulations r 36)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I hold a driver's licence` IS A BOOLEAN @desc Whether you hold a driver's licence (a provisional licence counts; a learner's permit does not)
+      `provisional` IS A BOOLEAN @desc Whether your licence is a provisional licence
+      `months held` IS A NUMBER @desc Months you have held a driver's licence (not a learner's permit), not counting months you were excluded by law from driving
+GIVETH A `Plates answer`
+`What P plates must I display on my car` MEANS
+    CONSIDER `my role`
+    WHEN `I am learning to drive, or hold a driver's licence` THEN
+        IF NOT `I hold a driver's licence`
+        THEN `does not arise for you`
+        ELSE `I must display` (`What P plates must I display` `provisional` `months held`)
+    OTHERWISE `does not arise for you`
+
+@export May I drive between midnight and 5 a.m. (Regulations r 10, r 57)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I hold a driver's licence` IS A BOOLEAN @desc Whether you hold a driver's licence (a provisional licence counts; a learner's permit does not)
+      `months held` IS A NUMBER @desc Months you have held a driver's licence (not a learner's permit), not counting months you were excluded by law from driving
+      `the purpose` IS A `Night purpose` @desc Why you are driving
+      `the CEO gave me a written permit` IS A BOOLEAN @desc Whether the CEO has given you a written permit to drive (r 57)
+GIVETH A `Yes or no`
+`May I drive between midnight and 5 a.m.` MEANS
+    CONSIDER `my role`
+    WHEN `I am learning to drive, or hold a driver's licence` THEN
+        IF NOT `I hold a driver's licence`
+        THEN `does not arise for you`
+        ELSE `yes if` (`May I drive between midnight and 5 am` `months held` `the purpose` `the CEO gave me a written permit`)
+    OTHERWISE `does not arise for you`
+
+@export May I carry these passengers (Regulations r 11, r 94)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I hold a driver's licence` IS A BOOLEAN @desc Whether you hold a driver's licence (a provisional licence counts; a learner's permit does not)
+      `the day` IS A DATE @desc The day the question is about
+      `months held` IS A NUMBER @desc Months you have held a driver's licence (not a learner's permit), not counting months you were excluded by law from driving
+      `the passengers` IS A `My passengers` @desc Who is in the car with you
+GIVETH A `Yes or no`
+`May I carry these passengers in my car` MEANS
+    CONSIDER `my role`
+    WHEN `I am learning to drive, or hold a driver's licence` THEN
+        IF NOT `I hold a driver's licence`
+        THEN `does not arise for you`
+        ELSE `yes if` (`May I carry these passengers` `the day` `months held` `the passengers`)
+    OTHERWISE `does not arise for you`
+
+§§§ `r 35(1), 48(1), 55, 57 -- am I authorised to drive at all`
+
+@export Am I authorised to drive this vehicle on this drive (Regulations r 35(1), r 48(1), r 55, r 57; s 23)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my drive` IS A `My drive` @desc Your licence and the drive you are asking about
+GIVETH A `Yes or no`
+`Am I authorised to drive this vehicle on this drive` MEANS
+    CONSIDER `my role`
+    WHEN `I am learning to drive, or hold a driver's licence` THEN `yes if` (`Am I authorised to drive` `my drive`)
+    OTHERWISE `does not arise for you`
+
+§§§ `s 16, 17, 18, 23, 24; r 53B, 53C -- when I am convicted or disqualified`
+
+@export Does a licence or permit I obtain while disqualified have any effect (s 23)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have been convicted of a driving offence, or disqualified` IS A BOOLEAN @desc Whether you have been convicted of a driving offence, or disqualified from holding or obtaining a driver's licence (by a court, by demerit points or by a fines enforcement order)
+      `disqualified when I obtained it` IS A BOOLEAN @desc Whether you were disqualified from holding or obtaining a licence when it was obtained
+      `an extraordinary licence ordered by a court` IS A BOOLEAN @desc Whether it is an extraordinary licence granted on a court's order
+GIVETH A `Yes or no`
+`Does a licence or permit I obtain while disqualified have any effect` MEANS
+    CONSIDER `my role`
+    WHEN `I am learning to drive, or hold a driver's licence` THEN
+        IF NOT `I have been convicted of a driving offence, or disqualified`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Does a licence I obtain while disqualified have effect` `disqualified when I obtained it` `an extraordinary licence ordered by a court`)
+    OTHERWISE `does not arise for you`
+
+@export What happens to my licence or learner's permit when I am disqualified (s 16, s 17; Regulations r 53B, r 53C)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have been convicted of a driving offence, or disqualified` IS A BOOLEAN @desc Whether you have been convicted of a driving offence, or disqualified from holding or obtaining a driver's licence (by a court, by demerit points or by a fines enforcement order)
+      `provisional` IS A BOOLEAN @desc Whether your licence is a provisional licence
+      `how` IS A `How I am disqualified` @desc How you came to be disqualified, or convicted
+      `an alcohol interlock offence or a repeat prescribed offence under r 53B` IS A BOOLEAN @desc For a court disqualification of a full licence or permit: whether the offence is an alcohol interlock offence or a repeat prescribed drink- or drug-driving offence
+GIVETH A `Licence answer`
+`What happens to my licence or permit when I am disqualified` MEANS
+    CONSIDER `my role`
+    WHEN `I am learning to drive, or hold a driver's licence` THEN
+        IF NOT `I have been convicted of a driving offence, or disqualified`
+        THEN `does not arise for you`
+        ELSE `my licence or permit is` (`What happens to my licence when I am disqualified` `provisional` `how` `an alcohol interlock offence or a repeat prescribed offence under r 53B`)
+    OTHERWISE `does not arise for you`
+
+@export For how many months am I disqualified after my provisional licence is cancelled on conviction (s 16(2), s 18(3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have been convicted of a driving offence, or disqualified` IS A BOOLEAN @desc Whether you have been convicted of a driving offence, or disqualified from holding or obtaining a driver's licence (by a court, by demerit points or by a fines enforcement order)
+      `months disqualified by the court` IS A NUMBER @desc Months the court disqualified you for (0 if none)
+GIVETH A `Months`
+`For how many months am I disqualified after losing my provisional licence on conviction` MEANS
+    CONSIDER `my role`
+    WHEN `I am learning to drive, or hold a driver's licence` THEN
+        IF NOT `I have been convicted of a driving offence, or disqualified`
+        THEN `does not arise for you`
+        ELSE `for months` (`How many months am I disqualified after losing my provisional licence` `months disqualified by the court`)
+    OTHERWISE `does not arise for you`
+
+@export Am I disqualified, as someone without a licence who would get a provisional one (s 18)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have been convicted of a driving offence, or disqualified` IS A BOOLEAN @desc Whether you have been convicted of a driving offence, or disqualified from holding or obtaining a driver's licence (by a court, by demerit points or by a fines enforcement order)
+      `I hold a driver's licence now` IS A BOOLEAN @desc Whether you hold a driver's licence (a learner's permit is not one)
+      `my licence would have to be provisional` IS A BOOLEAN @desc Whether a licence granted to you would have to be provisional (a novice, or under 19)
+      `the conviction` IS A `What I was convicted of` @desc What you were convicted of
+GIVETH A `Yes or no`
+`Am I disqualified, as someone unlicensed who would get a provisional licence` MEANS
+    CONSIDER `my role`
+    WHEN `I am learning to drive, or hold a driver's licence` THEN
+        IF NOT `I have been convicted of a driving offence, or disqualified`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Am I disqualified as an unlicensed would-be provisional driver` `I hold a driver's licence now` `my licence would have to be provisional` `the conviction`)
+    OTHERWISE `does not arise for you`
+
+@export How many months must pass before I may apply to remove my court disqualification (s 24)? (0 means I cannot apply)
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have been convicted of a driving offence, or disqualified` IS A BOOLEAN @desc Whether you have been convicted of a driving offence, or disqualified from holding or obtaining a driver's licence (by a court, by demerit points or by a fines enforcement order)
+      `months of disqualification` IS A NUMBER @desc The length of the court's disqualification, in months
+      `permanent` IS A BOOLEAN @desc Whether you are disqualified permanently
+GIVETH A `Months`
+`How many months must pass before I may apply to remove my court disqualification` MEANS
+    CONSIDER `my role`
+    WHEN `I am learning to drive, or hold a driver's licence` THEN
+        IF NOT `I have been convicted of a driving offence, or disqualified`
+        THEN `does not arise for you`
+        ELSE `for months` (`How many months before I may apply to remove my disqualification` `months of disqualification` `permanent`)
+    OTHERWISE `does not arise for you`
+
+§§§ `s 40(1A), 41, 43-50; r 65, 66; Code r 17 -- my offence and its demerit points`
+
+@export How many demerit points does my speeding carry (Road Traffic Code 2000 r 17; Regulations r 65(3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have committed, or am said to have committed, a traffic offence` IS A BOOLEAN @desc Whether you have committed, or are said to have committed, a speeding or other road traffic offence
+      `km/h over the limit` IS A NUMBER @desc How many km/h over the speed limit you were
+      `in a holiday period` IS A BOOLEAN @desc Whether the offence was in a holiday period (long weekend, Easter, Christmas)
+      `on a motorised scooter or electric rideable device` IS A BOOLEAN @desc Whether you were riding a motorised scooter or an electric rideable device
+GIVETH A `Demerit points`
+`How many demerit points does my speeding offence carry` MEANS
+    CONSIDER `my role`
+    WHEN `I am learning to drive, or hold a driver's licence` THEN
+        IF NOT `I have committed, or am said to have committed, a traffic offence`
+        THEN `does not arise for you`
+        ELSE `demerit points` (`How many demerit points does my speeding carry` `km/h over the limit` `in a holiday period` `on a motorised scooter or electric rideable device`)
+    OTHERWISE `does not arise for you`
+
+@export What is the modified penalty for my speeding (Road Traffic Code 2000 r 17)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have committed, or am said to have committed, a traffic offence` IS A BOOLEAN @desc Whether you have committed, or are said to have committed, a speeding or other road traffic offence
+      `km/h over the limit` IS A NUMBER @desc How many km/h over the speed limit you were
+      `driving a heavy vehicle` IS A BOOLEAN @desc Whether you were driving a heavy vehicle
+GIVETH A `Penalty units`
+`What is the modified penalty for my speeding offence` MEANS
+    CONSIDER `my role`
+    WHEN `I am learning to drive, or hold a driver's licence` THEN
+        IF NOT `I have committed, or am said to have committed, a traffic offence`
+        THEN `does not arise for you`
+        ELSE `penalty units` (`What is the modified penalty for my speeding` `km/h over the limit` `driving a heavy vehicle`)
+    OTHERWISE `does not arise for you`
+
+@export How many demerit points does this Road Traffic Act offence carry (Regulations r 65(2), r 66)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have committed, or am said to have committed, a traffic offence` IS A BOOLEAN @desc Whether you have committed, or are said to have committed, a speeding or other road traffic offence
+      `the offence` IS A `Road Traffic Act offence` @desc The offence
+      `in a holiday period` IS A BOOLEAN @desc Whether the offence was in a holiday period (long weekend, Easter, Christmas)
+GIVETH A `Demerit points`
+`How many demerit points does my Road Traffic Act offence carry` MEANS
+    CONSIDER `my role`
+    WHEN `I am learning to drive, or hold a driver's licence` THEN
+        IF NOT `I have committed, or am said to have committed, a traffic offence`
+        THEN `does not arise for you`
+        ELSE `demerit points` (`How many demerit points does this offence carry` `the offence` `in a holiday period`)
+    OTHERWISE `does not arise for you`
+
+@export Has my infringement notice been "dealt with", so that points follow (s 40(1A), (1B))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have committed, or am said to have committed, a traffic offence` IS A BOOLEAN @desc Whether you have committed, or are said to have committed, a speeding or other road traffic offence
+      `the Fines Enforcement Act Part 3 applies` IS A BOOLEAN @desc Whether the Fines, Penalties and Infringement Notices Enforcement Act 1994 Part 3 applies to the notice (it does to a WA traffic infringement)
+      `I paid something, even if the payment was dishonoured` IS A BOOLEAN @desc Whether any amount has been paid, even part, even if dishonoured
+      `an order to pay or elect has been issued` IS A BOOLEAN @desc Whether an order to pay or elect has been issued to you
+GIVETH A `Yes or no`
+`Has my infringement notice been dealt with` MEANS
+    CONSIDER `my role`
+    WHEN `I am learning to drive, or hold a driver's licence` THEN
+        IF NOT `I have committed, or am said to have committed, a traffic offence`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Am I dealt with by infringement notice` `the Fines Enforcement Act Part 3 applies` `I paid something, even if the payment was dishonoured` `an order to pay or elect has been issued`)
+    OTHERWISE `does not arise for you`
+
+@export Is WA my demerit point registry jurisdiction (s 43)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have committed, or am said to have committed, a traffic offence` IS A BOOLEAN @desc Whether you have committed, or are said to have committed, a speeding or other road traffic offence
+      `I hold a WA licence or learner's permit` IS A BOOLEAN @desc Whether you hold a WA driver's licence or learner's permit
+      `I hold another jurisdiction's authorisation` IS A BOOLEAN @desc Whether you hold an interstate licence or permit
+      `I held one before` IS A BOOLEAN @desc If you hold neither: whether you held one before
+      `the most recent was from WA` IS A BOOLEAN @desc If so: whether the most recent was a WA one
+GIVETH A `Yes or no`
+`Is WA my registry jurisdiction for demerit points` MEANS
+    CONSIDER `my role`
+    WHEN `I am learning to drive, or hold a driver's licence` THEN
+        IF NOT `I have committed, or am said to have committed, a traffic offence`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Is WA my demerit point registry jurisdiction` `I hold a WA licence or learner's permit` `I hold another jurisdiction's authorisation` `I held one before` `the most recent was from WA`)
+    OTHERWISE `does not arise for you`
+
+@export Will demerit points be recorded against me (s 44 to s 47)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have committed, or am said to have committed, a traffic offence` IS A BOOLEAN @desc Whether you have committed, or are said to have committed, a speeding or other road traffic offence
+      `I am an individual` IS A BOOLEAN @desc Whether you are an individual (not a company)
+      `a demerit point offence` IS A BOOLEAN @desc Whether the offence carries demerit points
+      `an offence under a WA road law` IS A BOOLEAN @desc Whether it is an offence under WA law (not interstate)
+      `WA is my registry jurisdiction` IS A BOOLEAN @desc Whether WA is your demerit point registry jurisdiction
+      `the outcome` IS A `How my offence ended` @desc How the offence has been dealt with
+GIVETH A `Yes or no`
+`Will demerit points be recorded against me for this offence` MEANS
+    CONSIDER `my role`
+    WHEN `I am learning to drive, or hold a driver's licence` THEN
+        IF NOT `I have committed, or am said to have committed, a traffic offence`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Will demerit points be recorded against me` `I am an individual` `a demerit point offence` `an offence under a WA road law` `WA is my registry jurisdiction` `the outcome`)
+    OTHERWISE `does not arise for you`
+
+@export Are the demerit points for this offence still current on this day (s 48)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have committed, or am said to have committed, a traffic offence` IS A BOOLEAN @desc Whether you have committed, or are said to have committed, a speeding or other road traffic offence
+      `the day of the offence` IS A DATE @desc The day the offence was committed
+      `the day` IS A DATE @desc The day the question is about
+      `cancelled` IS A BOOLEAN @desc Whether the points have been cancelled (for example by a notice under s 49 or s 50)
+GIVETH A `Yes or no`
+`Are the demerit points for this offence still current` MEANS
+    CONSIDER `my role`
+    WHEN `I am learning to drive, or hold a driver's licence` THEN
+        IF NOT `I have committed, or am said to have committed, a traffic offence`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Are these demerit points current` `the day of the offence` `the day` `cancelled`)
+    OTHERWISE `does not arise for you`
+
+@export For how many months will an excessive demerit points notice disqualify me (s 49)? (0 means no notice is due)
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have committed, or am said to have committed, a traffic offence` IS A BOOLEAN @desc Whether you have committed, or are said to have committed, a speeding or other road traffic offence
+      `my current demerit points` IS A NUMBER @desc Your current (unexpired, uncancelled) demerit points
+GIVETH A `Months`
+`For how many months will an excessive demerit points notice disqualify me` MEANS
+    CONSIDER `my role`
+    WHEN `I am learning to drive, or hold a driver's licence` THEN
+        IF NOT `I have committed, or am said to have committed, a traffic offence`
+        THEN `does not arise for you`
+        ELSE `for months` (`How many months does an excessive demerit points notice disqualify me` `my current demerit points`)
+    OTHERWISE `does not arise for you`
+
+@export Must I be given an excessive demerit points (novice driver) notice, with 3 months' disqualification (s 50)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have committed, or am said to have committed, a traffic offence` IS A BOOLEAN @desc Whether you have committed, or are said to have committed, a speeding or other road traffic offence
+      `my current points after the offence` IS A NUMBER @desc Your current demerit points, counting this offence
+      `months held when I offended` IS A NUMBER @desc Months you had held a licence (not counting excluded time) on the day of the offence
+GIVETH A `Yes or no`
+`Must I be given a novice driver notice for my points` MEANS
+    CONSIDER `my role`
+    WHEN `I am learning to drive, or hold a driver's licence` THEN
+        IF NOT `I have committed, or am said to have committed, a traffic offence`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Must I be given a novice driver notice` `my current points after the offence` `months held when I offended`)
+    OTHERWISE `does not arise for you`
+
+§§§ `s 49(2), 50(2)(d), 51, 52 -- after a demerit points notice`
+
+@export What is the earliest day my demerit points disqualification can start (s 49(2), s 50(2)(d))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have been given a demerit points notice` IS A BOOLEAN @desc Whether the CEO has given you an excessive demerit points notice (s 49) or an excessive demerit points (novice driver) notice (s 50)
+      `the day the notice was given` IS A DATE @desc The day the CEO gave you the notice
+      `a novice driver notice` IS A BOOLEAN @desc Whether it is a novice driver notice (s 50) rather than an excessive demerit points notice (s 49)
+GIVETH A `Date answer`
+`What is the earliest day my demerit points disqualification can start` MEANS
+    CONSIDER `my role`
+    WHEN `I am learning to drive, or hold a driver's licence` THEN
+        IF NOT `I have been given a demerit points notice`
+        THEN `does not arise for you`
+        ELSE `on or after` (`The earliest day my demerit disqualification can start` `the day the notice was given` `a novice driver notice`)
+    OTHERWISE `does not arise for you`
+
+@export May I avoid the disqualification by electing a good behaviour year (s 51)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have been given a demerit points notice` IS A BOOLEAN @desc Whether the CEO has given you an excessive demerit points notice (s 49) or an excessive demerit points (novice driver) notice (s 50)
+      `I hold a driver's licence now` IS A BOOLEAN @desc Whether you hold a driver's licence (a learner's permit is not one)
+      `it is provisional` IS A BOOLEAN @desc Whether it is a provisional licence
+      `months held` IS A NUMBER @desc Months you have held a driver's licence (not a learner's permit), not counting months you were excluded by law from driving
+      `days since the notice was given` IS A NUMBER @desc Days since the CEO gave you the excessive demerit points notice
+GIVETH A `Yes or no`
+`May I elect a good behaviour year instead of being disqualified` MEANS
+    CONSIDER `my role`
+    WHEN `I am learning to drive, or hold a driver's licence` THEN
+        IF NOT `I have been given a demerit points notice`
+        THEN `does not arise for you`
+        ELSE `yes if` (`May I make a section 51 election` `I hold a driver's licence now` `it is provisional` `months held` `days since the notice was given`)
+    OTHERWISE `does not arise for you`
+
+@export Have I broken my good behaviour election (s 51(3), s 52(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have made a good behaviour election` IS A BOOLEAN @desc Whether you have made a good behaviour election under s 51
+      `points recorded for offences in the election year` IS A NUMBER @desc Demerit points recorded for offences committed during the election year
+      `convicted of an offence with mandatory or automatic disqualification` IS A BOOLEAN @desc Whether you were convicted of an offence in that year for which disqualification is mandatory or automatic
+GIVETH A `Yes or no`
+`Have I broken my good behaviour election` MEANS
+    CONSIDER `my role`
+    WHEN `I am learning to drive, or hold a driver's licence` THEN
+        IF NOT `I have made a good behaviour election`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Have I broken my election` `points recorded for offences in the election year` `convicted of an offence with mandatory or automatic disqualification`)
+    OTHERWISE `does not arise for you`
+
+@export For how many months am I disqualified after breaking my election (s 52(4))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have made a good behaviour election` IS A BOOLEAN @desc Whether you have made a good behaviour election under s 51
+      `months in the excessive demerit points notice` IS A NUMBER @desc The period stated in the original notice, in months
+GIVETH A `Months`
+`For how many months am I disqualified after breaking my good behaviour election` MEANS
+    CONSIDER `my role`
+    WHEN `I am learning to drive, or hold a driver's licence` THEN
+        IF NOT `I have made a good behaviour election`
+        THEN `does not arise for you`
+        ELSE `for months` (`How many months am I disqualified after breaking my election` `months in the excessive demerit points notice`)
+    OTHERWISE `does not arise for you`
+
+§§ `For the person who supervises a learner driver, or rides with a new driver`
+
+§§§ `s 10(2); r 43, 47, 16A -- supervising a learner`
+
+@export May I supervise this learner's driving (s 10(2); Regulations r 43)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my standing` IS A `My standing to supervise` @desc What you hold: a driving instructor's licence; an instructor's place in a youth driver education course the CEO authorised; an Australian driver licence or foreign driving authorisation for the kind of driving the learner is learning (a provisional licence counts); or only a learner's permit, or nothing, for it
+      `years I have held a licence for this kind of driving` IS A NUMBER @desc For a licensed driver: years (adding up separate periods) you have held a licence for the kind of driving the learner is learning
+      `the learner is learning to ride a moped` IS A BOOLEAN @desc Whether the learner is learning to ride a moped
+GIVETH A `Yes or no`
+`May I supervise this learner` MEANS
+    CONSIDER `my role`
+    WHEN `I supervise a learner driver, or ride with a new driver` THEN `yes if` (`May this person supervise me` (`the supervisor I am` `my standing`) `years I have held a licence for this kind of driving` `the learner is learning to ride a moped`)
+    OTHERWISE `does not arise for you`
+
+-- s 10(2), r 47(3)(a), r 48(1): the learner is authorised only while accompanied by the instructor. The baseline's own
+-- test, `Does my learner's permit authorise this drive`, is run with the supervisor's facts.
+@export Is the learner authorised to drive on this drive, with me as the supervisor (s 10; Regulations r 42, r 43, r 47(3)(a), r 48(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the learner's permit is in force` IS A BOOLEAN @desc Whether the learner's permit is in force (not expired, cancelled or suspended)
+      `the learner is driving solely to learn` IS A BOOLEAN @desc Whether the learner is driving solely to learn to drive the vehicle
+      `my standing` IS A `My standing to supervise` @desc What you hold: a driving instructor's licence; an instructor's place in a youth driver education course the CEO authorised; an Australian driver licence or foreign driving authorisation for the kind of driving the learner is learning (a provisional licence counts); or only a learner's permit, or nothing, for it
+      `years I have held a licence for this kind of driving` IS A NUMBER @desc For a licensed driver: years (adding up separate periods) you have held a licence for the kind of driving the learner is learning
+      `the learner is learning to ride a moped` IS A BOOLEAN @desc Whether the learner is learning to ride a moped
+      `I accompany the learner` IS A BOOLEAN @desc Whether you are with the learner for the whole of the drive
+GIVETH A `Yes or no`
+`Is the learner authorised to drive with me as the supervisor` MEANS
+    CONSIDER `my role`
+    WHEN `I supervise a learner driver, or ride with a new driver` THEN `yes if` (`Does my learner's permit authorise this drive` (`My learning drive` `the learner's permit is in force` `the learner is driving solely to learn` (`the supervisor I am` `my standing`) `years I have held a licence for this kind of driving` `the learner is learning to ride a moped` `I accompany the learner`))
+    OTHERWISE `does not arise for you`
+
+@export What is the fastest the learner I supervise may drive (Regulations r 47(3)(b))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH A `Speed`
+`What is the fastest the learner I supervise may drive` MEANS
+    CONSIDER `my role`
+    WHEN `I supervise a learner driver, or ride with a new driver` THEN `km/h` `What is the fastest I may drive on my learner's permit`
+    OTHERWISE `does not arise for you`
+
+-- r 16A(2)(a), (b): the hours count if driven "in the course of instruction by" a licensed driving instructor or "a
+-- person who may give driving instruction under regulation 43(2)", and recorded in a logbook approved by the CEO,
+-- "signed by the person who gave the instruction". r 16A is for a car licence (and a restricted motor cycle licence),
+-- so the moped rule of r 43(2)(b)(i) is not read here: the 4-year rule applies.
+@export Do the hours I supervise count towards the 50 logbook hours a learner under 25 needs for a car licence (Regulations r 16A(2)(a), (b))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my standing` IS A `My standing to supervise` @desc What you hold: a driving instructor's licence; an instructor's place in a youth driver education course the CEO authorised; an Australian driver licence or foreign driving authorisation for the kind of driving the learner is learning (a provisional licence counts); or only a learner's permit, or nothing, for it
+      `years I have held a licence for this kind of driving` IS A NUMBER @desc For a licensed driver: years (adding up separate periods) you have held a licence for the kind of driving the learner is learning
+      `I sign the record of each drive in the CEO-approved logbook` IS A BOOLEAN @desc Whether you sign the record of each drive you supervise in the logbook approved by the CEO
+GIVETH A `Yes or no`
+`Do the hours I supervise count towards the learner's logbook hours` MEANS
+    CONSIDER `my role`
+    WHEN `I supervise a learner driver, or ride with a new driver` THEN
+        `yes if` (    `May this person supervise me` (`the supervisor I am` `my standing`) `years I have held a licence for this kind of driving` FALSE
+                  AND `I sign the record of each drive in the CEO-approved logbook`)
+    OTHERWISE `does not arise for you`
+
+§§§ `r 49 -- L plates`
+
+@export Must I make sure L plates are displayed on the vehicle the learner drives (Regulations r 49(1), (3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I am the person in charge of the vehicle the learner drives` IS A BOOLEAN @desc Whether you are the person in charge of the vehicle the learner drives on a road
+GIVETH A `Yes or no`
+`Must I make sure L plates are displayed` MEANS
+    CONSIDER `my role`
+    -- r 49(3): "The person in charge of a motor vehicle that another person drives on a road while learning to drive must
+    -- ensure that L plates are displayed as required by subregulation (1)." Asked of that person, so the answer is yes by
+    -- the question's own terms.
+    WHEN `I supervise a learner driver, or ride with a new driver` THEN
+        IF NOT `I am the person in charge of the vehicle the learner drives`
+        THEN `does not arise for you`
+        ELSE yes
+    OTHERWISE `does not arise for you`
+
+@export What is the most I can be fined if the L plates are not displayed (Regulations r 49(3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I am the person in charge of the vehicle the learner drives` IS A BOOLEAN @desc Whether you are the person in charge of the vehicle the learner drives on a road
+GIVETH A `Penalty units`
+`What is the most I can be fined if the L plates are not displayed` MEANS
+    CONSIDER `my role`
+    -- r 49(3): "Penalty for this subregulation: a fine of 2 PU. Modified penalty for this subregulation: 1 PU."
+    WHEN `I supervise a learner driver, or ride with a new driver` THEN
+        IF NOT `I am the person in charge of the vehicle the learner drives`
+        THEN `does not arise for you`
+        ELSE `penalty units` 2
+    OTHERWISE `does not arise for you`
+
+-- r 49(4): "A person must not drive on a road a motor vehicle displaying an L plate unless -- (a) the person is driving
+-- while learning ...; or (b) a person who is authorised as described in paragraph (a) (the learner) is sitting beside the
+-- driver and the driver is authorised to give, and is driving in the course of giving, driving instruction to the
+-- learner. Penalty for this subregulation: a fine of 2 PU." Asked of the supervisor, who is not driving while learning.
+@export May I drive the vehicle while it displays L plates (Regulations r 49(4))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my standing` IS A `My standing to supervise` @desc What you hold: a driving instructor's licence; an instructor's place in a youth driver education course the CEO authorised; an Australian driver licence or foreign driving authorisation for the kind of driving the learner is learning (a provisional licence counts); or only a learner's permit, or nothing, for it
+      `years I have held a licence for this kind of driving` IS A NUMBER @desc For a licensed driver: years (adding up separate periods) you have held a licence for the kind of driving the learner is learning
+      `the learner is learning to ride a moped` IS A BOOLEAN @desc Whether the learner is learning to ride a moped
+      `the learner is sitting beside me` IS A BOOLEAN @desc Whether the learner is sitting beside you while you drive
+      `I am driving in the course of instructing the learner` IS A BOOLEAN @desc Whether you are driving in the course of giving the learner driving instruction (for example, showing how it is done)
+GIVETH A `Yes or no`
+`May I drive the vehicle while it displays L plates` MEANS
+    CONSIDER `my role`
+    WHEN `I supervise a learner driver, or ride with a new driver` THEN `yes if` (`r 49(4)(b) -- I may drive with L plates while instructing the learner beside me` `my standing` `years I have held a licence for this kind of driving` `the learner is learning to ride a moped` `the learner is sitting beside me` `I am driving in the course of instructing the learner`)
+    OTHERWISE `does not arise for you`
+
+§§§ `r 11(3)(a), (4) -- riding with a new driver`
+
+-- r 11(3)(a), (4): a type 1A novice may carry more than one passenger if one of them is an experienced driver: authorised
+-- to drive the novice's class, for at least 4 years under a licence other than a provisional one. The baseline's
+-- `May I carry these passengers` is run for a type 1A novice (0 months) on the day r 11 began, carrying two passengers
+-- who are not family and not carried for work, the most experienced of them me: its answer turns on my years alone.
+@export Am I an experienced driver, so that a new driver in their first 6 months may carry more than one passenger when I ride with them (Regulations r 11(3)(a), (4))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `years I have held a non-provisional licence for the new driver's class` IS A NUMBER @desc Years (adding up separate periods) you have held an Australian driver licence other than a provisional one, or an equivalent foreign authorisation, for the class of vehicle the new driver drives (0 if you hold none)
+GIVETH A `Yes or no`
+`Am I an experienced driver for a new driver's passenger limit` MEANS
+    CONSIDER `my role`
+    WHEN `I supervise a learner driver, or ride with a new driver` THEN
+        `yes if` (`May I carry these passengers` `the day the passenger restriction came into operation` 0
+                    (`My passengers` 2 `years I have held a non-provisional licence for the new driver's class` FALSE FALSE))
+    OTHERWISE `does not arise for you`
