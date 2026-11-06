@@ -211,3 +211,20 @@ s 169 elements, and the remote question) take no situation input.
   it first. It found no DEONTIC or EVENT input, and, after the rename in Q3, no shared input with two types or texts.
 - Limit (graffiti finding 31): the baseline reads `Place`, `Schedule 2 description` and `Kind of act` through
   OTHERWISE, so an ASSUMEd value of those types that is read is not caught.
+
+### After the independent check (6 Nov 2026)
+
+- **The site's form keeps "May I witness this statutory declaration, and how" open for the maker, and for the witness
+  of an affidavit.** The verifier's form-engine run kept it open in all 15 of the maker's states, and for the witness
+  with `the document` an affidavit (16 findings).
+  - The layer is not wrong here. The question answers `does not arise for you` from `my role` and `the document` alone,
+    before `me, as a declaration witness` is read; every case agrees, and no evaluation failed.
+  - The cause is the engine. To drop a question it evaluates every combination of its open yes/no and choice inputs,
+    up to 1 024 (`PROBE_CAP` in `interact-engine.ts`). The baseline's `Statutory declaration witness` has a `Place`
+    (3 values), a `Schedule 2 description` (51 values) and 4 yes/no facts: 2 448 combinations by itself, and 4 896
+    with `the document` open.
+  - No change to the layer fixes this without changing what is asked: the baseline's s 12 rule reads the whole record,
+    and the 51 Schedule 2 descriptions are the Act's own list.
+  - The fix belongs in the engine (evaluate one completion with a trace when the combinations are over the cap, and
+    settle when only answered inputs were read), as noted for the Civil Liability Act.
+- No file was changed for this finding.
