@@ -196,3 +196,30 @@ first; each parameter name with one type and one `@desc` across the file; each s
 every role branch; no DEONTIC or EVENT input. Two negative controls (a wrong permit outcome for the builder, ASSUMEd
 inputs read after a holding situation) failed as they should. All four files of the encoding run with 0 errors and 0
 warnings, and `l4 check hbc-qa.l4` succeeds.
+
+### After the independent check (6 Nov 2026)
+
+- **The site's form keeps the questions that take `the contract` open** for the role they are not about, and when
+  their situation is FALSE (for example the owner keeps 41 of 43 questions, and "Once work has started may my builder
+  demand this payment" stays open with `the building work has started` FALSE).
+  - The layer is not wrong here: each of those questions answers `does not arise for you` from `my role` (and its
+    situation) alone, and no case or evaluation failed.
+  - The cause is the engine. To drop a question it evaluates every combination of its open yes/no and choice inputs, up
+    to 1 024 (`PROBE_CAP` in `interact-engine.ts`). `Contract` has 13 yes/no fields and a choice of the kind of work is over that cap by itself, so every question that takes it
+    stays open until it is answered.
+  - No change to the layer fixes this without changing what is asked: splitting the record into its fields leaves the
+    same number of yes/no facts, and narrowing it to what one question reads gives the form a second set of inputs for
+    the same facts. The fix belongs in the engine (when over the cap, evaluate one completion with a trace; if it reads
+    only answered inputs, the answer holds for every completion), as the Civil Liability Act encoding's notes say.
+  No file was changed for this finding.
+- **The builder's s 8 answer for a cost rise is corrected.** s 8(4) lets a cost rise alone vary the contract only "in
+  accordance with section 7(1) and (2) or 13(4) or clause 4 of Schedule 1"; the answer had named s 7 only. It now has its
+  own value, `no s 8 statement: a cost rise alone allows a variation only under s 7(1) and (2) (in writing, signed by the
+  owner), s 13(4) or Schedule 1 clause 4`, and its case expects it. An agreed change keeps the s 7 answer.
+- **Kept: the owner's s 8(3) question answers does not arise from `the cause`** (any cause but unforeseen
+  circumstances), an ordinary input, not a situation input. This is the s 8(3) decision recorded above: what the
+  builder's reason is, is one of the facts the question asks, not a situation the person is in. Every value of
+  `Cause of the variation` is listed, so the ASSUMEd cases test it.
+- The first form-engine run hit the service's "Evaluation resource limit exceeded"; run alone, it completed. That is
+  the service's limit on a shared machine, not the layer.
+- `hbc-qa-cases.l4` still has 193 cases, all satisfied.
