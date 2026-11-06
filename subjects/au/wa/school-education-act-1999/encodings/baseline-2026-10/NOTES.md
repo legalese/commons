@@ -150,12 +150,12 @@ situation input, because every employer question arises for every employer.
 - QA2. **The prosecution question for not enrolling (ss 9(3), 41(1a), 42(1a)) takes no situation input.** It covers two
   cases: a child who is not enrolled, and a child who is not following a notified option. Its own inputs say which, and
   neither fact on its own decides whether the question arises.
-- QA3. **The baseline's records are taken as the baseline takes them** (`My child's arrangements`, `My child's absence`,
-  `My child's residence`, `The school's offer`). They are not broken into plain fields.
-  - The student's questions reuse `My child's absence` and `My child's residence`, under the inputs `my absence` and
-    `my residence`, with the student's `@desc`.
-  - The records' own field names stay in the parent's words ("I told the principal").
-  - Breaking the records into fields worded from each seat is left open.
+- QA3. **Two of the baseline's records are taken as the baseline takes them** (`My child's arrangements`, `The
+  school's offer`). `My child's absence` and `My child's residence` were too, until 6 November 2026; they are now asked
+  as the layer's own records (QA7).
+  - The student's questions take the same records as the parent's, under the inputs `my absence` and `my residence`,
+    with the student's `@desc`.
+  - The layer's records are worded for either seat ("the principal was told").
 - QA4. **A shared input carries one `@desc`.**
   - Where the baseline gave one input two texts (`on`, `the arrangements`, `the school`,
     `a Panel advised or offered assistance`, `of compulsory school age`), the layer gives one text that covers both uses.
@@ -174,6 +174,51 @@ situation input, because every employer question arises for every employer.
   - The student's fine question maps the student's two offences onto the baseline's penalty table. It lists every value
     and has no OTHERWISE.
 
+- QA7. **The absence and the residence are asked in groups the baseline reads together** (fixed 6 November 2026,
+  after verification). The site's form drops a question for a role it is not about only after trying every
+  combination of the question's open yes/no and choice inputs, and gives up past 1 024. The baseline's `My child's
+  absence` has ten yes/no fields and `My child's residence` five, so the parent's excused, s 23 and s 38(1) questions
+  (2 048 to 4 096 combinations), the student's s 23 and excused questions, and the parent's s 75 question (4 096) stayed
+  open for the other roles, and their inputs would have been asked of people they do not concern (verification: 35
+  states each for the student and the employer). Now:
+  - `The day away` stands for `My child's absence`. Its field `what kept the child away` (`What kept the child away`)
+    is one choice of four for the four fields s 25(2)(a) and (c) read only together, as "(incapacity OR another cause)
+    AND (NOT incapacity OR NOT asked OR given)": incapacity, with a medical certificate given if the principal asked
+    for one; incapacity, and the principal asked for a certificate that was not given; another reasonable cause;
+    nothing that prevented attendance. Where incapacity and another cause both kept the child away, the incapacity
+    choices apply, as the certificate condition does in the baseline. Its field `a recognised religious or cultural day
+    at a government school, and the principal was told beforehand or as soon as reasonably practicable` is one yes/no
+    for the two fields s 30 reads only together. The other fields are the baseline's, reworded for either seat. 128
+    combinations; the questions have at most 1 024.
+  - `The residence` stands for `My child's residence`. Its field `where they usually live, and their status`
+    (`Residence and status`) is one choice of seven for the five yes/no fields: usually in Western Australia and
+    entitled to reside permanently, in the exchange programme, a dependant of a scholarship holder, covered by the
+    Status of Forces Agreement, or none of these; or not usually in Western Australia, with or without the entitlement
+    to reside permanently. The baseline reads the five only in `Is my child qualified by residence` (s 76, regs 12-14A)
+    and `Is my child an overseas student` (reg 62), and these seven give every answer the 32 combinations give, where a
+    child with more than one status takes the first listed, permanent residence first. The visa subclasses stay
+    numbers. The s 75 question has 896 combinations.
+  - `the baseline's absence for` and `the baseline's residence for` build the baseline's records, through helpers that
+    list every value, so the rules are not restated. The cases ask the layer the grouped records and the baseline the
+    original fixtures, and 16 new cases check each new choice against the baseline's own records.
+- QA8. **Deploying the layer** (6 November 2026, after verification). On the b98 jl4-service (the 1.6.98 tools) the
+  layer cannot be deployed as it stands, for two reasons outside the layer:
+  - the baseline's `Day`/`Date` from `daydate` are ambiguous against the service's own daydate ("multiple definitions
+    for the identifier `__LEQ__`"), so the update is rejected. Deployed with `libraries/daydate.l4` of the 1.6.98 VS Code
+    extension, it compiles (111 functions), as the tobacco encoding found;
+  - every layer question that calls the baseline then fails with "Internal error: `...` is not in scope". This is a
+    service bug, not the layer's: on that service any module whose rules use a prelude function (the baseline's
+    s 76 rule uses `elem`) cannot be called from a module that imports it; a two-file example (`b-base.l4` using
+    `null`, `a-qa.l4` calling its other function) shows the same error, and the layers of other Acts whose baselines
+    use no prelude function do not meet it. Deployed with the extension's `libraries/prelude.l4` as well, every call
+    works, but the compile then needs more than the service's default 256 MB and 60 seconds (about 3.5 minutes
+    locally). The deployment list is in `encoding.json` (`qa_layer.deploy_with`). The baseline is not changed.
+
+  On a local b98 jl4-service with raised compile limits, deployed with `sea-qa.l4`, `sea-schooling.l4` and the two
+  library files, the site's form engine, with 20 random completions per question in every state of every role (105
+  states), finds no ground-truth issues and no failed evaluation: it keeps 47 questions for the parent at the start, 14
+  for the student and 3 for the employer, and drops every other role's question.
+
 **Not covered for the new roles.**
 
 - **The student:**
@@ -190,7 +235,7 @@ situation input, because every employer question arises for every employer.
   - s 37 and the attendance officer's powers;
   - the Children and Community Services Act 2004, and any other law on child employment.
 
-**Cases.** `sea-qa-cases.l4` has 406 assertions. All 406 are satisfied, with 0 errors and 0 warnings, on the stable `l4`
+**Cases.** `sea-qa-cases.l4` has 422 assertions. All 422 are satisfied, with 0 errors and 0 warnings, on the stable `l4`
 of VS Code extension 1.6.98 with `JL4_LIBRARY_PATH` unset. They are:
 
 - 128 cases that ask each of the 64 questions for the two roles it is not about, with every other input ASSUMEd;
@@ -198,7 +243,10 @@ of VS Code extension 1.6.98 with `JL4_LIBRARY_PATH` unset. They are:
   input ASSUMEd (33 for the parent, 10 for the student);
 - 100 parent cases against values worked by hand, most taken from the baseline's cases with the lives' event ids (c010,
   c011, c078, d054, k010, k011, k024), and the same 100 again against the baseline export's own answer on the same facts;
-- 28 student cases and 7 employer cases, worked by hand from the text.
+- 28 student cases and 7 employer cases, worked by hand from the text;
+- 16 cases added on 6 November 2026 for QA7: each new choice of `What kept the child away`, the religious day told
+  beforehand, and three of `Residence and status`, each once against a value worked by hand and once against the
+  baseline export's answer on the same facts in the baseline's own records (8 and 8).
 
 **Negative controls.** Each of these fails, as it should:
 
