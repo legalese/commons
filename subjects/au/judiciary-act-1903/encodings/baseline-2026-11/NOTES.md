@@ -10,7 +10,7 @@ No pipeline, no coverage table, no independent test pass, no human gate.
 
 It sits **beside** `../baseline-2026-10/` (the accused's seat, ss 68, 68A, 79, 80 on the criminal side). Nothing there was changed or imported; this module keeps its own names. No ledger entry asked for it; it was written as part of a run over the Acts behind compensation and other civil claims, with the focus "the provisions a claimant meets".
 
-Every question is a function named as the claimant would ask it, with `@export` and a `@desc` on every input, so it can be deployed to Legalese Cloud. There are 24 exported questions, grouped under `§§` headings in the order a claim meets them (where to sue; competent court; suing a State; service; rights and costs; which law; invalid State taxes; review of a Commonwealth officer; constitutional points; interest; remittal; getting paid; being sued by the Commonwealth; Legal Services Directions). Headings for situations the person may not be in say so in brackets ("if you have a judgment against a government").
+Every question is a function named as the claimant would ask it, with `@export` and a `@desc` on every input, so it can be deployed to Legalese Cloud. There are 26 exported questions, grouped under `§§` headings in the order a claim meets them (where to sue; competent court; suing a State; service; rights and costs; which law; invalid State taxes; review of a Commonwealth officer; constitutional points; interest; remittal; getting paid; being sued by the Commonwealth; Legal Services Directions). Headings for situations the person may not be in say so in brackets ("if you have a judgment against a government").
 
 **Regulative rules.**
 
@@ -18,14 +18,14 @@ Every question is a function named as the claimant would ask it, with `@export` 
 |---|---|---|---|
 | `s 63 -- I must serve process on the Attorney-General or the person appointed to receive service` | me | MUST serve the Attorney-General or the appointed person (no time limit) | `Whom must I serve question` |
 | `s 78B(1) -- the court must not proceed until the Attorneys-General have had notice and a reasonable time` | the court | SHANT proceed with an ordinary step before notice and time; s 78B(2)(c), (5) steps excepted | `Must the court wait for the Attorneys-General question` |
-| `s 65 -- I must not issue execution against the property or revenues of the Commonwealth or a State` | me | SHANT issue execution or attachment | `Can I execute against the government question` |
+| `s 65 -- I must not issue execution against the property or revenues of the Commonwealth or a State` | me | SHANT issue execution or attachment against the Commonwealth or a State (for a Territory s 65 puts no duty: FULFILLED) | `Can I execute against the government question` |
 | `ss 65, 66 -- the Registrar must certify my judgment and the government must then satisfy it` | the Registrar, then the Minister for Finance or the State's Treasurer | MUST certify, HENCE MUST pay exactly the judgment sum | `How is my judgment against a government paid question` |
 
 None of these duties has a deadline in the Act, so no rule has a `WITHIN`. The case file asserts, through a helper `ends fulfilled` (a `CONSIDER … WHEN FULFILLED`), that a trace ends FULFILLED or that it does not; breaches are also `#TRACE`d with an `-- expect:` line, because on the stable `l4` a breached trace cannot be compared with `EQUALS`.
 
 ## Edition
 
-The compilation registered as **C2024C00864** (Compilation No. 51, compilation date 11 December 2024, including amendments up to Act No. 115, 2024), retrieved from the Federal Register of Legislation on 13 October 2026, as deposited at `../../registers/source-bundle/C1903A00006.txt`. Part IX (ss 56–67) is at line 495 of the deposit, s 39B at 182, s 44 at 264, ss 77MA–77N at 866, s 78B at 1084, s 79 at 1096, ss 82–83 at 1121, the Schedule at 1154. The commencement of s 77MA is read from endnote 3 and its note (g) (lines 1470–1475 and 1800–1801).
+The compilation registered as **C2024C00864** (Compilation No. 51, compilation date 11 December 2024, including amendments up to Act No. 115, 2024), retrieved from the Federal Register of Legislation on 13 October 2026, as deposited at `../../registers/source-bundle/C1903A00006.txt`. Part IX (ss 56–67) is at line 496 of the deposit, s 39B at 182, s 44 at 264, ss 77MA–77N at 866, s 78B at 1084, s 79 at 1096, ss 82–83 at 1121, the Schedule at 1154. The commencement of s 77MA is read from endnote 3 and its note (g) (lines 1470–1475 and 1800–1801).
 
 Nothing else is brought in. The Constitution (ss 75, 76, which settle the matters in which the High Court has or can be given original jurisdiction, and s 75(v)) is not deposited; those matters are asked as facts. The High Court Rules (the s 77N rate) are not deposited; the rate is not given. The National Security Information (Criminal and Civil Proceedings) Act 2004, which s 39B(3) borrows, is not read; the kind of decision is asked as a fact.
 
@@ -33,9 +33,9 @@ Nothing else is brought in. The Constitution (ss 75, 76, which settle the matter
 
 | Module | Case file | Assertions |
 |---|---|---|
-| `jc-claimant.l4` | `jc-cases-claimant.l4` | 107 written, 107 satisfied; 5 traces, each as its `-- expect:` line says |
+| `jc-claimant.l4` | `jc-cases-claimant.l4` | 121 written, 121 satisfied; 5 traces, each as its `-- expect:` line says |
 
-`l4 run` on both files: 0 errors, 0 warnings (2026-11-07). `l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read. Every expected value was written by hand from the text. Every exported question has cases, with the edges: the day before and the day of s 77MA's commencement, exclusions equal to the judgment sum and $1 over it, a payment $1 short of the judgment, each branch of s 39B and s 56(2).
+`l4 run` on both files: 0 errors, 0 warnings (2026-11-07). `l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read. Every expected value was written by hand from the text. Every exported question has cases, with the edges: the day before and the day of s 77MA's commencement, exclusions equal to the judgment sum and $1 over it, a payment $1 short of the judgment, each branch of s 39B, s 39B(1A) and s 56(2), and a treaty matter under s 44(2).
 
 ## Seat
 
@@ -55,7 +55,7 @@ The 2026-10-18 defaults:
 
 ## Negatives (the 2026-11-04 and 2026-11-05 rulings)
 
-`JUST FALSE` where the text says no in its own words: s 56(2)(b) ("is not a court of competent jurisdiction"), s 65 and s 67E ("No execution ... shall be issued"), s 55ZI ("is not liable"), s 55ZG(3) ("may not be raised ... except"), s 77MA(2)(b), (e) ("does not apply", "does not authorize"), a failed "where" or "if" (s 78B(1), s 39B(1E)), "upon application" (read as "where", ruling (c) of 2026-11-05). `NOTHING` where the text is silent or a scope limit without "only" fails: s 64 outside a suit with the Commonwealth or a State; s 79(2) for a suit that is not to recover an invalid tax; s 77MA outside the High Court, outside money claims, or for a cause of action before 22 November 1984; s 77N for another court's judgment; s 44 where neither subsection reaches; s 78B for a tribunal; s 55ZI where the act was not under a Direction (or bad-faith purported compliance by someone other than the Attorney-General); s 65 and s 67 for the Australian Capital Territory or another Territory.
+`JUST FALSE` where the text says no in its own words: s 56(2)(b) ("is not a court of competent jurisdiction"), s 65 and s 67E ("No execution ... shall be issued"), s 55ZI ("is not liable"), s 55ZG(3) ("may not be raised ... except"), s 77MA(2)(b), (e) ("does not apply", "does not authorize"), s 39B(1B)(a), (1C)(c), (1EA)(c) ("does not have jurisdiction", held against s 39B(1A) by (1F)(a)), a failed "where" or "if" (s 78B(1), s 39B(1E)), "upon application" (read as "where", ruling (c) of 2026-11-05). `NOTHING` where the text is silent or a scope limit without "only" fails: s 64 outside a suit with the Commonwealth or a State; s 79(2) for a suit that is not to recover an invalid tax; s 77MA outside the High Court, outside money claims, for a cause of action before 22 November 1984, or for damages for the dishonour of a bill of exchange (s 77MA(2)(c), see the fork); s 39B(1A) where none of its heads is met; s 60 outside a suit against a State in the High Court; s 77N for another court's judgment; s 44 where neither subsection reaches; s 78B for a tribunal; s 55ZI where the act was not under a Direction (or bad-faith purported compliance by someone other than the Attorney-General); s 65 and s 67 for the Australian Capital Territory or another Territory.
 
 Fork lines (case-by-case sites, for the reviewer to overrule):
 
@@ -64,17 +64,18 @@ Fork lines (case-by-case sites, for the reviewer to overrule):
 | s 56(1)(b), (c) "court of competent jurisdiction" | `Is this court competent for my suit against the Commonwealth question` | a court competent on no ground: `JUST FALSE` | `NOTHING` (the term left to State and Territory law) |
 | s 78B(1) "unless and until" once met | `Must the court wait for the Attorneys-General question` | `JUST FALSE` (the duty is spent) | `NOTHING` |
 | s 77MA(1) "other than proceedings on appeal" | `Must the High Court give interest up to judgment question` | `JUST FALSE` | `NOTHING` |
+| s 77MA(2)(c) "does not ... affect the damages recoverable for the dishonour of a bill of exchange" | `Must the High Court give interest up to judgment question` | `NOTHING` (a saving: those damages are left to the law on bills of exchange) | `JUST FALSE` (read as "does not apply") |
 
 ## Scope
 
-**In:** s 39B(1), (1A) (as the general Federal Court head, not separately asked), (1B)–(1EA), (2); s 44(1), (2A), (3); ss 55ZG(3), 55ZI; s 56(1), (2); s 58; s 63; s 64; s 65 and the Schedule (named, not reproduced); s 66; s 67; s 67E; s 77MA (with its commencement); s 77N; ss 78AA, 78B(1), (2)(c), (3)(b), (5); s 79(1), (1A)(b), (2)–(4); s 80A; ss 82, 83.
+**In:** s 39B(1), (1A), (1B)–(1EA), (1F)(a) (as holding (1B), (1C) and (1EA) against (1A)), (2); s 44(1), (2) for a matter arising directly under a treaty (s 38(a)), (2A), (3); ss 55ZG(3), 55ZI; s 56(1), (2); s 58; s 60; s 63; s 64; s 65 and the Schedule (named, not reproduced); s 66; s 67; s 67E; s 77MA(1)–(4) (with its commencement; (2)(c) answered `NOTHING`, (2)(d) a saving recorded in the module, not asked); s 77N; ss 78AA, 78B(1), (2)(c), (3)(b), (5); s 79(1), (1A)(b), (2)–(4); s 80A; ss 82, 83.
 
 **Out, and why:**
 - Parts I–V except s 44 (the High Court's internal procedure, appeals and special leave: the court's machinery, not a claimant's entitlement), including s 25A summary judgment, s 26 costs and s 27 appeals as to costs (High Court only; left for a High Court practice encoding).
-- ss 38, 39, 39A (exclusive and invested jurisdiction: what they give a claimant is asked in s 56, s 58 and s 39B as facts), s 39B(1A) beyond its role as the general head, s 39B(3) definitions beyond the decision kinds.
-- ss 40–43, 45 (removal into the High Court: the Attorney-General's or the Court's step), s 44(2), (4).
+- ss 38, 39, 39A (exclusive and invested jurisdiction: what they give a claimant is asked in s 56, s 58 and s 39B as facts; s 38(a) is asked as a fact for s 44(2)), s 39B(1F)(b) (the Supreme Courts' (1B), (1C), (1EA) jurisdiction kept despite other law: it changes no answer here), s 39B(3) definitions beyond the decision kinds.
+- ss 40–43, 45 (removal into the High Court: the Attorney-General's or the Court's step), s 44(2) for the s 38(b)–(d) matters (suits between governments, which a person is not a party to from this seat), s 44(4).
 - Part VIII (ss 46–51: orders in the Victorian criminal proceedings about the 1983 Sheraton Hotel incident, limited by s 51 to orders made within two years of a 1984 Victorian Act), Part VIIIA except ss 55ZG(3), 55ZI (the right to practise, the Register, the AGS).
-- ss 57, 59–62 (suits by or between governments: no individual seat), s 60, s 67A–67D, 67F (Part IXA except the s 67E bar).
+- ss 57, 59, 61, 62 (suits by or between governments, and the governments' own suits: no individual seat), s 67A–67D, 67F (Part IXA except the s 67E bar).
 - Part X (criminal jurisdiction: see the accused's seat in `../baseline-2026-10/`).
 - ss 77M, 77P–77V (High Court enforcement detail, interpleader, receivers, suppression and non-publication orders, vexatious proceedings orders, appeals): High Court practice.
 - s 78 (appearance), s 78A (intervention: the Attorney-General's step), s 78B(2)(a), (b), (3)(a), (4).
@@ -94,6 +95,10 @@ Fork lines (case-by-case sites, for the reviewer to overrule):
 9. **Section 77MA(4) restores interest on a liability the plaintiff has met, from the date it was met**, not from the date the cause of action arose. Asserted.
 10. **No time limit for paying a judgment against the Commonwealth or a State.** Section 66 says the Minister for Finance or the Treasurer "shall satisfy the judgment out of moneys legally available" on receiving the certificate, with no period. The rule has no `WITHIN`; a payment $1 short does not discharge it. Asserted.
 11. **Whether a State limitation period binds a suit against the Commonwealth is not answered by the text alone.** Section 64 ("rights of parties ... as nearly as possible the same") and s 79(1) ("in all cases to which they are applicable") are the routes, and the courts have read them; no case was read here. Section 79(3)(a) shows the drafter treating a State limitation law as "applicable" in at least one kind of suit (recovering an invalid State tax), which the encoding asserts.
+
+12. **Section 39B(1A) is not made "subject to" (1B), (1C) or (1EA)**, as (1) is. Those subsections take away "any matter" in which the writ or injunction is sought, and (1F)(a) holds them "despite anything in any other law", so the encoding reads them as overriding (1A) too: such a matter answers `JUST FALSE` even when it also arises under a Commonwealth law. Asserted.
+13. **Section 60 reaches my own s 58 suit.** In a suit against a State brought in the High Court, the High Court may enjoin the State and all its officers. Asserted; NOTHING for a Territory or a suit in another court.
+14. **Section 44(1) excludes s 44(2) matters in its own words.** A treaty matter (s 38(a)) pending in the High Court can be remitted to the Federal Court or any State or Territory court whether or not that court otherwise has jurisdiction (s 44(2), (3)). Asserted.
 
 ## Raised in the ledger
 
