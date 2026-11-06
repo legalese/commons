@@ -221,7 +221,7 @@ Out:
 Added 6 November 2026, after the model of the Graffiti Vandalism Act 2016 encoding's seat layer (its design decisions D2, D4 and D8). The baseline's files are unchanged: the layer is added, nothing is replaced. Two new files:
 
 - `pta-qa.l4` imports `prelude` and `pta-small-estates`. It has 24 exported questions.
-- `pta-qa-cases.l4` imports the same and `pta-qa`. It has 175 cases.
+- `pta-qa-cases.l4` imports the same and `pta-qa`. It has 189 cases.
 
 ### Roles
 
@@ -244,10 +244,11 @@ It is the second input, straight after `my role`, with one name, type and `@desc
 
 ### Decisions
 
-- **QA-1. The situation is what the Public Trustee has done, not what the family has done.** The Act ties s 14(4)-(5) to the election having been filed, and s 18, the fees and s 45 to the Public Trustee holding the estate (s 14(2) deems the election a grant). s 18's own input `the Public Trustee holds the grant` is kept, as the baseline asks it, so the answer still equals the baseline's.
-- **QA-2. One `@desc` for `the family`.** The baseline gives the same input two `@desc` texts in different questions; the layer gives every question one, "What the executor and next of kin are doing, and who has authorised the Public Trustee", so the form asks it once.
+- **QA-1. The situation is what the Public Trustee has done, not what the family has done.** The Act ties s 14(4)-(5) to the election having been filed, and s 18, the fees and s 45 to the Public Trustee holding the estate (s 14(2) deems the election a grant). s 18's own input `the Public Trustee holds the grant` was at first kept, as the baseline asks it; since the situation already settles it, so that an answer could contradict the situation, the layer now passes it as TRUE (fix of 6 November 2026), and the answer equals the baseline's with that input TRUE.
+- **QA-2. One `@desc` for `the family`.** The baseline gives the same input two `@desc` texts in different questions; the layer gives every question one, so the form asks it once. Since QA-5 it is the layer's own record, with the `@desc` "What the family is doing, and who has authorised the Public Trustee".
 - **QA-3. The will-maker's fee question builds the baseline's enumeration.** `May the Public Trustee charge me for preparing my will` asks only whether a legal practitioner directs and controls the preparation, and picks the baseline's `What the charge is for` value from it (s 47A(1)-(2)).
 - **QA-4. The creditor's answer is the baseline's s 11 answer turned round.** The creditor is preferred exactly when the Public Trustee is not, that is when the creditor proves to the Court it would be more beneficial.
+- **QA-5. Whether there is a will, and who will act, is one choice (fix of 6 November 2026).** The site's form drops a question for a role it is not about only by trying every combination of its open yes/no and choice inputs, at most 1,024 of them. The s 10(1) ground, the s 10(1) "may apply" and the s 14(1) election questions took the baseline's `The estate`, `The family` and `What the Court thinks`, with 12 yes/no facts: 4,096 combinations, so the will-maker, the beneficiary and the creditor were shown all three. Five of those facts say one thing: `the deceased left a will`; `an executor named in the will is willing, capable and resident in WA` and `the will expressly prohibits the executor authorising the Public Trustee` (both only with a will); `the person first entitled to administration is willing, capable and resident in WA` (s 10(1)(ab), "dies intestate"); and `the executor renounced and everyone first entitled declined in writing filed in Court` (s 10(1)(b), an executor, so a will). The layer asks them as one choice of eight, `The will and who will act` (two with no will, six with one), a field of its own record `The estate, as the next of kin knows it`; the family's other facts are its record `What the family is doing`. `the estate as the Act puts it` and `the family as the Act puts it` build the baseline's records; a fact the baseline's rules do not read in a value (the executor with no will, the person first entitled with a will) is given a fixed value that changes no answer. The four questions that take them (s 12 too) now have at most 1,024 combinations. A scratchpad script (`probe.py`) counts them for every question of the layer. The cases put the baseline's fixtures through a converter (`the layer's estate`, `the layer's family`) and compare with the baseline on the fixtures themselves; 14 more ask the s 10(1) ground for each of the eight values and s 12 for six.
 
 ### Not covered for the new roles
 
@@ -257,11 +258,11 @@ It is the second input, straight after `my role`, with one name, type and `@desc
 
 ### Cases
 
-175 in `pta-qa-cases.l4`, all satisfied, with 0 errors and 0 warnings:
+189 in `pta-qa-cases.l4`, all satisfied, with 0 errors and 0 warnings:
 
 - 70 ask each question for each role it is not about, every other input ASSUMEd: `does not arise for you`;
 - 10 ask each situation question, for its own role, with each value that makes the situation not hold, every later input ASSUMEd: `does not arise for you`;
 - 20 assert that the next of kin's or will-maker's answer equals the baseline export's on the same facts (one for each of the 17 next-of-kin questions and the 3 will-maker questions);
-- 75 are worked by hand from the text, for all four roles, with the baseline's fixtures (Jake's death, k098, and the encoder's fee figures).
+- 89 are worked by hand from the text, for all four roles, with the baseline's fixtures (Jake's death, k098, and the encoder's fee figures).
 
 Checked with the stable `l4` of VS Code extension 1.6.98, `JL4_LIBRARY_PATH` unset: `pta-qa.l4`, `pta-qa-cases.l4`, and the baseline's `pta-small-estates.l4` and `pta-cases-small-estates.l4` (48 of 48, unchanged) give 0 errors and 0 warnings; `l4 check pta-qa.l4` succeeds. A script listed every `@export` of `pta-qa.l4` with its inputs and checked that `my role` is first in all 24, that the situation input (and every other shared input) has one name, type and `@desc`, and that no input is DEONTIC or EVENT. A negative control (one expected fee altered) was caught. The mechanical cases are generated by the scratchpad script `gen_pta.py` from the layer's own `@export` list.
