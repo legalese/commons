@@ -2,7 +2,7 @@
 
 Australian Capital Territory legislation, one subject-id per body of law, following the subject-sidecar shape described in [`subjects/README.md`](../README.md).
 
-The subjects here were laid out on 2026-09-22 for the legislation governing twelve everyday topics. Each was checked against the ACT Legislation Register (ACT Parliamentary Counsel's Office); the check is recorded in each subject's `registers/source-bundle/*.meta.json`. Text was first deposited on 2026-10-20, for the sample below; nothing is encoded yet.
+The subjects here were laid out on 2026-09-22 for the legislation governing twelve everyday topics. Each was checked against the ACT Legislation Register (ACT Parliamentary Counsel's Office); the check is recorded in each subject's `registers/source-bundle/*.meta.json`. Text was first deposited on 2026-10-20, for the first sample below, and on 2026-11-06 for the claims, injury and compensation sample.
 
 **Licence category: open.** Statute text may be deposited and quoted in an encoding, under CC BY 4.0 with the attribution "© Australian Capital Territory" (see the terms record below and each subject's `SOURCE-LICENSE.md`).
 
@@ -113,6 +113,57 @@ The stable `l4` cannot IMPORT across encoding folders, so each link is recorded 
 | Motor Accident Injuries Act | [Social Security Act 1991](../social-security-act-1991/encodings/baseline-2026-10/): pension age (s 101(2)(b), s 51(2)(b)), and compensation recovery (pt 3.14); see *Is my payment a compensation affected payment (s 17(1))?* and *By how much is my daily rate reduced for periodic compensation, in dollars a day (s 1173)?* [Superannuation Guarantee (Administration) Act 1992](../superannuation-guarantee-administration-act-1992/encodings/baseline-2026-10/): s 96(2) takes "SG" from that Act's s 19(2), which in the deposited compilation no longer sets the rate; the rate is now in s 17A(2), *What percentage of my qualifying earnings must go to super for this payday (s 17A(2))?* (finding 20). [Income Tax Assessment Act 1997](../income-tax-assessment-act-1997/encodings/baseline-2026-10/): income replacement benefits are ordinary income (s 6-5); the tax treatment of the lump sums is not worked out. |
 
 The Territory encodings also meet each other, by links in their `NOTES.md`. A workers' compensation weekly payment reduces income replacement benefits week for week (MAI Act s 98). An accepted workers' compensation claim ends the MAI income replacement, treatment and care and quality of life benefits (s 50). Workers' compensation and motor accident benefits for the same act of violence are "associated payments" that reduce victims of crime assistance (s 47(1)(a)) or must be reported, and may have to be repaid, if they come later (ss 64-67).
+
+## Claims, injury and compensation law (sample, 2026-11-06)
+
+Fourteen ACT instruments deposited on 2026-11-06 for claims, injury and compensation law: the courts and their procedure, time limits, damages and costs; workplace injury; health records and health complaints; childhood abuse; discrimination at work; long service leave; and wills and estates. Twelve are new subjects; two (Civil Law (Wrongs) Act 2002 and Long Service Leave Act 1976) were indexed on 2026-09-22 and now have text. Nothing in this sample is encoded yet.
+
+### The instruments chosen
+
+| Instrument | Register id | Version | Effective / commences | Characters | |
+|---|---|---|---|---|---|
+| [Jurisdiction of Courts (Cross-vesting) Act 1993](jurisdiction-of-courts-cross-vesting-act-1993/) | A1993-60 | R4 | 2025-03-21 | 41,243 | new subject |
+| [Limitation Act 1985](limitation-act-1985/) | A1985-66 | R28 | 2025-11-26 | 92,230 | new subject |
+| [Civil Law (Wrongs) Act 2002](civil-law-wrongs-act-2002/) | A2002-40 | R77 | 2026-05-16 | 450,321 | existing subject, text added |
+| [Court Procedures Rules 2006](court-procedures-rules-2006/) | SL2006-29 | R73 | 2026-08-01 | 1,866,020 | new subject (rules made under the Court Procedures Act 2004, s 7, which is not deposited) |
+| [ACT Civil and Administrative Tribunal Act 2008](act-civil-and-administrative-tribunal-act-2008/) | A2008-35 | R42 | 2026-02-23 | 155,516 | new subject |
+| [Legal Profession Act 2006](legal-profession-act-2006/) | A2006-25 | R45 | 2026-05-16 | 727,301 | new subject |
+| [Coroners Act 1997](coroners-act-1997/) | A1997-57 | R51 | 2026-09-05 | 137,894 | new subject |
+| [Work Health and Safety Act 2011](work-health-and-safety-act-2011/) | A2011-35 | R30 | 2025-11-26 | 364,229 | new subject |
+| [Health Records (Privacy and Access) Act 1997](health-records-privacy-and-access-act-1997/) | A1997-125 | R32 | 2025-11-16 | 111,433 | new subject |
+| [Human Rights Commission Act 2005](human-rights-commission-act-2005/) | A2005-40 | R53 | 2026-06-26 | 233,480 | new subject |
+| [Discrimination Act 1991](discrimination-act-1991/) | A1991-81 | R54 | 2026-02-23 | 133,132 | new subject |
+| [Long Service Leave Act 1976](long-service-leave-act-1976/) | A1976-27 | R29 | 2025-11-19 | 53,669 | existing subject, text added |
+| [Family Provision Act 1969](family-provision-act-1969/) | A1969-15 | R12 | 2023-12-12 | 37,479 | new subject |
+| [Wills Act 1968](wills-act-1968/) | A1968-11 | R22 | 2026-02-23 | 85,911 | new subject |
+
+Total: 4,489,858 characters. Why each one is here:
+
+- **Jurisdiction of Courts (Cross-vesting) Act 1993**: the ACT's part of the national cross-vesting scheme, the counterpart of the Commonwealth and State Acts of 1987 (the ACT Act is of 1993). It vests jurisdiction and provides for transfers between courts, including the interests-of-justice transfer in s 5.
+- **Limitation Act 1985**: limitation periods for personal injury and other claims, and their extension. Section 21C sets no limitation period for personal injury resulting from child abuse. **The ACT has no separate Choice of Law (Limitation Periods) Act**: its choice-of-law rule is the Limitation Act 1985, div 4.4 (ss 55 to 57), which treats a limitation law as substantive. So that instrument is covered here.
+- **Civil Law (Wrongs) Act 2002**: negligence, damages for personal injury, proportionate liability, survival of actions and claims for death, and the personal injuries pre-court procedures (ch 5). Chapter 8A (institutional child abuse) sets the organisation's duty to prevent child abuse, vicarious liability for abuse by employees, and proper defendants for unincorporated bodies. With Limitation Act s 21C, this is the ACT's equivalent of the child-abuse limitation removals and organisational liability amendments elsewhere. Those amendments are consolidated in these two republications and are not deposited as separate amending Acts.
+- **Court Procedures Rules 2006**: civil procedure in the Supreme and Magistrates Courts, including representative proceedings (div 2.4.7, numerous concurrent interests), offers of compromise (pt 2.10) and costs (sch 4, scale of costs).
+- **ACT Civil and Administrative Tribunal Act 2008**: the tribunal's civil jurisdiction, procedure, orders and appeals.
+- **Legal Profession Act 2006**: pt 3.2, costs disclosure and assessment (costs agreements, conditional costs agreements, uplift fees and the s 285 ban on contingency fees).
+- **Coroners Act 1997**: reportable deaths, inquests, findings, and the standing of family members.
+- **Work Health and Safety Act 2011**: the model WHS duties, incident notification and offences, including industrial manslaughter (div 2.6).
+- **Health Records (Privacy and Access) Act 1997** and **Human Rights Commission Act 2005**: the list asked for the health records and health complaints Acts without naming them. These are the ACT's two. The first gives the privacy principles and a consumer's right of access to their own health record. The second covers complaints about health services to the health services commissioner (div 3.6), and also discrimination complaints.
+- **Discrimination Act 1991**: discrimination at work and in other areas, sexual harassment, victimisation and the positive duty.
+- **Long Service Leave Act 1976**: the private-sector long service leave entitlement and payment on termination.
+- **Family Provision Act 1969** and **Wills Act 1968**: claims on a deceased estate by family members, and the making, revocation and validity of wills.
+
+The texts have the same shape as the 2026-10-20 sample: the notices at the top, headings and numbers kept, tables as `| a | b |` rows, and the cover coat of arms dropped. One formula is held in the DOCX only as an image: the Long Service Leave Act 1976 s 2F (1) (b) weekly amount, "total payable ÷ 52". It was transcribed from the authorised PDF and marked in the text and in `formula_repairs`. The Work Health and Safety Act's one equation (sch 4, s 4.4 penalty indexation) is linearised as `A × (B)/(C)`. The 2026-10-20 converter was kept outside the repository and could not be found, so a converter written to the same method (same notices, conversion statement and marking) was used. Its name is given in each meta file.
+
+### Terms and access (read 2026-11-06, before any text was fetched)
+
+- **robots.txt** (read 12:03:14Z UTC) is unchanged: `Crawl-delay: 10`, and the same disallowed paths. Only landing pages, the `/Static/` Copyright page and `/DownloadFile/` were requested, at least 11 s apart, with the User-Agent `legalese-commons-source-fetcher/1.0 (+https://github.com/legalese/commons)`. In all, 34 requests went to the register. 33 returned 200; one landing page returned 404 (a wrong guess of the Family Provision Act's number, A1969-11; the right one is A1969-15). None was refused or challenged. Two downloads (the Court Procedures Rules and the Long Service Leave Act DOCX) came back incomplete and were each fetched once more.
+- **JACS Copyright Policy**, https://www.justice.act.gov.au/copyright: **readable this time** (12:03:57Z, HTTP 200). It confirms the CC BY 4.0 statement, the credit "© Australian Capital Territory" and the exclusion of the Coat of Arms and ACT symbols and logos. This settles the "confirm it in a browser" note above for this sample.
+- Licence: CC BY 4.0, as for the 2026-10-20 sample. No document had different terms.
+
+### Currency and gaps
+
+- All texts are the versions current on the register on 2026-11-06. The oldest is the Family Provision Act's R12 of 12 December 2023, which the register still lists as current.
+- **Not deposited, could be added**: the Court Procedures Act 2004 (the parent of the Rules); the Civil Law (Wrongs) Regulation 2003; the Work Health and Safety Regulation 2011 and the codes of practice; the Legal Profession Regulation 2007; the Administration and Probate Act 1929 (intestacy and administration); the Workers Compensation Regulation 2002 (listed above).
 
 ## Topics with no legislation here
 
