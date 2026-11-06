@@ -1,0 +1,461 @@
+IMPORT prelude
+IMPORT `cor-deaths`
+
+-- Coroners Act 1996 (WA) -- the Q&A layer: the questions people ask about a death, with the seat and the situation as
+-- parameters, for one deployment that serves every seat.
+--
+-- ROLES (the seat as a parameter). Every exported question takes `my role` first ("Which of these describes you"). A question
+-- about another role answers `does not arise for you` without reading any other input, so the form never asks those inputs.
+--   - `I am family of the person who has died` -- the baseline's seat: reporting, the investigation and inquest, the next of
+--     kin's rights, the post mortem, the body and the record.
+--   - `I am a doctor who was present at or soon after the death` -- new: s 17(3) and (4) put a duty to report, and a duty to
+--     help the coroner, on this doctor, with a $1 000 penalty.
+--   - `I know of the death, and I am not family or a doctor present` -- new: s 17(1) puts the duty to report on any person who
+--     becomes aware of a reportable death, and s 18(1) the duty to help on anyone who reports; any person may ask for an
+--     inquest (s 24), and some are interested persons (reg 17(c)) or ask for copies of the record (Sch 3 item 2(c)).
+-- The coroner, the State Coroner, the police, the Attorney General and the Supreme Court are never a seat. The person under
+-- whose care a person was held (s 17(5)) is not a role here: in most of the eleven care categories that person is an official
+-- or a public body (see NOTES.md).
+--
+-- SITUATIONS (the graffiti design D8). Within a role, a question that arises only in a situation takes that situation's fact
+-- straight after `my role`, and answers `does not arise for you` without reading anything else when the situation does not
+-- hold. The questions of one situation share one input, with the same name, type and @desc:
+--   - `I have asked the coroner to hold an inquest` (BOOLEAN; family and other person): s 24(2) is open only to a person who
+--     made a request under s 24(1). FALSE gives `does not arise for you` for the Supreme Court question.
+--   - `as senior next of kin, I asked the coroner not to direct a post mortem, and the coroner decided one is necessary`
+--     (BOOLEAN; family): s 37(1)-(3) arise only on that request and that decision. FALSE gives `does not arise for you` for
+--     the two s 37 questions.
+--   - `a post mortem examination has been held` (BOOLEAN; family): s 25(4) arises "Where a post mortem examination is held".
+--   - `the body is under the coroner's control` (BOOLEAN; family): s 30(2) arises "While a body is under the control of the
+--     coroner". FALSE gives `does not arise for you` for viewing and touching the body.
+-- The doctor's questions arise for every doctor present, so the doctor has no situation input.
+--
+-- The rules are the baseline's (`cor-deaths.l4`); this layer builds the baseline's Reporter record from plain answers, calls
+-- the baseline's functions, and restates none. One helper is added (the s 18(1) penalty). No exported question takes a
+-- DEONTIC or EVENT input.
+--
+-- BASELINE. Not for public use as advice. See NOTES.md.
+
+§ `Coroners Act 1996 (WA) -- the questions people ask`
+
+§§ `Who is asking, and the shape of the answers`
+
+DECLARE Role IS ONE OF
+    `I am family of the person who has died`
+    `I am a doctor who was present at or soon after the death`
+    `I know of the death, and I am not family or a doctor present`
+
+DECLARE `Yes or no` IS ONE OF
+    yes
+    no
+    `does not arise for you`
+
+DECLARE `Amount` IS ONE OF
+    `does not arise for you`
+    amount HAS dollars IS A NUMBER
+
+DECLARE `Place in the order` IS ONE OF
+    `does not arise for you`
+    `place` HAS `the place, 1 to 7, or 99 if not on the list` IS A NUMBER
+
+DECLARE `Whom to report to` IS ONE OF
+    `does not arise for you`
+    `report to` HAS `whom` IS A `Whom I must report to`
+
+DECLARE `The investigation` IS ONE OF
+    `does not arise for you`
+    `the investigation` HAS `whether the coroner will investigate` IS A `Whether the coroner will investigate`
+
+DECLARE `The inquest` IS ONE OF
+    `does not arise for you`
+    `the inquest` HAS `whether there will be one` IS A `Whether there will be an inquest`
+
+DECLARE `Senior next of kin` IS ONE OF
+    `does not arise for you`
+    `senior next of kin` HAS `whether I am` IS A `Whether I am the senior next of kin`
+
+DECLARE `The body` IS ONE OF
+    `does not arise for you`
+    `the body` HAS `whether the coroner holds it` IS A `Whether the coroner holds the body`
+
+DECLARE `The disposal certificate` IS ONE OF
+    `does not arise for you`
+    `the disposal certificate` HAS `when it can issue` IS A `When the disposal certificate can issue`
+
+DECLARE `Interested person` IS ONE OF
+    `does not arise for you`
+    `interested person` HAS `whether I am one` IS A `Whether I am an interested person`
+
+GIVEN `it holds` IS A BOOLEAN
+GIVETH A `Yes or no`
+`yes if` `it holds` MEANS
+    IF `it holds` THEN yes ELSE no
+
+§§ `Building the baseline's inputs`
+
+-- A person asking whether they must report a death is aware of it, so `I am aware of the death` is TRUE. For the family and
+-- the other person, the doctor's three facts do not apply and are FALSE; the baseline's `my part` is `a family member or other
+-- person` for both (s 17(1) does not tell them apart).
+GIVEN `I have reasonable grounds to believe it has already been reported` IS A BOOLEAN
+GIVETH A Reporter
+`me, not a doctor present` MEANS Reporter WITH
+    `my part` IS `a family member or other person`
+    `I am aware of the death` IS TRUE
+    `I have reasonable grounds to believe it has already been reported` IS `I have reasonable grounds to believe it has already been reported`
+    `another doctor present has reported it to a coroner` IS FALSE
+    `as a doctor, I cannot determine the cause of death` IS FALSE
+    `as a doctor, I think the death occurred under suspicious circumstances` IS FALSE
+
+GIVEN `I have reasonable grounds to believe it has already been reported` IS A BOOLEAN
+      `another doctor present has reported it to a coroner` IS A BOOLEAN
+      `I cannot determine the cause of death` IS A BOOLEAN
+      `I think the death occurred under suspicious circumstances` IS A BOOLEAN
+GIVETH A Reporter
+`me, a doctor present` MEANS Reporter WITH
+    `my part` IS `a doctor present at or soon after the death`
+    `I am aware of the death` IS TRUE
+    `I have reasonable grounds to believe it has already been reported` IS `I have reasonable grounds to believe it has already been reported`
+    `another doctor present has reported it to a coroner` IS `another doctor present has reported it to a coroner`
+    `as a doctor, I cannot determine the cause of death` IS `I cannot determine the cause of death`
+    `as a doctor, I think the death occurred under suspicious circumstances` IS `I think the death occurred under suspicious circumstances`
+
+-- s 18(1): "A person who reports a death must give to the coroner investigating the death any information which may help the
+-- investigation. Penalty: $1 000." s 17(4) puts the same duty on a doctor present who did not report because another did, but
+-- states no penalty, so the most is $1 000 for a person who reported and 0 under this Act otherwise.
+GIVEN `I reported the death` IS A BOOLEAN
+GIVETH A NUMBER
+`s 18(1) -- the most I can be fined for not giving the coroner information` MEANS
+    IF `I reported the death` THEN 1000 ELSE 0
+
+§§ `For everyone: reporting a death (ss 3, 17, 18)`
+
+@export Is this a Western Australian death (Coroners Act 1996 (WA) s 3)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the death` IS A Death @desc How and where the person died: where the death, its cause and the body were, where they lived and worked, how the death appears, whether a doctor has certified or will certify the cause, and whether they were held in care
+GIVETH A `Yes or no`
+`Is this death a Western Australian death` MEANS
+    CONSIDER `my role`
+    WHEN `I am family of the person who has died` THEN `yes if` (`Is this a Western Australian death` `the death`)
+    WHEN `I am a doctor who was present at or soon after the death` THEN `yes if` (`Is this a Western Australian death` `the death`)
+    WHEN `I know of the death, and I am not family or a doctor present` THEN `yes if` (`Is this a Western Australian death` `the death`)
+
+@export Must this death be reported to the coroner -- is it a reportable death (Coroners Act 1996 (WA) ss 3, 3A, 3B)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the death` IS A Death @desc How and where the person died: where the death, its cause and the body were, where they lived and worked, how the death appears, whether a doctor has certified or will certify the cause, and whether they were held in care
+GIVETH A `Yes or no`
+`Is this death a reportable death` MEANS
+    CONSIDER `my role`
+    WHEN `I am family of the person who has died` THEN `yes if` (`Is this a reportable death` `the death`)
+    WHEN `I am a doctor who was present at or soon after the death` THEN `yes if` (`Is this a reportable death` `the death`)
+    WHEN `I know of the death, and I am not family or a doctor present` THEN `yes if` (`Is this a reportable death` `the death`)
+
+@export Must I report this death (Coroners Act 1996 (WA) s 17)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the death` IS A Death @desc How and where the person died: where the death, its cause and the body were, where they lived and worked, how the death appears, whether a doctor has certified or will certify the cause, and whether they were held in care
+      `I have reasonable grounds to believe it has already been reported` IS A BOOLEAN @desc Whether you have reasonable grounds to believe the death has already been reported
+      `another doctor present has reported it to a coroner` IS A BOOLEAN @desc For a doctor present: whether another doctor present at or soon after the death has reported it to a coroner
+      `I cannot determine the cause of death` IS A BOOLEAN @desc For a doctor present: whether you are unable to determine the cause of death
+      `I think the death occurred under suspicious circumstances` IS A BOOLEAN @desc For a doctor present: whether in your opinion the death occurred under suspicious circumstances
+GIVETH A `Yes or no`
+`Must I report this death to a coroner or the police` MEANS
+    CONSIDER `my role`
+    WHEN `I am family of the person who has died` THEN `yes if` (`Must I report this death` (`me, not a doctor present` `I have reasonable grounds to believe it has already been reported`) `the death`)
+    WHEN `I am a doctor who was present at or soon after the death` THEN `yes if` (`Must I report this death` (`me, a doctor present` `I have reasonable grounds to believe it has already been reported` `another doctor present has reported it to a coroner` `I cannot determine the cause of death` `I think the death occurred under suspicious circumstances`) `the death`)
+    WHEN `I know of the death, and I am not family or a doctor present` THEN `yes if` (`Must I report this death` (`me, not a doctor present` `I have reasonable grounds to believe it has already been reported`) `the death`)
+
+@export Whom must I report this death to, and when (Coroners Act 1996 (WA) s 17)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the death` IS A Death @desc How and where the person died: where the death, its cause and the body were, where they lived and worked, how the death appears, whether a doctor has certified or will certify the cause, and whether they were held in care
+      `I have reasonable grounds to believe it has already been reported` IS A BOOLEAN @desc Whether you have reasonable grounds to believe the death has already been reported
+      `another doctor present has reported it to a coroner` IS A BOOLEAN @desc For a doctor present: whether another doctor present at or soon after the death has reported it to a coroner
+      `I cannot determine the cause of death` IS A BOOLEAN @desc For a doctor present: whether you are unable to determine the cause of death
+      `I think the death occurred under suspicious circumstances` IS A BOOLEAN @desc For a doctor present: whether in your opinion the death occurred under suspicious circumstances
+GIVETH A `Whom to report to`
+`Whom must I report this death to, and when` MEANS
+    CONSIDER `my role`
+    WHEN `I am family of the person who has died` THEN `report to` (`Whom must I report to` (`me, not a doctor present` `I have reasonable grounds to believe it has already been reported`) `the death`)
+    WHEN `I am a doctor who was present at or soon after the death` THEN `report to` (`Whom must I report to` (`me, a doctor present` `I have reasonable grounds to believe it has already been reported` `another doctor present has reported it to a coroner` `I cannot determine the cause of death` `I think the death occurred under suspicious circumstances`) `the death`)
+    WHEN `I know of the death, and I am not family or a doctor present` THEN `report to` (`Whom must I report to` (`me, not a doctor present` `I have reasonable grounds to believe it has already been reported`) `the death`)
+
+@export What is the most I can be fined for not reporting this death, in dollars (Coroners Act 1996 (WA) s 17)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the death` IS A Death @desc How and where the person died: where the death, its cause and the body were, where they lived and worked, how the death appears, whether a doctor has certified or will certify the cause, and whether they were held in care
+      `I have reasonable grounds to believe it has already been reported` IS A BOOLEAN @desc Whether you have reasonable grounds to believe the death has already been reported
+      `another doctor present has reported it to a coroner` IS A BOOLEAN @desc For a doctor present: whether another doctor present at or soon after the death has reported it to a coroner
+      `I cannot determine the cause of death` IS A BOOLEAN @desc For a doctor present: whether you are unable to determine the cause of death
+      `I think the death occurred under suspicious circumstances` IS A BOOLEAN @desc For a doctor present: whether in your opinion the death occurred under suspicious circumstances
+GIVETH AN `Amount`
+`What is the most I can be fined for not reporting this death` MEANS
+    CONSIDER `my role`
+    WHEN `I am family of the person who has died` THEN amount (`What is the most I can be fined for not reporting` (`me, not a doctor present` `I have reasonable grounds to believe it has already been reported`) `the death`)
+    WHEN `I am a doctor who was present at or soon after the death` THEN amount (`What is the most I can be fined for not reporting` (`me, a doctor present` `I have reasonable grounds to believe it has already been reported` `another doctor present has reported it to a coroner` `I cannot determine the cause of death` `I think the death occurred under suspicious circumstances`) `the death`)
+    WHEN `I know of the death, and I am not family or a doctor present` THEN amount (`What is the most I can be fined for not reporting` (`me, not a doctor present` `I have reasonable grounds to believe it has already been reported`) `the death`)
+
+@export Must I give the coroner any information that may help the investigation (Coroners Act 1996 (WA) ss 17(4), 18(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I reported the death` IS A BOOLEAN @desc Whether you reported the death
+      `another doctor present has reported it to a coroner` IS A BOOLEAN @desc For a doctor present: whether another doctor present at or soon after the death has reported it to a coroner
+GIVETH A `Yes or no`
+`Must I give the coroner information that may help the investigation` MEANS
+    CONSIDER `my role`
+    WHEN `I am family of the person who has died` THEN `yes if` (`Must I give the coroner information` (`me, not a doctor present` FALSE) `I reported the death`)
+    WHEN `I am a doctor who was present at or soon after the death` THEN `yes if` (`Must I give the coroner information` (`me, a doctor present` FALSE `another doctor present has reported it to a coroner` FALSE FALSE) `I reported the death`)
+    WHEN `I know of the death, and I am not family or a doctor present` THEN `yes if` (`Must I give the coroner information` (`me, not a doctor present` FALSE) `I reported the death`)
+
+-- New: the baseline does not ask the s 18(1) penalty.
+@export What is the most I can be fined for not giving the coroner information that may help the investigation, in dollars (Coroners Act 1996 (WA) s 18(1); s 17(4) states no penalty)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I reported the death` IS A BOOLEAN @desc Whether you reported the death
+GIVETH AN `Amount`
+`What is the most I can be fined for not giving the coroner information` MEANS
+    CONSIDER `my role`
+    WHEN `I am family of the person who has died` THEN amount (`s 18(1) -- the most I can be fined for not giving the coroner information` `I reported the death`)
+    WHEN `I am a doctor who was present at or soon after the death` THEN amount (`s 18(1) -- the most I can be fined for not giving the coroner information` `I reported the death`)
+    WHEN `I know of the death, and I am not family or a doctor present` THEN amount (`s 18(1) -- the most I can be fined for not giving the coroner information` `I reported the death`)
+
+§§ `For the family and anyone else who knows of the death: the inquest and the record (ss 24, 44; regs 17, 22-23B)`
+
+§§§ `s 24 -- asking for an inquest`
+
+@export May I ask the coroner to hold an inquest into this death (Coroners Act 1996 (WA) s 24(1), (1a); Coroners Regulations 1997 reg 15)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the death` IS A Death @desc How and where the person died: where the death, its cause and the body were, where they lived and worked, how the death appears, whether a doctor has certified or will certify the cause, and whether they were held in care
+      `my request is in writing and gives reasons` IS A BOOLEAN @desc Whether your request is in writing and says why you want an inquest
+GIVETH A `Yes or no`
+`May I ask the coroner to hold an inquest` MEANS
+    CONSIDER `my role`
+    WHEN `I am family of the person who has died` THEN `yes if` (`May I ask for an inquest` `the death` `my request is in writing and gives reasons`)
+    WHEN `I know of the death, and I am not family or a doctor present` THEN `yes if` (`May I ask for an inquest` `the death` `my request is in writing and gives reasons`)
+    OTHERWISE `does not arise for you`
+
+@export May I now apply to the Supreme Court for an order that an inquest be held (Coroners Act 1996 (WA) s 24(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have asked the coroner to hold an inquest` IS A BOOLEAN @desc Whether you have asked a coroner to hold an inquest into the death (s 24(1))
+      `the coroner refused my request` IS A BOOLEAN @desc Whether the coroner has refused your request for an inquest
+      `days since I received notice of the refusal` IS A NUMBER @desc Days since you received the coroner's notice of refusal
+      `the coroner has replied to my request` IS A BOOLEAN @desc Whether the coroner has replied to your request at all
+      `months since I made my request` IS A NUMBER @desc Whole months since you made your request
+GIVETH A `Yes or no`
+`May I now apply to the Supreme Court for an order that an inquest be held` MEANS
+    CONSIDER `my role`
+    WHEN `I am family of the person who has died` THEN
+        IF NOT `I have asked the coroner to hold an inquest`
+        THEN `does not arise for you`
+        ELSE `yes if` (`May I apply to the Supreme Court for an inquest` `the coroner refused my request` `days since I received notice of the refusal` `the coroner has replied to my request` `months since I made my request`)
+    WHEN `I know of the death, and I am not family or a doctor present` THEN
+        IF NOT `I have asked the coroner to hold an inquest`
+        THEN `does not arise for you`
+        ELSE `yes if` (`May I apply to the Supreme Court for an inquest` `the coroner refused my request` `days since I received notice of the refusal` `the coroner has replied to my request` `months since I made my request`)
+    OTHERWISE `does not arise for you`
+
+§§§ `s 44, reg 17 -- taking part in the inquest; regs 22-23B -- copies of the record`
+
+@export Am I an interested person who may appear at the inquest, be represented and question witnesses (Coroners Act 1996 (WA) s 44; Coroners Regulations 1997 reg 17)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `how I am related to the deceased` IS A Kin @desc Your relationship to the deceased: spouse, partner, child, parent, brother or sister, or none; your age; whether you lived with them; whether you are their executor or were named as their emergency contact
+      `I am a beneficiary of insurance on the deceased's life` IS A BOOLEAN @desc Whether you are a beneficiary under a policy of insurance issued on the deceased's life
+GIVETH AN `Interested person`
+`May I take part in the inquest as an interested person` MEANS
+    CONSIDER `my role`
+    WHEN `I am family of the person who has died` THEN `interested person` (`Am I an interested person at the inquest` `how I am related to the deceased` `I am a beneficiary of insurance on the deceased's life`)
+    WHEN `I know of the death, and I am not family or a doctor present` THEN `interested person` (`Am I an interested person at the inquest` `how I am related to the deceased` `I am a beneficiary of insurance on the deceased's life`)
+    OTHERWISE `does not arise for you`
+
+@export How much must I pay for copies of the coroner's record of investigation into the death (Coroners Regulations 1997 (WA) regs 22, 22A, 23B, Schedule 3 item 2)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `how I am related to the deceased` IS A Kin @desc Your relationship to the deceased: spouse, partner, child, parent, brother or sister, or none; your age; whether you lived with them; whether you are their executor or were named as their emergency contact
+      `copies I ask for` IS A NUMBER @desc How many copies of the record you are asking for now
+      `pages in the record` IS A NUMBER @desc Pages in one copy of the record (a part page counts as a page)
+      `I have already had my free copy` IS A BOOLEAN @desc Whether you have already been given the one copy that is free
+      `I am an eligible individual under reg 23B` IS A BOOLEAN @desc Whether you hold a Centrelink concession or health card, receive youth allowance, AUSTUDY or ABSTUDY, have legal aid for the proceedings, or have been directed to be an eligible individual
+      `I am under 18` IS A BOOLEAN @desc Whether you are under 18 on the day the fee would be payable
+GIVETH AN `Amount`
+`How much must I pay for copies of the record of investigation` MEANS
+    CONSIDER `my role`
+    WHEN `I am family of the person who has died` THEN amount (`How much do I pay for copies of the record` `how I am related to the deceased` `copies I ask for` `pages in the record` `I have already had my free copy` `I am an eligible individual under reg 23B` `I am under 18`)
+    WHEN `I know of the death, and I am not family or a doctor present` THEN amount (`How much do I pay for copies of the record` `how I am related to the deceased` `copies I ask for` `pages in the record` `I have already had my free copy` `I am an eligible individual under reg 23B` `I am under 18`)
+    OTHERWISE `does not arise for you`
+
+§§ `For the family of the person who has died`
+
+§§§ `ss 19, 19A, 22, 23 -- the investigation and the inquest`
+
+@export Will the coroner investigate this death (Coroners Act 1996 (WA) ss 19, 19A)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the death` IS A Death @desc How and where the person died: where the death, its cause and the body were, where they lived and worked, how the death appears, whether a doctor has certified or will certify the cause, and whether they were held in care
+      `the directions` IS A Directions @desc Any direction for an inquest by the Attorney General or the State Coroner
+      `the coroner has determined natural causes on a pathologist's written opinion (coroner)` IS A BOOLEAN @desc Whether the coroner, on a pathologist's written opinion, has determined that the death is due to natural causes
+GIVETH A `The investigation`
+`Will the coroner investigate this death` MEANS
+    CONSIDER `my role`
+    WHEN `I am family of the person who has died` THEN `the investigation` (`Will the coroner investigate` `the death` `the directions` `the coroner has determined natural causes on a pathologist's written opinion (coroner)`)
+    OTHERWISE `does not arise for you`
+
+@export Must an inquest be held into this death (Coroners Act 1996 (WA) ss 22, 23)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the death` IS A Death @desc How and where the person died: where the death, its cause and the body were, where they lived and worked, how the death appears, whether a doctor has certified or will certify the cause, and whether they were held in care
+      `the directions` IS A Directions @desc Any direction for an inquest by the Attorney General or the State Coroner
+GIVETH A `The inquest`
+`Must an inquest be held into this death` MEANS
+    CONSIDER `my role`
+    WHEN `I am family of the person who has died` THEN `the inquest` (`Must an inquest be held` `the death` `the directions`)
+    OTHERWISE `does not arise for you`
+
+§§§ `s 37(5) -- the next of kin`
+
+@export What is my place in the order of next of kin (Coroners Act 1996 (WA) s 37(5); 1 is first, 99 means not on the list)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `how I am related to the deceased` IS A Kin @desc Your relationship to the deceased: spouse, partner, child, parent, brother or sister, or none; your age; whether you lived with them; whether you are their executor or were named as their emergency contact
+GIVETH A `Place in the order`
+`What is my place in the order of next of kin of the deceased` MEANS
+    CONSIDER `my role`
+    WHEN `I am family of the person who has died` THEN `place` (`What is my place in the order of next of kin` `how I am related to the deceased`)
+    OTHERWISE `does not arise for you`
+
+@export Am I one of the deceased's next of kin (Coroners Act 1996 (WA) s 37(5))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `how I am related to the deceased` IS A Kin @desc Your relationship to the deceased: spouse, partner, child, parent, brother or sister, or none; your age; whether you lived with them; whether you are their executor or were named as their emergency contact
+GIVETH A `Yes or no`
+`Am I one of the deceased's next of kin` MEANS
+    CONSIDER `my role`
+    WHEN `I am family of the person who has died` THEN `yes if` (`Am I one of the next of kin` `how I am related to the deceased`)
+    OTHERWISE `does not arise for you`
+
+@export Am I the senior next of kin (Coroners Act 1996 (WA) s 37(5))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `how I am related to the deceased` IS A Kin @desc Your relationship to the deceased: spouse, partner, child, parent, brother or sister, or none; your age; whether you lived with them; whether you are their executor or were named as their emergency contact
+      `the best place of anyone else available` IS A NUMBER @desc The highest place (1 to 7) held by anyone else who is available; 99 if no one else on the list is available
+GIVETH A `Senior next of kin`
+`Am I the deceased's senior next of kin` MEANS
+    CONSIDER `my role`
+    WHEN `I am family of the person who has died` THEN `senior next of kin` (`Am I the senior next of kin` `how I am related to the deceased` `the best place of anyone else available`)
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 20, 25(4), 26A, 30(2), 35 -- what the family must be told and allowed`
+
+@export Must the coroner tell me, in writing where practicable, about the body, the post mortem and my rights (Coroners Act 1996 (WA) s 20)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `how I am related to the deceased` IS A Kin @desc Your relationship to the deceased: spouse, partner, child, parent, brother or sister, or none; your age; whether you lived with them; whether you are their executor or were named as their emergency contact
+      `the death` IS A Death @desc How and where the person died: where the death, its cause and the body were, where they lived and worked, how the death appears, whether a doctor has certified or will certify the cause, and whether they were held in care
+GIVETH A `Yes or no`
+`Must the coroner tell me about the body, the post mortem and my rights` MEANS
+    CONSIDER `my role`
+    WHEN `I am family of the person who has died` THEN `yes if` (`Must the coroner give me the section 20 information` `how I am related to the deceased` `the death`)
+    OTHERWISE `does not arise for you`
+
+@export While the coroner holds the body, may I view it (Coroners Act 1996 (WA) s 30(2), s 20(1)(f))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the body is under the coroner's control` IS A BOOLEAN @desc Whether the body is now under the control of the coroner (for a reportable death with the body in Western Australia, it is until the coroner issues the certificate releasing it, s 30(1))
+      `how I am related to the deceased` IS A Kin @desc Your relationship to the deceased: spouse, partner, child, parent, brother or sister, or none; your age; whether you lived with them; whether you are their executor or were named as their emergency contact
+GIVETH A `Yes or no`
+`May I view the body while the coroner holds it` MEANS
+    CONSIDER `my role`
+    WHEN `I am family of the person who has died` THEN
+        IF NOT `the body is under the coroner's control`
+        THEN `does not arise for you`
+        ELSE `yes if` (`May I view the body` `how I am related to the deceased`)
+    OTHERWISE `does not arise for you`
+
+@export While the coroner holds the body, may I touch it (Coroners Act 1996 (WA) s 30(2), s 20(1)(c))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the body is under the coroner's control` IS A BOOLEAN @desc Whether the body is now under the control of the coroner (for a reportable death with the body in Western Australia, it is until the coroner issues the certificate releasing it, s 30(1))
+      `how I am related to the deceased` IS A Kin @desc Your relationship to the deceased: spouse, partner, child, parent, brother or sister, or none; your age; whether you lived with them; whether you are their executor or were named as their emergency contact
+      `the coroner has determined that touching is undesirable or dangerous (coroner)` IS A BOOLEAN @desc Whether the coroner has determined that touching the body is undesirable or dangerous
+GIVETH A `Yes or no`
+`May I touch the body while the coroner holds it` MEANS
+    CONSIDER `my role`
+    WHEN `I am family of the person who has died` THEN
+        IF NOT `the body is under the coroner's control`
+        THEN `does not arise for you`
+        ELSE `yes if` (`May I touch the body` `how I am related to the deceased` `the coroner has determined that touching is undesirable or dangerous (coroner)`)
+    OTHERWISE `does not arise for you`
+
+@export Must the coroner let a doctor I choose attend the post mortem (Coroners Act 1996 (WA) s 35)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I am the senior next of kin` IS A BOOLEAN @desc Whether you are the senior next of kin (see "Am I the senior next of kin")
+      `I have asked the coroner` IS A BOOLEAN @desc Whether you have asked the coroner to allow your doctor to be present
+GIVETH A `Yes or no`
+`Must the coroner let a doctor I choose attend the post mortem` MEANS
+    CONSIDER `my role`
+    WHEN `I am family of the person who has died` THEN `yes if` (`Must my doctor be allowed at the post mortem` `I am the senior next of kin` `I have asked the coroner`)
+    OTHERWISE `does not arise for you`
+
+@export Must the coroner give me written information on the post mortem (Coroners Act 1996 (WA) s 25(4))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `a post mortem examination has been held` IS A BOOLEAN @desc Whether a post mortem examination has been held as part of the coroner's investigation of the death
+      `how I am related to the deceased` IS A Kin @desc Your relationship to the deceased: spouse, partner, child, parent, brother or sister, or none; your age; whether you lived with them; whether you are their executor or were named as their emergency contact
+      `days since the post mortem` IS A NUMBER @desc Days since the post mortem examination
+      `the coroner has made a finding` IS A BOOLEAN @desc Whether the coroner has made a finding
+      `it is not practicable (coroner)` IS A BOOLEAN @desc Whether it is not practicable for the coroner to give the information
+GIVETH A `Yes or no`
+`Must the coroner give me written information on the post mortem examination` MEANS
+    CONSIDER `my role`
+    WHEN `I am family of the person who has died` THEN
+        IF NOT `a post mortem examination has been held`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Must the coroner give me written information on the post mortem` `how I am related to the deceased` `days since the post mortem` `the coroner has made a finding` `it is not practicable (coroner)`)
+    OTHERWISE `does not arise for you`
+
+@export Must the coroner give me access to the evidence gathered in the investigation (Coroners Act 1996 (WA) s 26A)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I am the senior next of kin` IS A BOOLEAN @desc Whether you are the senior next of kin (see "Am I the senior next of kin")
+      `the coroner believes it not desirable or practicable (coroner)` IS A BOOLEAN @desc Whether the coroner believes access is not desirable or practicable
+GIVETH A `Yes or no`
+`Must the coroner give me access to the evidence gathered` MEANS
+    CONSIDER `my role`
+    WHEN `I am family of the person who has died` THEN `yes if` (`Must the coroner give me access to the evidence` `I am the senior next of kin` `the coroner believes it not desirable or practicable (coroner)`)
+    OTHERWISE `does not arise for you`
+
+§§§ `s 37 -- objecting to a post mortem`
+
+@export Can the post mortem go ahead despite my objection as senior next of kin (Coroners Act 1996 (WA) s 37(1)-(4))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `as senior next of kin, I asked the coroner not to direct a post mortem, and the coroner decided one is necessary` IS A BOOLEAN @desc Whether you, as senior next of kin, asked the coroner not to direct a post mortem examination, and the coroner decided that one is necessary (s 37(1))
+      `clear working days since I was given notice of the decision` IS A NUMBER @desc Whole working days that have passed since you were given the coroner's written notice that a post mortem is necessary
+      `the coroner believes it must be performed immediately (coroner)` IS A BOOLEAN @desc Whether the coroner believes the post mortem must be performed immediately
+      `an extension granted by the Supreme Court is still running` IS A BOOLEAN @desc Whether the Supreme Court has granted an extension of time that has not ended
+      `the Supreme Court has ordered no post mortem` IS A BOOLEAN @desc Whether the Supreme Court has ordered that no post mortem be performed
+      `I have withdrawn my objection` IS A BOOLEAN @desc Whether you have withdrawn your request
+GIVETH A `Yes or no`
+`Can the post mortem go ahead although I objected` MEANS
+    CONSIDER `my role`
+    WHEN `I am family of the person who has died` THEN
+        IF NOT `as senior next of kin, I asked the coroner not to direct a post mortem, and the coroner decided one is necessary`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Can the post mortem go ahead despite my objection` `clear working days since I was given notice of the decision` `the coroner believes it must be performed immediately (coroner)` `an extension granted by the Supreme Court is still running` `the Supreme Court has ordered no post mortem` `I have withdrawn my objection`)
+    OTHERWISE `does not arise for you`
+
+@export May I still apply to the Supreme Court to stop the post mortem (Coroners Act 1996 (WA) s 37(3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `as senior next of kin, I asked the coroner not to direct a post mortem, and the coroner decided one is necessary` IS A BOOLEAN @desc Whether you, as senior next of kin, asked the coroner not to direct a post mortem examination, and the coroner decided that one is necessary (s 37(1))
+      `clear working days since I was given notice of the decision` IS A NUMBER @desc Whole working days that have passed since you were given the coroner's written notice that a post mortem is necessary
+      `an extension granted by the Supreme Court is still running` IS A BOOLEAN @desc Whether the Supreme Court has granted an extension of time that has not ended
+GIVETH A `Yes or no`
+`May I still ask the Supreme Court to stop the post mortem` MEANS
+    CONSIDER `my role`
+    WHEN `I am family of the person who has died` THEN
+        IF NOT `as senior next of kin, I asked the coroner not to direct a post mortem, and the coroner decided one is necessary`
+        THEN `does not arise for you`
+        ELSE `yes if` (`May I apply to the Supreme Court to stop the post mortem` `clear working days since I was given notice of the decision` `an extension granted by the Supreme Court is still running`)
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 29, 30, 36(3) -- when the body is released`
+
+@export Does the coroner hold the body, or may we have it for the funeral (Coroners Act 1996 (WA) ss 29(1), 30(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the death` IS A Death @desc How and where the person died: where the death, its cause and the body were, where they lived and worked, how the death appears, whether a doctor has certified or will certify the cause, and whether they were held in care
+      `the coroner has issued the s 29 certificate` IS A BOOLEAN @desc Whether the coroner has issued the certificate permitting burial, cremation or other disposal
+GIVETH A `The body`
+`Does the coroner hold the body, or may we have it` MEANS
+    CONSIDER `my role`
+    WHEN `I am family of the person who has died` THEN `the body` (`Does the coroner hold the body` `the death` `the coroner has issued the s 29 certificate`)
+    OTHERWISE `does not arise for you`
+
+@export When can the coroner issue the certificate releasing the body for burial or cremation (Coroners Act 1996 (WA) s 29)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the request` IS A `Request by anyone for a post mortem` @desc Where any request by anyone for a post mortem stands
+GIVETH A `The disposal certificate`
+`When can the coroner issue the certificate releasing the body` MEANS
+    CONSIDER `my role`
+    WHEN `I am family of the person who has died` THEN `the disposal certificate` (`When can the disposal certificate issue` `the request`)
+    OTHERWISE `does not arise for you`

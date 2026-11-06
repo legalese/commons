@@ -257,3 +257,78 @@ What is left out is machinery or the coroner's own conduct of the case:
 - "Person held in care" could be worked out from its eleven categories rather than
   asked.
 - No case law was searched. There has been no independent test pass and no human gate.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026 as a layer: `cor-qa.l4` (IMPORTs `prelude` and `cor-deaths`) and `cor-qa-cases.l4` (IMPORTs those and
+`cor-qa`). The baseline's files are unchanged. The design is the Graffiti Vandalism Act 2016 encoding's (its NOTES.md D2, D4,
+D8 and D8.1-D8.15): every exported question takes `my role` IS A Role first (`@desc Which of these describes you`), and answers
+`does not arise for you` for a role it is not about without reading any other input; a question that arises only in a
+situation takes that situation's fact second and answers `does not arise for you` when it does not hold, reading nothing
+else. No exported question takes a DEONTIC or EVENT input. One deployment serves every role.
+
+### Roles, and why
+
+| Role | Why | Questions |
+|---|---|---|
+| `I am family of the person who has died` | the baseline's seat | 26 |
+| `I am a doctor who was present at or soon after the death` | new: s 17(3) and (4) put the duty to report and to help the coroner on this doctor ($1 000) | 7 |
+| `I know of the death, and I am not family or a doctor present` | new: s 17(1) binds any person aware of a reportable death, s 18(1) anyone who reports; any person may ask for an inquest (s 24); some are interested persons (reg 17(c)) or pay for copies (Sch 3 item 2(c)) | 11 |
+
+26 questions in all; a question shared by roles is counted under each. The seven reporting questions (ss 3, 17, 18) are
+asked by all three roles; the inquest request, the Supreme Court application, the interested person and the copies by the
+family and the other person; the rest by the family alone. The coroner, the State Coroner, the police, the Attorney General
+and the Supreme Court are not seats. The person under whose care the deceased was held (s 17(5)) is not a role: in most of
+the eleven care categories that person is an official or a public body (the CEO, a prison, the police, a detention centre),
+which the brief rules out as a seat.
+
+### Situation inputs
+
+| Name | Type | Gives `does not arise for you` | Questions |
+|---|---|---|---|
+| `I have asked the coroner to hold an inquest` | BOOLEAN | FALSE | `May I now apply to the Supreme Court for an order that an inquest be held` (family, other person): s 24(2) is open to the person who made a s 24(1) request |
+| `as senior next of kin, I asked the coroner not to direct a post mortem, and the coroner decided one is necessary` | BOOLEAN | FALSE | `Can the post mortem go ahead although I objected`, `May I still ask the Supreme Court to stop the post mortem` (family): s 37(1)-(3) arise on that request and decision |
+| `a post mortem examination has been held` | BOOLEAN | FALSE | `Must the coroner give me written information on the post mortem examination` (family): s 25(4) "Where a post mortem examination is held" |
+| `the body is under the coroner's control` | BOOLEAN | FALSE | `May I view the body while the coroner holds it`, `May I touch the body while the coroner holds it` (family): s 30(2) "While a body is under the control of the coroner" |
+
+The doctor's questions arise for every doctor present, and the reporting questions for every person who asks them, so they
+take no situation input.
+
+### Decisions
+
+- **The Reporter record is built, not asked.** The baseline's reporting questions take a `Reporter` whose `my part` says
+  whether the person is family, a doctor present or the carer; the role now says that. The layer builds the record from plain
+  answers: `I am aware of the death` is TRUE (a person asking whether to report a death knows of it), and for the family and
+  the other person the doctor's three facts are FALSE. The three doctor's facts are inputs of the reporting questions that
+  only the doctor's branch reads (their `@desc` begins "For a doctor present").
+- **`clear working days since I was given notice of the decision` is one input.** The baseline's two s 37 questions name the
+  same fact two ways ("was given notice", "received notice"); the layer asks it once, under the first name.
+- **Being the senior next of kin is not a situation** for ss 26A and 35. Those questions answer no when the person is not the
+  senior next of kin, which tells them where they stand (graffiti D8.1's reasoning). It is a situation only within the s 37
+  input, since only the senior next of kin can make the s 37(1) request.
+- **The body under the coroner's control is asked as a fact** for s 30(2), though `Does the coroner hold the body, or may we
+  have it` works it out from the death; the person who is asking whether they may view the body usually knows where it is.
+- **Added:** the s 18(1) penalty (`What is the most I can be fined for not giving the coroner information`): $1 000 for a
+  person who reported, and 0 under this Act for a doctor present relieved by s 17(4), which states no penalty.
+- The question texts and `@desc` of `the death` are now one wording across the layer, so the form asks the death once.
+
+### Not covered for the new roles
+
+For the doctor: the Births, Deaths and Marriages Registration Act 1998 s 44 certificate (in that Act's layer), and the
+circle between it and limb (i) (baseline finding 2); a doctor's own opinion under s 17(3)(c) is an input. For the other
+person: s 17(2) (the police officer told of a death must inform the State Coroner, an official's duty); reg 17(d)-(g)
+(insurer, a person whose act may have caused the death, union appointee, Commissioner of Police); the other Schedule 3
+fees.
+
+### Cases
+
+`cor-qa-cases.l4`: 164 assertions, all satisfied. 123 written by hand for the roles each question is about (26 of them assert
+that the answer equals the baseline export's on the same facts, wrapped in the answer type; the rest give hand-worked values,
+most from the baseline's own cases, on its fixtures, copied in); 34 for the roles a question is not about, every other input
+ASSUMEd; 7 for the situation values that do not hold, the inputs after them ASSUMEd. The last two groups were generated by a
+scratch script from the parameter list and the table above. Checked on stable l4 1.6.98: 0 errors and 0 warnings in all four
+files, 58 + 164 assertions satisfied, `l4 check cor-qa.l4` succeeds, and a parameter script confirms `my role` first
+everywhere, each shared input identical in name, type and @desc, each situation second and read first in each role branch,
+and no DEONTIC or EVENT input. A negative control on a scratch copy (a wrong expected value; a role branch for the doctor
+that reads the ASSUMEd Death record; a situation check that reads the Kin record) failed 3 cases, as it should, which also
+shows that reading a field of an ASSUMEd record stops the evaluation.
