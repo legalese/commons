@@ -136,15 +136,17 @@ taken, with the same name, type and `@desc` in every question.
 
 | Name | Role | Questions that take it |
 |---|---|---|
-| `I own the land with others` | owner | Can I be made to pay all of the levy on land I own with others, as a co-owner; Is a levy notice served on my co-owner taken to be served on me |
-| `levy on my land has fallen due and is unpaid` | owner | Does interest run on the levy I have not paid; Can the unpaid levy on this land be recovered from me; Is the unpaid levy a charge on my land; Can my land be sold for unpaid levy; Can a caveat be lodged against my land for the unpaid levy |
+| `I own the land with others` | owner | As a co-owner, can I be made to pay all of the levy on our land; Is a levy notice served on my co-owner taken to be served on me |
+| `levy on my land has fallen due and is unpaid` | owner; tenant or occupier | Does interest run on the levy I have not paid; Can the unpaid levy on this land be recovered from me; Is the unpaid levy a charge on my land; Can my land be sold for unpaid levy; Can a caveat be lodged against my land for the unpaid levy; (tenant or occupier) Can the levy on the land I rent or occupy be recovered from me |
 | `the land changed owners during the levy year` | owner | What part of the year's levy falls to me as a successive owner |
-| `I have objected to my levy` | owner | Was my objection in time; May I apply to the State Administrative Tribunal for a review of the objection decision; Must I still pay the levy while my objection is decided; How much is refunded to me when my levy is adjusted down; For how many days after an adjustment notice am I safe from recovery of an underpayment |
+| `I have objected to my levy` | owner | Was my objection in time; May I apply to the State Administrative Tribunal for a review of the objection decision |
+| `I have objected to my levy or my valuation` | owner | Must I still pay the levy while my objection is decided; How much is refunded to me when my levy is adjusted down; For how many days after an adjustment notice am I safe from recovery of an underpayment |
 | `I have paid levy on land I do not own` | tenant or occupier | Must the owner pay me back the levy I paid |
 
 The Act ties these rules to those facts: s 36P(3) and s 36J(3) to land "owned by 2 or more persons"; ss 36S, 36Z, 36O,
-36ZC and 36ZD to levy unpaid after it falls due; s 36T(1)(a) to "successive owners"; ss 36ZE(2)(d), (3), 36ZF and 36ZH
-to an objection; s 36T(2) to a part of the levy "paid by a person other than the owner".
+36ZC and 36ZD to levy unpaid after it falls due; s 36T(1)(a) to "successive owners"; ss 36ZE(2)(d), (3) and 36ZF to an
+objection to the purpose of use, and s 36ZH to that objection or "an objection to the valuation of the land under the
+Valuation of Land Act 1978" (s 36ZH(1)(a)), and to a review by the Tribunal (s 36ZH(2)); s 36T(2) to a part of the levy "paid by a person other than the owner".
 
 **Decisions.**
 
@@ -162,19 +164,37 @@ to an objection; s 36T(2) to a part of the levy "paid by a person other than the
 5. **Answer types** carry `does not arise for you`: `Yes or no`, `Amount`, `Day answer` (a day written YYYYMMDD, as the
    baseline writes it), `Days answer`, and `Notice answer`, the baseline's three notice routes reworded to the second
    person, through a helper that lists every value with no OTHERWISE.
-6. **Names.** Each question's name is a plain first-person question, different from the baseline function's name so
-   the two modules can be imported together.
+6. **Names.** Each question's name is a plain first-person question, different from every baseline function's name
+   even after the site shortens names to their first 60 characters (letters and digits, the rest as hyphens), so the
+   site never runs the baseline's function in the question's place. The first version broke this: "On which day is the
+   gross rental value for my levy fixed" and "May I object to the purpose my land is taken to be used for" were the
+   baseline's names exactly, and "Can I be made to pay all of the levy on land I own with others, as a co-owner" was
+   the baseline's name with a tail past the 60th character; the site ran the baseline's function for the tenant, which
+   answered yes or no instead of `does not arise for you`. They are now "Which day fixes the gross rental value for my
+   levy", "Can I object to the purpose my land is taken to be used for" and "As a co-owner, can I be made to pay all of
+   the levy on our land" (fixed 6 November 2026, after verification).
+7. **The days in the levy year are a yes/no** (fixed 6 November 2026). The s 36T(1)(a) question asked the days in the
+   levy year as a number, and the baseline divides by it; 0 failed with a division by zero. A levy year is "the
+   financial year for which the levy is payable" (FES Act s 3), so it has 365 or 366 days: the layer asks `the levy
+   year has 366 days` and passes 366 or 365 to the baseline's function.
+8. **The s 36ZH questions take their own objection situation** (fixed 6 November 2026). s 36ZH(1) applies to "an
+   objection to the valuation of the land under the Valuation of Land Act 1978" as well as to an objection under the
+   Division, and s 36ZH(2) to a review by the Tribunal, so its three questions take `I have objected to my levy or my
+   valuation`; the two questions only about the s 36ZE objection keep `I have objected to my levy`.
+9. **The tenant's recovery question takes the unpaid-levy situation** (fixed 6 November 2026), as the owner's does:
+   s 36Z(1) recovers levy that is payable and unpaid. Its description now says "the land", so it reads for both roles.
 
 **Not covered for the tenant or occupier.** Whether a lease can make the tenant pay the levy (a question of the lease,
 not the Act; s 36T(2)'s "agreement ... to the contrary" is asked as a fact); a Crown land occupier's other questions
 (the amount, the notice, objection), which are the owner's questions, asked as the owner. The baseline's own gaps
 stand.
 
-**Checks.** 32 exported questions: 29 for the owner, 3 for the tenant or occupier. `esl-qa-cases.l4` has 182 assertions,
-all satisfied: 32 asking each question for the role it is not about, every other input ASSUMEd; 14 asking each
+**Checks.** 32 exported questions: 29 for the owner, 3 for the tenant or occupier. `esl-qa-cases.l4` has 183 assertions,
+all satisfied: 32 asking each question for the role it is not about, every other input ASSUMEd; 15 asking each
 situation question with FALSE and every later input ASSUMEd; for the owner 64 hand-worked cases, each also asserted
 equal to the baseline export's answer on the same facts (64); for the tenant or occupier 8 hand-worked cases. 0 errors
 and 0 warnings in all four files (`esl-levy.l4`; `esl-cases-levy.l4`, 39 satisfied; `esl-qa.l4`; `esl-qa-cases.l4`);
-`l4 check esl-qa.l4` succeeds. A script listed every `@export` with its inputs and checked `my role` first everywhere,
-the five situation inputs identical wherever they occur, each role branch reading its situation first, and no DEONTIC
+`l4 check esl-qa.l4` succeeds. A further script checked that no two exported names, of the layer or the baseline,
+shorten to the same first 60 characters. A script listed every `@export` with its inputs and checked `my role` first everywhere,
+the six situation inputs identical wherever they occur, each role branch reading its situation first, and no DEONTIC
 or EVENT input. Negative control: a case reading an ASSUMEd input fails.
