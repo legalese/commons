@@ -232,8 +232,8 @@ the other role answers `does not arise for you` without reading any other input.
 
 - `I have been given an infringement notice`: the baseline's seat, the "alleged offender" (s 11). It has 22 questions:
   - 21 of the baseline's exports, each calling the baseline function;
-  - "Can an approved sponsor apply for a work and development permit for my infringement", which is settled on the role
-    alone (finding 1: no).
+  - "Is a work and development permit open to me for my infringement notice", which is settled on the role alone
+    (finding 1: no).
 
   The baseline's court-fine branch of that question, and its mentoring question (s 46A(e)), are asked of the second seat.
 - `I have been fined by a court`: a court fine is a Part 4 fine (s 28(1)). Two kinds of question arise for this person:
@@ -282,6 +282,61 @@ each stage-gated question the stages that give `does not arise for you`.
   - Its -1 protected value is `protected whatever its value`, and its 0 is `not protected`.
 
   Each comparison case still checks that the layer's answer is the baseline's, carried into these types.
+- QA5. **No question's name is a baseline export's, even after the site cuts names to 60 characters** (fixed 6 November
+  2026, after verification). The site calls a function by its name with every character but letters, digits, `_` and
+  `-` turned into `-`, cut to 60 characters, and so it ran one question for another where two names agreed that far.
+  Four questions had the baseline export's exact name (L4 told them apart by their types, the site cannot), and two
+  pairs of the layer's own questions agreed in their first 60 characters. Renamed:
+  - "Am I taken to be convicted for driver licensing" to "Am I taken to be convicted of the offence for driver
+    licensing";
+  - "Can a notice of intention to enforce be issued to me" to "Can the Registrar issue me a notice of intention to
+    enforce";
+  - "Must the Registrar give me a time to pay order" to "Must I be given a time to pay order on my application";
+  - "Can an enforcement warrant be issued against me" to "Can the Registrar issue an enforcement warrant against me";
+  - the court fine's "Up to what value is my property of this kind protected from seizure for my fine" to "Up to what
+    value is my property protected from seizure for my court fine";
+  - the notice's "Can an approved sponsor apply for a work and development permit for my infringement" to "Is a work and
+    development permit open to me for my infringement notice".
+
+  The `@export` texts are unchanged. A script over the layer's and the baseline's exports finds no two names alike in
+  their first 60 characters as the site cuts them.
+- QA6. **The law and the body that issued the notice are one input** (fixed 6 November 2026, after verification).
+  `the law and the body that issued the notice`, of the layer's type `The law and the body that issued it`, stands for
+  the baseline's `the law it was issued under` and `the prosecuting authority is approved by the Registrar`: `the Road
+  Traffic (Administration) Act 2008, by an approved prosecuting authority`; `another law listed in Schedule 1, by an
+  approved prosecuting authority`; `a law listed in Schedule 1, by a body not approved by the Registrar`; `a law not
+  listed in Schedule 1`. The baseline reads the two only together: Part 3 applies when the law is listed and the body
+  approved (ss 12, 13(1)), and s 26 asks besides whether the law is the Road Traffic (Administration) Act 2008, which
+  matters only where Part 3 applies. So the four values give every answer the six pairs give. `the law for` and `the
+  approval for` give the baseline's two fields, listing every value; a body not approved is given the second listed
+  law, which nothing then reads. The 8 questions that took the pair take this input.
+- QA7. **Where my last known address is, as one input** (fixed 6 November 2026, after verification). `where my last
+  known address is`, of the layer's type `Where my address is`, stands for the baseline's four address facts, which it
+  reads only through `Is my address in a remote area` (r 2B): `in the metropolitan region, or in an area sharing a
+  postcode with it` (not remote, r 2B(3)); `elsewhere, in an area classed Inner Regional, Outer Regional, Remote or
+  Very Remote Australia, or sharing a postcode with one` (remote, r 2B(2)); `elsewhere, in a Major Cities of Australia
+  area sharing no postcode with a regional or remote area` (not remote). Four helpers give the baseline's fields,
+  listing every value. The remote-area question and the s 19 question take it; the remote-area question now carries
+  r 2B in its choices and answers as the baseline does for each.
+- QA8. **The election question no longer asks about road traffic instalments** (fixed 6 November 2026, after
+  verification). s 21(1)(b) bars the election once "any part" has been paid, and a road traffic instalment (s 14A) is
+  a payment of part. So `I have paid part of it` answers for it, and the layer passes the baseline's instalment field
+  FALSE: wherever it would be TRUE, part has been paid and the baseline answers no either way. The s 14A case now asks
+  the layer with part paid, and the baseline with both.
+- QA9. **The form's probe** (6 November 2026, after verification). The site's form drops a question for a role it is
+  not about only after trying every combination of the question's open yes/no and choice inputs, and gives up past
+  1 024 (and its service has no query plan for a question that is not a yes/no DECIDE). Before QA6-QA8 the election
+  (2 304 combinations), the licence suspension (92 160) and the warrant (1 152) questions stayed open for the person
+  fined by a court, and the suspension question at every fixed stage but the notice of intention to enforce, so the
+  form would have asked their inputs. Now every question has at most 1 024 but one: `Can my driver's licence be
+  suspended for not paying` has 4 608 (the 6 stages, the 4 laws and bodies, paid, withdrawn, elected, time to pay
+  order, the 3 addresses, s 20A(3) and the due date), 768 once the stage is given. On a local jl4-service (the 1.6.98
+  tools) with the site's form engine and 100 random completions per question in every state, the one ground-truth
+  issue left is that question kept open for the person fined by a court (12 states). Not fixed: every remaining input
+  is read by s 19(1), (2A) and s 21H(2)(b) on its own, and the inputs it shares with other questions (paid, withdrawn,
+  elected, time to pay order) are read apart elsewhere (ss 20(1), 20A(2), 24), so a further grouping would no longer
+  give the baseline's answers, or would ask the same facts twice under two names. The form's probe would need to
+  reach 4 608, or the service a query plan for the layer's answer type.
 
 **Not covered for the person fined by a court.**
 
@@ -294,17 +349,19 @@ each stage-gated question the stages that give `does not arise for you`.
 The baseline encodes none of these, and the deposit was read here only to confirm that s 75 reaches a Part 4 warrant
 (s 63).
 
-**Cases.** `fpine-qa-cases.l4` has 216 assertions. All 216 are satisfied, with 0 errors and 0 warnings, on the stable
+**Cases.** `fpine-qa-cases.l4` has 225 assertions. All 225 are satisfied, with 0 errors and 0 warnings, on the stable
 `l4` of VS Code extension 1.6.98 with `JL4_LIBRARY_PATH` unset. They are:
 
 - 26 cases that ask each question for the role it is not about, with every other input ASSUMEd;
-- 55 cases that ask each question with a situation input, for its own role, with each value under which it does not
+- 57 cases that ask each question with a situation input, for its own role, with each value under which it does not
   hold and every later input ASSUMEd: 54 stage values and one refund case for the person given a notice, and 2 for
-  the person fined by a court (57 in all);
-- 62 cases for the person given a notice against values worked by hand, most taken from the baseline's cases (Jake's
-  eRideable notice, k042). The same 62 are asserted again against the baseline export's own answer on the same facts.
-  For those comparisons the cases build the baseline's record field by field (`a notice with`), apart from the
-  layer's builder;
+  the person fined by a court;
+- 66 cases for the person given a notice against values worked by hand, most taken from the baseline's cases (Jake's
+  eRideable notice, k042), and 67 against the baseline export's own answer on the same facts. For those comparisons
+  the cases build the baseline's record field by field (`a notice with`), apart from the layer's builder, and so check
+  QA6 and QA7 against the baseline's own fields (a body not approved, under either listed law; another listed law
+  under s 26; a Major Cities address outside the metropolitan region; a postcode shared with a regional area). Nine
+  were added on 6 November 2026;
 - 9 cases for the person fined by a court, worked by hand from the text.
 
 **Negative controls.** Each of these fails, as it should:
@@ -317,6 +374,7 @@ The baseline encodes none of these, and the deposit was read here only to confir
 
 - The parameter script (`check_params.py`, in the batch scratchpad) checked that:
   - `my role` is first in each of the 26 questions;
+  - no two of the layer's and the baseline's export names agree in their first 60 characters as the site cuts them;
   - the three situation inputs are second, and identical in name, type and `@desc` wherever they occur;
   - each gated role branch reads its situation input first (17 questions take the stage, 13 of them gated);
   - no input is DEONTIC or EVENT.
