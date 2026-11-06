@@ -1,0 +1,1235 @@
+IMPORT prelude
+
+-- Workers' Compensation and Rehabilitation Regulation 2025 (Qld) -- SEAT-NEUTRAL CORE.
+-- The rules use the Regulation's own actors and terms: "the worker", "the claimant", "the applicant", "the insurer",
+-- "the registered person", "the panel", "the court". The injured worker's (claimant's) questions are in wcrr-seat.l4,
+-- which IMPORTs this module and restates no rule.
+--
+-- PROVISIONS COVERED. s 15 (excess period amount); ss 105-109 (NWE); ss 113-115 (medical certificate substitutes,
+-- examinations); s 117 (lump sum by DPI); s 116 and schedule 2 (terminal latent onset injury); s 118 and schedule 3
+-- (DPI of 30% or more); ss 119, 121 and schedule 4 (gratuitous care); ss 122-136 and schedule 5 (s 193A compensation);
+-- ss 145-146 and schedules 6-7 (pneumoconiosis); s 147 and schedule 8 (caring allowance); ss 153-160 (treatment, care
+-- and support: eligibility criteria); ss 173-174 (payment requests); s 176 (review notice); s 185 (adding a
+-- contributor); s 187 (loss of consortium or servitium threshold); s 189 and schedule 17 (general damages); s 190
+-- (structured settlement threshold); s 191(3); ss 193-194 and schedule 9 (pre-proceeding legal costs); s 196(1)(d),
+-- (f) (outlays); ss 206-208 and schedules 10-11 (first responders and eligible employees, with Act ss 36EB-36ED).
+--
+-- FIGURES. Amounts the Regulation states as "N times QOTE" are N times the QOTE for the financial year containing the
+-- day the person names. QOTE for 2026-27 is $1,994.50 (QOTE Notice 2026, s 3(1), deposited in its own subject); for an
+-- earlier year the person gives the figure; otherwise NOTHING (not covered). Act s 205 rounds some chapter 3 amounts up
+-- to the nearest $5 when QOTE varies; this encoding gives the Regulation's figure unrounded (NOTES.md, finding 9).
+--
+-- EDITION. sl-2025-0116, in force from 1 September 2025, the current in-force version on 20 October 2026, deposited at
+-- ../../registers/source-bundle/sl-2025-0116.txt.
+--
+-- BASELINE. Written with the writing-l4-rules skill, design defaults of 2026-10-18. No pipeline, no coverage table,
+-- no independent test pass, no human gate. Not for public use as advice. See NOTES.md.
+
+§ `Workers' Compensation and Rehabilitation Regulation 2025 (Qld) -- seat-neutral core`
+
+§§ `Small helpers`
+
+GIVEN `a` IS A NUMBER
+      `b` IS A NUMBER
+GIVETH A NUMBER
+`the greater of` `a` `and` `b` MEANS
+    IF `a` AT LEAST `b` THEN `a` ELSE `b`
+
+GIVEN `a` IS A NUMBER
+      `b` IS A NUMBER
+GIVETH A NUMBER
+`the lesser of` `a` `and` `b` MEANS
+    IF `a` AT MOST `b` THEN `a` ELSE `b`
+
+GIVEN `x` IS A NUMBER
+GIVETH A NUMBER
+`nil if negative` `x` MEANS
+    IF `x` LESS THAN 0 THEN 0 ELSE `x`
+
+GIVEN `x` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `is a whole number` `x` IF
+    TRUNC `x` 0 EQUALS `x`
+
+-- The entry at a 0-based position of a table column; 0 past the end (callers check the range first).
+GIVEN `i`          IS A NUMBER
+      `the column` IS A LIST OF NUMBER
+GIVETH A NUMBER
+`entry at` `i` `of` `the column` MEANS
+    IF `i` LESS THAN 0 OR `i` AT LEAST count `the column`
+    THEN 0
+    ELSE at `the column` `i`
+
+§§ `Days, months and business days`
+
+-- DATE_SERIAL MODULO 7 is 0 on a Sunday, 1 on a Monday ... 6 on a Saturday (1 July 2026, a Wednesday, is 3).
+GIVEN `the day` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `is a Monday to Friday` `the day` IF
+        (DATE_SERIAL `the day` MODULO 7) AT LEAST 1
+    AND (DATE_SERIAL `the day` MODULO 7) AT MOST 5
+
+GIVEN `n`         IS A NUMBER
+      `the start` IS A DATE
+GIVETH A DATE
+`the calendar day` `n` `days after` `the start` MEANS
+    DATE_FROM_SERIAL (DATE_SERIAL `the start` PLUS `n`)
+
+GIVEN `n`         IS A NUMBER
+      `the start` IS A DATE
+GIVETH A DATE
+`the date` `n` `Monday-to-Friday days after` `the start` MEANS
+    IF `n` AT MOST 0
+    THEN `the start`
+    ELSE IF `is a Monday to Friday` (`the calendar day` 1 `days after` `the start`)
+         THEN `the date` (`n` MINUS 1) `Monday-to-Friday days after` (`the calendar day` 1 `days after` `the start`)
+         ELSE `the date` `n` `Monday-to-Friday days after` (`the calendar day` 1 `days after` `the start`)
+
+-- "Business day" is not defined in the Regulation; the Acts Interpretation Act 1954 (not deposited) excludes
+-- Saturdays, Sundays and public holidays. READING: the count skips Saturdays and Sundays, and adds one business day
+-- for each Queensland public holiday on a Monday to Friday in the period, which the person states.
+GIVEN `n`               IS A NUMBER
+      `the start`       IS A DATE
+      `public holidays` IS A NUMBER
+GIVETH A DATE
+`the day` `n` `business days after` `the start` `with` `public holidays` `public holidays in between` MEANS
+    `the date` (`n` PLUS `public holidays`) `Monday-to-Friday days after` `the start`
+
+-- Monday-to-Friday days after the first day, up to and including the last (0 if the last is not after the first).
+GIVEN `the first day` IS A DATE
+      `the last day`  IS A DATE
+GIVETH A NUMBER
+`the Monday-to-Friday days after` `the first day` `up to` `the last day` MEANS
+    IF DATE_SERIAL `the last day` AT MOST DATE_SERIAL `the first day`
+    THEN 0
+    ELSE IF `is a Monday to Friday` `the last day`
+         THEN 1 PLUS `the Monday-to-Friday days after` `the first day` `up to` (`the calendar day` (0 MINUS 1) `days after` `the last day`)
+         ELSE `the Monday-to-Friday days after` `the first day` `up to` (`the calendar day` (0 MINUS 1) `days after` `the last day`)
+
+GIVEN `y` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `is a leap year` `y` IF
+        ((`y` MODULO 4) EQUALS 0 AND (NOT ((`y` MODULO 100) EQUALS 0)))
+    OR  (`y` MODULO 400) EQUALS 0
+
+GIVEN `m` IS A NUMBER
+      `y` IS A NUMBER
+GIVETH A NUMBER
+`the number of days in month` `m` `of` `y` MEANS
+    IF `m` EQUALS 2
+    THEN IF `is a leap year` `y` THEN 29 ELSE 28
+    ELSE IF `m` EQUALS 4 OR `m` EQUALS 6 OR `m` EQUALS 9 OR `m` EQUALS 11
+         THEN 30
+         ELSE 31
+
+-- READING: "within 6 months after" a day ends on the same day of the month 6 months on, or that month's last day
+-- where it is shorter (31 August to 28 February).
+GIVEN `k`       IS A NUMBER
+      `the day` IS A DATE
+GIVETH A DATE
+`the same day` `k` `months after` `the day` MEANS
+    DATE_FROM_DMY (`the lesser of` (DATE_DAY `the day`) `and` (`the number of days in month` `the month` `of` `the year`)) `the month` `the year`
+    WHERE
+        `months from year 0` MEANS (DATE_YEAR `the day` TIMES 12) PLUS (DATE_MONTH `the day` MINUS 1) PLUS `k`
+        `the year`  MEANS FLOOR (`months from year 0` DIVIDED BY 12)
+        `the month` MEANS (`months from year 0` MODULO 12) PLUS 1
+
+-- The year in which the financial year containing a day begins (1 July to 30 June).
+GIVEN `the day` IS A DATE
+GIVETH A NUMBER
+`the financial year starting year of` `the day` MEANS
+    IF DATE_MONTH `the day` AT LEAST 7
+    THEN DATE_YEAR `the day`
+    ELSE DATE_YEAR `the day` MINUS 1
+
+§§ `QOTE (Act s 10A; QOTE Notice 2026)`
+
+-- QOTE Notice 2026, s 3(1): "For section 10A(2)(a) of the Act, QOTE for the 2026-2027 financial year is $1,994.50."
+`QOTE for 2026-27` MEANS 1994.50
+
+-- The QOTE for the financial year containing a day: the Notice for 2026-27; for an earlier year, the caller's figure if
+-- one is given (more than 0); otherwise, and for any day after 30 June 2027, NOTHING (not covered).
+GIVEN `the day`                  IS A DATE
+      `QOTE for an earlier year` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`the QOTE for the financial year containing` `the day` `given` `QOTE for an earlier year` MEANS
+    IF `the financial year starting year of` `the day` EQUALS 2026
+    THEN JUST `QOTE for 2026-27`
+    ELSE IF     `the financial year starting year of` `the day` LESS THAN 2026
+            AND `QOTE for an earlier year` GREATER THAN 0
+         THEN JUST `QOTE for an earlier year`
+         ELSE NOTHING
+
+-- "N times QOTE", in dollars, when the QOTE is known.
+GIVEN `n`      IS A NUMBER
+      `qote`   IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+`the multiple` `n` `of` `qote` MEANS
+    CONSIDER `qote`
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST `q` THEN JUST (`n` TIMES `q`)
+
+§§ `Part 2, division 2 -- s 15 excess period`
+
+-- s 15: "For section 65(2) of the Act, the amount prescribed ... is the lesser of the following-- (a) QOTE; (b) the
+-- amount of the weekly payment of compensation payable to the worker under chapter 3, part 9 of the Act." Act s 65(2):
+-- the excess period ends at the end of the day the weekly compensation paid exceeds that amount.
+GIVEN `the QOTE`           IS A NUMBER
+      `the weekly payment` IS A NUMBER
+GIVETH A NUMBER
+`the s 15 prescribed amount` `the QOTE` `the weekly payment` MEANS
+    `the lesser of` `the QOTE` `and` `the weekly payment`
+
+§§ `Part 4, division 1 -- normal weekly earnings (ss 105-109)`
+
+DECLARE `Earnings item` IS ONE OF
+    `overtime`
+    `higher duties`
+    `penalties`
+    `an allowance`
+    `any other earnings`
+
+-- s 106(1): overtime, higher duties, penalties and allowances "in relation to work required by the worker's employer,
+-- may be taken into account but only if the amounts-- (a) are of a regular nature; and (b) would have continued if not
+-- for the worker's injury." (2): "However, amounts mentioned in the Act, schedule 6, definition wages, paragraphs (a) to
+-- (d) must not be taken into account". JUST TRUE: may be counted; JUST FALSE: the "only if" fails, or (2) excludes it;
+-- NOTHING: s 106 does not speak (other earnings, or work the employer did not require).
+GIVEN `the item`                                       IS AN `Earnings item`
+      `it relates to work the employer required`       IS A BOOLEAN
+      `it is of a regular nature`                      IS A BOOLEAN
+      `it would have continued but for the injury`     IS A BOOLEAN
+      `it is within paragraphs (a) to (d) of the Act's definition of wages` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`may it be taken into account in NWE under s 106` `the item` `it relates to work the employer required` `it is of a regular nature` `it would have continued but for the injury` `it is within paragraphs (a) to (d) of the Act's definition of wages` MEANS
+    IF `it is within paragraphs (a) to (d) of the Act's definition of wages`
+    THEN JUST FALSE
+    ELSE CONSIDER `the item`
+         WHEN `any other earnings` THEN NOTHING
+         OTHERWISE
+            IF NOT `it relates to work the employer required`
+            THEN NOTHING
+            ELSE IF `it is of a regular nature` AND `it would have continued but for the injury`
+                 THEN JUST TRUE
+                 ELSE JUST FALSE
+
+DECLARE `NWE basis` IS ONE OF
+    `the worker's own earnings in the 12 months before the injury (ss 105, 106)`
+    `regard must be had to the NWE of a comparable person employed by the same employer (s 107(2)(a))`
+    `regard must be had to the NWE of a comparable person employed by another employer (s 107(2)(b))`
+    `a calculation the insurer considers fair, which is taken to be the NWE (s 109)`
+
+-- s 107(1): applies "if it is impracticable to calculate the worker's earnings in the 12 months ... because of-- (a)
+-- the period for which the worker has been employed; or (b) the terms of the worker's employment." (2)(a): a person of
+-- the same employer, same or comparable terms, same or comparable work; (b) "if paragraph (a) does not apply", a person
+-- of another employer. s 109: "If an insurer considers that the calculation ... would be unfair", the insurer's fair
+-- calculation "is taken to be the worker's NWE". The insurer's view is an input (a judgment, answered conditionally).
+GIVEN `impracticable because of the period employed or the terms of employment` IS A BOOLEAN
+      `the same employer has a comparable person`                               IS A BOOLEAN
+      `the insurer considers the calculation would be unfair`                   IS A BOOLEAN
+GIVETH AN `NWE basis`
+`the basis of the NWE` `impracticable because of the period employed or the terms of employment` `the same employer has a comparable person` `the insurer considers the calculation would be unfair` MEANS
+    IF `the insurer considers the calculation would be unfair`
+    THEN `a calculation the insurer considers fair, which is taken to be the NWE (s 109)`
+    ELSE IF `impracticable because of the period employed or the terms of employment`
+         THEN IF `the same employer has a comparable person`
+              THEN `regard must be had to the NWE of a comparable person employed by the same employer (s 107(2)(a))`
+              ELSE `regard must be had to the NWE of a comparable person employed by another employer (s 107(2)(b))`
+         ELSE `the worker's own earnings in the 12 months before the injury (ss 105, 106)`
+
+-- s 108: "This section applies if, at the time the worker's injury was sustained, the worker was employed under
+-- concurrent contracts of service with 2 or more employers." (2): NWE is calculated "as if earnings under all the
+-- contracts were earnings in the employment of the employer for whom the worker was working when the injury was
+-- sustained."
+GIVEN `concurrent contracts of service with 2 or more employers` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `earnings under all the contracts are counted (s 108)` `concurrent contracts of service with 2 or more employers` IF
+    `concurrent contracts of service with 2 or more employers`
+
+§§ `Part 4, division 2 -- applications (ss 113-115)`
+
+DECLARE `Declaration effect` IS ONE OF
+    `s 113 does not apply: the declaration does not stand in for a medical certificate`
+    `taken to be the certificate; the insurer may accept it as proof of incapacity for not more than 3 days`
+    `taken to be the certificate, but it cannot be accepted again as proof of incapacity for an injury in this event`
+    `taken to be the certificate; for a fatal injury s 113(3) sets no limit`
+
+-- s 113(1): applies if (a) an application is made under Act s 132, 132A or 132B, (b) not accompanied by a medical
+-- certificate, and (c) a doctor, nurse practitioner or registered dentist "was not available to attend the worker".
+-- (2): the applicant must give a declaration in the approved form. (3): "For a non-fatal injury, the declaration-- (a)
+-- may be accepted by the insurer as proof of incapacity of the worker only once for injury to the worker in any 1
+-- event; and (b) is acceptable proof of incapacity of the worker for not more than 3 days." (4): "The declaration is
+-- taken to be a certificate in the approved form".
+GIVEN `the application is accompanied by a medical certificate`  IS A BOOLEAN
+      `no doctor, nurse practitioner or dentist was available`   IS A BOOLEAN
+      `a declaration in the approved form was given`             IS A BOOLEAN
+      `the injury is fatal`                                      IS A BOOLEAN
+      `a declaration was already accepted for injury in this event` IS A BOOLEAN
+GIVETH A `Declaration effect`
+`the effect of the s 113 declaration` `the application is accompanied by a medical certificate` `no doctor, nurse practitioner or dentist was available` `a declaration in the approved form was given` `the injury is fatal` `a declaration was already accepted for injury in this event` MEANS
+    IF `the application is accompanied by a medical certificate`
+        OR (NOT `no doctor, nurse practitioner or dentist was available`)
+        OR (NOT `a declaration in the approved form was given`)
+    THEN `s 113 does not apply: the declaration does not stand in for a medical certificate`
+    ELSE IF `the injury is fatal`
+         THEN `taken to be the certificate; for a fatal injury s 113(3) sets no limit`
+         ELSE IF `a declaration was already accepted for injury in this event`
+              THEN `taken to be the certificate, but it cannot be accepted again as proof of incapacity for an injury in this event`
+              ELSE `taken to be the certificate; the insurer may accept it as proof of incapacity for not more than 3 days`
+
+`the s 113(3)(b) days` MEANS 3
+
+-- Days of incapacity a s 113 declaration can prove: at most 3, once per event, for a non-fatal injury; NOTHING for a
+-- fatal injury (no limit is stated); 0 where it cannot be accepted.
+GIVEN `the effect`                  IS A `Declaration effect`
+      `days of incapacity claimed`  IS A NUMBER
+GIVETH A MAYBE NUMBER
+`the days of incapacity the declaration can prove` `the effect` `days of incapacity claimed` MEANS
+    CONSIDER `the effect`
+    WHEN `taken to be the certificate; the insurer may accept it as proof of incapacity for not more than 3 days`
+        THEN JUST (`the lesser of` `days of incapacity claimed` `and` `the s 113(3)(b) days`)
+    WHEN `taken to be the certificate; for a fatal injury s 113(3) sets no limit` THEN NOTHING
+    OTHERWISE JUST 0
+
+-- s 114(1): applies if an application is made, not accompanied by a medical certificate, and "the worker sustained the
+-- injury outside Queensland". (2)-(3): a document "substantially to the same effect as the medical certificate,
+-- prepared by a person who holds a qualification corresponding to a doctor, nurse practitioner or registered dentist
+-- who attends the worker" is "taken to be a certificate in the approved form".
+GIVEN `the application is accompanied by a medical certificate` IS A BOOLEAN
+      `the injury was sustained outside Queensland`             IS A BOOLEAN
+      `the document is substantially to the same effect as the certificate` IS A BOOLEAN
+      `its author holds a corresponding qualification and attended the worker` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `the document is taken to be the certificate (s 114)` `the application is accompanied by a medical certificate` `the injury was sustained outside Queensland` `the document is substantially to the same effect as the certificate` `its author holds a corresponding qualification and attended the worker` IF
+        (NOT `the application is accompanied by a medical certificate`)
+    AND `the injury was sustained outside Queensland`
+    AND `the document is substantially to the same effect as the certificate`
+    AND `its author holds a corresponding qualification and attended the worker`
+
+-- s 115(1)-(3): a requirement to submit to a personal examination "must be made by written notice", stating (a) the
+-- registered person's name, (b) "if the registered person is a specialist--the field of specialty", (c) "the day, time
+-- and place"; and the registered person "must not be employed by the insurer giving the notice". A bare "must" not
+-- done: FORK (case by case, ruled 2026-11-05) -- the answer taken is FALSE ("not made as s 115 requires"); the other
+-- reading is that the requirement stands and only its form is defective.
+GIVEN `made by written notice`                                IS A BOOLEAN
+      `the notice names the registered person`                IS A BOOLEAN
+      `the registered person is a specialist`                 IS A BOOLEAN
+      `the notice states the field of specialty`              IS A BOOLEAN
+      `the notice states the day, time and place`             IS A BOOLEAN
+      `the registered person is employed by the insurer`      IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `the examination requirement is made as s 115 requires` `made by written notice` `the notice names the registered person` `the registered person is a specialist` `the notice states the field of specialty` `the notice states the day, time and place` `the registered person is employed by the insurer` IF
+        `made by written notice`
+    AND `the notice names the registered person`
+    AND ((NOT `the registered person is a specialist`) OR `the notice states the field of specialty`)
+    AND `the notice states the day, time and place`
+    AND (NOT `the registered person is employed by the insurer`)
+
+-- s 115(4): the registered person "must, within 10 days after the examination, give the insurer-- (a) a written report
+-- of the examination; and (b) an itemised account". Calendar days (the text says "days", not "business days").
+`the s 115(4) days` MEANS 10
+
+GIVEN `the day of the examination` IS A DATE
+GIVETH A DATE
+`the last day for the examination report` `the day of the examination` MEANS
+    `the calendar day` `the s 115(4) days` `days after` `the day of the examination`
+
+§§ `Part 4, division 3 -- lump sums for permanent impairment (ss 116-121, schedules 2-4)`
+
+-- s 117: "the lump sum compensation for a worker's DPI is calculated by multiplying the maximum statutory compensation
+-- by the worker's DPI." Act schedule 6: maximum statutory compensation is "the amount of compensation payable under
+-- chapter 3, part 6", which Act s 140 fixes at 216.15 times QOTE (borrowed from the Act; finding 9 on rounding).
+`the Act s 140 multiple` MEANS 216.15
+
+GIVEN `the DPI percentage`                   IS A NUMBER
+      `the maximum statutory compensation`   IS A NUMBER
+GIVETH A NUMBER
+`the s 117 lump sum for a DPI of` `the DPI percentage` `with maximum statutory compensation of` `the maximum statutory compensation` MEANS
+    `the maximum statutory compensation` TIMES (`the DPI percentage` DIVIDED BY 100)
+
+-- Schedule 2 (s 116; Act s 128B(2)(c)): additional lump sum for a terminal latent onset injury, by "the age of the
+-- worker when the worker lodges the worker's application": 70 or under 216.15; 71 194.54; 72 172.92; 73 151.31; 74
+-- 126.69; 75 108.08; 76 86.47; 77 64.86; 78 43.24; 79 21.63; 80 or over 0 (times QOTE). Item 74 breaks the steps of
+-- about 21.61 (finding 1); it is encoded as printed.
+`schedule 2 multiples for ages 71 to 79` MEANS LIST 194.54, 172.92, 151.31, 126.69, 108.08, 86.47, 64.86, 43.24, 21.63
+
+GIVEN `the age at lodgement` IS A NUMBER
+GIVETH A NUMBER
+`the schedule 2 multiple of QOTE for age` `the age at lodgement` MEANS
+    IF `the age at lodgement` AT MOST 70
+    THEN 216.15
+    ELSE IF `the age at lodgement` AT LEAST 80
+         THEN 0
+         ELSE `entry at` (FLOOR `the age at lodgement` MINUS 71) `of` `schedule 2 multiples for ages 71 to 79`
+
+-- Schedule 3 (s 118; Act s 192): DPI 30% to 74% one entry each, "75-100" 216.15 times QOTE. A DPI below 30% is outside
+-- the schedule's scope (NOTHING: a scope limit with no "only", ruled 2026-11-05 (c)); so is a DPI that is not a whole
+-- percentage, which the column does not list (finding 8).
+`schedule 3 multiples for DPI 30 to 74` MEANS LIST 8.15, 12.77, 17.39, 22.01, 26.63, 31.26, 35.88, 40.50, 45.12, 49.75, 54.37, 58.99, 63.61, 68.23, 72.86, 77.48, 82.10, 86.73, 91.35, 95.97, 100.59, 105.21, 109.83, 114.46, 119.08, 123.70, 128.32, 132.95, 137.57, 142.19, 146.82, 151.44, 156.06, 160.68, 165.31, 169.93, 174.55, 179.17, 183.80, 188.42, 193.04, 197.66, 202.28, 206.91, 211.53
+
+GIVEN `the DPI percentage` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`the schedule 3 multiple of QOTE for a DPI of` `the DPI percentage` MEANS
+    IF `the DPI percentage` LESS THAN 30 OR `the DPI percentage` GREATER THAN 100 OR (NOT (`is a whole number` `the DPI percentage`))
+    THEN NOTHING
+    ELSE IF `the DPI percentage` AT LEAST 75
+         THEN JUST 216.15
+         ELSE JUST (`entry at` (`the DPI percentage` MINUS 30) `of` `schedule 3 multiples for DPI 30 to 74`)
+
+-- Schedule 4 (s 121; Act s 193(6)): gratuitous care, by DPI band and the modified barthel index (MBI) range: moderate
+-- 50-74, severe 25-49, total 0-24. A DPI under 15% or an MBI of 75 or more is outside the schedule (NOTHING).
+DECLARE `Dependency range` IS ONE OF `minimal`, `mild`, `moderate`, `severe`, `total`
+
+-- Schedule 8, s 2(2) (and schedule 4, s 2(3) for the last three): minimal 91-99, mild 75-90, moderate 50-74, severe
+-- 25-49, total 0-24. A score of 100 is in no range (NOTHING). READING: a score between two ranges (MBI totals are whole
+-- numbers) goes to the range whose lower bound it reaches.
+GIVEN `the MBI total score` IS A NUMBER
+GIVETH A MAYBE `Dependency range`
+`the dependency range for an MBI score of` `the MBI total score` MEANS
+    BRANCH IF `the MBI total score` LESS THAN 0 OR `the MBI total score` GREATER THAN 99 THEN NOTHING
+           IF `the MBI total score` AT LEAST 91 THEN JUST `minimal`
+           IF `the MBI total score` AT LEAST 75 THEN JUST `mild`
+           IF `the MBI total score` AT LEAST 50 THEN JUST `moderate`
+           IF `the MBI total score` AT LEAST 25 THEN JUST `severe`
+           OTHERWISE JUST `total`
+
+-- Schedule 4 column 3 by DPI band (15-39, 40-49, 50-59, 60-69, 70-79, 80-89, 90-94, 95-100).
+`schedule 4 moderate` MEANS LIST 1.99, 3.70, 16.35, 40.84, 57.16, 65.32, 73.49, 81.63
+`schedule 4 severe`   MEANS LIST 3.97, 7.52, 32.68, 73.49, 106.14, 132.00, 146.93, 163.28
+`schedule 4 total`    MEANS LIST 5.94, 11.21, 49.00, 97.97, 146.93, 195.89, 228.53, 244.86
+
+GIVEN `the DPI percentage` IS A NUMBER
+GIVETH A NUMBER
+`the schedule 4 DPI band index` `the DPI percentage` MEANS
+    BRANCH IF `the DPI percentage` AT LEAST 95 THEN 7
+           IF `the DPI percentage` AT LEAST 90 THEN 6
+           IF `the DPI percentage` AT LEAST 80 THEN 5
+           IF `the DPI percentage` AT LEAST 70 THEN 4
+           IF `the DPI percentage` AT LEAST 60 THEN 3
+           IF `the DPI percentage` AT LEAST 50 THEN 2
+           IF `the DPI percentage` AT LEAST 40 THEN 1
+           OTHERWISE 0
+
+GIVEN `the DPI percentage`  IS A NUMBER
+      `the MBI total score` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`the schedule 4 multiple of QOTE for a DPI of` `the DPI percentage` `and an MBI score of` `the MBI total score` MEANS
+    IF `the DPI percentage` LESS THAN 15 OR `the DPI percentage` GREATER THAN 100
+    THEN NOTHING
+    ELSE CONSIDER `the dependency range for an MBI score of` `the MBI total score`
+         WHEN JUST `moderate` THEN JUST (`entry at` (`the schedule 4 DPI band index` `the DPI percentage`) `of` `schedule 4 moderate`)
+         WHEN JUST `severe`   THEN JUST (`entry at` (`the schedule 4 DPI band index` `the DPI percentage`) `of` `schedule 4 severe`)
+         WHEN JUST `total`    THEN JUST (`entry at` (`the schedule 4 DPI band index` `the DPI percentage`) `of` `schedule 4 total`)
+         OTHERWISE NOTHING
+
+§§ `Part 4, division 4 -- s 193A compensation (ss 122-136, schedule 5)`
+
+-- s 126(2): "The worker is entitled to section 193A compensation only if-- (a) the insurer is satisfied, on the balance
+-- of probabilities, that the worker's employer is, or would have been, liable to pay damages to the worker; but (b) the
+-- worker can not seek damages because of the application of former section 237(1)(a)(i)" (the Act as in force from 15
+-- October 2013 until 31 January 2015). s 131(3): the condition "is taken not to be satisfied" if, after a notice that
+-- the insurer lacks information, the worker does not give it in time. The insurer's satisfaction is an input.
+GIVEN `the insurer is satisfied the employer is or would have been liable for damages` IS A BOOLEAN
+      `former s 237(1)(a)(i) stops me seeking damages`                               IS A BOOLEAN
+      `I was told the insurer lacked information and did not give it in time`        IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `the s 193A qualifying condition is satisfied` `the insurer is satisfied the employer is or would have been liable for damages` `former s 237(1)(a)(i) stops me seeking damages` `I was told the insurer lacked information and did not give it in time` IF
+        `the insurer is satisfied the employer is or would have been liable for damages`
+    AND `former s 237(1)(a)(i) stops me seeking damages`
+    AND (NOT `I was told the insurer lacked information and did not give it in time`)
+
+-- Schedule 5, s 2: DPI 1% $6,298; 2% $12,596; 3% $18,894; 4% $25,192; 5% $31,490. Other DPIs are outside the scale.
+`schedule 5 DPI amounts` MEANS LIST 6298, 12596, 18894, 25192, 31490
+
+GIVEN `the DPI percentage` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`the schedule 5 DPI amount for a DPI of` `the DPI percentage` MEANS
+    IF `the DPI percentage` LESS THAN 1 OR `the DPI percentage` GREATER THAN 5 OR (NOT (`is a whole number` `the DPI percentage`))
+    THEN NOTHING
+    ELSE JUST (`entry at` (`the DPI percentage` MINUS 1) `of` `schedule 5 DPI amounts`)
+
+-- Schedule 5, s 3(1)-(2): with a physical and a psychological notice from 1 event, "only ... 1 payment", at the higher
+-- DPI. (3)-(4): if paid on a first notice and a later notice "for a different type of injury" states a higher DPI "but
+-- is not more than 5%", another payment at the DPI "equal to the difference". Example: 3% then 5%: $12,596.
+GIVEN `the first notice's DPI`  IS A NUMBER
+      `the second notice's DPI` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`the further schedule 5 DPI amount after a second notice` `the first notice's DPI` `the second notice's DPI` MEANS
+    IF `the second notice's DPI` GREATER THAN `the first notice's DPI` AND `the second notice's DPI` AT MOST 5
+    THEN `the schedule 5 DPI amount for a DPI of` (`the second notice's DPI` MINUS `the first notice's DPI`)
+    ELSE JUST 0
+
+-- Schedule 5, s 4: legal cost amounts "if a worker has engaged a lawyer and incurs legal costs" for: giving information
+-- under s 131, $1,700; attending a s 133 meeting with the lawyer, $2,000; applying to the panel under s 136, $1,000;
+-- giving information to the panel under s 136(2)(c), $1,700. Example: $31,490 + $4,700 = $36,190.
+GIVEN `giving information to the insurer under s 131`   IS A BOOLEAN
+      `attending a s 133 meeting with my lawyer`        IS A BOOLEAN
+      `applying to the panel under s 136`               IS A BOOLEAN
+      `giving information to the panel under s 136(2)(c)` IS A BOOLEAN
+GIVETH A NUMBER
+`the schedule 5 legal cost amount` `giving information to the insurer under s 131` `attending a s 133 meeting with my lawyer` `applying to the panel under s 136` `giving information to the panel under s 136(2)(c)` MEANS
+        (IF `giving information to the insurer under s 131` THEN 1700 ELSE 0)
+    PLUS (IF `attending a s 133 meeting with my lawyer` THEN 2000 ELSE 0)
+    PLUS (IF `applying to the panel under s 136` THEN 1000 ELSE 0)
+    PLUS (IF `giving information to the panel under s 136(2)(c)` THEN 1700 ELSE 0)
+
+`the s 130 business days`        MEANS 10
+`the s 131 business days`        MEANS 60
+`the s 132(3)(a) business days`  MEANS 60
+`the s 132(3)(b) business days`  MEANS 10
+`the s 136 business days`        MEANS 20
+
+-- s 132(3): "The insurer must make the decision within the later of the following periods to end-- (a) 60 business
+-- days after receiving the information from the worker; (b) if the insurer meets with the worker under section 133
+-- within 60 business days after receiving the information ... --10 business days after the day of the meeting."
+GIVEN `the day the insurer received the information` IS A DATE
+      `a s 133 meeting was held`                     IS A BOOLEAN
+      `the day of the meeting`                       IS A DATE
+      `public holidays`                              IS A NUMBER
+GIVETH A DATE
+`the s 132(3) decision day` `the day the insurer received the information` `a s 133 meeting was held` `the day of the meeting` `public holidays` MEANS
+    IF      `a s 133 meeting was held`
+        AND DATE_SERIAL `the day of the meeting` AT MOST DATE_SERIAL `the 60th`
+        AND DATE_SERIAL `ten after the meeting` GREATER THAN DATE_SERIAL `the 60th`
+    THEN `ten after the meeting`
+    ELSE `the 60th`
+    WHERE
+        `the 60th` MEANS `the day` `the s 132(3)(a) business days` `business days after` `the day the insurer received the information` `with` `public holidays` `public holidays in between`
+        `ten after the meeting` MEANS `the day` `the s 132(3)(b) business days` `business days after` `the day of the meeting` `with` `public holidays` `public holidays in between`
+
+§§ `Part 4, division 5 -- pneumoconiosis (ss 145-146, schedules 6-7)`
+
+-- Schedule 6, s 2(1), table 1: the ILO categories in row order, with their scores.
+DECLARE `Chest x-ray reading` IS ONE OF
+    `category 0/-`, `category 0/0`, `category 0/1`
+    `category 1/0`, `category 1/1`, `category 1/2`
+    `category 2/1`, `category 2/2`, `category 2/3`
+    `category 3/2`, `category 3/3`, `category 3/+`
+    `category A`, `category B`, `category C`
+    `no such reading taken`
+
+GIVEN `r` IS A `Chest x-ray reading`
+GIVETH A NUMBER
+`the row of` `r` MEANS
+    CONSIDER `r`
+    WHEN `category 0/-` THEN 0
+    WHEN `category 0/0` THEN 1
+    WHEN `category 0/1` THEN 2
+    WHEN `category 1/0` THEN 3
+    WHEN `category 1/1` THEN 4
+    WHEN `category 1/2` THEN 5
+    WHEN `category 2/1` THEN 6
+    WHEN `category 2/2` THEN 7
+    WHEN `category 2/3` THEN 8
+    WHEN `category 3/2` THEN 9
+    WHEN `category 3/3` THEN 10
+    WHEN `category 3/+` THEN 11
+    WHEN `category A`   THEN 12
+    WHEN `category B`   THEN 13
+    WHEN `category C`   THEN 14
+    WHEN `no such reading taken` THEN 0 MINUS 1
+
+`schedule 6 scores by row` MEANS LIST 0, 0, 0, 15, 20, 25, 50, 55, 60, 75, 80, 85, 90, 95, 100
+
+GIVEN `row` IS A NUMBER
+GIVETH A NUMBER
+`the corresponding score of row` `row` MEANS
+    `entry at` `row` `of` `schedule 6 scores by row`
+
+GIVEN `r` IS A `Chest x-ray reading`
+GIVETH A NUMBER
+`the corresponding score of` `r` MEANS
+    `the corresponding score of row` (`the row of` `r`)
+
+-- The leading digit group of a row: 0 for 0/x, 1 for 1/x, 2 for 2/x, 3 for 3/x, 4 for categories A to C.
+GIVEN `row` IS A NUMBER
+GIVETH A NUMBER
+`the digit group of row` `row` MEANS
+    IF `row` AT LEAST 12 THEN 4 ELSE FLOOR (`row` DIVIDED BY 3)
+
+-- Schedule 6, s 3: "Two categories are consecutive categories if the categories-- (a) start with the same digit, other
+-- than 0; and (b) appear in consecutive rows".
+GIVEN `a` IS A `Chest x-ray reading`
+      `b` IS A `Chest x-ray reading`
+GIVETH A BOOLEAN
+DECIDE `are consecutive categories` `a` `b` IF
+        `ga` EQUALS `gb`
+    AND `ga` AT LEAST 1
+    AND `ga` AT MOST 3
+    AND (`ra` MINUS `rb` EQUALS 1 OR `rb` MINUS `ra` EQUALS 1)
+    WHERE
+        `ra` MEANS `the row of` `a`
+        `rb` MEANS `the row of` `b`
+        `ga` MEANS `the digit group of row` `ra`
+        `gb` MEANS `the digit group of row` `rb`
+
+GIVEN `r` IS A `Chest x-ray reading`
+GIVETH A BOOLEAN
+DECIDE `is a 0 category` `r` IF
+    `the row of` `r` AT LEAST 0 AND `the row of` `r` AT MOST 2
+
+GIVEN `r` IS A `Chest x-ray reading`
+GIVETH A BOOLEAN
+DECIDE `is category A, B or C` `r` IF
+    `the row of` `r` AT LEAST 12
+
+GIVEN `r` IS A `Chest x-ray reading`
+GIVETH A BOOLEAN
+DECIDE `is taken` `r` IF
+    `the row of` `r` AT LEAST 0
+
+-- The higher of two readings' scores where the pair settles the score under s 4(3)(b)-(c) or s 5(4)(a)-(b)
+-- (consecutive categories, or two of categories A to C); NOTHING otherwise.
+GIVEN `a` IS A `Chest x-ray reading`
+      `b` IS A `Chest x-ray reading`
+GIVETH A MAYBE NUMBER
+`the pair score of` `a` `and` `b` MEANS
+    IF `are consecutive categories` `a` `b` OR (`is category A, B or C` `a` AND `is category A, B or C` `b`)
+    THEN JUST (`the greater of` (`the corresponding score of` `a`) `and` (`the corresponding score of` `b`))
+    ELSE NOTHING
+
+DECLARE `Pneumoconiosis score answer` IS ONE OF
+    `the pneumoconiosis score is` HAS `score` IS A NUMBER
+    `a third reading of the same chest x-ray is needed (schedule 6, s 5)`
+    `a fourth and fifth reading of the same chest x-ray are needed (schedule 6, s 6)`
+
+-- Schedule 6, s 4: two readings. (2) the same category: its score. (3)(a) any combination of 0/-, 0/0, 0/1: 0; (b)
+-- consecutive categories: the higher score; (c) any combination of A, B, C: the higher score. Otherwise s 5.
+GIVEN `the first` IS A `Chest x-ray reading`
+      `the second` IS A `Chest x-ray reading`
+GIVETH A MAYBE NUMBER
+`the two-reading score of` `the first` `and` `the second` MEANS
+    IF `the row of` `the first` EQUALS `the row of` `the second`
+    THEN JUST (`the corresponding score of` `the first`)
+    ELSE IF `is a 0 category` `the first` AND `is a 0 category` `the second`
+         THEN JUST 0
+         ELSE `the pair score of` `the first` `and` `the second`
+
+-- Schedule 6, s 5(3): the third reading records the same category as either of the first 2: that category's score.
+-- (4) different from both: (a) "if 2 of the 3 categories are consecutive categories--the higher of the corresponding
+-- scores for the consecutive categories"; (b) "if 2 of the 3 categories are any combination of category A, category B or
+-- category C--the higher of the corresponding scores for the 2 categories". s 5(4) has no rule for two 0 categories
+-- (finding 3). READING where two pairs qualify (2/1, 2/3 then 2/2): the higher of the pairs' scores (finding 4).
+GIVEN `the first`  IS A `Chest x-ray reading`
+      `the second` IS A `Chest x-ray reading`
+      `the third`  IS A `Chest x-ray reading`
+GIVETH A MAYBE NUMBER
+`the three-reading score of` `the first` `the second` `the third` MEANS
+    IF `the row of` `the third` EQUALS `the row of` `the first` OR `the row of` `the third` EQUALS `the row of` `the second`
+    THEN JUST (`the corresponding score of` `the third`)
+    ELSE `the best of` (LIST (`the pair score of` `the first` `and` `the second`), (`the pair score of` `the first` `and` `the third`), (`the pair score of` `the second` `and` `the third`))
+
+GIVEN `xs` IS A LIST OF MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+`the best of` `xs` MEANS
+    CONSIDER `xs`
+    WHEN EMPTY THEN NOTHING
+    WHEN `x` FOLLOWED BY `rest` THEN
+        CONSIDER `x`
+        WHEN NOTHING THEN `the best of` `rest`
+        WHEN JUST `v` THEN
+            CONSIDER `the best of` `rest`
+            WHEN NOTHING THEN JUST `v`
+            WHEN JUST `w` THEN JUST (`the greater of` `v` `and` `w`)
+
+-- Schedule 6, s 6(3): "the corresponding score for the median category of the categories recorded in each of the 5
+-- readings" (median in row order).
+GIVEN `rows` IS A LIST OF NUMBER
+GIVETH A NUMBER
+`the five-reading score of rows` `rows` MEANS
+    `the corresponding score of row` (`entry at` 2 `of` (sort `rows`))
+
+GIVEN `r1` IS A `Chest x-ray reading`
+      `r2` IS A `Chest x-ray reading`
+      `r3` IS A `Chest x-ray reading`
+      `r4` IS A `Chest x-ray reading`
+      `r5` IS A `Chest x-ray reading`
+GIVETH A `Pneumoconiosis score answer`
+`the pneumoconiosis score from readings` `r1` `r2` `r3` `r4` `r5` MEANS
+    CONSIDER `the two-reading score of` `r1` `and` `r2`
+    WHEN JUST `s` THEN `the pneumoconiosis score is` `s`
+    WHEN NOTHING THEN
+        IF NOT (`is taken` `r3`)
+        THEN `a third reading of the same chest x-ray is needed (schedule 6, s 5)`
+        ELSE CONSIDER `the three-reading score of` `r1` `r2` `r3`
+             WHEN JUST `s3` THEN `the pneumoconiosis score is` `s3`
+             WHEN NOTHING THEN
+                IF (NOT (`is taken` `r4`)) OR (NOT (`is taken` `r5`))
+                THEN `a fourth and fifth reading of the same chest x-ray are needed (schedule 6, s 6)`
+                ELSE `the pneumoconiosis score is` (`the five-reading score of rows` (LIST (`the row of` `r1`), (`the row of` `r2`), (`the row of` `r3`), (`the row of` `r4`), (`the row of` `r5`)))
+
+-- Schedule 7, s 2: score 0 nil; 15, 20, 25: 12.15, 16.20, 20.25; 50, 55, 60: 40.49, 44.53, 48.59; 75, 80: 60.73,
+-- 64.78; 85: 68.83; 90: 72.87; 95: 76.92; 100: 80.97 (times QOTE). Any other score is not in the scale (NOTHING).
+GIVEN `the score` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`the schedule 7 multiple of QOTE for a score of` `the score` MEANS
+    BRANCH IF `the score` EQUALS 0 THEN JUST 0
+           IF `the score` EQUALS 15 THEN JUST 12.15
+           IF `the score` EQUALS 20 THEN JUST 16.20
+           IF `the score` EQUALS 25 THEN JUST 20.25
+           IF `the score` EQUALS 50 THEN JUST 40.49
+           IF `the score` EQUALS 55 THEN JUST 44.53
+           IF `the score` EQUALS 60 THEN JUST 48.59
+           IF `the score` EQUALS 75 THEN JUST 60.73
+           IF `the score` EQUALS 80 THEN JUST 64.78
+           IF `the score` EQUALS 85 THEN JUST 68.83
+           IF `the score` EQUALS 90 THEN JUST 72.87
+           IF `the score` EQUALS 95 THEN JUST 76.92
+           IF `the score` EQUALS 100 THEN JUST 80.97
+           OTHERWISE NOTHING
+
+-- Schedule 7, s 3: if "the worker's lodgement age is 71 years or more", for "each whole year by which the worker's
+-- lodgement age is more than 70 years", reduce by 5% of the prescribed amount, (3) at most 50%. The s 3(2) example
+-- does not follow the rule (finding 2): the rule is encoded.
+GIVEN `the lodgement age` IS A NUMBER
+GIVETH A NUMBER
+`the schedule 7 reduction fraction for lodgement age` `the lodgement age` MEANS
+    IF `the lodgement age` LESS THAN 71
+    THEN 0
+    ELSE `the lesser of` ((FLOOR `the lodgement age` MINUS 70) TIMES 5%) `and` (50%)
+
+GIVEN `the prescribed amount` IS A NUMBER
+      `the lodgement age`     IS A NUMBER
+GIVETH A NUMBER
+`the schedule 7 amount after the age reduction` `the prescribed amount` `the lodgement age` MEANS
+    `the prescribed amount` MINUS (`the prescribed amount` TIMES (`the schedule 7 reduction fraction for lodgement age` `the lodgement age`))
+
+§§ `Part 4, division 6 -- caring allowance (s 147, schedule 8)`
+
+-- Schedule 8, s 2(3): the maximum hours of care required in a week: minimal 10, mild 13.0, moderate 20.0, severe
+-- 23.5, total 27.0.
+GIVEN `the range` IS A `Dependency range`
+GIVETH A NUMBER
+`the schedule 8 maximum weekly hours for` `the range` MEANS
+    CONSIDER `the range`
+    WHEN `minimal`  THEN 10
+    WHEN `mild`     THEN 13
+    WHEN `moderate` THEN 20
+    WHEN `severe`   THEN 23.5
+    WHEN `total`    THEN 27
+
+-- s 147(1)(c): the insurer pays "at an hourly rate equal to the carer pension rate divided by 35". (2): the carer
+-- pension rate is "the weekly amount of the maximum carer payment payable from time to time under a Commonwealth law",
+-- without allowances (a Commonwealth figure: an input).
+`the s 147 divisor` MEANS 35
+
+GIVEN `the carer pension rate` IS A NUMBER
+GIVETH A NUMBER
+`the s 147 hourly rate` `the carer pension rate` MEANS
+    `the carer pension rate` DIVIDED BY `the s 147 divisor`
+
+§§ `Part 6 -- treatment, care and support (ss 153-160, 173-176)`
+
+-- s 160: an assessment using the functional independence measure (FIM, or the children's FIM) "may be used ... only if
+-- the assessment is carried out by a person who is-- (a) accredited by the Australasian Rehabilitation Outcomes Centre
+-- to carry out the assessment; and (b) approved by the insurer".
+GIVEN `the lowest FIM motor or cognitive item score` IS A NUMBER
+      `the assessor is AROC-accredited and insurer-approved` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `the FIM shows 5 or less on a motor or cognitive item, by a s 160 assessor` `the lowest FIM motor or cognitive item score` `the assessor is AROC-accredited and insurer-approved` IF
+    `the assessor is AROC-accredited and insurer-approved` AND `the lowest FIM motor or cognitive item score` AT MOST 5
+
+DECLARE `ASIA grade` IS ONE OF `grade A`, `grade B`, `grade C`, `grade D`, `grade E or not graded`
+
+-- s 153(1): (a) "classified as grade A, B, C or D on the ASIA impairment scale, as assessed under the ISNCSCI; and (b)
+-- ... a score of 0 for an item relating to bladder, bowel or sexual function, as assessed under the ISAFSCI."
+GIVEN `the ASIA grade`                                          IS AN `ASIA grade`
+      `an ISAFSCI bladder, bowel or sexual function item scores 0` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `a spinal cord injury meets the s 153 criteria` `the ASIA grade` `an ISAFSCI bladder, bowel or sexual function item scores 0` IF
+        (CONSIDER `the ASIA grade`
+         WHEN `grade E or not graded` THEN FALSE
+         OTHERWISE TRUE)
+    AND `an ISAFSCI bladder, bowel or sexual function item scores 0`
+
+-- s 154(1): (a) any of (i) post-traumatic amnesia of 7 days or more on an approved scale, (ii) a coma, "other than an
+-- induced coma, for 1 hour or more", (iii) imaging showing "a significant brain abnormality"; and (b) FIM 5 or less.
+GIVEN `days of post-traumatic amnesia on an approved scale` IS A NUMBER
+      `hours of coma, other than an induced coma`           IS A NUMBER
+      `brain imaging shows a significant brain abnormality` IS A BOOLEAN
+      `the FIM test is met`                                 IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `a traumatic brain injury meets the s 154 criteria` `days of post-traumatic amnesia on an approved scale` `hours of coma, other than an induced coma` `brain imaging shows a significant brain abnormality` `the FIM test is met` IF
+        (   `days of post-traumatic amnesia on an approved scale` AT LEAST 7
+         OR `hours of coma, other than an induced coma` AT LEAST 1
+         OR `brain imaging shows a significant brain abnormality`)
+    AND `the FIM test is met`
+
+-- s 155(1): "the amputation involves the loss of 65% or more of the length of the femur".
+GIVEN `the percentage of the femur's length lost` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `a leg amputation meets the s 155 criterion` `the percentage of the femur's length lost` IF
+    `the percentage of the femur's length lost` AT LEAST 65
+
+-- s 156(1): (a) "the loss of 50% or more of the length of each of the worker's tibias"; or (b) "both of the worker's
+-- upper limbs are amputated at or above the first metacarpophalangeal joint of the thumb and index finger of each
+-- hand"; or (c) one tibia 50% or more and one upper limb so amputated.
+GIVEN `the percentage of the first tibia lost`  IS A NUMBER
+      `the percentage of the second tibia lost` IS A NUMBER
+      `upper limbs amputated at or above the first MCP joint of thumb and index finger` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `multiple amputations meet the s 156 criteria` `the percentage of the first tibia lost` `the percentage of the second tibia lost` `upper limbs amputated at or above the first MCP joint of thumb and index finger` IF
+        (`the percentage of the first tibia lost` AT LEAST 50 AND `the percentage of the second tibia lost` AT LEAST 50)
+    OR  `upper limbs amputated at or above the first MCP joint of thumb and index finger` AT LEAST 2
+    OR  (    (`the percentage of the first tibia lost` AT LEAST 50 OR `the percentage of the second tibia lost` AT LEAST 50)
+         AND `upper limbs amputated at or above the first MCP joint of thumb and index finger` AT LEAST 1)
+
+-- s 157: (a) a full thickness burn to (i) under 16: more than 30% of total body surface area; (ii) 16 or older: more
+-- than 40%; (iii) both hands; (iv) the face; (v) the genital area; and (b) FIM 5 or less.
+GIVEN `the worker's age`                         IS A NUMBER
+      `percentage of total body surface area`    IS A NUMBER
+      `both hands`                               IS A BOOLEAN
+      `the face`                                 IS A BOOLEAN
+      `the genital area`                         IS A BOOLEAN
+      `the FIM test is met`                      IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `a full thickness burn meets the s 157 criteria` `the worker's age` `percentage of total body surface area` `both hands` `the face` `the genital area` `the FIM test is met` IF
+        (   (`the worker's age` LESS THAN 16 AND `percentage of total body surface area` GREATER THAN 30)
+         OR (`the worker's age` AT LEAST 16 AND `percentage of total body surface area` GREATER THAN 40)
+         OR `both hands`
+         OR `the face`
+         OR `the genital area`)
+    AND `the FIM test is met`
+
+-- s 158: an inhalation burn with permanent respiratory impairment: FIM 5 or less.
+GIVEN `the FIM test is met` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `an inhalation burn meets the s 158 criterion` `the FIM test is met` IF
+    `the FIM test is met`
+
+-- s 159(1): visual loss that "is, or is equivalent to-- (a) visual acuity of less than 6/60 in both eyes ... after
+-- correction by suitable lenses; or (b) the constriction of the worker's field of vision to 10 degrees or less of the
+-- arc around central fixation in the worker's better eye". Acuity is given as a decimal (6/60 = 0.1); "equivalent to"
+-- is a judgment, an input.
+GIVEN `the better eye's corrected visual acuity, as a decimal`       IS A NUMBER
+      `the better eye's field of vision in degrees around central fixation` IS A NUMBER
+      `the visual loss is assessed as equivalent to either`          IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `blindness meets the s 159 criterion` `the better eye's corrected visual acuity, as a decimal` `the better eye's field of vision in degrees around central fixation` `the visual loss is assessed as equivalent to either` IF
+        `the better eye's corrected visual acuity, as a decimal` LESS THAN 0.1
+    OR  `the better eye's field of vision in degrees around central fixation` AT MOST 10
+    OR  `the visual loss is assessed as equivalent to either`
+
+DECLARE `Payment request answer` IS ONE OF
+    `a payment request may be made`
+    `no payment request may be made: the expense falls under a funding agreement (s 173(2))`
+    `the request is late: the insurer may accept it if it considers that fair and reasonable (s 173(4))`
+
+-- s 173(2): no payment request if "(a) the person has entered into a funding agreement with the insurer for the
+-- treatment, care or support; and (b) the expense was incurred in the period covered by the funding agreement." (3):
+-- "A payment request must be made within 6 months after the expense is incurred." (4): the insurer "may accept a later
+-- payment request if the insurer considers it is fair and reasonable".
+GIVEN `under a funding agreement covering the expense's period` IS A BOOLEAN
+      `the day the expense was incurred`                        IS A DATE
+      `the day of the request`                                  IS A DATE
+GIVETH A `Payment request answer`
+`can a payment request be made` `under a funding agreement covering the expense's period` `the day the expense was incurred` `the day of the request` MEANS
+    IF `under a funding agreement covering the expense's period`
+    THEN `no payment request may be made: the expense falls under a funding agreement (s 173(2))`
+    ELSE IF DATE_SERIAL `the day of the request` GREATER THAN DATE_SERIAL (`the same day` 6 `months after` `the day the expense was incurred`)
+         THEN `the request is late: the insurer may accept it if it considers that fair and reasonable (s 173(4))`
+         ELSE `a payment request may be made`
+
+-- s 174(3): "The insurer must approve the payment request if-- (a) the expense is incurred in the eligibility period
+-- ...; and (b) the treatment, care or support ... is an approved service". (4): excluded treatment, care or support is
+-- an approved service "only if" stated in a support plan (or, with no plan, approved under a service request). (5): the
+-- insurer may approve otherwise. JUST TRUE: must approve; NOTHING: s 174(3) does not oblige, but (5) lets the insurer
+-- approve; a lapsed request (s 174(2)): JUST FALSE, "not required to approve".
+GIVEN `the request lapsed for want of requested information` IS A BOOLEAN
+      `incurred in the eligibility period`                   IS A BOOLEAN
+      `the service is excluded treatment, care or support`   IS A BOOLEAN
+      `a support plan or approved service request specifically states it` IS A BOOLEAN
+      `it is otherwise an approved service`                  IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`must the insurer approve the payment request` `the request lapsed for want of requested information` `incurred in the eligibility period` `the service is excluded treatment, care or support` `a support plan or approved service request specifically states it` `it is otherwise an approved service` MEANS
+    IF `the request lapsed for want of requested information`
+    THEN JUST FALSE
+    ELSE IF `incurred in the eligibility period` AND `approved`
+         THEN JUST TRUE
+         ELSE NOTHING
+    WHERE
+        `approved` MEANS
+            IF `the service is excluded treatment, care or support`
+            THEN `a support plan or approved service request specifically states it`
+            ELSE `it is otherwise an approved service`
+
+-- s 176(2): "The insurer must give the worker written notice of the review at least 20 business days before carrying
+-- out the review." READING: enough notice if 20 or more business days fall after the day of the notice and before the
+-- day of the review.
+`the s 176 business days` MEANS 20
+
+GIVEN `the day of the notice`  IS A DATE
+      `the day of the review`  IS A DATE
+      `public holidays`        IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `the review notice was given in time (s 176)` `the day of the notice` `the day of the review` `public holidays` IF
+    (`the Monday-to-Friday days after` `the day of the notice` `up to` (`the calendar day` (0 MINUS 1) `days after` `the day of the review`)) MINUS `public holidays` AT LEAST `the s 176 business days`
+
+§§ `Part 7 -- damages: adding a contributor (s 185)`
+
+-- s 185: the time for Act s 278A(1) "is the later of the following-- (a) 30 business days after the insurer receives the
+-- notice of claim; (b) 5 business days after the insurer identifies someone else as a contributor."
+GIVEN `the day the insurer received the notice of claim` IS A DATE
+      `the day the insurer identified the contributor`   IS A DATE
+      `public holidays`                                  IS A NUMBER
+GIVETH A DATE
+`the last day to add a contributor` `the day the insurer received the notice of claim` `the day the insurer identified the contributor` `public holidays` MEANS
+    IF DATE_SERIAL `b` GREATER THAN DATE_SERIAL `a` THEN `b` ELSE `a`
+    WHERE
+        `a` MEANS `the day` 30 `business days after` `the day the insurer received the notice of claim` `with` `public holidays` `public holidays in between`
+        `b` MEANS `the day` 5 `business days after` `the day the insurer identified the contributor` `with` `public holidays` `public holidays in between`
+
+§§ `Part 8 -- assessment of damages (ss 187, 189, 190, schedule 17)`
+
+-- The item of the s 187, s 190 and schedule 17 tables for an injury day: 1 for 2010-11, 2 for 2011-12, 3 for 2012-13,
+-- 4 for 2013-14, 5 for 2014-15, 6 for 1 July 2015 to 30 June 2017, 7 for 2017-18, 8 for 2018-19, 9 for 2019-20, 10 for
+-- 1 July 2020 and after; 0 before 1 July 2010 (no table).
+GIVEN `the day of injury` IS A DATE
+GIVETH A NUMBER
+`the damages table item for` `the day of injury` MEANS
+    BRANCH IF `fy` LESS THAN 2010 THEN 0
+           IF `fy` AT LEAST 2020 THEN 10
+           IF `fy` AT MOST 2015 THEN `fy` MINUS 2009
+           IF `fy` EQUALS 2016 THEN 6
+           OTHERWISE `fy` MINUS 2010
+    WHERE
+        `fy` MEANS `the financial year starting year of` `the day of injury`
+
+-- s 187 (Act s 306M(1)(b)): items 1-9 in dollars; item 10 "28.78 times QOTE". s 190 (Act s 306R(2)): items 1-9;
+-- item 10 "95.92 times QOTE". The QOTE for item 10 is not named (finding 6); the caller gives the QOTE (the encoding
+-- uses the QOTE for the day the person names).
+`s 187 amounts` MEANS LIST 35340, 36350, 38290, 39430, 40920, 41920, 42650, 43960, 45290
+`s 187 item 10 multiple` MEANS 28.78
+`s 190 amounts` MEANS LIST 117800, 121160, 127620, 131420, 136400, 139740, 142160, 146540, 150970
+`s 190 item 10 multiple` MEANS 95.92
+
+GIVEN `the item`         IS A NUMBER
+      `the amounts`      IS A LIST OF NUMBER
+      `the multiple`     IS A NUMBER
+      `qote`             IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+`the prescribed amount for item` `the item` `from` `the amounts` `or` `the multiple` `of` `qote` MEANS
+    IF `the item` LESS THAN 1
+    THEN NOTHING
+    ELSE IF `the item` EQUALS 10
+         THEN `the multiple` `the multiple` `of` `qote`
+         ELSE JUST (`entry at` (`the item` MINUS 1) `of` `the amounts`)
+
+-- Schedule 17, tables 1-9 (s 189(2)): general damages are the base amount plus the variable amount for the item whose
+-- injury scale value (ISV) range holds the ISV. Item lower bounds: 0, 5, 10, 15, 20, 25, 30, 35, 40, 50, 60, 70, 80, 90.
+`schedule 17 lower bounds` MEANS LIST 0, 5, 10, 15, 20, 25, 30, 35, 40, 50, 60, 70, 80, 90
+
+GIVEN `table` IS A NUMBER
+GIVETH A LIST OF NUMBER
+`schedule 17 base amounts of table` `table` MEANS
+    BRANCH IF `table` EQUALS 1 THEN LIST 0, 5900, 12950, 21200, 30600, 41200, 53000, 65950, 80100, 110500, 143000, 177600, 214400, 253300
+           IF `table` EQUALS 2 THEN LIST 0, 6050, 13300, 21800, 31450, 42350, 54500, 67800, 82350, 113650, 147050, 182650, 220450, 260450
+           IF `table` EQUALS 3 THEN LIST 0, 6350, 14000, 22950, 33100, 44600, 57400, 71400, 86750, 119750, 154950, 192450, 232250, 274350
+           IF `table` EQUALS 4 THEN LIST 0, 6550, 14450, 23650, 34100, 45950, 59150, 73550, 89350, 123350, 159550, 198150, 239150, 282550
+           IF `table` EQUALS 5 THEN LIST 0, 6800, 15000, 24550, 35400, 47700, 61400, 76350, 92750, 128050, 165650, 205750, 248350, 293350
+           IF `table` EQUALS 6 THEN LIST 0, 6950, 15350, 25150, 36250, 48850, 62900, 78200, 95000, 131200, 169700, 210800, 254400, 300500
+           IF `table` EQUALS 7 THEN LIST 0, 7050, 15600, 25550, 36850, 49650, 63950, 79500, 96600, 133400, 172600, 214400, 258800, 305700
+           IF `table` EQUALS 8 THEN LIST 0, 7250, 16050, 26300, 37950, 51150, 65900, 81950, 99600, 137500, 177900, 221000, 266800, 315100
+           OTHERWISE LIST 0, 7450, 16500, 27050, 39050, 52650, 67850, 84400, 102600, 141600, 183200, 227600, 274800, 324600
+
+GIVEN `table` IS A NUMBER
+GIVETH A LIST OF NUMBER
+`schedule 17 rates of table` `table` MEANS
+    BRANCH IF `table` EQUALS 1 THEN LIST 1180, 1410, 1650, 1880, 2120, 2360, 2590, 2830, 3040, 3250, 3460, 3680, 3890, 4120
+           IF `table` EQUALS 2 THEN LIST 1210, 1450, 1700, 1930, 2180, 2430, 2660, 2910, 3130, 3340, 3560, 3780, 4000, 4240
+           IF `table` EQUALS 3 THEN LIST 1270, 1530, 1790, 2030, 2300, 2560, 2800, 3070, 3300, 3520, 3750, 3980, 4210, 4470
+           IF `table` EQUALS 4 THEN LIST 1310, 1580, 1840, 2090, 2370, 2640, 2880, 3160, 3400, 3620, 3860, 4100, 4340, 4600
+           IF `table` EQUALS 5 THEN LIST 1360, 1640, 1910, 2170, 2460, 2740, 2990, 3280, 3530, 3760, 4010, 4260, 4500, 4770
+           IF `table` EQUALS 6 THEN LIST 1390, 1680, 1960, 2220, 2520, 2810, 3060, 3360, 3620, 3850, 4110, 4360, 4610, 4890
+           IF `table` EQUALS 7 THEN LIST 1410, 1710, 1990, 2260, 2560, 2860, 3110, 3420, 3680, 3920, 4180, 4440, 4690, 4970
+           IF `table` EQUALS 8 THEN LIST 1450, 1760, 2050, 2330, 2640, 2950, 3210, 3530, 3790, 4040, 4310, 4580, 4830, 5120
+           OTHERWISE LIST 1490, 1810, 2110, 2400, 2720, 3040, 3310, 3640, 3900, 4160, 4440, 4720, 4980, 5270
+
+-- The item (0-based) whose range holds the ISV: "5 or less" is item 0; "N or less but more than M" holds M < ISV <= N.
+GIVEN `isv` IS A NUMBER
+GIVETH A NUMBER
+`the schedule 17 item index for ISV` `isv` MEANS
+    BRANCH IF `isv` AT MOST 5 THEN 0
+           IF `isv` AT MOST 10 THEN 1
+           IF `isv` AT MOST 15 THEN 2
+           IF `isv` AT MOST 20 THEN 3
+           IF `isv` AT MOST 25 THEN 4
+           IF `isv` AT MOST 30 THEN 5
+           IF `isv` AT MOST 35 THEN 6
+           IF `isv` AT MOST 40 THEN 7
+           IF `isv` AT MOST 50 THEN 8
+           IF `isv` AT MOST 60 THEN 9
+           IF `isv` AT MOST 70 THEN 10
+           IF `isv` AT MOST 80 THEN 11
+           IF `isv` AT MOST 90 THEN 12
+           OTHERWISE 13
+
+GIVEN `table` IS A NUMBER
+      `isv`   IS A NUMBER
+GIVETH A NUMBER
+`the schedule 17 general damages from table` `table` `for ISV` `isv` MEANS
+    (`entry at` `i` `of` (`schedule 17 base amounts of table` `table`))
+        PLUS ((`isv` MINUS (`entry at` `i` `of` `schedule 17 lower bounds`)) TIMES (`entry at` `i` `of` (`schedule 17 rates of table` `table`)))
+    WHERE
+        `i` MEANS `the schedule 17 item index for ISV` `isv`
+
+-- Schedule 17, table 10 (s 189(3)): for an injury on or after 1 July 2020, general damages for ISV 0 to 100 as a
+-- multiple of QOTE.
+`schedule 17 table 10 multiples` MEANS LIST 0, 0.95, 1.90, 2.84, 3.79, 4.74, 5.89, 7.04, 8.19, 9.34, 10.49, 11.83, 13.17, 14.51, 15.85, 17.19, 18.72, 20.24, 21.76, 23.29, 24.81, 26.54, 28.27, 30.00, 31.73, 33.45, 35.39, 37.32, 39.25, 41.18, 43.11, 45.21, 47.32, 49.42, 51.52, 53.63, 55.94, 58.25, 60.56, 62.88, 65.19, 67.67, 70.14, 72.62, 75.10, 77.58, 80.06, 82.53, 85.01, 87.49, 89.97, 92.61, 95.25, 97.90, 100.54, 103.18, 105.82, 108.47, 111.11, 113.75, 116.40, 119.22, 122.04, 124.86, 127.68, 130.50, 133.32, 136.14, 138.96, 141.78, 144.60, 147.60, 150.60, 153.60, 156.60, 159.60, 162.60, 165.60, 168.59, 171.59, 174.59, 177.76, 180.92, 184.08, 187.25, 190.41, 193.58, 196.74, 199.90, 203.07, 206.23, 209.58, 212.93, 216.28, 219.62, 222.97, 226.32, 229.67, 233.02, 236.36, 239.71
+
+-- General damages for an injury day and an ISV. Schedule 13, s 14: "ISV must be a whole number"; the scale runs 0 to 100
+-- (Act s 306O(1)(a)). Outside that, or an injury before 1 July 2010: NOTHING.
+GIVEN `the day of injury` IS A DATE
+      `isv`               IS A NUMBER
+      `qote`              IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+`the general damages for an injury on` `the day of injury` `with ISV` `isv` `and` `qote` MEANS
+    IF `isv` LESS THAN 0 OR `isv` GREATER THAN 100 OR (NOT (`is a whole number` `isv`)) OR `item` LESS THAN 1
+    THEN NOTHING
+    ELSE IF `item` EQUALS 10
+         THEN `the multiple` (`entry at` `isv` `of` `schedule 17 table 10 multiples`) `of` `qote`
+         ELSE JUST (`the schedule 17 general damages from table` `item` `for ISV` `isv`)
+    WHERE
+        `item` MEANS `the damages table item for` `the day of injury`
+
+§§ `Part 9 -- costs (ss 191, 193-196, schedule 9)`
+
+-- s 191(3): the industrial magistrate or commission "may award costs up to 1.5 times the amounts under subsection
+-- (2)(a)" if satisfied they are inadequate. The satisfaction is an input.
+GIVEN `the scale C amount`                               IS A NUMBER
+      `the magistrate or commission is satisfied the scale is inadequate` IS A BOOLEAN
+GIVETH A NUMBER
+`the most counsel's or solicitor's costs that may be awarded` `the scale C amount` `the magistrate or commission is satisfied the scale is inadequate` MEANS
+    IF `the magistrate or commission is satisfied the scale is inadequate`
+    THEN `the scale C amount` TIMES 1.5
+    ELSE `the scale C amount`
+
+-- s 193: division 2 "applies to a claimant who is-- (a) a worker whose DPI is 20% or more; or (b) a worker who has a
+-- terminal condition; or (c) a dependant."
+GIVEN `I am a dependant`                  IS A BOOLEAN
+      `I have a terminal condition`       IS A BOOLEAN
+      `my DPI percentage`                 IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `part 9, division 2 applies to the claimant` `I am a dependant` `I have a terminal condition` `my DPI percentage` IF
+    `my DPI percentage` AT LEAST 20 OR `I have a terminal condition` OR `I am a dependant`
+
+-- Schedule 9: column A $2,000; column B "$135 for the first hour or part of an hour $105 for each additional hour or
+-- part of an hour"; column C $270; column D $400.
+`schedule 9 column A` MEANS 2000
+`schedule 9 column C` MEANS 270
+`schedule 9 column D` MEANS 400
+
+GIVEN `hours` IS A NUMBER
+GIVETH A NUMBER
+`schedule 9 column B for conference hours` `hours` MEANS
+    IF `hours` AT MOST 0
+    THEN 0
+    ELSE 135 PLUS ((`whole hours` MINUS 1) TIMES 105)
+    WHERE
+        `whole hours` MEANS IF `is a whole number` `hours` THEN `hours` ELSE FLOOR `hours` PLUS 1
+
+-- s 194(2): net damages of $150,000 or more: (a) no compulsory conference: 120% of column A; (b) a conference: columns
+-- A and B; (c) "for investigation of liability by an expert": column C; (d) "for an application to the court": column D.
+GIVEN `a compulsory conference was held`        IS A BOOLEAN
+      `hours of the compulsory conference`       IS A NUMBER
+      `liability was investigated by an expert`  IS A BOOLEAN
+      `an application was made to the court`     IS A BOOLEAN
+GIVETH A NUMBER
+`the s 194(2) costs` `a compulsory conference was held` `hours of the compulsory conference` `liability was investigated by an expert` `an application was made to the court` MEANS
+        (IF `a compulsory conference was held`
+         THEN `schedule 9 column A` PLUS (`schedule 9 column B for conference hours` `hours of the compulsory conference`)
+         ELSE `schedule 9 column A` TIMES 1.2)
+    PLUS (IF `liability was investigated by an expert` THEN `schedule 9 column C` ELSE 0)
+    PLUS (IF `an application was made to the court` THEN `schedule 9 column D` ELSE 0)
+
+-- s 194(3): net damages of $50,000 or more but less than $150,000: 85% of the s 194(2) amount. (4): under $50,000:
+-- 85% of it "multiplied by the proportion that the net damages bear to $50,000". (5): "if the court in which the
+-- proceeding is started awards legal costs", times 120%. (6): net damages are "the damages recovered less the
+-- compensation paid by an insurer". FORK (net damages of nil or less, which the text does not address): the answer
+-- taken is 0; the other reading is that (4) gives no amount at all.
+GIVEN `the s 194(2) amount`                      IS A NUMBER
+      `the net damages`                          IS A NUMBER
+      `the court awards legal costs`             IS A BOOLEAN
+GIVETH A NUMBER
+`the s 194 costs` `the s 194(2) amount` `the net damages` `the court awards legal costs` MEANS
+    `before (5)` TIMES (IF `the court awards legal costs` THEN 1.2 ELSE 1)
+    WHERE
+        `before (5)` MEANS
+            IF `the net damages` AT LEAST 150000
+            THEN `the s 194(2) amount`
+            ELSE IF `the net damages` AT LEAST 50000
+                 THEN `the s 194(2) amount` TIMES 0.85
+                 ELSE (`the s 194(2) amount` TIMES 0.85) TIMES ((`nil if negative` `the net damages`) DIVIDED BY 50000)
+
+-- s 196(1)(d): "1 report fee of an expert investigating liability, of not more than $1,000, less any proportion of the
+-- fee agreed to be paid by the insurer"; (2): only for a report disclosed before the proceeding started. READING: the fee
+-- capped at $1,000, less the insurer's agreed share of the fee (finding 7), not below nil.
+GIVEN `the expert's fee`                       IS A NUMBER
+      `the share of the fee the insurer agreed to pay` IS A NUMBER
+      `the report was disclosed before the proceeding started` IS A BOOLEAN
+GIVETH A NUMBER
+`the allowed liability expert outlay` `the expert's fee` `the share of the fee the insurer agreed to pay` `the report was disclosed before the proceeding started` MEANS
+    IF NOT `the report was disclosed before the proceeding started`
+    THEN 0
+    ELSE `nil if negative` ((`the lesser of` `the expert's fee` `and` 1000) MINUS (`the expert's fee` TIMES `the share of the fee the insurer agreed to pay`))
+
+-- s 196(1)(f): fees charged by previous employers for information needed for the notice of claim, "but not more than
+-- $50 for each employer".
+GIVEN `fees` IS A LIST OF NUMBER
+GIVETH A NUMBER
+`the allowed previous employer fees` `fees` MEANS
+    CONSIDER `fees`
+    WHEN EMPTY THEN 0
+    WHEN `f` FOLLOWED BY `rest` THEN (`the lesser of` `f` `and` 50) PLUS `the allowed previous employer fees` `rest`
+
+§§ `Part 11 -- first responders and eligible employees (ss 206-208, schedules 10-11; Act ss 36EB-36ED)`
+
+DECLARE `Occupation` IS ONE OF
+    `an ambulance officer classified as a paramedic of any type`
+    `an authorised officer under the Child Protection Act 1999`
+    `a corrective services officer`
+    `a fire service officer`
+    `a member of the State Emergency Service`
+    `a member of a registered rural fire brigade`
+    `a volunteer firefighter or volunteer fire warden`
+    `a police officer or police recruit`
+    `a youth justice staff member`
+    `a doctor or nurse in emergency and trauma, acute, critical or high-dependency care`
+    `a private sector paramedic, corrective services officer or fire service officer`
+    `a local government paramedic or fire service officer`
+    `a coal mine worker qualified to perform a rescue function`
+    `a mine worker qualified to perform a rescue function`
+    `a member of Marine Rescue Queensland`
+    `none of these occupations`
+
+-- s 206 and schedule 10: items 1-15 are prescribed for Act s 36EB(a).
+GIVEN `the occupation` IS AN `Occupation`
+GIVETH A BOOLEAN
+DECIDE `is a prescribed first responder occupation` `the occupation` IF
+    CONSIDER `the occupation`
+    WHEN `none of these occupations` THEN FALSE
+    OTHERWISE TRUE
+
+DECLARE `Employing entity` IS ONE OF
+    `the department administering the Ambulance Service Act 1991`
+    `the department administering the Child Protection Act 1999`
+    `the department administering the Corrective Services Act 2006`
+    `the department administering the Fire Services Act 1990`
+    `the department administering the Police Service Administration Act 1990`
+    `the department administering the Youth Justice Act 1992`
+    `none of these entities`
+
+-- s 207 and schedule 11: items 1-6 are prescribed for Act s 36EC(1)(a).
+GIVEN `the entity` IS AN `Employing entity`
+GIVETH A BOOLEAN
+DECIDE `is a prescribed entity for eligible employees` `the entity` IF
+    CONSIDER `the entity`
+    WHEN `none of these entities` THEN FALSE
+    OTHERWISE TRUE
+
+-- Act s 36EB: a first responder is (a) "a worker, or a relevant volunteer, employed in an occupation or profession
+-- prescribed by regulation" whose (b) employment "requires the person to respond to incidents" that are life-
+-- threatening or otherwise traumatic and time-critical. Act s 36EC(1): an eligible employee is (a) a worker or relevant
+-- volunteer "employed by or in an entity prescribed by regulation" whose (b) employment requires "repeated or extreme
+-- exposure to the graphic details of traumatic incidents". Act s 36ED(1): (a) diagnosed by a psychiatrist, "in the way
+-- prescribed by regulation" (s 208: the DSM-5 diagnostic criteria for PTSD), and (b) employed as either before the
+-- diagnosis; (2) the PTSD "is taken to be an injury"; (4) not if it is proved that it did not arise out of that
+-- employment, or that employment was not a significant contributing factor. The Act's tests are borrowed, as facts.
+GIVEN `I am a worker or relevant volunteer`                          IS A BOOLEAN
+      `the occupation`                                                IS AN `Occupation`
+      `the employment requires responding to traumatic, time-critical incidents` IS A BOOLEAN
+      `the entity`                                                    IS AN `Employing entity`
+      `the employment requires repeated or extreme exposure to the graphic details of traumatic incidents` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `was employed as a first responder or an eligible employee` `I am a worker or relevant volunteer` `the occupation` `the employment requires responding to traumatic, time-critical incidents` `the entity` `the employment requires repeated or extreme exposure to the graphic details of traumatic incidents` IF
+    `I am a worker or relevant volunteer`
+    AND (   (`is a prescribed first responder occupation` `the occupation` AND `the employment requires responding to traumatic, time-critical incidents`)
+         OR (`is a prescribed entity for eligible employees` `the entity` AND `the employment requires repeated or extreme exposure to the graphic details of traumatic incidents`))
+
+GIVEN `diagnosed with PTSD by a psychiatrist using the DSM-5 criteria` IS A BOOLEAN
+      `employed as a first responder or an eligible employee before the diagnosis` IS A BOOLEAN
+      `it is proved the PTSD did not arise from that employment, or it was not a significant contributing factor` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `the PTSD is taken to be an injury (Act s 36ED)` `diagnosed with PTSD by a psychiatrist using the DSM-5 criteria` `employed as a first responder or an eligible employee before the diagnosis` `it is proved the PTSD did not arise from that employment, or it was not a significant contributing factor` IF
+        `diagnosed with PTSD by a psychiatrist using the DSM-5 criteria`
+    AND `employed as a first responder or an eligible employee before the diagnosis`
+    AND (NOT `it is proved the PTSD did not arise from that employment, or it was not a significant contributing factor`)
+
+§§ `Duties with deadlines (regulative rules)`
+
+DECLARE `WCRR party` IS ONE OF `the worker`, `the insurer`, `the registered person`
+
+DECLARE `s 193A decision` IS ONE OF `the qualifying condition is satisfied`, `the qualifying condition is not satisfied`
+
+DECLARE `WCRR act` IS ONE OF
+    `give the insurer a written report and an itemised account of the examination`
+    `ask the insurer for written reasons for the decision`
+    `give the worker written reasons for the decision`
+    `give the insurer information relevant to the qualifying condition`
+    `decide the qualifying condition` HAS `the decision` IS A `s 193A decision`
+    `give the worker a notice stating the amount of section 193A compensation`
+    `apply to the panel for a review`
+    `give the panel and the worker the information it considered`
+
+-- s 115(4). Clock: calendar days from the examination.
+GIVETH A DEONTIC `WCRR party` `WCRR act`
+DECIDE `s 115(4) -- the registered person must report to the insurer within 10 days after the examination` IS
+    PARTY  `the registered person`
+    MUST   `give the insurer a written report and an itemised account of the examination`
+    WITHIN `the s 115(4) days`
+    HENCE  FULFILLED
+    LEST   BREACH BY `the registered person` BECAUSE "s 115(4): no written report and itemised account within 10 days after the examination"
+
+-- s 130. Clock: business days from receiving the s 193A notice. The worker "may, within 10 business days after receiving
+-- the notice, ask"; on a request, the insurer "must give the worker the reasons ... within 10 business days after
+-- receiving the worker's request". Not asking is no breach (DO ... LEST FULFILLED); but without written reasons the worker
+-- may not apply to the panel (s 129(3)(c)).
+GIVETH A DEONTIC `WCRR party` `WCRR act`
+DECIDE `s 130 -- the worker may ask for written reasons, and the insurer must then give them` IS
+    PARTY  `the worker`
+    DO     `ask the insurer for written reasons for the decision`
+    WITHIN `the s 130 business days`
+    HENCE
+        PARTY  `the insurer`
+        MUST   `give the worker written reasons for the decision`
+        WITHIN `the s 130 business days`
+        HENCE  FULFILLED
+        LEST   BREACH BY `the insurer` BECAUSE "s 130(3): no written reasons within 10 business days after the worker's request"
+    LEST   FULFILLED
+
+-- ss 131-132. Clock: business days from receiving the s 193A notice; `days to give information` is 60, or more where the
+-- insurer agreed a later day (s 131(2)(a)(ii)); `days to decide` is 60, or more after a s 133 meeting (s 132(3)). If the
+-- worker gives nothing in time, the condition "is taken not to be satisfied" (s 131(3)): no breach by anyone. On a
+-- decision: satisfied, a notice stating the amount (s 132(4)); not satisfied, written reasons (s 132(5)). No time is set
+-- for either. No decision in time: "taken to have decided the qualifying condition is not satisfied" (s 132(6)).
+GIVEN `days to give information` IS A NUMBER
+      `days to decide`           IS A NUMBER
+GIVETH A DEONTIC `WCRR party` `WCRR act`
+DECIDE `ss 131-132 -- the worker may give information, and the insurer must then decide` `days to give information` `days to decide` IS
+    PARTY  `the worker`
+    DO     `give the insurer information relevant to the qualifying condition`
+    WITHIN `days to give information`
+    HENCE
+        PARTY  `the insurer`
+        MUST   `decide the qualifying condition` `the outcome`
+        WITHIN `days to decide`
+        HENCE
+            (IF `the outcome` EQUALS `the qualifying condition is satisfied`
+             THEN PARTY `the insurer`
+                  MUST  `give the worker a notice stating the amount of section 193A compensation`
+             ELSE PARTY `the insurer`
+                  MUST  `give the worker written reasons for the decision`)
+        LEST   BREACH BY `the insurer` BECAUSE "s 132(3): no decision in time; s 132(6): the insurer is taken to have decided the qualifying condition is not satisfied"
+    LEST   FULFILLED
+
+-- s 136-137. Clock: business days from receiving the written reasons (or becoming aware of a failure to decide). The
+-- worker "may apply to the panel ... within 20 business days"; then the insurer must "as soon as practicable" give the
+-- panel and the worker the information it considered (no fixed period, so no WITHIN).
+GIVETH A DEONTIC `WCRR party` `WCRR act`
+DECIDE `s 136 -- the worker may apply to the panel within 20 business days` IS
+    PARTY  `the worker`
+    DO     `apply to the panel for a review`
+    WITHIN `the s 136 business days`
+    HENCE
+        (PARTY  `the insurer`
+         MUST   `give the panel and the worker the information it considered`)
+    LEST   FULFILLED
