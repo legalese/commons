@@ -178,3 +178,16 @@ A scratch script checked every @export:
 - each situation input is identical wherever it is used;
 - no input is DEONTIC or EVENT;
 - each role branch reads its situation first.
+
+### Fix after verification (6 November 2026)
+
+An independent check through a local jl4-service form engine found that some inputs of the same name had different @desc values, or two meanings. The form shows one label per name. Fixed here (no answer changes; the 200 cases and the baseline's 70 are unchanged and satisfied):
+
+- `I am in a prescribed class` meant the juror in the s 58B(3)-(5) question and the employer in the employer's s 58B(3) question. The employer's input is now `I am in a prescribed class of employer`.
+- `I have applied` was three different applications. It is now `I have applied to be excused for good reason` (s 34H), `I have applied to be excused for not being indifferent` (s 34I) and `I have applied to be excused for recent jury service` (s 34J).
+- `days from service to attendance`, `act` and `days of jury service` now carry one @desc each.
+
+Not changed:
+
+- **Record inputs in questions of another role.** The juror's eligibility questions take the `Person` record `me`, so the form engine keeps them for the employer: it cannot settle a question while a record input is unanswered. The code already answers `does not arise for you` for the employer without reading the record; the gap is in how the engine decides what to drop (it should evaluate with the role alone first). Flattening the baseline's record into separate fields would restate the baseline, against the layering rule.
+- **The jl4-service build** fails on modules with a `GIVEN ... YIELD` lambda (`ja-juror.l4` has one). That is a service bug; the stable l4 runs every file cleanly.
