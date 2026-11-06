@@ -176,3 +176,10 @@ Added 6 November 2026, following the Graffiti Vandalism Act encoding's design (D
   - `l4 check fhog-qa.l4` succeeds.
   - `l4 run` gives 0 errors and 0 warnings for `fhog-qa.l4`, `fhog-qa-cases.l4`, `fhog-grant.l4` and `fhog-cases-grant.l4` (68 of 68, unchanged).
   - The parameter script (scratchpad `check_params.py`) confirms that `my role` is first everywhere and that each situation input is identical and second wherever it appears. It also confirms that each role branch reads its situation first, and that no input is DEONTIC or EVENT.
+
+### After the independent check (6 Nov 2026)
+
+- **The site's form keeps two repayment questions open with no grant paid.** With `a grant has been paid on my application` FALSE, the s 18(3) and s 21(2) questions stay open, though both answer `does not arise for you`. The other six situation questions drop.
+  - The layer is right: both read the situation straight after `my role`, and the cases show it.
+  - The cause is the engine's cap of 1 024 combinations of open yes/no and choice inputs (`PROBE_CAP` in `interact-engine.ts`). `Transaction` alone has 720 combinations (5 kinds, 2 sides of the 26th parallel, 9 classes, 3 yes/no items), so with `paid before completion` it is 1 440. `Applicant` has 16 yes/no items of its own and more in its history. The fix belongs in the engine (evaluate one completion with a trace, and settle when only answered inputs were read). Nothing in the layer changed for this.
+- **One @desc per input.** `me`, `the application` and `the transaction` had the same type everywhere but several @desc texts, so the form would show whichever came first. Each now has one @desc in every question.
