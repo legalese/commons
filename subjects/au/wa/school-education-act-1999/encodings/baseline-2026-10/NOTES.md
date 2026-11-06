@@ -99,3 +99,119 @@ It stops short of discipline, suspension and exclusion (ss 88-96I), which the se
 - s 106's parent route is read as closing at 18, because "parent" is defined only in relation to a child. That is an inference.
 - Discipline, suspension and exclusion (ss 88-96I), home education (Division 6) and non-government schools (Part 4) are not encoded.
 - No case law was searched. The Vocational Education and Training Act 1996 (for "approved VET course" and "apprentice") is not encoded.
+
+## Q&A layer (seat and situations as parameters)
+
+Added on 6 November 2026 (batch qa1), on Michael's approval of the design of the graffiti encoding's seat layer
+(`subjects/au/wa/graffiti-vandalism-act-2016/encodings/baseline-2026-10/`, its D2, D4 and D8). The layer is
+`sea-qa.l4`, and its cases are in `sea-qa-cases.l4`. It imports `prelude`, `daydate` and `sea-schooling`. The baseline's
+files are unchanged: the layer adds to them and replaces nothing.
+
+**Roles.** Every exported question takes `my role` IS A `Role` first ("Which of these describes you"). A question about
+another role answers `does not arise for you` without reading any other input.
+
+- `I am the child's parent, or the adult responsible for the child`: the baseline's seat. Its 47 questions are the
+  baseline's 47 exports. Each calls the baseline function and carries its answer into an answer type that has
+  `does not arise for you`.
+- `I am the child or student`: s 23 binds the student, and s 38(2) ($10) and s 36(3) ($200) are the student's own
+  offences. ss 41-42 bar a prosecution under s 38, which includes s 38(2). An adult student, or a student who has
+  turned 18, meets ss 97, 98, 105 and 106(1)(b) in person. 14 questions.
+- `I employ a child, or would like to`: s 29 binds "a person" who employs a child of compulsory school age in school
+  hours ($5 000). 3 questions.
+
+The principal, the chief executive officer, the Minister, attendance officers and Attendance Panels are not seats.
+Nor is a non-government school: the baseline does not encode Part 4.
+
+**Situation inputs.** Each one is a BOOLEAN placed second. FALSE gives `does not arise for you`.
+
+| Name | Role | Questions that take it |
+|---|---|---|
+| `my child has been away from school` | parent | 4: excused that day (ss 25, 27, 30); breach of s 23; breach of s 38(1); prosecution for absences (ss 41, 42) |
+| `my child's case has been, or may be, referred to an Attendance Panel` | parent | 4: who may refer (ss 26, 40); what the Panel may do (s 40); whether this Panel may deal with the case (s 39); representation (s 39(7)) |
+| `my child is leaving, or has left, school for a course, training or employment` | parent | 5: may I give the notices (s 11A); full-time (s 11C); may my child take this option (s 11B); what must I do (ss 11D, 11G, 11H); is the notice in force (ss 11D(7), 11E, 11F) |
+| `my child works, or would work, for someone` | parent | 1: s 29 |
+| `my child goes to, or is to enrol at, a government school` | parent | 19: ss 75-79 with regs 12-16 (7), and ss 97-106 with regs 61-64 (12) |
+| `I have been away from school` | student | 3: breach of s 23; excused that day; prosecution (ss 38(2), 41, 42) |
+| `I am leaving, or have left, school for a course, training or employment` | student | 1: may I take this option (ss 4, 11B, 11C) |
+| `I go to, or am to enrol at, a government school` | student | 6: adult student (s 97); overseas student (s 97, reg 62); fee for instruction (s 98(1)); the reg 64 exemption; exclusion (s 105); recovery from the student (s 106(1)(b), (2)) |
+
+The `@desc` texts are in `sea-qa.l4`, and in `encoding.json` under `qa_layer.situation_parameters`. The employer has no
+situation input, because every employer question arises for every employer.
+
+**Decisions.**
+
+- QA1. **The situations are what the Act ties the rules to.**
+  - The excused-absence, s 23 and s 38 questions turn on a day the child did not attend.
+  - The Panel questions turn on a referral (s 40(1): "may be referred").
+  - ss 11A-11H turn on the child taking up an option instead of school.
+  - ss 75-79 and 97-106 turn on a government school, which is all Part 3 covers.
+  - The s 6 periods, who is a parent (s 4), the duty to enrol (ss 9, 10) and the penalty table arise for every parent, so
+    they take no situation input.
+- QA2. **The prosecution question for not enrolling (ss 9(3), 41(1a), 42(1a)) takes no situation input.** It covers two
+  cases: a child who is not enrolled, and a child who is not following a notified option. Its own inputs say which, and
+  neither fact on its own decides whether the question arises.
+- QA3. **The baseline's records are taken as the baseline takes them** (`My child's arrangements`, `My child's absence`,
+  `My child's residence`, `The school's offer`). They are not broken into plain fields.
+  - The student's questions reuse `My child's absence` and `My child's residence`, under the inputs `my absence` and
+    `my residence`, with the student's `@desc`.
+  - The records' own field names stay in the parent's words ("I told the principal").
+  - Breaking the records into fields worded from each seat is left open.
+- QA4. **A shared input carries one `@desc`.**
+  - Where the baseline gave one input two texts (`on`, `the arrangements`, `the school`,
+    `a Panel advised or offered assistance`, `of compulsory school age`), the layer gives one text that covers both uses.
+  - The student's and the employer's inputs have their own names (`my date of birth`, `the date`,
+    `the child's date of birth`, `the day of the work`), so no input name carries two texts.
+- QA5. **Fork, s 29(2): work that is not for gain.** The employer's offence question asks whether the child works for
+  the employer "for the purpose of gain", paid or not, and answers no when the child does not. s 29(2) extends
+  "employed" to unpaid work for gain, and nothing extends it further. The other reading is that any work done for
+  someone in school hours is employment, which would answer yes. Asserted on the first reading.
+- QA6. **New helpers.** The layer adds two rules the baseline does not have:
+  - `s 106(1)(b), (2) -- the fee or charge may be recovered from the student`: the student has turned 18 or is a
+    prescribed child, and the three s 106(2) steps were taken. The steps are read as conditions, as the baseline reads
+    them for the parent.
+  - `s 29(1) -- the employer commits the offence`: the child works for gain, and the baseline's
+    `May my child work during school hours` answers no.
+  - The student's fine question maps the student's two offences onto the baseline's penalty table. It lists every value
+    and has no OTHERWISE.
+
+**Not covered for the new roles.**
+
+- **The student:**
+  - the s 5 kindergarten period;
+  - the s 9 duty to enrol, which is the parent's;
+  - the notices of ss 11D-11H, which are the parent's;
+  - the ss 75-79 entitlement to enrol, asked of the parent;
+  - s 37 (obstructing an attendance officer), and the attendance officer's powers (s 36(1), (2)) beyond the s 36(3) fine;
+  - Attendance Panels, asked of the parent;
+  - discipline, suspension and exclusion (ss 88-96I), which the baseline does not encode;
+  - the regulation that names a "prescribed child".
+- **The employer:**
+  - whether the child is under a s 11D or 11H notice, which is asked as a fact, not worked out;
+  - s 37 and the attendance officer's powers;
+  - the Children and Community Services Act 2004, and any other law on child employment.
+
+**Cases.** `sea-qa-cases.l4` has 406 assertions. All 406 are satisfied, with 0 errors and 0 warnings, on the stable `l4`
+of VS Code extension 1.6.98 with `JL4_LIBRARY_PATH` unset. They are:
+
+- 128 cases that ask each of the 64 questions for the two roles it is not about, with every other input ASSUMEd;
+- 43 cases that ask each question with a situation input, for its own role, with the situation FALSE and every later
+  input ASSUMEd (33 for the parent, 10 for the student);
+- 100 parent cases against values worked by hand, most taken from the baseline's cases with the lives' event ids (c010,
+  c011, c078, d054, k010, k011, k024), and the same 100 again against the baseline export's own answer on the same facts;
+- 28 student cases and 7 employer cases, worked by hand from the text.
+
+**Negative controls.** Each of these fails, as it should:
+
+- a parent question with the situation TRUE and an ASSUMEd absence;
+- a wrong expected value;
+- a student question with the situation TRUE and its inputs ASSUMEd.
+
+**Other checks.**
+
+- A script (`check_params.py`, in the batch scratchpad) listed the 64 exports and their inputs. It checked that:
+  - `my role` is first in each;
+  - each situation input is second, and identical in name, type and `@desc` wherever it occurs;
+  - each role branch reads its situation input first;
+  - no input is DEONTIC or EVENT.
+- `l4 check sea-qa.l4` succeeds.
+- `sea-schooling.l4` and `sea-cases-schooling.l4` (70 of 70) still run with no error or warning.
