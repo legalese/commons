@@ -43,7 +43,7 @@ two deliberately wrong assertions were run once in a scratch copy, since deleted
 |---|---|---|---|---|
 | `whs-claims-rules.l4` | 0 | 0 | 0 | 0 |
 | `whs-claims-seat.l4` (26 questions) | 0 | 0 | 0 | 0 |
-| `whs-claims-cases.l4` | 0 | 0 | 127 | 127 |
+| `whs-claims-cases.l4` | 0 | 0 | 140 | 140 |
 
 Every expected value was worked by hand from the text before the run. Every exported question has cases, with the
 edges: each limb and each defeater of ss 108 and 109; s 106(h) inside and outside its list; the last day and the day
@@ -51,7 +51,9 @@ after under s 113(1) and s 231(1B), at a month end and from 29 February; the s 2
 the day after, and not answered as at either; each period of s 232 winning in turn, industrial manslaughter, and the
 fresh-evidence exception for Category 1 and not Category 2; each eligible-person head of s 223 and a person outside it;
 the improvement notice's compliance period under, over and at 14 days; s 226 with and without a request for
-information, answered and not, and a request giving fewer than 7 days; each branch of s 228; each period of s 229(2).
+information, answered and not, and a request giving fewer than 7 days; each branch of s 228, and Comcare's own decisions
+(items 5, 6, 12), which s 228 does not reach; each period of s 229(2); for s 104, each element, with and without the
+s 110(1) case.
 
 ## Seat
 
@@ -95,7 +97,7 @@ The 2026-10-18 defaults:
 
 ## Scope
 
-**In:** Part 6 whole: ss 104 (with (2)), 105, 106, 107 (as s 112(2)(b) and the tier A penalty), 108, 109, 110, 111, 112,
+**In:** Part 6 whole: ss 104 (with (2) and (3)), 105, 106, 107 (as s 112(2)(b) and the tier A penalty), 108, 109, 110, 111, 112,
 113, 114, 115; s 184; Part 12: s 223 (items 1 to 12), 224, 226, 228, 229(1), (2); Part 13: ss 231(1), (1A), (1B), (2)(a),
 (3)(b), 232, 267; Part 14: ss 272, 273, and 273A(1) (named in the answer); Schedule 4 cl 2 items 1 and 6 (tier A and
 tier F, before indexation).
@@ -106,7 +108,9 @@ s 273 as a prohibition (`SHANT`) on the business, run by EVALTRACE inside "Did t
 charging me for safety?". Both questions take only plain facts.
 
 **Out, and why:**
-- s 104(3), 107(2) (fault elements under the Criminal Code): the conviction is an input.
+- s 107(2) (fault element under the Criminal Code): the s 107 offence is not asked as a question; its conviction is an
+  input to the s 111 orders. (s 104(3)'s intention is an input to "Can they be convicted for discriminating against
+  me?", and so is the prosecution's s 110(1) case, which raises the presumption.)
 - s 113(4), 110(3) (legal burden): reflected in the "has the other side proved" wording.
 - s 223 item 13 (decisions the Regulations make reviewable): answers "not answered here".
 - s 225, 227 (who reviews, written reasons), 228(6) (how long a stay lasts), 229(3) (what the Commission may do):
@@ -115,12 +119,19 @@ charging me for safety?". Both questions take only plain facts.
   owed to the person, but with no date the person can check except (2A)'s "at least every 3 months", which needs the
   advice day; left for a later layer.
 - s 230 (who may prosecute) and s 233 (charging multiple contraventions): not met by the claimant.
-- Part 13 Division 2 (sentencing orders other than s 111), Division 7 (civil penalty proceedings, only by Comcare or an
-  inspector, s 260): not open to the claimant; s 267 says so in "Does the Act give me a right to sue?".
+- Part 13 Division 2 (ss 234 to 242, the court's sentencing orders: adverse publicity, restoration, project and training
+  orders, court-ordered undertakings, injunctions; the Part 6 sentencing order, s 111, is in Part 6 Division 2 and is
+  in): orders made in the prosecution, not claims the person brings. Division 7 (civil penalty proceedings, only by
+  Comcare or an inspector, s 260): not open to the claimant; s 267 says so in "Does the Act give me a right to sue?".
+- Part 13 Division 3 (s 243, infringement notices), Division 4 (s 244, offences by bodies corporate: who is liable for
+  the offence), Division 5 (ss 245 to 248, the Commonwealth as a duty holder) and Division 6 (ss 249 to 253, public
+  authorities): who is prosecuted and how, not a claim, time or step the claimant meets.
 - ss 182, 183 (inspector's notice of damage): the s 184 claim is in; the notice is a duty without a period.
 - s 272A, 272B (no insurance against penalties): duties on the duty holder and insurer, not a claim.
 - Part 7 (entry permits, and its civil penalty provisions): the union's and the business's, not the individual's.
-- Everything in `../baseline-2026-10/`'s scope: not repeated here.
+- The rest of `../baseline-2026-10/`'s scope (duties, consultation, ceasing work, notifiable incidents, penalties of
+  Schedule 4 cl 1, the Regulations, indexation): not repeated here. The overlap on ss 105, 106, 112, 113(1) and 115(a) is
+  deliberate: Part 6 is encoded whole here (see Method), and the two agree on the same facts.
 
 ## Negatives (rulings of 2026-11-04 and 2026-11-05)
 
@@ -164,7 +175,9 @@ How they fall here:
 - **F8** s 229(2)(c), `s 229(2) -- the last day to apply to the Fair Work Commission`: when the Commission requires
   reasons, (c)'s 14 days after the statement replace (a) or (b); other reading: whichever of the periods ends later.
 - **F9** s 228(1), (2), `s 228 -- the decision is stayed`: for a prohibition or non-disturbance notice with no stay
-  granted or deemed, JUST FALSE ("other than" read as excluding the automatic stay); other reading: NOTHING.
+  granted or deemed, JUST FALSE ("other than" read as excluding the automatic stay); other reading: NOTHING. For
+  Comcare's own decisions (items 5, 6, 12), which have no internal review (s 224(1)), and a decision outside the table,
+  NOTHING: s 228 speaks only of "an application for an internal review".
 - **F10** s 273, `s 273 -- the business must not charge me for safety`: the prohibition has no period; `WITHIN 1` stands
   for the one period the question asks about, so a trace with no charge ends FULFILLED.
 - **F11** s 231(2), `s 231(2) -- the duty was kept, or can still be`: "late" is computed as "an answer on the day asked
@@ -221,8 +234,11 @@ How they fall here:
     s 228, for internal review. Not asserted (a drafting finding); the encoding follows s 229.
 12. **The improvement notice states a day, but s 224(3)(a) speaks of a period.** See fork F6. Asserted on the reading
     taken.
-13. **A worker cannot seek review of an inspector's decision on HSR training** (s 223 item 2 lists only the PCBU and an
-    HSR), nor of a forfeiture or return decision unless entitled to the thing (items 5, 6). Asserted.
+13. **A worker cannot seek review of an inspector's decision on HSR training** (s 223 item 2 lists only the PCBU and "A
+    health and safety representative whose interests are affected by the decision", the representative's own
+    interests, not those of the workers it represents, as items 1, 3, 4 and 7 to 12 word it), nor of a forfeiture or
+    return decision unless entitled to the thing (items 5, 6). Item 1 alone adds the worker's representative appointed
+    for the s 52(1)(b) negotiations. Asserted.
 
 ## What would need doing before this is worth relying on
 
