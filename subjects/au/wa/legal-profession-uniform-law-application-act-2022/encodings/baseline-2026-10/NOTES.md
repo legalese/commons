@@ -263,3 +263,56 @@ Not encoded:
 - The old Act (Legal Profession Act 2008) is not deposited. The carry-over provisions are
   encoded only from the bridging text.
 - No decided cases, costs determinations or Board practice were consulted.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026, after the model of the Graffiti Vandalism Act 2016 encoding's seat layer (its design decisions D2, D4 and D8). The baseline's files are unchanged: the layer is added, nothing is replaced. Two new files:
+
+- `lpula-qa.l4` imports `prelude`, `daydate`, `lpula-practice` and `lpula-costs`. It has 53 exported questions.
+- `lpula-qa-cases.l4` imports the same and `lpula-qa`. It has 262 cases.
+
+### Roles
+
+`DECLARE Role IS ONE OF`:
+
+- `I am studying law, seeking admission, or practising as a lawyer in WA`: the baseline's seat, Daniel (42 questions, one for each baseline export).
+- `I am a client of a law practice, or am thinking of instructing one` (11 questions).
+
+Why: the Act and the Law it applies admit, certify and supervise lawyers and limit what their law practices may agree and recover; the client is the person those limits protect, who may end a conditional costs agreement in the cooling-off period (Uniform Law s 181(4)), recovers what a void agreement or an unqualified entity took (ss 10(2), 185), and may seek review of a costs assessment and repayment of the excess (Application Act ss 149, 151). The law practice is not a separate seat: the baseline asks its Part 4.3 duties from the lawyer's seat as what "my firm" may agree and recover, and the layer keeps that. The Legal Practice Board, the Supreme Court and the committees are never seats. Every exported question takes `my role` IS A Role first, with `@desc Which of these describes you`, and for the other role answers `does not arise for you` without reading any other input.
+
+### Situation inputs
+
+| Input | Type | Roles | Does not arise when | Taken by |
+|---|---|---|---|---|
+| `I have been admitted as a lawyer` | BOOLEAN | lawyer | TRUE, for the 8 questions of admission: the academic and PLT prerequisites, s 279, starting PLT, an old qualification, the compliance certificate, admission, an old application (s 276). FALSE, for the 28 after admission: the day of admission, titles, the practising certificate, renewal, deemed refusal, supervision, and every costs question | 36 of the lawyer's 42 |
+| `the costs agreement in the matter` | `Costs agreement so far` (`there is no costs agreement`, `a costs agreement that is not a conditional costs agreement`, `a conditional costs agreement`) | both | the first two values, for the conditional costs agreement questions (lawyer: form, uplift, validity; client: validity, cooling-off, the uplift after ending it); the first value, for the contingency fee questions (s 183 reaches any costs agreement), the firm's penalty and the conduct matter | 6 of the lawyer's, 4 of the client's |
+| `the costs have been assessed` | BOOLEAN | both | FALSE | review of the assessment (s 149) and repayment of the excess (s 151), for each role: 4 |
+
+For the lawyer's costs questions the admission input comes second and the costs input third. The six lawyer's questions with no situation input arise either side of admission: whether the Law governs on a date, who decides, whether I am an Australian lawyer, whether I may engage in legal practice (a graduate asks it, d030), and its two penalties. The client's questions about Part 4.3, s 181(7), s 141, s 143 and s 10(2) take none.
+
+### Decisions
+
+- **Q1. Admission is the lawyer's situation.** The baseline seat runs from law school to practice. The Act ties the prerequisites and the compliance certificate to an applicant for admission, and the certificate, supervision and costs to someone admitted (Uniform Law s 45(1)(a): a certificate needs an Australian lawyer). So one BOOLEAN splits the seat. Daniel's d023 replay, asked by a lawyer already admitted, now needs the answer "not yet admitted" for the time asked about. `May the Supreme Court of WA admit me` still takes the baseline's own `already admitted` input after the situation; on the facts where the situation holds it is FALSE, and the layer does not check that.
+- **Q2. Answers for the lawyer are the baseline's own, wrapped.** Booleans become `Yes or no`; numbers `Penalty units`, `Years`, `Months` or `Amount`; dates `Date, if it arises`; each enumeration its own `..., if it arises` type. Each of the 42 has a case that its answer equals the baseline export's on the same facts.
+- **Q3. The client's validity answer is reworded value for value.** The baseline's `Agreement answer` speaks as the lawyer ("my firm may recover nothing"). `What the law practice may recover from me` says the same five things from the client's seat; the helper lists every value with no OTHERWISE. The s 10(2) question reuses the baseline's `May I engage in legal practice`, asked of the person who did the work, and maps its five answers to two.
+- **Q4. Two client rules are helpers in the layer,** since the baseline does not export them: the least cooling-off period, 5 clear business days (s 181(4)), and that no uplift fee is recoverable after the client ends the agreement in it (s 181(5)(b)).
+- **Q5. Shared inputs have one name and one `@desc`.** Where the baseline used one name for two things (`the matter` in s 20 and in Part 4.3; `the application` for admission and for a certificate; `the date I apply` for a compliance certificate and for review; `the date I completed it` for s 279 and rr 5(2), 6(4)), the layer renames one (`what I want decided`, `my admission application`, `my certificate application`, `the date I apply for review`, `the date I apply for a compliance certificate`, `the date I completed the course or the training`). Where it used one name with two `@desc` texts (`the course`, `old Act qualifications obtained before 1 July 2022`, `my certificate is barrister only`, the two "tribunal" inputs, `the date I was notified`), the layer uses one text. The s 151 inputs `paid` and `assessed` are `what the client paid` and `the assessed costs` for both roles. The parameter script found no shared name with two types or two texts.
+- **Q6. The question names that would repeat a baseline name are reworded** (for example `Can I apply for my practising certificate in WA`, `Must I still practise under supervision only`, `Is the matter I act in a litigious matter`, `Am I allowed to supervise other lawyers`), since a module cannot define a name its import defines. Seven export texts that did not end with their citation in brackets now do (the s 10(1) fine and imprisonment, s 279, s 276, s 143, the firm's penalty, the form requirements, titles).
+
+### Not covered for the client
+
+- Costs disclosure (Uniform Law ss 174-178), whose failure also lets a client avoid an agreement (s 178), billing, and the costs assessment procedure itself (baseline, "What would need doing").
+- What the law practice may recover after the client ends a conditional costs agreement in the cooling-off period, beyond the uplift fee (s 181(5)(a), a matter of the instructions and the client's knowledge).
+- Complaints and the Legal Services and Complaints Committee; trust money; interest under Application Act s 150(3).
+
+### Cases
+
+262 in `lpula-qa-cases.l4`, all satisfied, with 0 errors and 0 warnings:
+
+- 53 ask each question for the role it is not about, every other input ASSUMEd: `does not arise for you`;
+- 56 ask each situation question, for its own role, with each value of each situation input under which it does not arise (the earlier situation inputs holding, every later input ASSUMEd): `does not arise for you`;
+- 42 assert that the lawyer's answer equals the baseline export's on the same facts, one for every lawyer's question;
+- 3 mirror cases ask d038 from both seats (a 30% uplift, the excess over an assessment, a determination displaced by a valid agreement);
+- 108 are worked by hand from the text, for both roles, on Daniel's d023, d031 and d038 and the baseline's fixtures (copied into the case file, since a case file cannot be imported without running its assertions).
+
+Checked with the stable `l4` of VS Code extension 1.6.98, `JL4_LIBRARY_PATH` unset: `lpula-qa.l4`, `lpula-qa-cases.l4`, and the baseline's four files (46 and 24 cases, unchanged) give 0 errors and 0 warnings; `l4 check lpula-qa.l4` succeeds. A script listed every `@export` of `lpula-qa.l4` with its inputs and checked that `my role` is first in all 53, that each of the three situation inputs has one name, type and `@desc` wherever it is taken, and that no input is DEONTIC or EVENT. A negative control (a wrong excess in two cases, and a client's "no agreement" case given a conditional agreement with its inputs still ASSUMEd) gave 3 failures out of 262.
