@@ -50,3 +50,15 @@ copyright notice, the Government Printer's attribution and an unofficial-version
 conversion goes in a `<source-id>.formulas.md` sidecar.
 
 The indexed amounts under this Act for 1 July 2026 (Division 1 of Part 13) are deposited separately, from the Victoria Government Gazette, which robots.txt allows: [`../workers-compensation-annual-indexation-notice/`](../workers-compensation-annual-indexation-notice/) (Special Gazette No. S 363, 30 June 2026).
+
+## Deposit, 6 November 2026
+
+The text is deposited, under the ruling above; this replaces "No text is deposited yet" above. robots.txt still keeps a crawler off the register's Word and PDF files,
+so the owner saved the Word file by hand, in a browser, on 2026-11-06, and it was converted from that copy.
+
+- **Saved from**: https://www.legislation.vic.gov.au/in-force/acts/workplace-injury-rehabilitation-and-compensation-act-2013/054 (Version No. 054, incorporating amendments as at 2 October 2026, the current version on 2026-11-06).
+- **Word file**: https://content.legislation.vic.gov.au/sites/default/files/2026-10/13-67a054.docx (identified from its own cover: title, number, version and date).
+- **Deposited text**: `registers/source-bundle/workplace-injury-rehabilitation-and-compensation-act-2013.txt`, a plain-text conversion headed by the copyright notice, the Government
+  Printer's attribution and an unofficial-version notice; hashes, the page read and the conversion are in `workplace-injury-rehabilitation-and-compensation-act-2013.meta.json`.
+- **Formulas and images**: `registers/source-bundle/workplace-injury-rehabilitation-and-compensation-act-2013.formulas.md` transcribes the 14 embedded equations, 11 images the conversion cannot carry, from the Word file; not yet checked against the authorised PDF.
+- **Authorised version**: https://content.legislation.vic.gov.au/sites/default/files/2026-10/13-67aa054-authorised.pdf. It was not saved; it is the version to check the conversion against.

@@ -50,3 +50,15 @@ copyright notice, the Government Printer's attribution and an unofficial-version
 conversion goes in a `<source-id>.formulas.md` sidecar.
 
 The Transport Accident Commission's indexed amounts for 1 July 2026 were looked for in the Victoria Government Gazette on 2026-10-24 and not found. Every General Gazette G17-G30 (23 April to 23 July 2026) and Special Gazette S260-S402 (26 May to 10 July 2026) was read; the site's search form was not used. Whether the Act requires a Gazette notice can be checked once its text is deposited.
+
+## Deposit, 6 November 2026
+
+The text is deposited, under the ruling above; this replaces "No text is deposited yet" above. robots.txt still keeps a crawler off the register's Word and PDF files,
+so the owner saved the Word file by hand, in a browser, on 2026-11-06, and it was converted from that copy.
+
+- **Saved from**: https://www.legislation.vic.gov.au/in-force/acts/transport-accident-act-1986/159 (Version No. 159, incorporating amendments as at 1 November 2026, the current version on 2026-11-06).
+- **Word file**: https://content.legislation.vic.gov.au/sites/default/files/2026-10/86-111a159.docx (identified from its own cover: title, number, version and date).
+- **Deposited text**: `registers/source-bundle/transport-accident-act-1986.txt`, a plain-text conversion headed by the copyright notice, the Government
+  Printer's attribution and an unofficial-version notice; hashes, the page read and the conversion are in `transport-accident-act-1986.meta.json`.
+- **Formulas and images**: `registers/source-bundle/transport-accident-act-1986.formulas.md` transcribes the 23 embedded equations the conversion cannot carry, from the Word file; not yet checked against the authorised PDF.
+- **Authorised version**: https://content.legislation.vic.gov.au/sites/default/files/2026-10/86-111aa159-authorised.pdf. It was not saved; it is the version to check the conversion against.
