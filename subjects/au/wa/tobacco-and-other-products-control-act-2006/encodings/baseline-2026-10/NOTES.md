@@ -235,3 +235,12 @@ each parameter name with one type and one `@desc` across the file; each situatio
 branch; no DEONTIC or EVENT input. Three negative controls (an ASSUMEd finder read, the adult's answer in the young
 person's words, an ASSUMEd date read) failed as they should. All four files of the encoding run with 0 errors and 0
 warnings, and `l4 check topca-qa.l4` succeeds.
+
+### After the independent check (6 Nov 2026)
+
+- **Deploying the layer needs the stable `daydate.l4` with it.** The baseline imports `daydate`; on the site's jl4-service
+  (b98) the service's own daydate gives "multiple definitions for the identifier `__GEQ__`" in the baseline's `Does the
+  deposited edition answer for` (`Day d AT LEAST Day ...`), so the update is rejected. Deployed with `topca-qa.l4`,
+  `topca-minor.l4` and `libraries/daydate.l4` from the 1.6.98 VS Code extension, it compiles (43 functions) and the form
+  drops every question it should (18, 8 and 5 kept per role). The clash is in the baseline's own date comparison, which
+  this layer does not change; the deployment list is recorded in `encoding.json` (`qa_layer.deploy_with`).
