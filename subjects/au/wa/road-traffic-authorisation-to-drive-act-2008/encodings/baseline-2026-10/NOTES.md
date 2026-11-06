@@ -266,9 +266,10 @@ learner's permit questions (r 44-46), the two licence questions (r 15, r 22, r 1
 - **Q1. The situations follow what the text ties each rule to.** These are the permit (s 10, Part 3), the licence
   (r 9, 10, 11, 36), the offence (Part 4), the notice (s 49-51), the election (s 52), and a conviction or
   disqualification (s 16-18, 23, 24). Getting a permit or licence arises for anyone, including a licence holder learning
-  a new class, so it takes none. The baseline's s 18 and s 51 questions keep their own `I hold a driver's licence` input,
-  renamed `I hold a driver's licence now`, as an ordinary input after the situation. It is not the licence situation:
-  s 18 is about someone who does not hold one.
+  a new class, so it takes none. The baseline's s 18 and s 51 questions also read whether I hold a driver's licence.
+  They take the same input, `I hold a driver's licence`, with the same type and `@desc`, so the form asks it once; there
+  it is an ordinary input after their own situation, not a gate: s 18 is about someone who does not hold one.
+  (Until the independent check it was a separate input, `I hold a driver's licence now`, so the form asked it twice.)
 - **Q2. Shared non-situation inputs were made identical,** so that a form merging by name cannot mix them. `the day` is
   "The day the question is about" throughout. The baseline's two `months held` texts became one. `the drive` of r 35(1)
   became `my drive`, since its type (`My drive`) differs from the learner's `the drive` (`My learning drive`).
@@ -289,11 +290,11 @@ penalties of r 49 (1 PU). A youth driver education course instructor's own condi
 
 - `l4 run rtad-qa.l4`, `l4 run rtad-qa-cases.l4`, and the baseline's `rtad-drivers.l4` and `rtad-cases-drivers.l4`
   (unchanged): 0 errors and 0 warnings. `l4 check rtad-qa.l4` succeeds.
-- `rtad-qa-cases.l4`: 216 assertions, 216 satisfied. They break down as 43 asking each question for the role it is not
+- `rtad-qa-cases.l4`: 217 assertions, 217 satisfied. They break down as 43 asking each question for the role it is not
   about, with every other input ASSUMEd, and 30 asking each situation question with its situation FALSE (28 for the
-  driver, 2 for the supervisor), every later input ASSUMEd. The other 143 are in the role and situation that hold, and
+  driver, 2 for the supervisor), every later input ASSUMEd. The other 144 are in the role and situation that hold, and
   35 of them check the answer against the baseline export's own answer on the same facts. With the baseline's 70, the
-  encoding has 286 assertions.
+  encoding has 287 assertions.
 - A parameter script (scratchpad `qa/b13/check_params.py`) listed the 43 exports. It found `my role` first in each,
   each situation input second and identical in name, type and `@desc`, and each situation's role branch reading it
   first. It found no DEONTIC or EVENT input, and no shared input with two types or texts.
@@ -301,3 +302,20 @@ penalties of r 49 (1 PU). A youth driver education course instructor's own condi
   convicted of` and `How my offence ended` through OTHERWISE, so an ASSUMEd value of those types that is read is not
   caught. The situation inputs are all BOOLEAN and are caught, and the layer's one enumeration helper
   (`the supervisor I am`) lists every value.
+
+### After the independent check (6 Nov 2026)
+
+- **r 11(4)(a) was not asked (fixed).** The experienced-driver question took only the years held, so a passenger now
+  disqualified, or not licensed for the novice's class, but with 4 years or more behind them got yes. r 11(4) needs
+  both: "(a) is authorised to drive a motor vehicle of the class that the novice driver is authorised to drive; and
+  (b) has held that authorisation ... at least 4 years". The baseline's `My passengers` carries only (b), so the
+  question now takes `I am authorised now to drive the new driver's class of vehicle` (BOOLEAN) before the years:
+  FALSE gives no; TRUE gives the baseline's answer on the years, as before. One case added (FALSE with 10 years: no).
+- **The same fact under two names (fixed).** The s 18 and s 51 questions took `I hold a driver's licence now`, and the
+  licence questions `I hold a driver's licence`. They now share `I hold a driver's licence`, with one type and
+  `@desc` (see Q1). The cases are positional and did not change.
+- **The jl4-service build rejects the deployment (not changed).** That build's own `daydate` library defines
+  comparisons that clash with the baseline's `is on or after` (`rtad-drivers.l4`, defined on `Day` from the stable
+  `daydate`). The stable l4 1.6.98 gives 0 errors, and the baseline's rules may not be changed by this layer. The
+  verifier deployed with the stable `daydate.l4` bundled, which is the fix on the service side.
+- Assertions: 217 in `rtad-qa-cases.l4` (was 216), 287 with the baseline's 70, all satisfied; 0 errors, 0 warnings.
