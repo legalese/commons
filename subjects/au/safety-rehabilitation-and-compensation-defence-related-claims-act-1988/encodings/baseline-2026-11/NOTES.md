@@ -42,14 +42,15 @@ Act to new claims from 1 July 2026. What remains is encoded whole for the claima
 ## Checks
 
 Stable `l4` of VS Code extension 1.6.98 (`bin/win32-x64/l4.exe run <file>`), `JL4_LIBRARY_PATH` unset, run from this
-folder, at most two processes at a time. `l4 run` exits 0 even when an assertion fails, so the diagnostics were read; one
+folder, at most two processes at a time. Each deadline period (s 26(1) 30 days, ss 46(1), 47(1) 7 days, s 48(2) 28 days)
+is stated once as a named number, and both the regulative rule (WITHIN) and the last-day question read it from there. `l4 run` exits 0 even when an assertion fails, so the diagnostics were read; one
 deliberately wrong assertion was run once in a scratch copy, since deleted, and showed as "assertion failed".
 
 | File | Errors | Warnings | Assertions written | Satisfied |
 |---|---|---|---|---|
 | `drca-dates.l4` | 0 | 0 | 0 | 0 |
 | `drca-claimant.l4` | 0 | 0 | 0 | 0 |
-| `drca-cases.l4` | 0 | 0 | 174 | 174 |
+| `drca-cases.l4` | 0 | 0 | 183 | 183 |
 
 Every exported question has cases, with the edges: 30 June and 1 July 2026 (s 14AA); each service period against each
 kind of claim, the property exception to the span rule, and each limb of s 4AA(4) and s 6A(2A); s 5(6) and both
@@ -57,7 +58,7 @@ exceptions; each qualifying period of the firefighter table at and just under th
 prescribed child; 9%, 9.99% and 10% (and 4% and 5% for hearing) under s 24; increases of 9 and 10 points (4 and 5 for
 hearing) under s 25; the 30th and 31st day and a year end under s 26; the 7th and 8th day under ss 46, 47; the 28th and
 29th under s 48(2); half the cost under, at and over the $200 cap under s 29; 24 and 25 months, ages 64 and 65, and 12 and
-13 months under s 41B; equal and unequal amounts in ss 48, 49, 119. Every expected value was worked by hand from the text
+13 months under s 41B, for a former spouse of a member who has died as well as one whose member is living; the s 53(2) notice of the accident for a s 15 property claim, late and excused; equal and unequal amounts in ss 48, 49, 119. Every expected value was worked by hand from the text
 before the run.
 
 ## Seat
@@ -102,7 +103,7 @@ The 2026-10-18 defaults:
 **In:** s 4(1) (dependant, prescribed child, date of commencement), s 4(4), (5), (13); s 4AA(1) to (5); s 5(1), (6) to
 (8); s 5A; s 5B; s 6(1), (1C), (3); s 6A(2), (2A) (for s 4AA(4)); s 7(7) to (10); s 14AA; s 14; s 15(1), (3); s 16(1),
 (2), (4); s 17(2) to (6); s 24(1), (3) to (9); s 25(4), (5); s 26(1), (2), (4); s 27(1), (2); s 29(1), (3), (5); s 29A(1),
-(3); s 41B(2), (5), (5A), (6); s 44(1), (3), (4); s 45(1) to (4); ss 46(1), 47(1); s 48(2) to (7); s 49; s 53(1), (3);
+(3); s 41B(2), (5), (5A), (6); s 44(1), (3), (4); s 45(1) to (4); ss 46(1), 47(1); s 48(2) to (7); s 49; s 53(1) to (3);
 s 54(1) to (3), (5); s 58(1), (3); s 118(1), (6); s 119(2), (6), (7); s 144A(1), (2); s 144B(5).
 
 **Out, and why:**
@@ -174,7 +175,10 @@ amount of 0 stands for `JUST FALSE`, and a `not covered` choice for `NOTHING`.
 - **F10** s 26(4), `s 26 -- days of interest`: a review application answers 0 days ("does not apply"); other reading: no
   answer (`NOTHING`), since interest may then follow the review.
 - **F11** s 41B(6), `s 41B -- criteria met`: a spouse at the death may also meet (6) ("was the spouse of an employee");
-  other reading: (6) is only for a spouse whose relationship ended in the member's life.
+  other reading: (6) is only for a spouse whose relationship ended in the member's life. A former spouse of a member who has since died is offered (6) as its own choice, not a fork: (6) says
+  "was the spouse of an employee", and s 41B(1)(b) reaches a related person of a deceased employee. (5A)(b)'s "another
+  person who was the spouse of an employee at any time before the employee's death" covers the parent of the spouse at
+  the death too, so that choice is worded that way.
 - **F12** s 4(5), `s 4 -- am I a dependant`: the deeming overrides the stated dependence (a spouse living with the member
   who was only partly dependent is wholly dependent); other reading: none.
 - **F13** ss 53, 54, `ss 53, 54 -- have I made a claim that counts`: the first failing step is reported (notice, form,
