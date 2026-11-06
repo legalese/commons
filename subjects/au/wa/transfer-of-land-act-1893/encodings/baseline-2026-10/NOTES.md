@@ -245,6 +245,19 @@ situation, with an identical name, type and `@desc` wherever it is taken, checke
 - The lender's and the caveator's questions call the same baseline functions as the owner's, since the rules are the
   same; only the question and the inputs are worded from their seat. The lender's surplus question is s 109(1): the
   surplus "shall be paid to the mortgagor".
+- **QA1. The baseline's `How do I get onto the register after the death` on the site: not fixable in the layer**
+  (recorded 6 November 2026, after verification). The baseline's export takes an input named `my role`, of the
+  baseline's type `Role` (the surviving joint proprietor, the executor or administrator, a devisee, someone else), as its
+  third input (tla-title.l4). A deployment lists the exports of the modules the layer imports, and the site's form keeps
+  every export that takes the seat's input by name and fills it with the seat's answer, a `Seat` value, so that baseline
+  export fails for every seat ("Parameter 'my role': unknown"; verification: 700 failed states, all on this one
+  function). Inside the layer the names are consistent, and the layer's own "How do I get onto the register for the land
+  of someone who has died" is right: it asks the capacity as `my capacity` and calls the baseline's function with the
+  baseline's type. The layer cannot rename the baseline's input (layers add; they do not replace), and it cannot keep a
+  baseline export out of the deployment. Naming the seat type `Role` would not help: the input would still be a
+  different type of the same name. The remedy is in the form engine (keep an export for a seat only when its input
+  accepts the seat's value) or a change to the baseline's input name, which Michael would have to approve. The Motor
+  Vehicle (Third Party Insurance) Act and Spent Convictions Act layers meet the same thing.
 
 **Not covered for the new roles.** The lender: possession and ejectment (ss 111-112A), actions on the covenants (ss
 116-120), transfers of mortgages, the s 109(1A) annuity deposit and conditional tenure land. The caveator: who may
