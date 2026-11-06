@@ -175,7 +175,7 @@ assertion count (33) is in the 25-35 band asked for this constitutive Act.
 Added 6 November 2026, after the model of the Graffiti Vandalism Act 2016 encoding's seat layer (its design decisions D2, D4 and D8). The baseline's files are unchanged: the layer is added, nothing is replaced. Two new files:
 
 - `ha-qa.l4` imports `prelude` and `ha-housing`. It has 20 exported questions.
-- `ha-qa-cases.l4` imports the same and `ha-qa`. It has 138 cases.
+- `ha-qa-cases.l4` imports the same and `ha-qa`. It has 137 cases.
 
 ### Roles
 
@@ -198,10 +198,11 @@ Each is the second input, straight after `my role`, with one name, type and `@de
 
 ### Decisions
 
-- **QA-1. Where the situation settles a baseline input, the layer passes it.** The buyer's s 31 question is asked only for a Division 4 purchase, so the baseline's `I am buying the house and land from the Authority under Division 4` is passed as TRUE; the s 72-73 question only for a Part IV loan or a Division 4 sale, so the baseline's one input is passed as TRUE. For a buyer using Keystart or a bank the answer is `does not arise for you` where the baseline says no; the cases show the answers equal the baseline's wherever the situation holds.
+- **QA-1. Where the situation settles a baseline input, the layer passes it.** The buyer's s 31 question is asked only for a Division 4 purchase, so the baseline's `I am buying the house and land from the Authority under Division 4` is passed as TRUE; the s 72-73 question only for a Part IV loan or a Division 4 sale, so the baseline's one input is passed as TRUE; and the s 68 question, asked by the buyer only for a Part IV loan or a Division 4 sale and by the tenant only while renting, passes the baseline's `I owe the Authority money as a purchaser, tenant, borrower or other debtor` as TRUE (fix of 6 November 2026: it had been asked again, so an answer could contradict the situation). For a buyer using Keystart or a bank the answer is `does not arise for you` where the baseline says no; the cases show the answers equal the baseline's wherever the situation holds.
 - **QA-2. The s 46 guarantee and s 47 subsidy are tied to a loan from another lender.** s 46 helps a person "unable to borrow, without assistance ... from the Authority"; s 47 subsidises "loans made to them by approved lending institutions". Neither concerns a Part IV loan or a Division 4 purchase.
 - **QA-3. The tenant asks s 31 with both its inputs.** A tenant thinking of buying the house they rent is not yet in the buyer's situation, so the tenant's s 31 question keeps the baseline's two inputs and has no situation input.
 - **QA-4. The lender's facts about the borrower are its own inputs.** `the borrower meets the Authority's eligibility conditions` and `the house is to be the borrower's home` build the baseline's `Applicant` record (for s 47, which does not read the home field, the layer passes TRUE). The baseline's `my loan is secured by a mortgage` is asked as `the loan is secured by a mortgage` by both the buyer and the lender, with one `@desc`.
+- **QA-5. Function ids (fix of 6 November 2026).** The site cuts a function id at about 60 characters, so the buyer's s 47 question, first named `Can the Housing Authority subsidise the interest on my loan, as I ask it`, was served as the baseline export `Can the Housing Authority subsidise the interest on my loan` and could not run. It is now `Can my home loan's interest be subsidised by the Housing Authority`; a script checks that no two exports of the encoding share their first 60 characters.
 
 ### Not covered for the new roles
 
@@ -210,11 +211,11 @@ Each is the second input, straight after `my role`, with one name, type and `@de
 
 ### Cases
 
-138 in `ha-qa-cases.l4`, all satisfied, with 0 errors and 0 warnings:
+137 in `ha-qa-cases.l4`, all satisfied, with 0 errors and 0 warnings:
 
 - 39 ask each question for each role it is not about, every other input ASSUMEd: `does not arise for you`;
 - 19 ask each situation question, for its own role, with each value that makes the situation not hold, every later input ASSUMEd: `does not arise for you`;
 - 19 assert that the buyer's or tenant's answer equals the baseline export's on the same facts (one for each of the 18 buyer and tenant questions, the shared s 15 question once per role);
-- 61 are worked by hand from the text, for all three roles, with the baseline's fixtures (Jake's apartment, k074, with its ASSUMED figures).
+- 60 are worked by hand from the text, for all three roles, with the baseline's fixtures (Jake's apartment, k074, with its ASSUMED figures).
 
 Checked with the stable `l4` of VS Code extension 1.6.98, `JL4_LIBRARY_PATH` unset: `ha-qa.l4`, `ha-qa-cases.l4`, and the baseline's `ha-housing.l4` and `ha-cases-housing.l4` (33 of 33, unchanged) give 0 errors and 0 warnings; `l4 check ha-qa.l4` succeeds. A script listed every `@export` of `ha-qa.l4` with its inputs and checked that `my role` is first in all 20, that each situation input (and every other shared input) has one name, type and `@desc`, and that no input is DEONTIC or EVENT. A negative control (one expected rent altered) was caught. The mechanical cases are generated by the scratchpad script `gen_ha.py` from the layer's own `@export` list.
