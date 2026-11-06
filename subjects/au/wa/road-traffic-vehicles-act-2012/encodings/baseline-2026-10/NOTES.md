@@ -206,9 +206,9 @@ checked by script):
 
 | Name | Type | Does not arise when | Taken by |
 |---|---|---|---|
-| `what the vehicle is` | `Kind of vehicle` (the baseline's) | every value but `a bicycle with an auxiliary motor (an e-bike)` | owner and user: "Is the e-bike a power assisted pedal cycle" (2nd). The two licensing questions and the four offence questions take it as an ordinary input |
-| `my vehicle has been used on a road` | BOOLEAN | FALSE | owner: the s 4(2) offence and the s 4(6) conviction |
-| `I have used the vehicle on a road` | BOOLEAN | FALSE | user: the same two questions |
+| `what the vehicle is` | `Kind of vehicle` (the baseline's) | every value but `a bicycle with an auxiliary motor (an e-bike)` | owner and user: "Is the e-bike a power assisted pedal cycle" (2nd). The two licensing questions take it as an ordinary input; the four offence questions take `the vehicle, as the licensing rules see it` instead (QA1) |
+| `my vehicle has been used on a road` | BOOLEAN | FALSE | owner: the s 4(2) offence and the s 4(6) conviction ("Do I commit the unlicensed-vehicle offence as its owner", "As its owner, can I be convicted of the unlicensed-vehicle offence") |
+| `I have used the vehicle on a road` | BOOLEAN | FALSE | user: the same two questions ("... as its user", "As its user, can I be convicted ...") |
 | `the CEO has issued me a notice to apply for transfer` | BOOLEAN | FALSE | buyer: s 10(6) and s 10(7) |
 
 The seller's questions arise for every seller, and the penalties, charges and CTP for every role they are about, so
@@ -229,12 +229,56 @@ they take no situation input.
 - Answers in the baseline's own types (`Licensing answer`, `CTP answer`) are mapped value by value onto Q&A types, with
   `does not arise for you` added. Dollar answers are `Amount`; the notice periods are `Days`.
 
+- **QA1. The offence questions in a form the site can drop** (fixed 6 November 2026, after verification). The site's
+  question form proves that a question does not arise for a role by trying every combination of its open yes/no and
+  choice inputs, and gives up past 1 024. The four s 4(2)-(6) questions took the vehicle as the baseline's record (the
+  kind, 7 values, and five yes/no facts) and the use as six facts (the licence state, 4 values, and four yes/no facts):
+  with the use situation, 28 672 combinations (57 344 with the s 4(6) fact). So the form kept them open for the seller,
+  the buyer and the other of owner and user, and for the owner or user when the vehicle had not been used on a road,
+  though the code answers `does not arise for you` from the role or the situation alone (verification: 315 such
+  states). They now take:
+  - `the vehicle, as the licensing rules see it` IS A `The vehicle, as the licensing rules see it` (12 values): a car,
+    motor cycle, bus, truck or other self-propelled motor vehicle; a motor vehicle or e-bike built so that it cannot go
+    faster than 10 km/h; an agricultural implement towed by a licensed or permitted vehicle; any other trailer; an e-bike
+    driven by its pedals that is a pedalec meeting EN 15194; any other e-bike driven by its pedals; an e-bike not driven
+    by its pedals; a bicycle without a motor; an electric rideable device; a motorised scooter; a declared electric
+    personal transporter; any vehicle being towed by a licensed or permitted tow truck. With the output in watts (a
+    number), these are the cases `Must my vehicle be licensed` tells apart: every vehicle towed by a licensed or permitted
+    tow truck needs no licence (r 15(2)(b), or it is not a motor vehicle or trailer at all), and so does a self-propelled
+    vehicle or e-bike built not to exceed 10 km/h (r 15(2)(c), or as a power assisted pedal cycle).
+  - `it was used under a s 13(1) permit or with s 13(2) number plates` (s 4(4)(a) and (b), which the baseline reads only
+    as "neither"), and `its use is authorised interstate and no responsible person lives in WA` (s 4(5), which the
+    baseline reads only as that conjunction). The licence state and the days since expiry are unchanged.
+  `the offence vehicle from` and `the offence use from` build the baseline's `My vehicle` and `The use`, so each answer is
+  the baseline's for every vehicle and use the inputs describe. The largest question now has 768 combinations (12 x 4 x
+  2 x 2, with the situation and the s 4(6) fact). The two licensing questions keep `what the vehicle is` and the five
+  facts (224 combinations), because their answer names the r 15 exception, which the folded value would not always
+  pick as the baseline does (an agricultural implement that is also being towed by a tow truck). The owner or user who
+  asks both kinds of question is asked the vehicle twice, in two forms. Run on a local jl4-service through the site's form engine (100 random completions
+  per question, for each role and each value of each situation input), the layer shows no ground-truth issue.
+- **QA2. Names that agree as the site cuts them** (fixed 6 November 2026). The site's engine names each function by its
+  first 60 characters (letters, digits, `-` and `_`). "Can I be convicted of the unlicensed-vehicle offence as its
+  owner" and "... as its user" agreed in those, so the site ran the owner's question when asked the user's (verification:
+  every completion failed for want of the owner's input). They are now "As its owner, can I be convicted of the
+  unlicensed-vehicle offence" and "As its user, can I be convicted of the unlicensed-vehicle offence". No two of the
+  deployment's 57 functions (30 of the layer, 27 of the baseline) now agree in their first 60 characters (checked by
+  script).
+- **QA3. The regulations' figures** (checked 6 November 2026, after verification asked). The r 57 rate and $586 cap, the
+  r 99(1) $9.70 recording fee, the r 100 $20.50 transfer fee and the r 22 penalty units are not in this Act's deposit,
+  which holds only the Act; they are in the regulations' own deposits, named under Sources above
+  (`subjects/au/wa/road-traffic-vehicles-regulations-2014/registers/source-bundle/mrdoc_49887.txt`: r 57, for
+  a car, "$13.20 plus $29.76 per 100 kg, or part of 100 kg, of tare, subject to a maximum charge of $586.00"; r 99(1)
+  "$9.70"; r 100 "$20.50"; and `subjects/au/wa/road-traffic-administration-regulations-2014/registers/source-bundle/mrdoc_49740.txt`:
+  r 22, s 4(2) 5 PU, s 10(1) and s 10(2) 2 PU). Re-read there; they agree.
+
 **Not covered for the user.** Whether the user is also a "responsible person" in any other way (Administration Act s 6
 beyond s 6(2)), the uninsured-vehicle offence itself (MVTPI s 4(3A), for that Act's baseline), and the driver's own
 licence (the Road Traffic (Authorisation to Drive) Act 2008).
 
-**Cases.** `rtva-qa-cases.l4`, generated by `gen_rtva.py` in the session scratchpad: **213 assertions written, 213
-satisfied, 0 errors, 0 warnings**. They are 116 content cases (each baseline-seat answer also asserted equal to the
+**Cases.** `rtva-qa-cases.l4`, generated by `gen_rtva.py` in the session scratchpad (the four offence questions'
+cases rewritten for QA1 by `rtva_cases.py`): **252 assertions written, 252 satisfied, 0 errors, 0 warnings** (213
+before QA1; 39 added, among them each value of the folded vehicle and use against the baseline on the facts it stands
+for). They were 116 content cases (each baseline-seat answer also asserted equal to the
 baseline's export on the same facts, in the baseline's own c074 figures), 79 role cases (every question for each role
 it is not about, every other input ASSUMEd) and 18 situation cases. `l4 check rtva-qa.l4` succeeds. `l4 run` gives no
 diagnostics on `rtva-licensing.l4` or `rtva-qa.l4`, and `rtva-cases-licensing.l4` still gives 43 of 43.
