@@ -94,3 +94,77 @@ Left out:
 - Deposit the Authority's code of conduct (s 27) and any Minister's code of practice (s 26), and encode the hardship and suspension rules.
 - Check whether pensioner and seniors concessions on water charges come from another Act, and link it if so.
 - Run the Legalese Studio stages this baseline skipped: Resolve, Refine and Test, an independent test pass, and the human gates.
+
+## Q&A layer (seat and situations as parameters)
+
+Added on 6 November 2026, following the graffiti encoding's design (D2, D4, D8).
+
+- **Files.** The layer is `wsa-qa.l4`. Its cases are in `wsa-qa-cases.l4`.
+- **Imports.** It imports `prelude` and `wsa-charges`. It changes none of the baseline's rules or exports.
+- **The role comes first.** Every exported question takes `my role` first ("Which of these describes you"). For the role a question is not about, it answers `does not arise for you` without reading any other input.
+
+**Roles.**
+
+- `I own land with a water, sewerage or drainage service, or a main near it`. This is the baseline's seat (Chloe and Liam).
+- `I live in or occupy a home with a water service but do not own it, such as a tenant`. The Act gives the occupier these protections and duties:
+  - s 95(3) protects the occupier of a dwelling from being cut off without their agreement;
+  - the regulations may make a tenant liable as a measured user (s 124(2)(d));
+  - a tenant may be liable for a share the licensee apportions (s 125);
+  - s 129(5) gives the occupier the say on how much notice is given before routine entry.
+
+The licensee, the Economic Regulation Authority, the Registrar and the ombudsman are never seats.
+
+**Situation inputs.** All six are BOOLEANs and all are the owner's. FALSE gives `does not arise for you`. Each comes straight after `my role`.
+
+| Name | Questions (owner) |
+| --- | --- |
+| `my land is not yet connected to the service` | "Can I be charged for a water service my land is not yet connected to" (s 124(2)(c)) |
+| `my home is let to a tenant` | "If my tenant ... does not pay, can the statutory charges still be recovered from me" (s 126(1)) |
+| `a previous owner made a written agreement with the licensee about the service` | "Am I ... bound by a term of an agreement the previous owner made" (s 76) |
+| `water service charges on my land are overdue` | "How much do I owe on an overdue water bill" (s 124(2)(n)) |
+| `a water memorial has been lodged on my title and not withdrawn` | s 128(3) dealings; s 128(4) withdrawal |
+| `my water supply has been cut off or reduced` | s 95(6) the debt remains; s 95(7) what is paid before restoring |
+
+Every question of the occupier arises for every occupier, so none takes a situation input.
+
+**Decisions.**
+
+- **D-QA1. Inputs fixed by the role or the situation.**
+  - The baseline's `I am the owner of the land` (s 73) and `I am the owner for the time being` (s 126(1)) are TRUE by the owner's role.
+  - s 128(3)'s `a memorial has been lodged and not withdrawn` is TRUE by its situation.
+  - The tenant question's `I am the owner for the time being` is TRUE by the role.
+- **D-QA2. Some questions settle on their own input and take no situation.**
+  - s 128(2)'s memorial question settles on `what is unpaid`: `nothing, or something else` gives no, so it takes no situation.
+  - The cut-off question (s 95(1)-(4)) arises for every owner and every occupier. Its grounds are its inputs.
+- **D-QA3. s 128(3) with no memorial gives does not arise.** Before the layer, the baseline answered yes when no memorial stands. The question presupposes a memorial ("while a water memorial stands"), so its situation decides.
+- **D-QA4. The occupier's s 126(1) question.** "Can water charges left unpaid on the land be recovered from me under s 126(1), though I am not the owner" is the baseline's function with `I am the owner for the time being` FALSE. The answer is no for every kind of charge. A tenant's own liability is the separate "Am I liable" question (ss 124(2)(d), 125).
+- **D-QA5. String answers are wrapped.** The baseline's string answers (s 123, hardship, concessions) are wrapped in `Text answer`, so that they can also say `does not arise for you`.
+
+**Not covered for the occupier.**
+
+- Any liability the regulations or the licensee's terms put on a measured user beyond who is liable (not deposited).
+- What a tenancy agreement says about water charges (Residential Tenancies Act 1987, not this Act).
+- Restoration and its fees when the occupier is not liable.
+- The hardship code itself (not deposited).
+
+**Counts.** 29 questions: 20 for the owner (every baseline export) and 9 for the occupier. `wsa-qa-cases.l4` has 119 cases:
+
+- 29 ask each question for the other role, every other input ASSUMEd;
+- 8 ask each situation FALSE, every later input ASSUMEd;
+- 63 are for the owner, worked by hand. 20 of them, one per question, assert that the answer equals the baseline export's on the same facts;
+- 19 are for the occupier, worked by hand.
+
+The baseline reads its enumerations through OTHERWISE (graffiti finding 31). For those inputs, the check that they are not read rests on the parameter script. The situation inputs are BOOLEANs, which fail if read when ASSUMEd.
+
+**Checks.** Run on the stable l4 (VS Code extension 1.6.98), with `JL4_LIBRARY_PATH` unset:
+
+- 0 errors and 0 warnings in all four files;
+- 158 assertions satisfied (39 baseline + 119 layer);
+- `l4 check wsa-qa.l4` succeeds.
+
+The parameter script (`check_params.py`, session scratchpad) checked all 29 questions:
+
+- `my role` comes first in each;
+- every shared parameter is identical in type and `@desc`;
+- each situation comes straight after the role;
+- no question takes a DEONTIC or EVENT input.
