@@ -195,3 +195,29 @@ script from the parameter list and the table above. Checked on stable l4 1.6.98:
 files, 67 + 183 assertions satisfied, `l4 check sca-qa.l4` succeeds, and a parameter script confirms `my role` first
 everywhere, each shared situation input identical in name, type and @desc, each situation second and read first in
 each role branch, and no DEONTIC or EVENT input.
+
+### Found in verification (6 November 2026), and not fixable in the layer
+
+The independent check ran the layer through the site's form engine on a jl4-service. Stable l4 is clean (0 errors, 0
+warnings, 67 + 183 assertions satisfied); three things go wrong on the site, none of them in the layer's own rules:
+
+- **The baseline's exports that take an input named `my role`.** Four baseline exports (`Must I disclose it`, `May it
+  count against me under a law of Western Australia`, `Is it unlawful for them to discriminate against me over it`,
+  `May someone obtain it from an official criminal record`) take `my role` IS A `My role`,
+  the Schedule 3 job, licence or role. A deployment lists the exports of the modules the layer imports, and the form
+  keeps every export that takes the seat's parameter by name, so it sends the seat's answer to these four, which fail
+  ("unknown enum variant"). The layer asks the same input as `the job, licence or role concerned` and cannot rename
+  the baseline's (layers add; they do not replace). The remedy is in the form engine (keep an export for a seat only
+  when its parameter accepts the seat's value) or a baseline change Michael would have to approve.
+- **Questions on the baseline's records are kept where they do not arise.** The questions that take `My conviction`
+  or `My matter` read `my role` and their situation first and answer `does not arise for you` from them alone, but
+  the form engine proves that only by trying every combination of the open yes/no and choice inputs, at most 1 024,
+  and these records have more; the service will not evaluate with an input missing. So `I was convicted = false` drops
+  none of its five questions, and the employer's questions stay for the person. Lowering the count would mean
+  restating the baseline's records. The fix belongs in the engine (for example: when the combinations exceed the cap,
+  evaluate one completion with a trace and settle the question when the trace reads no open input).
+- **`From what day may I apply to have my conviction spent` and `How can my conviction become spent, and may I apply
+  now`** hit the service's "Evaluation resource limit exceeded" on a batch of 100 random completions. Each is one
+  CONSIDER and one IF over the baseline's function of the same subject; the cost is the baseline's date arithmetic.
+- The service runs the layer only with the daydate.l4 of stable l4 1.6.98 bundled; with its own daydate it fails
+  (ambiguous `__GEQ__`/`__LEQ__` on `Day`). The deployment should bundle the stable daydate.l4.
