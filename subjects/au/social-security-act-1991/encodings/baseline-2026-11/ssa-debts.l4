@@ -1,0 +1,630 @@
+IMPORT prelude
+IMPORT `ssa-debts-dates`
+
+-- Social Security Act 1991 (Cth), Chapter 5 (Parts 5.2, 5.3 and 5.4) -- the questions a person meets when the Commonwealth says
+-- they owe a social security debt: does the payment make a debt I owe (s 1223); is a 10% penalty added (s 1228B); am I liable for
+-- another person's debt (s 1224AB); must I be given a notice, and by when must I pay (s 1229); am I liable to interest charge, at
+-- what rate and how much (ss 1229A-1229F); how can the debt be recovered from me, and when (ss 1230C, 1231, 1233, 1234, 1234B); and
+-- can it be written off or waived (ss 1230D, 1236, 1237A, 1237AA, 1237AAA, 1237AAB, 1237AAC(4)-(5), 1237AAD).
+--
+-- SEAT: the person said to owe the debt (the debtor) -- usually a person who received a social security payment -- asking "Do I owe
+-- this, how much, by when, what can be done to recover it, and can it be waived?". Every decision is phrased as that person would ask
+-- it, on facts that person could state. What the Secretary or a court must be satisfied of is asked as a fact ("if the Secretary is
+-- satisfied that ..."), never decided.
+--
+-- Edition: Compilation No. 232, compilation date 1 July 2026 (register id C2026C00336), as deposited at
+-- ../../registers/source-bundle/C2004A04121.txt; the version in force from 20 September 2026 has no registered compilation in the
+-- deposit, so amendments commencing on or after that date may be missing. The s 1237AAB(6) formula, lost from the text deposit, is
+-- taken from ../../registers/source-bundle/C2004A04121.formulas.md.
+--
+-- INPUTS, because the deposit does not give the figure: the small debt amount in force (s 1237AAA, $250 immediately before 1 July
+-- 2026, indexed from that day by ss 1191-1194 with figures not in the text); the base interest rate (s 1229D(2), a Reserve Bank
+-- yield); the interest rate the Minister specifies for s 1237AAB(6) (a legislative instrument, not deposited).
+--
+-- NOT ENCODED (see NOTES.md for why): the special debt provisions (ss 1223(7)-(8), 1223A, 1223AA-1224EA, 1227-1228A); the garnishee
+-- debtor's own liability (ss 1230, 1230A); deductions by consent and recovery from financial institutions (ss 1234A, 1234AA);
+-- s 1236A; the family payment waiver (s 1237AAC(1)-(3)); assurance of support debts (s 1237AAE); class waivers (s 1237AB); departure
+-- prohibition orders (Part 5.5); review and appeal (Social Security (Administration) Act 1999, not deposited).
+--
+-- BASELINE ENCODING. Written straight from the deposited text with the writing-l4-rules skill, from the seat of the individual to
+-- whom the law is applied, with the design defaults ruled on 2026-10-18. No pipeline, no coverage table, no independent test pass,
+-- no human gate. Not for public use as advice. See NOTES.md.
+
+§ `Social Security Act 1991 -- the debtor's questions`
+
+§§ `Arithmetic`
+
+@desc Rounds an amount to the nearest cent, half a cent upwards
+GIVEN `x` IS A NUMBER
+GIVETH A NUMBER
+`to the nearest cent` `x` MEANS FLOOR ((`x` TIMES 100) PLUS 0.5) DIVIDED BY 100
+
+@desc Rounds an amount down to the nearest 5 cents (s 1228B(3))
+GIVEN `x` IS A NUMBER
+GIVETH A NUMBER
+`rounded down to 5 cents` `x` MEANS FLOOR (`x` TIMES 20) DIVIDED BY 20
+
+@desc The smaller of two amounts
+GIVEN `a` IS A NUMBER, `b` IS A NUMBER
+GIVETH A NUMBER
+`whichever is less of` `a` `b` MEANS IF `a` AT MOST `b` THEN `a` ELSE `b`
+
+@desc The later of two dates
+GIVEN `d1` IS A DATE, `d2` IS A DATE
+GIVETH A DATE
+`whichever is later of` `d1` `d2` MEANS IF `d1` `is on or before` `d2` THEN `d2` ELSE `d1`
+
+§§ `Kinds of payment`
+
+-- The payment the debt is about. "Social security benefit" is the Act's own term (s 23(1)): youth allowance, austudy payment,
+-- jobseeker payment, special benefit, benefit PP (partnered), parenting allowance (other than non-benefit allowance).
+DECLARE PaymentKind IS ONE OF
+    `youth allowance`
+    `austudy payment`
+    `jobseeker payment`
+    `special benefit`
+    `benefit PP (partnered)`
+    `parenting allowance`
+    `disability support pension`
+    `pension PP (single)`
+    `age pension`
+    `carer payment`
+    `another social security payment`
+
+@desc s 23(1): is the payment a social security benefit
+GIVEN `the payment` IS A PaymentKind
+GIVETH A BOOLEAN
+DECIDE `is a social security benefit` `the payment` IF
+    CONSIDER `the payment`
+    WHEN `youth allowance` THEN TRUE
+    WHEN `austudy payment` THEN TRUE
+    WHEN `jobseeker payment` THEN TRUE
+    WHEN `special benefit` THEN TRUE
+    WHEN `benefit PP (partnered)` THEN TRUE
+    WHEN `parenting allowance` THEN TRUE
+    OTHERWISE FALSE
+
+§ `Part 5.2 -- Does a debt arise`
+
+-- s 1223(1AB): the reasons for which a payment "should not have been made", each of which makes the person who obtained its benefit
+-- "taken not to have been entitled". One is chosen; "none of these" leaves entitlement to the person's own answer.
+DECLARE NotEntitledReason IS ONE OF
+    `made by mistake as a result of a computer error or an administrative error`
+    `the intended recipient was not qualified`
+    `the payment was not payable`
+    `made because of a contravention of the social security law, a false statement or a misrepresentation`
+    `made under a direction or authority that had been revoked or withdrawn`
+    `the intended recipient died before the payment was made`
+    `none of these reasons`
+
+@desc s 1223(1AB): is there a (1AB) reason
+GIVEN `the reason` IS A NotEntitledReason
+GIVETH A BOOLEAN
+DECIDE `is a subsection (1AB) reason` `the reason` IF
+    CONSIDER `the reason`
+    WHEN `none of these reasons` THEN FALSE
+    OTHERWISE TRUE
+
+@desc s 1223(1AB): was the payment made by computer or administrative error
+GIVEN `the reason` IS A NotEntitledReason
+GIVETH A BOOLEAN
+DECIDE `is computer or administrative error` `the reason` IF
+    CONSIDER `the reason`
+    WHEN `made by mistake as a result of a computer error or an administrative error` THEN TRUE
+    OTHERWISE FALSE
+
+-- s 1223(1)(b) with (1AB): not entitled for any reason. (1AB) is "without limiting": any other reason the person was not entitled
+-- (a borrowed judgment -- whether the rate and qualification rules gave an entitlement) is asked as a fact.
+@desc s 1223(1)(b): was the person not entitled to obtain the benefit of the payment
+GIVEN `the reason` IS A NotEntitledReason, `entitled apart from those reasons` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `was not entitled to the benefit` `the reason` `entitled apart from those reasons` IF
+        `is a subsection (1AB) reason` `the reason`
+    OR  (NOT `entitled apart from those reasons`)
+
+@export Does section 1223 of the Social Security Act 1991 make the social security payment I got the benefit of a debt I owe to the Commonwealth? TRUE: the amount of the payment (or the part I was not entitled to, s 1223(9)) is a debt, taken to arise when I obtained the benefit. FALSE: section 1223 makes no debt on these facts (other debt provisions of Part 5.2 are not encoded). NOTHING: the answer turns on the Social Security (Administration) Act 1999 (s 1223(1AD)), which is not deposited.
+GIVEN
+    `the reason` IS A NotEntitledReason @desc Which of these was the reason the payment should not have been made (s 1223(1AB)): made by mistake as a result of a computer error or an administrative error; the intended recipient was not qualified; the payment was not payable; made because of a contravention of the social security law, a false statement or a misrepresentation; made under a direction or authority that had been revoked or withdrawn; the intended recipient died before the payment was made; or none of these reasons
+    `entitled apart from those reasons` IS A BOOLEAN @desc Leaving those reasons aside, were you entitled to obtain the benefit of the payment (were you qualified for it and was it payable at that rate)?
+    `made under a determination in effect` IS A BOOLEAN @desc Was the payment made under a determination (a decision about your payment) that had effect when it was paid?
+    `unnotified change without a valid notification requirement` IS A BOOLEAN @desc Was the payment made because of an event or change in your circumstances that was not notified to the Secretary, when no valid requirement to notify it had been made under the social security law (s 1223(1AD))?
+    `benefit obtained from a payment to the entitled person` IS A BOOLEAN @desc Did you get the benefit of the payment afterwards, from a payment made to, or as directed or authorised by, another person who was entitled to it (s 1223(1AA))?
+    `because of that person's mistake in the direction` IS A BOOLEAN @desc If so, did you get the benefit because of a mistake that person made in giving the direction or authorisation?
+    `paid under section 47(2) or 51(2) of the Administration Act` IS A BOOLEAN @desc Was the payment made under subsection 47(2) or 51(2) of the Social Security (Administration) Act 1999 (payments around release from gaol or psychiatric confinement)?
+    `released after the expected release day` IS A BOOLEAN @desc If so, were you released from gaol or psychiatric confinement on a day after your expected release day (s 1223(1AG))?
+    `carer payment overpaid because of the care receiver's income` IS A BOOLEAN @desc Was this carer payment paid when you were not qualified because the care receiver's income was underestimated, their income assessment was amended (s 198B(2)(b)-(d)), or the Department was not told of an event a notice under s 70 of the Administration Act required (s 1223(1B))?
+    `it was reasonable for you to know` IS A BOOLEAN @desc If so, was it reasonable for you to know that the estimate was wrong, the assessment had been amended, or the Department should have been told (s 1223(1C))?
+    `parenting payment overpaid only for the employment pathway plan` IS A BOOLEAN @desc Was this parenting payment paid when you were not qualified only because you, a person to whom s 500(1)(ca) applies, did not meet your employment pathway plan requirements (s 1223(2))?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Does section 1223 make my payment a debt` IS
+    BRANCH
+        IF NOT (`was not entitled to the benefit` `the reason` `entitled apart from those reasons`)
+            THEN JUST FALSE
+        IF `benefit obtained from a payment to the entitled person` AND (NOT `because of that person's mistake in the direction`)
+            THEN JUST FALSE
+        IF `paid under section 47(2) or 51(2) of the Administration Act` AND (NOT `released after the expected release day`)
+            THEN JUST FALSE
+        IF `carer payment overpaid because of the care receiver's income` AND (NOT `it was reasonable for you to know`)
+            THEN JUST FALSE
+        IF `parenting payment overpaid only for the employment pathway plan`
+            THEN JUST FALSE
+        IF      `is computer or administrative error` `the reason`
+            AND `made under a determination in effect`
+            AND `unnotified change without a valid notification requirement`
+            AND `entitled apart from those reasons`
+            THEN NOTHING
+        OTHERWISE JUST TRUE
+
+@export Am I jointly and severally liable to pay another person's social security debt? s 1224AB: yes, if that person is liable because they contravened the social security law and I have been convicted of a Criminal Code offence (ss 11.2, 11.2A, 11.4 or 11.5 -- complicity, joint commission, incitement, conspiracy) in relation to that contravention.
+GIVEN
+    `the other person owes a debt for a contravention` IS A BOOLEAN @desc Is the other person liable to pay a debt because they contravened the social security law (or this Act as in force before 20 March 2000)?
+    `you were convicted in relation to it` IS A BOOLEAN @desc Have you been convicted of an offence under section 11.2, 11.2A, 11.4 or 11.5 of the Criminal Code in relation to that contravention?
+GIVETH A BOOLEAN
+DECIDE `Am I jointly liable for the other person's debt` IF
+        `the other person owes a debt for a contravention`
+    AND `you were convicted in relation to it`
+
+§§ `s 1228B -- the 10% penalty for not giving or misstating income from personal exertion`
+
+DECLARE IncomeInformationFailure IS ONE OF
+    `refused or failed to provide the information`
+    `knowingly or recklessly provided false or misleading information`
+    `no such failure`
+
+@desc s 1228B(1): is the penalty added
+GIVEN
+    `the payment` IS A PaymentKind
+    `at least the minimum youth allowance age` IS A BOOLEAN
+    `under pension age` IS A BOOLEAN
+    `the failure` IS A IncomeInformationFailure
+    `reasonable excuse` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `the 10% penalty applies` IF
+        `at least the minimum youth allowance age`
+    AND `under pension age`
+    AND (    `is a social security benefit` `the payment`
+         OR  `the payment` EQUALS `disability support pension`
+         OR  `the payment` EQUALS `pension PP (single)`)
+    AND (NOT (`the failure` EQUALS `no such failure`))
+    AND (NOT `reasonable excuse`)
+
+@export How much is the 10% penalty added to my social security debt for not giving, or misstating, my income from personal exertion (s 1228B)? 10% of the part of the debt that arose because of it, rounded down to 5 cents; the penalty becomes part of the debt. 0 if the section does not apply.
+GIVEN
+    `the payment` IS A PaymentKind @desc Which payment the debt is about: youth allowance, austudy payment, jobseeker payment, special benefit, benefit PP (partnered), parenting allowance, disability support pension, pension PP (single), age pension, carer payment, or another social security payment
+    `at least the minimum youth allowance age` IS A BOOLEAN @desc When the payment was made, had you reached the minimum age for youth allowance (s 543A)?
+    `under pension age` IS A BOOLEAN @desc When the payment was made, were you under pension age?
+    `the failure` IS A IncomeInformationFailure @desc When you were required to give information about your income from personal exertion (for example wages), did you: refuse or fail to provide the information; knowingly or recklessly provide false or misleading information; or neither (no such failure)?
+    `the part of the debt from the failure` IS A NUMBER @desc How much of the debt, in dollars, arose because of that failure?
+    `reasonable excuse` IS A BOOLEAN @desc Is the Secretary satisfied that you had a reasonable excuse for refusing or failing to provide the information (s 1228B(4))?
+GIVETH A NUMBER
+DECIDE `How much is my 10% penalty` IS
+    IF `the 10% penalty applies` `the payment` `at least the minimum youth allowance age` `under pension age` `the failure` `reasonable excuse`
+    THEN `rounded down to 5 cents` (`the part of the debt from the failure` TIMES 0.1)
+    ELSE 0
+
+§ `s 1229 -- the debt notice and the day the debt is due`
+
+@export Must I be given a notice of my social security debt (s 1229(1))? Yes while the debt has not been wholly paid, except for a debt of interest charge (s 1229C(3)). The notice must give its date, the reason for the debt with a brief explanation, the period it relates to, the outstanding amount, the day it is due, the effect of the interest charge rules, that repayment options are available, and contact details.
+GIVEN
+    `wholly paid` IS A BOOLEAN @desc Have you already paid the whole debt?
+    `an interest charge debt` IS A BOOLEAN @desc Is the debt itself interest charge under s 1229A or 1229B?
+GIVETH A BOOLEAN
+DECIDE `Must I be given a debt notice` IF
+        (NOT `wholly paid`)
+    AND (NOT `an interest charge debt`)
+
+@export By what date must I pay my social security debt (s 1229(2))? The outstanding amount is due and payable on the 28th day after the date of the notice.
+GIVEN `the date of the notice` IS A DATE @desc The date the debt notice says it was issued
+GIVETH A DATE
+DECIDE `By when must I pay my debt` IS `the date` 28 `days after` `the date of the notice`
+
+§ `ss 1229A-1229F -- interest charge`
+
+DECLARE Party IS ONE OF `the debtor`
+DECLARE DebtAction IS ONE OF `pay the outstanding amount`
+
+-- s 1229(2) with s 1229A(1): the debtor must pay within 28 days of the notice's date (the due day is day 28, and a payment on the
+-- due day is in time); if the amount is unpaid at the end of the due day, interest charge runs from the next day (unless an
+-- arrangement under s 1234 is in effect or an exemption applies -- those are applied by the question below, not by the duty).
+@desc s 1229(2): the duty to pay the debt by the due day, counted in days from the date of the notice
+GIVEN `the notice day` IS A NUMBER
+GIVETH A DEONTIC Party DebtAction
+`the duty to pay the debt` `the notice day` MEANS
+    PARTY `the debtor`
+    MUST `pay the outstanding amount`
+    WITHIN 28
+    HENCE FULFILLED
+    LEST BREACH BY `the debtor` BECAUSE "the debt was unpaid at the end of the due day (s 1229(2)): interest charge under s 1229A runs from the next day unless an arrangement under s 1234 is in effect or an exemption applies"
+
+@desc s 1229(2): was the debt paid by the end of the due day
+GIVEN `the date of the notice` IS A DATE, `paid` IS A BOOLEAN, `the date paid` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `was paid by the due day` `the date of the notice` `paid` `the date paid` IF
+    IF NOT `paid`
+    THEN FALSE
+    ELSE
+        CONSIDER EVALTRACE (`the duty to pay the debt` (`the day number of` `the date of the notice`)) (`the day number of` `the date of the notice`) (LIST (EVENT `the debtor` `pay the outstanding amount` (`the day number of` `the date paid`)))
+        WHEN FULFILLED THEN TRUE
+        OTHERWISE FALSE
+
+-- s 1234(1A): a payment due under an arrangement before the end of a day must be made before the end of that day.
+@desc s 1234(1A): the duty to make an arrangement payment by the end of its day
+GIVEN `the instalment day` IS A NUMBER
+GIVETH A DEONTIC Party DebtAction
+`the duty to pay the instalment` `the instalment day` MEANS
+    PARTY `the debtor`
+    MUST `pay the outstanding amount`
+    WITHIN 0
+    HENCE FULFILLED
+    LEST BREACH BY `the debtor` BECAUSE "an arrangement payment was not made by the end of its day (s 1234(1A)): interest charge under s 1229B runs from the next day unless an exemption applies"
+
+@desc s 1234(1A): was the instalment paid by the end of its day
+GIVEN `the instalment date` IS A DATE, `paid` IS A BOOLEAN, `the date paid` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `was paid on time` `the instalment date` `paid` `the date paid` IF
+    IF NOT `paid`
+    THEN FALSE
+    ELSE
+        CONSIDER EVALTRACE (`the duty to pay the instalment` (`the day number of` `the instalment date`)) (`the day number of` `the instalment date`) (LIST (EVENT `the debtor` `pay the outstanding amount` (`the day number of` `the date paid`)))
+        WHEN FULFILLED THEN TRUE
+        OTHERWISE FALSE
+
+-- s 1229E(1)(a)-(e): what the person was receiving on the day before the interest charge period would start.
+DECLARE ExemptingPayment IS ONE OF
+    `a social security payment`
+    `a pension, veteran payment or allowance under the Veterans' Entitlements Act`
+    `instalments of family tax benefit`
+    `ABSTUDY instalments including living allowance`
+    `Assistance for Isolated Children Scheme instalments`
+    `none of these`
+
+@desc s 1229E and s 1229F: is the person exempt from interest charge
+GIVEN
+    `receiving` IS A ExemptingPayment
+    `a ministerial exemption applies` IS A BOOLEAN
+    `a Secretary's determination applies` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `is exempt from interest charge` IF
+        (NOT (`receiving` EQUALS `none of these`))
+    OR  `a ministerial exemption applies`
+    OR  `a Secretary's determination applies`
+
+@export Am I liable to pay interest charge on my social security debt because it was not paid by the due day (s 1229A)? Yes if a debt notice was given, the debt was unpaid at the end of the due day (the 28th day after the notice), no repayment arrangement under s 1234 was in effect then, and no exemption applies (ss 1229E, 1229F). The charge runs from the day after the due day.
+GIVEN
+    `the date of the notice` IS A DATE @desc The date the debt notice says it was issued
+    `paid` IS A BOOLEAN @desc Have you paid the whole debt?
+    `the date paid` IS A DATE @desc If so, the date you paid it (ignored if you have not paid)
+    `an arrangement was in effect` IS A BOOLEAN @desc At the end of the due day, was a repayment arrangement under s 1234 in effect for the debt?
+    `receiving` IS A ExemptingPayment @desc On the due day (the day before the charge would start), were you receiving: a social security payment; a pension, veteran payment or allowance under the Veterans' Entitlements Act; instalments of family tax benefit; ABSTUDY instalments including living allowance; Assistance for Isolated Children Scheme instalments; or none of these?
+    `a ministerial exemption applies` IS A BOOLEAN @desc Do circumstances the Minister has determined by legislative instrument under s 1229E(2) apply to you?
+    `a Secretary's determination applies` IS A BOOLEAN @desc Has the Secretary determined under s 1229F that interest charge is not payable by you on this debt for the period (and have you kept any conditions of it)?
+GIVETH A BOOLEAN
+DECIDE `Am I liable to interest charge on my unpaid debt` IF
+        (NOT (`was paid by the due day` `the date of the notice` `paid` `the date paid`))
+    AND (NOT `an arrangement was in effect`)
+    AND (NOT (`is exempt from interest charge` `receiving` `a ministerial exemption applies` `a Secretary's determination applies`))
+
+@export Am I liable to pay interest charge because I missed a payment under my repayment arrangement (s 1229B(1))? Yes if the payment was not made by the end of the day it was due (s 1234(1A)) and no exemption applies (ss 1229E, 1229F). The charge runs from the next day until you have caught up on all payments due, or the arrangement is terminated.
+GIVEN
+    `the instalment date` IS A DATE @desc The day the missed payment was due under the arrangement
+    `paid` IS A BOOLEAN @desc Have you made that payment?
+    `the date paid` IS A DATE @desc If so, the date you made it (ignored if you have not)
+    `receiving` IS A ExemptingPayment @desc On the day the payment was due, were you receiving: a social security payment; a pension, veteran payment or allowance under the Veterans' Entitlements Act; instalments of family tax benefit; ABSTUDY instalments including living allowance; Assistance for Isolated Children Scheme instalments; or none of these?
+    `a ministerial exemption applies` IS A BOOLEAN @desc Do circumstances the Minister has determined by legislative instrument under s 1229E(2) apply to you?
+    `a Secretary's determination applies` IS A BOOLEAN @desc Has the Secretary determined under s 1229F that interest charge is not payable by you on this debt for the period?
+GIVETH A BOOLEAN
+DECIDE `Am I liable to interest charge for a missed arrangement payment` IF
+        (NOT (`was paid on time` `the instalment date` `paid` `the date paid`))
+    AND (NOT (`is exempt from interest charge` `receiving` `a ministerial exemption applies` `a Secretary's determination applies`))
+
+@export By what date must I pay after my repayment arrangement is terminated (s 1229B(4))? The outstanding amount, and any interest charge on it, are due on the 14th day after the termination day; interest charge runs from the next day on what is unpaid.
+GIVEN `the termination day` IS A DATE @desc The day the arrangement was terminated under s 1234
+GIVETH A DATE
+DECIDE `By when must I pay after my arrangement ends` IS `the date` 14 `days after` `the termination day`
+
+@export Which month's Reserve Bank yield on 90-day Bank Accepted Bills sets the base interest rate for interest charge on a given day (s 1229D(2))? January-March: the preceding November; April-June: the preceding February; July-September: the preceding May; October-December: the preceding August.
+GIVEN `the day` IS A DATE @desc The day the interest charge is for
+GIVETH A STRING
+DECIDE `Which month sets my base interest rate` IS
+    BRANCH
+        IF `the month of` `the day` AT MOST 3 THEN CONCAT "November ", TOSTRING (`the year of` `the day` MINUS 1)
+        IF `the month of` `the day` AT MOST 6 THEN CONCAT "February ", TOSTRING (`the year of` `the day`)
+        IF `the month of` `the day` AT MOST 9 THEN CONCAT "May ", TOSTRING (`the year of` `the day`)
+        OTHERWISE CONCAT "August ", TOSTRING (`the year of` `the day`)
+
+@desc s 1229D(4): the base interest rate rounded to the second decimal place, .005 upwards
+GIVEN `the yield` IS A NUMBER
+GIVETH A NUMBER
+`the base interest rate from` `the yield` MEANS `to the nearest cent` `the yield`
+
+@export What is the daily interest charge rate on my social security debt (s 1229D(1))? The base interest rate (rounded to 2 decimal places) plus 7 percentage points, divided by the number of days in the calendar year. The answer is a percentage per day.
+GIVEN
+    `the yield` IS A NUMBER @desc The monthly average yield of 90-day Bank Accepted Bills (per cent a year) published by the Reserve Bank for the month that applies to the day (for example 3.6 for 3.60%)
+    `the day` IS A DATE @desc The day the interest charge is for
+GIVETH A NUMBER
+DECIDE `What is the daily interest charge rate` IS
+    (`the base interest rate from` `the yield` PLUS 7) DIVIDED BY (`the number of days in the calendar year of` `the day`)
+
+@desc ss 1229A(3), 1229B(3): interest charge accrued over a number of days, each day's charge being the daily rate times the unpaid amount plus the charge from previous days
+GIVEN `the unpaid amount` IS A NUMBER, `the daily rate` IS A NUMBER, `days` IS A NUMBER
+GIVETH A NUMBER
+`the interest charge accrued` `the unpaid amount` `the daily rate` `days` MEANS
+    IF `days` AT MOST 0
+    THEN 0
+    ELSE `earlier` PLUS ((`the daily rate` DIVIDED BY 100) TIMES (`the unpaid amount` PLUS `earlier`))
+    WHERE
+        `earlier` MEANS `the interest charge accrued` `the unpaid amount` `the daily rate` (`days` MINUS 1)
+
+@export How much interest charge accrues on my unpaid social security debt over a number of days in one quarter (ss 1229A(3), 1229D)? Each day's charge is the daily rate times the unpaid amount plus the charge from previous days, so it compounds daily. Rounded to the nearest cent. Assumes no payment in the period and one base interest rate (one quarter, one calendar year).
+GIVEN
+    `the unpaid amount` IS A NUMBER @desc The unpaid amount of the debt, in dollars, at the start of the period
+    `the yield` IS A NUMBER @desc The Reserve Bank's monthly average yield of 90-day Bank Accepted Bills (per cent a year) for the month that applies to the quarter
+    `the first day` IS A DATE @desc The first day of the period (the day after the due day, or later)
+    `days` IS A NUMBER @desc The number of days in the period, all in the same quarter
+GIVETH A NUMBER
+DECIDE `How much interest charge accrues` IS
+    `to the nearest cent` (`the interest charge accrued` `the unpaid amount` (`What is the daily interest charge rate` `the yield` `the first day`) `days`)
+
+§ `Part 5.3 -- How the debt can be recovered`
+
+@export Can the Commonwealth take me to court, or send a garnishee notice to my bank or employer, to recover my social security debt (s 1230C(2), (3))? Only if it first sought to recover the debt by deductions from a social security payment or a repayment arrangement (unless the Secretary determined those not appropriate), and can establish that I failed to enter a reasonable arrangement or missed a payment under one.
+GIVEN
+    `deductions or an arrangement were first sought` IS A BOOLEAN @desc Did the Commonwealth first seek to recover the debt by deductions from a social security payment (yours, or by consent someone else's) or by an instalment arrangement under s 1234?
+    `the Secretary determined those not appropriate` IS A BOOLEAN @desc Has the Secretary determined that recovery by deductions or an arrangement is not appropriate in the circumstances of your case (s 1230C(3))?
+    `you failed to enter a reasonable arrangement` IS A BOOLEAN @desc Can the Commonwealth establish that you failed to enter into a reasonable arrangement to repay the debt?
+    `you missed an arrangement payment` IS A BOOLEAN @desc Can the Commonwealth establish that, having entered such an arrangement, you failed to make a payment under it?
+GIVETH A BOOLEAN
+DECIDE `Can my debt be recovered by court action or garnishee notice` IF
+        (    `deductions or an arrangement were first sought`
+         OR  `the Secretary determined those not appropriate`)
+    AND (    `you failed to enter a reasonable arrangement`
+         OR  `you missed an arrangement payment`)
+
+@export Must my social security debt be deducted from my social security payment (s 1231(2))? Yes, if I am receiving a social security payment, unless the Secretary writes off or waives the amount under Part 5.4 or it is recovered another way.
+GIVEN
+    `receiving a social security payment` IS A BOOLEAN @desc Are you receiving a social security payment (or arrears of one)?
+    `written off or waived` IS A BOOLEAN @desc Has the Secretary written off or waived the amount under Part 5.4?
+    `recovered another way` IS A BOOLEAN @desc Is the amount being recovered another way (another provision of Chapter 5, or Part 4 of the Family Assistance Administration Act)?
+GIVETH A BOOLEAN
+DECIDE `Must my debt be deducted from my payment` IF
+        `receiving a social security payment`
+    AND (NOT `written off or waived`)
+    AND (NOT `recovered another way`)
+
+DECLARE DeductedPayment IS ONE OF
+    `pension bonus`
+    `arrears of social security payments`
+    `an economic security strategy payment, essential medical equipment payment or training and learning bonus`
+    `a student start-up loan`
+    `another social security payment`
+
+@export Can the deduction for my social security debt reduce a payment to nil (s 1231(1A), (1AA), (1B))? Never a student start-up loan, never if it would leave me in severe financial hardship, and an economic security strategy payment, essential medical equipment payment or training and learning bonus only if I asked; otherwise yes for pension bonus and arrears, and for another payment only if I consented or elected in writing.
+GIVEN
+    `the payment` IS A DeductedPayment @desc Which payment the deduction is from: pension bonus; arrears of social security payments; an economic security strategy payment, essential medical equipment payment or training and learning bonus; a student start-up loan; or another social security payment
+    `you consented to nil` IS A BOOLEAN @desc Have you consented to a deduction that reduces the payment to nil (s 1231(1A)(b))?
+    `you elected in writing` IS A BOOLEAN @desc Have you elected in writing that s 1231(1B) applies to you (each payment may be reduced to nil)?
+    `you asked for the deduction` IS A BOOLEAN @desc For an economic security strategy payment, essential medical equipment payment or training and learning bonus: did you ask the Secretary to make a deduction from it?
+    `severe financial hardship` IS A BOOLEAN @desc Would reducing the payment to nil leave you in severe financial hardship?
+GIVETH A BOOLEAN
+DECIDE `Can my payment be reduced to nil` IF
+    CONSIDER `the payment`
+    WHEN `a student start-up loan` THEN FALSE
+    WHEN `pension bonus` THEN NOT `severe financial hardship`
+    WHEN `arrears of social security payments` THEN NOT `severe financial hardship`
+    WHEN `an economic security strategy payment, essential medical equipment payment or training and learning bonus` THEN
+            `you asked for the deduction`
+        AND (`you consented to nil` OR `you elected in writing`)
+        AND (NOT `severe financial hardship`)
+    OTHERWISE
+            (`you consented to nil` OR `you elected in writing`)
+        AND (NOT `severe financial hardship`)
+
+@export What is the earliest date a garnishee notice can require my bank, employer or another person to pay my money to the Commonwealth (s 1233(2))? Not before the end of 14 days after the notice is given, and not before the money is due to me or held for me. I must be given a copy of the notice (s 1233(4)).
+GIVEN
+    `the day the notice was given` IS A DATE @desc The day the garnishee notice was given to the bank, employer or other person
+    `the day the money is due or held` IS A DATE @desc The day the money becomes due to you, or is held for you
+GIVETH A DATE
+DECIDE `When can a garnishee notice first take my money` IS
+    `whichever is later of` (`the date` 14 `days after` `the day the notice was given`) `the day the money is due or held`
+
+@export Can the Secretary terminate or alter my repayment arrangement on a given day (s 1234(4))? Yes at my request; after 28 days' notice of the proposed termination or alteration; or without notice if the Secretary is satisfied I failed to disclose material information about my true capacity to repay. NOTHING where none of these holds: the list is not closed with "only".
+GIVEN
+    `the day` IS A DATE @desc The day the termination or alteration would take effect
+    `you asked` IS A BOOLEAN @desc Did you ask for the arrangement to be terminated or altered?
+    `notice was given` IS A BOOLEAN @desc Were you given notice of the proposed termination or alteration?
+    `the day of the notice` IS A DATE @desc If so, the day you were given it (ignored if no notice)
+    `undisclosed capacity to repay` IS A BOOLEAN @desc Is the Secretary satisfied that you failed to disclose material information about your true capacity to repay the debt?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Can my arrangement be ended or changed` IS
+    IF `a ground applies` THEN JUST TRUE ELSE NOTHING
+    WHERE
+        `the notice has run` MEANS (`the date` 28 `days after` `the day of the notice`) `is on or before` `the day`
+        `a ground applies` MEANS
+                `you asked`
+            OR  `undisclosed capacity to repay`
+            OR  (`notice was given` AND `the notice has run`)
+
+@export Is there a time limit on recovering my social security debt (s 1234B)? No: legal proceedings or any other recovery action under Chapter 5 may be started at any time, however old the debt.
+GIVEN `years since the debt arose` IS A NUMBER @desc How many years ago the debt arose
+GIVETH A BOOLEAN
+DECIDE `Is there a time limit on recovering my debt` IF FALSE
+
+§ `Part 5.4 -- Write-off and waiver`
+
+@export Can my social security debt be written off (s 1236(1A)-(1C))? Only if it is irrecoverable at law (no proof capable of sustaining legal proceedings; discharged from bankruptcy for a debt incurred before it and not by fraud), I have no capacity to repay, or recovery is not cost effective. If the debt can be recovered by deductions from my payment I am taken to have capacity unless that would put me in severe financial hardship. A written-off debt can still be recovered later (s 1236(3)); writing off is at the Secretary's discretion.
+GIVEN
+    `no proof` IS A BOOLEAN @desc Is there no proof of the debt capable of sustaining legal proceedings for its recovery?
+    `discharged from bankruptcy` IS A BOOLEAN @desc Have you been discharged from bankruptcy?
+    `incurred before the bankruptcy` IS A BOOLEAN @desc Was the debt incurred before you became bankrupt?
+    `incurred by fraud` IS A BOOLEAN @desc Was the debt incurred by fraud?
+    `recoverable by deductions` IS A BOOLEAN @desc Can the debt be recovered by deductions from your social security payment or family tax benefit (or set off against it)?
+    `severe financial hardship` IS A BOOLEAN @desc Would recovery by those deductions put you in severe financial hardship?
+    `no capacity to repay otherwise` IS A BOOLEAN @desc If the debt cannot be recovered by deductions: do you have no capacity to repay it?
+    `not cost effective` IS A BOOLEAN @desc Is it not cost effective for the Commonwealth to take action to recover the debt?
+GIVETH A BOOLEAN
+DECIDE `Can my debt be written off` IF
+        `irrecoverable at law`
+    OR  `no capacity to repay`
+    OR  `not cost effective`
+    WHERE
+        `irrecoverable at law` MEANS
+                `no proof`
+            OR  (`discharged from bankruptcy` AND `incurred before the bankruptcy` AND (NOT `incurred by fraud`))
+        `no capacity to repay` MEANS
+            IF `recoverable by deductions`
+            THEN `severe financial hardship`
+            ELSE `no capacity to repay otherwise`
+
+@export How much of my social security debt must be waived because it came solely from an administrative error by the Commonwealth (s 1237A(1), (1A))? The part attributable solely to the error, if I received the payments in good faith -- but only if the debt was not raised within 6 weeks from the first payment that caused it (or, if the debt arose because I complied with a notification obligation, within 6 weeks from the end of the notification period, whichever is later). 0 otherwise.
+GIVEN
+    `the part from the error` IS A NUMBER @desc How much of the debt, in dollars, is attributable solely to an administrative error made by the Commonwealth (not partly to anything you did)?
+    `good faith` IS A BOOLEAN @desc Did you receive the payments that gave rise to that part of the debt in good faith?
+    `the first payment` IS A DATE @desc The date of the first payment that caused the debt
+    `from complying with a notification obligation` IS A BOOLEAN @desc Did the debt arise because you complied with a notification obligation (told the agency of a change as required)?
+    `the end of the notification period` IS A DATE @desc If so, the last day of the notification period (ignored otherwise)
+    `the day the debt was raised` IS A DATE @desc The day the debt was raised
+GIVETH A NUMBER
+DECIDE `How much is waived for administrative error` IS
+    IF `good faith` AND (NOT (`the day the debt was raised` `is on or before` `the end of the 6 weeks`))
+    THEN `the part from the error`
+    ELSE 0
+    WHERE
+        `the end of the 6 weeks` MEANS
+            IF `from complying with a notification obligation`
+            THEN `whichever is later of` (`the date` 42 `days after` `the first payment`) (`the date` 42 `days after` `the end of the notification period`)
+            ELSE `the date` 42 `days after` `the first payment`
+
+@export How much of my social security debt must be waived because I or my partner underestimated the value of property (s 1237A(2))? The part attributable to the underestimate, if the estimate was made in good faith and the value could not easily be determined when it was made; 0 otherwise.
+GIVEN
+    `the part from the underestimate` IS A NUMBER @desc How much of the debt, in dollars, is attributable to the underestimate?
+    `good faith` IS A BOOLEAN @desc Was the estimate made in good faith?
+    `not easily determined` IS A BOOLEAN @desc Was the value of the property not able to be easily determined when the estimate was made?
+GIVETH A NUMBER
+DECIDE `How much is waived for an underestimate of property` IS
+    IF `good faith` AND `not easily determined`
+    THEN `the part from the underestimate`
+    ELSE 0
+
+@export How much of my social security debt must be waived because a court gave me a longer custodial sentence for not paying it (s 1237AA)? The part that arose in connection with the offence I was convicted of, if the court said in sentencing that it imposed a longer custodial sentence because I was unable or unwilling to pay the debt; 0 otherwise.
+GIVEN
+    `the part from the offence` IS A NUMBER @desc How much of the debt, in dollars, arose in connection with the offence?
+    `convicted` IS A BOOLEAN @desc Have you been convicted of an offence that gave rise to that part of the debt?
+    `longer sentence for not paying` IS A BOOLEAN @desc Did the court say in sentencing that it imposed a longer custodial sentence because you were unable or unwilling to pay the debt?
+GIVETH A NUMBER
+DECIDE `How much is waived for a longer sentence` IS
+    IF `convicted` AND `longer sentence for not paying`
+    THEN `the part from the offence`
+    ELSE 0
+
+@export Must my social security debt be waived as a small debt (s 1237AAA)? Yes if the debt is, or is likely to be, less than the small debt amount ($250 immediately before 1 July 2026, indexed each 1 July from then).
+GIVEN
+    `the debt` IS A NUMBER @desc The amount of the debt (or what it is likely to be), in dollars
+    `the small debt amount` IS A NUMBER @desc The small debt amount in force under s 1237AAA, in dollars (250 before 1 July 2026)
+GIVETH A BOOLEAN
+DECIDE `Must my small debt be waived` IF `the debt` LESS THAN `the small debt amount`
+
+@export Can a social security debt be raised for an amount recorded against me (s 1230D)? No if the recorded amount is less than the small debt amount: the Secretary must waive the right to raise it. NOTHING otherwise: s 1230D says nothing about larger amounts.
+GIVEN
+    `the recorded amount` IS A NUMBER @desc The amount recorded in the agency's records, in dollars
+    `the small debt amount` IS A NUMBER @desc The small debt amount in force under s 1237AAA, in dollars (250 before 1 July 2026)
+GIVETH A MAYBE BOOLEAN
+DECIDE `Can a debt be raised for this amount` IS
+    IF `the recorded amount` LESS THAN `the small debt amount`
+    THEN JUST FALSE
+    ELSE NOTHING
+
+@export How much of my social security debt must be waived when the Commonwealth settles a court action, or the Secretary settles proceedings before the Administrative Review Tribunal, for less than the full debt (s 1237AAB(1), (2))? The difference between the debt and the settlement amount.
+GIVEN
+    `the debt` IS A NUMBER @desc The amount of the debt, in dollars
+    `the settlement amount` IS A NUMBER @desc The amount the settlement says you will pay, in dollars
+GIVETH A NUMBER
+DECIDE `How much is waived on settlement` IS
+    IF `the settlement amount` LESS THAN `the debt`
+    THEN `the debt` MINUS `the settlement amount`
+    ELSE 0
+
+@export How much of my social security debt must be waived once at least 80% of it has been recovered (s 1237AAB(3))? The rest of the original debt (20% or less), if at least 80% has been recovered, the Commonwealth and I agree that is in full satisfaction, and I cannot repay more; 0 otherwise.
+GIVEN
+    `the original debt` IS A NUMBER @desc The original amount of the debt, in dollars
+    `recovered` IS A NUMBER @desc How much has been recovered from you, in dollars
+    `agreed in full satisfaction` IS A BOOLEAN @desc Have you and the Commonwealth agreed that what has been recovered is in full satisfaction of the whole debt?
+    `cannot repay more` IS A BOOLEAN @desc Is it the case that you cannot repay a greater proportion of the debt?
+GIVETH A NUMBER
+DECIDE `How much is waived after 80% is recovered` IS
+    IF      `recovered` AT LEAST (`the original debt` TIMES 0.8)
+        AND `recovered` LESS THAN `the original debt`
+        AND `agreed in full satisfaction`
+        AND `cannot repay more`
+    THEN `the original debt` MINUS `recovered`
+    ELSE 0
+
+@export What is the present value of the unpaid amount of my social security debt, against which an offer to pay part of it in full satisfaction is measured (s 1237AAB(6))? (annual repayment / interest) x [1 - 1 / (1 + interest) ^ repayment period], where the repayment period is the unpaid amount divided by the annual repayment. Rounded to the nearest cent.
+GIVEN
+    `the unpaid amount` IS A NUMBER @desc The amount of the debt outstanding, in dollars
+    `the annual repayment` IS A NUMBER @desc How much of the debt, in dollars, the Secretary believes would be recovered in a year by the ordinary methods of Part 5.3
+    `the interest rate` IS A NUMBER @desc The annual rate of interest the Minister has specified by legislative instrument, as a fraction (for example 0.05 for 5%)
+GIVETH A NUMBER
+DECIDE `What is the present value of my unpaid amount` IS
+    `to nearest cent of`
+        ((`the annual repayment` DIVIDED BY `the interest rate`)
+            TIMES (1 MINUS (1 DIVIDED BY (EXPONENT (1 PLUS `the interest rate`) (`the unpaid amount` DIVIDED BY `the annual repayment`)))))
+    WHERE
+        `to nearest cent of` `y` MEANS `to the nearest cent` `y`
+
+@export Does the present-value floor allow my offer to pay part of my social security debt in full satisfaction (s 1237AAB(4), (5))? The Secretary must not agree unless the agreed amount is at least the present value of the unpaid amount. If agreed, the difference between the unpaid amount and the agreed amount must be waived.
+GIVEN
+    `the unpaid amount` IS A NUMBER @desc The amount of the debt outstanding at the time of the agreement, in dollars
+    `the agreed amount` IS A NUMBER @desc The amount you offer to pay in full satisfaction, in dollars
+    `the annual repayment` IS A NUMBER @desc How much of the debt, in dollars, the Secretary believes would be recovered in a year by the ordinary methods of Part 5.3
+    `the interest rate` IS A NUMBER @desc The annual rate of interest the Minister has specified by legislative instrument, as a fraction (for example 0.05 for 5%)
+GIVETH A BOOLEAN
+DECIDE `Can my part-payment offer be accepted` IF
+    `the agreed amount` AT LEAST (`What is the present value of my unpaid amount` `the unpaid amount` `the annual repayment` `the interest rate`)
+
+@export How much of my social security debt must be waived under an agreement that I pay part of it in full satisfaction (s 1237AAB(4))? The difference between the unpaid amount at the time of the agreement and the agreed amount.
+GIVEN
+    `the unpaid amount` IS A NUMBER @desc The amount of the debt outstanding at the time of the agreement, in dollars
+    `the agreed amount` IS A NUMBER @desc The amount agreed to be paid in full satisfaction, in dollars
+GIVETH A NUMBER
+DECIDE `How much is waived under my part-payment agreement` IS
+    IF `the agreed amount` LESS THAN `the unpaid amount`
+    THEN `the unpaid amount` MINUS `the agreed amount`
+    ELSE 0
+
+@export How much of my social security debt must be waived because I or my partner could have claimed parenting payment for the overpayment period but did not (s 1237AAC(4), (5))? The parenting payment that would have been payable for the part of the overpayment period not earlier than 3 years before the overpayment stopped, up to the debt, if the Secretary is satisfied the overpayments did not come from anyone knowingly making a false statement or not complying; 0 otherwise.
+GIVEN
+    `the debt` IS A NUMBER @desc The amount of the debt from the overpayments, in dollars
+    `no knowing false statement or non-compliance` IS A BOOLEAN @desc Is the Secretary satisfied that the overpayments did not result, wholly or partly, from you or another person knowingly making a false statement or representation, or failing to comply with the Act?
+    `no claim was made` IS A BOOLEAN @desc Did you and your partner not claim parenting allowance or parenting payment for the period when the overpayments were made?
+    `the notional parenting payment` IS A NUMBER @desc The parenting allowance or parenting payment, in dollars, that would have been payable to you or your partner had you claimed it, for the part of the overpayment period not earlier than 3 years before the overpayment was stopped (at the rate s 1237AAC(6) fixes)
+GIVETH A NUMBER
+DECIDE `How much is waived for unclaimed parenting payment` IS
+    IF `no knowing false statement or non-compliance` AND `no claim was made`
+    THEN `whichever is less of` `the notional parenting payment` `the debt`
+    ELSE 0
+
+@export Can my social security debt be waived in special circumstances (s 1237AAD)? Only if the debt did not come from anyone knowingly making a false statement or not complying (or, if it did, that was justified, or another person did it without my knowledge, or I knew but was justified in not correcting it), and the Secretary is satisfied there are special circumstances (other than financial hardship alone) that make waiver desirable and that waiving is more appropriate than writing off. The waiver itself is at the Secretary's discretion.
+GIVEN
+    `you knowingly misstated or failed to comply` IS A BOOLEAN @desc Did the debt result, wholly or partly, from you knowingly making a false statement or representation, or failing to comply with the social security law?
+    `that was justified` IS A BOOLEAN @desc If so, was what you did (or failed to do) justified in the circumstances?
+    `another person knowingly misstated or failed to comply` IS A BOOLEAN @desc Did the debt result, wholly or partly, from another person knowingly making a false statement or representation, or failing to comply?
+    `you knew of it` IS A BOOLEAN @desc If so, did you know about what that person did?
+    `you were justified in not correcting it` IS A BOOLEAN @desc If you knew, was it justified in the circumstances for you not to correct it?
+    `special circumstances` IS A BOOLEAN @desc Is the Secretary satisfied that there are special circumstances (other than financial hardship alone) that make it desirable to waive?
+    `waiver more appropriate than write-off` IS A BOOLEAN @desc Is the Secretary satisfied that it is more appropriate to waive the debt than to write it off?
+GIVETH A BOOLEAN
+DECIDE `Can my debt be waived for special circumstances` IF
+        `paragraph (a) is met`
+    AND `special circumstances`
+    AND `waiver more appropriate than write-off`
+    WHERE
+        `paragraph (a) is met` MEANS
+                -- (i) no knowing misstatement or non-compliance by anyone
+                (    (NOT `you knowingly misstated or failed to comply`)
+                 AND (NOT `another person knowingly misstated or failed to comply`))
+                -- (ii) yours, but justified
+            OR  (`you knowingly misstated or failed to comply` AND `that was justified`)
+                -- (iii) another person's, without your knowledge
+            OR  (`another person knowingly misstated or failed to comply` AND (NOT `you knew of it`))
+                -- (iv) another person's, known to you, but you were justified in not correcting it
+            OR  (`another person knowingly misstated or failed to comply` AND `you knew of it` AND `you were justified in not correcting it`)
