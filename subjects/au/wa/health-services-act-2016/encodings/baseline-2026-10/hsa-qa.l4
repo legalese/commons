@@ -8,7 +8,10 @@ IMPORT `hsa-charges`
 -- PURPOSE. One deployment serves every seat. Every exported question takes `my role` first ("Which of these describes
 -- you"). A question about another role answers `does not arise for you` without reading any other input, so the form never
 -- asks those inputs and drops the question. The baseline's questions take a record (`Me as a patient`) and, in one case,
--- the baseline's `Charge`; here every input is one plain fact, and the records are built inside L4.
+-- the baseline's `Charge`; here the inputs are plain facts, and the records are built inside L4. To keep every question
+-- within the 1,024 combinations of yes/no and choice inputs the form can try, the compensation facts are one choice, the
+-- cl 6A facts one yes/no, and the charge questions take the patient's class (the class question's answer) in place of
+-- the facts it is worked out from (see "The situations a question arises in" below).
 --
 -- ROLES. (1) `I am a patient of a WA public health service`: the baseline's seat, the person charged (s 57(1)).
 -- (2) `I am a family member or carer of a patient, or stay in hospital with one`: the person the Order charges for staying
@@ -22,10 +25,10 @@ IMPORT `hsa-charges`
 --
 -- SITUATIONS (as in the Graffiti Vandalism Act layer, design D8). Within a role, a question that arises only in a situation
 -- takes that situation's fact straight after `my role` and answers `does not arise for you` without reading anything else
--- when it does not hold; the questions of one situation share one input. The patient's: how I attend (the per-day and
--- whole-stay charges do not arise for an out-patient; the out-patient service and medicine charges arise only for one);
--- a payment for my injury (ss 53B, 57A, 57D). The family member's: staying in the hospital with the patient (item 7). The
--- compensation payer's: another person also liable (s 57A(4)).
+-- when it does not hold; the questions of one situation share one input. The patient's: my class (the per-day and
+-- whole-stay charges do not arise for an out-patient class; the out-patient service and medicine charges arise only for
+-- one, or for a patient free of all fees under cl 6A); a payment for my injury (ss 53B, 57A, 57D). The family member's:
+-- staying in the hospital with the patient (item 7). The compensation payer's: another person also liable (s 57A(4)).
 --
 -- The rules are in hsa-charges.l4. For the patient this module calls them and restates none; each answer equals the
 -- baseline export's wherever the role and situation hold. The other roles use the baseline's rules where they exist (item 7,
@@ -69,50 +72,209 @@ GIVETH A `Yes or no`
 `yes if` `it holds` MEANS
     IF `it holds` THEN yes ELSE no
 
-§§ `The situations a question arises in`
+§§ `The situations a question arises in, and the inputs built from plain answers`
 
--- The patient's attendance (Order cl 11(1)) is the baseline's `How I attend`. It is the situation of the per-day and
--- whole-stay charges (not for an out-patient, who is charged per service) and of the out-patient service and medicine
--- charges (only for an out-patient); elsewhere it is an ordinary input. This helper lists every value and has no
--- OTHERWISE: on the stable l4 a CONSIDER with OTHERWISE quietly takes the OTHERWISE branch for an ASSUMEd value (Graffiti
--- Vandalism Act layer, finding 31), so the cases could not show that an ASSUMEd situation is never read.
-GIVEN `how I attend` IS A `How I attend`
+-- WHY THE PATIENT'S INPUTS ARE SHAPED AS THEY ARE (fix after verification, 6 November 2026). The site's form drops a
+-- question for a role it is not about only when it can try every combination of the question's open yes/no and choice
+-- inputs, at most 1,024 (the form engine's PROBE_CAP and ENUMERATION_CAP). The baseline's `Me as a patient` has twelve
+-- fields, and a charge question asked them all with the attendance, the bed and more: tens of thousands of combinations,
+-- so a family member, a payer or a holder of information was asked the patient's facts. So:
+-- (1) the baseline's four compensation fields are asked as one choice, `my compensation` (`My compensation position`),
+--     because the baseline reads them only as "motor vehicle insurance, or other compensation law, or a right to
+--     compensation the chief executive has not ruled out" (cl 3A, cl 12(3)), and the motor vehicle insurance alone again
+--     in Schedule 1 Division 2 items 2, 3 and 10;
+-- (2) the baseline's three cl 6A fields are asked as one yes/no, because it reads them only as "an asylum seeker, or an
+--     involuntary patient treated under the Mental Health Act for this service" (cl 6A(a), (b));
+-- (3) the six charge questions (per day, whole stay, out-patient service, out-patient medicine, MRI, pathology) take
+--     `my class`, the answer to the class question, in place of the twelve facts. The baseline's charge rules read the
+--     facts only through the class, except the motor vehicle insurance (items 2, 3, 10: asked as `my compensation`) and,
+--     in the pathology election (cl 14(3)), eligibility, compensability and the veteran's election, which the class
+--     `an eligible out-patient` holds exactly. Each charge question builds, from the class, a patient of that class (below)
+--     and calls the baseline on it, so its answer equals the baseline's for any patient whose class that is.
+-- `my class` is also the situation of the charge questions: the per-day and whole-stay charges do not arise for the four
+-- out-patient classes (an out-patient is charged per service: cl 5, Schedule 1 Division 1 item 4); the out-patient service
+-- and medicine charges arise only for the four out-patient classes and for a patient free of all fees under cl 6A (whose
+-- answer is that no fees are payable). `how I attend` remains an ordinary input of the compensable, cl 6A and class
+-- questions. Each helper below that reads an enumeration lists every value and has no OTHERWISE: on the stable l4 a
+-- CONSIDER with OTHERWISE quietly takes the OTHERWISE branch for an ASSUMEd value (Graffiti Vandalism Act layer, finding
+-- 31), so the cases could not show that an ASSUMEd input is never read.
+
+DECLARE `My compensation position` IS ONE OF
+    `motor vehicle third party insurance applies, or appears to apply, to paying for my treatment`
+    `workers compensation, catastrophic injuries or Defence Force law applies, or appears to apply, to paying for my treatment`
+    `I have, or appear to have, another right to compensation for this condition, and the chief executive has not decided I am not compensable`
+    `none of these`
+
+GIVEN `my compensation` IS A `My compensation position`
 GIVETH A BOOLEAN
-DECIDE `I attend as an out-patient` IF
-    CONSIDER `how I attend`
-    WHEN `as an in-patient` THEN FALSE
-    WHEN `as a day patient` THEN FALSE
-    WHEN `as an out-patient` THEN TRUE
-    WHEN `as a same day patient` THEN FALSE
+DECIDE `motor vehicle third party insurance applies by` IF
+    CONSIDER `my compensation`
+    WHEN `motor vehicle third party insurance applies, or appears to apply, to paying for my treatment` THEN TRUE
+    WHEN `workers compensation, catastrophic injuries or Defence Force law applies, or appears to apply, to paying for my treatment` THEN FALSE
+    WHEN `I have, or appear to have, another right to compensation for this condition, and the chief executive has not decided I am not compensable` THEN FALSE
+    WHEN `none of these` THEN FALSE
 
-§§ `Building the baseline's record from plain answers`
+GIVEN `my compensation` IS A `My compensation position`
+GIVETH A BOOLEAN
+DECIDE `workers compensation, catastrophic injuries or Defence Force law applies by` IF
+    CONSIDER `my compensation`
+    WHEN `motor vehicle third party insurance applies, or appears to apply, to paying for my treatment` THEN FALSE
+    WHEN `workers compensation, catastrophic injuries or Defence Force law applies, or appears to apply, to paying for my treatment` THEN TRUE
+    WHEN `I have, or appear to have, another right to compensation for this condition, and the chief executive has not decided I am not compensable` THEN FALSE
+    WHEN `none of these` THEN FALSE
 
+GIVEN `my compensation` IS A `My compensation position`
+GIVETH A BOOLEAN
+DECIDE `I have another right to compensation not ruled out by` IF
+    CONSIDER `my compensation`
+    WHEN `motor vehicle third party insurance applies, or appears to apply, to paying for my treatment` THEN FALSE
+    WHEN `workers compensation, catastrophic injuries or Defence Force law applies, or appears to apply, to paying for my treatment` THEN FALSE
+    WHEN `I have, or appear to have, another right to compensation for this condition, and the chief executive has not decided I am not compensable` THEN TRUE
+    WHEN `none of these` THEN FALSE
+
+-- A compensable class needs a compensation that makes the patient compensable: the one given, or, for `none of these`
+-- (which no compensable patient has), the compensation law limb. The motor vehicle insurance is kept as given.
+GIVEN `my compensation` IS A `My compensation position`
+GIVETH A `My compensation position`
+`a compensation that makes me compensable` `my compensation` MEANS
+    CONSIDER `my compensation`
+    WHEN `motor vehicle third party insurance applies, or appears to apply, to paying for my treatment` THEN `motor vehicle third party insurance applies, or appears to apply, to paying for my treatment`
+    WHEN `workers compensation, catastrophic injuries or Defence Force law applies, or appears to apply, to paying for my treatment` THEN `workers compensation, catastrophic injuries or Defence Force law applies, or appears to apply, to paying for my treatment`
+    WHEN `I have, or appear to have, another right to compensation for this condition, and the chief executive has not decided I am not compensable` THEN `I have, or appear to have, another right to compensation for this condition, and the chief executive has not decided I am not compensable`
+    WHEN `none of these` THEN `workers compensation, catastrophic injuries or Defence Force law applies, or appears to apply, to paying for my treatment`
+
+-- The baseline's record from the plain answers. The chief executive's cl 3A(5) decision is inside `my compensation`, so the
+-- record's field is FALSE; the cl 6A yes/no is carried as `I am an asylum seeker` (the baseline reads it only in cl 6A, as
+-- the alternative to the involuntary patient's limb), the two involuntary-patient fields FALSE.
 GIVEN `eligible` IS A BOOLEAN
-      `compensation right` IS A BOOLEAN
-      `decided not compensable` IS A BOOLEAN
-      `motor vehicle insurance` IS A BOOLEAN
-      `other compensation law` IS A BOOLEAN
+      `my compensation` IS A `My compensation position`
       `DVA veteran` IS A BOOLEAN
       `nursing home type` IS A BOOLEAN
       `election` IS A `My election`
-      `asylum seeker` IS A BOOLEAN
-      `involuntary` IS A BOOLEAN
-      `Mental Health Act treatment` IS A BOOLEAN
+      `cl 6A ground` IS A BOOLEAN
       `s 6(2) declaration` IS A BOOLEAN
 GIVETH A `Me as a patient`
 `me from my answers` MEANS `Me as a patient` WITH
     `I am an eligible person under the Health Insurance Act 1973` IS `eligible`
-    `I have, or appear to have, a right to compensation for this condition` IS `compensation right`
-    `the chief executive has decided I am not a compensable patient` IS `decided not compensable`
-    `motor vehicle third party insurance applies or appears to apply` IS `motor vehicle insurance`
-    `workers compensation, catastrophic injuries or Defence Force law applies or appears to apply` IS `other compensation law`
+    `I have, or appear to have, a right to compensation for this condition` IS `I have another right to compensation not ruled out by` `my compensation`
+    `the chief executive has decided I am not a compensable patient` IS FALSE
+    `motor vehicle third party insurance applies or appears to apply` IS `motor vehicle third party insurance applies by` `my compensation`
+    `workers compensation, catastrophic injuries or Defence Force law applies or appears to apply` IS `workers compensation, catastrophic injuries or Defence Force law applies by` `my compensation`
     `I am a veteran who elects the DVA arrangement` IS `DVA veteran`
     `I am a nursing home type patient` IS `nursing home type`
     `my election` IS `election`
-    `I am an asylum seeker` IS `asylum seeker`
-    `I am an involuntary patient under the Mental Health Act 2014` IS `involuntary`
-    `the service is part of my Mental Health Act treatment` IS `Mental Health Act treatment`
+    `I am an asylum seeker` IS `cl 6A ground`
+    `I am an involuntary patient under the Mental Health Act 2014` IS FALSE
+    `the service is part of my Mental Health Act treatment` IS FALSE
     `a declaration under s 6(2) of the Health Insurance Act 1973 applies to me` IS `s 6(2) declaration`
+
+-- A patient of each class (Order cll 3A, 6A, 11-15): a record, and an attendance, for which the baseline's class rule gives
+-- that class (the cases check each one). For a compensable class the compensation is `a compensation that makes me
+-- compensable`; every other class has none, so the motor vehicle insurance is not read for it.
+GIVEN `my class` IS A `My class`
+      `my compensation` IS A `My compensation position`
+GIVETH A `Me as a patient`
+`a patient of my class` MEANS
+    CONSIDER `my class`
+    WHEN `a public in-patient` THEN `me from my answers` TRUE `none of these` FALSE FALSE `to be a public patient` FALSE FALSE
+    WHEN `a private in-patient` THEN `me from my answers` TRUE `none of these` FALSE FALSE `to be a private patient` FALSE FALSE
+    WHEN `a compensable in-patient` THEN `me from my answers` TRUE (`a compensation that makes me compensable` `my compensation`) FALSE FALSE `to be a public patient` FALSE FALSE
+    WHEN `an eligible veteran in-patient` THEN `me from my answers` TRUE `none of these` TRUE FALSE `to be a public patient` FALSE FALSE
+    WHEN `a nursing home type patient` THEN `me from my answers` TRUE `none of these` FALSE TRUE `to be a public patient` FALSE FALSE
+    WHEN `a nursing home type private patient` THEN `me from my answers` TRUE `none of these` FALSE TRUE `to be a private patient` FALSE FALSE
+    WHEN `an ineligible in-patient` THEN `me from my answers` FALSE `none of these` FALSE FALSE `to be a public patient` FALSE FALSE
+    WHEN `a compensable day patient` THEN `me from my answers` TRUE (`a compensation that makes me compensable` `my compensation`) FALSE FALSE `to be a public patient` FALSE FALSE
+    WHEN `an eligible day patient` THEN `me from my answers` TRUE `none of these` FALSE FALSE `to be a public patient` FALSE FALSE
+    WHEN `an ineligible day patient` THEN `me from my answers` FALSE `none of these` FALSE FALSE `to be a public patient` FALSE FALSE
+    WHEN `a compensable out-patient` THEN `me from my answers` TRUE (`a compensation that makes me compensable` `my compensation`) FALSE FALSE `to be a public patient` FALSE FALSE
+    WHEN `an eligible veteran out-patient` THEN `me from my answers` TRUE `none of these` TRUE FALSE `to be a public patient` FALSE FALSE
+    WHEN `an eligible out-patient` THEN `me from my answers` TRUE `none of these` FALSE FALSE `to be a public patient` FALSE FALSE
+    WHEN `an ineligible out-patient` THEN `me from my answers` FALSE `none of these` FALSE FALSE `to be a public patient` FALSE FALSE
+    WHEN `a public same day patient` THEN `me from my answers` TRUE `none of these` FALSE FALSE `to be a public patient` FALSE FALSE
+    WHEN `a private same day patient` THEN `me from my answers` TRUE `none of these` FALSE FALSE `to be a private patient` FALSE FALSE
+    WHEN `a compensable same day patient` THEN `me from my answers` TRUE (`a compensation that makes me compensable` `my compensation`) FALSE FALSE `to be a public patient` FALSE FALSE
+    WHEN `an eligible veteran same day patient` THEN `me from my answers` TRUE `none of these` TRUE FALSE `to be a public patient` FALSE FALSE
+    WHEN `an ineligible same day patient` THEN `me from my answers` FALSE `none of these` FALSE FALSE `to be a public patient` FALSE FALSE
+    WHEN `not classified: no fees or charges are payable (cl 6A)` THEN `me from my answers` FALSE `none of these` FALSE FALSE `to be a public patient` TRUE FALSE
+    WHEN `not classified: the Order gives no in-patient class` THEN `me from my answers` FALSE `none of these` FALSE FALSE `to be a public patient` FALSE TRUE
+
+GIVEN `my class` IS A `My class`
+GIVETH A `How I attend`
+`how a patient of my class attends` MEANS
+    CONSIDER `my class`
+    WHEN `a public in-patient` THEN `as an in-patient`
+    WHEN `a private in-patient` THEN `as an in-patient`
+    WHEN `a compensable in-patient` THEN `as an in-patient`
+    WHEN `an eligible veteran in-patient` THEN `as an in-patient`
+    WHEN `a nursing home type patient` THEN `as an in-patient`
+    WHEN `a nursing home type private patient` THEN `as an in-patient`
+    WHEN `an ineligible in-patient` THEN `as an in-patient`
+    WHEN `a compensable day patient` THEN `as a day patient`
+    WHEN `an eligible day patient` THEN `as a day patient`
+    WHEN `an ineligible day patient` THEN `as a day patient`
+    WHEN `a compensable out-patient` THEN `as an out-patient`
+    WHEN `an eligible veteran out-patient` THEN `as an out-patient`
+    WHEN `an eligible out-patient` THEN `as an out-patient`
+    WHEN `an ineligible out-patient` THEN `as an out-patient`
+    WHEN `a public same day patient` THEN `as a same day patient`
+    WHEN `a private same day patient` THEN `as a same day patient`
+    WHEN `a compensable same day patient` THEN `as a same day patient`
+    WHEN `an eligible veteran same day patient` THEN `as a same day patient`
+    WHEN `an ineligible same day patient` THEN `as a same day patient`
+    WHEN `not classified: no fees or charges are payable (cl 6A)` THEN `as an in-patient`
+    WHEN `not classified: the Order gives no in-patient class` THEN `as an in-patient`
+
+GIVEN `my class` IS A `My class`
+GIVETH A BOOLEAN
+DECIDE `my class is an out-patient class` IF
+    CONSIDER `my class`
+    WHEN `a public in-patient` THEN FALSE
+    WHEN `a private in-patient` THEN FALSE
+    WHEN `a compensable in-patient` THEN FALSE
+    WHEN `an eligible veteran in-patient` THEN FALSE
+    WHEN `a nursing home type patient` THEN FALSE
+    WHEN `a nursing home type private patient` THEN FALSE
+    WHEN `an ineligible in-patient` THEN FALSE
+    WHEN `a compensable day patient` THEN FALSE
+    WHEN `an eligible day patient` THEN FALSE
+    WHEN `an ineligible day patient` THEN FALSE
+    WHEN `a compensable out-patient` THEN TRUE
+    WHEN `an eligible veteran out-patient` THEN TRUE
+    WHEN `an eligible out-patient` THEN TRUE
+    WHEN `an ineligible out-patient` THEN TRUE
+    WHEN `a public same day patient` THEN FALSE
+    WHEN `a private same day patient` THEN FALSE
+    WHEN `a compensable same day patient` THEN FALSE
+    WHEN `an eligible veteran same day patient` THEN FALSE
+    WHEN `an ineligible same day patient` THEN FALSE
+    WHEN `not classified: no fees or charges are payable (cl 6A)` THEN FALSE
+    WHEN `not classified: the Order gives no in-patient class` THEN FALSE
+
+GIVEN `my class` IS A `My class`
+GIVETH A BOOLEAN
+DECIDE `my class is charged per out-patient service` IF
+    CONSIDER `my class`
+    WHEN `a public in-patient` THEN FALSE
+    WHEN `a private in-patient` THEN FALSE
+    WHEN `a compensable in-patient` THEN FALSE
+    WHEN `an eligible veteran in-patient` THEN FALSE
+    WHEN `a nursing home type patient` THEN FALSE
+    WHEN `a nursing home type private patient` THEN FALSE
+    WHEN `an ineligible in-patient` THEN FALSE
+    WHEN `a compensable day patient` THEN FALSE
+    WHEN `an eligible day patient` THEN FALSE
+    WHEN `an ineligible day patient` THEN FALSE
+    WHEN `a compensable out-patient` THEN TRUE
+    WHEN `an eligible veteran out-patient` THEN TRUE
+    WHEN `an eligible out-patient` THEN TRUE
+    WHEN `an ineligible out-patient` THEN TRUE
+    WHEN `a public same day patient` THEN FALSE
+    WHEN `a private same day patient` THEN FALSE
+    WHEN `a compensable same day patient` THEN FALSE
+    WHEN `an eligible veteran same day patient` THEN FALSE
+    WHEN `an ineligible same day patient` THEN FALSE
+    WHEN `not classified: no fees or charges are payable (cl 6A)` THEN TRUE
+    WHEN `not classified: the Order gives no in-patient class` THEN FALSE
 
 §§ `For the patient`
 
@@ -160,48 +322,35 @@ GIVETH A `Yes or no`
 
 §§§ `Order cll 3, 3A, 6A, 11-15 -- what class of patient am I`
 
+-- The compensable question reads only the compensation, the eligibility and the attendance (cl 3A); the record's other
+-- fields are fixed values that the baseline's rule does not read.
+
 @export Am I a compensable patient (Health Services (Fees and Charges) Order 2016 (WA) cll 3A, 12(3), 13(3), 14(5), 15(5))?
 GIVEN `my role` IS A Role @desc Which of these describes you
       `how I attend` IS A `How I attend` @desc Whether you are an in-patient (admitted to a hospital bed), a day patient (at a day hospital), an out-patient, or a same day patient (admitted and discharged on the same day)
       `I am an eligible person under the Health Insurance Act 1973` IS A BOOLEAN @desc Whether you are an "eligible person" for Medicare under the Health Insurance Act 1973 s 3 (the Health Insurance Act encoding works this out)
-      `I have, or appear to have, a right to compensation for this condition` IS A BOOLEAN @desc Whether you have received, or established a right to receive, compensation (such as workers' compensation, motor vehicle third party insurance or damages) for the injury, illness or disease you are treated for, or appear to have that right when you attend
-      `the chief executive has decided I am not a compensable patient` IS A BOOLEAN @desc Whether the hospital's chief executive has decided under Order cl 3A(5) that you are not a compensable patient
-      `motor vehicle third party insurance applies or appears to apply` IS A BOOLEAN @desc Whether the Motor Vehicle (Third Party Insurance) Act 1943 applies, or appears to apply, to the payment for your treatment
-      `workers compensation, catastrophic injuries or Defence Force law applies or appears to apply` IS A BOOLEAN @desc Whether the Workers Compensation and Injury Management Act 2023, the Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 or the law relating to the Defence Force applies, or appears to apply, to the payment for your treatment
-      `I am a veteran who elects the DVA arrangement` IS A BOOLEAN @desc Whether you are a veteran who elects to be treated under the arrangement with the Department of Veterans' Affairs
-      `I am a nursing home type patient` IS A BOOLEAN @desc Whether you are a nursing home type patient (a Health Insurance Act 1973 term for a long-stay in-patient who no longer needs acute care)
-      `my election` IS A `My election` @desc Whether, on admission, you elected to be treated as a public or a private patient (an eligible in-patient or same day patient must elect)
-      `I am an asylum seeker` IS A BOOLEAN @desc Whether you have applied for a permanent or temporary protection visa or a safe haven enterprise visa, and the application has not yet been decided
-      `I am an involuntary patient under the Mental Health Act 2014` IS A BOOLEAN @desc Whether you are under an inpatient or community treatment order, another detaining order, or an unexpired referral under the Mental Health Act 2014
-      `the service is part of my Mental Health Act treatment` IS A BOOLEAN @desc Whether this service is part of your treatment under the Mental Health Act 2014
-      `a declaration under s 6(2) of the Health Insurance Act 1973 applies to me` IS A BOOLEAN @desc Whether a declaration under the Health Insurance Act 1973 s 6(2) applies to you, so that you are treated as not an eligible person
+      `my compensation` IS A `My compensation position` @desc Whether compensation may pay for your treatment, the first of these that fits: motor vehicle third party insurance (Motor Vehicle (Third Party Insurance) Act 1943) applies, or appears to apply; the Workers Compensation and Injury Management Act 2023, the Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 or the law relating to the Defence Force applies, or appears to apply; you have received, or established or appear to have, a right to other compensation (such as damages or a settlement) for the injury, illness or disease you are treated for, and the hospital's chief executive has not decided under Order cl 3A(5) that you are not a compensable patient; or none of these
 GIVETH A `Yes or no`
 `Am I a compensable patient for hospital charges` MEANS
     CONSIDER `my role`
-    WHEN `I am a patient of a WA public health service` THEN `yes if` (`Am I a compensable patient` (`me from my answers` `I am an eligible person under the Health Insurance Act 1973` `I have, or appear to have, a right to compensation for this condition` `the chief executive has decided I am not a compensable patient` `motor vehicle third party insurance applies or appears to apply` `workers compensation, catastrophic injuries or Defence Force law applies or appears to apply` `I am a veteran who elects the DVA arrangement` `I am a nursing home type patient` `my election` `I am an asylum seeker` `I am an involuntary patient under the Mental Health Act 2014` `the service is part of my Mental Health Act treatment` `a declaration under s 6(2) of the Health Insurance Act 1973 applies to me`) `how I attend`)
+    WHEN `I am a patient of a WA public health service` THEN `yes if` (`Am I a compensable patient` (`me from my answers` `I am an eligible person under the Health Insurance Act 1973` `my compensation` FALSE FALSE `to be a public patient` FALSE FALSE) `how I attend`)
     WHEN `I am a family member or carer of a patient, or stay in hospital with one` THEN `does not arise for you`
     WHEN `I must pay compensation to someone a public hospital treated for their injury` THEN `does not arise for you`
     WHEN `I hold information about someone that I obtained through the WA health system` THEN `does not arise for you`
+
+-- cl 6A reads, besides, only the cl 6A yes/no; the veteran's, nursing home and election fields are fixed values it does
+-- not read.
 
 @export Am I free of all hospital fees and charges as a Medicare-ineligible asylum seeker or involuntary patient (Health Services (Fees and Charges) Order 2016 (WA) cl 6A)?
 GIVEN `my role` IS A Role @desc Which of these describes you
       `how I attend` IS A `How I attend` @desc Whether you are an in-patient (admitted to a hospital bed), a day patient (at a day hospital), an out-patient, or a same day patient (admitted and discharged on the same day)
       `I am an eligible person under the Health Insurance Act 1973` IS A BOOLEAN @desc Whether you are an "eligible person" for Medicare under the Health Insurance Act 1973 s 3 (the Health Insurance Act encoding works this out)
-      `I have, or appear to have, a right to compensation for this condition` IS A BOOLEAN @desc Whether you have received, or established a right to receive, compensation (such as workers' compensation, motor vehicle third party insurance or damages) for the injury, illness or disease you are treated for, or appear to have that right when you attend
-      `the chief executive has decided I am not a compensable patient` IS A BOOLEAN @desc Whether the hospital's chief executive has decided under Order cl 3A(5) that you are not a compensable patient
-      `motor vehicle third party insurance applies or appears to apply` IS A BOOLEAN @desc Whether the Motor Vehicle (Third Party Insurance) Act 1943 applies, or appears to apply, to the payment for your treatment
-      `workers compensation, catastrophic injuries or Defence Force law applies or appears to apply` IS A BOOLEAN @desc Whether the Workers Compensation and Injury Management Act 2023, the Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 or the law relating to the Defence Force applies, or appears to apply, to the payment for your treatment
-      `I am a veteran who elects the DVA arrangement` IS A BOOLEAN @desc Whether you are a veteran who elects to be treated under the arrangement with the Department of Veterans' Affairs
-      `I am a nursing home type patient` IS A BOOLEAN @desc Whether you are a nursing home type patient (a Health Insurance Act 1973 term for a long-stay in-patient who no longer needs acute care)
-      `my election` IS A `My election` @desc Whether, on admission, you elected to be treated as a public or a private patient (an eligible in-patient or same day patient must elect)
-      `I am an asylum seeker` IS A BOOLEAN @desc Whether you have applied for a permanent or temporary protection visa or a safe haven enterprise visa, and the application has not yet been decided
-      `I am an involuntary patient under the Mental Health Act 2014` IS A BOOLEAN @desc Whether you are under an inpatient or community treatment order, another detaining order, or an unexpired referral under the Mental Health Act 2014
-      `the service is part of my Mental Health Act treatment` IS A BOOLEAN @desc Whether this service is part of your treatment under the Mental Health Act 2014
-      `a declaration under s 6(2) of the Health Insurance Act 1973 applies to me` IS A BOOLEAN @desc Whether a declaration under the Health Insurance Act 1973 s 6(2) applies to you, so that you are treated as not an eligible person
+      `my compensation` IS A `My compensation position` @desc Whether compensation may pay for your treatment, the first of these that fits: motor vehicle third party insurance (Motor Vehicle (Third Party Insurance) Act 1943) applies, or appears to apply; the Workers Compensation and Injury Management Act 2023, the Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 or the law relating to the Defence Force applies, or appears to apply; you have received, or established or appear to have, a right to other compensation (such as damages or a settlement) for the injury, illness or disease you are treated for, and the hospital's chief executive has not decided under Order cl 3A(5) that you are not a compensable patient; or none of these
+      `I am an asylum seeker, or an involuntary patient and this service is part of my Mental Health Act treatment` IS A BOOLEAN @desc Whether you have applied for a permanent or temporary protection visa or a safe haven enterprise visa that has not yet been decided; or you are under an inpatient or community treatment order, another detaining order or an unexpired referral under the Mental Health Act 2014, and this service is part of your treatment under that Act
 GIVETH A `Yes or no`
 `Am I free of all hospital fees and charges under cl 6A` MEANS
     CONSIDER `my role`
-    WHEN `I am a patient of a WA public health service` THEN `yes if` (`Am I free of all fees under cl 6A` (`me from my answers` `I am an eligible person under the Health Insurance Act 1973` `I have, or appear to have, a right to compensation for this condition` `the chief executive has decided I am not a compensable patient` `motor vehicle third party insurance applies or appears to apply` `workers compensation, catastrophic injuries or Defence Force law applies or appears to apply` `I am a veteran who elects the DVA arrangement` `I am a nursing home type patient` `my election` `I am an asylum seeker` `I am an involuntary patient under the Mental Health Act 2014` `the service is part of my Mental Health Act treatment` `a declaration under s 6(2) of the Health Insurance Act 1973 applies to me`) `how I attend`)
+    WHEN `I am a patient of a WA public health service` THEN `yes if` (`Am I free of all fees under cl 6A` (`me from my answers` `I am an eligible person under the Health Insurance Act 1973` `my compensation` FALSE FALSE `to be a public patient` `I am an asylum seeker, or an involuntary patient and this service is part of my Mental Health Act treatment` FALSE) `how I attend`)
     WHEN `I am a family member or carer of a patient, or stay in hospital with one` THEN `does not arise for you`
     WHEN `I must pay compensation to someone a public hospital treated for their injury` THEN `does not arise for you`
     WHEN `I hold information about someone that I obtained through the WA health system` THEN `does not arise for you`
@@ -210,21 +359,16 @@ GIVETH A `Yes or no`
 GIVEN `my role` IS A Role @desc Which of these describes you
       `how I attend` IS A `How I attend` @desc Whether you are an in-patient (admitted to a hospital bed), a day patient (at a day hospital), an out-patient, or a same day patient (admitted and discharged on the same day)
       `I am an eligible person under the Health Insurance Act 1973` IS A BOOLEAN @desc Whether you are an "eligible person" for Medicare under the Health Insurance Act 1973 s 3 (the Health Insurance Act encoding works this out)
-      `I have, or appear to have, a right to compensation for this condition` IS A BOOLEAN @desc Whether you have received, or established a right to receive, compensation (such as workers' compensation, motor vehicle third party insurance or damages) for the injury, illness or disease you are treated for, or appear to have that right when you attend
-      `the chief executive has decided I am not a compensable patient` IS A BOOLEAN @desc Whether the hospital's chief executive has decided under Order cl 3A(5) that you are not a compensable patient
-      `motor vehicle third party insurance applies or appears to apply` IS A BOOLEAN @desc Whether the Motor Vehicle (Third Party Insurance) Act 1943 applies, or appears to apply, to the payment for your treatment
-      `workers compensation, catastrophic injuries or Defence Force law applies or appears to apply` IS A BOOLEAN @desc Whether the Workers Compensation and Injury Management Act 2023, the Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 or the law relating to the Defence Force applies, or appears to apply, to the payment for your treatment
+      `my compensation` IS A `My compensation position` @desc Whether compensation may pay for your treatment, the first of these that fits: motor vehicle third party insurance (Motor Vehicle (Third Party Insurance) Act 1943) applies, or appears to apply; the Workers Compensation and Injury Management Act 2023, the Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 or the law relating to the Defence Force applies, or appears to apply; you have received, or established or appear to have, a right to other compensation (such as damages or a settlement) for the injury, illness or disease you are treated for, and the hospital's chief executive has not decided under Order cl 3A(5) that you are not a compensable patient; or none of these
       `I am a veteran who elects the DVA arrangement` IS A BOOLEAN @desc Whether you are a veteran who elects to be treated under the arrangement with the Department of Veterans' Affairs
       `I am a nursing home type patient` IS A BOOLEAN @desc Whether you are a nursing home type patient (a Health Insurance Act 1973 term for a long-stay in-patient who no longer needs acute care)
       `my election` IS A `My election` @desc Whether, on admission, you elected to be treated as a public or a private patient (an eligible in-patient or same day patient must elect)
-      `I am an asylum seeker` IS A BOOLEAN @desc Whether you have applied for a permanent or temporary protection visa or a safe haven enterprise visa, and the application has not yet been decided
-      `I am an involuntary patient under the Mental Health Act 2014` IS A BOOLEAN @desc Whether you are under an inpatient or community treatment order, another detaining order, or an unexpired referral under the Mental Health Act 2014
-      `the service is part of my Mental Health Act treatment` IS A BOOLEAN @desc Whether this service is part of your treatment under the Mental Health Act 2014
+      `I am an asylum seeker, or an involuntary patient and this service is part of my Mental Health Act treatment` IS A BOOLEAN @desc Whether you have applied for a permanent or temporary protection visa or a safe haven enterprise visa that has not yet been decided; or you are under an inpatient or community treatment order, another detaining order or an unexpired referral under the Mental Health Act 2014, and this service is part of your treatment under that Act
       `a declaration under s 6(2) of the Health Insurance Act 1973 applies to me` IS A BOOLEAN @desc Whether a declaration under the Health Insurance Act 1973 s 6(2) applies to you, so that you are treated as not an eligible person
 GIVETH A `Class answer`
 `What class of patient am I for hospital charges` MEANS
     CONSIDER `my role`
-    WHEN `I am a patient of a WA public health service` THEN `my class is` (`What class of patient am I` (`me from my answers` `I am an eligible person under the Health Insurance Act 1973` `I have, or appear to have, a right to compensation for this condition` `the chief executive has decided I am not a compensable patient` `motor vehicle third party insurance applies or appears to apply` `workers compensation, catastrophic injuries or Defence Force law applies or appears to apply` `I am a veteran who elects the DVA arrangement` `I am a nursing home type patient` `my election` `I am an asylum seeker` `I am an involuntary patient under the Mental Health Act 2014` `the service is part of my Mental Health Act treatment` `a declaration under s 6(2) of the Health Insurance Act 1973 applies to me`) `how I attend`)
+    WHEN `I am a patient of a WA public health service` THEN `my class is` (`What class of patient am I` (`me from my answers` `I am an eligible person under the Health Insurance Act 1973` `my compensation` `I am a veteran who elects the DVA arrangement` `I am a nursing home type patient` `my election` `I am an asylum seeker, or an involuntary patient and this service is part of my Mental Health Act treatment` `a declaration under s 6(2) of the Health Insurance Act 1973 applies to me`) `how I attend`)
     WHEN `I am a family member or carer of a patient, or stay in hospital with one` THEN `does not arise for you`
     WHEN `I must pay compensation to someone a public hospital treated for their injury` THEN `does not arise for you`
     WHEN `I hold information about someone that I obtained through the WA health system` THEN `does not arise for you`
@@ -233,82 +377,51 @@ GIVETH A `Class answer`
 
 @export I am admitted: what does the public hospital charge me per day for my stay (Health Services (Fees and Charges) Order 2016 (WA) cll 5, 6, 6A; Schedule 1 Divisions 1 and 2)?
 GIVEN `my role` IS A Role @desc Which of these describes you
-      `how I attend` IS A `How I attend` @desc Whether you are an in-patient (admitted to a hospital bed), a day patient (at a day hospital), an out-patient, or a same day patient (admitted and discharged on the same day)
+      `my class` IS A `My class` @desc Your class of patient under the Order: the answer to "What class of patient am I for hospital fees and charges" (an in-patient, day patient, out-patient or same day patient class, or none, because no fees are payable under cl 6A or the Order gives no in-patient class)
       `I asked for a single bed ward` IS A BOOLEAN @desc Whether you are in a single-bed ward at your own request
       `bed` IS A `My bed` @desc The kind of bed and care (matters only for a compensable in-patient)
-      `I am an eligible person under the Health Insurance Act 1973` IS A BOOLEAN @desc Whether you are an "eligible person" for Medicare under the Health Insurance Act 1973 s 3 (the Health Insurance Act encoding works this out)
-      `I have, or appear to have, a right to compensation for this condition` IS A BOOLEAN @desc Whether you have received, or established a right to receive, compensation (such as workers' compensation, motor vehicle third party insurance or damages) for the injury, illness or disease you are treated for, or appear to have that right when you attend
-      `the chief executive has decided I am not a compensable patient` IS A BOOLEAN @desc Whether the hospital's chief executive has decided under Order cl 3A(5) that you are not a compensable patient
-      `motor vehicle third party insurance applies or appears to apply` IS A BOOLEAN @desc Whether the Motor Vehicle (Third Party Insurance) Act 1943 applies, or appears to apply, to the payment for your treatment
-      `workers compensation, catastrophic injuries or Defence Force law applies or appears to apply` IS A BOOLEAN @desc Whether the Workers Compensation and Injury Management Act 2023, the Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 or the law relating to the Defence Force applies, or appears to apply, to the payment for your treatment
-      `I am a veteran who elects the DVA arrangement` IS A BOOLEAN @desc Whether you are a veteran who elects to be treated under the arrangement with the Department of Veterans' Affairs
-      `I am a nursing home type patient` IS A BOOLEAN @desc Whether you are a nursing home type patient (a Health Insurance Act 1973 term for a long-stay in-patient who no longer needs acute care)
-      `my election` IS A `My election` @desc Whether, on admission, you elected to be treated as a public or a private patient (an eligible in-patient or same day patient must elect)
-      `I am an asylum seeker` IS A BOOLEAN @desc Whether you have applied for a permanent or temporary protection visa or a safe haven enterprise visa, and the application has not yet been decided
-      `I am an involuntary patient under the Mental Health Act 2014` IS A BOOLEAN @desc Whether you are under an inpatient or community treatment order, another detaining order, or an unexpired referral under the Mental Health Act 2014
-      `the service is part of my Mental Health Act treatment` IS A BOOLEAN @desc Whether this service is part of your treatment under the Mental Health Act 2014
-      `a declaration under s 6(2) of the Health Insurance Act 1973 applies to me` IS A BOOLEAN @desc Whether a declaration under the Health Insurance Act 1973 s 6(2) applies to you, so that you are treated as not an eligible person
+      `my compensation` IS A `My compensation position` @desc Whether compensation may pay for your treatment, the first of these that fits: motor vehicle third party insurance (Motor Vehicle (Third Party Insurance) Act 1943) applies, or appears to apply; the Workers Compensation and Injury Management Act 2023, the Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 or the law relating to the Defence Force applies, or appears to apply; you have received, or established or appear to have, a right to other compensation (such as damages or a settlement) for the injury, illness or disease you are treated for, and the hospital's chief executive has not decided under Order cl 3A(5) that you are not a compensable patient; or none of these
 GIVETH A `Charge answer`
 `What does the public hospital charge me per day for my stay` MEANS
     CONSIDER `my role`
     WHEN `I am a patient of a WA public health service` THEN
-        IF `I attend as an out-patient` `how I attend`
+        IF `my class is an out-patient class` `my class`
         THEN `does not arise for you`
-        ELSE `the hospital's charge` (`What does the hospital charge me per day` (`me from my answers` `I am an eligible person under the Health Insurance Act 1973` `I have, or appear to have, a right to compensation for this condition` `the chief executive has decided I am not a compensable patient` `motor vehicle third party insurance applies or appears to apply` `workers compensation, catastrophic injuries or Defence Force law applies or appears to apply` `I am a veteran who elects the DVA arrangement` `I am a nursing home type patient` `my election` `I am an asylum seeker` `I am an involuntary patient under the Mental Health Act 2014` `the service is part of my Mental Health Act treatment` `a declaration under s 6(2) of the Health Insurance Act 1973 applies to me`) `how I attend` `I asked for a single bed ward` `bed`)
+        ELSE `the hospital's charge` (`What does the hospital charge me per day` (`a patient of my class` `my class` `my compensation`) (`how a patient of my class attends` `my class`) `I asked for a single bed ward` `bed`)
     WHEN `I am a family member or carer of a patient, or stay in hospital with one` THEN `does not arise for you`
     WHEN `I must pay compensation to someone a public hospital treated for their injury` THEN `does not arise for you`
     WHEN `I hold information about someone that I obtained through the WA health system` THEN `does not arise for you`
 
 @export I am admitted: what will my whole stay cost me under the Order, in dollars, at most (Health Services (Fees and Charges) Order 2016 (WA) Schedule 1 Divisions 1 and 2)?
 GIVEN `my role` IS A Role @desc Which of these describes you
-      `how I attend` IS A `How I attend` @desc Whether you are an in-patient (admitted to a hospital bed), a day patient (at a day hospital), an out-patient, or a same day patient (admitted and discharged on the same day)
+      `my class` IS A `My class` @desc Your class of patient under the Order: the answer to "What class of patient am I for hospital fees and charges" (an in-patient, day patient, out-patient or same day patient class, or none, because no fees are payable under cl 6A or the Order gives no in-patient class)
       `I asked for a single bed ward` IS A BOOLEAN @desc Whether you are in a single-bed ward at your own request
       `bed` IS A `My bed` @desc The kind of bed and care (matters only for a compensable in-patient)
       `days` IS A NUMBER @desc How many days you are charged for
-      `I am an eligible person under the Health Insurance Act 1973` IS A BOOLEAN @desc Whether you are an "eligible person" for Medicare under the Health Insurance Act 1973 s 3 (the Health Insurance Act encoding works this out)
-      `I have, or appear to have, a right to compensation for this condition` IS A BOOLEAN @desc Whether you have received, or established a right to receive, compensation (such as workers' compensation, motor vehicle third party insurance or damages) for the injury, illness or disease you are treated for, or appear to have that right when you attend
-      `the chief executive has decided I am not a compensable patient` IS A BOOLEAN @desc Whether the hospital's chief executive has decided under Order cl 3A(5) that you are not a compensable patient
-      `motor vehicle third party insurance applies or appears to apply` IS A BOOLEAN @desc Whether the Motor Vehicle (Third Party Insurance) Act 1943 applies, or appears to apply, to the payment for your treatment
-      `workers compensation, catastrophic injuries or Defence Force law applies or appears to apply` IS A BOOLEAN @desc Whether the Workers Compensation and Injury Management Act 2023, the Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 or the law relating to the Defence Force applies, or appears to apply, to the payment for your treatment
-      `I am a veteran who elects the DVA arrangement` IS A BOOLEAN @desc Whether you are a veteran who elects to be treated under the arrangement with the Department of Veterans' Affairs
-      `I am a nursing home type patient` IS A BOOLEAN @desc Whether you are a nursing home type patient (a Health Insurance Act 1973 term for a long-stay in-patient who no longer needs acute care)
-      `my election` IS A `My election` @desc Whether, on admission, you elected to be treated as a public or a private patient (an eligible in-patient or same day patient must elect)
-      `I am an asylum seeker` IS A BOOLEAN @desc Whether you have applied for a permanent or temporary protection visa or a safe haven enterprise visa, and the application has not yet been decided
-      `I am an involuntary patient under the Mental Health Act 2014` IS A BOOLEAN @desc Whether you are under an inpatient or community treatment order, another detaining order, or an unexpired referral under the Mental Health Act 2014
-      `the service is part of my Mental Health Act treatment` IS A BOOLEAN @desc Whether this service is part of your treatment under the Mental Health Act 2014
-      `a declaration under s 6(2) of the Health Insurance Act 1973 applies to me` IS A BOOLEAN @desc Whether a declaration under the Health Insurance Act 1973 s 6(2) applies to you, so that you are treated as not an eligible person
+      `my compensation` IS A `My compensation position` @desc Whether compensation may pay for your treatment, the first of these that fits: motor vehicle third party insurance (Motor Vehicle (Third Party Insurance) Act 1943) applies, or appears to apply; the Workers Compensation and Injury Management Act 2023, the Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 or the law relating to the Defence Force applies, or appears to apply; you have received, or established or appear to have, a right to other compensation (such as damages or a settlement) for the injury, illness or disease you are treated for, and the hospital's chief executive has not decided under Order cl 3A(5) that you are not a compensable patient; or none of these
 GIVETH AN `Amount`
 `What will my whole stay cost me under the Order` MEANS
     CONSIDER `my role`
     WHEN `I am a patient of a WA public health service` THEN
-        IF `I attend as an out-patient` `how I attend`
+        IF `my class is an out-patient class` `my class`
         THEN `does not arise for you`
-        ELSE amount (`What will my stay cost under the Order` (`me from my answers` `I am an eligible person under the Health Insurance Act 1973` `I have, or appear to have, a right to compensation for this condition` `the chief executive has decided I am not a compensable patient` `motor vehicle third party insurance applies or appears to apply` `workers compensation, catastrophic injuries or Defence Force law applies or appears to apply` `I am a veteran who elects the DVA arrangement` `I am a nursing home type patient` `my election` `I am an asylum seeker` `I am an involuntary patient under the Mental Health Act 2014` `the service is part of my Mental Health Act treatment` `a declaration under s 6(2) of the Health Insurance Act 1973 applies to me`) `how I attend` `I asked for a single bed ward` `bed` `days`)
+        ELSE amount (`What will my stay cost under the Order` (`a patient of my class` `my class` `my compensation`) (`how a patient of my class attends` `my class`) `I asked for a single bed ward` `bed` `days`)
     WHEN `I am a family member or carer of a patient, or stay in hospital with one` THEN `does not arise for you`
     WHEN `I must pay compensation to someone a public hospital treated for their injury` THEN `does not arise for you`
     WHEN `I hold information about someone that I obtained through the WA health system` THEN `does not arise for you`
 
+-- Named so that its first 60 characters, as the site's service shortens a name for its address, differ from the medicine
+-- question's (the verification found the two names collided).
+
 @export I am an out-patient: what does the public hospital charge me for each out-patient service (Health Services (Fees and Charges) Order 2016 (WA) Schedule 1 Division 1 item 4, Division 2 items 7, 9)?
 GIVEN `my role` IS A Role @desc Which of these describes you
-      `how I attend` IS A `How I attend` @desc Whether you are an in-patient (admitted to a hospital bed), a day patient (at a day hospital), an out-patient, or a same day patient (admitted and discharged on the same day)
-      `I am an eligible person under the Health Insurance Act 1973` IS A BOOLEAN @desc Whether you are an "eligible person" for Medicare under the Health Insurance Act 1973 s 3 (the Health Insurance Act encoding works this out)
-      `I have, or appear to have, a right to compensation for this condition` IS A BOOLEAN @desc Whether you have received, or established a right to receive, compensation (such as workers' compensation, motor vehicle third party insurance or damages) for the injury, illness or disease you are treated for, or appear to have that right when you attend
-      `the chief executive has decided I am not a compensable patient` IS A BOOLEAN @desc Whether the hospital's chief executive has decided under Order cl 3A(5) that you are not a compensable patient
-      `motor vehicle third party insurance applies or appears to apply` IS A BOOLEAN @desc Whether the Motor Vehicle (Third Party Insurance) Act 1943 applies, or appears to apply, to the payment for your treatment
-      `workers compensation, catastrophic injuries or Defence Force law applies or appears to apply` IS A BOOLEAN @desc Whether the Workers Compensation and Injury Management Act 2023, the Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 or the law relating to the Defence Force applies, or appears to apply, to the payment for your treatment
-      `I am a veteran who elects the DVA arrangement` IS A BOOLEAN @desc Whether you are a veteran who elects to be treated under the arrangement with the Department of Veterans' Affairs
-      `I am a nursing home type patient` IS A BOOLEAN @desc Whether you are a nursing home type patient (a Health Insurance Act 1973 term for a long-stay in-patient who no longer needs acute care)
-      `my election` IS A `My election` @desc Whether, on admission, you elected to be treated as a public or a private patient (an eligible in-patient or same day patient must elect)
-      `I am an asylum seeker` IS A BOOLEAN @desc Whether you have applied for a permanent or temporary protection visa or a safe haven enterprise visa, and the application has not yet been decided
-      `I am an involuntary patient under the Mental Health Act 2014` IS A BOOLEAN @desc Whether you are under an inpatient or community treatment order, another detaining order, or an unexpired referral under the Mental Health Act 2014
-      `the service is part of my Mental Health Act treatment` IS A BOOLEAN @desc Whether this service is part of your treatment under the Mental Health Act 2014
-      `a declaration under s 6(2) of the Health Insurance Act 1973 applies to me` IS A BOOLEAN @desc Whether a declaration under the Health Insurance Act 1973 s 6(2) applies to you, so that you are treated as not an eligible person
+      `my class` IS A `My class` @desc Your class of patient under the Order: the answer to "What class of patient am I for hospital fees and charges" (an in-patient, day patient, out-patient or same day patient class, or none, because no fees are payable under cl 6A or the Order gives no in-patient class)
 GIVETH A `Charge answer`
-`What does the public hospital charge me for each out-patient service` MEANS
+`As an out-patient, what does the public hospital charge me per service` MEANS
     CONSIDER `my role`
     WHEN `I am a patient of a WA public health service` THEN
-        IF `I attend as an out-patient` `how I attend`
-        THEN `the hospital's charge` (`What does the hospital charge me for an out-patient service` (`me from my answers` `I am an eligible person under the Health Insurance Act 1973` `I have, or appear to have, a right to compensation for this condition` `the chief executive has decided I am not a compensable patient` `motor vehicle third party insurance applies or appears to apply` `workers compensation, catastrophic injuries or Defence Force law applies or appears to apply` `I am a veteran who elects the DVA arrangement` `I am a nursing home type patient` `my election` `I am an asylum seeker` `I am an involuntary patient under the Mental Health Act 2014` `the service is part of my Mental Health Act treatment` `a declaration under s 6(2) of the Health Insurance Act 1973 applies to me`))
+        IF `my class is charged per out-patient service` `my class`
+        THEN `the hospital's charge` (`What does the hospital charge me for an out-patient service` (`a patient of my class` `my class` `none of these`))
         ELSE `does not arise for you`
     WHEN `I am a family member or carer of a patient, or stay in hospital with one` THEN `does not arise for you`
     WHEN `I must pay compensation to someone a public hospital treated for their injury` THEN `does not arise for you`
@@ -316,26 +429,14 @@ GIVETH A `Charge answer`
 
 @export I am an out-patient: what does the public hospital charge me for each out-patient medicine item (Health Services (Fees and Charges) Order 2016 (WA) Schedule 1 Division 1 item 5, Division 2 item 8, cl 10A)?
 GIVEN `my role` IS A Role @desc Which of these describes you
-      `how I attend` IS A `How I attend` @desc Whether you are an in-patient (admitted to a hospital bed), a day patient (at a day hospital), an out-patient, or a same day patient (admitted and discharged on the same day)
+      `my class` IS A `My class` @desc Your class of patient under the Order: the answer to "What class of patient am I for hospital fees and charges" (an in-patient, day patient, out-patient or same day patient class, or none, because no fees are payable under cl 6A or the Order gives no in-patient class)
       `concession` IS A `My medicine concession` @desc Whether you hold an entitlement card, or are a Gold or White Card veteran, a pensioner or a concessional beneficiary
-      `I am an eligible person under the Health Insurance Act 1973` IS A BOOLEAN @desc Whether you are an "eligible person" for Medicare under the Health Insurance Act 1973 s 3 (the Health Insurance Act encoding works this out)
-      `I have, or appear to have, a right to compensation for this condition` IS A BOOLEAN @desc Whether you have received, or established a right to receive, compensation (such as workers' compensation, motor vehicle third party insurance or damages) for the injury, illness or disease you are treated for, or appear to have that right when you attend
-      `the chief executive has decided I am not a compensable patient` IS A BOOLEAN @desc Whether the hospital's chief executive has decided under Order cl 3A(5) that you are not a compensable patient
-      `motor vehicle third party insurance applies or appears to apply` IS A BOOLEAN @desc Whether the Motor Vehicle (Third Party Insurance) Act 1943 applies, or appears to apply, to the payment for your treatment
-      `workers compensation, catastrophic injuries or Defence Force law applies or appears to apply` IS A BOOLEAN @desc Whether the Workers Compensation and Injury Management Act 2023, the Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 or the law relating to the Defence Force applies, or appears to apply, to the payment for your treatment
-      `I am a veteran who elects the DVA arrangement` IS A BOOLEAN @desc Whether you are a veteran who elects to be treated under the arrangement with the Department of Veterans' Affairs
-      `I am a nursing home type patient` IS A BOOLEAN @desc Whether you are a nursing home type patient (a Health Insurance Act 1973 term for a long-stay in-patient who no longer needs acute care)
-      `my election` IS A `My election` @desc Whether, on admission, you elected to be treated as a public or a private patient (an eligible in-patient or same day patient must elect)
-      `I am an asylum seeker` IS A BOOLEAN @desc Whether you have applied for a permanent or temporary protection visa or a safe haven enterprise visa, and the application has not yet been decided
-      `I am an involuntary patient under the Mental Health Act 2014` IS A BOOLEAN @desc Whether you are under an inpatient or community treatment order, another detaining order, or an unexpired referral under the Mental Health Act 2014
-      `the service is part of my Mental Health Act treatment` IS A BOOLEAN @desc Whether this service is part of your treatment under the Mental Health Act 2014
-      `a declaration under s 6(2) of the Health Insurance Act 1973 applies to me` IS A BOOLEAN @desc Whether a declaration under the Health Insurance Act 1973 s 6(2) applies to you, so that you are treated as not an eligible person
 GIVETH A `Charge answer`
 `What does the public hospital charge me for each out-patient medicine item` MEANS
     CONSIDER `my role`
     WHEN `I am a patient of a WA public health service` THEN
-        IF `I attend as an out-patient` `how I attend`
-        THEN `the hospital's charge` (`What does the hospital charge me for an out-patient medicine` (`me from my answers` `I am an eligible person under the Health Insurance Act 1973` `I have, or appear to have, a right to compensation for this condition` `the chief executive has decided I am not a compensable patient` `motor vehicle third party insurance applies or appears to apply` `workers compensation, catastrophic injuries or Defence Force law applies or appears to apply` `I am a veteran who elects the DVA arrangement` `I am a nursing home type patient` `my election` `I am an asylum seeker` `I am an involuntary patient under the Mental Health Act 2014` `the service is part of my Mental Health Act treatment` `a declaration under s 6(2) of the Health Insurance Act 1973 applies to me`) `concession`)
+        IF `my class is charged per out-patient service` `my class`
+        THEN `the hospital's charge` (`What does the hospital charge me for an out-patient medicine` (`a patient of my class` `my class` `none of these`) `concession`)
         ELSE `does not arise for you`
     WHEN `I am a family member or carer of a patient, or stay in hospital with one` THEN `does not arise for you`
     WHEN `I must pay compensation to someone a public hospital treated for their injury` THEN `does not arise for you`
@@ -345,51 +446,27 @@ GIVETH A `Charge answer`
 
 @export What does the public hospital charge me for an MRI study (Health Services (Fees and Charges) Order 2016 (WA) cl 7; Schedule 1 Division 3)?
 GIVEN `my role` IS A Role @desc Which of these describes you
-      `how I attend` IS A `How I attend` @desc Whether you are an in-patient (admitted to a hospital bed), a day patient (at a day hospital), an out-patient, or a same day patient (admitted and discharged on the same day)
+      `my class` IS A `My class` @desc Your class of patient under the Order: the answer to "What class of patient am I for hospital fees and charges" (an in-patient, day patient, out-patient or same day patient class, or none, because no fees are payable under cl 6A or the Order gives no in-patient class)
       `the hospital's MRI attracts Medicare benefits` IS A BOOLEAN @desc Whether the hospital's MRI equipment is equipment for which a Medicare benefit is payable
       `study` IS A `My MRI study` @desc Which regions of the body are scanned
       `gadolinium used` IS A BOOLEAN @desc Whether gadolinium is used as a contrast medium
-      `I am an eligible person under the Health Insurance Act 1973` IS A BOOLEAN @desc Whether you are an "eligible person" for Medicare under the Health Insurance Act 1973 s 3 (the Health Insurance Act encoding works this out)
-      `I have, or appear to have, a right to compensation for this condition` IS A BOOLEAN @desc Whether you have received, or established a right to receive, compensation (such as workers' compensation, motor vehicle third party insurance or damages) for the injury, illness or disease you are treated for, or appear to have that right when you attend
-      `the chief executive has decided I am not a compensable patient` IS A BOOLEAN @desc Whether the hospital's chief executive has decided under Order cl 3A(5) that you are not a compensable patient
-      `motor vehicle third party insurance applies or appears to apply` IS A BOOLEAN @desc Whether the Motor Vehicle (Third Party Insurance) Act 1943 applies, or appears to apply, to the payment for your treatment
-      `workers compensation, catastrophic injuries or Defence Force law applies or appears to apply` IS A BOOLEAN @desc Whether the Workers Compensation and Injury Management Act 2023, the Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 or the law relating to the Defence Force applies, or appears to apply, to the payment for your treatment
-      `I am a veteran who elects the DVA arrangement` IS A BOOLEAN @desc Whether you are a veteran who elects to be treated under the arrangement with the Department of Veterans' Affairs
-      `I am a nursing home type patient` IS A BOOLEAN @desc Whether you are a nursing home type patient (a Health Insurance Act 1973 term for a long-stay in-patient who no longer needs acute care)
-      `my election` IS A `My election` @desc Whether, on admission, you elected to be treated as a public or a private patient (an eligible in-patient or same day patient must elect)
-      `I am an asylum seeker` IS A BOOLEAN @desc Whether you have applied for a permanent or temporary protection visa or a safe haven enterprise visa, and the application has not yet been decided
-      `I am an involuntary patient under the Mental Health Act 2014` IS A BOOLEAN @desc Whether you are under an inpatient or community treatment order, another detaining order, or an unexpired referral under the Mental Health Act 2014
-      `the service is part of my Mental Health Act treatment` IS A BOOLEAN @desc Whether this service is part of your treatment under the Mental Health Act 2014
-      `a declaration under s 6(2) of the Health Insurance Act 1973 applies to me` IS A BOOLEAN @desc Whether a declaration under the Health Insurance Act 1973 s 6(2) applies to you, so that you are treated as not an eligible person
 GIVETH A `Charge answer`
 `What does the public hospital charge me for an MRI study` MEANS
     CONSIDER `my role`
-    WHEN `I am a patient of a WA public health service` THEN `the hospital's charge` (`What does the hospital charge me for an MRI study` (`me from my answers` `I am an eligible person under the Health Insurance Act 1973` `I have, or appear to have, a right to compensation for this condition` `the chief executive has decided I am not a compensable patient` `motor vehicle third party insurance applies or appears to apply` `workers compensation, catastrophic injuries or Defence Force law applies or appears to apply` `I am a veteran who elects the DVA arrangement` `I am a nursing home type patient` `my election` `I am an asylum seeker` `I am an involuntary patient under the Mental Health Act 2014` `the service is part of my Mental Health Act treatment` `a declaration under s 6(2) of the Health Insurance Act 1973 applies to me`) `how I attend` `the hospital's MRI attracts Medicare benefits` `study` `gadolinium used`)
+    WHEN `I am a patient of a WA public health service` THEN `the hospital's charge` (`What does the hospital charge me for an MRI study` (`a patient of my class` `my class` `none of these`) (`how a patient of my class attends` `my class`) `the hospital's MRI attracts Medicare benefits` `study` `gadolinium used`)
     WHEN `I am a family member or carer of a patient, or stay in hospital with one` THEN `does not arise for you`
     WHEN `I must pay compensation to someone a public hospital treated for their injury` THEN `does not arise for you`
     WHEN `I hold information about someone that I obtained through the WA health system` THEN `does not arise for you`
 
 @export What does the public hospital charge me for a pathology service (Health Services (Fees and Charges) Order 2016 (WA) cll 8, 14(3), (4); Schedule 1 Division 4)?
 GIVEN `my role` IS A Role @desc Which of these describes you
-      `how I attend` IS A `How I attend` @desc Whether you are an in-patient (admitted to a hospital bed), a day patient (at a day hospital), an out-patient, or a same day patient (admitted and discharged on the same day)
+      `my class` IS A `My class` @desc Your class of patient under the Order: the answer to "What class of patient am I for hospital fees and charges" (an in-patient, day patient, out-patient or same day patient class, or none, because no fees are payable under cl 6A or the Order gives no in-patient class)
       `I elect to be a private pathology out-patient` IS A BOOLEAN @desc Whether, as an out-patient, you chose to be treated privately for this pathology test
       `the MBS amount` IS A NUMBER @desc The Medicare Benefits Schedule fee for the pathology item, in dollars
-      `I am an eligible person under the Health Insurance Act 1973` IS A BOOLEAN @desc Whether you are an "eligible person" for Medicare under the Health Insurance Act 1973 s 3 (the Health Insurance Act encoding works this out)
-      `I have, or appear to have, a right to compensation for this condition` IS A BOOLEAN @desc Whether you have received, or established a right to receive, compensation (such as workers' compensation, motor vehicle third party insurance or damages) for the injury, illness or disease you are treated for, or appear to have that right when you attend
-      `the chief executive has decided I am not a compensable patient` IS A BOOLEAN @desc Whether the hospital's chief executive has decided under Order cl 3A(5) that you are not a compensable patient
-      `motor vehicle third party insurance applies or appears to apply` IS A BOOLEAN @desc Whether the Motor Vehicle (Third Party Insurance) Act 1943 applies, or appears to apply, to the payment for your treatment
-      `workers compensation, catastrophic injuries or Defence Force law applies or appears to apply` IS A BOOLEAN @desc Whether the Workers Compensation and Injury Management Act 2023, the Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 or the law relating to the Defence Force applies, or appears to apply, to the payment for your treatment
-      `I am a veteran who elects the DVA arrangement` IS A BOOLEAN @desc Whether you are a veteran who elects to be treated under the arrangement with the Department of Veterans' Affairs
-      `I am a nursing home type patient` IS A BOOLEAN @desc Whether you are a nursing home type patient (a Health Insurance Act 1973 term for a long-stay in-patient who no longer needs acute care)
-      `my election` IS A `My election` @desc Whether, on admission, you elected to be treated as a public or a private patient (an eligible in-patient or same day patient must elect)
-      `I am an asylum seeker` IS A BOOLEAN @desc Whether you have applied for a permanent or temporary protection visa or a safe haven enterprise visa, and the application has not yet been decided
-      `I am an involuntary patient under the Mental Health Act 2014` IS A BOOLEAN @desc Whether you are under an inpatient or community treatment order, another detaining order, or an unexpired referral under the Mental Health Act 2014
-      `the service is part of my Mental Health Act treatment` IS A BOOLEAN @desc Whether this service is part of your treatment under the Mental Health Act 2014
-      `a declaration under s 6(2) of the Health Insurance Act 1973 applies to me` IS A BOOLEAN @desc Whether a declaration under the Health Insurance Act 1973 s 6(2) applies to you, so that you are treated as not an eligible person
 GIVETH A `Charge answer`
 `What does the public hospital charge me for a pathology service` MEANS
     CONSIDER `my role`
-    WHEN `I am a patient of a WA public health service` THEN `the hospital's charge` (`What does the hospital charge me for a pathology service` (`me from my answers` `I am an eligible person under the Health Insurance Act 1973` `I have, or appear to have, a right to compensation for this condition` `the chief executive has decided I am not a compensable patient` `motor vehicle third party insurance applies or appears to apply` `workers compensation, catastrophic injuries or Defence Force law applies or appears to apply` `I am a veteran who elects the DVA arrangement` `I am a nursing home type patient` `my election` `I am an asylum seeker` `I am an involuntary patient under the Mental Health Act 2014` `the service is part of my Mental Health Act treatment` `a declaration under s 6(2) of the Health Insurance Act 1973 applies to me`) `how I attend` `I elect to be a private pathology out-patient` `the MBS amount`)
+    WHEN `I am a patient of a WA public health service` THEN `the hospital's charge` (`What does the hospital charge me for a pathology service` (`a patient of my class` `my class` `none of these`) (`how a patient of my class attends` `my class`) `I elect to be a private pathology out-patient` `the MBS amount`)
     WHEN `I am a family member or carer of a patient, or stay in hospital with one` THEN `does not arise for you`
     WHEN `I must pay compensation to someone a public hospital treated for their injury` THEN `does not arise for you`
     WHEN `I hold information about someone that I obtained through the WA health system` THEN `does not arise for you`
