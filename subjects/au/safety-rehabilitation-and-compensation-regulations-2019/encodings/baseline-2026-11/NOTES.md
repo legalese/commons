@@ -43,12 +43,13 @@ and showed as "assertion failed".
 |---|---|---|---|---|
 | `srcr-rules.l4` | 0 | 0 | 0 | 0 |
 | `srcr-seat.l4` | 0 | 0 | 0 | 0 |
-| `srcr-cases.l4` | 0 | 0 | 133 | 133 |
+| `srcr-cases.l4` | 0 | 0 | 140 | 140 |
 
 Every exported question has cases, with the edges: every Schedule 2 Entity and another employer; each s 7 profession,
 registration against membership, and the two cases outside s 7; every s 8A period and a sample of the Act's; the
 firefighter presumption at its period and just under (5, 10 and 15 years), on 3 and 4 July 2011 and on 16 and 17 December
-2022 (reg s 36), for a State employer, without exposure, and for an unlisted disease; every combination of the indexation
+2022 (reg s 36), on 6 and 7 December 2011 and for a 2005 cancer (the Act's s 7(8) commencement, F15), without the
+relevant authority's s 7(9)(a) satisfaction, for a State employer, without exposure, and for an unlisted disease; every combination of the indexation
 routes; the first indexation date either side of 1 July and on it; F at a whole 0.001, just over it, with a fifth decimal
 cut off, with no rise and with a fall; the increase with and without rounding up; the s 11A(1) last day for 20 and 60 days,
 on and before 1 April 2024, without a s 54 claim, with a pause, a pause covering the day of receipt, overlapping pauses, a
@@ -75,8 +76,8 @@ The 2026-10-18 defaults:
   Index numbers are inputs.
 - **The actors the text names.** Followed: the employee (claimant), the determining authority, Comcare, the Commission,
   the licensed authority, the licensed corporation and their principal officers, the rehabilitation authority.
-- **Judgments answered conditionally.** Followed: whether firefighting duties were "not insubstantial" (Act s 7(9)(a)) is
-  folded into the years the claimant counts; "unless the contrary is established" is stated in the answer, not decided;
+- **Judgments answered conditionally.** Followed: whether the relevant authority is satisfied that firefighting duties were "not
+  insubstantial" (Act s 7(9)(a)) is its own input (F16), and the years counted are those periods; "unless the contrary is established" is stated in the answer, not decided;
   the s 11A(3) end days that turn on what the authority "reasonably believes", and item 5's "reasonable and necessary",
   are the dates the claimant enters; Comcare's decisions under ss 25, 30(8) and 31 are asked as facts.
 - **The text's definitions worked out; borrowed terms asked.** Followed: "quarter", "indexation date" (Act s 8(9C)),
@@ -156,7 +157,11 @@ How they fall here:
 - **F6** Act s 8(9C) "the 1 July next following ... the date of that cessation", `s 8(9C) -- the first indexation date
   after I ceased`: a cessation on 1 July gives the next year's 1 July; other reading: that same day.
 - **F7** regs ss 9, 11, `ss 9, 11 -- F`: "worked out to 4 decimal places" is cut off at the fourth place and "rounded up
-  to 3 decimal places" raises any remainder to the next 0.001; other reading: round half up at each step.
+  to 3 decimal places" raises any remainder to the next 0.001; other reading: round half up at each step. This is the
+  fork most likely to be overruled: "worked out to 4 decimal places" suggests the fourth place exists to be rounded on,
+  and Comcare's published factors may follow round half up. It changes ordinary answers: 102.01 / 100 gives F = 1.021
+  here and 1.020 the other way, so $850 a week goes up $17.85 here and $17.00 the other way. Settle it against Comcare's
+  published indexation factors before relying on any amount.
 - **F8** regs ss 9, 11, `ss 9, 11 -- the further increase in dollars`: the increase is WE x (F - 1), cut off at 3
   places and raised to the next cent; other reading: the lost formula gives the new earnings F x WE, rounded the same way
   (the same result when WE is in whole cents; finding 1).
@@ -174,6 +179,17 @@ How they fall here:
   s 21(7) is not conditioned on s 21(2); other reading: only where s 21(2) applied.
 - **F14** ss 22(1)(d), 28(1)(d), `ss 22, 28 -- my rehabilitation authority after revocation`: a person Comcare has
   arranged under s 25 or 31 is the answer in or out of the preservation period; outside it with no arrangement, NOTHING.
+- **F15** Act s 7(8), `Act s 7(8) applies in time`: s 7(8) and (9) came from the Fair Protection for Firefighters Act
+  2011 (No. 182, 2011), which commenced on 7 December 2011 with its own application provision (Sch. 1 items 2, 3; endnote
+  3 of the deposited Act). That provision is not deposited. A decision before 7 December 2011, or a disease sustained
+  before 4 July 2011 (the date reg s 36 uses, taken as the amending Act's), answers NOTHING for every item, the Act's
+  included; other reading: whatever the undeposited application provision says, which may reach diseases sustained
+  earlier or turn on the date of the claim. (Fixed after verification: the first version gave the Act's items the
+  presumption at any date, and asserted it for a 2005 cancer decided in 2010.)
+- **F16** Act s 7(9)(a), `s 7(8) -- my employment is taken to have contributed to the disease`: where the relevant
+  authority is not satisfied that firefighting or related duties made up a not insubstantial portion of the duties, the
+  answer is JUST FALSE; other reading: NOTHING, as s 7(9)(a) deems in and says no "only", so an employee might still be
+  "employed as a firefighter" in the ordinary sense.
 
 ## What the Regulations turn out to say
 
@@ -210,5 +226,5 @@ How they fall here:
 
 ## Before relying on it
 
-Transcribe the regs ss 9 and 11 formula (finding 1); have a reader settle forks F4, F7, F8 and F10, which change answers
+Transcribe the regs ss 9 and 11 formula (finding 1); have a reader settle forks F4, F7, F8, F10 and F15, which change answers
 on real dates and amounts; add the s 21(5) proceedings question; and run an independent test pass.
