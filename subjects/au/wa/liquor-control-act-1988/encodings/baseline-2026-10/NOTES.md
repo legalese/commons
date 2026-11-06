@@ -293,6 +293,26 @@ The `@desc` texts are in `lca-qa.l4`, and in `encoding.json` under `qa_layer.sit
 - QA7. **The penalty tables of the new roles are new helpers.** `the most an adult can be fined for` and `the most a
   licensee or seller can be fined for` take the figures printed in the deposited text, as the baseline's table does for
   the young person.
+- QA8. **A manager commits the s 121(4) offence only by permitting** (fixed 6 November 2026, after verification).
+  s 121(4)(a) names only "the licensee"; (b) "any employee or agent of the licensee who permits the juvenile to enter or
+  remain". A manager is the licensee's employee or agent, so falls under (b). The penalty's "(a) for the licensee or a
+  manager, a fine of $15 000" sets a permitting manager's fine; it does not make a manager liable as the licensee is.
+  Before the fix the layer's `My position at the premises` put the manager with the licensee, liable whether or not
+  they permitted it. The licensee's question now takes `my part in the person's presence`, of the layer's type `My part
+  in the young person's presence`: `I am the licensee`; `I am a manager, employee or agent of the licensee, and I
+  permitted the person to enter or stay`; `... and I did not permit it`. The fine choices are reworded to match: `as the
+  licensee, or a manager who permitted it (s 121(4)(a), (b))` ($15 000) and `as another employee or agent who permitted
+  it (s 121(4)(b))` ($6 000).
+- QA9. **The licensee's s 121(4) question fits the site form's probe** (fixed 6 November 2026, after verification). The
+  site's form drops a question for a role it is not about only after trying every combination of the question's open
+  yes/no and choice inputs, and gives up past 1 024. The question took the situation, the position, the permission, the
+  8-value `Reason`, the 7-value companion, and two yes/no facts about the companion: 3 584 combinations. So for the young
+  person and the adult the form kept it open in every state and would have asked them the licensee's facts (verification:
+  130 ground-truth issues). The position and the permission are now one input (QA8). Whether the companion is an adult and
+  whether they supervise are now one, `that person is an adult who is supervising them`: the baseline reads the two only
+  together (s 121(5)(a)(i): "accompanied by, and under the supervision of, a responsible adult"), so the layer passes the
+  one answer for both. 672 combinations. On a local jl4-service (the 1.6.98 tools) with the site's form engine and 100
+  random completions per question in every state of every role, there are no ground-truth issues.
 
 **Not covered for the new roles.**
 
@@ -310,7 +330,7 @@ The `@desc` texts are in `lca-qa.l4`, and in `encoding.json` under `qa_layer.sit
   - approvals under ss 126A and 126B;
   - licensing itself, and s 115.
 
-**Cases.** `lca-qa-cases.l4` has 287 assertions. All 287 are satisfied, with 0 errors and 0 warnings, on the stable
+**Cases.** `lca-qa-cases.l4` has 292 assertions. All 292 are satisfied, with 0 errors and 0 warnings, on the stable
 `l4` of VS Code extension 1.6.98 with `JL4_LIBRARY_PATH` unset. They are:
 
 - 90 cases that ask each of the 45 questions for the two roles it is not about, with every other input ASSUMEd;
@@ -318,7 +338,11 @@ The `@desc` texts are in `lca-qa.l4`, and in `encoding.json` under `qa_layer.sit
   input ASSUMEd (13 for the young person, 8 for the adult, 10 for the licensee or seller);
 - 57 young-person cases against values worked by hand, most taken from the baseline's cases (c025, Chloe turning 18,
   among them), and the same 57 again against the baseline export's own answer on the same facts;
-- 23 adult cases and 29 licensee or seller cases, worked by hand from the text.
+- 23 adult cases and 34 licensee or seller cases, worked by hand from the text. Five were added on 6 November 2026
+  for QA8 and QA9: a manager who permitted the presence (yes); a parent with them who is not an adult supervising them
+  (yes); a permitting employee where the young person is there for a meal (no); an adult friend supervising them (yes);
+  and the $15 000 fine for the licensee or a permitting manager. The three earlier s 121(4) cases are kept, asked with
+  the new inputs (the employee who did not permit is now a manager, employee or agent who did not permit).
 
 **Negative controls.** Each of these fails, as it should:
 
