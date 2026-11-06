@@ -106,3 +106,52 @@ Everything else in the Act concerns how the training system is organised, so it 
 - Jake's two events give no facts about accreditation, registration or classification, so those are hypothetical.
 - No case law or Industrial Relations Commission decisions were searched (for example on "serious misconduct" or "substantial change of circumstances").
 - Commonwealth law that may bear on an apprentice is not encoded: the Fair Work Act 2009, and the national VET regulator for providers registered under the National Vocational Education and Training Regulator Act 2011.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026, after the model of the Graffiti Vandalism Act 2016 encoding's seat layer (its design decisions D2, D4 and D8). The baseline's files are unchanged: the layer is added, nothing is replaced. Two new files:
+
+- `vet-qa.l4` imports `prelude` and `vet-training`. It has 47 exported questions.
+- `vet-qa-cases.l4` imports the same and `vet-qa`. It has 303 cases.
+
+### Roles
+
+`DECLARE Role IS ONE OF`:
+
+- `I am an apprentice or trainee, or about to become one`: the baseline's seat, with the school leaver going to TAFE (all 30 of the baseline's questions).
+- `I employ an apprentice or trainee, or am about to take one on`: the person Part 7 is mostly written to: ss 60D(2), (3), 60E, 60F(2)-(4), 60G(1)-(3), 60H(1), the appeals of ss 60F(8) and 60G(4) and the employer's fines (15 questions, one shared with the apprentice).
+- `I run a training provider`: the duties of s 58A(1)-(3) and s 60D(1) with s 60I, and the s 58A fine (3 questions).
+
+Why: Part 7 puts its duties on the employer and the provider, and the baseline turned them into what they mean for the apprentice; the employer and the provider ask the same rules from their side. The chief executive, the Minister, the Training Accreditation Council and the Industrial Relations Commission are not seats. Every exported question takes `my role` IS A Role first, with `@desc Which of these describes you`, and for a role it is not about answers `does not arise for you` without reading any other input.
+
+### Situation input
+
+| Input | Type | Does not arise when | Taken by |
+|---|---|---|---|
+| `where the training contract stands` | `Where the training contract stands` (`there is no training contract, and none is proposed`; `a training contract is proposed or signed, but not registered yet`; `the training contract has been registered`) | no contract: every question that takes it. Proposed but not registered: the questions of a contract that has commenced (s 60F(1)): changing it (s 60E(4), s 60F(4)), ending it (s 60G), cancelling its registration (s 60F(5)), disputes under it (s 60(f)), a new arrangement after it ends (s 60H(2)). Registered: the employer's duty to lodge (s 60F(2)) and the refusal of registration (s 60F(3)) | apprentice: 21 questions (8 about the contract, its signing and its effect arise for both contract values; 11 only once registered; 2 only before); employer: 10 questions (2, 6 and 2 the same way) |
+
+It is the second input, straight after `my role`, with one name, type and `@desc` everywhere, so the form asks it once. The three helpers that read it list all three values with no OTHERWISE (graffiti finding 31). The course and qualification questions, the appeals and the fines arise in every situation of their role and take no situation input; the provider has none.
+
+### Decisions
+
+- **QA-1. The situation is the contract's registration, not its signing.** s 60F(1): "A training contract does not commence until it is registered." So the questions of a running contract wait for registration, and the questions of lodging and refusal stop with it. "Is my training contract in effect" and "Am I still employed under it" arise for an unregistered contract too, and answer no from the baseline's status record.
+- **QA-2. The employer's inputs are in the employer's voice, mapped onto the baseline's.** The baseline's types speak as the apprentice (`my employer`, `I consented`, `I have engaged in serious misconduct`, `training me for ...`). For the employer the layer declares its own types (`The reason I give`, `The decision I am dissatisfied with`, `The employer's offence`, `Who may make the change, for the employer`) and builds the baseline's `My termination` from the employer's own facts (`the apprentice consented` and so on). Every map lists every value with no OTHERWISE. Where the baseline's record has neutral fields (`My contract`, `My lodgement`, `My contract's status`) the employer is given the record itself, with a `@desc` saying who "I" is.
+- **QA-3. Inputs that shared a name with different `@desc` texts are renamed.** The baseline's `the regulations permit it` means three different things in three questions; the layer asks `the regulations permit the transfer`, `the regulations permit the suspension` and `the regulations permit the termination`.
+- **QA-4. The Commission's powers question serves both appellants.** "May the Commission do this on my appeal" (ss 60F(9), 60G(5)) is the same for the apprentice and the employer, so one question has a branch for each.
+- **QA-5. The provider's view of the person is its own record.** `The person's completion` (they fulfilled a registered training contract; completed an approved course; I assessed them as competent; their skills come from training with an employer) maps onto the baseline's `My completion`.
+
+### Not covered for the new roles
+
+- Employer: what the regulations require for the form, lodgement and probation (not deposited); the employer's obligations under the award; more than one employer (s 60E(2)) is in the contract record but not asked as its own question.
+- Provider: registration and accreditation under Part 7A beyond s 58A, and the Council's powers (out of the baseline's scope).
+
+### Cases
+
+303 in `vet-qa-cases.l4`, all satisfied, with 0 errors and 0 warnings:
+
+- 93 ask each question for each role it is not about, every other input ASSUMEd: `does not arise for you`;
+- 52 ask each situation question, for its own role, with each value that makes the situation not hold, every later input ASSUMEd: `does not arise for you`;
+- 30 assert that the apprentice's answer equals the baseline export's on the same facts (one for each of the 30 questions);
+- 128 are worked by hand from the text, for all three roles, with the baseline's fixtures (Jake's TAFE course, k024 and k030; Liam, the baseline's illustrative apprentice).
+
+Checked with the stable `l4` of VS Code extension 1.6.98, `JL4_LIBRARY_PATH` unset: `vet-qa.l4`, `vet-qa-cases.l4`, and the baseline's `vet-training.l4` and `vet-cases-training.l4` (69 of 69, unchanged) give 0 errors and 0 warnings; `l4 check vet-qa.l4` succeeds. A script listed every `@export` of `vet-qa.l4` with its inputs and checked that `my role` is first in all 47, that the situation input (and every other shared input) has one name, type and `@desc`, and that no input is DEONTIC or EVENT. A negative control (one expected fine altered) was caught. The mechanical cases are generated by the scratchpad script `gen_vet.py` from the layer's own `@export` list.
