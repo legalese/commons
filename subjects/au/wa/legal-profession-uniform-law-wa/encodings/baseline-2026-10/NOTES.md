@@ -270,6 +270,13 @@ both roles.
   does not arise for the four s 187 questions, since s 187(1) is about a lump sum bill.
 - **`the costs have been assessed`** (BOOLEAN). FALSE gives does not arise. It is taken by "Who pays the costs of the
   assessment" (s 204), in both roles (2).
+- **`the client`** (`Kind of client`, the baseline's type; added 7 November 2026). The nine commercial or government
+  kinds (s 170(2), General Rules r 71) give does not arise: s 170(1) disapplies Part 4.3. It is taken as a situation by
+  three client questions: "Can I still ask for an itemised bill" and "By what date must I be given the itemised bill"
+  (after `the bill given`), and "By what date must I apply for a costs assessment" (s 198(3)). It is read through the
+  layer's own helper `the client is a commercial or government client`, which lists every value with no OTHERWISE and
+  is asserted equal to the baseline's on all eleven. It stays an ordinary input of the other Part 4.3 questions, whose
+  baseline answers already turn on it.
 
 **Decisions.**
 
@@ -303,6 +310,29 @@ both roles.
   - The assessment question (s 198) takes no bill situation, because s 198(3)(b) counts from payment where there was no
     bill.
 
+- **D-QA6. Fix after verification (7 November 2026).**
+  - The site's form drops a question for a role it is not about only when it can try every combination of the
+    question's open yes/no and choice inputs, at most 1,024 (the form engine's PROBE_CAP). Three questions had more, so
+    the other role was asked them: "Where must my firm put the client's money" and its client mirror (1,152), and "Must
+    I report this to the Legal Practice Board" (1,920). The L4 was right; the shape was not.
+  - s 129(2)(d)(i) and (ii) are now one yes/no, `it was received at the client's direction in the ordinary course of
+    legal practice and is invested to maintain or enhance its value`, in all six money questions: the baseline reads
+    the two only together. The money questions now have at most 576 combinations.
+  - General Rules r 15(3)'s three yes/no facts (under transport or traffic legislation; about parking; about driving or
+    operating a vehicle) are now one choice, `how the offence relates to transport or traffic legislation`
+    (`Transport or traffic offence`, four values), built back into the baseline's record by helpers that list every
+    value. An offence about parking is never prescribed, whether or not it is also about driving, so `about parking`
+    covers both. The reporting question now has 960 combinations.
+  - The client's s 187 questions now take `the client` as a situation (above), as the s 198(3) date already did; the
+    s 198(3) date now reads it through the layer's helper rather than the baseline's, which has OTHERWISE.
+  - "By what date must I be given the itemised bill" now also takes `the date the costs became payable`. s 187(3)
+    binds only for a request "made in accordance with subsection (2)", within 30 days after the costs became payable;
+    a later request gets the new `Date answer` value `no date: the law practice need not give it, as the request was
+    made more than 30 days after the costs became payable (s 187(2), (3))`, decided by the baseline's s 187(2) function.
+  - The 21st day is now worked with the prelude's `DATE_SERIAL` and `DATE_FROM_SERIAL` rather than daydate's `Day` and
+    `Date` (the same count), so the layer's own date answer does not depend on daydate. The baseline's own uses of
+    daydate are unchanged.
+
 **Not covered for the client:**
 
 - third party payers (ss 171, 176, 198(5), (6));
@@ -310,26 +340,30 @@ both roles.
 - complaints and Chapter 5 costs disputes;
 - the fidelity fund;
 - whether the lawyer's charging is a conduct matter (s 207 is the lawyer's question only);
-- the s 187(4) limit for a part payer.
+- the s 187(4) limit for a part payer;
+- s 191 (no charge for a bill) for a commercial or government client: Part 4.3 does not apply to it, and the client's
+  s 191 question does not take `the client`.
 
 **Counts.** There are 60 questions: 36 for the lawyer (every baseline export) and 24 for the client. `lpul-qa-cases.l4` has
-264 cases:
+310 cases:
 
 - 60 ask each question for the other role, with every other input ASSUMEd;
-- 35 ask each situation input with each value under which it does not hold, with every later input ASSUMEd;
-- 116 are for the lawyer where the situation holds. They were worked by hand, and 36 of them (one per question) also
-  assert that the answer equals the baseline export's on the same facts;
-- 53 are for the client, worked by hand.
+- 61 ask each situation input with each value under which it does not hold, with every later input ASSUMEd (26 of them
+  for `the client`, added 7 November 2026);
+- 121 are for the lawyer where the situation holds. They were worked by hand, and 37 of them also assert that the answer
+  equals the baseline export's on the same facts (at least one per question);
+- 57 are for the client, worked by hand;
+- 11 assert that the layer's `the client is a commercial or government client` equals the baseline's on each kind.
 
 **Reads that the cases cannot show.** The baseline reads `Kind of client`, `Statement occasion` and `What happened`
 through OTHERWISE (graffiti finding 31). For those inputs, the "not read" cases rest on the parameter script's check that
 each question reads the role first and then its situation. The layer's own helpers over `The bill given` list every value
-and have no OTHERWISE.
+and have no OTHERWISE, as do its helpers over `Transport or traffic offence` and `Kind of client`.
 
 **Checks.** These used the stable l4 (VS Code extension 1.6.98), with `JL4_LIBRARY_PATH` unset.
 
 - All eight files: 0 errors and 0 warnings.
-- 333 assertions are satisfied: 69 in the baseline and 264 in the layer.
+- 379 assertions are satisfied: 69 in the baseline and 310 in the layer (7 November 2026).
 - `l4 check lpul-qa.l4` succeeds.
 - A parameter script listed every `@export` (session scratchpad, `check_params.py`). It found:
   - `my role` first in all 60 questions;
