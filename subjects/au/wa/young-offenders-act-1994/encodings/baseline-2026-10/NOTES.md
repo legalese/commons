@@ -146,7 +146,7 @@ Police, the team, the Coordinator, the chief executive officer and the court are
 - **D-QA2. Some inputs are fixed by the question's own terms.**
   - In s 26, `my matter was referred to a team` is TRUE, because the referral is the situation.
   - In the parent's "Can the team deal with my child without me", the responsible adult's presence is FALSE.
-  - In the parent's "If I withdraw my agreement", the young person attends and agrees, the team is unanimous, and the adult does not agree. The baseline's team function then answers that the matter goes back (s 32(2)).
+  - In the parent's "If I withdraw my agreement", the young person attends and agrees, the team is unanimous, and the adult does not agree. The baseline's team function then answers that the matter goes back (s 32(2)). With the adult taking part, s 30 lets the team go ahead whatever the young person's age, so the two dates are fixed values and not asked (fix of 7 November 2026).
   - The victim's s 31(2) question also uses the baseline's team function, with everyone agreeing except the victim who is present.
 - **D-QA3. Questions with no situation.** "Will a conviction be recorded if I am found guilty" (s 55) takes no situation, because it is asked before the finding as well as after it. s 71's maximum fine and the publisher's penalty are fixed for their role, so they take none either.
 - **D-QA4. New helpers, worked from the text.**
@@ -158,6 +158,8 @@ Police, the team, the Coordinator, the chief executive officer and the court are
   - s 40(2)(b): up to 12 months' imprisonment.
 - **D-QA5. Each role keeps its own wording.** The parent's facts about the child are worded of the child, for example `my child's date of birth` and `there is enough evidence to charge my child`. They are not shared with the young person's first-person inputs. A name that is shared has one `@desc` everywhere, worded for every role that takes it, for example "the young person's matter (yours, if you are the young person)".
 
+- **D-QA6. Fix after verification (7 November 2026).** The site's form drops a question for a role it is not about only when it can try every combination of the question's open yes/no and choice inputs, at most 1,024 (the form engine's PROBE_CAP). "What happens to my matter at the juvenile justice team" had eleven yes/no inputs after the role (2,048 combinations), so the parent, the victim and the publisher were asked it. The L4 was right; the shape was not. s 38 (a decision that is not unanimous goes back) and s 32(6) (the team thinks a caution or a court is the right course) are now asked as one yes/no, `the team members all agree to deal with the matter themselves`, passed to the baseline as the team's unanimity with "a caution or a court is the right course" FALSE. The baseline reads the two only as (not unanimous) or (caution or court), so its answer is unchanged for every pair of facts. The question now has 1,024 combinations. In the same fix, the parent's "If I withdraw my agreement" no longer asks the young person's date of birth or the meeting date (D-QA2), and the layer's fixed date is built with the prelude's `DATE_FROM_DMY` rather than daydate's `Date`.
+
 **Not covered for the new roles.**
 
 - The parent: who may be appointed in the parent's place (s 30(4)-(5)); the bail and custody duties in Part 4; court orders against a responsible adult (Part 7); and the parent's own liability.
@@ -165,11 +167,11 @@ Police, the team, the Coordinator, the chief executive officer and the court are
 - The publisher: punishment as a contempt under s 40(2)(a), which is named only in the question text; ss 11CR and 15A, which are outside the baseline's scope; and the Spent Convictions Act.
 
 **Counts.** There are 48 questions: 27 for the young person (every baseline export), 9 for the parent, 8 for the victim and 4 for the publisher.
-`yoa-qa-cases.l4` has 308 cases:
+`yoa-qa-cases.l4` has 309 cases:
 
 - 144 ask each question for the three roles it is not about, with every other input ASSUMEd.
 - 37 ask each value of a situation input under which the situation does not hold, with every later input ASSUMEd: 21 for the team referral, 1 for the caution and 15 for how the matter ended.
-- 90 are for the young person, worked by hand. 27 of them, one per question, assert that the answer equals the baseline export's on the baseline's own records.
+- 91 are for the young person, worked by hand. 27 of them, one per question, assert that the answer equals the baseline export's on the baseline's own records.
 - 37 are for the other roles, worked by hand: 18 for the parent, 12 for the victim and 7 for the publisher.
 
 **A limit of the "not read" cases.** The baseline reads `Police option`, `Schedule status`, `What I said`, `Team term`, `Sentence` and `Purpose` through OTHERWISE (graffiti finding 31). For those inputs, the check that they are not read rests on the parameter script, not on the cases. The layer's own helpers over `How my matter ended` list every value.
@@ -177,7 +179,7 @@ Police, the team, the Coordinator, the chief executive officer and the court are
 **Checks.** Run on the stable l4 (VS Code extension 1.6.98), with `JL4_LIBRARY_PATH` unset:
 
 - 0 errors and 0 warnings in all four files.
-- 378 assertions are satisfied: 70 in the baseline and 308 in the layer.
+- 379 assertions are satisfied: 70 in the baseline and 309 in the layer.
 - `l4 check yoa-qa.l4` succeeds.
 - The parameter script (`check_params.py`, in the session scratchpad) checked all 48 questions:
   - `my role` comes first in each;
