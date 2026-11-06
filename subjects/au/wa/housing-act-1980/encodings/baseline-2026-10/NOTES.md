@@ -169,3 +169,52 @@ assertion count (33) is in the 25-35 band asked for this constitutive Act.
 - A lawyer's review of whether s 12's general powers let the Authority lend outside
   Part IV's limits; if so, a "no" under Part IV is not a "no" under the Act.
 - An independent test pass and the two human gates.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026, after the model of the Graffiti Vandalism Act 2016 encoding's seat layer (its design decisions D2, D4 and D8). The baseline's files are unchanged: the layer is added, nothing is replaced. Two new files:
+
+- `ha-qa.l4` imports `prelude` and `ha-housing`. It has 20 exported questions.
+- `ha-qa-cases.l4` imports the same and `ha-qa`. It has 138 cases.
+
+### Roles
+
+`DECLARE Role IS ONE OF`:
+
+- `I am buying or building a home and want the Housing Authority's help`: the buyer's half of the baseline's seat (13 questions, one shared with the tenant).
+- `I rent, or want to rent, a home from the Housing Authority`: the tenant's half (6 questions, one shared).
+- `I am a bank or other institution lending to a home buyer`: the lending institution whose loan the Authority may guarantee (s 46) or to which it may pay an interest subsidy (s 47, "payments ... to approved lending institutions") (2 questions).
+
+Why: the baseline's seat has two faces with different questions; the lending institution is the other party the Act gives something to. The Housing Authority and the Minister are not seats. "Must the Housing Authority deal with my application" (s 15) is one question with a branch for the buyer and the tenant. Every exported question takes `my role` IS A Role first, with `@desc Which of these describes you`, and for a role it is not about answers `does not arise for you` without reading any other input.
+
+### Situation inputs
+
+| Input | Type | Does not arise when | Taken by |
+|---|---|---|---|
+| `how I am buying` | `How I am buying` (`with a loan from the Housing Authority (Part IV)`; `buying a house or land from the Housing Authority itself (Part III Division 4)`; `with a loan from Keystart, a bank or another lender`) | not a Part IV loan: the s 40 limit and the s 41 security; not a Division 4 purchase: the s 31 rent credit, the ss 32-33 terms and the s 34 limit; another lender's loan (nothing owed to the Authority): the gazetted rate (ss 33(6), 42(3)), more time to pay (s 68) and duty added to the debt (ss 72-73); not another lender's loan: the s 46 guarantee and the s 47 subsidy | buyer: 10 questions |
+| `I rent a home from the Housing Authority now` | BOOLEAN | FALSE | tenant: `How much rent must I pay, as I ask it` (s 30), `Can I be given more time to pay my rent` (s 68) |
+
+Each is the second input, straight after `my role`, with one name, type and `@desc` everywhere, so the form asks it once. The four helpers that read `how I am buying` list all three values with no OTHERWISE (graffiti finding 31). Questions that arise in every situation of their role take none: s 15, whether the Authority can lend for a purpose (ss 35-38), what the Act decides about a lender (buyer); s 28, s 60 and a former tenant's rent credit (tenant); both of the lender's.
+
+### Decisions
+
+- **QA-1. Where the situation settles a baseline input, the layer passes it.** The buyer's s 31 question is asked only for a Division 4 purchase, so the baseline's `I am buying the house and land from the Authority under Division 4` is passed as TRUE; the s 72-73 question only for a Part IV loan or a Division 4 sale, so the baseline's one input is passed as TRUE. For a buyer using Keystart or a bank the answer is `does not arise for you` where the baseline says no; the cases show the answers equal the baseline's wherever the situation holds.
+- **QA-2. The s 46 guarantee and s 47 subsidy are tied to a loan from another lender.** s 46 helps a person "unable to borrow, without assistance ... from the Authority"; s 47 subsidises "loans made to them by approved lending institutions". Neither concerns a Part IV loan or a Division 4 purchase.
+- **QA-3. The tenant asks s 31 with both its inputs.** A tenant thinking of buying the house they rent is not yet in the buyer's situation, so the tenant's s 31 question keeps the baseline's two inputs and has no situation input.
+- **QA-4. The lender's facts about the borrower are its own inputs.** `the borrower meets the Authority's eligibility conditions` and `the house is to be the borrower's home` build the baseline's `Applicant` record (for s 47, which does not read the home field, the layer passes TRUE). The baseline's `my loan is secured by a mortgage` is asked as `the loan is secured by a mortgage` by both the buyer and the lender, with one `@desc`.
+
+### Not covered for the new roles
+
+- Lender: the State loan agreements of Part V Division 2 (ss 52-59), whose value and income caps bind the institution; the guarantee's own terms (the repealed Housing Loan Guarantee Act 1957); approval as a lending institution.
+- Tenant: the tenancy itself under the Residential Tenancies Act 1987 (encoded separately); Aboriginal housing management agreements (Part VA).
+
+### Cases
+
+138 in `ha-qa-cases.l4`, all satisfied, with 0 errors and 0 warnings:
+
+- 39 ask each question for each role it is not about, every other input ASSUMEd: `does not arise for you`;
+- 19 ask each situation question, for its own role, with each value that makes the situation not hold, every later input ASSUMEd: `does not arise for you`;
+- 19 assert that the buyer's or tenant's answer equals the baseline export's on the same facts (one for each of the 18 buyer and tenant questions, the shared s 15 question once per role);
+- 61 are worked by hand from the text, for all three roles, with the baseline's fixtures (Jake's apartment, k074, with its ASSUMED figures).
+
+Checked with the stable `l4` of VS Code extension 1.6.98, `JL4_LIBRARY_PATH` unset: `ha-qa.l4`, `ha-qa-cases.l4`, and the baseline's `ha-housing.l4` and `ha-cases-housing.l4` (33 of 33, unchanged) give 0 errors and 0 warnings; `l4 check ha-qa.l4` succeeds. A script listed every `@export` of `ha-qa.l4` with its inputs and checked that `my role` is first in all 20, that each situation input (and every other shared input) has one name, type and `@desc`, and that no input is DEONTIC or EVENT. A negative control (one expected rent altered) was caught. The mechanical cases are generated by the scratchpad script `gen_ha.py` from the layer's own `@export` list.
