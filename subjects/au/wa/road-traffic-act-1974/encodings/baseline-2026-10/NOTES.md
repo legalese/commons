@@ -235,7 +235,7 @@ takes a DEONTIC or EVENT input.
 
 - `I ride an electric scooter, skateboard or similar device`: the baseline's rider (24 questions).
 - `I drive a car, motorcycle or other motor vehicle`: the baseline's driver (29 questions).
-- `I employ someone to drive, or let someone drive my vehicle`: the person s 49(1)(b) puts a duty on (5 questions).
+- `I employ someone to drive, or let someone drive my vehicle`: the person s 49(1)(b) puts a duty on (7 questions).
 
 The baseline's one seat, "the rider and the driver", is split, because the Code's eRideable rules and the Act's
 driving offences are asked by different people. The rider and the driver share the Code (r 5, r 9(2)), demerit point,
@@ -251,13 +251,16 @@ police, the court, the CEO and the Minister are not seats.
 | `I am charged with dangerous driving` | the two s 61 questions, rider and driver |
 | `I am charged with careless driving` | the two s 62 questions, rider and driver |
 | `I am charged with reckless driving or a reckless speed` | the four s 60B questions, driver |
-| `I drove without a licence for the vehicle, or while disqualified or suspended` | the seven s 49 questions, driver |
-| `the person who drove had no licence for the vehicle, or was disqualified or suspended` | the four s 49(1)(b) questions, employer or permitter |
+| `I drove a motor vehicle without a licence that let me make that drive` | the seven s 49 questions, driver |
+| `the person who drove had no licence that let them make that drive` | the six s 49(1)(b) questions, employer or permitter |
 
 These are what the provisions tie their penalties to: the drive while not authorised (s 49), the charge (s 60B, s 61,
 s 62) and the alcohol (s 64 to s 64AAA). The speed-limit, speeding, aggravation, reckless-speed and eRideable
 questions arise for every driver or rider and take no situation input. The `@desc` of each "charged with" input also
-covers a person asking about a possible charge. Whether the driving was dangerous, careless or reckless stays the
+covers a person asking about a possible charge. The two s 49 situations cover every reason the baseline's
+`Why I am not authorised` lists, the type 1A novice included: the novice holds a licence, but not one that let them
+make that drive (the situations were first worded "without a licence for the vehicle, or while disqualified or
+suspended", which left the novice's r 23 answer of 4 PU unreachable; fixed after verification, 6 November 2026). Whether the driving was dangerous, careless or reckless stays the
 court's judgment, as in the baseline.
 
 **Decisions.**
@@ -267,11 +270,23 @@ court's judgment, as in the baseline.
   drive is the baseline's s 49(1)(a) offence (`Do I commit the offence of driving unlicensed`, with the s 49(2)
   defence and the r 55(2)(h) eRideable). The rule is `s 49(1)(b) -- the person employs or permits another person to
   drive while not authorised` in `rta-qa.l4`.
-- **QA2. The employer's penalty is always s 49(1) penalty (a): 6 PU, or 12 PU for a subsequent offence.** s 49(3)
-  opens "If an offence under subsection (1)(a) is committed by a person". So penalties (b) and (c), the compulsory
-  disqualification and arrest without warrant attach to the driver's own offence, not to the employer's. A
-  subsequent offence is one after a conviction of "any offence under that subsection" (s 49(6)). This is an
-  INFERENCE from the text's layout. Asserted.
+- **QA2. The employer's penalty takes the tier of the driver's reason.** s 49(3) opens "If an offence under
+  subsection (1)(a) is committed by a person -- (a) who ...", and the penalty for the whole of s 49(1), the (1)(b)
+  offence included, turns on whether "subsection (3)(d), but no other paragraph of subsection (3), applies" (penalty
+  (b)) or "subsection (3)(a), (b), (ca), (c) or (da) applies" (penalty (c)). Where the driver's (1)(a) offence was
+  committed by such a person, subsection (3) applies, so the employer's penalty is the driver's tier: (a) 6 or 12 PU
+  for a driver never licensed or a novice; (b) 4 to 30 PU and up to 12 months for penalty enforcement; (c) 8 to 40 PU
+  and 12 months, or 20 to 80 PU and 18 months, and compulsory disqualification, for refused, disqualified, cancelled,
+  suspended or prescribed. s 49(6) supports this reading: its "relevant offence" rule is limited to where subsection
+  (3) "applies to an offence under subsection (1)(a)", which would be needless if (3) could apply to no other
+  offence; that limit does not reach the employer, so any earlier s 49(1) conviction of theirs makes a subsequent
+  offence. Arrest without warrant stays the driver's: s 49(3) lets the police arrest "the person" who committed the
+  (1)(a) offence. The layer first read s 49(3) as never reaching the employer (always penalty (a)); the verification
+  of 6 November 2026 found that reading disputable, and the text above favours this one. Both are the encoder's
+  (INFERENCE). The rule is the baseline's own penalty rules, called on a drive built from the driver's reason
+  (`the employer's drive built from`), and the reason is asked in the employer's words (`Why the driver was not
+  authorised`, read only through `the driver's reason`, which lists every value with no OTHERWISE). Asserted, with
+  three cases that the employer's answer equals the driver's for the same reason.
 - **QA3. The rider's demerit points settle on the role alone: 0.** ATD Regulations r 65(4) says no offence on a
   motorised scooter or an eRideable is a demerit point offence. That is the baseline's answer with that input TRUE,
   whatever the speed, and a device that is a bicycle carries none either. The question reads nothing for the rider.
@@ -290,17 +305,19 @@ s 60B questions are the driver's. An eRideable needs no licence (r 55(2)(h)), an
 was not encoded for the rider.
 
 **Checks.** `rta-qa.l4` runs and `l4 check` succeeds, with 0 errors and 0 warnings. `rta-road.l4` and
-`rta-cases-road.l4` still give 0 errors and 0 warnings, and 68 of 68 assertions. `rta-qa-cases.l4` has **281
-assertions, 281 satisfied**:
+`rta-cases-road.l4` still give 0 errors and 0 warnings, and 68 of 68 assertions. `rta-qa-cases.l4` has **307
+assertions, 307 satisfied**:
 
-- 174 worked by hand (58 rider, 106 driver, 10 employer). Of these, 41 assert the answer equal to the baseline
-  export's on the same facts, at least one for every question that calls a baseline export.
-- 74 ask each question for each role it is not about, with every other input ASSUMEd.
-- 33 ask each situation question, for each role it is about, with the situation FALSE and the rest ASSUMEd.
+- 194 worked by hand (58 rider, 106 driver, 30 employer). Of these, 41 assert the answer equal to the baseline
+  export's on the same facts, at least one for every question that calls a baseline export, and 3 assert the
+  employer's penalty equal to the driver's for the same reason.
+- 78 ask each question for each role it is not about, with every other input ASSUMEd.
+- 35 ask each situation question, for each role it is about, with the situation FALSE and the rest ASSUMEd.
 
-A script (`qa_params.py`, in the session scratchpad) lists all 44 exported questions with their parameters. It checks
+A script (`qa_params.py`, in the session scratchpad) lists all 46 exported questions with their parameters. It checks
 that `my role` comes first in each, that each situation input is identical in name, type and `@desc` wherever it
-appears, and that no input is DEONTIC or EVENT. It also generated the 107 role and situation cases. The baseline
+appears, and that no input is DEONTIC or EVENT. It also generated the role and situation cases (107 at first; the 6 added
+with the employer's new questions and input on 6 November 2026 follow the same pattern). The baseline
 reads two enumerations through OTHERWISE (`Where I am riding`, `Why I am not authorised`), so an ASSUMEd value of
 either would not fail if read (graffiti finding 31). They are read only after the role and the situation, which the
 script checks. A negative control (a wrong expected fine, and an ASSUMEd input that is read) failed, as it should.
