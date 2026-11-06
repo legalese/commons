@@ -51,14 +51,14 @@ deliberately wrong assertion was run once in a scratch file, since deleted, and 
 | `lhl-seat.l4` | 0 | 0 | 0 | 0 |
 | `lhl-seat-host.l4` | 0 | 0 | 0 | 0 |
 | `lhl-seat-worker.l4` | 0 | 0 | 0 | 0 |
-| `lhl-cases.l4` | 0 | 0 | 150 | 150 |
+| `lhl-cases.l4` | 0 | 0 | 156 | 156 |
 | `lhl-cases-host.l4` | 0 | 0 | 49 | 49 |
 | `lhl-cases-worker.l4` | 0 | 0 | 22 | 22 |
 
 Every expected value was worked by hand from the text, with the edges: every head of ss 7, 8 and 9 with and without each
 element, the s 10 and s 11 exclusions and the prescribed circumstances; the licence on its first day, the day before, the day
 before the expiry date and on it, a cancellation's day and the day before, a renewal pending, decided, out of the prescribed
-period, made after the expiry date and made on it; each s 18 bar on its last day and the next, 3 months from 30 November;
+period, made after the expiry date and made on it; each s 18 bar on its last day and the next, counted back from the proposed day (a refusal on 30 November, a cancellation on 29 February);
 each tier boundary and the one-dollar gap; each 14, 28 and 30-day period on its last day and the next; anniversaries of 29
 February; each penalty column and the s 93(6) split for an individual and a company; each eligible applicant under s 102.
 
@@ -84,6 +84,11 @@ of their own: only the Authority applies for civil penalties (s 93(1)) and only 
 
 The three seats draw on the same rules, so they cannot disagree about the law; the mirror cases in `lhl-cases-host.l4` ask
 the same facts from all three. Each keeps its own names.
+
+**Departure from the guide.** ENCODING-GUIDE section 2 puts the individual's seat first. Here the first seat is the provider,
+which is often a company (answered for by an officer), because the licensing system is applied to the provider; the worker,
+the individual in the guide's sense, has the third seat. The worker's questions are complete for what the Act gives a worker
+(it gives no claim of their own), so nothing the individual would ask is left out by the order.
 
 No seat for the Labour Hire Licensing Authority, the Commissioner, inspectors, police, VCAT or the courts: their
 satisfaction, beliefs, decisions and orders are asked as facts; their duties to the person (s 32(3) time to respond, s 42
@@ -153,7 +158,8 @@ Each line: the provision, the function, the answer taken, the other reading.
 
 - **F1** "3 months" (s 18(1)(b)), "12 months" (s 34(5)), "anniversary" (s 35(1)), "years" (ss 18, 26, 29(7), 67(2), 93(7),
   105) -- `the date` n `months on from` -- the same day of the month, or that month's last day where it is shorter (29 February
-  2028 plus 12 months is 28 February 2029; 30 November 2026 plus 3 months is 28 February 2027) -- 1 March (rolling over).
+  2028 plus 12 months is 28 February 2029) -- 1 March (rolling over). For s 18 the count runs back from the proposed day,
+  not forward from the refusal (fork F4).
 - **F2** s 26(b)(i) "remains in force until the date (the expiry date)" -- `the licence is in force on`,
   `ss 26, 29(7) -- the last day the licence can be in force` -- the expiry date is the first day not in force (read with s
   28(4) "in force from the expiry date"), so the last day in force is the day before the third anniversary -- in force on
@@ -162,9 +168,12 @@ Each line: the provision, the function, the answer taken, the other reading.
   force on` -- once the late application is made, the licence counts as in force for the gap between the expiry date and the
   application too -- only from the application.
 - **F4** s 18(1)(a) "within the preceding 2 years", (b) "during the period of 3 months immediately preceding" -- `s 18 -- the
-  first day I may apply` -- barred until the day before the second anniversary of the cancellation, or the day before the day
-  3 months after the refusal; free on that day; only a cancellation or refusal on or before the proposed day counts -- the
-  anniversary itself still barred.
+  first day I may apply`, `the first day outside the` n `months preceding, for` -- the period is counted back from the
+  proposed day, and the person is barred while the cancellation or refusal falls after the day 2 years (or 3 months) before
+  it; so free on the second anniversary or the day 3 months on, or on the day after that where the count back lands short (a
+  refusal on 30 November 2026 bars to 28 February 2027, free 1 March 2027; a cancellation on 29 February 2028 bars to 28
+  February 2030); only a cancellation or refusal on or before the proposed day counts -- the anniversary itself still barred
+  (the day 2 years or 3 months before counted as inside the period).
 - **F5** s 23(2) "an application for a licence" -- `ss 17, 23, 28, 29 -- what must go with the application` -- a renewal by a
   holder not conducting a labour hire business gets no s 23 compliance declaration (s 23(1) and (2) both fail) -- s 23(2)
   applies to renewals too.
@@ -189,6 +198,11 @@ Each line: the provision, the function, the answer taken, the other reading.
 - **F14** s 24(2), s 29(2) "may grant ... if ... satisfied that it is appropriate" -- `ss 24, 29, 32(4) -- what the Authority
   must do` -- when satisfied, the answer is "may grant" (the Authority may still decide not to, and must then refuse under (3))
   -- "must grant".
+- **F15** s 86(1) "by threat or intimidation, persuade or attempt to persuade ... not to" and (2) "refuse to employ ... or
+  subject another person to any detriment because" -- `s 86 -- what was done is forbidden` -- the two subsections are merged:
+  any listed treatment with any listed reason is forbidden, so a threat made because the worker already gave information
+  counts (as a "detriment" under (2)) -- a threat counts only under (1), when made to stop the worker giving information,
+  continuing a process or complying.
 
 ## Rulings on negatives (copied word for word from docs/ENCODING-GUIDE.md section 5)
 
