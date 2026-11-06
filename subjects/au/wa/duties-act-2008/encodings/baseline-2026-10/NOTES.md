@@ -162,7 +162,8 @@ No other seat was added. The seller of land owes no transfer duty under the prov
 transferee or purchaser), the dealer's vehicle licence duty (s 252) is not encoded, and the Commissioner is not a seat.
 
 **Situation inputs.** All are BOOLEAN; FALSE gives `does not arise for you`; each is the second input wherever it is
-taken, with the same name, type and `@desc` in every question. All are for the buyer of land.
+a gate, with the same name, type and `@desc` in every question. All are for the buyer of land. Two of them are also
+ordinary inputs of the duty questions that read them (decision 2).
 
 | Name | Questions that take it |
 |---|---|
@@ -177,13 +178,32 @@ be a concessional first home owner (s 142(1)(a)).
 
 **Decisions.**
 
-1. **The s 142 question takes no first home owner situation.** For a buyer who is not a first home owner it answers no,
-   which is the answer that buyer wants (as the graffiti layer's first s 18 question does, its D8.1), and it reads the
-   baseline's own field `each transferee is a concessional first home owner` for that.
-2. **The `Purchase` record is kept.** The baseline's land questions take one `Purchase` record. The layer takes the
-   same record, so its answers are the baseline's by construction. The situation inputs sit beside it; where a
-   situation holds but the record says otherwise (an off-the-plan situation with a purchase whose stage is "not an
-   off-the-plan purchase"), the baseline's answer is given (no concession).
+1. **The s 142 question is not gated by the first home owner situation.** For a buyer who is not a first home owner it
+   answers no, which is the answer that buyer wants (as the graffiti layer's first s 18 question does, its D8.1). It
+   takes `every buyer is a concessional first home owner` as an ordinary input (decision 2).
+2. **The purchase is asked as `My purchase`** (fixed 6 November 2026, after verification). The first version took the
+   baseline's `Purchase` record beside the situation inputs. Two things went wrong. The record has 768 combinations of
+   yes/no and choice fields, 1 536 with a situation, past the 1 024 the site's form tries before it gives up proving that
+   a question does not arise for a role; so the two off-the-plan questions and the foreign transfer duty question stayed
+   open for the buyer of a vehicle and the acquirer of shares, although the code answers `does not arise for you` from
+   the role alone. And the situations repeated facts in the record, so the two could disagree (TRUE beside a record
+   saying no gave an amount of 0, not `does not arise for you`). The land questions now take `my purchase` IS A `My
+   purchase`, the baseline's record less:
+   - `each transferee is a concessional first home owner`, which is the input `every buyer is a concessional first home
+     owner`, taken by the s 142 question, the transfer duty, the foreign transfer duty and the concession questions;
+   - whether it is an off-the-plan purchase, which is the input `I am buying a lot off the plan`, taken (beyond its
+     gate) by the transfer duty and foreign transfer duty questions; the record asks only `stage of the development`,
+     an `Off-the-plan stage` of three values, and with the situation FALSE the baseline is given `not an off-the-plan
+     purchase` (`the baseline's stage for` lists every value, with no OTHERWISE);
+   - the three s 266F/266FA lot facts (a new dwelling; the Commissioner's opinion that it is suitable; no s 266F(3) or
+     266FA(3) exclusion), asked as one, since the baseline reads them only joined (`the lot qualifies`).
+   `the baseline's purchase for` builds the baseline's `Purchase`, so every answer is the baseline's. Where a baseline
+   rule does not read a fact (s 27 reads neither situation; s 142 not the stage; ss 266F, 266FA not the first home owner
+   fact) the layer passes FALSE, which cannot change the answer. The most combinations now are 576 (foreign transfer
+   duty). Not fixed: `a foreign person is among the buyers` and the list of buyers can still disagree. The baseline needs
+   each buyer's citizenship and visas to work out the foreign share (s 205L), and the list is not a fact the form can
+   enumerate, so the situation stays the gate and the list the input. If the situation is TRUE but no buyer listed is
+   foreign, the answer is the baseline's: 0.
 3. **Shared questions.** s 15 (dutiable property) and the general rate are asked by the buyer of land and by the
    acquirer of shares, since landholder duty is charged at the general rate (s 184(1)).
 4. **Answer types** carry `does not arise for you`: `Yes or no`, `Amount`, `Months`, and `Time to pay answer`, a
@@ -194,7 +214,7 @@ exemptions, foreign landholder duty, the s 189 reduction, the dealer's liability
 
 **Checks.** 20 exported questions: 16 asked by the buyer of land, 2 by the buyer of a vehicle and 4 by the acquirer of
 shares (two of them shared with the buyer of land). `l4 check da-qa.l4` succeeds; `l4 run` of all six files shows no
-error and no warning. `da-qa-cases.l4` has 105 assertions, 105 satisfied: every question for every role it is not
+error and no warning. `da-qa-cases.l4` has 112 assertions, 112 satisfied: every question for every role it is not
 about, with every other input ASSUMEd; every situation question with its situation FALSE and every later input ASSUMEd;
 hand-worked answers on the baseline's facts; and, for each of the baseline's questions, a case that the layer's answer
 equals the baseline export's on the same facts. A script (`check_params.py`, in the session's scratch folder) listed
