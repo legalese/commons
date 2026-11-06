@@ -295,3 +295,97 @@ Left out, with the reason:
   word by word.
 - An independent test pass and the coverage table of the `encoding-a-subject`
   workflow have not been done.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026 (batch qa11), following the graffiti model
+(`../../../graffiti-vandalism-act-2016/encodings/baseline-2026-10/`, D2, D4, D8). The baseline files are unchanged;
+the layer is added beside them: `cta-qa.l4` (imports `prelude` and `cta-community`) and `cta-qa-cases.l4`.
+
+### Roles
+
+Every exported question takes `my role` IS A `Role` first ("Which of these describes you"), and answers
+`does not arise for you` for a role it is not about without reading any other input.
+
+| Role | Why | Questions |
+|---|---|---|
+| `I own a lot in a community titles scheme` | the baseline's seat | 29 |
+| `I am buying a lot in a community titles scheme` | the baseline's seat before settlement (ss 130-138), split out so the form asks a buyer only the buyer's questions | 9 |
+| `I am selling a lot in a community titles scheme` | ss 130, 131, 137 and 138 put the duties on the seller | 6 |
+| `I occupy or lease a lot in a community titles scheme, but do not own it` | the by-laws apply to occupiers and lessees (s 44(1)(d)-(e), (3)), and so do ss 70, 71 and 48 | 9 |
+
+The community corporation, its council, the Tribunal and the Registrar are not seats. There are 42 questions in all;
+some are asked of two roles (the by-law and ss 70-71 questions of the owner and the occupier, the certificate questions
+of the owner and the buyer, the kind of notifiable variation of the buyer and the seller).
+
+### Situation inputs
+
+Each is placed straight after `my role`; when it does not hold the question answers `does not arise for you` and reads
+nothing else. A shared input has one name, type and `@desc`.
+
+| Input | Type | Does not arise when | Questions |
+|---|---|---|---|
+| `my lot's tier` | `Tier` | `tier 1`, `tier 3` | How much of the tier 1 levy reaches me as a tier 2 owner (also an ordinary second input of the s 17 and s 16(7) questions) |
+| `the community corporation has served me a notice of a contribution` | BOOLEAN | FALSE | Is the contribution notice served on me valid |
+| `a contribution of mine was not paid by its due date` | BOOLEAN | FALSE | How much interest can I be charged on a late contribution |
+| `I bought my lot from a previous owner` | BOOLEAN | FALSE | How much of the previous owner's arrears can I be made to pay |
+| `my contributions are overdue` | BOOLEAN | FALSE | Can I vote on this resolution although my contributions are overdue (also an ordinary input of "Who may cast the vote of my lot") |
+| `I have been given a notice that I broke a by-law` | BOOLEAN | FALSE | Is the by-law breach notice given to me valid (owner, occupier) |
+| `someone else has broken a scheme by-law` | BOOLEAN | FALSE | May I apply to the Tribunal to enforce a by-law against someone else (owner, occupier) |
+| `the Tribunal has made an order in my community titles dispute` | BOOLEAN | FALSE | Can I seek internal review of the Tribunal's order |
+| `something changed after the contract was signed and before settlement` | BOOLEAN | FALSE | What kind of notifiable variation is this change (buyer, seller); As a buyer may I avoid my contract for a notifiable variation; By when must I tell the buyer of a notifiable variation |
+| `the contract is for a lot not yet created (off the plan)` | BOOLEAN | FALSE | As a buyer off the plan may I avoid my contract; Must my off-the-plan contract have the deposit held on trust |
+| `the contract to buy the lot has been avoided` | BOOLEAN | FALSE | As a buyer how much do I get back when I avoid; As a seller how much must I repay when the buyer avoids |
+
+### Decisions
+
+- **The buyer is a role of its own.** The baseline's seat is the owner "and, before settlement, the buyer". Both are
+  the baseline's seat, so both roles' answers equal the baseline's. The arrears question (ss 88(6), 97(3)) is the
+  owner's, asked after buying, with `I bought my lot from a previous owner` as its situation.
+- **The s 130(3)-(4) questions keep "the seller is the original subdivision owner" as an ordinary input,** not a
+  situation: a buyer from someone else is better told `no` than have the question vanish (graffiti D8.1).
+- **Numbers and the baseline's own enums are wrapped:** `Amount` (dollars), `Share` (a fraction), `Days`, and
+  `the answer is` over `How I take part`, `Who casts my lot's vote` and `Notifiable variation`.
+- **The levy question for a tier 2 owner** arises only for `tier 2`. The baseline encodes no tier 3 chain (a tier 3
+  owner would apply s 88(3) twice), so the question does not arise for a tier 3 lot.
+- **The s 131 time (seller).** A helper reads s 131(3) and (4)-(5). Aware less than 15 working days before settlement:
+  as soon as practicable; otherwise within 10 working days. Where the contract described the change and it was
+  completed as described (s 131(4)(a)-(b)), the answer names the notice of completion of s 131(4)(c) instead. A change
+  that is `no notifiable variation` needs no notice: `does not arise for you`, and nothing more is read. Whether the
+  s 131(4)(c) notice was itself given in time is not asked.
+- **s 138(2) (seller).** Read as the baseline reads it for the buyer: the holder repays the deposit less any rent, and
+  the seller owes the rest of the money paid. The seller's question calls the baseline's rule with no held deposit and
+  no rent, so the two answers add up.
+- **s 48(3)-(4) (enforcing against someone else).** The grounds are those of s 48(1)(b), so the baseline's rule is used
+  with the other person's facts. The corporation's own breach (s 48(4)(a)'s "if a person other than the community
+  corporation") is not covered.
+- **Every helper that reads a situation enum lists every value with no OTHERWISE** (graffiti finding 31). The two enum
+  tests (`my lot's tier`, and `the variation` in the seller's s 131 question) use EQUALS, which fails on an ASSUMEd
+  value instead of taking a branch.
+
+### Not covered for the new roles
+
+- **Buyer:** the buyer's own s 162(1)(h) dispute with the seller is not asked as a buyer question (the owner's s 162
+  question lists it).
+- **Seller:** the onus of proof (ss 130(6), 131(6)), the form of the s 130 notice (s 130(5)) and the s 67 disclosures
+  themselves are not asked; nor is the seller's view of the buyer's avoidance rights (ss 132-137(3)), which are asked
+  of the buyer only.
+- **Occupier:** the occupier's own s 162 disputes (s 162(2)), the s 44(3) lease term beyond "must I comply", exclusive
+  use by-laws for occupiers of special lots (s 44(1)(f)), and a lessee of common property.
+
+### Cases
+
+`cta-qa-cases.l4` has 265 cases, all satisfied:
+
+- 115 ask each question for each role it is not about, with every other input ASSUMEd;
+- 19 ask each situation question, for its own roles, with each value under which the situation does not hold, the
+  later inputs ASSUMEd;
+- 131 are worked by hand from the text; 32 of them assert the answer equal to the baseline export's own on the same
+  facts.
+
+The role and situation cases are generated from the exports' parameter lists by a script in the batch's scratch
+folder. The same script checked every export: `my role` first; each parameter name with one type and one `@desc`
+across the file; each situation second and read first in every role branch; no DEONTIC or EVENT input. Three negative
+controls (a wrong yes, an ASSUMEd input read after a holding situation, an ASSUMEd input read in the seller's s 131
+question) failed as they should. All five files of the encoding run with 0 errors and 0 warnings, and
+`l4 check cta-qa.l4` succeeds.
