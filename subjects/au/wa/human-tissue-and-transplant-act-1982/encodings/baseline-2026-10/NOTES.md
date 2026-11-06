@@ -264,7 +264,7 @@ death".
 2. **The next of kin's after-death questions call the donor's functions.** "Whose consent governs donation of the
    person's tissue", "May tissue be removed from the person's body" and "Does my objection stop the person's tissue being
    taken" call the baseline's donor functions with the person's `Deceased` record (and, for the objection, the
-   relative's own `Relative` record as `me`). `Whose consent answer` words the baseline's four answers so that either
+   relative's own `Relative` record as `me as next of kin`). `Whose consent answer` words the baseline's four answers so that either
    role can read them, through a helper that lists every value.
 3. **The donor's s 24(2) question takes no situation.** "Have the brain-death declarations been made about me" is asked
    by the donor about what would be needed, before anyone is ventilated, so it arises in every situation of that role.
@@ -274,6 +274,15 @@ death".
    baseline's `Penalty` record, which has no `does not arise for you`).
 6. **Names.** Each question's name is a plain first-person question, different from the baseline function's name so the
    two modules can be imported together.
+7. **One name, one input, in every role (fixed 6 November 2026, after verification).** The site's form asks an input
+   once per name across the whole deployment, so a name must have one type and one description wherever it is used.
+   The first version broke this: `the tissue` was a `Tissue after death` in "May this person remove this tissue from my
+   body" and a `Living tissue` in the two living-donation questions, and `me` was the donor's `Deceased` record and the
+   next of kin's `Relative` record. The form then sent an after-death tissue value to the living questions and failed
+   them for every role, and could not drop the next of kin's questions for the other roles. Now the after-death input is
+   `the tissue to be removed after death`, the relative's record is `me as next of kin`, the next of kin's s 24(2)
+   list is `the practitioners who examined the person`, and the inputs that keep a shared name (`me`, `the tissue`) have
+   one description each.
 
 **Not covered for the new roles.** The next of kin's role adds no provision the baseline does not encode: the coroner's
 conditions (s 23(3), (4)), post-mortem examinations (Part 4) and who is the designated officer (ss 4, 5) stay out. For
