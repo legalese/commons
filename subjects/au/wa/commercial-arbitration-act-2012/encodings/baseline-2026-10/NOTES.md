@@ -167,6 +167,12 @@ which list every value with no OTHERWISE (graffiti finding 31).
 - **QA2. An award partly in my favour and partly against me opens both the enforcing and the resisting question.**
   Setting aside, appeal, reasons and correction arise for any award, whichever way it went, since s 34(3) and
   s 34A(6) speak of "the party making that application" without regard to who won.
+  The Act gives these to any party: s 33(1) "a party ... may request" a correction (a winner may need a computation
+  put right), s 34(2)(a) "the party making the application", s 34A(2) "any of the parties to an arbitration
+  agreement". Enforcing and resisting are different: the Act ties them to the direction of the award (s 35(2) "the
+  party relying on an award or applying for its enforcement"; s 36(1)(a) "at the request of the party against whom
+  it is invoked"), so only those two are gated by who the award favours. The verification of 6 November 2026 asked
+  why the others are not; this is why, and they stay ungated.
 - **QA3. Placeholders.** Where a baseline rule reads only some fields of its record, the others get fixed values it
   never reads, each commented: the agreement's later fields for the s 7 questions, the seat for s 8 (which s 1(2)
   applies wherever the seat is), the grounds for the s 34(3) time question, and the dates and agreement for the
@@ -175,8 +181,11 @@ which list every value with no OTHERWISE (graffiti finding 31).
   the circumstances` (approached: disclose; appointed: disclose unless already told), `s 30(1) -- what the tribunal must
   do on a settlement`, and `s 33(2) -- the days the tribunal has to correct the award` (30). s 18 and s 24(3)-(5) are
   fixed answers for the role.
-- **QA5. s 33(2) answers 0 days for a request the arbitrator does not consider justified.** The duty arises only "if
-  the arbitral tribunal considers a request ... to be justified". The question text says what 0 means.
+- **QA5. s 33(2) answers "you need not make it" for a request the arbitrator does not consider justified.** The duty
+  arises only "if the arbitral tribunal considers a request ... to be justified". The answer type is `Correction
+  time`: `within` a number of days, `you need not make it, as you do not consider the request justified`, or `does
+  not arise for you`. (The layer first answered `days 0` and said in the question what 0 meant; changed after the
+  verification of 6 November 2026, so the reply is not squeezed into a number.)
 
 **Not covered for the arbitrator.** The challenge procedure (s 13), withdrawal and substitution (ss 14, 15) beyond the
 s 27D(6) consequence, jurisdiction (s 16), interim measures (s 17 onwards), procedure and evidence (ss 19-27C),
@@ -199,3 +208,13 @@ The parameter script (`qa_params.py`, in the session scratchpad) lists all 29 ex
 parameters. It checks that `my role` comes first in each, that each situation input is identical in name, type and
 `@desc` wherever it appears (`the award and me` in 8 questions), and that no input is DEONTIC or EVENT. It also
 generated the 48 role and situation cases.
+
+**The site's form engine (verification of 6 November 2026).** The jl4-service built from l4-ide b98 rejects the
+deployment of `caa-qa.l4` with `caa-arbitration.l4`, and `caa-arbitration.l4` alone, with "multiple definitions for the identifier `__LEQ__`" in
+the baseline's `Am I in time to ask for a correction` (`Day ... MINUS Day ... AT MOST ...`). The verifier found the same with `IMPORT daydate` removed from a scratch copy; the stable l4
+1.6.98 is clean (0 errors, and every assertion satisfied). In b98's libraries `__LEQ__` has overloads in `prelude` (MAYBE NUMBER), `daydate` (DATE),
+`datetime` and `time`, besides the built-in NUMBER comparison, and the baseline's comparison of `Day` numbers is not resolved
+among them there. The cause is in the baseline's rule file (or the service's libraries), not in the Q&A layer, and
+the layer may not change the baseline's rules (layers are added, nothing is replaced). So the Q&A layer cannot be
+served on the site until the baseline is made to compile in the service (for example by comparing the day numbers
+through a NUMBER-typed helper) or the service's overloads are fixed. For Michael.
