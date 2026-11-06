@@ -237,15 +237,39 @@ granted (s 119(b), (c)); it keeps the baseline's `I applied for the permit`.
    `the named builder, not an owner`, and for the occupier `an occupier, not an owner` (with the occupier flag TRUE in
    the s 41 offence question), and does not read the asker's own `Person`. A builder who also owns the land is an
    owner-builder and answers as the owner.
-3. **The baseline's situation-like inputs are kept.** `a decision has been made` (s 23), the `Work`, `Building` and
-   `Building permit application` records stay as the baseline has them, so that each owner answer equals the
-   baseline's; the form drops none of their questions for that, since each arises for every owner.
+3. **The baseline's situation-like inputs are kept.** `a decision has been made` (s 23) and the `Building` record stay
+   as the baseline has them, so that each owner answer equals the baseline's; the form drops none of their questions for
+   that, since each arises for every owner. The `Work` and `Building permit application` records are asked in a smaller
+   shape (decision 7).
 4. **s 33's fine for the owner.** The baseline asks the notice-of-completion fine with no inputs; the layer keeps it for
    the owner (the answer is the builder's fine, as the question text says) and for the builder.
 5. **The two builder questions of s 34(3)** are helpers in the layer: 7 days, and a fine of $10 000.
 6. **Answer types** carry `does not arise for you`: `Yes or no`, `Amount`, `Months`, `Days`, `Years`, and wrappers
    around the baseline's own answer types (`Certificate source answer`, `Certificate answer`). The baseline's 0 for "not
    my duty" in the days questions is kept for the owner, as the question texts say.
+7. **Smaller inputs for the form** (fixed 6 November 2026, after verification). The site's form proves that a question
+   does not arise for a role by trying every combination of its open yes/no and choice inputs, and gives up past 1 024.
+   Two questions had more, so the form kept them open for roles they are not about, although the code answers `does not
+   arise for you` from the role alone: "Must the permit authority grant my building permit" for the builder and the
+   occupier (the baseline's application record: 4 096 combinations), and "Must I ensure the completed building meets the
+   building standards" for the occupier (`me` and the baseline's `Work`: 1 792). The layer now asks:
+   - `the work` IS A `My work`: the baseline's `Work`, with its two s 69 facts as one, `it is to stand no longer than a
+     month and the public will not use it or have access`. The baseline reads them only together (`the temporary
+     building exemption applies`), so `the baseline's work for` passes the one fact as the month fact with the public
+     fact FALSE: the same answer for every input. 896 combinations for the s 37 question. All four questions that take
+     the work take this one input.
+   - the s 20 question takes `the surveyor` (the s 4 question's input, with its `@desc`, so the form asks it once rather
+     than again inside the application) and `my permit application` IS A `My permit application`: the baseline's
+     application with the certificate's two facts (s 20(1)(c), (e)) as one and the levy with the other s 20(1) matters
+     as one. The baseline joins them all by AND, so `the baseline's application for` passes each joined fact to both
+     fields: the same answer for every input. 1 024 combinations, the most the form tries.
+   Cases check the layer against the baseline on the fixtures, with the s 69 and s 20 facts that differ.
+8. **The offence takes the builder's own offences** (fixed 6 November 2026, after verification). The baseline's
+   `Offence` lists s 9, s 37(2), s 41 and s 33, so the builder could not choose their own s 37(1) or s 34(3) offence in
+   "Can I still be prosecuted for this offence", which the builder is asked. `the offence` is now the layer's `My
+   offence`, in the first person, with all six. `may I still be prosecuted for` lists every value: the baseline's four
+   go to the baseline's `Can I still be prosecuted`; s 37(1) is in s 133(3) ("37(1) or (2) ... within 6 years") and
+   s 34(3) falls under s 133(4) ("any other offence ... within 3 years"), helpers here.
 
 **Not covered for the new roles.** For the builder: the display of the permit (s 30), suspension when registration
 lapses (s 35) beyond the s 11 defence, inspections (s 36), demolition permits and staged permits. For the occupier: the
@@ -254,7 +278,7 @@ since nothing of Part 6 is encoded.
 
 **Checks.** 29 exported questions: 27 asked by the owner (every baseline export), 15 by the builder and 5 by the
 occupier. `l4 check ba-qa.l4` succeeds; `l4 run` of all four files shows no error and no warning. `ba-qa-cases.l4` has
-143 assertions, 143 satisfied: every question for every role it is not about, with every other input ASSUMEd; every
+154 assertions, 154 satisfied: every question for every role it is not about, with every other input ASSUMEd; every
 situation question with its situation FALSE and every later input ASSUMEd; hand-worked answers for each role; and, for
 each of the baseline's questions, a case that the layer's answer equals the baseline export's on the same facts. A
 script (`check_params.py`, in the session's scratch folder) listed every export's parameters and confirmed: `my role`
