@@ -389,3 +389,33 @@ across the file; each situation second and read first in every role branch; no D
 controls (a wrong yes, an ASSUMEd input read after a holding situation, an ASSUMEd input read in the seller's s 131
 question) failed as they should. All five files of the encoding run with 0 errors and 0 warnings, and
 `l4 check cta-qa.l4` succeeds.
+
+### After the independent check (6 Nov 2026)
+
+- **A sum of unit entitlements of 0 no longer divides by 0.** The form engine's probes gave 0 for a sum, and the
+  baseline's s 16(7), s 88(2)-(3) and reg 8 arithmetic divides by it. A real scheme's sum is never 0 (s 41(1)(a) gives
+  every lot and tier parcel a whole-number unit entitlement, and s 3(1) divides by their sum). The layer now checks
+  the sums it would divide by, after the role and situation, and answers that no value can be worked out:
+  - `Share` and `Amount` gain `no share can be worked out: ...` and `no amount can be worked out: ...`;
+    `Notifiable variation, if it arises` gains `no answer can be worked out: ...` (each ends "a sum of unit
+    entitlements given is 0, and every scheme's sum is above 0 (ss 3(1), 41(1)(a))").
+  - The s 16(7) share checks only the sums the lot's tier divides by (every value of `Tier` is listed); the s 88
+    contribution checks the sum only when no by-law method applies; the s 88(3) tier 1 levy checks both sums; the
+    notifiable variation checks the notified sum and the sum now.
+  - The baseline's rules are unchanged; on every input with sums above 0 each answer is the same as before.
+  - 10 cases added: one per sum for each question, a tier 1 lot whose unused sums are 0, and a by-law method with a 0 sum.
+- **The site's form keeps "Does this by-law bind me as an owner" open for the buyer, the seller and the occupier.**
+  - The layer is not wrong here: each of those questions answers `does not arise for you` from `my role` (and its
+    situation) alone, and no case or evaluation failed.
+  - The cause is the engine. To drop a question it evaluates every combination of its open yes/no and choice inputs, up
+    to 1 024 (`PROBE_CAP` in `interact-engine.ts`). `What the by-law does` has 10 yes/no fields, 1 024 combinations by itself, and the question takes more is over that cap by itself, so every question that takes it
+    stays open until it is answered.
+  - No change to the layer fixes this without changing what is asked: splitting the record into its fields leaves the
+    same number of yes/no facts, and narrowing it to what one question reads gives the form a second set of inputs for
+    the same facts. The fix belongs in the engine (when over the cap, evaluate one completion with a trace; if it reads
+    only answered inputs, the answer holds for every completion), as the Civil Liability Act encoding's notes say.
+  No file was changed for this finding.
+- **Kept: the seller's s 131 question answers does not arise when `the variation` is `no notifiable variation`.** That
+  is an ordinary input, the answer of the notifiable variation question, not a situation; the decision is recorded
+  above. The form asks it first, after the situation.
+- `cta-qa-cases.l4` now has 275 cases, all satisfied.
