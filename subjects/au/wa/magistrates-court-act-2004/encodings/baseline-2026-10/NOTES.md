@@ -305,3 +305,20 @@ each parameter name with one type and one `@desc` across the file; each situatio
 branch; no DEONTIC or EVENT input. Two negative controls (an ASSUMEd input read after a holding situation, a wrong
 s 33(8) answer) failed as they should. All four files of the encoding run with 0 errors and 0 warnings, and
 `l4 check mca-qa.l4` succeeds.
+
+### After the independent check (6 Nov 2026)
+
+- **The site's form keeps five party-only questions open for the witness or other person** ("May the Magistrates
+  Court hear the claim in my case", "Who may constitute the Court to hear my case", "May the Court sit at that place
+  for my case", "Do the Supreme Court rules of evidence apply in my case", "Must the Court explain cross-examination to
+  me as a party"), all of which take `My case`. The party roles and every situation input drop correctly.
+  - The layer is not wrong here: each of those questions answers `does not arise for you` from `my role` (and its
+    situation) alone, and no case or evaluation failed.
+  - The cause is the engine. To drop a question it evaluates every combination of its open yes/no and choice inputs, up
+    to 1 024 (`PROBE_CAP` in `interact-engine.ts`). `My case` has 9 yes/no fields and a choice of where the claim's jurisdiction comes from is over that cap by itself, so every question that takes it
+    stays open until it is answered.
+  - No change to the layer fixes this without changing what is asked: splitting the record into its fields leaves the
+    same number of yes/no facts, and narrowing it to what one question reads gives the form a second set of inputs for
+    the same facts. The fix belongs in the engine (when over the cap, evaluate one completion with a trace; if it reads
+    only answered inputs, the answer holds for every completion), as the Civil Liability Act encoding's notes say.
+  No file was changed for this finding.
