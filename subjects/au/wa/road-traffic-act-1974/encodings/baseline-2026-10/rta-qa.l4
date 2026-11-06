@@ -1,0 +1,843 @@
+IMPORT prelude
+IMPORT `rta-road`
+
+-- Road Traffic Act 1974 (WA), with the Road Traffic Code 2000 and the regulations the baseline uses -- the questions
+-- people ask, with the seat and the situation as parameters (the Q&A layer).
+--
+-- PURPOSE. One module whose exported questions serve every seat from one deployment. Every question takes `my role`
+-- first ("Which of these describes you"); a question about another role answers `does not arise for you` without
+-- reading any other input, so the form never asks those inputs. The rules are the baseline's (rta-road.l4): this layer
+-- builds the baseline's records from plain answers and calls its functions, and restates none of them. The one rule
+-- the baseline does not have, s 49(1)(b) (employing or permitting an unlicensed driver), is built here from the
+-- baseline's s 49(1)(a) rule, as s 49(1)(b) itself is ("as described in paragraph (a)").
+--
+-- ROLES. The baseline's seat, "the rider and the driver", is split in two, because the Code's eRideable rules and the
+-- Act's driving offences are asked by different people: the rider of an electric scooter, skateboard or similar device,
+-- and the driver of a car, motorcycle or other motor vehicle. The third role is the person s 49(1)(b) puts a duty on:
+-- the one who employs another person to drive, or lets them drive. The police, the court, the CEO and the Minister are
+-- never a seat; what they may or must do appears as what it means for the person asking.
+--
+-- SITUATIONS (design D8 of the Graffiti Vandalism Act layer). Within a role, a question that arises only in a
+-- situation takes that situation's fact straight after `my role`, and when it does not hold answers `does not arise
+-- for you` without reading anything else. The questions of one situation share one input, with the same name, type
+-- and @desc. The situations, each a BOOLEAN that gives `does not arise for you` when FALSE, are:
+--   `I had alcohol in my blood when I drove or rode`            the five drink-driving questions (rider, driver);
+--   `I am charged with dangerous driving`                         the two s 61 questions (rider, driver);
+--   `I am charged with careless driving`                          the two s 62 questions (rider, driver);
+--   `I am charged with reckless driving or a reckless speed`      the four s 60B questions (driver);
+--   `I drove without a licence for the vehicle, or while disqualified or suspended`
+--                                                                 the seven s 49 questions (driver);
+--   `the person who drove had no licence for the vehicle, or was disqualified or suspended`
+--                                                                 the four s 49(1)(b) questions (employer or permitter).
+-- s 49, s 60B, s 61, s 62 and the drink-driving sections tie their penalties to the offence (the drive while not
+-- authorised, the charge, the alcohol), so those are the situations. The speed, speed-limit, aggravation and eRideable
+-- questions arise for every driver or rider and take none.
+--
+-- BASELINE. Not for public use as advice. See NOTES.md, "Q&A layer (seat and situations as parameters)".
+
+§ `Road Traffic Act 1974 (WA) -- the questions people ask`
+
+§§ `Who is asking, and the shape of the answers`
+
+DECLARE Role IS ONE OF
+    `I ride an electric scooter, skateboard or similar device`
+    `I drive a car, motorcycle or other motor vehicle`
+    `I employ someone to drive, or let someone drive my vehicle`
+
+DECLARE `Yes or no` IS ONE OF
+    yes
+    no
+    `does not arise for you`
+
+DECLARE `Amount` IS ONE OF
+    `does not arise for you`
+    amount HAS dollars IS A NUMBER
+
+DECLARE `Penalty units` IS ONE OF
+    `does not arise for you`
+    `PU` HAS `number of penalty units` IS A NUMBER
+
+DECLARE `Months` IS ONE OF
+    `does not arise for you`
+    `months` HAS `number of months` IS A NUMBER
+
+DECLARE `Speed` IS ONE OF
+    `does not arise for you`
+    `km/h` HAS `kilometres per hour` IS A NUMBER
+
+DECLARE `Demerit points` IS ONE OF
+    `does not arise for you`
+    `points` HAS `number of demerit points` IS A NUMBER
+
+DECLARE `Kind of device answer` IS ONE OF
+    `does not arise for you`
+    `the device is` HAS `which kind` IS A `Kind of device`
+
+DECLARE `Blood alcohol answer` IS ONE OF
+    `does not arise for you`
+    `the offence is` HAS `which offence` IS A `Blood alcohol offence`
+
+§§ `Building the baseline's inputs`
+
+GIVEN `it holds` IS A BOOLEAN
+GIVETH A `Yes or no`
+`yes if` `it holds` MEANS
+    IF `it holds` THEN yes ELSE no
+
+GIVEN `has a wheel` IS A BOOLEAN
+      `for one person` IS A BOOLEAN
+      `electric motor` IS A BOOLEAN
+      `stopping system` IS A BOOLEAN
+      `top speed` IS A NUMBER
+      `length` IS A NUMBER
+      `width` IS A NUMBER
+      `height` IS A NUMBER
+      `mass` IS A NUMBER
+      `approved` IS A BOOLEAN
+      `pedals` IS A BOOLEAN
+      `excluded kind` IS A BOOLEAN
+GIVETH A `My device`
+`the device built from` MEANS
+    `My device` WITH
+        `it has at least 1 wheel` IS `has a wheel`
+        `it is designed for a single person` IS `for one person`
+        `it has an electric motor` IS `electric motor`
+        `it has an effective stopping system` IS `stopping system`
+        `top speed on its motor alone on level ground, in km/h` IS `top speed`
+        `length in mm` IS `length`
+        `width in mm` IS `width`
+        `height in mm` IS `height`
+        `unladen mass in kg` IS `mass`
+        `it meets other mass and dimension requirements the Minister has approved` IS `approved`
+        `it has pedals` IS `pedals`
+        `it is a motorised scooter, motorised wheelchair, electric personal transporter or wheeled toy` IS `excluded kind`
+
+GIVEN `where` IS A `Where I am riding`
+      `limit` IS A NUMBER
+      `crossing` IS A BOOLEAN
+      `avoiding` IS A BOOLEAN
+      `wheeled sign` IS A BOOLEAN
+      `bicycles sign` IS A BOOLEAN
+      `speed` IS A NUMBER
+GIVETH A `My ride`
+`the ride built from` MEANS
+    `My ride` WITH
+        `where I am` IS `where`
+        `the speed limit of the carriageway, in km/h` IS `limit`
+        `I am only crossing the carriageway, by the shortest safe route` IS `crossing`
+        `I am only avoiding an obstruction, for no longer than necessary` IS `avoiding`
+        `I pass a no wheeled devices sign` IS `wheeled sign`
+        `a no bicycles sign or marking applies here` IS `bicycles sign`
+        `my speed, in km/h` IS `speed`
+
+GIVEN `signed` IS A BOOLEAN
+      `signed limit` IS A NUMBER
+      `built-up` IS A BOOLEAN
+      `heavy` IS A BOOLEAN
+GIVETH A `Where I am driving`
+`the place built from` MEANS
+    `Where I am driving` WITH
+        `a sign sets the limit here (speed zone, school zone in its hours, shared zone or speed limited area)` IS `signed`
+        `the signed limit, in km/h` IS `signed limit`
+        `I am in a built-up area` IS `built-up`
+        `I am towing, over 12 t GVM, or driving a bus over 5 t GVM` IS `heavy`
+
+GIVEN `no consent` IS A BOOLEAN
+      `never held` IS A BOOLEAN
+      `s 49(3) person` IS A BOOLEAN
+      `wrong kind` IS A BOOLEAN
+      `s 38(1)` IS A BOOLEAN
+      `over by` IS A NUMBER
+      `escaping` IS A BOOLEAN
+GIVETH A `My driving`
+`the driving built from` MEANS
+    `My driving` WITH
+        `I was driving without the owner's consent` IS `no consent`
+        `I have never held a licence or permit` IS `never held`
+        `I am a person described in s 49(3)(a), (b), (ca), (c) or (da)` IS `s 49(3) person`
+        `my licence does not cover this kind of vehicle` IS `wrong kind`
+        `I am committing an offence under the ATD Act s 38(1)` IS `s 38(1)`
+        `km/h above the speed limit` IS `over by`
+        `I was driving to escape pursuit by a police officer` IS `escaping`
+
+GIVEN `on an eRideable` IS A BOOLEAN
+      `authorised` IS A BOOLEAN
+      `under regulations or permit` IS A BOOLEAN
+      `why` IS A `Why I am not authorised`
+      `subsequent` IS A BOOLEAN
+GIVETH A `My unlicensed drive`
+`the drive built from` MEANS
+    `My unlicensed drive` WITH
+        `I was riding an electric rideable device` IS `on an eRideable`
+        `I am authorised under the ATD Act Part 2 to drive this vehicle` IS `authorised`
+        `I drove under the ATD Act s 11(1) regulations or a s 49A necessity permit` IS `under regulations or permit`
+        `why I am not authorised` IS `why`
+        `this is a subsequent offence under s 49(6)` IS `subsequent`
+
+GIVEN `bac` IS A NUMBER
+      `novice` IS A BOOLEAN
+      `s 64A(2) person` IS A BOOLEAN
+      `s 64A(5) vehicle` IS A BOOLEAN
+GIVETH A `My drinking and driving`
+`the drinking built from` MEANS
+    `My drinking and driving` WITH
+        `my blood alcohol content, in g per 100 mL` IS `bac`
+        `I am a novice driver (ATD Act s 40(2))` IS `novice`
+        `I am otherwise a person s 64A(2) lists (drink-driving disqualification, extraordinary licence, recently disqualified)` IS `s 64A(2) person`
+        `my vehicle is one s 64A(5) lists (bus with passengers, hire passengers, GCM 22.5 t or more, dangerous goods)` IS `s 64A(5) vehicle`
+
+-- s 49(1)(b): "A person who ... employs or permits another person to drive a motor vehicle as described in paragraph
+-- (a), commits an offence." The drive "as described in paragraph (a)" is the baseline's s 49(1)(a) offence, defence
+-- (s 49(2)) and r 55(2)(h) eRideable included, so that rule is called on the other person's drive. The reason the
+-- driver was not authorised and whether it is their subsequent offence are not read by it; they are given fixed
+-- placeholders.
+GIVEN `I employed or permitted them to drive it` IS A BOOLEAN
+      `they were riding an electric rideable device` IS A BOOLEAN
+      `they were authorised under the ATD Act Part 2 all the same` IS A BOOLEAN
+      `it was driven under the ATD Act s 11(1) regulations or a s 49A necessity permit` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `s 49(1)(b) -- the person employs or permits another person to drive while not authorised` IF
+        `I employed or permitted them to drive it`
+    AND `Do I commit the offence of driving unlicensed`
+            (`the drive built from` `they were riding an electric rideable device` `they were authorised under the ATD Act Part 2 all the same` `it was driven under the ATD Act s 11(1) regulations or a s 49A necessity permit` `I never held a licence of the kind needed, or it expired or I surrendered it` FALSE)
+
+§§ `For every role`
+
+@export How many dollars is a fine or modified penalty of this many penalty units (Road Traffic (Administration) Act 2008 s 7)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `penalty units` IS A NUMBER @desc The number of penalty units (PU)
+GIVETH AN `Amount`
+`How many dollars is a fine of this many penalty units` MEANS
+    CONSIDER `my role`
+    WHEN `I ride an electric scooter, skateboard or similar device` THEN amount (`How many dollars is this many penalty units` `penalty units`)
+    WHEN `I drive a car, motorcycle or other motor vehicle` THEN amount (`How many dollars is this many penalty units` `penalty units`)
+    WHEN `I employ someone to drive, or let someone drive my vehicle` THEN amount (`How many dollars is this many penalty units` `penalty units`)
+
+§§ `For the rider of an electric scooter, skateboard or similar device (Code r 3A, 5, 15, 210B-228; ATD Regulations r 55, 65; Vehicles Regulations r 15)`
+
+-- Every question here arises for every rider, so none takes a situation input. The rider also shares the Code,
+-- drink-driving, dangerous and careless driving questions with the driver (below): finding 6 of the baseline reads an
+-- eRideable as a "motor vehicle" for this Act's offences.
+
+§§§ `Code r 3A; ATD Regulations r 55; Vehicles Regulations r 15; Administration Act s 4 -- what my device is`
+
+@export Is my device an electric rideable device (an eRideable) under the Road Traffic Code 2000 r 3A?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my device has at least 1 wheel` IS A BOOLEAN @desc Whether your device has at least one wheel
+      `my device is designed for one person` IS A BOOLEAN @desc Whether your device is designed to be used by a single person
+      `my device has an electric motor` IS A BOOLEAN @desc Whether your device has an electric motor or motors
+      `my device has an effective stopping system` IS A BOOLEAN @desc Whether your device is fitted with an effective stopping system controlled by brakes, gears or motor control
+      `the top speed of my device on its motor, in km/h` IS A NUMBER @desc The fastest your device can go on level ground on its motor alone, in km/h
+      `the length of my device in mm` IS A NUMBER @desc Your device's length in millimetres
+      `the width of my device in mm` IS A NUMBER @desc Your device's width in millimetres
+      `the height of my device in mm` IS A NUMBER @desc Your device's height in millimetres
+      `the unladen mass of my device in kg` IS A NUMBER @desc Your device's unladen mass in kilograms
+      `my device meets other requirements the Minister has approved` IS A BOOLEAN @desc Whether your device meets other mass and dimension requirements the Minister has approved
+      `my device has pedals` IS A BOOLEAN @desc Whether your device has pedals
+      `my device is a motorised scooter, motorised wheelchair, electric personal transporter or wheeled toy` IS A BOOLEAN @desc Whether your device is a motorised scooter, a motorised wheelchair, an electric personal transporter or a wheeled toy (none of which is an eRideable)
+GIVETH A `Kind of device answer`
+`What kind of device is mine` MEANS
+    CONSIDER `my role`
+    WHEN `I ride an electric scooter, skateboard or similar device` THEN `the device is` (`What kind of device am I riding` (`the device built from` `my device has at least 1 wheel` `my device is designed for one person` `my device has an electric motor` `my device has an effective stopping system` `the top speed of my device on its motor, in km/h` `the length of my device in mm` `the width of my device in mm` `the height of my device in mm` `the unladen mass of my device in kg` `my device meets other requirements the Minister has approved` `my device has pedals` `my device is a motorised scooter, motorised wheelchair, electric personal transporter or wheeled toy`))
+    OTHERWISE `does not arise for you`
+
+@export May I ride my device on a road without a driver's licence, because it is an electric rideable device (Authorisation to Drive Regulations r 55(2)(h))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my device has at least 1 wheel` IS A BOOLEAN @desc Whether your device has at least one wheel
+      `my device is designed for one person` IS A BOOLEAN @desc Whether your device is designed to be used by a single person
+      `my device has an electric motor` IS A BOOLEAN @desc Whether your device has an electric motor or motors
+      `my device has an effective stopping system` IS A BOOLEAN @desc Whether your device is fitted with an effective stopping system controlled by brakes, gears or motor control
+      `the top speed of my device on its motor, in km/h` IS A NUMBER @desc The fastest your device can go on level ground on its motor alone, in km/h
+      `the length of my device in mm` IS A NUMBER @desc Your device's length in millimetres
+      `the width of my device in mm` IS A NUMBER @desc Your device's width in millimetres
+      `the height of my device in mm` IS A NUMBER @desc Your device's height in millimetres
+      `the unladen mass of my device in kg` IS A NUMBER @desc Your device's unladen mass in kilograms
+      `my device meets other requirements the Minister has approved` IS A BOOLEAN @desc Whether your device meets other mass and dimension requirements the Minister has approved
+      `my device has pedals` IS A BOOLEAN @desc Whether your device has pedals
+      `my device is a motorised scooter, motorised wheelchair, electric personal transporter or wheeled toy` IS A BOOLEAN @desc Whether your device is a motorised scooter, a motorised wheelchair, an electric personal transporter or a wheeled toy (none of which is an eRideable)
+GIVETH A `Yes or no`
+`May I ride my device without a driver's licence` MEANS
+    CONSIDER `my role`
+    WHEN `I ride an electric scooter, skateboard or similar device` THEN `yes if` (`May I ride it without a driver's licence` (`the device built from` `my device has at least 1 wheel` `my device is designed for one person` `my device has an electric motor` `my device has an effective stopping system` `the top speed of my device on its motor, in km/h` `the length of my device in mm` `the width of my device in mm` `the height of my device in mm` `the unladen mass of my device in kg` `my device meets other requirements the Minister has approved` `my device has pedals` `my device is a motorised scooter, motorised wheelchair, electric personal transporter or wheeled toy`))
+    OTHERWISE `does not arise for you`
+
+@export Does my device need a vehicle licence (registration) (Vehicles Regulations r 15)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my device has at least 1 wheel` IS A BOOLEAN @desc Whether your device has at least one wheel
+      `my device is designed for one person` IS A BOOLEAN @desc Whether your device is designed to be used by a single person
+      `my device has an electric motor` IS A BOOLEAN @desc Whether your device has an electric motor or motors
+      `my device has an effective stopping system` IS A BOOLEAN @desc Whether your device is fitted with an effective stopping system controlled by brakes, gears or motor control
+      `the top speed of my device on its motor, in km/h` IS A NUMBER @desc The fastest your device can go on level ground on its motor alone, in km/h
+      `the length of my device in mm` IS A NUMBER @desc Your device's length in millimetres
+      `the width of my device in mm` IS A NUMBER @desc Your device's width in millimetres
+      `the height of my device in mm` IS A NUMBER @desc Your device's height in millimetres
+      `the unladen mass of my device in kg` IS A NUMBER @desc Your device's unladen mass in kilograms
+      `my device meets other requirements the Minister has approved` IS A BOOLEAN @desc Whether your device meets other mass and dimension requirements the Minister has approved
+      `my device has pedals` IS A BOOLEAN @desc Whether your device has pedals
+      `my device is a motorised scooter, motorised wheelchair, electric personal transporter or wheeled toy` IS A BOOLEAN @desc Whether your device is a motorised scooter, a motorised wheelchair, an electric personal transporter or a wheeled toy (none of which is an eRideable)
+GIVETH A `Yes or no`
+`Does my device need a vehicle licence` MEANS
+    CONSIDER `my role`
+    WHEN `I ride an electric scooter, skateboard or similar device` THEN `yes if` (`Does my eRideable need a vehicle licence` (`the device built from` `my device has at least 1 wheel` `my device is designed for one person` `my device has an electric motor` `my device has an effective stopping system` `the top speed of my device on its motor, in km/h` `the length of my device in mm` `the width of my device in mm` `the height of my device in mm` `the unladen mass of my device in kg` `my device meets other requirements the Minister has approved` `my device has pedals` `my device is a motorised scooter, motorised wheelchair, electric personal transporter or wheeled toy`))
+    OTHERWISE `does not arise for you`
+
+-- The baseline's rule reads only the motor and the pedals; the other fields get fixed placeholders it never reads.
+@export Is my device a "motor vehicle" for the Road Traffic Act 1974's offences (Administration Act s 4)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my device has an electric motor` IS A BOOLEAN @desc Whether your device has an electric motor or motors
+      `my device has pedals` IS A BOOLEAN @desc Whether your device has pedals
+GIVETH A `Yes or no`
+`Is my device a motor vehicle for this Act` MEANS
+    CONSIDER `my role`
+    WHEN `I ride an electric scooter, skateboard or similar device` THEN `yes if` (`Is my eRideable a motor vehicle for this Act` (`the device built from` TRUE TRUE `my device has an electric motor` TRUE 0 0 0 0 0 FALSE `my device has pedals` FALSE))
+    OTHERWISE `does not arise for you`
+
+§§§ `Code r 228, r 212, r 223B -- who may ride, and how`
+
+@export Am I old enough to ride an electric rideable device with its motor on (Code r 228(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my age in years` IS A NUMBER @desc Your age in completed years
+GIVETH A `Yes or no`
+`Am I old enough to ride my device` MEANS
+    CONSIDER `my role`
+    WHEN `I ride an electric scooter, skateboard or similar device` THEN `yes if` (`Am I old enough to ride an eRideable` `my age in years`)
+    OTHERWISE `does not arise for you`
+
+-- The answer is fixed for the role: no (r 212(5)).
+@export May I carry a passenger or an animal on my electric rideable device (Code r 212(5))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH A `Yes or no`
+`May I carry a passenger or animal on my device` MEANS
+    CONSIDER `my role`
+    WHEN `I ride an electric scooter, skateboard or similar device` THEN `yes if` `May I carry a passenger on my eRideable`
+    OTHERWISE `does not arise for you`
+
+@export Must I wear a helmet on my electric rideable device (Code r 223B)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I wear a customary religious or cultural headdress that makes a helmet impractical` IS A BOOLEAN @desc Whether you wear a customary religious or cultural headdress that makes a helmet impractical
+      `the CEO has exempted me in writing for medical reasons and I keep its terms` IS A BOOLEAN @desc Whether the CEO of the Department of Transport has exempted you in writing for medical reasons, and you comply with its terms
+GIVETH A `Yes or no`
+`Must I wear a helmet on my device` MEANS
+    CONSIDER `my role`
+    WHEN `I ride an electric scooter, skateboard or similar device` THEN `yes if` (`Must I wear a helmet` `I wear a customary religious or cultural headdress that makes a helmet impractical` `the CEO has exempted me in writing for medical reasons and I keep its terms`)
+    OTHERWISE `does not arise for you`
+
+§§§ `Code r 210B, r 215, r 218, r 218A, r 15 -- where I may ride, and how fast`
+
+-- The baseline's ride record has a speed the place questions never read, and signs the r 210B and r 15 questions
+-- never read; each question takes only what its rule reads, and the rest get fixed placeholders.
+@export May I ride my electric rideable device where I am riding (Code r 210B, r 215, r 218, r 218A)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `where I am riding` IS A `Where I am riding` @desc Where you are riding: a carriageway, a footpath, a shared path, a bicycle path, or the pedestrians-only or the bicycle part of a separated footpath
+      `the speed limit on the carriageway, in km/h` IS A NUMBER @desc On a carriageway, its speed limit in km/h
+      `I am just crossing the carriageway by the shortest safe route` IS A BOOLEAN @desc On a carriageway, whether you are only crossing it by the shortest safe route, staying no longer than necessary
+      `I am just going round an obstruction, no longer than necessary` IS A BOOLEAN @desc On a carriageway, whether you must ride on it to avoid an obstruction, and do so for no longer than necessary
+      `I am passing a no wheeled devices sign` IS A BOOLEAN @desc Whether you are travelling past a "no wheeled devices" sign
+      `a no bicycles sign or marking applies where I am` IS A BOOLEAN @desc Whether a "no bicycles" sign or road marking applies to the length of carriageway or path you are on
+GIVETH A `Yes or no`
+`May I ride my device where I am` MEANS
+    CONSIDER `my role`
+    WHEN `I ride an electric scooter, skateboard or similar device` THEN `yes if` (`May I ride my eRideable here` (`the ride built from` `where I am riding` `the speed limit on the carriageway, in km/h` `I am just crossing the carriageway by the shortest safe route` `I am just going round an obstruction, no longer than necessary` `I am passing a no wheeled devices sign` `a no bicycles sign or marking applies where I am` 0))
+    OTHERWISE `does not arise for you`
+
+@export What is the modified penalty for riding my electric rideable device on this carriageway, in penalty units (Code r 210B; 0 means no offence)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `where I am riding` IS A `Where I am riding` @desc Where you are riding: a carriageway, a footpath, a shared path, a bicycle path, or the pedestrians-only or the bicycle part of a separated footpath
+      `the speed limit on the carriageway, in km/h` IS A NUMBER @desc On a carriageway, its speed limit in km/h
+      `I am just crossing the carriageway by the shortest safe route` IS A BOOLEAN @desc On a carriageway, whether you are only crossing it by the shortest safe route, staying no longer than necessary
+      `I am just going round an obstruction, no longer than necessary` IS A BOOLEAN @desc On a carriageway, whether you must ride on it to avoid an obstruction, and do so for no longer than necessary
+GIVETH A `Penalty units`
+`What is the modified penalty for riding my device on this carriageway` MEANS
+    CONSIDER `my role`
+    WHEN `I ride an electric scooter, skateboard or similar device` THEN `PU` (`What is the modified penalty for riding my eRideable on this carriageway` (`the ride built from` `where I am riding` `the speed limit on the carriageway, in km/h` `I am just crossing the carriageway by the shortest safe route` `I am just going round an obstruction, no longer than necessary` FALSE FALSE 0))
+    OTHERWISE `does not arise for you`
+
+@export What is the fastest I may ride my electric rideable device where I am, in km/h (Code r 15)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `where I am riding` IS A `Where I am riding` @desc Where you are riding: a carriageway, a footpath, a shared path, a bicycle path, or the pedestrians-only or the bicycle part of a separated footpath
+      `the speed limit on the carriageway, in km/h` IS A NUMBER @desc On a carriageway, its speed limit in km/h
+GIVETH A `Speed`
+`What is the fastest I may ride my device where I am` MEANS
+    CONSIDER `my role`
+    WHEN `I ride an electric scooter, skateboard or similar device` THEN `km/h` (`What is the fastest I may ride my eRideable here` (`the ride built from` `where I am riding` `the speed limit on the carriageway, in km/h` FALSE FALSE FALSE FALSE 0))
+    OTHERWISE `does not arise for you`
+
+@export What is the modified penalty for my speed on my electric rideable device, in penalty units (Code r 15, r 11, r 17; 0 means not speeding)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `where I am riding` IS A `Where I am riding` @desc Where you are riding: a carriageway, a footpath, a shared path, a bicycle path, or the pedestrians-only or the bicycle part of a separated footpath
+      `the speed limit on the carriageway, in km/h` IS A NUMBER @desc On a carriageway, its speed limit in km/h
+      `my riding speed, in km/h` IS A NUMBER @desc How fast you were riding, in km/h
+GIVETH A `Penalty units`
+`What is the modified penalty for my speed on my device` MEANS
+    CONSIDER `my role`
+    WHEN `I ride an electric scooter, skateboard or similar device` THEN `PU` (`What is the modified penalty for my eRideable speed` (`the ride built from` `where I am riding` `the speed limit on the carriageway, in km/h` FALSE FALSE FALSE FALSE `my riding speed, in km/h`))
+    OTHERWISE `does not arise for you`
+
+§§ `For the rider and the driver (Code r 5, r 9, r 17; s 61, 62, 64-64AAA)`
+
+§§§ `Code r 5, r 9(2), r 17 -- Code offences and points`
+
+@export Can I be given an infringement notice for a Road Traffic Code offence (Code r 5)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my age when the offence was committed` IS A NUMBER @desc Your age in completed years when the offence was committed
+GIVETH A `Yes or no`
+`Can I be given an infringement notice for a Code offence` MEANS
+    CONSIDER `my role`
+    WHEN `I ride an electric scooter, skateboard or similar device` THEN `yes if` (`Can I be given a Code infringement notice` `my age when the offence was committed`)
+    WHEN `I drive a car, motorcycle or other motor vehicle` THEN `yes if` (`Can I be given a Code infringement notice` `my age when the offence was committed`)
+    OTHERWISE `does not arise for you`
+
+@export What is the most a court can fine me for a Road Traffic Code offence such as speeding, in penalty units (Code r 9(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have committed a Code offence before` IS A BOOLEAN @desc Whether you have committed any offence against the Road Traffic Code before
+GIVETH A `Penalty units`
+`What is the most a court can fine me for a Code offence such as speeding` MEANS
+    CONSIDER `my role`
+    WHEN `I ride an electric scooter, skateboard or similar device` THEN `PU` (`What is the most a court can fine me for a Code offence` `I have committed a Code offence before`)
+    WHEN `I drive a car, motorcycle or other motor vehicle` THEN `PU` (`What is the most a court can fine me for a Code offence` `I have committed a Code offence before`)
+    OTHERWISE `does not arise for you`
+
+-- For the rider the answer is fixed: no offence on a motorised scooter or an eRideable is a demerit point offence (ATD
+-- Regulations r 65(4)), which is the baseline's answer with that input TRUE, whatever the speed. A device that is a
+-- bicycle is not a motor vehicle and carries no points either. So it settles on the role alone.
+@export How many demerit points does my speeding carry (Road Traffic Code 2000 r 17; Authorisation to Drive Regulations r 65(3), (4))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `km/h over the limit` IS A NUMBER @desc How many km/h over the speed limit you were
+      `in a holiday period` IS A BOOLEAN @desc Whether the offence was in a holiday period (long weekend, Easter, Christmas)
+GIVETH A `Demerit points`
+`How many demerit points does my speeding cost me` MEANS
+    CONSIDER `my role`
+    WHEN `I ride an electric scooter, skateboard or similar device` THEN points 0
+    WHEN `I drive a car, motorcycle or other motor vehicle` THEN points (`How many demerit points does my speeding carry` `km/h over the limit` `in a holiday period` FALSE)
+    OTHERWISE `does not arise for you`
+
+§§§ `s 64, s 64AA, s 64A, s 64AAA -- drink-driving (situation: alcohol in my blood)`
+
+@export Which blood alcohol offence, if any, do I commit by driving or riding (s 64, s 64AA, s 64A, s 64AAA)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I had alcohol in my blood when I drove or rode` IS A BOOLEAN @desc Whether you had any alcohol in your blood when you drove or rode
+      `my blood alcohol content, g per 100 mL` IS A NUMBER @desc Your blood alcohol content, in grams of alcohol per 100 mL of blood (0.05 is 0.05)
+      `I am a novice driver` IS A BOOLEAN @desc Whether you are a novice driver (Authorisation to Drive Act s 40(2): for example, in your first two years of driving)
+      `I am otherwise someone s 64A(2) lists` IS A BOOLEAN @desc Whether you are otherwise a person s 64A(2) lists: disqualified for a drink-driving offence, holding an extraordinary licence, or recently disqualified
+      `my vehicle is one s 64A(5) lists` IS A BOOLEAN @desc Whether your vehicle is one s 64A(5) lists: a bus with passengers, a vehicle carrying passengers for hire, a GCM of 22.5 t or more, or dangerous goods
+GIVETH A `Blood alcohol answer`
+`Which blood alcohol offence do I commit by driving or riding` MEANS
+    CONSIDER `my role`
+    WHEN `I ride an electric scooter, skateboard or similar device` THEN
+        IF NOT `I had alcohol in my blood when I drove or rode` THEN `does not arise for you`
+        ELSE `the offence is` (`Which blood alcohol offence do I commit` (`the drinking built from` `my blood alcohol content, g per 100 mL` `I am a novice driver` `I am otherwise someone s 64A(2) lists` `my vehicle is one s 64A(5) lists`))
+    WHEN `I drive a car, motorcycle or other motor vehicle` THEN
+        IF NOT `I had alcohol in my blood when I drove or rode` THEN `does not arise for you`
+        ELSE `the offence is` (`Which blood alcohol offence do I commit` (`the drinking built from` `my blood alcohol content, g per 100 mL` `I am a novice driver` `I am otherwise someone s 64A(2) lists` `my vehicle is one s 64A(5) lists`))
+    OTHERWISE `does not arise for you`
+
+@export What is the least a court must fine me for drink-driving, in penalty units (s 64, s 64AA, s 64A, s 64AAA; 0 means no minimum or no offence)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I had alcohol in my blood when I drove or rode` IS A BOOLEAN @desc Whether you had any alcohol in your blood when you drove or rode
+      `my blood alcohol content, g per 100 mL` IS A NUMBER @desc Your blood alcohol content, in grams of alcohol per 100 mL of blood (0.05 is 0.05)
+      `I am a novice driver` IS A BOOLEAN @desc Whether you are a novice driver (Authorisation to Drive Act s 40(2): for example, in your first two years of driving)
+      `I am otherwise someone s 64A(2) lists` IS A BOOLEAN @desc Whether you are otherwise a person s 64A(2) lists: disqualified for a drink-driving offence, holding an extraordinary licence, or recently disqualified
+      `my vehicle is one s 64A(5) lists` IS A BOOLEAN @desc Whether your vehicle is one s 64A(5) lists: a bus with passengers, a vehicle carrying passengers for hire, a GCM of 22.5 t or more, or dangerous goods
+      `which drink-driving offence of mine this is` IS A NUMBER @desc 1 for your first offence under this section, 2 for your second, and so on
+GIVETH A `Penalty units`
+`What is the least I must be fined for drink-driving` MEANS
+    CONSIDER `my role`
+    WHEN `I ride an electric scooter, skateboard or similar device` THEN
+        IF NOT `I had alcohol in my blood when I drove or rode` THEN `does not arise for you`
+        ELSE `PU` (`What is the least I can be fined for drink-driving` (`the drinking built from` `my blood alcohol content, g per 100 mL` `I am a novice driver` `I am otherwise someone s 64A(2) lists` `my vehicle is one s 64A(5) lists`) `which drink-driving offence of mine this is`)
+    WHEN `I drive a car, motorcycle or other motor vehicle` THEN
+        IF NOT `I had alcohol in my blood when I drove or rode` THEN `does not arise for you`
+        ELSE `PU` (`What is the least I can be fined for drink-driving` (`the drinking built from` `my blood alcohol content, g per 100 mL` `I am a novice driver` `I am otherwise someone s 64A(2) lists` `my vehicle is one s 64A(5) lists`) `which drink-driving offence of mine this is`)
+    OTHERWISE `does not arise for you`
+
+@export What is the most I can be fined for drink-driving, in penalty units (s 64, s 64AA, s 64A, s 64AAA; 0 means no offence)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I had alcohol in my blood when I drove or rode` IS A BOOLEAN @desc Whether you had any alcohol in your blood when you drove or rode
+      `my blood alcohol content, g per 100 mL` IS A NUMBER @desc Your blood alcohol content, in grams of alcohol per 100 mL of blood (0.05 is 0.05)
+      `I am a novice driver` IS A BOOLEAN @desc Whether you are a novice driver (Authorisation to Drive Act s 40(2): for example, in your first two years of driving)
+      `I am otherwise someone s 64A(2) lists` IS A BOOLEAN @desc Whether you are otherwise a person s 64A(2) lists: disqualified for a drink-driving offence, holding an extraordinary licence, or recently disqualified
+      `my vehicle is one s 64A(5) lists` IS A BOOLEAN @desc Whether your vehicle is one s 64A(5) lists: a bus with passengers, a vehicle carrying passengers for hire, a GCM of 22.5 t or more, or dangerous goods
+      `which drink-driving offence of mine this is` IS A NUMBER @desc 1 for your first offence under this section, 2 for your second, and so on
+GIVETH A `Penalty units`
+`What is the most I may be fined for drink-driving` MEANS
+    CONSIDER `my role`
+    WHEN `I ride an electric scooter, skateboard or similar device` THEN
+        IF NOT `I had alcohol in my blood when I drove or rode` THEN `does not arise for you`
+        ELSE `PU` (`What is the most I can be fined for drink-driving` (`the drinking built from` `my blood alcohol content, g per 100 mL` `I am a novice driver` `I am otherwise someone s 64A(2) lists` `my vehicle is one s 64A(5) lists`) `which drink-driving offence of mine this is`)
+    WHEN `I drive a car, motorcycle or other motor vehicle` THEN
+        IF NOT `I had alcohol in my blood when I drove or rode` THEN `does not arise for you`
+        ELSE `PU` (`What is the most I can be fined for drink-driving` (`the drinking built from` `my blood alcohol content, g per 100 mL` `I am a novice driver` `I am otherwise someone s 64A(2) lists` `my vehicle is one s 64A(5) lists`) `which drink-driving offence of mine this is`)
+    OTHERWISE `does not arise for you`
+
+@export What is the shortest disqualification a court must order for drink-driving, in months (s 64, s 64AA, s 64A; 0 means none is required)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I had alcohol in my blood when I drove or rode` IS A BOOLEAN @desc Whether you had any alcohol in your blood when you drove or rode
+      `my blood alcohol content, g per 100 mL` IS A NUMBER @desc Your blood alcohol content, in grams of alcohol per 100 mL of blood (0.05 is 0.05)
+      `I am a novice driver` IS A BOOLEAN @desc Whether you are a novice driver (Authorisation to Drive Act s 40(2): for example, in your first two years of driving)
+      `I am otherwise someone s 64A(2) lists` IS A BOOLEAN @desc Whether you are otherwise a person s 64A(2) lists: disqualified for a drink-driving offence, holding an extraordinary licence, or recently disqualified
+      `my vehicle is one s 64A(5) lists` IS A BOOLEAN @desc Whether your vehicle is one s 64A(5) lists: a bus with passengers, a vehicle carrying passengers for hire, a GCM of 22.5 t or more, or dangerous goods
+      `which drink-driving offence of mine this is` IS A NUMBER @desc 1 for your first offence under this section, 2 for your second, and so on
+GIVETH A `Months`
+`What is the shortest disqualification I must be given for drink-driving` MEANS
+    CONSIDER `my role`
+    WHEN `I ride an electric scooter, skateboard or similar device` THEN
+        IF NOT `I had alcohol in my blood when I drove or rode` THEN `does not arise for you`
+        ELSE months (`What is the shortest disqualification for drink-driving` (`the drinking built from` `my blood alcohol content, g per 100 mL` `I am a novice driver` `I am otherwise someone s 64A(2) lists` `my vehicle is one s 64A(5) lists`) `which drink-driving offence of mine this is`)
+    WHEN `I drive a car, motorcycle or other motor vehicle` THEN
+        IF NOT `I had alcohol in my blood when I drove or rode` THEN `does not arise for you`
+        ELSE months (`What is the shortest disqualification for drink-driving` (`the drinking built from` `my blood alcohol content, g per 100 mL` `I am a novice driver` `I am otherwise someone s 64A(2) lists` `my vehicle is one s 64A(5) lists`) `which drink-driving offence of mine this is`)
+    OTHERWISE `does not arise for you`
+
+@export What is the modified penalty if I am given an infringement notice for drink-driving, in penalty units (Administration Regulations r 23; 0 means it goes to court)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I had alcohol in my blood when I drove or rode` IS A BOOLEAN @desc Whether you had any alcohol in your blood when you drove or rode
+      `my blood alcohol content, g per 100 mL` IS A NUMBER @desc Your blood alcohol content, in grams of alcohol per 100 mL of blood (0.05 is 0.05)
+      `I am a novice driver` IS A BOOLEAN @desc Whether you are a novice driver (Authorisation to Drive Act s 40(2): for example, in your first two years of driving)
+      `I am otherwise someone s 64A(2) lists` IS A BOOLEAN @desc Whether you are otherwise a person s 64A(2) lists: disqualified for a drink-driving offence, holding an extraordinary licence, or recently disqualified
+      `my vehicle is one s 64A(5) lists` IS A BOOLEAN @desc Whether your vehicle is one s 64A(5) lists: a bus with passengers, a vehicle carrying passengers for hire, a GCM of 22.5 t or more, or dangerous goods
+      `which drink-driving offence of mine this is` IS A NUMBER @desc 1 for your first offence under this section, 2 for your second, and so on
+GIVETH A `Penalty units`
+`What is the infringement penalty for my drink-driving` MEANS
+    CONSIDER `my role`
+    WHEN `I ride an electric scooter, skateboard or similar device` THEN
+        IF NOT `I had alcohol in my blood when I drove or rode` THEN `does not arise for you`
+        ELSE `PU` (`What is the modified penalty for drink-driving` (`the drinking built from` `my blood alcohol content, g per 100 mL` `I am a novice driver` `I am otherwise someone s 64A(2) lists` `my vehicle is one s 64A(5) lists`) `which drink-driving offence of mine this is`)
+    WHEN `I drive a car, motorcycle or other motor vehicle` THEN
+        IF NOT `I had alcohol in my blood when I drove or rode` THEN `does not arise for you`
+        ELSE `PU` (`What is the modified penalty for drink-driving` (`the drinking built from` `my blood alcohol content, g per 100 mL` `I am a novice driver` `I am otherwise someone s 64A(2) lists` `my vehicle is one s 64A(5) lists`) `which drink-driving offence of mine this is`)
+    OTHERWISE `does not arise for you`
+
+§§§ `s 61, s 62 -- dangerous and careless driving (situation: the charge)`
+
+@export What is the most I can be fined for dangerous driving, in penalty units (s 61(3), (4))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I am charged with dangerous driving` IS A BOOLEAN @desc Whether you are charged with, or are asking about a charge of, driving or riding in a manner dangerous to the public or any person (s 61); whether it was dangerous is for the court
+      `earlier offences against s 59, 59A, 60, 60A or 61` IS A NUMBER @desc How many earlier offences you have committed against s 59, 59A, 60, 60A or 61
+      `I was escaping police pursuit` IS A BOOLEAN @desc Whether you were driving to escape pursuit by a police officer
+GIVETH A `Penalty units`
+`What is the most I may be fined for dangerous driving` MEANS
+    CONSIDER `my role`
+    WHEN `I ride an electric scooter, skateboard or similar device` THEN
+        IF NOT `I am charged with dangerous driving` THEN `does not arise for you`
+        ELSE `PU` (`What is the most I can be fined for dangerous driving` `earlier offences against s 59, 59A, 60, 60A or 61` `I was escaping police pursuit`)
+    WHEN `I drive a car, motorcycle or other motor vehicle` THEN
+        IF NOT `I am charged with dangerous driving` THEN `does not arise for you`
+        ELSE `PU` (`What is the most I can be fined for dangerous driving` `earlier offences against s 59, 59A, 60, 60A or 61` `I was escaping police pursuit`)
+    OTHERWISE `does not arise for you`
+
+@export What is the shortest disqualification a court must order for dangerous driving, in months (s 61(3); 0 means none is required)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I am charged with dangerous driving` IS A BOOLEAN @desc Whether you are charged with, or are asking about a charge of, driving or riding in a manner dangerous to the public or any person (s 61); whether it was dangerous is for the court
+      `earlier offences against s 59, 59A, 60, 60A or 61` IS A NUMBER @desc How many earlier offences you have committed against s 59, 59A, 60, 60A or 61
+      `I was escaping police pursuit` IS A BOOLEAN @desc Whether you were driving to escape pursuit by a police officer
+GIVETH A `Months`
+`What is the shortest disqualification I must be given for dangerous driving` MEANS
+    CONSIDER `my role`
+    WHEN `I ride an electric scooter, skateboard or similar device` THEN
+        IF NOT `I am charged with dangerous driving` THEN `does not arise for you`
+        ELSE months (`What is the shortest disqualification for dangerous driving` `earlier offences against s 59, 59A, 60, 60A or 61` `I was escaping police pursuit`)
+    WHEN `I drive a car, motorcycle or other motor vehicle` THEN
+        IF NOT `I am charged with dangerous driving` THEN `does not arise for you`
+        ELSE months (`What is the shortest disqualification for dangerous driving` `earlier offences against s 59, 59A, 60, 60A or 61` `I was escaping police pursuit`)
+    OTHERWISE `does not arise for you`
+
+@export What is the modified penalty for careless driving if I get an infringement notice, in penalty units (s 62; Administration Regulations r 23)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I am charged with careless driving` IS A BOOLEAN @desc Whether you are charged with, or are asking about a charge of, driving or riding without due care and attention (s 62)
+GIVETH A `Penalty units`
+`What is the infringement penalty for my careless driving` MEANS
+    CONSIDER `my role`
+    WHEN `I ride an electric scooter, skateboard or similar device` THEN
+        IF NOT `I am charged with careless driving` THEN `does not arise for you`
+        ELSE `PU` `What is the modified penalty for careless driving`
+    WHEN `I drive a car, motorcycle or other motor vehicle` THEN
+        IF NOT `I am charged with careless driving` THEN `does not arise for you`
+        ELSE `PU` `What is the modified penalty for careless driving`
+    OTHERWISE `does not arise for you`
+
+@export What is the most a court can fine me for careless driving, in penalty units (s 62)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I am charged with careless driving` IS A BOOLEAN @desc Whether you are charged with, or are asking about a charge of, driving or riding without due care and attention (s 62)
+GIVETH A `Penalty units`
+`What is the most I may be fined for careless driving` MEANS
+    CONSIDER `my role`
+    WHEN `I ride an electric scooter, skateboard or similar device` THEN
+        IF NOT `I am charged with careless driving` THEN `does not arise for you`
+        ELSE `PU` `What is the most I can be fined for careless driving`
+    WHEN `I drive a car, motorcycle or other motor vehicle` THEN
+        IF NOT `I am charged with careless driving` THEN `does not arise for you`
+        ELSE `PU` `What is the most I can be fined for careless driving`
+    OTHERWISE `does not arise for you`
+
+§§ `For the driver of a car, motorcycle or other motor vehicle (Code r 11, 13, 17; s 49, 49AAA, 49AB, 60A, 60B)`
+
+§§§ `Code r 11, r 13; s 49AAA; r 17 -- my speed limit, and what my speeding costs`
+
+@export What is my speed limit, in km/h (Road Traffic Code 2000 r 11, r 13)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `a sign sets the speed limit where I am driving` IS A BOOLEAN @desc Whether a sign sets the limit where you are driving: a speed zone, a school zone in its hours, a shared zone or a speed limited area
+      `the signed speed limit, in km/h` IS A NUMBER @desc The limit the sign sets, in km/h
+      `I am driving in a built-up area` IS A BOOLEAN @desc Whether you are driving in a built-up area (street lighting no more than 100 m apart, or buildings less than 100 m apart, for at least 500 m)
+      `I am towing, or my vehicle is over 12 t GVM or a bus over 5 t GVM` IS A BOOLEAN @desc Whether you are towing, driving a vehicle with a GVM over 12 t, or driving a bus with a GVM over 5 t
+GIVETH A `Speed`
+`What speed limit applies to me` MEANS
+    CONSIDER `my role`
+    WHEN `I drive a car, motorcycle or other motor vehicle` THEN `km/h` (`What is my speed limit` (`the place built from` `a sign sets the speed limit where I am driving` `the signed speed limit, in km/h` `I am driving in a built-up area` `I am towing, or my vehicle is over 12 t GVM or a bus over 5 t GVM`))
+    OTHERWISE `does not arise for you`
+
+@export By how many km/h am I above the speed limit (s 49AAA; 0 means not above it)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my speed, in km/h` IS A NUMBER @desc Your speed in km/h
+      `my speed limit, in km/h` IS A NUMBER @desc Your speed limit in km/h
+GIVETH A `Speed`
+`How far above the speed limit am I` MEANS
+    CONSIDER `my role`
+    WHEN `I drive a car, motorcycle or other motor vehicle` THEN `km/h` (`By how many km/h am I above the speed limit` `my speed, in km/h` `my speed limit, in km/h`)
+    OTHERWISE `does not arise for you`
+
+@export What is the modified penalty for my speeding, in penalty units (Road Traffic Code 2000 r 17; 0 means not speeding)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `km/h over the limit` IS A NUMBER @desc How many km/h over the speed limit you were
+      `driving a heavy vehicle` IS A BOOLEAN @desc Whether you were driving a heavy vehicle (GCM 22.5 t or more)
+GIVETH A `Penalty units`
+`What is the infringement penalty for my speeding` MEANS
+    CONSIDER `my role`
+    WHEN `I drive a car, motorcycle or other motor vehicle` THEN `PU` (`What is the modified penalty for my speeding` `km/h over the limit` `driving a heavy vehicle`)
+    OTHERWISE `does not arise for you`
+
+§§§ `s 49AB, s 60A, s 60B -- aggravation and reckless speed`
+
+@export Am I committing a driving offence in circumstances of aggravation (s 49AB(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I drove without the owner's consent` IS A BOOLEAN @desc Whether you were unlawfully driving the vehicle without the owner's consent
+      `I have never held a driver's licence or permit` IS A BOOLEAN @desc Whether you have never held a driver's licence or other prescribed authorisation
+      `I am refused, disqualified, suspended or in a class s 49(3) lists` IS A BOOLEAN @desc Whether you have held a licence or permit but are a person described in s 49(3)(a), (b), (ca), (c) or (da): refused a licence, disqualified, your licence ceased (not by surrender or expiry), suspended, or in a prescribed class
+      `my licence is not for this kind of vehicle` IS A BOOLEAN @desc Whether you hold a licence or permit that does not authorise you to drive a vehicle of this kind
+      `I am driving in breach of the ATD Act s 38(1)` IS A BOOLEAN @desc Whether you are committing an offence under the Road Traffic (Authorisation to Drive) Act 2008 s 38(1)
+      `how many km/h above the speed limit I was` IS A NUMBER @desc How many km/h above the speed limit you were driving
+      `I was escaping police pursuit` IS A BOOLEAN @desc Whether you were driving to escape pursuit by a police officer
+GIVETH A `Yes or no`
+`Am I driving in aggravating circumstances` MEANS
+    CONSIDER `my role`
+    WHEN `I drive a car, motorcycle or other motor vehicle` THEN `yes if` (`Am I driving in circumstances of aggravation` (`the driving built from` `I drove without the owner's consent` `I have never held a driver's licence or permit` `I am refused, disqualified, suspended or in a class s 49(3) lists` `my licence is not for this kind of vehicle` `I am driving in breach of the ATD Act s 38(1)` `how many km/h above the speed limit I was` `I was escaping police pursuit`))
+    OTHERWISE `does not arise for you`
+
+@export Am I driving at a reckless speed (s 60A)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my speed, in km/h` IS A NUMBER @desc Your speed in km/h
+      `my speed limit, in km/h` IS A NUMBER @desc Your speed limit in km/h
+GIVETH A `Yes or no`
+`Is my speed a reckless speed` MEANS
+    CONSIDER `my role`
+    WHEN `I drive a car, motorcycle or other motor vehicle` THEN `yes if` (`Am I driving at a reckless speed` `my speed, in km/h` `my speed limit, in km/h`)
+    OTHERWISE `does not arise for you`
+
+@export What is the most I can be fined for driving recklessly or at a reckless speed, in penalty units (s 60B(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I am charged with reckless driving or a reckless speed` IS A BOOLEAN @desc Whether you are charged with, or are asking about a charge of, driving in a reckless manner (s 60) or at a reckless speed (s 60A)
+      `which offence of mine this is` IS A NUMBER @desc 1 for your first offence against s 60 or s 60A, 2 for your second, and so on
+GIVETH A `Penalty units`
+`What is the most I may be fined for reckless driving or speed` MEANS
+    CONSIDER `my role`
+    WHEN `I drive a car, motorcycle or other motor vehicle` THEN
+        IF NOT `I am charged with reckless driving or a reckless speed` THEN `does not arise for you`
+        ELSE `PU` (`What is the most I can be fined for reckless driving or speed` `which offence of mine this is`)
+    OTHERWISE `does not arise for you`
+
+@export What is the longest I can be imprisoned for driving recklessly or at a reckless speed, in months (s 60B(2), (4))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I am charged with reckless driving or a reckless speed` IS A BOOLEAN @desc Whether you are charged with, or are asking about a charge of, driving in a reckless manner (s 60) or at a reckless speed (s 60A)
+      `which offence of mine this is` IS A NUMBER @desc 1 for your first offence against s 60 or s 60A, 2 for your second, and so on
+      `I was escaping police pursuit` IS A BOOLEAN @desc Whether you were driving to escape pursuit by a police officer
+GIVETH A `Months`
+`What is the longest I may be imprisoned for reckless driving or speed` MEANS
+    CONSIDER `my role`
+    WHEN `I drive a car, motorcycle or other motor vehicle` THEN
+        IF NOT `I am charged with reckless driving or a reckless speed` THEN `does not arise for you`
+        ELSE months (`What is the longest I can be imprisoned for reckless driving or speed` `which offence of mine this is` `I was escaping police pursuit`)
+    OTHERWISE `does not arise for you`
+
+@export What is the shortest disqualification a court must order for driving recklessly or at a reckless speed, in months (s 60B(3), (5); 0 means it must be permanent)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I am charged with reckless driving or a reckless speed` IS A BOOLEAN @desc Whether you are charged with, or are asking about a charge of, driving in a reckless manner (s 60) or at a reckless speed (s 60A)
+      `which offence of mine this is` IS A NUMBER @desc 1 for your first offence against s 60 or s 60A, 2 for your second, and so on
+      `I was escaping police pursuit` IS A BOOLEAN @desc Whether you were driving to escape pursuit by a police officer
+GIVETH A `Months`
+`What is the shortest disqualification I must be given for reckless driving or speed` MEANS
+    CONSIDER `my role`
+    WHEN `I drive a car, motorcycle or other motor vehicle` THEN
+        IF NOT `I am charged with reckless driving or a reckless speed` THEN `does not arise for you`
+        ELSE months (`What is the shortest disqualification for reckless driving or speed` `which offence of mine this is` `I was escaping police pursuit`)
+    OTHERWISE `does not arise for you`
+
+@export Must I be permanently disqualified for driving recklessly or at a reckless speed (s 60B(3)(c), (5)(d))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I am charged with reckless driving or a reckless speed` IS A BOOLEAN @desc Whether you are charged with, or are asking about a charge of, driving in a reckless manner (s 60) or at a reckless speed (s 60A)
+      `which offence of mine this is` IS A NUMBER @desc 1 for your first offence against s 60 or s 60A, 2 for your second, and so on
+GIVETH A `Yes or no`
+`Must I lose my licence permanently for reckless driving or speed` MEANS
+    CONSIDER `my role`
+    WHEN `I drive a car, motorcycle or other motor vehicle` THEN
+        IF NOT `I am charged with reckless driving or a reckless speed` THEN `does not arise for you`
+        ELSE `yes if` (`Must I be permanently disqualified` `which offence of mine this is`)
+    OTHERWISE `does not arise for you`
+
+§§§ `s 49; Administration Regulations r 23 -- driving without a licence (situation: I drove without one)`
+
+-- The driver is not on an eRideable (that is the rider's role), so the baseline's eRideable field is FALSE here.
+@export Do I commit an offence by driving without a licence or authorisation (s 49(1), (2); Authorisation to Drive Regulations r 55)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I drove without a licence for the vehicle, or while disqualified or suspended` IS A BOOLEAN @desc Whether you drove a motor vehicle on a road without a driver's licence that covers it, or while your licence was suspended or you were disqualified
+      `I was authorised under the ATD Act Part 2 all the same` IS A BOOLEAN @desc Whether you were nonetheless authorised to drive it under the Road Traffic (Authorisation to Drive) Act 2008 Part 2, for example by a learner's permit or a regulation that lets you drive it without a licence
+      `the vehicle was driven under the s 11(1) regulations or a s 49A necessity permit` IS A BOOLEAN @desc Whether you drove in accordance with the regulations referred to in the ATD Act s 11(1), or a necessity permit under s 49A (a defence you must prove)
+GIVETH A `Yes or no`
+`Do I commit an offence by driving without a licence` MEANS
+    CONSIDER `my role`
+    WHEN `I drive a car, motorcycle or other motor vehicle` THEN
+        IF NOT `I drove without a licence for the vehicle, or while disqualified or suspended` THEN `does not arise for you`
+        ELSE `yes if` (`Do I commit the offence of driving unlicensed` (`the drive built from` FALSE `I was authorised under the ATD Act Part 2 all the same` `the vehicle was driven under the s 11(1) regulations or a s 49A necessity permit` `I never held a licence of the kind needed, or it expired or I surrendered it` FALSE))
+    OTHERWISE `does not arise for you`
+
+@export What is the most I can be fined for driving without a licence, in penalty units (s 49(1); 0 means no offence)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I drove without a licence for the vehicle, or while disqualified or suspended` IS A BOOLEAN @desc Whether you drove a motor vehicle on a road without a driver's licence that covers it, or while your licence was suspended or you were disqualified
+      `I was authorised under the ATD Act Part 2 all the same` IS A BOOLEAN @desc Whether you were nonetheless authorised to drive it under the Road Traffic (Authorisation to Drive) Act 2008 Part 2, for example by a learner's permit or a regulation that lets you drive it without a licence
+      `the vehicle was driven under the s 11(1) regulations or a s 49A necessity permit` IS A BOOLEAN @desc Whether you drove in accordance with the regulations referred to in the ATD Act s 11(1), or a necessity permit under s 49A (a defence you must prove)
+      `why I was not authorised` IS A `Why I am not authorised` @desc Why you were not authorised: never licensed for it, or it expired or was surrendered; a type 1A novice at night or over the passenger limit; lost under penalty enforcement laws; or refused, disqualified, cancelled, suspended or in a prescribed class
+      `this is a subsequent offence for me under s 49(6)` IS A BOOLEAN @desc Whether you have been convicted before of an offence under s 49(1) that makes this a subsequent offence (s 49(6))
+GIVETH A `Penalty units`
+`What is the most I may be fined for driving without a licence` MEANS
+    CONSIDER `my role`
+    WHEN `I drive a car, motorcycle or other motor vehicle` THEN
+        IF NOT `I drove without a licence for the vehicle, or while disqualified or suspended` THEN `does not arise for you`
+        ELSE `PU` (`What is the most I can be fined for driving unlicensed` (`the drive built from` FALSE `I was authorised under the ATD Act Part 2 all the same` `the vehicle was driven under the s 11(1) regulations or a s 49A necessity permit` `why I was not authorised` `this is a subsequent offence for me under s 49(6)`))
+    OTHERWISE `does not arise for you`
+
+@export What is the least a court must fine me for driving without a licence, in penalty units (s 49(1); 0 means no minimum or no offence)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I drove without a licence for the vehicle, or while disqualified or suspended` IS A BOOLEAN @desc Whether you drove a motor vehicle on a road without a driver's licence that covers it, or while your licence was suspended or you were disqualified
+      `I was authorised under the ATD Act Part 2 all the same` IS A BOOLEAN @desc Whether you were nonetheless authorised to drive it under the Road Traffic (Authorisation to Drive) Act 2008 Part 2, for example by a learner's permit or a regulation that lets you drive it without a licence
+      `the vehicle was driven under the s 11(1) regulations or a s 49A necessity permit` IS A BOOLEAN @desc Whether you drove in accordance with the regulations referred to in the ATD Act s 11(1), or a necessity permit under s 49A (a defence you must prove)
+      `why I was not authorised` IS A `Why I am not authorised` @desc Why you were not authorised: never licensed for it, or it expired or was surrendered; a type 1A novice at night or over the passenger limit; lost under penalty enforcement laws; or refused, disqualified, cancelled, suspended or in a prescribed class
+      `this is a subsequent offence for me under s 49(6)` IS A BOOLEAN @desc Whether you have been convicted before of an offence under s 49(1) that makes this a subsequent offence (s 49(6))
+GIVETH A `Penalty units`
+`What is the least I must be fined for driving without a licence` MEANS
+    CONSIDER `my role`
+    WHEN `I drive a car, motorcycle or other motor vehicle` THEN
+        IF NOT `I drove without a licence for the vehicle, or while disqualified or suspended` THEN `does not arise for you`
+        ELSE `PU` (`What is the least I can be fined for driving unlicensed` (`the drive built from` FALSE `I was authorised under the ATD Act Part 2 all the same` `the vehicle was driven under the s 11(1) regulations or a s 49A necessity permit` `why I was not authorised` `this is a subsequent offence for me under s 49(6)`))
+    OTHERWISE `does not arise for you`
+
+@export What is the longest I can be imprisoned for driving without a licence, in months (s 49(1); 0 means no imprisonment)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I drove without a licence for the vehicle, or while disqualified or suspended` IS A BOOLEAN @desc Whether you drove a motor vehicle on a road without a driver's licence that covers it, or while your licence was suspended or you were disqualified
+      `I was authorised under the ATD Act Part 2 all the same` IS A BOOLEAN @desc Whether you were nonetheless authorised to drive it under the Road Traffic (Authorisation to Drive) Act 2008 Part 2, for example by a learner's permit or a regulation that lets you drive it without a licence
+      `the vehicle was driven under the s 11(1) regulations or a s 49A necessity permit` IS A BOOLEAN @desc Whether you drove in accordance with the regulations referred to in the ATD Act s 11(1), or a necessity permit under s 49A (a defence you must prove)
+      `why I was not authorised` IS A `Why I am not authorised` @desc Why you were not authorised: never licensed for it, or it expired or was surrendered; a type 1A novice at night or over the passenger limit; lost under penalty enforcement laws; or refused, disqualified, cancelled, suspended or in a prescribed class
+      `this is a subsequent offence for me under s 49(6)` IS A BOOLEAN @desc Whether you have been convicted before of an offence under s 49(1) that makes this a subsequent offence (s 49(6))
+GIVETH A `Months`
+`What is the longest I may be imprisoned for driving without a licence` MEANS
+    CONSIDER `my role`
+    WHEN `I drive a car, motorcycle or other motor vehicle` THEN
+        IF NOT `I drove without a licence for the vehicle, or while disqualified or suspended` THEN `does not arise for you`
+        ELSE months (`What is the longest I can be imprisoned for driving unlicensed` (`the drive built from` FALSE `I was authorised under the ATD Act Part 2 all the same` `the vehicle was driven under the s 11(1) regulations or a s 49A necessity permit` `why I was not authorised` `this is a subsequent offence for me under s 49(6)`))
+    OTHERWISE `does not arise for you`
+
+@export Must the court disqualify me (for 9 months to 3 years) for driving without a licence (s 49(1) penalty (c))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I drove without a licence for the vehicle, or while disqualified or suspended` IS A BOOLEAN @desc Whether you drove a motor vehicle on a road without a driver's licence that covers it, or while your licence was suspended or you were disqualified
+      `I was authorised under the ATD Act Part 2 all the same` IS A BOOLEAN @desc Whether you were nonetheless authorised to drive it under the Road Traffic (Authorisation to Drive) Act 2008 Part 2, for example by a learner's permit or a regulation that lets you drive it without a licence
+      `the vehicle was driven under the s 11(1) regulations or a s 49A necessity permit` IS A BOOLEAN @desc Whether you drove in accordance with the regulations referred to in the ATD Act s 11(1), or a necessity permit under s 49A (a defence you must prove)
+      `why I was not authorised` IS A `Why I am not authorised` @desc Why you were not authorised: never licensed for it, or it expired or was surrendered; a type 1A novice at night or over the passenger limit; lost under penalty enforcement laws; or refused, disqualified, cancelled, suspended or in a prescribed class
+GIVETH A `Yes or no`
+`Must I be disqualified for driving without a licence` MEANS
+    CONSIDER `my role`
+    WHEN `I drive a car, motorcycle or other motor vehicle` THEN
+        IF NOT `I drove without a licence for the vehicle, or while disqualified or suspended` THEN `does not arise for you`
+        ELSE `yes if` (`Must I be disqualified for driving unlicensed` (`the drive built from` FALSE `I was authorised under the ATD Act Part 2 all the same` `the vehicle was driven under the s 11(1) regulations or a s 49A necessity permit` `why I was not authorised` FALSE))
+    OTHERWISE `does not arise for you`
+
+@export May the police arrest me without a warrant for driving without a licence (s 49(3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I drove without a licence for the vehicle, or while disqualified or suspended` IS A BOOLEAN @desc Whether you drove a motor vehicle on a road without a driver's licence that covers it, or while your licence was suspended or you were disqualified
+      `I was authorised under the ATD Act Part 2 all the same` IS A BOOLEAN @desc Whether you were nonetheless authorised to drive it under the Road Traffic (Authorisation to Drive) Act 2008 Part 2, for example by a learner's permit or a regulation that lets you drive it without a licence
+      `the vehicle was driven under the s 11(1) regulations or a s 49A necessity permit` IS A BOOLEAN @desc Whether you drove in accordance with the regulations referred to in the ATD Act s 11(1), or a necessity permit under s 49A (a defence you must prove)
+      `why I was not authorised` IS A `Why I am not authorised` @desc Why you were not authorised: never licensed for it, or it expired or was surrendered; a type 1A novice at night or over the passenger limit; lost under penalty enforcement laws; or refused, disqualified, cancelled, suspended or in a prescribed class
+GIVETH A `Yes or no`
+`May the police arrest me without a warrant for driving without a licence` MEANS
+    CONSIDER `my role`
+    WHEN `I drive a car, motorcycle or other motor vehicle` THEN
+        IF NOT `I drove without a licence for the vehicle, or while disqualified or suspended` THEN `does not arise for you`
+        ELSE `yes if` (`May I be arrested without a warrant for driving unlicensed` (`the drive built from` FALSE `I was authorised under the ATD Act Part 2 all the same` `the vehicle was driven under the s 11(1) regulations or a s 49A necessity permit` `why I was not authorised` FALSE))
+    OTHERWISE `does not arise for you`
+
+@export What is the modified penalty if I am given an infringement notice for driving without a licence, in penalty units (Administration Regulations r 23; 0 means it goes to court, or no offence)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I drove without a licence for the vehicle, or while disqualified or suspended` IS A BOOLEAN @desc Whether you drove a motor vehicle on a road without a driver's licence that covers it, or while your licence was suspended or you were disqualified
+      `I was authorised under the ATD Act Part 2 all the same` IS A BOOLEAN @desc Whether you were nonetheless authorised to drive it under the Road Traffic (Authorisation to Drive) Act 2008 Part 2, for example by a learner's permit or a regulation that lets you drive it without a licence
+      `the vehicle was driven under the s 11(1) regulations or a s 49A necessity permit` IS A BOOLEAN @desc Whether you drove in accordance with the regulations referred to in the ATD Act s 11(1), or a necessity permit under s 49A (a defence you must prove)
+      `why I was not authorised` IS A `Why I am not authorised` @desc Why you were not authorised: never licensed for it, or it expired or was surrendered; a type 1A novice at night or over the passenger limit; lost under penalty enforcement laws; or refused, disqualified, cancelled, suspended or in a prescribed class
+GIVETH A `Penalty units`
+`What is the infringement penalty for my driving without a licence` MEANS
+    CONSIDER `my role`
+    WHEN `I drive a car, motorcycle or other motor vehicle` THEN
+        IF NOT `I drove without a licence for the vehicle, or while disqualified or suspended` THEN `does not arise for you`
+        ELSE `PU` (`What is the modified penalty for driving unlicensed` (`the drive built from` FALSE `I was authorised under the ATD Act Part 2 all the same` `the vehicle was driven under the s 11(1) regulations or a s 49A necessity permit` `why I was not authorised` FALSE))
+    OTHERWISE `does not arise for you`
+
+§§ `For the person who employs someone to drive, or lets someone drive their vehicle (s 49(1)(b))`
+
+-- Every question here arises only where the person who drove was not licensed for the vehicle (the situation).
+-- s 49(3) applies only "if an offence under subsection (1)(a) is committed" -- by the driver -- so the s 49(1)(b)
+-- offence always takes penalty (a): 6 PU, or 12 PU for a subsequent offence (s 49(6): a previous conviction of "any
+-- offence under that subsection"). No imprisonment, no compulsory disqualification and no arrest without warrant
+-- follow from it. That reading of s 49(3) is the encoder's (INFERENCE).
+
+@export Do I commit an offence by employing or permitting this person to drive (Road Traffic Act 1974 (WA) s 49(1)(b), (2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the person who drove had no licence for the vehicle, or was disqualified or suspended` IS A BOOLEAN @desc Whether the person you employed or let drive had no driver's licence for the vehicle, or was disqualified or suspended, when they drove it on a road
+      `I employed or permitted them to drive it` IS A BOOLEAN @desc Whether you employed them to drive the vehicle, or permitted them to drive it
+      `they were riding an electric rideable device` IS A BOOLEAN @desc Whether what they rode was an electric rideable device (an eRideable: no licence is needed for one, ATD Regulations r 55(2)(h))
+      `they were authorised under the ATD Act Part 2 all the same` IS A BOOLEAN @desc Whether they were nonetheless authorised to drive it under the Road Traffic (Authorisation to Drive) Act 2008 Part 2, for example by a learner's permit
+      `it was driven under the ATD Act s 11(1) regulations or a s 49A necessity permit` IS A BOOLEAN @desc Whether it was driven in accordance with the regulations referred to in the ATD Act s 11(1), or a necessity permit under s 49A (a defence that must be proved)
+GIVETH A `Yes or no`
+`Do I commit an offence by letting this person drive` MEANS
+    CONSIDER `my role`
+    WHEN `I employ someone to drive, or let someone drive my vehicle` THEN
+        IF NOT `the person who drove had no licence for the vehicle, or was disqualified or suspended` THEN `does not arise for you`
+        ELSE `yes if` (`s 49(1)(b) -- the person employs or permits another person to drive while not authorised` `I employed or permitted them to drive it` `they were riding an electric rideable device` `they were authorised under the ATD Act Part 2 all the same` `it was driven under the ATD Act s 11(1) regulations or a s 49A necessity permit`)
+    OTHERWISE `does not arise for you`
+
+@export What is the most I can be fined for employing or permitting someone to drive without a licence, in penalty units (s 49(1) penalty (a), (6))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the person who drove had no licence for the vehicle, or was disqualified or suspended` IS A BOOLEAN @desc Whether the person you employed or let drive had no driver's licence for the vehicle, or was disqualified or suspended, when they drove it on a road
+      `I have been convicted of an offence under s 49(1) before` IS A BOOLEAN @desc Whether you have been convicted before of any offence under s 49(1), driving unlicensed or letting someone else do so (s 49(6))
+GIVETH A `Penalty units`
+`What is the most I may be fined for letting someone drive without a licence` MEANS
+    CONSIDER `my role`
+    WHEN `I employ someone to drive, or let someone drive my vehicle` THEN
+        IF NOT `the person who drove had no licence for the vehicle, or was disqualified or suspended` THEN `does not arise for you`
+        ELSE IF `I have been convicted of an offence under s 49(1) before` THEN `PU` 12 ELSE `PU` 6
+    OTHERWISE `does not arise for you`
+
+@export Must the court disqualify me from driving for employing or permitting someone to drive without a licence (s 49(1) penalty (c), (3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the person who drove had no licence for the vehicle, or was disqualified or suspended` IS A BOOLEAN @desc Whether the person you employed or let drive had no driver's licence for the vehicle, or was disqualified or suspended, when they drove it on a road
+GIVETH A `Yes or no`
+`Must I be disqualified for letting someone drive without a licence` MEANS
+    CONSIDER `my role`
+    WHEN `I employ someone to drive, or let someone drive my vehicle` THEN
+        IF NOT `the person who drove had no licence for the vehicle, or was disqualified or suspended` THEN `does not arise for you`
+        ELSE no
+    OTHERWISE `does not arise for you`
+
+@export May the police arrest me without a warrant for employing or permitting someone to drive without a licence (s 49(3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the person who drove had no licence for the vehicle, or was disqualified or suspended` IS A BOOLEAN @desc Whether the person you employed or let drive had no driver's licence for the vehicle, or was disqualified or suspended, when they drove it on a road
+GIVETH A `Yes or no`
+`May the police arrest me without a warrant for letting someone drive without a licence` MEANS
+    CONSIDER `my role`
+    WHEN `I employ someone to drive, or let someone drive my vehicle` THEN
+        IF NOT `the person who drove had no licence for the vehicle, or was disqualified or suspended` THEN `does not arise for you`
+        ELSE no
+    OTHERWISE `does not arise for you`
