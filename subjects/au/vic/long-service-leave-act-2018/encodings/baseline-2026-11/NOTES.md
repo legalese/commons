@@ -57,14 +57,20 @@ the greatest of three; payment of s 9 money on the day employment ends, before i
 day and a day short; 7 years of record keeping to the day and a day over; every constructor of every choice that changes
 an answer.
 
+After an independent verification (6 November 2026) three points were corrected, with the counts unchanged: the s 12
+question, which answers yes when the absence keeps employment continuous, is now named `Is my employment continuous
+despite the absence` (it was named as if it asked whether the absence breaks employment, the inverse of its answers); a
+s 18 request for less than 1 day now answers NOTHING, not JUST FALSE (F10); and the s 36 question and rule now say
+"unlawful adverse action", since they answer the contravention, not the s 36(6) definition (F19).
+
 ## Seat
 
 **The employee** (`lsl-seat.l4`): the employee or former employee to whom the Act gives long service leave, including
 casual and seasonal employees, apprentices, public sector employees and police. "Does the Act apply to me?", "From what
-day is my employment counted?", "Does this absence break my continuous employment, and how much of it counts?", "Am I
+day is my employment counted?", "Is my employment continuous despite this absence, and how much of it counts?", "Am I
 entitled yet, and to how many weeks?", "What is my ordinary pay, and my normal weekly hours?", "Must my employer grant my
 request?", "Must I go on leave when directed?", "What must I be paid when my employment ends, and was it paid on time?",
-"By when must I sue?", "Did my employer take adverse action against me?". One question, s 10, is asked from the seat of
+"By when must I sue?", "Did my employer take unlawful adverse action against me?". One question, s 10, is asked from the seat of
 the **personal representative** of an employee who died, the person to whom s 10 gives the money and s 24(2) the right to
 apply.
 
@@ -157,8 +163,9 @@ Each line: the provision, the function, the answer taken, the other reading.
 - **F9** s 17(2) "normal weekly hours and ordinary time rate of pay are to be taken to be the greater of" two pairs --
   `s 17 -- my weekly pay on the hours and rate taken` -- the pair giving the greater weekly pay -- the greater hours and the
   greater rate taken separately.
-- **F10** s 18 -- `s 18 -- my employer must grant my request` -- a request for less than 1 day is not a s 18(1) request:
-  JUST FALSE; an employee with no leave to take: NOTHING (a duty whose "if" is unmet) -- JUST FALSE for both.
+- **F10** s 18 -- `s 18 -- my employer must grant my request` -- a request for less than 1 day is outside s 18(1), which
+  limits the request in its own wording ("for a period of not less than 1 day", no "only"): NOTHING (scope limit, rule (c)
+  of the periods ruling); an employee with no leave to take: NOTHING (a duty whose "if" is unmet) -- JUST FALSE for both.
 - **F11** s 19(1) "by giving the employee at least 12 weeks' written notice" -- `s 19 -- I must comply with the direction`
   -- the leave may start on the day 84 days after the notice; an unwritten or short notice is not a direction under s 19(1),
   so JUST FALSE -- 12 clear weeks (both days excluded), or a short notice valid from the day 12 weeks after it.
@@ -178,7 +185,9 @@ Each line: the provision, the function, the answer taken, the other reading.
   agreement" -- `ss 13, 14 -- the weeks of the absence that count` -- reached only by the choice "other leave my employment
   agreement provides for"; annual, parental and carer's leave unpaid beyond 52 weeks count only with an agreement that
   counts them (finding 3) -- any unpaid leave an agreement provides for counted in full.
-- **F19** s 36 -- `s 36 -- my employer took adverse action against me` -- no reason of s 36 alleged: NOTHING -- JUST FALSE.
+- **F19** s 36 -- `s 36 -- my employer took unlawful adverse action against me` -- no reason of s 36 alleged: NOTHING -- JUST FALSE.
+  The question asks about the contravention of s 36(1) to (4), not the s 36(6) definition: an act s 36(6) lists, done for
+  no reason s 36 names, is adverse action but not unlawful, so the function and question say "unlawful adverse action".
 - **F20** s 23 -- `s 23 -- the term can have effect` -- a term that does not annul, vary or exclude the Act: NOTHING -- JUST
   TRUE.
 
@@ -199,7 +208,7 @@ conditions of ss 11(5), (7), 12(3), (6), (7), 13(2), 16(1), 17(1), 26(6), 27(2),
 22(2), 23(2); the "means" definitions of industrial action (s 12(9), (10)) and protected accrued entitlement (s 48); the
 flat negatives of ss 23(1), 34(2), 35(1); the periods of ss 19(1), 26(4), 50(1) give `JUST FALSE`. The open definition of
 employee (s 3(1) "includes"), the absences s 12 or ss 13, 14 do not speak of, a zero divisor in a s 16 formula, and the
-scope limits of ss 23, 26 (before the money is owed), 35, 36, 37 give `NOTHING` (*open definition*, *silent*, *limited by
+scope limits of ss 18(1), 23, 26 (before the money is owed), 35, 36, 37 give `NOTHING` (*open definition*, *silent*, *limited by
 its own wording*).
 
 ## What the Act turns out to say
