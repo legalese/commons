@@ -22,7 +22,7 @@ Compilation No. 23, compilation date 6 February 2023, including amendments up to
 
 | Module | Case file | Assertions |
 |---|---|---|
-| `jcca-party.l4` | `jcca-cases-party.l4` | 104 written, 104 satisfied; 1 trace, as its `-- expect:` line says |
+| `jcca-party.l4` | `jcca-cases-party.l4` | 108 written, 108 satisfied; 1 trace, as its `-- expect:` line says |
 
 `l4 run` on both files: 0 errors, 0 warnings (2026-11-07). `l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read. Every expected value was written by hand from the text.
 
@@ -37,16 +37,16 @@ The 2026-10-18 defaults:
 - **The Act alone.** The Acts it names (the Competition and Consumer Act 2010, the Fair Work Act 2009, the ADJR Act, the Judiciary Act 1903, the Family Law Act 1975, the Acts in the Schedule) are named, not encoded; whether a matter arises under one is asked as a fact. The State and Territory cross-vesting Acts (which give the federal courts State jurisdiction) are a different law and are not encoded.
 - **The actors the text names:** the party, the courts by name, the Attorneys-General.
 - **Judgments handed to others are answered conditionally:** every "it appears to the first court", "more appropriate", "interests of justice", "special reasons", "considers it appropriate" and "in the opinion of the court" is an input. Whether a court has jurisdiction "apart from this Act" is also asked, as a fact about the other laws.
-- **The Act's own definitions are worked out from facts:** "special federal matter" (s 3(1), every paragraph and the closing words); "State" and "Territory" (s 3(1)); the State Family Court rule of s 3(2). "Commonwealth authority" (s 6A(6)) is folded into a factual input; "officer of the Commonwealth" (borrowed from s 75(v) of the Constitution) is asked.
+- **The Act's own definitions are worked out from facts:** "special federal matter" (s 3(1), every paragraph and the closing words); "State", "Territory" and "Full Court" (s 3(1), the last for s 7); the State Family Court rule of s 3(2). "Commonwealth authority" (s 6A(6)) is folded into a factual input; "officer of the Commonwealth" (borrowed from s 75(v) of the Constitution) is asked.
 - **One case:** one proceeding (or, for s 5(6), the proceeding and one related to it).
 - **The Act's own terms**, quoted in the comment above each rule, and glossed in the `@desc` lines.
 - **Machinery out:** ss 1, 2, 15, 16.
 
 ## Scope
 
-**In:** s 3(1) (the definitions used), s 3(2); s 4(1)–(4); s 5(1)–(9); s 6(1)–(5), (7)–(10); s 6A(1)–(3); s 7(1)–(8) and the Schedule; s 8(1)–(3); s 10; s 11(1)–(3); s 12; s 13; s 14(1), (2).
+**In:** s 3(1) (the definitions used, among them "special federal matter", "State", "Territory", "State Family Court" and "Full Court"), s 3(2); s 4(1)–(4); s 5(1)–(9); s 6(1)–(5), (7)–(10); s 6A(1)–(3); s 7(1)–(8) and the Schedule; s 8(1)–(3); s 10; s 11(1)–(3); s 12; s 13; s 14(1), (2).
 
-**Out, and why:** ss 1, 2 (title, commencement); s 3(3) (extension to external Territories: assumed); s 3(4) (ACT and NT application laws of the Competition Code treated as federal jurisdiction: a rule for the courts that changes no answer here); s 6(6) (what the court weighs on "special reasons": its opinion is the input); s 6A(4), (5) (no new jurisdiction; how "interests of justice" is read); s 9 (the courts' capacity to exercise cross-vested jurisdiction, and s 9(1) saving State laws); s 14(3) (references in other laws); s 15 (reading down); s 16 (suspension or cessation by Proclamation; none is in the deposit). The preamble is quoted in nothing.
+**Out, and why:** ss 1, 2 (title, commencement); s 3(3) (extension to external Territories: assumed); s 3(4) (ACT and NT application laws of the Competition Code treated as federal jurisdiction: a rule for the courts that changes no answer here); s 6(6) (what the court weighs on "special reasons": its opinion is the input); s 6A(4), (5) (no new jurisdiction; how "interests of justice" is read); s 6A(6) (its two definitions are not encoded as rules but folded into the inputs, as said above); s 9 (the courts' capacity to exercise cross-vested jurisdiction, and s 9(1) saving State laws); s 14(3) (references in other laws); s 15 (reading down); s 16 (suspension or cessation by Proclamation; none is in the deposit). The preamble is quoted in nothing.
 
 ## Fork register (questions with no convention, decided case by case)
 
