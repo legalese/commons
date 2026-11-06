@@ -225,3 +225,116 @@ worked out. Third party payers (ss 171, 176) are left out because they are a sec
   disputes.
 - Compute business days (s 6) from a WA public holiday calendar instead of asking for the count.
 - No decided cases, Board guidance or Legal Services Council material were consulted.
+
+## Q&A layer (seat and situations as parameters)
+
+Added on 6 November 2026, following the graffiti encoding's design (D2, D4, D8).
+
+- **Files.** The layer is `lpul-qa.l4` and its cases are in `lpul-qa-cases.l4`.
+- **Imports.** It imports `prelude`, `daydate` and the three baseline modules: `lpul-practice`, `lpul-trust` and
+  `lpul-costs`. It changes none of their rules or exports.
+- **The role comes first.** Every exported question takes `my role` first ("Which of these describes you"). For the role a
+  question is not about, the answer is `does not arise for you`, and no other input is read.
+
+**Roles.**
+
+- `I am a lawyer: admitted to the legal profession, practising or about to`. This is the baseline's seat (Daniel). The
+  role is admitted by its own terms, so the baseline's `I am an Australian lawyer` is passed TRUE.
+- `I am the client of a law practice`. Parts 4.2 and 4.3 give the client its rights to trust money, costs disclosure, bills
+  and costs assessment. The client is the other person who would ask the Law questions.
+
+Some people get no seat:
+
+- The Board, costs assessors and the designated tribunal are never seats.
+- A principal is not a seat of their own. The baseline already asks a principal's facts as inputs of the lawyer's
+  questions (the responsible principal in s 207, a principal's certificate in s 150).
+
+**Situation inputs.** Each comes straight after `my role`. It has the same name, type and `@desc` wherever it is taken, in
+both roles.
+
+- **`I hold a current practising certificate`** (BOOLEAN).
+  - FALSE gives does not arise for 6 lawyer questions: s 47 capacity, s 48(2), s 50, s 51/88 reporting, notice in time,
+    s 54.
+  - It is an ordinary input, not a gate, of three questions that arise with or without a certificate: qualified entity,
+    s 11(1) holding out, and solicitor or barrister.
+- **`the law practice holds money for the client`** (BOOLEAN). FALSE gives does not arise. It is taken by 12 questions,
+  the six trust questions of each role: ss 129, 134, 137-143, 145, and General Rules rr 42, 52.
+- **`the bill given`** (`The bill given`). Its values are `no bill has been given yet`, `a lump sum bill` and `an itemised
+  bill, with no lump sum bill before it`. It is taken by 11 questions:
+  - the s 187(1)-(2) request and the s 187(3) time, in both roles (4);
+  - the highest interest rate and may interest be charged, in both roles (4);
+  - s 207 (the lawyer);
+  - suing, in both roles (2).
+
+  `no bill has been given yet` gives does not arise for all of them except suing (D-QA2). The itemised value also gives
+  does not arise for the four s 187 questions, since s 187(1) is about a lump sum bill.
+- **`the costs have been assessed`** (BOOLEAN). FALSE gives does not arise. It is taken by "Who pays the costs of the
+  assessment" (s 204), in both roles (2).
+
+**Decisions.**
+
+- **D-QA1. Records are taken apart.**
+  - The baseline's exported questions take records: the money, the withdrawal, the bill, the offence, the disclosure, the
+    interest claim and the ledger.
+  - The layer takes each field as its own plain input and builds the record. The form can then ask for the fields one by
+    one and share them; `the day the bill was given`, for example, serves both r 42 and s 194.
+  - Where a baseline function does not read a field of its record, the layer passes FALSE and does not ask for it. This
+    applies to cash and the written direction, in "is it trust money" and the s 134 warning.
+- **D-QA2. Suing with no bill keeps the baseline's no.** "May my firm sue" and "Can my law practice sue me now" answer `no:
+  no bill complying with the Law and the Rules has been given (s 194(1))` when no bill has been given. That answer comes
+  from the bill situation alone and reads nothing else, just as the graffiti layer's D8.1 keeps a no that settles its
+  question.
+- **D-QA3. Shared wording.**
+  - Inputs shared by the two roles are worded of "the client" and "the law practice". That way one name and one `@desc`
+    serve both roles.
+  - The answers wrap the baseline's own enumerations (for example `on suing` HAS a `Suing answer`). So for the lawyer, the
+    answer is the baseline's answer, word for word.
+- **D-QA4. Three client questions are new, worked from the text.**
+  - "By what date must I be given the itemised bill": s 187(3), 21 days after the request. The days are counted as the
+    baseline's "Is our itemised bill in time" counts them.
+  - "By what date must I apply for a costs assessment": s 198(3), 12 months, counted with the baseline's `months after`.
+    It does not arise for a commercial or government client (s 170(1), finding 7).
+  - "Is the person acting for me a qualified entity": s 6, using the baseline's function on that person's facts.
+- **D-QA5. Situations not made.**
+  - The settlement in s 177 keeps `the law practice negotiates the settlement` as an ordinary input. Only one question
+    would take it as a situation, and the baseline answers no without it.
+  - The disclosure failure in s 178 keeps its contravention input as an ordinary input. FALSE already settles the
+    question to "nothing".
+  - The assessment question (s 198) takes no bill situation, because s 198(3)(b) counts from payment where there was no
+    bill.
+
+**Not covered for the client:**
+
+- third party payers (ss 171, 176, 198(5), (6));
+- the costs agreement rights beyond s 179 (ss 180-185 are in the Application Act baseline);
+- complaints and Chapter 5 costs disputes;
+- the fidelity fund;
+- whether the lawyer's charging is a conduct matter (s 207 is the lawyer's question only);
+- the s 187(4) limit for a part payer.
+
+**Counts.** There are 60 questions: 36 for the lawyer (every baseline export) and 24 for the client. `lpul-qa-cases.l4` has
+264 cases:
+
+- 60 ask each question for the other role, with every other input ASSUMEd;
+- 35 ask each situation input with each value under which it does not hold, with every later input ASSUMEd;
+- 116 are for the lawyer where the situation holds. They were worked by hand, and 36 of them (one per question) also
+  assert that the answer equals the baseline export's on the same facts;
+- 53 are for the client, worked by hand.
+
+**Reads that the cases cannot show.** The baseline reads `Kind of client`, `Statement occasion` and `What happened`
+through OTHERWISE (graffiti finding 31). For those inputs, the "not read" cases rest on the parameter script's check that
+each question reads the role first and then its situation. The layer's own helpers over `The bill given` list every value
+and have no OTHERWISE.
+
+**Checks.** These used the stable l4 (VS Code extension 1.6.98), with `JL4_LIBRARY_PATH` unset.
+
+- All eight files: 0 errors and 0 warnings.
+- 333 assertions are satisfied: 69 in the baseline and 264 in the layer.
+- `l4 check lpul-qa.l4` succeeds.
+- A parameter script listed every `@export` (session scratchpad, `check_params.py`). It found:
+  - `my role` first in all 60 questions;
+  - each shared parameter identical in type and `@desc` wherever it is taken;
+  - each situation input straight after `my role`;
+  - no DEONTIC or EVENT input.
+- A negative control failed as it should. It gave one case a wrong expected value, and another an ASSUMEd value for a
+  situation input that its question reads.
