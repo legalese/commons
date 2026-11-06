@@ -158,8 +158,8 @@ So the encoding covers:
 
 Added on 6 November 2026, after the graffiti encoding's design (D2, D4, D8). The baseline's files are unchanged; the layer is added beside them.
 
-- `sarca-qa.l4` imports `prelude`, `daydate` and `sarca-licensing`. It has 42 exported questions.
-- `sarca-qa-cases.l4` imports the same and `sarca-qa`. It has 250 cases.
+- `sarca-qa.l4` imports `prelude` and `sarca-licensing`. It has 42 exported questions.
+- `sarca-qa-cases.l4` imports `prelude`, `daydate` (for its dates), `sarca-licensing` and `sarca-qa`. It has 252 cases.
 
 ### Roles
 
@@ -193,7 +193,7 @@ Each comes straight after `my role`. When it does not hold, the question answers
 | `I have a past charge or other matter for an offence` | BOOLEAN | FALSE | The three questions on one past matter (ss 4A, 4B, reg 25) |
 | `the licensing officer refused to issue me a licence` | BOOLEAN | FALSE | The s 57(1) reasons question |
 | `the licensing officer refused to renew my licence` | BOOLEAN | FALSE | The s 57(2) notice question |
-| `I am said to have committed an offence under this Act` | BOOLEAN | FALSE | The officer's 3 penalty questions and the business's 2 |
+| `I am said to have committed an offence under this Act` | BOOLEAN | FALSE | The officer's 3 penalty questions, the business's 2 and the client's 2 (s 20) |
 | `how I get security for my property` | `How I get security for my property` | `I hire a security firm to supply guards` (the 4 own-guard questions); `I employ my own guard` (the hired-firm question) | The client's 5. `I do both` opens all five |
 
 These questions take no situation input, because they arise in every situation of their role:
@@ -206,7 +206,7 @@ These questions take no situation input, because they arise in every situation o
 ### Decisions
 
 - **One input with two meanings of not arising.** The licence input serves both kinds of question. The s 20 question takes it inverted, because it asks about the time before issue. Its name, type and @desc are the same as everywhere else, so the form asks it once.
-- **The offence input is shared by two roles.** The officer and the business use the same input, word for word.
+- **The offence situation is shared by three roles.** The officer, the business and the client use the same input, word for word. The offence itself is not shared: the officer's is `the offence` (`My offence`), the business's is `the offence of my business` (`My business's offence`), because the form keys inputs by name and one name cannot carry two types.
 - **Two helpers read the client's situation.** They are `I employ my own guard, in` and `I hire a security firm, in`. Each lists every value, with no OTHERWISE (graffiti finding 31).
 - **The client's s 12 question runs the baseline's test.** It builds a `My work` record (`the work of my own guard`) and runs the baseline's `Am I a security officer` on it. It does not restate s 12.
 - **The business's s 19 question runs the baseline's s 19 function.** It passes the role's facts: the officer is licensed, and the business supplies officers' services.
@@ -225,19 +225,19 @@ For the client: crowd controllers at a venue (s 35), and whether the client is i
 
 ### Cases
 
-The 250 cases in `sarca-qa-cases.l4` are:
+The 252 cases in `sarca-qa-cases.l4` are (the two added on 6 November 2026 in the fix below are the client's penalty questions with the offence situation FALSE, counted under situation cases):
 
 | Kind | Cases |
 |---|---|
 | Each question for the two roles it is not about, every other input ASSUMEd | 84 |
-| Each situation question for its own role, with each value under which the situation does not hold, later inputs ASSUMEd | 27 |
+| Each situation question for its own role, with each value under which the situation does not hold, later inputs ASSUMEd | 29 |
 | Own role, worked by hand | 76 |
 | Officer answer equal to the baseline export's answer on the same facts | 56 |
 | Mirror cases and `I do both` | 7 |
 
 The mirror cases are d04b's in-house guard, asked from the guard's seat and the client's, and Sentinel's licence, asked from all three seats.
 
-All 250 cases are satisfied, as are the baseline's 69. There are 0 errors and 0 warnings. `l4 check sarca-qa.l4` succeeds.
+All 252 cases are satisfied, as are the baseline's 69. There are 0 errors and 0 warnings. `l4 check sarca-qa.l4` succeeds.
 
 A scratch script checked every @export:
 
@@ -245,3 +245,17 @@ A scratch script checked every @export:
 - each situation input is identical in name, type and @desc wherever it is used;
 - no input is DEONTIC or EVENT;
 - each role branch reads its situation first.
+
+### Fix after verification (6 November 2026)
+
+An independent check through a local jl4-service form engine found these, and they are fixed here:
+
+- **Name clash.** The officer's and the business's penalty questions both named their offence input `the offence`, with two types (`My offence`, `My business's offence`). The form keys inputs by name, so the business's two questions could not be answered. The business's input is now `the offence of my business`.
+- **The client's s 20 penalty questions** now take `I am said to have committed an offence under this Act` after `how I get security for my property`, as the officer's and the business's penalty questions do. FALSE gives `does not arise for you`.
+- **Two notice dates.** The s 57(1) and s 57(2) questions both named their date `the date of the notice`, with two @desc values, though they are different notices. The s 57(2) date is now `the date of the notice of non-renewal`.
+- **Unused import.** `sarca-qa.l4` no longer imports `daydate`; it uses only the prelude's DATE.
+
+Not changed:
+
+- **Record inputs in questions of another role.** The officer's questions that take a `My work` or `My application` record stay in the form for the business and the client, because the form engine cannot settle a question while a record input is unanswered. The code already answers `does not arise for you` for those roles without reading the record; the gap is in how the engine decides what to drop (it should evaluate with the role alone first). Flattening the baseline's records into separate fields would restate the baseline, against the layering rule.
+- **The jl4-service build** rejects some baseline syntax and fails on modules with a `GIVEN ... YIELD` lambda. That is a service bug; the stable l4 runs every file cleanly.
