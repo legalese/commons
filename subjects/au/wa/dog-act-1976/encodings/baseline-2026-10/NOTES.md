@@ -249,8 +249,8 @@ of work.
 
 Added on 6 November 2026, after the graffiti encoding's design (D2, D4, D8). The baseline's files are unchanged; the layer is added beside them.
 
-- `doga-qa.l4` imports `prelude`, `daydate` and `doga-owner`. It has 19 exported questions.
-- `doga-qa-cases.l4` imports the same and `doga-qa`. It has 101 cases.
+- `doga-qa.l4` imports `prelude` and `doga-owner`. It has 19 exported questions.
+- `doga-qa-cases.l4` imports `prelude`, `daydate` (for its dates), `doga-owner` and `doga-qa`. It has 101 cases.
 
 ### Roles
 
@@ -328,3 +328,15 @@ A scratch script checked every @export:
 - each situation input is identical wherever it is used;
 - no input is DEONTIC or EVENT;
 - each role branch reads its situation first.
+
+### Fix after verification (6 November 2026)
+
+An independent check through a local jl4-service form engine found these, fixed here (no answer changes; the 101 cases and the baseline's 49 are unchanged and satisfied):
+
+- `the term` (3 labels), `date of effect` (2) and `in a s 22(3) period` (2) now carry one @desc each. The form shows one label per name.
+- `doga-qa.l4` no longer imports `daydate`; it uses only the prelude's DATE.
+
+Not changed:
+
+- **Record inputs in questions of another role.** The owner's questions take the `Dog` record, and the attacked person's "Is the dog already a dangerous dog" takes one too, so the form engine keeps them for the other role: it cannot settle a question while a record input is unanswered. The code already answers `does not arise for you` for the other role without reading the record; the gap is in how the engine decides what to drop (it should evaluate with the role alone first). Flattening the baseline's record into separate fields would restate the baseline, against the layering rule.
+- **The jl4-service build** rejects some baseline syntax and fails on modules with a `GIVEN ... YIELD` lambda (`doga-owner.l4` has one). That is a service bug; the stable l4 runs every file cleanly.
