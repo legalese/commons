@@ -87,3 +87,88 @@ The plan named s 6 (the Court's power) and s 7 (who may claim). A claimant askin
 - Decide whether the Court's adequacy judgment should be supported with the case-law factors, as an annotated input rather than a computed answer.
 - Encode ss 8, 9 and 11 (claims after distribution, Trustees Act 1962 s 65) and s 12(2) (one application for all) if a life turns on a late claim.
 - An independent test pass, a coverage table and the human gates.
+
+## Q&A layer (seat and situations as parameters)
+
+Added on 6 November 2026, following the design of the Graffiti Vandalism Act 2016 layer (its D2, D4 and D8). The
+layer is `fp-qa.l4`, which imports `prelude` and `fp-claims.l4`; its cases are `fp-qa-cases.l4`, which also import
+`daydate` to write dates, as `fp-cases-claims.l4` does. Nothing in `fp-claims.l4` or `fp-cases-claims.l4` was changed.
+The layer builds the baseline's `My position` from plain answers and calls the baseline's functions. Every exported
+question takes `my role` first (`@desc Which of these describes you`) and answers `does not arise for you` for a role
+it is not about, without reading any other input. No exported question takes a DEONTIC or EVENT input.
+
+**Roles.**
+
+- `I am a family member who may have been left out of the estate, or left too little`: the baseline's seat (11
+  questions, one for each of the baseline's 11 exports).
+- `I take a share of the estate under the will or on intestacy`: the beneficiary, whose share bears provision ordered
+  for a claimant (s 14(2)) (3 questions).
+- `I am the executor or administrator of the estate`: s 20 protects them, and s 7(2) and s 20(5) time what they may do
+  (4 questions).
+
+The Supreme Court is not a seat. The administrator may be the Public Trustee (s 4(1)); the questions read the same for
+it. The administrator is a seat because the executor is usually a private person, often family, whom s 20 addresses.
+
+**Situation inputs.** Each is a BOOLEAN. FALSE gives `does not arise for you` without reading anything else.
+
+| Name | Roles | Questions that take it |
+|---|---|---|
+| `probate or administration has been granted in Western Australia` | all three; claimant | the last day to claim without leave (s 7(2)(a)); whether my application is in time (s 7(2), (3)) |
+| `I have applied to the Court and my claim is undecided` | claimant | s 7A interim order |
+| `estate property the evidence on my claim did not reveal has come to light` | claimant | s 6(5), (7) further claim |
+| `the Court has ordered provision for me` | claimant | s 14(2) |
+| `I have given a mortgage, charge or assignment over my provision` | claimant | s 19 |
+| `the administrator has been given notice of an intended claim` | claimant, administrator | s 20(5) lapse date |
+| `I advised the administrator in writing that I consent, or that I will not apply` | claimant | s 20(4) |
+| `the Court has ordered provision for a claimant` | beneficiary | s 14(2) |
+| `I have distributed, or propose to distribute, part of the estate` | administrator | s 20(1), (3), (4), (5) |
+
+Each situation is what the provision ties the rule to: the grant ("the date on which the administrator becomes
+entitled to administer the estate", s 7(2)(a)), the pending application (s 7A "before making an order"), the property
+the evidence "did not reveal" (s 6(5)(a)), the provision ordered (s 14(2)), the dealing (s 19), the notice (s 20(5)),
+the written advice (s 20(4)) and the distribution (s 20(1), (3)). Who may claim, whether the will can shut a claim out,
+and whether the Court can order provision arise for every claimant and take none.
+
+**Decisions.**
+
+- **QA1. Where a situation is the baseline's own input, it is passed TRUE within the situation.** This covers s 7A
+  (`an application under section 6(1) is before the Court`), s 6(5) (`the evidence did not reveal the property`) and
+  s 20(4) (`I advised the administrator in writing ...`). Within the situation the answer equals the baseline's with
+  that input TRUE; outside it the question does not arise, where the baseline answered no.
+- **QA2. The Court-order question keeps the baseline's Standing and Timing inputs.** The baseline's `Can the Court order
+  provision for me` takes the answers to "May I claim" and "Will my application be heard" as inputs of those types, and
+  so does this layer's question, with `@desc` saying so. Computing them inside from the facts would repeat 17 inputs
+  and both rules.
+- **QA3. Two questions serve more than one role from one rule.** The last day to claim without leave serves all three
+  roles; the s 20(5) lapse date serves the claimant and the administrator. Their inputs are worded for any of them.
+- **QA4. The administrator's protection is a helper here,** `s 20(1), (3), (4) -- no action lies against the
+  administrator for the distribution`. It holds where there was no notice of an application or an unlapsed intended
+  application, and the distribution was properly made (s 20(1)) or the claimant's tie is not through a legal marriage or
+  adoption (s 20(3), which omits "properly"); or where the claimant consented in writing with full capacity (s 20(4),
+  the baseline's rule). A lapsed notice of intention counts as no notice, since s 20(5) lets the administrator "act as
+  if he had not received the notice" (INFERENCE). When none applies, the answer is "section 20 does not bar it: whether
+  the action lies is for the general law", not "yes": s 20 only bars actions, it does not create one.
+- **QA5. The beneficiary's two s 6 and s 14(2) questions are mirrors of the claimant's.** They call the same rules, and
+  a case asserts each agrees with the claimant's answer on the same facts.
+
+**Not covered for the new roles.** For the beneficiary: whether a gift is "settled property" charged against corpus
+(s 14(3)), the Court's power to order the burden otherwise (s 14(2) "unless the Court otherwise orders"), and claims
+after distribution (ss 8, 9). For the administrator: urgent distributions (s 11), service of the application (s 12),
+the trustee's protection beyond s 20, and the costs order (s 14(6)).
+
+**Checks.** `fp-qa.l4` runs and `l4 check` succeeds, with 0 errors and 0 warnings. `fp-claims.l4` and
+`fp-cases-claims.l4` still give 0 errors and 0 warnings, and 44 of 44 assertions. `fp-qa-cases.l4` has **103
+assertions, 103 satisfied**:
+
+- 63 worked by hand (48 claimant, 5 beneficiary, 10 administrator). Of these, 11 assert the claimant's answer equal to
+  the baseline export's on the same facts, one for each of the claimant's 11 questions; 3 mirror cases assert the
+  beneficiary's or administrator's answer equal to the claimant's.
+- 27 ask each question for each role it is not about, with every other input ASSUMEd.
+- 13 ask each situation question, for each role it is about, with the situation FALSE and the rest ASSUMEd.
+
+The parameter script (`qa_params.py`, in the session scratchpad) lists all 15 exported questions with their
+parameters. It checks that `my role` comes first in each, that each situation input is identical in name, type and
+`@desc` wherever it appears, and that no input is DEONTIC or EVENT. It also generated the 40 role and situation cases.
+The baseline reads `Relationship`, `When I was born`, `Standing` and `Timing` through CONSIDERs with OTHERWISE, so an
+ASSUMEd value of them would not fail if read (graffiti finding 31). They are read only after the role, which the
+script checks.
