@@ -77,3 +77,49 @@ Left out because no life asks for them and each is self-contained: specialised o
 - **Coverage.** Orthoses and prostheses (cl 9, 10, Division 6); s 57B; the s 58 recovery regulations and review by the State Administrative Tribunal; s 59 and Part 16 parking charges; the veteran's three-way election (cll 12(5), 15(4)) beyond the fact of electing the DVA arrangement.
 - **Related law.** The Health Insurance Act 1973 baseline for eligibility and doctors' charges, and the Mental Health Act 2014 for involuntary status.
 - **Review.** An independent test pass and a human gate. No case law or WA Health billing practice was consulted.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026 (qa2). Two files, beside the baseline, which is unchanged: `hsa-qa.l4` (IMPORTs `prelude` and `hsa-charges`) and its cases `hsa-qa-cases.l4` (IMPORTs `prelude`, `hsa-charges` and `hsa-qa`). It follows the design of the Graffiti Vandalism Act layer (`../../../graffiti-vandalism-act-2016/encodings/baseline-2026-10/`, D2, D4 and D8): one deployment serves every seat, so the site's question form can drop the questions that do not arise.
+
+**Roles.** Every exported question takes `my role` IS A Role first (`@desc Which of these describes you`), and answers `does not arise for you` for a role it is not about without reading any other input.
+
+- `I am a patient of a WA public health service`: the baseline's seat, the person who owes the fee (s 57(1)). 21 questions.
+- `I am a family member or carer of a patient, or stay in hospital with one`: the person charged for staying with a patient (Order Schedule 1 Division 1 item 7). The chief executive may also disclose the patient's health information to them (s 217(2)). 2 questions.
+- `I must pay compensation to someone a public hospital treated for their injury`: the "compensation payer" (s 53A: "a person who must pay compensation to another person in relation to an injury"), who may be an individual as well as an insurer. 4 questions: recovery from the payer (s 57A(3)(a)), joint and several liability (s 57A(4)), the discharge (s 57A(5)), and paying the hospital first (s 57D).
+- `I hold information about someone that I obtained through the WA health system`: anyone bound by the confidentiality offence (s 219(1)), such as a person who works for a health service provider, or a relative told under s 217. 2 questions.
+- Not seats: the Minister, the Department CEO, health service providers, their chief executives.
+
+**Plain inputs.** The baseline's questions take the record `Me as a patient` (twelve facts) and, for s 55(2), the baseline's `Charge`. Here each is asked fact by fact, and the record is built inside L4 (`me from my answers`). The Order's charge for s 55(2) becomes two inputs: how the Order fixes the charge, and the amount it fixes.
+
+**Situation inputs.** Each comes straight after `my role`. When it does not hold, the question answers `does not arise for you` and reads nothing else. The same name, type and `@desc` wherever taken.
+
+| Input | Type | Does not arise when | Questions |
+|---|---|---|---|
+| `how I attend` | `How I attend` (the baseline's: `as an in-patient`, `as a day patient`, `as an out-patient`, `as a same day patient`) | `as an out-patient`, for the per-day and whole-stay charges; the other three values, for the out-patient service and medicine charges | 4 as a situation. An ordinary input of the compensable, cl 6A, class, MRI and pathology questions |
+| `I receive, or am to receive, a payment for the injury or illness I was treated for` | BOOLEAN | FALSE | the patient's ss 53B, 57A and 57D questions |
+| `I am staying in the hospital with the patient` | BOOLEAN | FALSE | item 7 (the family member's daily charge) |
+| `another person must also pay compensation for the injury` | BOOLEAN | FALSE | s 57A(4) (the payer's) |
+
+The one helper over an enumeration (`I attend as an out-patient`) lists every value and has no OTHERWISE (the graffiti finding 31).
+
+**Decisions.**
+
+- For an out-patient the baseline's per-day question answers `charged per out-patient service, not per day`. Here the per-day and whole-stay questions do not arise for an out-patient, and the out-patient questions answer instead. The baseline's out-patient questions take no attendance, since they assume one; here they arise only for `as an out-patient`.
+- The baseline's item 7 question is the family member's here (`why I am staying`, renamed from `why` because the patient's s 219 question has a `why` of another type), and the s 217 rule is asked from the family member's seat too.
+- The holder's s 220 reasons are worded from the holder's seat (`Why I would use or disclose it`, nine values, "with the consent of the person the information is about") and mapped to the baseline's list, which is worded from the patient's ("with my consent").
+- The compensation payer's s 57A helpers are in `hsa-qa.l4`, quoted from the deposit. Compensation is payable by the role's own terms, so s 57A(2) is not asked again.
+- The baseline's answer types are carried in `Charge answer` (the baseline's `Charge` record) and `Class answer` (its `My class`); BOOLEANs as `Yes or no`; dollar NUMBERs as `Amount`.
+
+**Not covered for the new roles.** For the family member: who may receive or consent for a patient who cannot (guardianship law, not deposited); the regulations s 217(2) requires. For the payer: the s 58 regulations (information to give the provider, apportionment, review); s 57B (former public hospitals); what counts as compensation from the payer's side beyond s 53B, which the patient's question answers. For the holder: the s 220(1)(i) prescribed circumstances (regulations, not deposited); s 215 and Part 17 Division 2 beyond being a listed reason.
+
+**Checks.** Stable l4 1.6.98, `JL4_LIBRARY_PATH` unset.
+
+- `hsa-charges.l4` and `hsa-qa.l4`: no diagnostics. `l4 check hsa-qa.l4`: Check succeeded.
+- `hsa-cases-charges.l4`: 69 of 69 satisfied.
+- `hsa-qa-cases.l4`: 202 of 202 satisfied, no error or warning. It was written by the scratchpad script `gen_hsa_cases.py`, which only spells out argument lists; the values are hand-worked from the Act and the Order.
+  - 87 for the roles a question is not about (every other input ASSUMEd);
+  - 13 for a situation value that does not hold (later inputs ASSUMEd);
+  - 102 where role and situation hold. 25 of these assert equality with the baseline export on the same facts, built as the baseline's own `Me as a patient` records: at least one for each of the 21 patient questions and the item 7 question, and one each for the payer's s 57D and the holder's s 219 questions, which call baseline rules.
+- A parameter script (`check_params.py`, session scratchpad) listed all 29 exports. It found `my role` first everywhere, every shared input identical in type and `@desc`, each situation read in the first check after the role, and no DEONTIC or EVENT input.
+- Negative controls on a scratch copy each failed: an ASSUMEd attendance for the per-day charge; a wrong total for k090 as a private patient; an ASSUMEd payment for the s 53B question when a payment is received.

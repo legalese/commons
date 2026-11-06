@@ -1,0 +1,702 @@
+IMPORT prelude
+IMPORT `hsa-charges`
+
+-- Health Services Act 2016 (WA), with the Health Services (Fees and Charges) Order 2016 -- the Q&A layer: the questions
+-- people ask about what a WA public hospital may charge, with the seat and the situation as parameters, for the site's
+-- question form.
+--
+-- PURPOSE. One deployment serves every seat. Every exported question takes `my role` first ("Which of these describes
+-- you"). A question about another role answers `does not arise for you` without reading any other input, so the form never
+-- asks those inputs and drops the question. The baseline's questions take a record (`Me as a patient`) and, in one case,
+-- the baseline's `Charge`; here every input is one plain fact, and the records are built inside L4.
+--
+-- ROLES. (1) `I am a patient of a WA public health service`: the baseline's seat, the person charged (s 57(1)).
+-- (2) `I am a family member or carer of a patient, or stay in hospital with one`: the person the Order charges for staying
+-- with a patient (Schedule 1 Division 1 item 7), and to whom the chief executive may disclose the patient's health
+-- information (s 217(2)). (3) `I must pay compensation to someone a public hospital treated for their injury`: the
+-- "compensation payer" (s 53A), a person, not only an insurer, from whom the hospital may recover its compensable charge
+-- (s 57A(3)(a), (4), (5)) and who must pay it first once notified (s 57D). (4) `I hold information about someone that I
+-- obtained through the WA health system`: anyone bound by the confidentiality offence (s 219(1)), such as a person who
+-- works for a health service provider, or a relative told under s 217. The Minister, the Department CEO, health service
+-- providers and their chief executives are never seats; what they may or must do appears as what it means for the person.
+--
+-- SITUATIONS (as in the Graffiti Vandalism Act layer, design D8). Within a role, a question that arises only in a situation
+-- takes that situation's fact straight after `my role` and answers `does not arise for you` without reading anything else
+-- when it does not hold; the questions of one situation share one input. The patient's: how I attend (the per-day and
+-- whole-stay charges do not arise for an out-patient; the out-patient service and medicine charges arise only for one);
+-- a payment for my injury (ss 53B, 57A, 57D). The family member's: staying in the hospital with the patient (item 7). The
+-- compensation payer's: another person also liable (s 57A(4)).
+--
+-- The rules are in hsa-charges.l4. For the patient this module calls them and restates none; each answer equals the
+-- baseline export's wherever the role and situation hold. The other roles use the baseline's rules where they exist (item 7,
+-- ss 57D, 217, 219, 220) and helpers below, quoted from the deposit, where they do not (s 57A(3)(a), (4), (5)).
+-- No exported question takes a DEONTIC or EVENT input.
+--
+-- AMOUNTS as in the baseline: the Order's figures in force from 1 July 2026.
+--
+-- BASELINE. Not for public use as advice. See NOTES.md, "Q&A layer (seat and situations as parameters)".
+
+§ `Health Services Act 2016 (WA) -- hospital charges: the questions people ask`
+
+§§ `Who is asking, and the shape of the answers`
+
+DECLARE Role IS ONE OF
+    `I am a patient of a WA public health service`
+    `I am a family member or carer of a patient, or stay in hospital with one`
+    `I must pay compensation to someone a public hospital treated for their injury`
+    `I hold information about someone that I obtained through the WA health system`
+
+DECLARE `Yes or no` IS ONE OF
+    yes
+    no
+    `does not arise for you`
+
+DECLARE `Amount` IS ONE OF
+    `does not arise for you`
+    amount HAS dollars IS A NUMBER
+
+-- The baseline's own answer types, each carried inside an answer that can also say `does not arise for you`.
+DECLARE `Charge answer` IS ONE OF
+    `does not arise for you`
+    `the hospital's charge` HAS `the charge` IS A `Charge`
+
+DECLARE `Class answer` IS ONE OF
+    `does not arise for you`
+    `my class is` HAS `the class` IS A `My class`
+
+GIVEN `it holds` IS A BOOLEAN
+GIVETH A `Yes or no`
+`yes if` `it holds` MEANS
+    IF `it holds` THEN yes ELSE no
+
+§§ `The situations a question arises in`
+
+-- The patient's attendance (Order cl 11(1)) is the baseline's `How I attend`. It is the situation of the per-day and
+-- whole-stay charges (not for an out-patient, who is charged per service) and of the out-patient service and medicine
+-- charges (only for an out-patient); elsewhere it is an ordinary input. This helper lists every value and has no
+-- OTHERWISE: on the stable l4 a CONSIDER with OTHERWISE quietly takes the OTHERWISE branch for an ASSUMEd value (Graffiti
+-- Vandalism Act layer, finding 31), so the cases could not show that an ASSUMEd situation is never read.
+GIVEN `how I attend` IS A `How I attend`
+GIVETH A BOOLEAN
+DECIDE `I attend as an out-patient` IF
+    CONSIDER `how I attend`
+    WHEN `as an in-patient` THEN FALSE
+    WHEN `as a day patient` THEN FALSE
+    WHEN `as an out-patient` THEN TRUE
+    WHEN `as a same day patient` THEN FALSE
+
+§§ `Building the baseline's record from plain answers`
+
+GIVEN `eligible` IS A BOOLEAN
+      `compensation right` IS A BOOLEAN
+      `decided not compensable` IS A BOOLEAN
+      `motor vehicle insurance` IS A BOOLEAN
+      `other compensation law` IS A BOOLEAN
+      `DVA veteran` IS A BOOLEAN
+      `nursing home type` IS A BOOLEAN
+      `election` IS A `My election`
+      `asylum seeker` IS A BOOLEAN
+      `involuntary` IS A BOOLEAN
+      `Mental Health Act treatment` IS A BOOLEAN
+      `s 6(2) declaration` IS A BOOLEAN
+GIVETH A `Me as a patient`
+`me from my answers` MEANS `Me as a patient` WITH
+    `I am an eligible person under the Health Insurance Act 1973` IS `eligible`
+    `I have, or appear to have, a right to compensation for this condition` IS `compensation right`
+    `the chief executive has decided I am not a compensable patient` IS `decided not compensable`
+    `motor vehicle third party insurance applies or appears to apply` IS `motor vehicle insurance`
+    `workers compensation, catastrophic injuries or Defence Force law applies or appears to apply` IS `other compensation law`
+    `I am a veteran who elects the DVA arrangement` IS `DVA veteran`
+    `I am a nursing home type patient` IS `nursing home type`
+    `my election` IS `election`
+    `I am an asylum seeker` IS `asylum seeker`
+    `I am an involuntary patient under the Mental Health Act 2014` IS `involuntary`
+    `the service is part of my Mental Health Act treatment` IS `Mental Health Act treatment`
+    `a declaration under s 6(2) of the Health Insurance Act 1973 applies to me` IS `s 6(2) declaration`
+
+§§ `For the patient`
+
+§§§ `ss 7, 8, 55(1) -- is this the public system, and may I be charged at all`
+
+@export Is my care a public health service (Health Services Act 2016 (WA) s 7(3), (4))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `provider` IS A `Who provides my health service` @desc Who gives you the care: a WA health service provider (an area health service), the Department CEO, a contracted health entity under a contract with one of them or the State, or a private provider with no such contract
+      `declared public by regulation` IS A BOOLEAN @desc Whether a regulation declares this service to be a public health service
+      `declared not public by regulation` IS A BOOLEAN @desc Whether a regulation declares this service not to be a public health service
+GIVETH A `Yes or no`
+`Is the care I receive a public health service` MEANS
+    CONSIDER `my role`
+    WHEN `I am a patient of a WA public health service` THEN `yes if` (`Is my care a public health service` `provider` `declared public by regulation` `declared not public by regulation`)
+    WHEN `I am a family member or carer of a patient, or stay in hospital with one` THEN `does not arise for you`
+    WHEN `I must pay compensation to someone a public hospital treated for their injury` THEN `does not arise for you`
+    WHEN `I hold information about someone that I obtained through the WA health system` THEN `does not arise for you`
+
+@export Is the hospital a public hospital (Health Services Act 2016 (WA) s 8(6)-(8))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `controlled or managed by a health service provider or the Department CEO` IS A BOOLEAN @desc Whether a WA health service provider or the Department runs the hospital
+      `declared a public hospital by the Minister` IS A BOOLEAN @desc Whether a Ministerial order in the Gazette declares it a public hospital (s 8(7))
+      `declared not a public hospital by the Minister` IS A BOOLEAN @desc Whether a Ministerial order in the Gazette declares it not a public hospital (s 8(8))
+GIVETH A `Yes or no`
+`Is my hospital a public hospital` MEANS
+    CONSIDER `my role`
+    WHEN `I am a patient of a WA public health service` THEN `yes if` (`Is the hospital a public hospital` `controlled or managed by a health service provider or the Department CEO` `declared a public hospital by the Minister` `declared not a public hospital by the Minister`)
+    WHEN `I am a family member or carer of a patient, or stay in hospital with one` THEN `does not arise for you`
+    WHEN `I must pay compensation to someone a public hospital treated for their injury` THEN `does not arise for you`
+    WHEN `I hold information about someone that I obtained through the WA health system` THEN `does not arise for you`
+
+@export May the health service provider charge me for my health service at all (Health Services Act 2016 (WA) s 55(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `provider` IS A `Who provides my health service` @desc Who gives you the care: a WA health service provider (an area health service), the Department CEO, a contracted health entity under a contract with one of them or the State, or a private provider with no such contract
+      `the National Health Agreement says I am not to be charged` IS A BOOLEAN @desc Whether it has been agreed under the National Health Agreement that you are not to be charged for this service
+      `the Agreement is in force` IS A BOOLEAN @desc Whether the National Health Agreement is in force when the service is given
+      `a Ministerial order says no fees are payable` IS A BOOLEAN @desc Whether an order under s 56(2)(b) in force when the service is given says no fees or charges are payable for it (for example Order cl 6A)
+GIVETH A `Yes or no`
+`May the health service provider charge me at all` MEANS
+    CONSIDER `my role`
+    WHEN `I am a patient of a WA public health service` THEN `yes if` (`May the hospital charge me at all` `provider` `the National Health Agreement says I am not to be charged` `the Agreement is in force` `a Ministerial order says no fees are payable`)
+    WHEN `I am a family member or carer of a patient, or stay in hospital with one` THEN `does not arise for you`
+    WHEN `I must pay compensation to someone a public hospital treated for their injury` THEN `does not arise for you`
+    WHEN `I hold information about someone that I obtained through the WA health system` THEN `does not arise for you`
+
+§§§ `Order cll 3, 3A, 6A, 11-15 -- what class of patient am I`
+
+@export Am I a compensable patient (Health Services (Fees and Charges) Order 2016 (WA) cll 3A, 12(3), 13(3), 14(5), 15(5))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `how I attend` IS A `How I attend` @desc Whether you are an in-patient (admitted to a hospital bed), a day patient (at a day hospital), an out-patient, or a same day patient (admitted and discharged on the same day)
+      `I am an eligible person under the Health Insurance Act 1973` IS A BOOLEAN @desc Whether you are an "eligible person" for Medicare under the Health Insurance Act 1973 s 3 (the Health Insurance Act encoding works this out)
+      `I have, or appear to have, a right to compensation for this condition` IS A BOOLEAN @desc Whether you have received, or established a right to receive, compensation (such as workers' compensation, motor vehicle third party insurance or damages) for the injury, illness or disease you are treated for, or appear to have that right when you attend
+      `the chief executive has decided I am not a compensable patient` IS A BOOLEAN @desc Whether the hospital's chief executive has decided under Order cl 3A(5) that you are not a compensable patient
+      `motor vehicle third party insurance applies or appears to apply` IS A BOOLEAN @desc Whether the Motor Vehicle (Third Party Insurance) Act 1943 applies, or appears to apply, to the payment for your treatment
+      `workers compensation, catastrophic injuries or Defence Force law applies or appears to apply` IS A BOOLEAN @desc Whether the Workers Compensation and Injury Management Act 2023, the Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 or the law relating to the Defence Force applies, or appears to apply, to the payment for your treatment
+      `I am a veteran who elects the DVA arrangement` IS A BOOLEAN @desc Whether you are a veteran who elects to be treated under the arrangement with the Department of Veterans' Affairs
+      `I am a nursing home type patient` IS A BOOLEAN @desc Whether you are a nursing home type patient (a Health Insurance Act 1973 term for a long-stay in-patient who no longer needs acute care)
+      `my election` IS A `My election` @desc Whether, on admission, you elected to be treated as a public or a private patient (an eligible in-patient or same day patient must elect)
+      `I am an asylum seeker` IS A BOOLEAN @desc Whether you have applied for a permanent or temporary protection visa or a safe haven enterprise visa, and the application has not yet been decided
+      `I am an involuntary patient under the Mental Health Act 2014` IS A BOOLEAN @desc Whether you are under an inpatient or community treatment order, another detaining order, or an unexpired referral under the Mental Health Act 2014
+      `the service is part of my Mental Health Act treatment` IS A BOOLEAN @desc Whether this service is part of your treatment under the Mental Health Act 2014
+      `a declaration under s 6(2) of the Health Insurance Act 1973 applies to me` IS A BOOLEAN @desc Whether a declaration under the Health Insurance Act 1973 s 6(2) applies to you, so that you are treated as not an eligible person
+GIVETH A `Yes or no`
+`Am I a compensable patient for hospital charges` MEANS
+    CONSIDER `my role`
+    WHEN `I am a patient of a WA public health service` THEN `yes if` (`Am I a compensable patient` (`me from my answers` `I am an eligible person under the Health Insurance Act 1973` `I have, or appear to have, a right to compensation for this condition` `the chief executive has decided I am not a compensable patient` `motor vehicle third party insurance applies or appears to apply` `workers compensation, catastrophic injuries or Defence Force law applies or appears to apply` `I am a veteran who elects the DVA arrangement` `I am a nursing home type patient` `my election` `I am an asylum seeker` `I am an involuntary patient under the Mental Health Act 2014` `the service is part of my Mental Health Act treatment` `a declaration under s 6(2) of the Health Insurance Act 1973 applies to me`) `how I attend`)
+    WHEN `I am a family member or carer of a patient, or stay in hospital with one` THEN `does not arise for you`
+    WHEN `I must pay compensation to someone a public hospital treated for their injury` THEN `does not arise for you`
+    WHEN `I hold information about someone that I obtained through the WA health system` THEN `does not arise for you`
+
+@export Am I free of all hospital fees and charges as a Medicare-ineligible asylum seeker or involuntary patient (Health Services (Fees and Charges) Order 2016 (WA) cl 6A)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `how I attend` IS A `How I attend` @desc Whether you are an in-patient (admitted to a hospital bed), a day patient (at a day hospital), an out-patient, or a same day patient (admitted and discharged on the same day)
+      `I am an eligible person under the Health Insurance Act 1973` IS A BOOLEAN @desc Whether you are an "eligible person" for Medicare under the Health Insurance Act 1973 s 3 (the Health Insurance Act encoding works this out)
+      `I have, or appear to have, a right to compensation for this condition` IS A BOOLEAN @desc Whether you have received, or established a right to receive, compensation (such as workers' compensation, motor vehicle third party insurance or damages) for the injury, illness or disease you are treated for, or appear to have that right when you attend
+      `the chief executive has decided I am not a compensable patient` IS A BOOLEAN @desc Whether the hospital's chief executive has decided under Order cl 3A(5) that you are not a compensable patient
+      `motor vehicle third party insurance applies or appears to apply` IS A BOOLEAN @desc Whether the Motor Vehicle (Third Party Insurance) Act 1943 applies, or appears to apply, to the payment for your treatment
+      `workers compensation, catastrophic injuries or Defence Force law applies or appears to apply` IS A BOOLEAN @desc Whether the Workers Compensation and Injury Management Act 2023, the Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 or the law relating to the Defence Force applies, or appears to apply, to the payment for your treatment
+      `I am a veteran who elects the DVA arrangement` IS A BOOLEAN @desc Whether you are a veteran who elects to be treated under the arrangement with the Department of Veterans' Affairs
+      `I am a nursing home type patient` IS A BOOLEAN @desc Whether you are a nursing home type patient (a Health Insurance Act 1973 term for a long-stay in-patient who no longer needs acute care)
+      `my election` IS A `My election` @desc Whether, on admission, you elected to be treated as a public or a private patient (an eligible in-patient or same day patient must elect)
+      `I am an asylum seeker` IS A BOOLEAN @desc Whether you have applied for a permanent or temporary protection visa or a safe haven enterprise visa, and the application has not yet been decided
+      `I am an involuntary patient under the Mental Health Act 2014` IS A BOOLEAN @desc Whether you are under an inpatient or community treatment order, another detaining order, or an unexpired referral under the Mental Health Act 2014
+      `the service is part of my Mental Health Act treatment` IS A BOOLEAN @desc Whether this service is part of your treatment under the Mental Health Act 2014
+      `a declaration under s 6(2) of the Health Insurance Act 1973 applies to me` IS A BOOLEAN @desc Whether a declaration under the Health Insurance Act 1973 s 6(2) applies to you, so that you are treated as not an eligible person
+GIVETH A `Yes or no`
+`Am I free of all hospital fees and charges under cl 6A` MEANS
+    CONSIDER `my role`
+    WHEN `I am a patient of a WA public health service` THEN `yes if` (`Am I free of all fees under cl 6A` (`me from my answers` `I am an eligible person under the Health Insurance Act 1973` `I have, or appear to have, a right to compensation for this condition` `the chief executive has decided I am not a compensable patient` `motor vehicle third party insurance applies or appears to apply` `workers compensation, catastrophic injuries or Defence Force law applies or appears to apply` `I am a veteran who elects the DVA arrangement` `I am a nursing home type patient` `my election` `I am an asylum seeker` `I am an involuntary patient under the Mental Health Act 2014` `the service is part of my Mental Health Act treatment` `a declaration under s 6(2) of the Health Insurance Act 1973 applies to me`) `how I attend`)
+    WHEN `I am a family member or carer of a patient, or stay in hospital with one` THEN `does not arise for you`
+    WHEN `I must pay compensation to someone a public hospital treated for their injury` THEN `does not arise for you`
+    WHEN `I hold information about someone that I obtained through the WA health system` THEN `does not arise for you`
+
+@export What class of patient am I for hospital fees and charges (Health Services (Fees and Charges) Order 2016 (WA) cll 6A, 11-15)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `how I attend` IS A `How I attend` @desc Whether you are an in-patient (admitted to a hospital bed), a day patient (at a day hospital), an out-patient, or a same day patient (admitted and discharged on the same day)
+      `I am an eligible person under the Health Insurance Act 1973` IS A BOOLEAN @desc Whether you are an "eligible person" for Medicare under the Health Insurance Act 1973 s 3 (the Health Insurance Act encoding works this out)
+      `I have, or appear to have, a right to compensation for this condition` IS A BOOLEAN @desc Whether you have received, or established a right to receive, compensation (such as workers' compensation, motor vehicle third party insurance or damages) for the injury, illness or disease you are treated for, or appear to have that right when you attend
+      `the chief executive has decided I am not a compensable patient` IS A BOOLEAN @desc Whether the hospital's chief executive has decided under Order cl 3A(5) that you are not a compensable patient
+      `motor vehicle third party insurance applies or appears to apply` IS A BOOLEAN @desc Whether the Motor Vehicle (Third Party Insurance) Act 1943 applies, or appears to apply, to the payment for your treatment
+      `workers compensation, catastrophic injuries or Defence Force law applies or appears to apply` IS A BOOLEAN @desc Whether the Workers Compensation and Injury Management Act 2023, the Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 or the law relating to the Defence Force applies, or appears to apply, to the payment for your treatment
+      `I am a veteran who elects the DVA arrangement` IS A BOOLEAN @desc Whether you are a veteran who elects to be treated under the arrangement with the Department of Veterans' Affairs
+      `I am a nursing home type patient` IS A BOOLEAN @desc Whether you are a nursing home type patient (a Health Insurance Act 1973 term for a long-stay in-patient who no longer needs acute care)
+      `my election` IS A `My election` @desc Whether, on admission, you elected to be treated as a public or a private patient (an eligible in-patient or same day patient must elect)
+      `I am an asylum seeker` IS A BOOLEAN @desc Whether you have applied for a permanent or temporary protection visa or a safe haven enterprise visa, and the application has not yet been decided
+      `I am an involuntary patient under the Mental Health Act 2014` IS A BOOLEAN @desc Whether you are under an inpatient or community treatment order, another detaining order, or an unexpired referral under the Mental Health Act 2014
+      `the service is part of my Mental Health Act treatment` IS A BOOLEAN @desc Whether this service is part of your treatment under the Mental Health Act 2014
+      `a declaration under s 6(2) of the Health Insurance Act 1973 applies to me` IS A BOOLEAN @desc Whether a declaration under the Health Insurance Act 1973 s 6(2) applies to you, so that you are treated as not an eligible person
+GIVETH A `Class answer`
+`What class of patient am I for hospital charges` MEANS
+    CONSIDER `my role`
+    WHEN `I am a patient of a WA public health service` THEN `my class is` (`What class of patient am I` (`me from my answers` `I am an eligible person under the Health Insurance Act 1973` `I have, or appear to have, a right to compensation for this condition` `the chief executive has decided I am not a compensable patient` `motor vehicle third party insurance applies or appears to apply` `workers compensation, catastrophic injuries or Defence Force law applies or appears to apply` `I am a veteran who elects the DVA arrangement` `I am a nursing home type patient` `my election` `I am an asylum seeker` `I am an involuntary patient under the Mental Health Act 2014` `the service is part of my Mental Health Act treatment` `a declaration under s 6(2) of the Health Insurance Act 1973 applies to me`) `how I attend`)
+    WHEN `I am a family member or carer of a patient, or stay in hospital with one` THEN `does not arise for you`
+    WHEN `I must pay compensation to someone a public hospital treated for their injury` THEN `does not arise for you`
+    WHEN `I hold information about someone that I obtained through the WA health system` THEN `does not arise for you`
+
+§§§ `Order cll 5, 6, Schedule 1 Divisions 1 and 2 -- what the hospital charges me`
+
+@export I am admitted: what does the public hospital charge me per day for my stay (Health Services (Fees and Charges) Order 2016 (WA) cll 5, 6, 6A; Schedule 1 Divisions 1 and 2)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `how I attend` IS A `How I attend` @desc Whether you are an in-patient (admitted to a hospital bed), a day patient (at a day hospital), an out-patient, or a same day patient (admitted and discharged on the same day)
+      `I asked for a single bed ward` IS A BOOLEAN @desc Whether you are in a single-bed ward at your own request
+      `bed` IS A `My bed` @desc The kind of bed and care (matters only for a compensable in-patient)
+      `I am an eligible person under the Health Insurance Act 1973` IS A BOOLEAN @desc Whether you are an "eligible person" for Medicare under the Health Insurance Act 1973 s 3 (the Health Insurance Act encoding works this out)
+      `I have, or appear to have, a right to compensation for this condition` IS A BOOLEAN @desc Whether you have received, or established a right to receive, compensation (such as workers' compensation, motor vehicle third party insurance or damages) for the injury, illness or disease you are treated for, or appear to have that right when you attend
+      `the chief executive has decided I am not a compensable patient` IS A BOOLEAN @desc Whether the hospital's chief executive has decided under Order cl 3A(5) that you are not a compensable patient
+      `motor vehicle third party insurance applies or appears to apply` IS A BOOLEAN @desc Whether the Motor Vehicle (Third Party Insurance) Act 1943 applies, or appears to apply, to the payment for your treatment
+      `workers compensation, catastrophic injuries or Defence Force law applies or appears to apply` IS A BOOLEAN @desc Whether the Workers Compensation and Injury Management Act 2023, the Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 or the law relating to the Defence Force applies, or appears to apply, to the payment for your treatment
+      `I am a veteran who elects the DVA arrangement` IS A BOOLEAN @desc Whether you are a veteran who elects to be treated under the arrangement with the Department of Veterans' Affairs
+      `I am a nursing home type patient` IS A BOOLEAN @desc Whether you are a nursing home type patient (a Health Insurance Act 1973 term for a long-stay in-patient who no longer needs acute care)
+      `my election` IS A `My election` @desc Whether, on admission, you elected to be treated as a public or a private patient (an eligible in-patient or same day patient must elect)
+      `I am an asylum seeker` IS A BOOLEAN @desc Whether you have applied for a permanent or temporary protection visa or a safe haven enterprise visa, and the application has not yet been decided
+      `I am an involuntary patient under the Mental Health Act 2014` IS A BOOLEAN @desc Whether you are under an inpatient or community treatment order, another detaining order, or an unexpired referral under the Mental Health Act 2014
+      `the service is part of my Mental Health Act treatment` IS A BOOLEAN @desc Whether this service is part of your treatment under the Mental Health Act 2014
+      `a declaration under s 6(2) of the Health Insurance Act 1973 applies to me` IS A BOOLEAN @desc Whether a declaration under the Health Insurance Act 1973 s 6(2) applies to you, so that you are treated as not an eligible person
+GIVETH A `Charge answer`
+`What does the public hospital charge me per day for my stay` MEANS
+    CONSIDER `my role`
+    WHEN `I am a patient of a WA public health service` THEN
+        IF `I attend as an out-patient` `how I attend`
+        THEN `does not arise for you`
+        ELSE `the hospital's charge` (`What does the hospital charge me per day` (`me from my answers` `I am an eligible person under the Health Insurance Act 1973` `I have, or appear to have, a right to compensation for this condition` `the chief executive has decided I am not a compensable patient` `motor vehicle third party insurance applies or appears to apply` `workers compensation, catastrophic injuries or Defence Force law applies or appears to apply` `I am a veteran who elects the DVA arrangement` `I am a nursing home type patient` `my election` `I am an asylum seeker` `I am an involuntary patient under the Mental Health Act 2014` `the service is part of my Mental Health Act treatment` `a declaration under s 6(2) of the Health Insurance Act 1973 applies to me`) `how I attend` `I asked for a single bed ward` `bed`)
+    WHEN `I am a family member or carer of a patient, or stay in hospital with one` THEN `does not arise for you`
+    WHEN `I must pay compensation to someone a public hospital treated for their injury` THEN `does not arise for you`
+    WHEN `I hold information about someone that I obtained through the WA health system` THEN `does not arise for you`
+
+@export I am admitted: what will my whole stay cost me under the Order, in dollars, at most (Health Services (Fees and Charges) Order 2016 (WA) Schedule 1 Divisions 1 and 2)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `how I attend` IS A `How I attend` @desc Whether you are an in-patient (admitted to a hospital bed), a day patient (at a day hospital), an out-patient, or a same day patient (admitted and discharged on the same day)
+      `I asked for a single bed ward` IS A BOOLEAN @desc Whether you are in a single-bed ward at your own request
+      `bed` IS A `My bed` @desc The kind of bed and care (matters only for a compensable in-patient)
+      `days` IS A NUMBER @desc How many days you are charged for
+      `I am an eligible person under the Health Insurance Act 1973` IS A BOOLEAN @desc Whether you are an "eligible person" for Medicare under the Health Insurance Act 1973 s 3 (the Health Insurance Act encoding works this out)
+      `I have, or appear to have, a right to compensation for this condition` IS A BOOLEAN @desc Whether you have received, or established a right to receive, compensation (such as workers' compensation, motor vehicle third party insurance or damages) for the injury, illness or disease you are treated for, or appear to have that right when you attend
+      `the chief executive has decided I am not a compensable patient` IS A BOOLEAN @desc Whether the hospital's chief executive has decided under Order cl 3A(5) that you are not a compensable patient
+      `motor vehicle third party insurance applies or appears to apply` IS A BOOLEAN @desc Whether the Motor Vehicle (Third Party Insurance) Act 1943 applies, or appears to apply, to the payment for your treatment
+      `workers compensation, catastrophic injuries or Defence Force law applies or appears to apply` IS A BOOLEAN @desc Whether the Workers Compensation and Injury Management Act 2023, the Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 or the law relating to the Defence Force applies, or appears to apply, to the payment for your treatment
+      `I am a veteran who elects the DVA arrangement` IS A BOOLEAN @desc Whether you are a veteran who elects to be treated under the arrangement with the Department of Veterans' Affairs
+      `I am a nursing home type patient` IS A BOOLEAN @desc Whether you are a nursing home type patient (a Health Insurance Act 1973 term for a long-stay in-patient who no longer needs acute care)
+      `my election` IS A `My election` @desc Whether, on admission, you elected to be treated as a public or a private patient (an eligible in-patient or same day patient must elect)
+      `I am an asylum seeker` IS A BOOLEAN @desc Whether you have applied for a permanent or temporary protection visa or a safe haven enterprise visa, and the application has not yet been decided
+      `I am an involuntary patient under the Mental Health Act 2014` IS A BOOLEAN @desc Whether you are under an inpatient or community treatment order, another detaining order, or an unexpired referral under the Mental Health Act 2014
+      `the service is part of my Mental Health Act treatment` IS A BOOLEAN @desc Whether this service is part of your treatment under the Mental Health Act 2014
+      `a declaration under s 6(2) of the Health Insurance Act 1973 applies to me` IS A BOOLEAN @desc Whether a declaration under the Health Insurance Act 1973 s 6(2) applies to you, so that you are treated as not an eligible person
+GIVETH AN `Amount`
+`What will my whole stay cost me under the Order` MEANS
+    CONSIDER `my role`
+    WHEN `I am a patient of a WA public health service` THEN
+        IF `I attend as an out-patient` `how I attend`
+        THEN `does not arise for you`
+        ELSE amount (`What will my stay cost under the Order` (`me from my answers` `I am an eligible person under the Health Insurance Act 1973` `I have, or appear to have, a right to compensation for this condition` `the chief executive has decided I am not a compensable patient` `motor vehicle third party insurance applies or appears to apply` `workers compensation, catastrophic injuries or Defence Force law applies or appears to apply` `I am a veteran who elects the DVA arrangement` `I am a nursing home type patient` `my election` `I am an asylum seeker` `I am an involuntary patient under the Mental Health Act 2014` `the service is part of my Mental Health Act treatment` `a declaration under s 6(2) of the Health Insurance Act 1973 applies to me`) `how I attend` `I asked for a single bed ward` `bed` `days`)
+    WHEN `I am a family member or carer of a patient, or stay in hospital with one` THEN `does not arise for you`
+    WHEN `I must pay compensation to someone a public hospital treated for their injury` THEN `does not arise for you`
+    WHEN `I hold information about someone that I obtained through the WA health system` THEN `does not arise for you`
+
+@export I am an out-patient: what does the public hospital charge me for each out-patient service (Health Services (Fees and Charges) Order 2016 (WA) Schedule 1 Division 1 item 4, Division 2 items 7, 9)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `how I attend` IS A `How I attend` @desc Whether you are an in-patient (admitted to a hospital bed), a day patient (at a day hospital), an out-patient, or a same day patient (admitted and discharged on the same day)
+      `I am an eligible person under the Health Insurance Act 1973` IS A BOOLEAN @desc Whether you are an "eligible person" for Medicare under the Health Insurance Act 1973 s 3 (the Health Insurance Act encoding works this out)
+      `I have, or appear to have, a right to compensation for this condition` IS A BOOLEAN @desc Whether you have received, or established a right to receive, compensation (such as workers' compensation, motor vehicle third party insurance or damages) for the injury, illness or disease you are treated for, or appear to have that right when you attend
+      `the chief executive has decided I am not a compensable patient` IS A BOOLEAN @desc Whether the hospital's chief executive has decided under Order cl 3A(5) that you are not a compensable patient
+      `motor vehicle third party insurance applies or appears to apply` IS A BOOLEAN @desc Whether the Motor Vehicle (Third Party Insurance) Act 1943 applies, or appears to apply, to the payment for your treatment
+      `workers compensation, catastrophic injuries or Defence Force law applies or appears to apply` IS A BOOLEAN @desc Whether the Workers Compensation and Injury Management Act 2023, the Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 or the law relating to the Defence Force applies, or appears to apply, to the payment for your treatment
+      `I am a veteran who elects the DVA arrangement` IS A BOOLEAN @desc Whether you are a veteran who elects to be treated under the arrangement with the Department of Veterans' Affairs
+      `I am a nursing home type patient` IS A BOOLEAN @desc Whether you are a nursing home type patient (a Health Insurance Act 1973 term for a long-stay in-patient who no longer needs acute care)
+      `my election` IS A `My election` @desc Whether, on admission, you elected to be treated as a public or a private patient (an eligible in-patient or same day patient must elect)
+      `I am an asylum seeker` IS A BOOLEAN @desc Whether you have applied for a permanent or temporary protection visa or a safe haven enterprise visa, and the application has not yet been decided
+      `I am an involuntary patient under the Mental Health Act 2014` IS A BOOLEAN @desc Whether you are under an inpatient or community treatment order, another detaining order, or an unexpired referral under the Mental Health Act 2014
+      `the service is part of my Mental Health Act treatment` IS A BOOLEAN @desc Whether this service is part of your treatment under the Mental Health Act 2014
+      `a declaration under s 6(2) of the Health Insurance Act 1973 applies to me` IS A BOOLEAN @desc Whether a declaration under the Health Insurance Act 1973 s 6(2) applies to you, so that you are treated as not an eligible person
+GIVETH A `Charge answer`
+`What does the public hospital charge me for each out-patient service` MEANS
+    CONSIDER `my role`
+    WHEN `I am a patient of a WA public health service` THEN
+        IF `I attend as an out-patient` `how I attend`
+        THEN `the hospital's charge` (`What does the hospital charge me for an out-patient service` (`me from my answers` `I am an eligible person under the Health Insurance Act 1973` `I have, or appear to have, a right to compensation for this condition` `the chief executive has decided I am not a compensable patient` `motor vehicle third party insurance applies or appears to apply` `workers compensation, catastrophic injuries or Defence Force law applies or appears to apply` `I am a veteran who elects the DVA arrangement` `I am a nursing home type patient` `my election` `I am an asylum seeker` `I am an involuntary patient under the Mental Health Act 2014` `the service is part of my Mental Health Act treatment` `a declaration under s 6(2) of the Health Insurance Act 1973 applies to me`))
+        ELSE `does not arise for you`
+    WHEN `I am a family member or carer of a patient, or stay in hospital with one` THEN `does not arise for you`
+    WHEN `I must pay compensation to someone a public hospital treated for their injury` THEN `does not arise for you`
+    WHEN `I hold information about someone that I obtained through the WA health system` THEN `does not arise for you`
+
+@export I am an out-patient: what does the public hospital charge me for each out-patient medicine item (Health Services (Fees and Charges) Order 2016 (WA) Schedule 1 Division 1 item 5, Division 2 item 8, cl 10A)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `how I attend` IS A `How I attend` @desc Whether you are an in-patient (admitted to a hospital bed), a day patient (at a day hospital), an out-patient, or a same day patient (admitted and discharged on the same day)
+      `concession` IS A `My medicine concession` @desc Whether you hold an entitlement card, or are a Gold or White Card veteran, a pensioner or a concessional beneficiary
+      `I am an eligible person under the Health Insurance Act 1973` IS A BOOLEAN @desc Whether you are an "eligible person" for Medicare under the Health Insurance Act 1973 s 3 (the Health Insurance Act encoding works this out)
+      `I have, or appear to have, a right to compensation for this condition` IS A BOOLEAN @desc Whether you have received, or established a right to receive, compensation (such as workers' compensation, motor vehicle third party insurance or damages) for the injury, illness or disease you are treated for, or appear to have that right when you attend
+      `the chief executive has decided I am not a compensable patient` IS A BOOLEAN @desc Whether the hospital's chief executive has decided under Order cl 3A(5) that you are not a compensable patient
+      `motor vehicle third party insurance applies or appears to apply` IS A BOOLEAN @desc Whether the Motor Vehicle (Third Party Insurance) Act 1943 applies, or appears to apply, to the payment for your treatment
+      `workers compensation, catastrophic injuries or Defence Force law applies or appears to apply` IS A BOOLEAN @desc Whether the Workers Compensation and Injury Management Act 2023, the Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 or the law relating to the Defence Force applies, or appears to apply, to the payment for your treatment
+      `I am a veteran who elects the DVA arrangement` IS A BOOLEAN @desc Whether you are a veteran who elects to be treated under the arrangement with the Department of Veterans' Affairs
+      `I am a nursing home type patient` IS A BOOLEAN @desc Whether you are a nursing home type patient (a Health Insurance Act 1973 term for a long-stay in-patient who no longer needs acute care)
+      `my election` IS A `My election` @desc Whether, on admission, you elected to be treated as a public or a private patient (an eligible in-patient or same day patient must elect)
+      `I am an asylum seeker` IS A BOOLEAN @desc Whether you have applied for a permanent or temporary protection visa or a safe haven enterprise visa, and the application has not yet been decided
+      `I am an involuntary patient under the Mental Health Act 2014` IS A BOOLEAN @desc Whether you are under an inpatient or community treatment order, another detaining order, or an unexpired referral under the Mental Health Act 2014
+      `the service is part of my Mental Health Act treatment` IS A BOOLEAN @desc Whether this service is part of your treatment under the Mental Health Act 2014
+      `a declaration under s 6(2) of the Health Insurance Act 1973 applies to me` IS A BOOLEAN @desc Whether a declaration under the Health Insurance Act 1973 s 6(2) applies to you, so that you are treated as not an eligible person
+GIVETH A `Charge answer`
+`What does the public hospital charge me for each out-patient medicine item` MEANS
+    CONSIDER `my role`
+    WHEN `I am a patient of a WA public health service` THEN
+        IF `I attend as an out-patient` `how I attend`
+        THEN `the hospital's charge` (`What does the hospital charge me for an out-patient medicine` (`me from my answers` `I am an eligible person under the Health Insurance Act 1973` `I have, or appear to have, a right to compensation for this condition` `the chief executive has decided I am not a compensable patient` `motor vehicle third party insurance applies or appears to apply` `workers compensation, catastrophic injuries or Defence Force law applies or appears to apply` `I am a veteran who elects the DVA arrangement` `I am a nursing home type patient` `my election` `I am an asylum seeker` `I am an involuntary patient under the Mental Health Act 2014` `the service is part of my Mental Health Act treatment` `a declaration under s 6(2) of the Health Insurance Act 1973 applies to me`) `concession`)
+        ELSE `does not arise for you`
+    WHEN `I am a family member or carer of a patient, or stay in hospital with one` THEN `does not arise for you`
+    WHEN `I must pay compensation to someone a public hospital treated for their injury` THEN `does not arise for you`
+    WHEN `I hold information about someone that I obtained through the WA health system` THEN `does not arise for you`
+
+§§§ `Order cll 7, 8, Schedule 1 Divisions 3 and 4 -- an MRI study, a pathology test`
+
+@export What does the public hospital charge me for an MRI study (Health Services (Fees and Charges) Order 2016 (WA) cl 7; Schedule 1 Division 3)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `how I attend` IS A `How I attend` @desc Whether you are an in-patient (admitted to a hospital bed), a day patient (at a day hospital), an out-patient, or a same day patient (admitted and discharged on the same day)
+      `the hospital's MRI attracts Medicare benefits` IS A BOOLEAN @desc Whether the hospital's MRI equipment is equipment for which a Medicare benefit is payable
+      `study` IS A `My MRI study` @desc Which regions of the body are scanned
+      `gadolinium used` IS A BOOLEAN @desc Whether gadolinium is used as a contrast medium
+      `I am an eligible person under the Health Insurance Act 1973` IS A BOOLEAN @desc Whether you are an "eligible person" for Medicare under the Health Insurance Act 1973 s 3 (the Health Insurance Act encoding works this out)
+      `I have, or appear to have, a right to compensation for this condition` IS A BOOLEAN @desc Whether you have received, or established a right to receive, compensation (such as workers' compensation, motor vehicle third party insurance or damages) for the injury, illness or disease you are treated for, or appear to have that right when you attend
+      `the chief executive has decided I am not a compensable patient` IS A BOOLEAN @desc Whether the hospital's chief executive has decided under Order cl 3A(5) that you are not a compensable patient
+      `motor vehicle third party insurance applies or appears to apply` IS A BOOLEAN @desc Whether the Motor Vehicle (Third Party Insurance) Act 1943 applies, or appears to apply, to the payment for your treatment
+      `workers compensation, catastrophic injuries or Defence Force law applies or appears to apply` IS A BOOLEAN @desc Whether the Workers Compensation and Injury Management Act 2023, the Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 or the law relating to the Defence Force applies, or appears to apply, to the payment for your treatment
+      `I am a veteran who elects the DVA arrangement` IS A BOOLEAN @desc Whether you are a veteran who elects to be treated under the arrangement with the Department of Veterans' Affairs
+      `I am a nursing home type patient` IS A BOOLEAN @desc Whether you are a nursing home type patient (a Health Insurance Act 1973 term for a long-stay in-patient who no longer needs acute care)
+      `my election` IS A `My election` @desc Whether, on admission, you elected to be treated as a public or a private patient (an eligible in-patient or same day patient must elect)
+      `I am an asylum seeker` IS A BOOLEAN @desc Whether you have applied for a permanent or temporary protection visa or a safe haven enterprise visa, and the application has not yet been decided
+      `I am an involuntary patient under the Mental Health Act 2014` IS A BOOLEAN @desc Whether you are under an inpatient or community treatment order, another detaining order, or an unexpired referral under the Mental Health Act 2014
+      `the service is part of my Mental Health Act treatment` IS A BOOLEAN @desc Whether this service is part of your treatment under the Mental Health Act 2014
+      `a declaration under s 6(2) of the Health Insurance Act 1973 applies to me` IS A BOOLEAN @desc Whether a declaration under the Health Insurance Act 1973 s 6(2) applies to you, so that you are treated as not an eligible person
+GIVETH A `Charge answer`
+`What does the public hospital charge me for an MRI study` MEANS
+    CONSIDER `my role`
+    WHEN `I am a patient of a WA public health service` THEN `the hospital's charge` (`What does the hospital charge me for an MRI study` (`me from my answers` `I am an eligible person under the Health Insurance Act 1973` `I have, or appear to have, a right to compensation for this condition` `the chief executive has decided I am not a compensable patient` `motor vehicle third party insurance applies or appears to apply` `workers compensation, catastrophic injuries or Defence Force law applies or appears to apply` `I am a veteran who elects the DVA arrangement` `I am a nursing home type patient` `my election` `I am an asylum seeker` `I am an involuntary patient under the Mental Health Act 2014` `the service is part of my Mental Health Act treatment` `a declaration under s 6(2) of the Health Insurance Act 1973 applies to me`) `how I attend` `the hospital's MRI attracts Medicare benefits` `study` `gadolinium used`)
+    WHEN `I am a family member or carer of a patient, or stay in hospital with one` THEN `does not arise for you`
+    WHEN `I must pay compensation to someone a public hospital treated for their injury` THEN `does not arise for you`
+    WHEN `I hold information about someone that I obtained through the WA health system` THEN `does not arise for you`
+
+@export What does the public hospital charge me for a pathology service (Health Services (Fees and Charges) Order 2016 (WA) cll 8, 14(3), (4); Schedule 1 Division 4)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `how I attend` IS A `How I attend` @desc Whether you are an in-patient (admitted to a hospital bed), a day patient (at a day hospital), an out-patient, or a same day patient (admitted and discharged on the same day)
+      `I elect to be a private pathology out-patient` IS A BOOLEAN @desc Whether, as an out-patient, you chose to be treated privately for this pathology test
+      `the MBS amount` IS A NUMBER @desc The Medicare Benefits Schedule fee for the pathology item, in dollars
+      `I am an eligible person under the Health Insurance Act 1973` IS A BOOLEAN @desc Whether you are an "eligible person" for Medicare under the Health Insurance Act 1973 s 3 (the Health Insurance Act encoding works this out)
+      `I have, or appear to have, a right to compensation for this condition` IS A BOOLEAN @desc Whether you have received, or established a right to receive, compensation (such as workers' compensation, motor vehicle third party insurance or damages) for the injury, illness or disease you are treated for, or appear to have that right when you attend
+      `the chief executive has decided I am not a compensable patient` IS A BOOLEAN @desc Whether the hospital's chief executive has decided under Order cl 3A(5) that you are not a compensable patient
+      `motor vehicle third party insurance applies or appears to apply` IS A BOOLEAN @desc Whether the Motor Vehicle (Third Party Insurance) Act 1943 applies, or appears to apply, to the payment for your treatment
+      `workers compensation, catastrophic injuries or Defence Force law applies or appears to apply` IS A BOOLEAN @desc Whether the Workers Compensation and Injury Management Act 2023, the Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016 or the law relating to the Defence Force applies, or appears to apply, to the payment for your treatment
+      `I am a veteran who elects the DVA arrangement` IS A BOOLEAN @desc Whether you are a veteran who elects to be treated under the arrangement with the Department of Veterans' Affairs
+      `I am a nursing home type patient` IS A BOOLEAN @desc Whether you are a nursing home type patient (a Health Insurance Act 1973 term for a long-stay in-patient who no longer needs acute care)
+      `my election` IS A `My election` @desc Whether, on admission, you elected to be treated as a public or a private patient (an eligible in-patient or same day patient must elect)
+      `I am an asylum seeker` IS A BOOLEAN @desc Whether you have applied for a permanent or temporary protection visa or a safe haven enterprise visa, and the application has not yet been decided
+      `I am an involuntary patient under the Mental Health Act 2014` IS A BOOLEAN @desc Whether you are under an inpatient or community treatment order, another detaining order, or an unexpired referral under the Mental Health Act 2014
+      `the service is part of my Mental Health Act treatment` IS A BOOLEAN @desc Whether this service is part of your treatment under the Mental Health Act 2014
+      `a declaration under s 6(2) of the Health Insurance Act 1973 applies to me` IS A BOOLEAN @desc Whether a declaration under the Health Insurance Act 1973 s 6(2) applies to you, so that you are treated as not an eligible person
+GIVETH A `Charge answer`
+`What does the public hospital charge me for a pathology service` MEANS
+    CONSIDER `my role`
+    WHEN `I am a patient of a WA public health service` THEN `the hospital's charge` (`What does the hospital charge me for a pathology service` (`me from my answers` `I am an eligible person under the Health Insurance Act 1973` `I have, or appear to have, a right to compensation for this condition` `the chief executive has decided I am not a compensable patient` `motor vehicle third party insurance applies or appears to apply` `workers compensation, catastrophic injuries or Defence Force law applies or appears to apply` `I am a veteran who elects the DVA arrangement` `I am a nursing home type patient` `my election` `I am an asylum seeker` `I am an involuntary patient under the Mental Health Act 2014` `the service is part of my Mental Health Act treatment` `a declaration under s 6(2) of the Health Insurance Act 1973 applies to me`) `how I attend` `I elect to be a private pathology out-patient` `the MBS amount`)
+    WHEN `I am a family member or carer of a patient, or stay in hospital with one` THEN `does not arise for you`
+    WHEN `I must pay compensation to someone a public hospital treated for their injury` THEN `does not arise for you`
+    WHEN `I hold information about someone that I obtained through the WA health system` THEN `does not arise for you`
+
+§§§ `ss 55(2), 57 -- is what I am asked to pay lawful, and do I owe it`
+
+-- The baseline takes the Order's charge as a `Charge` record; here its two parts are asked as plain facts.
+@export Is the amount the hospital asks me to pay consistent with the Fees and Charges Order (Health Services Act 2016 (WA) s 55(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `how the Order fixes the charge` IS A `How my charge is fixed` @desc How the Order fixes the charge for the service (the answer to one of the charge questions): no charge, a fixed amount, no more than an amount, at cost, not fixed by the Order, charged per out-patient service, or no fees at all (cl 6A)
+      `the amount the Order fixes` IS A NUMBER @desc The amount or ceiling the Order fixes for the service, in dollars (0 if none)
+      `asked to pay` IS A NUMBER @desc What the hospital asks you to pay, in dollars, for the same unit (a day, a service, an item)
+      `consistent with the policy frameworks` IS A BOOLEAN @desc Whether the charge is consistent with the Department's policy frameworks on fees (s 26(2)(e))
+GIVETH A `Yes or no`
+`Is what the hospital asks me to pay consistent with the Order` MEANS
+    CONSIDER `my role`
+    WHEN `I am a patient of a WA public health service` THEN `yes if` (`Is the charge consistent with the Order` (`Charge` WITH `how it is fixed` IS `how the Order fixes the charge`, `amount` IS `the amount the Order fixes`) `asked to pay` `consistent with the policy frameworks`)
+    WHEN `I am a family member or carer of a patient, or stay in hospital with one` THEN `does not arise for you`
+    WHEN `I must pay compensation to someone a public hospital treated for their injury` THEN `does not arise for you`
+    WHEN `I hold information about someone that I obtained through the WA health system` THEN `does not arise for you`
+
+@export Do I owe the hospital the fee it has imposed, after any waiver (Health Services Act 2016 (WA) s 57)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `lawfully imposed` IS A BOOLEAN @desc Whether the fee was imposed under s 55 (the hospital may charge you, and the amount is consistent with the Order)
+      `the amount` IS A NUMBER @desc The fee imposed, in dollars
+      `the amount waived` IS A NUMBER @desc How much of it the hospital has waived or refunded, in dollars
+GIVETH AN `Amount`
+`How much do I owe the hospital after any waiver` MEANS
+    CONSIDER `my role`
+    WHEN `I am a patient of a WA public health service` THEN amount (`How much do I owe the hospital` `lawfully imposed` `the amount` `the amount waived`)
+    WHEN `I am a family member or carer of a patient, or stay in hospital with one` THEN `does not arise for you`
+    WHEN `I must pay compensation to someone a public hospital treated for their injury` THEN `does not arise for you`
+    WHEN `I hold information about someone that I obtained through the WA health system` THEN `does not arise for you`
+
+§§§ `ss 53A, 53B, 57A, 57C, 57D -- a payment for my injury, and the hospital's compensable charge`
+
+@export I receive a payment for my injury: is it compensation that the hospital can claim against (Health Services Act 2016 (WA) s 53B)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I receive, or am to receive, a payment for the injury or illness I was treated for` IS A BOOLEAN @desc Whether you have received, or are to receive, damages, a settlement, or an insurance or compensation payment for the injury or illness the public hospital treated you for
+      `kind` IS A `Kind of payment` @desc What the payment is
+      `I contributed to the scheme` IS A BOOLEAN @desc Whether the payment comes from a scheme you paid into (for example your own insurance)
+      `excluded by regulation` IS A BOOLEAN @desc Whether the regulations exclude a payment of this kind (s 53B(2))
+      `date paid or payable as YYYYMMDD` IS A NUMBER @desc When the payment is paid or payable, as a number such as 20290815
+GIVETH A `Yes or no`
+`Is the payment for my injury compensation the hospital can claim against` MEANS
+    CONSIDER `my role`
+    WHEN `I am a patient of a WA public health service` THEN
+        IF `I receive, or am to receive, a payment for the injury or illness I was treated for`
+        THEN `yes if` (`Is my payment compensation` `kind` `I contributed to the scheme` `excluded by regulation` `date paid or payable as YYYYMMDD`)
+        ELSE `does not arise for you`
+    WHEN `I am a family member or carer of a patient, or stay in hospital with one` THEN `does not arise for you`
+    WHEN `I must pay compensation to someone a public hospital treated for their injury` THEN `does not arise for you`
+    WHEN `I hold information about someone that I obtained through the WA health system` THEN `does not arise for you`
+
+@export I receive a payment for my injury: can the hospital recover its compensable charge from me out of my compensation (Health Services Act 2016 (WA) ss 57A, 57C)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I receive, or am to receive, a payment for the injury or illness I was treated for` IS A BOOLEAN @desc Whether you have received, or are to receive, damages, a settlement, or an insurance or compensation payment for the injury or illness the public hospital treated you for
+      `I received the service from a health service provider for the injury` IS A BOOLEAN @desc Whether a WA health service provider treated you for the injury or illness
+      `I was charged a compensable charge at the time` IS A BOOLEAN @desc Whether the hospital already charged you at the compensable rate for the service
+      `the payment is compensation` IS A BOOLEAN @desc Whether what you receive is compensation under s 53B
+      `I receive the compensation` IS A BOOLEAN @desc Whether you (not only the insurer or other payer) have received compensation for the injury
+      `the hospital has waived it` IS A BOOLEAN @desc Whether the hospital has waived the compensable charge (s 57C)
+GIVETH A `Yes or no`
+`Can the hospital recover its compensable charge from my compensation` MEANS
+    CONSIDER `my role`
+    WHEN `I am a patient of a WA public health service` THEN
+        IF `I receive, or am to receive, a payment for the injury or illness I was treated for`
+        THEN `yes if` (`Can the hospital recover the compensable charge from me` `I received the service from a health service provider for the injury` `I was charged a compensable charge at the time` `the payment is compensation` `I receive the compensation` `the hospital has waived it`)
+        ELSE `does not arise for you`
+    WHEN `I am a family member or carer of a patient, or stay in hospital with one` THEN `does not arise for you`
+    WHEN `I must pay compensation to someone a public hospital treated for their injury` THEN `does not arise for you`
+    WHEN `I hold information about someone that I obtained through the WA health system` THEN `does not arise for you`
+
+@export I receive a payment for my injury: must the insurer or other payer pay the hospital before it pays me my compensation (Health Services Act 2016 (WA) s 57D)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I receive, or am to receive, a payment for the injury or illness I was treated for` IS A BOOLEAN @desc Whether you have received, or are to receive, damages, a settlement, or an insurance or compensation payment for the injury or illness the public hospital treated you for
+      `the payer has not paid me in full` IS A BOOLEAN @desc Whether the insurer or other payer has not yet paid you all the compensation
+      `the hospital has not been paid its compensable charge` IS A BOOLEAN @desc Whether the hospital's compensable charge is still unpaid
+      `the hospital's chief executive gave the payer notice` IS A BOOLEAN @desc Whether the hospital's chief executive has given the payer notice of the charge
+GIVETH A `Yes or no`
+`Must the payer pay the hospital before paying me my compensation` MEANS
+    CONSIDER `my role`
+    WHEN `I am a patient of a WA public health service` THEN
+        IF `I receive, or am to receive, a payment for the injury or illness I was treated for`
+        THEN `yes if` (`Must the payer pay the hospital before paying me` `the payer has not paid me in full` `the hospital has not been paid its compensable charge` `the hospital's chief executive gave the payer notice`)
+        ELSE `does not arise for you`
+    WHEN `I am a family member or carer of a patient, or stay in hospital with one` THEN `does not arise for you`
+    WHEN `I must pay compensation to someone a public hospital treated for their injury` THEN `does not arise for you`
+    WHEN `I hold information about someone that I obtained through the WA health system` THEN `does not arise for you`
+
+§§§ `ss 34(2)(f), 217, 219, 220 -- what the Act gives me as a patient`
+
+@export Must the health service that treats me have a procedure for dealing with my complaint (Health Services Act 2016 (WA) s 34(2)(f))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `provider` IS A `Who provides my health service` @desc Who gives you the care: a WA health service provider (an area health service), the Department CEO, a contracted health entity under a contract with one of them or the State, or a private provider with no such contract
+GIVETH A `Yes or no`
+`Must the health service that treats me have a complaints procedure` MEANS
+    CONSIDER `my role`
+    WHEN `I am a patient of a WA public health service` THEN `yes if` (`Must my provider have a complaints procedure` `provider`)
+    WHEN `I am a family member or carer of a patient, or stay in hospital with one` THEN `does not arise for you`
+    WHEN `I must pay compensation to someone a public hospital treated for their injury` THEN `does not arise for you`
+    WHEN `I hold information about someone that I obtained through the WA health system` THEN `does not arise for you`
+
+@export May someone who got my information through the health system collect, use or disclose it (Health Services Act 2016 (WA) ss 219, 220)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `obtained through the Act` IS A BOOLEAN @desc Whether they got your information through their work under the Act, or through a disclosure made under it
+      `it is personal information` IS A BOOLEAN @desc Whether the information is about you personally (not statistics)
+      `why` IS A `Why my information is disclosed` @desc Why they collect, use or disclose it
+      `in good faith` IS A BOOLEAN @desc Whether they act in good faith
+GIVETH A `Yes or no`
+`May someone who got my information through the health system use or disclose it` MEANS
+    CONSIDER `my role`
+    WHEN `I am a patient of a WA public health service` THEN `yes if` (`May my information be disclosed` `obtained through the Act` `it is personal information` `why` `in good faith`)
+    WHEN `I am a family member or carer of a patient, or stay in hospital with one` THEN `does not arise for you`
+    WHEN `I must pay compensation to someone a public hospital treated for their injury` THEN `does not arise for you`
+    WHEN `I hold information about someone that I obtained through the WA health system` THEN `does not arise for you`
+
+@export May the hospital's chief executive tell someone about my health without my consent (Health Services Act 2016 (WA) s 217)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the chief executive thinks it relevant to my care or wellbeing` IS A BOOLEAN @desc Whether, in the chief executive's opinion, the information is or is likely to be relevant to your treatment, care, health, safety or wellbeing
+      `the chief executive thinks they have a sufficient interest` IS A BOOLEAN @desc Whether, in the chief executive's opinion, the person told has a sufficient interest in your treatment, care, health, safety or wellbeing
+      `in accordance with the regulations` IS A BOOLEAN @desc Whether the disclosure follows the regulations
+GIVETH A `Yes or no`
+`May the chief executive tell someone about my health without my consent` MEANS
+    CONSIDER `my role`
+    WHEN `I am a patient of a WA public health service` THEN `yes if` (`May the chief executive disclose my health information` `the chief executive thinks it relevant to my care or wellbeing` `the chief executive thinks they have a sufficient interest` `in accordance with the regulations`)
+    WHEN `I am a family member or carer of a patient, or stay in hospital with one` THEN `does not arise for you`
+    WHEN `I must pay compensation to someone a public hospital treated for their injury` THEN `does not arise for you`
+    WHEN `I hold information about someone that I obtained through the WA health system` THEN `does not arise for you`
+
+@export What is the most a person can be fined for wrongly disclosing my information (Health Services Act 2016 (WA) s 219(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH AN `Amount`
+`What is the most a person can be fined for wrongly disclosing my information` MEANS
+    CONSIDER `my role`
+    WHEN `I am a patient of a WA public health service` THEN amount `What is the most someone can be fined for disclosing my information`
+    WHEN `I am a family member or carer of a patient, or stay in hospital with one` THEN `does not arise for you`
+    WHEN `I must pay compensation to someone a public hospital treated for their injury` THEN `does not arise for you`
+    WHEN `I hold information about someone that I obtained through the WA health system` THEN `does not arise for you`
+
+§§ `For the family member or carer of a patient, or a person staying in hospital with one`
+
+§§§ `Order Schedule 1 Division 1 item 7 -- staying with the patient`
+
+@export I am staying in hospital with a patient: what does the public hospital charge me per day (Health Services (Fees and Charges) Order 2016 (WA) Schedule 1 Division 1 item 7)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I am staying in the hospital with the patient` IS A BOOLEAN @desc Whether you are staying in the hospital's accommodation with the patient
+      `why I am staying` IS A `Why I am staying with the patient` @desc Why you are staying in the hospital with the patient
+GIVETH A `Charge answer`
+`What does the public hospital charge me per day to stay with the patient` MEANS
+    CONSIDER `my role`
+    WHEN `I am a family member or carer of a patient, or stay in hospital with one` THEN
+        IF `I am staying in the hospital with the patient`
+        THEN `the hospital's charge` (`What do I pay to stay with a patient` `why I am staying`)
+        ELSE `does not arise for you`
+    WHEN `I am a patient of a WA public health service` THEN `does not arise for you`
+    WHEN `I must pay compensation to someone a public hospital treated for their injury` THEN `does not arise for you`
+    WHEN `I hold information about someone that I obtained through the WA health system` THEN `does not arise for you`
+
+§§§ `s 217 -- being told about the patient's health`
+
+@export May the hospital's chief executive tell me about the patient's health without the patient's consent (Health Services Act 2016 (WA) s 217(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the chief executive thinks the information relevant to the patient's care or wellbeing` IS A BOOLEAN @desc Whether, in the chief executive's opinion, the information is or is likely to be relevant to the patient's treatment, care, health, safety or wellbeing
+      `the chief executive thinks I have a sufficient interest in the patient` IS A BOOLEAN @desc Whether, in the chief executive's opinion, you have a sufficient interest in the patient's treatment, care, health, safety or wellbeing
+      `the disclosure follows the regulations` IS A BOOLEAN @desc Whether the disclosure would follow the regulations
+GIVETH A `Yes or no`
+`May the chief executive tell me about the patient's health` MEANS
+    CONSIDER `my role`
+    WHEN `I am a family member or carer of a patient, or stay in hospital with one` THEN `yes if` (`May the chief executive disclose my health information` `the chief executive thinks the information relevant to the patient's care or wellbeing` `the chief executive thinks I have a sufficient interest in the patient` `the disclosure follows the regulations`)
+    WHEN `I am a patient of a WA public health service` THEN `does not arise for you`
+    WHEN `I must pay compensation to someone a public hospital treated for their injury` THEN `does not arise for you`
+    WHEN `I hold information about someone that I obtained through the WA health system` THEN `does not arise for you`
+
+§§ `For the person who must pay compensation to someone a public hospital treated`
+
+-- Helpers from the deposited text where the baseline has no rule.
+--
+-- s 53A: "compensation payer means a person who must pay compensation to another person in relation to an injury".
+-- s 57A(1): the section applies if "(a) a person (a patient) receives a health service from a health service provider in
+-- relation to an injury; and (b) the health service provider ... did not charge the patient a compensable charge for the
+-- service". (2): "When compensation is paid or payable in relation to an injury for which the patient received a health
+-- service, the compensable charge for the health service is payable to the health service provider". (3): it "may recover
+-- the compensable charge payable under subsection (2) from -- (a) a compensation payer in relation to the injury if the
+-- compensation payer has not paid, or has partially paid, the compensation to the patient or patient's estate". Asked of
+-- the payer, compensation is payable by the role's own terms.
+GIVEN `the patient was treated by a health service provider for the injury` IS A BOOLEAN
+      `the hospital did not charge the patient a compensable charge at the time` IS A BOOLEAN
+      `I have not paid the patient all the compensation` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `s 57A(3)(a) -- the compensable charge may be recovered from the compensation payer` IF
+        `the patient was treated by a health service provider for the injury`
+    AND `the hospital did not charge the patient a compensable charge at the time`
+    AND `I have not paid the patient all the compensation`
+
+-- s 57A(4): "If there is more than 1 compensation payer under subsection (3)(a), each person liable to pay compensation is
+-- jointly and severally liable to the health service provider for the compensable charge for the health service."
+`s 57A(4) -- each compensation payer is liable for the whole charge` MEANS TRUE
+
+-- s 57A(5): "If the compensation payer pays the compensable charge to the health service provider under subsection (3)(a),
+-- the payment discharges the compensation payer's liability to pay -- (a) an amount of compensation equivalent to the
+-- payment made to the patient or the patient's estate; and (b) the compensable charge required to be paid under this Part."
+`s 57A(5) -- paying the charge discharges an equal amount of the compensation` MEANS TRUE
+
+§§§ `ss 57A, 57D -- the hospital's compensable charge`
+
+@export Can the hospital recover its compensable charge for the patient's treatment from me (Health Services Act 2016 (WA) s 57A(1)-(3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the patient was treated by a health service provider for the injury` IS A BOOLEAN @desc Whether a WA health service provider treated the patient for the injury or illness you must compensate
+      `the hospital did not charge the patient a compensable charge at the time` IS A BOOLEAN @desc Whether the hospital did not charge the patient at the compensable rate when it treated them
+      `I have not paid the patient all the compensation` IS A BOOLEAN @desc Whether you have not yet paid, or have only partly paid, the compensation to the patient or their estate
+GIVETH A `Yes or no`
+`Can the hospital recover its compensable charge from me as the payer` MEANS
+    CONSIDER `my role`
+    WHEN `I must pay compensation to someone a public hospital treated for their injury` THEN `yes if` (`s 57A(3)(a) -- the compensable charge may be recovered from the compensation payer` `the patient was treated by a health service provider for the injury` `the hospital did not charge the patient a compensable charge at the time` `I have not paid the patient all the compensation`)
+    WHEN `I am a patient of a WA public health service` THEN `does not arise for you`
+    WHEN `I am a family member or carer of a patient, or stay in hospital with one` THEN `does not arise for you`
+    WHEN `I hold information about someone that I obtained through the WA health system` THEN `does not arise for you`
+
+@export Must I pay the hospital its compensable charge before I pay the patient their compensation (Health Services Act 2016 (WA) s 57D)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have not paid the patient all the compensation` IS A BOOLEAN @desc Whether you have not yet paid, or have only partly paid, the compensation to the patient or their estate
+      `the hospital has not been paid its compensable charge` IS A BOOLEAN @desc Whether the hospital's compensable charge is still unpaid
+      `the hospital's chief executive has given me notice of the charge` IS A BOOLEAN @desc Whether the chief executive of the health service provider has given you notice of the compensable charge it may recover
+GIVETH A `Yes or no`
+`Must I pay the hospital before I pay the patient` MEANS
+    CONSIDER `my role`
+    WHEN `I must pay compensation to someone a public hospital treated for their injury` THEN `yes if` (`Must the payer pay the hospital before paying me` `I have not paid the patient all the compensation` `the hospital has not been paid its compensable charge` `the hospital's chief executive has given me notice of the charge`)
+    WHEN `I am a patient of a WA public health service` THEN `does not arise for you`
+    WHEN `I am a family member or carer of a patient, or stay in hospital with one` THEN `does not arise for you`
+    WHEN `I hold information about someone that I obtained through the WA health system` THEN `does not arise for you`
+
+@export Someone else must also pay compensation for the injury: is each of us liable to the hospital for the whole compensable charge (Health Services Act 2016 (WA) s 57A(4))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `another person must also pay compensation for the injury` IS A BOOLEAN @desc Whether someone else (another wrongdoer, or another insurer) must also pay compensation to the patient for the same injury
+GIVETH A `Yes or no`
+`Is each of us liable for the whole compensable charge` MEANS
+    CONSIDER `my role`
+    WHEN `I must pay compensation to someone a public hospital treated for their injury` THEN
+        IF `another person must also pay compensation for the injury`
+        THEN `yes if` `s 57A(4) -- each compensation payer is liable for the whole charge`
+        ELSE `does not arise for you`
+    WHEN `I am a patient of a WA public health service` THEN `does not arise for you`
+    WHEN `I am a family member or carer of a patient, or stay in hospital with one` THEN `does not arise for you`
+    WHEN `I hold information about someone that I obtained through the WA health system` THEN `does not arise for you`
+
+@export If I pay the hospital its compensable charge, does that count against the compensation I owe the patient (Health Services Act 2016 (WA) s 57A(5))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH A `Yes or no`
+`Does paying the hospital count against the compensation I owe` MEANS
+    CONSIDER `my role`
+    WHEN `I must pay compensation to someone a public hospital treated for their injury` THEN `yes if` `s 57A(5) -- paying the charge discharges an equal amount of the compensation`
+    WHEN `I am a patient of a WA public health service` THEN `does not arise for you`
+    WHEN `I am a family member or carer of a patient, or stay in hospital with one` THEN `does not arise for you`
+    WHEN `I hold information about someone that I obtained through the WA health system` THEN `does not arise for you`
+
+§§ `For the person who holds information obtained through the WA health system`
+
+-- Why the holder would collect, use or disclose the information: the s 220(1) circumstances, worded from the holder's
+-- seat, mapped to the baseline's own list (which is worded from the patient's). Listed in full, with no OTHERWISE.
+DECLARE `Why I would use or disclose it` IS ONE OF
+    `in performing a function under this Act or another written law`
+    `for the health information system, or under Part 17 Division 2`
+    `as this Act otherwise allows`
+    `as another law requires or allows`
+    `for a court, in proceedings or under an order`
+    `in investigating a suspected offence or disciplinary matter, or in those proceedings`
+    `with the consent of the person the information is about`
+    `in a circumstance the regulations prescribe`
+    `for none of these reasons`
+
+GIVEN `why I would` IS A `Why I would use or disclose it`
+GIVETH A `Why my information is disclosed`
+`the baseline's reason for` `why I would` MEANS
+    CONSIDER `why I would`
+    WHEN `in performing a function under this Act or another written law` THEN `to perform a function under this Act or another written law`
+    WHEN `for the health information system, or under Part 17 Division 2` THEN `for the health information system or under Division 2 of Part 17`
+    WHEN `as this Act otherwise allows` THEN `otherwise under this Act`
+    WHEN `as another law requires or allows` THEN `under another law`
+    WHEN `for a court, in proceedings or under an order` THEN `to a court in proceedings, or under a court order`
+    WHEN `in investigating a suspected offence or disciplinary matter, or in those proceedings` THEN `to investigate a suspected offence or disciplinary matter, or for those proceedings`
+    WHEN `with the consent of the person the information is about` THEN `with my consent`
+    WHEN `in a circumstance the regulations prescribe` THEN `in a prescribed circumstance`
+    WHEN `for none of these reasons` THEN `for no such reason`
+
+§§§ `ss 219, 220 -- confidentiality`
+
+@export May I collect, use or disclose this information (Health Services Act 2016 (WA) ss 219, 220)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I obtained it through my work under the Act, or through a disclosure made under it` IS A BOOLEAN @desc Whether you obtained the information because of your office, position, employment or engagement under or for the purposes of the Act, or through a disclosure made to you under the Act (for example by a chief executive under s 217)
+      `it is personal information about someone` IS A BOOLEAN @desc Whether the information is personal information about an individual, rather than statistical or other information that is not
+      `why I would` IS A `Why I would use or disclose it` @desc Why you would collect, use or disclose it: in performing a function under a written law; for the health information system; as this Act otherwise allows; as another law requires or allows; for a court; in an investigation of a suspected offence or disciplinary matter; with the consent of the person it is about; in a prescribed circumstance; or none of these
+      `I act in good faith` IS A BOOLEAN @desc Whether you would act in good faith
+GIVETH A `Yes or no`
+`May I collect, use or disclose this information` MEANS
+    CONSIDER `my role`
+    WHEN `I hold information about someone that I obtained through the WA health system` THEN `yes if` (`May my information be disclosed` `I obtained it through my work under the Act, or through a disclosure made under it` `it is personal information about someone` (`the baseline's reason for` `why I would`) `I act in good faith`)
+    WHEN `I am a patient of a WA public health service` THEN `does not arise for you`
+    WHEN `I am a family member or carer of a patient, or stay in hospital with one` THEN `does not arise for you`
+    WHEN `I must pay compensation to someone a public hospital treated for their injury` THEN `does not arise for you`
+
+@export What is the most I can be fined for wrongly collecting, using or disclosing the information (Health Services Act 2016 (WA) s 219(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH AN `Amount`
+`What is the most I can be fined for wrongly disclosing the information` MEANS
+    CONSIDER `my role`
+    WHEN `I hold information about someone that I obtained through the WA health system` THEN amount `What is the most someone can be fined for disclosing my information`
+    WHEN `I am a patient of a WA public health service` THEN `does not arise for you`
+    WHEN `I am a family member or carer of a patient, or stay in hospital with one` THEN `does not arise for you`
+    WHEN `I must pay compensation to someone a public hospital treated for their injury` THEN `does not arise for you`
