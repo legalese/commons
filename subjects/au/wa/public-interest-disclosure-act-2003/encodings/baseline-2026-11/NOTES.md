@@ -47,7 +47,7 @@ run once in a scratch file, since deleted, and showed "assertion failed".
 |---|---|---|---|---|
 | `pid-dates.l4` | 0 | 0 | 0 | 0 |
 | `pid-discloser.l4` | 0 | 0 | 0 | 0 |
-| `pid-cases.l4` | 0 | 0 | 173 | 173 |
+| `pid-cases.l4` | 0 | 0 | 176 | 176 |
 
 Every exported question has cases, with the edges: month arithmetic at month ends, 28 and 29 February and the year end;
 the s 10(1) notice on the disclosure day, the day before the last day, the last day and the day after, and after a
@@ -98,9 +98,11 @@ The 2026-10-18 defaults:
 ## Scope
 
 **In.** s 3 (public interest information, detrimental action; public authority, public officer, public sector
-contractor as choices); s 5 (all of it: (1), (2), (3), (4), (5)(a), (6A) and (6) in the answers); s 6; s 7A; s 7; s 8;
+contractor as choices); s 5 ((1), (2), (3), (4), (5)(a), (6A) and (6) in the answers; (5)(b) by absence: no question asks whether you can identify
+anyone the information concerns, so it never bears on an answer); s 6; s 7A; s 7; s 8;
 s 10; s 11 (as the limit on the content of a s 10 report); s 12(1), (3), (4), (5A); s 13; s 14 (in the penalty table);
-s 15A; s 15B; s 15; s 16(1), (2), (3A), (3); s 17; s 18A; s 23(1)(a) (the designated officer as a recipient) and
+s 15A; s 15B; s 15; s 16(1), (2), (3A), (3) (the informant's question takes (a), (b), (d), (e) and (g); (c), action
+under s 9(1)(a) to (c), is taken only by a proper authority, never by the informant, so it is left out with s 9); s 17; s 18A; s 23(1)(a) (the designated officer as a recipient) and
 s 23(1)(b) (named in the s 15B answer); s 24; s 25 (named in the s 13 answer).
 
 **Out, and why.**
@@ -168,6 +170,11 @@ Each line: the provision, the function, the answer taken, the other reading.
   revealed` -- a disclosure that is not appropriate is answered NOTHING-kind -- the text's no.
 - **F16** s 24(1) -- `s 24 -- is my disclosure an offence` -- a statement made honestly, or not to a proper authority, is
   answered NOTHING-kind (s 24 does not reach it; other laws may) -- the text's no.
+- **F17** s 5(3)(a) "a police officer" (not defined in this Act) -- `s 5(3) -- made to a proper authority` -- the
+  Commissioner of Police counts: Interpretation Act 1984 s 5 defines a police officer as a person appointed under Police
+  Act 1892 Part I to be a member of the Police Force, the Commissioner is appointed under Part I (Police Act s 5), and
+  Police Act s 34 leaves the Commissioner out of "police officer" only for Part III -- the Commissioner not a police
+  officer, since (d) names the Commissioner separately and the Commissioner is not "appointed ... to be a member".
 
 Sites decided without a fork line: the "means" definitions (public interest information) and "if, and only if" (s 5(2))
 answer the text's no when they fail; each paragraph of s 5(3) is a "where" condition (ruling (b) of 2026-11-05), so a
