@@ -171,10 +171,12 @@ checked by script; all BOOLEAN, does not arise when FALSE):
 | `my will was made in contemplation of a marriage` | will-maker: s 14(2) |
 | `something has happened to my marriage since I made the will` | will-maker: s 14A(3) (has it ended) and s 14A(2) (does the ending revoke) |
 | `my will has been revoked` | will-maker: s 16(1) |
-| `the will-maker has died` | beneficiary or family: s 32 (the deceased's informal document), validity at death, ss 26-27 (what becomes of a gift), s 27 (the grandchild's question), and the left-out child's question |
 
 The will-maker's capacity, form, s 20, alteration, revocation and statutory-will questions arise for every will-maker,
-the s 13 question for every role it is about, and the witness's for every witness, so they take none.
+the s 13 question for every role it is about, and the witness's for every witness, so they take none. The beneficiary or
+family's questions take none either: the role is someone named in the will of a person who has died, or their family,
+so the death holds by the role's own terms (QA2; until 6 November 2026 five of them took `the will-maker has died` as a
+situation input).
 
 **Decisions.**
 
@@ -194,12 +196,52 @@ the s 13 question for every role it is about, and the witness's for every witnes
 - s 40 stays with the will-maker, phrased as the baseline phrases it. A fourth seat, the family member who applies for a
   statutory will, was considered and left out: it would have one question.
 
+- **QA1. The validity questions in a form the site can drop** (fixed 6 November 2026, after verification). The site's
+  question form proves that a question does not arise for a role by trying every combination of its open yes/no and
+  choice inputs, and gives up past 1 024. "Is my will valid in form" and "Is the will I made valid" took twelve yes/no
+  inputs (4 096 combinations) and "Was the deceased's will valid" fourteen with the death and the Court (16 384), so the
+  form kept them open for the roles they are not about (verification: 217 such states), although the code answers
+  `does not arise for you` from the role alone. Two changes, each giving the baseline's answer for every input:
+  - The validity questions no longer ask whether a witness, or a witness's spouse, takes a gift: the baseline's record
+    keeps that field "read by nothing" (s 8 and s 11 do not disqualify a beneficiary), so the layer passes FALSE. The s 8
+    question "Is my will properly signed and witnessed" still asks it, as before, to show that it changes nothing.
+  - The routes other than s 8 are one choice, `another route to a valid will` IS AN `Another route to a valid will`:
+    `none of these`; conforms to the law of where it was signed, or of the will-maker's domicile, habitual residence or
+    nationality (s 20(1)); as to land or a building, conforms to the law of where it is (s 20(2)(b)); an international
+    will (Part XA); a statutory will (Part XI). The baseline reads s 20(1), s 20(2)(b) with `as to land or a building`,
+    Part XA and Part XI only joined by OR, and s 20 only as s 20(1) OR (land AND s 20(2)(b)), so one value that holds
+    gives its answer, and `none of these` the answer for none (including a will that conforms to the law where land is,
+    asked about other property). `the route for` and `it is as to land` build the baseline's `Another route` and its
+    `as to land or a building`. s 17 (a privileged will) stays its own yes/no, because s 7 reads it too. The s 20
+    question takes the same choice, so the form asks it once.
+  The largest question, "Was the deceased's will valid", now has 640 combinations (five yes/no s 8 facts, the route, s 17
+  and the Court's s 32 satisfaction); "Is the will I made valid" 320. Run on a local jl4-service through the site's form engine (100 random completions per question,
+  for each role and each value of each situation input), the layer shows no ground-truth issue: no question kept that
+  never arises, none dropped that arises, no evaluation failing.
+- **QA2. The beneficiary's questions and the date of death** (fixed 6 November 2026, after verification). The beneficiary
+  or family's role already says the will-maker has died, yet five of its questions asked `the will-maker has died` as a
+  situation, and its s 13 question did not. The situation is gone: those questions call the baseline with the death TRUE
+  by the role's own terms. The s 13 question, which the witness also asks, required `the date the will-maker died` of a
+  witness whose will-maker may be living (its `@desc` said to give a later date). It now takes `the will-maker has died`
+  (an ordinary yes/no input, not a situation: the question arises for the witness either way) before the date; for a
+  witness whose will-maker is living the layer passes the baseline's `the day the Wills Amendment Act 2007 commenced`, as
+  for the will-maker, and the date is not asked. The beneficiary is not asked whether the will-maker has died. The
+  date's `@desc` is now "The date the will-maker died" wherever it is taken.
+- **QA3. Deploying the layer needs the stable `daydate.l4` with it** (recorded 6 November 2026, after verification). The
+  baseline `wills-making.l4` imports `daydate`; on the site's jl4-service (b98) the service's own daydate gives "multiple
+  definitions for `__GEQ__`" in the baseline's `is on or after`, so a deployment of `wills-qa.l4` and `wills-making.l4`
+  (or of the baseline alone) is rejected. Deployed with `libraries/daydate.l4` from the 1.6.98 VS Code extension, it
+  compiles (45 functions). The clash is in the baseline's own date comparison, which this layer does not change; the
+  deployment list is recorded in `encoding.json` (`qa_layer.deploy_with`).
+
 **Not covered for the witness.** Whether a witness must sign in a particular place or form (no form of attestation is
 needed, s 8(d)); the text of the deleted s 13, which the deposit does not give; and anything in the Evidence or
 Oaths Acts about witnessing.
 
-**Cases.** `wills-qa-cases.l4`, generated by `gen_wills.py` in the session scratchpad: **168 assertions written, 168
-satisfied, 0 errors, 0 warnings**. They are 109 content cases (each baseline-seat answer also asserted equal to the
-baseline's export on the same facts, in the lives' facts), 49 role cases (every question for each role it is not about,
-every other input ASSUMEd) and 10 situation cases. `l4 check wills-qa.l4` succeeds. `l4 run` gives no diagnostics on
+**Cases.** `wills-qa-cases.l4`, generated by `gen_wills.py` in the session scratchpad: **179 assertions written, 179
+satisfied, 0 errors, 0 warnings** (168 before QA1 and QA2). They are 125 content cases (each baseline-seat answer also
+asserted equal to the baseline's export on the same facts, in the lives' facts, and each value of `another route to a
+valid will` against the baseline on the route it stands for; the beneficiary's s 13 cases leave `the will-maker has died`
+ASSUMEd, so they show it is not read), 49 role cases (every question for each role it is not about, every other input
+ASSUMEd) and 5 situation cases. `l4 check wills-qa.l4` succeeds. `l4 run` gives no diagnostics on
 `wills-making.l4` or `wills-qa.l4`, and `wills-cases-making.l4` still gives 68 of 68.
