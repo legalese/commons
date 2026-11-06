@@ -33,5 +33,14 @@ This encoding also quotes sections 3(1), 46P, 46PB, 46PE, 46PF, 46PH, 46PO, 46PO
 Sourced from the Federal Register of Legislation at 2026-10-13: "Australian Human Rights Commission Act 1986",
 Commonwealth of Australia, licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/).
 
-The encoding adapts both texts (it does not only reproduce them), so the attribution for the encoding as a whole reads
+It also quotes, on the same terms, Part IVA (ss 33C, 33E, 33J, 33ZB, 33ZE) of the **Federal Court of Australia Act 1976**
+(Compilation No. 59, register id C2024C00819), deposited at
+`subjects/au/federal-court-of-australia-act-1976/registers/source-bundle/C2004A01586.txt`; ss 2G and 36 of the **Acts
+Interpretation Act 1901** (Compilation No. 39, register id C2026C00117), deposited at
+`subjects/au/acts-interpretation-act-1901/registers/source-bundle/C1901A00002.txt`; and s 4AA of the **Crimes Act 1914**
+(Compilation No. 167, register id C2026C00368), deposited at `subjects/au/crimes-act-1914/registers/source-bundle/C1914A00012.txt`.
+Each: sourced from the Federal Register of Legislation at 2026-10-13, Commonwealth of Australia, licensed under CC BY 4.0
+(https://creativecommons.org/licenses/by/4.0/).
+
+The encoding adapts these texts (it does not only reproduce them), so the attribution for the encoding as a whole reads
 "Based on content from the Federal Register of Legislation", per the CC BY 4.0 terms.

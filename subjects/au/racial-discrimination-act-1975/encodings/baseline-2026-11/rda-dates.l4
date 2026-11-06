@@ -4,8 +4,13 @@ IMPORT prelude
 -- -- the dates, in one small module.
 --
 -- It uses only the built-in date functions (DATE_FROM_DMY, DATE_SERIAL, DATE_FROM_SERIAL, DATE_DAY, DATE_MONTH,
--- DATE_YEAR), not the daydate library. The AHRC Act counts in months ("more than 24 months after the alleged acts ... took
--- place", s 46PH(1)(b)) and in plain days ("within 60 days after the date of issue of the notice", s 46PO(2)).
+-- DATE_YEAR) and the prelude's elem, not the daydate library. The AHRC Act counts in months ("more than 24 months after
+-- the alleged acts ... took place", s 46PH(1)(b)) and in plain days ("within 60 days after the date of issue of the
+-- notice", s 46PO(2)). Both are counted by the Acts Interpretation Act 1901 (Compilation No. 39, compilation date 28 March
+-- 2026, deposited at subjects/au/acts-interpretation-act-1901/registers/source-bundle/C1901A00002.txt): s 2G(2) (a period
+-- of 2 or more months), s 36(1) item 6 (a period "after" a day leaves that day out) and s 36(2), (3) (a last day on a
+-- Saturday, a Sunday or a holiday). Saturday and Sunday are computed; holidays are an input (a list of dates), since no
+-- holiday calendar is deposited.
 --
 -- Sourced from the Federal Register of Legislation, Commonwealth of Australia, CC BY 4.0 (SOURCE-LICENSE.md).
 -- BASELINE ENCODING. Not for public use as advice. See NOTES.md.
@@ -34,18 +39,50 @@ GIVETH A NUMBER
     THEN 31
     ELSE DATE_SERIAL (DATE_FROM_DMY 1 (m PLUS 1) y) MINUS DATE_SERIAL (DATE_FROM_DMY 1 m y)
 
--- The day n calendar months after a day: the same day-number n months later, or the last day of that month where it is
--- shorter (29 February 2024 + 24 months is 28 February 2026). Fork F7 in NOTES.md.
-GIVEN n IS A NUMBER, `the start` IS A DATE
+-- The last day of a period of n calendar months (n of 2 or more) that begins after a given day.
+-- AIA s 36(1) item 6: a period "expressed to begin after a specified day ... does not include that day", so it starts the
+-- next day. AIA s 2G(2): "a reference to a period of 2 or more months is a reference to a period: (a) starting at the start
+-- of a day of one of the calendar months (the starting month); and (b) ending: (i) immediately before the start of the
+-- corresponding day of the calendar month that is that number of calendar months after the starting month; or (ii) if
+-- there is no such day -- at the end of the calendar month that is that number of calendar months after the starting
+-- month." So the last day is the day before the corresponding day, or the last day of that month where the corresponding
+-- day does not exist (an act on 28 February 2022 starts the period on 1 March 2022; the last day is 29 February 2024; an
+-- act on 28 February 2024 starts it on 29 February 2024; February 2026 has no 29th, so the last day is 28 February 2026).
+-- Fork F7 in NOTES.md.
+GIVEN n IS A NUMBER, `the day` IS A DATE
 GIVETH A DATE
-`the day` n `months after` `the start` MEANS
-    DATE_FROM_DMY `the day number` `the month` `the year`
+`the last day of` n `months beginning after` `the day` MEANS
+    IF DATE_DAY `the start` GREATER THAN `the days in month` `the month` `of` `the year`
+    THEN DATE_FROM_DMY (`the days in month` `the month` `of` `the year`) `the month` `the year`
+    ELSE `the date` (0 MINUS 1) `days after` (DATE_FROM_DMY (DATE_DAY `the start`) `the month` `the year`)
     WHERE
+        `the start` MEANS `the date` 1 `days after` `the day`
         `the count` MEANS (DATE_YEAR `the start` TIMES 12) PLUS (DATE_MONTH `the start` MINUS 1) PLUS n
         `the month index` MEANS `the count` MODULO 12
         `the year` MEANS (`the count` MINUS `the month index`) DIVIDED BY 12
         `the month` MEANS `the month index` PLUS 1
-        `the day number` MEANS
-            IF DATE_DAY `the start` GREATER THAN `the days in month` `the month` `of` `the year`
-            THEN `the days in month` `the month` `of` `the year`
-            ELSE DATE_DAY `the start`
+
+-- The day of the week, 0 for Monday to 6 for Sunday, counted from Monday 1 January 1900.
+GIVEN d IS A DATE
+GIVETH A NUMBER
+`the weekday of` d MEANS (DATE_SERIAL d MINUS DATE_SERIAL (DATE_FROM_DMY 1 1 1900)) MODULO 7
+
+-- AIA s 36(2), (3): "If: (a) an Act requires or allows a thing to be done; and (b) the last day for doing the thing is a
+-- Saturday, a Sunday or a holiday; then the thing may be done on the next day that is not a Saturday, a Sunday or a
+-- holiday." "holiday, in relation to the time for doing a thing, means: (a) a day that is a public holiday in the place in
+-- which the thing is to be or may be done; and (b) if the thing is to be or may be done at a particular office or other
+-- place -- a day on which the place or office is closed for the whole day." The holidays are the caller's list.
+GIVEN d IS A DATE, holidays IS A LIST OF DATE
+GIVETH A BOOLEAN
+DECIDE `is a Saturday, a Sunday or a holiday` d holidays IF
+        `the weekday of` d AT LEAST 5
+    OR elem d holidays
+
+-- From a last day, step forward one day at a time to the first day that is not a Saturday, a Sunday or a holiday (the
+-- last day itself if it is none of those).
+GIVEN d IS A DATE, holidays IS A LIST OF DATE
+GIVETH A DATE
+`the first day from` d `that is not a Saturday, a Sunday or a holiday, given` holidays MEANS
+    IF `is a Saturday, a Sunday or a holiday` d holidays
+    THEN `the first day from` (`the date` 1 `days after` d) `that is not a Saturday, a Sunday or a holiday, given` holidays
+    ELSE d

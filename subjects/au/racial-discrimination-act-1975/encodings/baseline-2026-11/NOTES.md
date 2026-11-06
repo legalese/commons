@@ -26,8 +26,16 @@ the Act sends the claimant to (its s 20 note: "see Part IIB of the Australian Hu
   46P, 46PB, 46PE, 46PF(1)(b), 46PH, 46PO, 46POA(1), 46POB(3) and 46PSA only: Compilation No. 58, compilation date
   18 September 2026 (includes amendments up to Act No. 87, 2026; register id C2026C00416), deposited at
   `subjects/au/australian-human-rights-commission-act-1986/registers/source-bundle/C2004A03366.txt`.
-- **Numbers set elsewhere:** no regulation sets a number the encoding needs. The value of a penalty unit (Crimes Act 1914
-  s 4AA) is not deposited: the s 27(2) answer is in penalty units.
+- **Federal Court of Australia Act 1976**, Part IVA ss 33C(1), 33E, 33J, 33ZB, 33ZE only (representative proceedings, the
+  group route s 46PO's note points to): Compilation No. 59, compilation date 11 December 2024 (register id C2024C00819), deposited at
+  `subjects/au/federal-court-of-australia-act-1976/registers/source-bundle/C2004A01586.txt`.
+- **Acts Interpretation Act 1901**, ss 2G(2) and 36 only (counting the 24 months and the 60 days): Compilation No. 39,
+  compilation date 28 March 2026 (register id C2026C00117), deposited at `subjects/au/acts-interpretation-act-1901/registers/source-bundle/C1901A00002.txt`.
+- **Numbers set elsewhere:** the penalty unit, Crimes Act 1914 s 4AA (Compilation No. 167, compilation date 27 August 2026,
+  register id C2026C00368, deposited at `subjects/au/crimes-act-1914/registers/source-bundle/C1914A00012.txt`): "$330 (subject to indexation under
+  subsection (3))". s 4AA(3) indexes it on 1 July 2026 and every third 1 July after, and the indexed amount is published by
+  notifiable instrument (s 4AA(1A)), which is not deposited; so the s 27(2) answer stays in penalty units and the $330 base
+  is named in its question text. No regulation sets a number the encoding needs.
 
 ## Checks
 
@@ -40,16 +48,20 @@ showed as "assertion failed".
 |---|---|---|---|---|
 | `rda-dates.l4` | 0 | 0 | 0 | 0 |
 | `rda-claims.l4` | 0 | 0 | 0 | 0 |
-| `rda-cases.l4` | 0 | 0 | 164 | 164 |
+| `rda-cases.l4` | 0 | 0 | 191 | 191 |
 
 Every exported question has cases, with the edges: each element of s 9(1) and s 9(1A) missing in turn; s 9(3), s 8(1),
 s 8(2) and both together; s 10(3) for an Aboriginal person, a Torres Strait Islander, a special measure and a general law;
 immigrant status where s 5 reaches and where it does not (ss 12(2), 15(3)); every actor and act of s 15 and the mismatches;
 s 15(4) and (5); s 18A with each condition missing and with reasonable steps; every head of s 18AA; s 27(2) for a natural
 person and a body corporate; each s 18C(2) place and private; good faith with and without a s 18D head; a complaint lodged
-on the last day of the 24 months and the day after, from 15 March 2024 and from 29 February 2024 (last day 28 February
-2026); a court application on day 0, day 60 and day 61 after the notice, and across 29 February 2028 (day 60 is 1 March
-2028); every ground of termination that needs or does not need leave; every head of s 46PSA(6) and (7).
+on the last day of the 24 months and the day after, from 15 March 2024, from 29 February 2024 (last day 28 February
+2026) and from 28 February 2022 (last day 29 February 2024, AIA s 2G(2)); a court application on day 0, day 60 and day 61
+after the notice, across 29 February 2028 (day 60 is 1 March 2028), with day 60 a Sunday (15 December 2027: Monday
+14 February 2028 in time, 15 February not, AIA s 36(2)), with day 60 a holiday, and over Christmas (25 and 28 December
+holidays: 29 December 2026); every ground of termination that needs or does not need leave; every head of s 46PSA(6) and
+(7); s 8 over ss 14(2), 16 and 17; the Crown under s 6(2); each element of FCA Act s 33C(1), and a Part IVA group member
+and representative party.
 
 **No mirror cases.** One seat.
 
@@ -70,10 +82,13 @@ asked the other way, and the focus is the claimant.
 
 The 2026-10-18 defaults:
 
-- **The Act alone, plus the instruments that set its numbers.** Followed, with one addition, as the Age Discrimination Act
-  baseline did: the claimant's questions "where do I complain, by when, and what then?" are answered only in the
-  Australian Human Rights Commission Act 1986, to which the Act's s 20 note sends them, so its complaint and court
-  provisions listed under Edition are brought in. Nothing else from that Act is.
+- **The Act alone, plus the instruments that set its numbers.** Followed, with additions, each listed under Edition: the
+  claimant's questions "where do I complain, by when, and what then?" are answered only in the Australian Human Rights
+  Commission Act 1986, to which the Act's s 20 note sends them, so its complaint and court provisions are brought in (as
+  the Age Discrimination Act baseline did); the group route of Part IVA of the Federal Court of Australia Act 1976, to
+  which s 46PO's note and s 46PO(5) point and which the focus (class actions) names; the Acts Interpretation Act 1901's
+  rules for counting months and days, which fix the last days; and the Crimes Act 1914 penalty unit. Nothing else from
+  those Acts is.
 - **The actors the text names.** Followed: the person, the employer, the principal, the employment agency, the
   organisation of employers or employees, the supplier, the trade union, the Commission, the President, the court.
 - **Judgments handed to someone else are answered conditionally.** Followed. Inputs: whether an act impairs a human right
@@ -95,23 +110,28 @@ The 2026-10-18 defaults:
 ## Scope
 
 **In.** Racial Discrimination Act 1975: s 3(1) (Aboriginal, Torres Strait Islander, employment, dispose, services,
-vehicle), s 3(3), (4) (glossed), s 5 (immigrants), s 6(1) (the Crown bound, in the s 18A description), s 6A(2), Part II
-whole (ss 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 18A, 18AA), Part IIA whole (ss 18B, 18C, 18D, 18E), s 26, s 27(2).
-AHRC Act: as under Edition.
+vehicle), s 3(3), (4) (glossed), s 5 (immigrants), s 6(1) (the Crown bound, in the s 18A description), s 6(2) (the Crown
+not prosecuted, in the crime question), s 6A(2), Part II whole (ss 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 18A, 18AA),
+Part IIA whole (ss 18B, 18C, 18D, 18E), s 26, s 27(2). AHRC Act, FCA Act Part IVA, AIA and Crimes Act: as under Edition.
 
 **Out, and why.**
-- ss 1, 2, 4, 6(2), 6B, 7, 18F, Part III (the Commission's functions), ss 27(1), (1A), 27F, Part VI (the Commissioner),
+- ss 1, 2, 4, 6B, 7, 18F, Part III (the Commission's functions), ss 27(1), (1A), 27F, Part VI (the Commissioner),
   ss 44, 45, 45A, 47 and the Schedule: machinery, offences against officials, or text that does not answer a claimant's
   question. s 6A(1) and (3) (concurrent State laws, double prosecution) are not a claimant's question; s 6A(2) is.
 - The Convention in the Schedule is quoted by s 9(2) and s 10(2) for "rights of a kind referred to in Article 5" and by
   s 8(1) for special measures: both are asked as facts, with Article 5's rights listed in the `@desc`.
+- AHRC Act s 46P(1B) ("The complaint must set out, as fully as practicable, the details of the alleged acts, omissions or
+  practices"): a requirement of form the claimant meets in writing the complaint, which answers no question of entitlement
+  or time; a complaint short of it may be amended (s 46PA). Not encoded.
 - AHRC Act: the President's inquiry and conciliation (ss 46PD, 46PF other than (1)(b), 46PI-46PN), amendment and withdrawal
   of complaints (ss 46PA, 46PG), the rest of s 46PB and 46PC, interim injunctions (s 46PP), representation (s 46PQ), the
   other s 46POB rules (separate applications, settlement), and the Commission's assistance (ss 46PT-46PV): procedure the
   claimant does not decide, or that adds no answer. The court's further time under s 46PO(2) and its leave under (3A)(a)
   are the court's: asked or reported, not decided.
-- Part IVA of the Federal Court of Australia Act 1976 (group proceedings), to which s 46PO's note and s 46PO(5) point: not
-  deposited. The question about group applications says so.
+- Part IVA of the Federal Court of Australia Act 1976 other than ss 33C(1), 33E, 33J, 33ZB and 33ZE: s 33B (causes of
+  action after the 1991 amendment commenced; every claim here is later), s 33G (cross-vesting only) and the court's
+  management of the proceeding (ss 33D, 33F, 33H, 33K-33ZD, 33ZF-33ZJ): procedure the group member does not decide.
+- The Acts Interpretation Act 1901 and the Crimes Act 1914 beyond ss 2G(2), 36 and s 4AA(1).
 - No requirement-ledger entry exists for this Act, and none was raised: no scenario life has reached it.
 
 ## Fork register
@@ -134,13 +154,18 @@ Each line: the provision, the function, the answer taken, the other reading.
   identify the class or specify the complaints and relief: FALSE -- NOTHING, or TRUE once amended (s 46PA allows amendment
   with leave).
 - **F6** AHRC Act s 46PO(2) "within 60 days after the date of issue" -- `AHRC Act s 46PO(2) -- the last day to apply to the
-  court` and the regulative rule -- the day of issue excluded (Acts Interpretation Act 1901 s 36, borrowed, not deposited),
-  so the 60th day after is the last day; an application on the day of issue is in time; no roll-forward to the next
-  business day -- counting the day of issue, or rolling a weekend or holiday forward.
+  court`, `AHRC Act s 46PO -- can I go to court` and the regulative rule -- the day of issue excluded (AIA s 36(1) item 6),
+  so the 60th day after is the last day; an application on the day of issue is in time; a 60th day that is a Saturday, a
+  Sunday or a holiday (an input list: public holidays where the application is made, days the registry is closed) moves on
+  to the next day that is none of those (AIA s 36(2), (3)), and every day up to it is in time -- only the 60th day and
+  the moved-on day in time, not the rest days between (the text names only those two).
 - **F7** AHRC Act s 46PH(1)(b) "more than 24 months after the alleged acts ... took place" -- `AHRC Act s 46PH(1)(b) -- the
-  last day before the complaint is late` -- the same day-number 24 months later, or the last day of a shorter month
-  (29 February 2024 gives 28 February 2026); a continuing practice counted from the latest day it occurred (the `@desc`
-  says so) -- rolling to 1 March, or counting from the first occurrence.
+  last day before the complaint is late` -- the 24 months begin after the day of the act (AIA s 36(1) item 6) and end
+  immediately before the corresponding day 24 months on, or at the end of that month if it has no such day (AIA s 2G(2)):
+  28 February 2022 gives 29 February 2024, 29 February 2024 gives 28 February 2026; AIA s 36(2) is not applied, since
+  lodging has no last day (the Act allows a complaint at any time; s 46PH(1)(b) only opens a discretion to end it); a
+  continuing practice counted from the latest day it occurred (the `@desc` says so) -- the period read as starting on the
+  day of the act, s 36(2) applied to a weekend last day, or counting from the first occurrence.
 - **F8** s 15(1), (2), (3) -- `s 15 -- employment` -- each subsection is matched to its own actor and acts; an employer's
   worse treatment of a job seeker that is not a refusal to employ, and an agency's dismissal, are "does not reach it"
   under s 15 (s 9 may still) -- read the subsections across actors.
@@ -148,11 +173,16 @@ Each line: the provision, the function, the answer taken, the other reading.
   immigrant status): NOTHING -- JUST FALSE ("is invalid" read as a "means"-like test).
 - **F10** ss 26, 27(2) -- `ss 26, 27(2) -- is it a crime` -- conduct that is not victimisation: "no ... under the Act"
   (s 26 is a flat negative); the s 27(1) offence (hindering officials) is not asked -- NOTHING, leaving room for s 27(1).
+- **F11** s 8(1), (2) over ss 16 and 17 -- `s 16 -- advertisements`, `s 17 -- inciting or assisting` -- s 8 applies to them
+  as to the rest of Part II: advertising, inciting or assisting "in relation to the application of" a special measure, or
+  an act done to give effect to a charity provision, is not unlawful -- s 8 reaches only the underlying act, so ss 16 and
+  17 need no exception of their own (their "unlawful act" element already fails when the underlying act is excepted).
 
 Sites decided without a fork line: ss 11, 12, 13, 14(2), 16, 17 outside their elements, and s 46PO(4) when the court is
 not satisfied, answer NOTHING (prohibitions or grants limited by their own wording); s 10(1), ss 18A(1), 18E(1),
 s 18AA(2), s 18C(1)(a), (b), s 46PO(1) and s 46PSA(2) when their "if" fails, ss 8(1), 8(2), 9(3), 12(3), 15(4), 15(5),
-18A(2), 18D, 46P(3), 46POA(1), 46PSA(5), (7) and RDA s 6A(2) (flat negatives) answer the text's no.
+18A(2), 18D, 46P(3), 46POA(1), 46PSA(5), (7), RDA ss 6(2) and 6A(2) (flat negatives) and FCA Act s 33C(1) (a "where"
+condition) answer the text's no.
 
 ## Rulings on negatives (copied word for word from docs/ENCODING-GUIDE.md section 5)
 
@@ -188,9 +218,13 @@ outside it the answer is "only if the court allows further time" (the period's n
 4. **Three group routes, with different consent rules.** A representative complaint to the Commission needs no consent of
    the class members (AHRC Act s 46PB(4)); a representative application to the court under s 46PO needs every member's
    written consent (s 46POA(1)); a Federal Court group proceeding under Part IVA of the Federal Court of Australia Act 1976
-   is expressly not a "representative application" (s 3(1)), so s 46POA does not apply to it, and s 46PO(5) lets every
-   group member benefit from the orders. A community-wide claim after a terminated complaint is therefore most naturally a
-   Part IVA proceeding, whose own rules are not deposited. Asserted (the consent cases and the Part IVA answer).
+   is expressly not a "representative application" (s 3(1)), so s 46POA does not apply to it; it needs 7 or more claims
+   against the same person from the same, similar or related circumstances with a substantial common issue (FCA Act
+   s 33C(1)); no group member's consent is needed (s 33E(1)) unless the member is a government, a Minister, a public body or
+   an officer (s 33E(2)); a member may opt out before the date the court fixes (s 33J) and is otherwise bound (s 33ZB); and
+   s 46PO(5) lets every group member benefit from the orders. A community-wide claim after a terminated complaint is
+   therefore most naturally a Part IVA proceeding, which is still an application under s 46PO(1): the 60 days and leave
+   still apply, and only the Federal Court hears it. Asserted.
 5. **The costs rule is new and its reach is outside the text.** s 46PSA was substituted from 2 October 2024 by the
    Australian Human Rights Commission Amendment (Costs Protection) Act 2024 (No. 89, 2024); its application provision
    (Sch 1 item 7) is not in the compilation, so which proceedings it governs cannot be read from the deposited text. As
@@ -210,10 +244,14 @@ outside it the answer is "only if the court allows further time" (the period's n
 9. **s 18AA and s 27(2) are the same conduct twice, one word apart.** Victimisation is both unlawful under Part II (so it
    can be complained of as "unlawful discrimination", AHRC Act s 3(1)(b)) and an offence; s 18AA(2)(f) says "given" where
    s 27(2)(f) says "furnished". Every other unlawful act under Parts II and IIA is not an offence (s 26). Asserted.
+10. **The State is answerable but cannot be prosecuted.** The Act binds the Crown (s 6(1)), so a State is answerable for
+   its police (s 18A) and may be the respondent to a complaint, but "This Act does not make the Crown liable to be
+   prosecuted for an offence" (s 6(2)): victimisation by the State itself is unlawful but not prosecuted, while the
+   officer who did it may be. Asserted.
 
 ## Before this is worth relying on
 
-- The Acts Interpretation Act 1901 (s 36, time; "month"), the Crimes Act 1914 s 4AA (penalty unit), Part IVA of the Federal
-  Court of Australia Act 1976, and the application provision of the Costs Protection Act 2024, none deposited.
-- A lawyer's view on forks F1, F3, F6, F7 and F8 and on findings 1, 4 and 5; an independent test pass and a human gate.
+- The application provision of the Costs Protection Act 2024 and the indexed penalty unit (Crimes Act 1914 s 4AA(1A)
+  notifiable instrument), neither deposited; a holiday calendar for the place of filing (holidays are an input).
+- A lawyer's view on forks F1, F3, F6, F7, F8 and F11 and on findings 1, 4 and 5; an independent test pass and a human gate.
 - A respondent's seat (employer, State) if wanted, drawing on the same rules.
