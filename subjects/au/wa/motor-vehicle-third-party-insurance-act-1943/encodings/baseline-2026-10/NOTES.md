@@ -221,3 +221,84 @@ Commission's administration, the abolished Tribunal, the visiting-motorist licen
   cites are not here.
 - Visiting vehicles (s 3(4)) rest on which States are prescribed by order in
   council. None is deposited.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026, after the graffiti encoding's design (Graffiti Vandalism Act 2016, `gva-seat.l4`, its NOTES D2,
+D4 and D8). The layer is `mvtpi-qa.l4` (imports `prelude` and `mvtpi-ctp`), with its cases in `mvtpi-qa-cases.l4`
+(imports `prelude`, `mvtpi-ctp` and `mvtpi-qa`). The baseline's files are unchanged: no rule or export of
+`mvtpi-ctp.l4` was touched, and its 73 cases still pass. The layer calls the baseline's functions and restates none.
+
+**Why.** The site's question form asks only the inputs that can still change an open question. Every exported question
+of the layer takes `my role` first ("Which of these describes you"); for a role it is not about, it answers `does not
+arise for you` without reading any other input. Within a role, a question that arises only in a situation takes that
+situation's fact second, and answers `does not arise for you` when it does not hold, again reading nothing else.
+
+**Roles** (`Role`):
+
+- `I own a vehicle, or have one on hire or hire purchase`: the baseline's first seat. "Owner" in s 3(1) includes the
+  hirer and the hire purchaser, so the role is worded to take them in; "Am I the owner" still answers no for one who
+  lets the vehicle out on hire purchase or holds a bill of sale as security. An owner who was driving answers as the
+  owner, with `I was driving or in charge of it at the time` where s 10 and s 7(5) turn on it.
+- `I drive a vehicle that someone else owns`: new. The Act makes the driver an "insured person" "whether with or without
+  the consent of the owner" (s 3(1), s 6(1)(b)), puts the s 10(1) notice and the s 10(5) no-admission duties on them,
+  lets the Commission recover from them (ss 7(5), 10(6), 15) and makes "any person so using" an uninsured vehicle an
+  offender (s 4(3A)).
+- `I was hurt by a motor vehicle`: the baseline's second seat.
+
+The Insurance Commission, the Director General, the police and the courts are not seats. Others the Act mentions (the
+doctor, nurse or conveyor paid under s 12, the employer of s 22) are reached through the seats' own questions.
+
+**Situation inputs.** All are BOOLEAN; FALSE gives `does not arise for you`; each is the second input wherever it is
+taken, with the same name, type and `@desc` in every question.
+
+| Name | Questions that take it |
+|---|---|
+| `someone was killed or injured by the vehicle` | owner, driver: Must I give the Insurance Commission notice of the accident; What is the most I can be fined for not giving the Commission notice; May I do this about the accident without the Commission's written consent; Can the Insurance Commission make me repay what it paid |
+| `a vehicle was used on a road uninsured, and I am its owner or was using it` | owner, driver: the fine, the disqualification, the licence fee, s 4(3B), and the time to prosecute (five questions) |
+| `a police officer asked me to show that my vehicle is insured` | owner: Have I complied with the police request to show my vehicle is insured; What is the most I can be fined for not showing my vehicle is insured |
+| `a doctor or nurse gave me emergency treatment` | injured: Will the Insurance Commission pay for my emergency treatment; How much of the emergency treatment charge must I pay |
+| `I was carried in a vehicle straight after I was injured` | injured: How much must the Insurance Commission pay the person who took me to hospital |
+| `I have a judgment against the owner or driver of an uninsured vehicle` | injured: How much of my unpaid judgment against an uninsured driver or owner can I claim from the Commission |
+
+The situations follow what the text ties each rule to: s 10 to "any accident which results in the death of or causes
+bodily injury to any person and is directly caused by, or by the driving of," the vehicle; s 4(3A) to a vehicle without
+a policy "used on a road"; s 4(7A) to the police officer's request; s 12(1)(a)(i) and (ii) to the treatment and the
+conveyance; s 8(1) to the judgment. No question takes a situation that arises in every situation of its role.
+
+**Decisions.**
+
+1. **One question, several roles.** Where the Act gives two roles the same answer from the same rule (what the policy
+   covers, s 6(1)(b); the s 10 duties; the s 4(3A) offence), one exported question serves both. The s 6A CISS question
+   serves all three: s 6A(2) insures "any person (the injured person)", the at-fault owner or driver included.
+2. **Record inputs are kept.** The baseline's questions take records (`My vehicle`, `The incident`, `What happened to me`
+   and others). The layer takes the same records, so its answers are the baseline's by construction.
+3. **The s 10 notice for an owner who was driving** passes the baseline `the driver or person in charge of the vehicle`
+   (s 10(1), forthwith); otherwise `the owner, not driving or in charge` (s 10(2)). The repay question does the same with
+   `My part in the accident`.
+4. **The s 10(4) fine** is the baseline's $20 for both owner and driver. s 10(4) penalises a failure under s 10(1) or
+   (3), not the owner's own s 10(2) notice. The question speaks of "an accident or a claim", and s 10(3) binds every
+   insured person, so it is kept for the owner; this note records the gap.
+5. **The driver's own question** ("Am I insured when I drive this vehicle") is a helper in the layer (`the driver's
+   cover under ss 3(1), 15`): no policy in force, no; with the owner's authority or reasonable grounds to think so, an
+   insured person; without, the policy answers but the Commission recovers (s 15).
+6. **The s 3C answer** is the baseline's MAYBE NUMBER unwrapped. The baseline never answers NOTHING; NOTHING would be
+   read as nothing awarded.
+7. **Answer types** carry `does not arise for you`: `Yes or no`, `Amount`, `Months`, `Days`, and wrappers around the
+   baseline's own answer types (`Cover answer`, `Employer answer`, `Accident notice answer`, `Claim answer`).
+8. **Questions with a fixed answer** (s 20, s 7(4), s 26, s 29(3), s 30(4), s 3FB) take only the role, so they settle on
+   it and the form can drop them.
+
+**Not covered for the driver:** s 14 (recovery of emergency payments from the driver of an uninsured vehicle), the
+s 7(5) proviso, the s 10(3) claim notice as a question of its own, and the driver's own injuries beyond CISS (a driver
+hurt by another vehicle asks as the injured person).
+
+**Checks.** 39 exported questions: 22 asked by the owner, 12 by the driver and 17 by the injured person (the CISS
+question by all three; ten questions by both the owner and the driver). `l4 check mvtpi-qa.l4` succeeds; `l4 run` of
+all four files shows no error and no warning. `mvtpi-qa-cases.l4` has 219 assertions, 219 satisfied: every question for
+every role it is not about, with every other input ASSUMEd; every situation question with its situation FALSE and every
+later input ASSUMEd; hand-worked answers for each role; and, for each of the baseline's questions, a case that the
+layer's answer equals the baseline export's on the same facts. A script (`check_params.py`, in the session's scratch
+folder) listed every export's parameters and confirmed: `my role` first everywhere; each situation parameter identical
+in name, type and `@desc`, and second, wherever taken; every other shared parameter identical too; no DEONTIC or EVENT
+input.

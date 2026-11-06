@@ -1,0 +1,647 @@
+IMPORT prelude
+IMPORT `mvtpi-ctp`
+
+-- Motor Vehicle (Third Party Insurance) Act 1943 (WA) -- the questions people ask, with the seat and the situation as
+-- parameters (the Q&A layer).
+--
+-- PURPOSE. One module whose exported questions serve every seat from one deployment. Every exported question takes
+-- `my role` first ("Which of these describes you"). A question about another role answers `does not arise for you`
+-- without reading any other input, so the site's question form never asks those inputs and drops the question.
+--
+-- ROLES. The baseline (mvtpi-ctp.l4) was written from two seats: the vehicle owner, and the person injured by a motor
+-- vehicle. Both are roles here. The third is the driver of a vehicle someone else owns: the Act makes that driver an
+-- "insured person" "whether with or without the consent of the owner" (s 3(1), s 6(1)(b)), puts the s 10 notice and
+-- no-admission duties on them, makes them liable to repay the Commission (ss 7(5), 10(6), 15) and to the s 4(3A) offence
+-- as "any person so using" an uninsured vehicle. An owner who was driving their own vehicle answers as the owner, and says
+-- so where it matters. The Insurance Commission, the Director General, the police and the courts are never a seat: what
+-- they may or must do appears only as what it means for the person asking.
+--
+-- SITUATIONS (graffiti design D8). Within a role, a question that arises only in a situation takes that situation's fact
+-- straight after `my role`, and answers `does not arise for you` when it does not hold, without reading anything else.
+-- The questions of one situation share ONE input, the same name, type and @desc, so the form asks it once:
+--   - `someone was killed or injured by the vehicle` (owner, driver): the s 10 notice, the s 10(4) fine, the s 10(5)
+--     consent and the Commission's recovery (ss 7(5), 10(6), 15). Section 10 is tied to "any accident which results in
+--     the death of or causes bodily injury to any person and is directly caused by, or by the driving of," the vehicle.
+--   - `a vehicle was used on a road uninsured, and I am its owner or was using it` (owner, driver): the five questions of
+--     the s 4(3A) offence (the fine, disqualification, the licence fee, s 4(3B), the time to prosecute).
+--   - `a police officer asked me to show that my vehicle is insured` (owner): the two questions of s 4(7A)-(7C).
+--   - `a doctor or nurse gave me emergency treatment` (injured): the two questions of s 12(1)(a)(i), (c), (3).
+--   - `I was carried in a vehicle straight after I was injured` (injured): the conveyor's payment, s 12(1)(a)(ii), (d), r 6.
+--   - `I have a judgment against the owner or driver of an uninsured vehicle` (injured): s 8(1).
+-- A question that arises in every situation of its role takes no situation input.
+--
+-- The rules are the baseline's. This module calls the baseline's functions and restates none; the few helpers it adds
+-- (the driver's own question, s 3(1) and s 15) are marked. Every answer type carries `does not arise for you`. No
+-- exported question takes a DEONTIC or EVENT input.
+--
+-- BASELINE. Not for public use as advice. See NOTES.md, "Q&A layer (seat and situations as parameters)".
+
+§ `Motor Vehicle (Third Party Insurance) Act 1943 (WA) -- the questions people ask`
+
+§§ `Who is asking, and the shape of the answers`
+
+DECLARE Role IS ONE OF
+    `I own a vehicle, or have one on hire or hire purchase`
+    `I drive a vehicle that someone else owns`
+    `I was hurt by a motor vehicle`
+
+DECLARE `Yes or no` IS ONE OF
+    yes
+    no
+    `does not arise for you`
+
+DECLARE `Amount` IS ONE OF
+    `does not arise for you`
+    amount HAS dollars IS A NUMBER
+
+DECLARE `Months` IS ONE OF
+    `does not arise for you`
+    months HAS `number of months` IS A NUMBER
+
+DECLARE `Days` IS ONE OF
+    `does not arise for you`
+    days HAS `number of days` IS A NUMBER
+
+DECLARE `Cover answer` IS ONE OF
+    `does not arise for you`
+    `my cover is` HAS `the cover` IS A `My cover`
+
+DECLARE `Employer answer` IS ONE OF
+    `does not arise for you`
+    `for my employer` HAS `the employer's position` IS A `Where my employer stands`
+
+DECLARE `Accident notice answer` IS ONE OF
+    `does not arise for you`
+    `the notice I must give` HAS `the notice required` IS A `Notice of the accident`
+
+DECLARE `Claim answer` IS ONE OF
+    `does not arise for you`
+    `I claim against` HAS `whom I claim against` IS A `Whom I claim against`
+
+-- The driver's own question (s 3(1) "insured person", s 6(1)(b), s 15). Not in the baseline.
+DECLARE `Whether I am insured as the driver` IS ONE OF
+    `does not arise for you`
+    `yes: you are an insured person while you drive it, with or without the owner's consent (s 3(1), s 6(1)(b))`
+    `the policy answers for your liability, but you had neither the owner's authority nor reasonable grounds to think you had it, so the Commission can recover from you what it pays (s 15)`
+    `no: no policy under this Act is in force for the vehicle (s 3(1))`
+
+GIVEN `it holds` IS A BOOLEAN
+GIVETH A `Yes or no`
+`yes if` `it holds` MEANS
+    IF `it holds` THEN yes ELSE no
+
+GIVEN `the answer` IS A MAYBE NUMBER
+GIVETH AN `Amount`
+-- The baseline's s 3C function always answers JUST an amount; NOTHING does not occur, and is read as nothing awarded.
+`amount from` `the answer` MEANS
+    CONSIDER `the answer`
+    WHEN JUST `the dollars` THEN amount `the dollars`
+    WHEN NOTHING THEN amount 0
+
+-- The owner's part, for the baseline's s 10 and s 7(5) functions: an owner who was driving or in charge answers as the
+-- driver.
+GIVEN `I was driving or in charge of it at the time` IS A BOOLEAN
+GIVETH A `My role`
+`the owner's s 10 position` MEANS
+    IF `I was driving or in charge of it at the time`
+    THEN `the driver or person in charge of the vehicle`
+    ELSE `the owner, not driving or in charge`
+
+GIVEN `I was driving or in charge of it at the time` IS A BOOLEAN
+GIVETH A `My part in the accident`
+`the owner's part` MEANS
+    IF `I was driving or in charge of it at the time`
+    THEN `I was driving, and I am liable`
+    ELSE `I own the vehicle, and someone else was driving`
+
+§§ `For the owner of a vehicle`
+
+§§§ `s 3(1), s 4(1), (9), (10) -- is my vehicle a motor vehicle, and must it be insured`
+
+@export Is my vehicle a "motor vehicle" under the Act (Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 3(1), s 4(10))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the vehicle` IS A `My vehicle` @desc Your vehicle: what drives it, whether the Road Traffic (Vehicles) Act requires it to be licensed and whether it complies with the requirements for licensing, whether it is a towed caravan or trailer, whether a policy was issued for it under s 4(9), whether it is on a road, and whether it is a Crown, visiting or defence vehicle
+GIVETH A `Yes or no`
+`Is my vehicle a motor vehicle` MEANS
+    CONSIDER `my role`
+    WHEN `I own a vehicle, or have one on hire or hire purchase` THEN `yes if` (`Is my vehicle a motor vehicle under the Act` `the vehicle`)
+    OTHERWISE `does not arise for you`
+
+@export Must my vehicle be covered by compulsory third party insurance (Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 4(1), s 3(3), (4), (6))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the vehicle` IS A `My vehicle` @desc Your vehicle: what drives it, whether the Road Traffic (Vehicles) Act requires it to be licensed and whether it complies with the requirements for licensing, whether it is a towed caravan or trailer, whether a policy was issued for it under s 4(9), whether it is on a road, and whether it is a Crown, visiting or defence vehicle
+GIVETH A `Yes or no`
+`Must my vehicle have compulsory third party insurance` MEANS
+    CONSIDER `my role`
+    WHEN `I own a vehicle, or have one on hire or hire purchase` THEN `yes if` (`Must my vehicle be insured` `the vehicle`)
+    OTHERWISE `does not arise for you`
+
+@export Does compulsory third party insurance cover injuries caused by my e-bike or eRideable (Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 3(1), s 4(9), (10))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the vehicle` IS A `My vehicle` @desc Your vehicle: what drives it, whether the Road Traffic (Vehicles) Act requires it to be licensed and whether it complies with the requirements for licensing, whether it is a towed caravan or trailer, whether a policy was issued for it under s 4(9), whether it is on a road, and whether it is a Crown, visiting or defence vehicle
+      `it is licensed` IS A BOOLEAN @desc Whether a vehicle licence is in force for it
+GIVETH A `Yes or no`
+`Does CTP cover injuries my e-bike or eRideable causes` MEANS
+    CONSIDER `my role`
+    WHEN `I own a vehicle, or have one on hire or hire purchase` THEN `yes if` (`Does CTP cover injuries caused by my e-bike or eRideable` `the vehicle` `it is licensed`)
+    OTHERWISE `does not arise for you`
+
+@export Am I the "owner" of the vehicle for compulsory third party insurance (Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 3(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `how` IS A `How I hold the vehicle` @desc How you hold the vehicle: you own it (alone, in part or jointly), have it under a hire purchase agreement, have hired it, let it out under a hire purchase agreement, or hold a bill of sale over it (with or without having taken possession to enforce it)
+GIVETH A `Yes or no`
+`Am I the owner of the vehicle` MEANS
+    CONSIDER `my role`
+    WHEN `I own a vehicle, or have one on hire or hire purchase` THEN `yes if` (`Am I an owner under the Act` `how`)
+    OTHERWISE `does not arise for you`
+
+§§§ `s 4(8), (8A), ss 19-21 -- is a policy in force for my vehicle`
+
+@export Is my vehicle covered by compulsory third party insurance right now (Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 4(8A), s 21; Regulations rr 8-11)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the licence` IS A `My licence` @desc Whether the vehicle licence is current or has expired, or the vehicle is unlicensed on a permit or plates; if expired, whether and how many days after expiry it was renewed (or how many days have passed)
+GIVETH A `Cover answer`
+`Is my vehicle covered now` MEANS
+    CONSIDER `my role`
+    WHEN `I own a vehicle, or have one on hire or hire purchase` THEN `my cover is` (`Is my vehicle covered` `the licence`)
+    OTHERWISE `does not arise for you`
+
+@export Can my vehicle licence be granted or renewed without paying the compulsory third party premium (Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 4(8))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the premium has been paid` IS A BOOLEAN @desc Whether the insurance premium determined by the Insurance Commission has been paid to the Director General
+GIVETH A `Yes or no`
+`Can my vehicle licence be granted or renewed without the premium` MEANS
+    CONSIDER `my role`
+    WHEN `I own a vehicle, or have one on hire or hire purchase` THEN `yes if` (`Can my vehicle licence be granted or renewed` `the premium has been paid`)
+    OTHERWISE `does not arise for you`
+
+@export If I buy a licensed vehicle, does its compulsory third party policy carry on for me (Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 20)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH A `Yes or no`
+`If I buy a licensed vehicle, does its policy carry on for me` MEANS
+    CONSIDER `my role`
+    WHEN `I own a vehicle, or have one on hire or hire purchase` THEN `yes if` `Does the policy carry on for me when I buy the vehicle`
+    OTHERWISE `does not arise for you`
+
+@export May the Insurance Commission end my compulsory third party policy before it expires (Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 19)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the vehicle no longer needs to be insured` IS A BOOLEAN @desc Whether the vehicle is no longer required to be insured under the Act
+GIVETH A `Yes or no`
+`May the Insurance Commission end my policy early` MEANS
+    CONSIDER `my role`
+    WHEN `I own a vehicle, or have one on hire or hire purchase` THEN `yes if` (`May the Commission end my policy early` `the vehicle no longer needs to be insured`)
+    OTHERWISE `does not arise for you`
+
+§§§ `s 22 -- my own car used for work`
+
+@export Does my compulsory third party policy cover my employer when I use my own car for work (Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 22)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `use` IS A `My employer and my car` @desc Whether you use your car for your employer's work, and if so whether your employer acquiesces or it is without the employer's knowledge or against instructions
+GIVETH AN `Employer answer`
+`Does my policy cover my employer when I use my car for work` MEANS
+    CONSIDER `my role`
+    WHEN `I own a vehicle, or have one on hire or hire purchase` THEN `for my employer` (`Where does my employer stand` `use`)
+    OTHERWISE `does not arise for you`
+
+§§§ `s 4(7A)-(7C) -- a police request to show my vehicle is insured`
+
+-- Situation: a police officer has asked for the evidence (s 4(7A)). The owner alone has the duty.
+@export Have I complied with a police request to show my vehicle is insured (Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 4(7A), (7B))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `a police officer asked me to show that my vehicle is insured` IS A BOOLEAN @desc Whether a police officer has asked you, as the owner, to produce evidence that a compulsory third party policy is in force for every motor vehicle you own (s 4(7A))
+      `I produced the evidence when asked` IS A BOOLEAN @desc Whether you produced evidence of insurance when the police officer asked
+      `days until I produced it at the police station I nominated` IS A NUMBER @desc How many days after the request you produced it at the police station you nominated (0 if not produced)
+      `I produced it at the nominated station` IS A BOOLEAN @desc Whether you produced it at the police station you nominated
+GIVETH A `Yes or no`
+`Have I complied with the police request to show my vehicle is insured` MEANS
+    CONSIDER `my role`
+    WHEN `I own a vehicle, or have one on hire or hire purchase` THEN
+        IF `a police officer asked me to show that my vehicle is insured`
+        THEN `yes if` (`Have I complied with the request to produce evidence of insurance` `I produced the evidence when asked` `days until I produced it at the police station I nominated` `I produced it at the nominated station`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+@export What is the most I can be fined for failing, without just excuse, to show the police my vehicle is insured (Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 4(7C))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `a police officer asked me to show that my vehicle is insured` IS A BOOLEAN @desc Whether a police officer has asked you, as the owner, to produce evidence that a compulsory third party policy is in force for every motor vehicle you own (s 4(7A))
+GIVETH AN `Amount`
+`What is the most I can be fined for not showing my vehicle is insured` MEANS
+    CONSIDER `my role`
+    WHEN `I own a vehicle, or have one on hire or hire purchase` THEN
+        IF `a police officer asked me to show that my vehicle is insured`
+        THEN amount `What is the most I can be fined for not producing evidence of insurance`
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+§§ `For the owner, and for the driver of a vehicle someone else owns`
+
+§§§ `s 6(1)(b), Schedule, s 3(7), s 3G, s 6A -- what the policy covers`
+
+-- s 6(1)(b) insures "the owner of the vehicle ... and any other person who at any time drives that vehicle, whether with
+-- or without the consent of the owner", so the one baseline rule answers both.
+@export Does the vehicle's compulsory third party policy cover this liability of mine, as its owner or its driver (Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 6(1)(b), Schedule, s 3(7), s 3G)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the incident` IS AN `The incident` @desc What harm was done, who is liable and for what, where, whether it was a consequence of the driving, and whether the policy was in force
+GIVETH A `Yes or no`
+`Does the policy cover this liability of mine` MEANS
+    CONSIDER `my role`
+    WHEN `I own a vehicle, or have one on hire or hire purchase` THEN `yes if` (`Does my policy cover this liability` `the incident`)
+    WHEN `I drive a vehicle that someone else owns` THEN `yes if` (`Does my policy cover this liability` `the incident`)
+    OTHERWISE `does not arise for you`
+
+-- s 6A(2) insures "any person (the injured person)" against a catastrophic motor vehicle injury from an accident
+-- involving the insured vehicle, without fault, so this question is asked by all three roles.
+@export If I am catastrophically injured in an accident involving an insured vehicle, does its policy cover me for CISS payments, even if it was my fault (Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 6A)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the injury is catastrophic under the MVWA(CI) Act` IS A BOOLEAN @desc Whether the injury is a catastrophic injury under the Motor Vehicle and Workplace Accidents (Catastrophic Injuries) Act 2016
+      `that Act applies to it as a motor vehicle injury` IS A BOOLEAN @desc Whether it is a motor vehicle injury to which that Act applies
+      `the accident involved the insured vehicle` IS A BOOLEAN @desc Whether the accident involved the vehicle named in the policy
+GIVETH A `Yes or no`
+`Am I covered for CISS payments if I am catastrophically injured` MEANS
+    CONSIDER `my role`
+    WHEN `I own a vehicle, or have one on hire or hire purchase` THEN `yes if` (`Am I covered for CISS payments for a catastrophic injury` `the injury is catastrophic under the MVWA(CI) Act` `that Act applies to it as a motor vehicle injury` `the accident involved the insured vehicle`)
+    WHEN `I drive a vehicle that someone else owns` THEN `yes if` (`Am I covered for CISS payments for a catastrophic injury` `the injury is catastrophic under the MVWA(CI) Act` `that Act applies to it as a motor vehicle injury` `the accident involved the insured vehicle`)
+    WHEN `I was hurt by a motor vehicle` THEN `yes if` (`Am I covered for CISS payments for a catastrophic injury` `the injury is catastrophic under the MVWA(CI) Act` `that Act applies to it as a motor vehicle injury` `the accident involved the insured vehicle`)
+
+§§§ `s 10, ss 7(5), 15 -- after an accident in which someone was killed or injured`
+
+-- Situation: an accident directly caused by, or by the driving of, the vehicle killed or injured someone (s 10(1)).
+@export Must I give the Insurance Commission written notice of the accident, and when (Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 10(1), (2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `someone was killed or injured by the vehicle` IS A BOOLEAN @desc Whether an accident directly caused by, or by the driving of, the vehicle (yours, or the one you were driving) killed or injured anyone
+      `I was driving or in charge of it at the time` IS A BOOLEAN @desc For the owner: whether you were yourself driving the vehicle, or in charge of it, at the time of the accident
+      `it was caused by a motor vehicle` IS A BOOLEAN @desc Whether the vehicle is a motor vehicle under the Act (insured or not), so that the accident was caused by a motor vehicle
+GIVETH AN `Accident notice answer`
+`Must I give the Insurance Commission notice of the accident` MEANS
+    CONSIDER `my role`
+    WHEN `I own a vehicle, or have one on hire or hire purchase` THEN
+        IF `someone was killed or injured by the vehicle`
+        THEN `the notice I must give` (`Must I give notice of the accident` (`the owner's s 10 position` `I was driving or in charge of it at the time`) TRUE `it was caused by a motor vehicle`)
+        ELSE `does not arise for you`
+    WHEN `I drive a vehicle that someone else owns` THEN
+        IF `someone was killed or injured by the vehicle`
+        THEN `the notice I must give` (`Must I give notice of the accident` `the driver or person in charge of the vehicle` TRUE `it was caused by a motor vehicle`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+-- s 10(4) penalises a failure to comply with s 10(1) (the driver's or person in charge's notice) or s 10(3) (the notice of
+-- a claim made on an insured person); the owner's own s 10(2) notice is not in s 10(4). The baseline's figure is used.
+@export What is the most I can be fined for not giving the Insurance Commission notice of an accident or a claim (Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 10(4))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `someone was killed or injured by the vehicle` IS A BOOLEAN @desc Whether an accident directly caused by, or by the driving of, the vehicle (yours, or the one you were driving) killed or injured anyone
+GIVETH AN `Amount`
+`What is the most I can be fined for not giving the Commission notice` MEANS
+    CONSIDER `my role`
+    WHEN `I own a vehicle, or have one on hire or hire purchase` THEN
+        IF `someone was killed or injured by the vehicle`
+        THEN amount `What is the most I can be fined for not giving notice`
+        ELSE `does not arise for you`
+    WHEN `I drive a vehicle that someone else owns` THEN
+        IF `someone was killed or injured by the vehicle`
+        THEN amount `What is the most I can be fined for not giving notice`
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+@export May I do this about the accident without the Insurance Commission's written consent (Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 10(5))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `someone was killed or injured by the vehicle` IS A BOOLEAN @desc Whether an accident directly caused by, or by the driving of, the vehicle (yours, or the one you were driving) killed or injured anyone
+      `the act` IS A `What I want to do` @desc What you want to do about the claim: admit liability, offer or promise to pay or settle, pay or settle, start or spend money on litigation, or answer truthfully a question reasonably asked of you
+GIVETH A `Yes or no`
+`May I do this about the accident without the Commission's written consent` MEANS
+    CONSIDER `my role`
+    WHEN `I own a vehicle, or have one on hire or hire purchase` THEN
+        IF `someone was killed or injured by the vehicle`
+        THEN `yes if` (`May I do it without the Commission's consent` `the act`)
+        ELSE `does not arise for you`
+    WHEN `I drive a vehicle that someone else owns` THEN
+        IF `someone was killed or injured by the vehicle`
+        THEN `yes if` (`May I do it without the Commission's consent` `the act`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+@export Can the Insurance Commission make me repay what it paid the injured person (Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 7(5), s 10(6), s 15, Schedule)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `someone was killed or injured by the vehicle` IS A BOOLEAN @desc Whether an accident directly caused by, or by the driving of, the vehicle (yours, or the one you were driving) killed or injured anyone
+      `I was driving or in charge of it at the time` IS A BOOLEAN @desc For the owner: whether you were yourself driving the vehicle, or in charge of it, at the time of the accident
+      `what went wrong` IS A `What went wrong` @desc Misstatements or nondisclosure when the policy was obtained, breaches of the policy's warranties or conditions (such as a drunk or unlicensed driver), whether you were yourself guilty of that matter, driving without the owner's authority, and missed s 10 notices
+GIVETH A `Yes or no`
+`Can the Insurance Commission make me repay what it paid` MEANS
+    CONSIDER `my role`
+    WHEN `I own a vehicle, or have one on hire or hire purchase` THEN
+        IF `someone was killed or injured by the vehicle`
+        THEN `yes if` (`Can the Commission make me repay` (`the owner's part` `I was driving or in charge of it at the time`) `what went wrong`)
+        ELSE `does not arise for you`
+    WHEN `I drive a vehicle that someone else owns` THEN
+        IF `someone was killed or injured by the vehicle`
+        THEN `yes if` (`Can the Commission make me repay` `I was driving, and I am liable` `what went wrong`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+§§§ `s 4(3A)-(5A) -- a vehicle used on a road uninsured`
+
+-- Situation: a motor vehicle with no complying policy was used on a road, and I am its owner, or used it, or caused or
+-- permitted its use (s 4(3A)). Each of these five questions takes it.
+@export What is the most I can be fined for using a vehicle on a road uninsured, or causing or permitting it (Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 4(3A))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `a vehicle was used on a road uninsured, and I am its owner or was using it` IS A BOOLEAN @desc Whether a motor vehicle with no compulsory third party policy in force was used on a road, and you are its owner, or you used it, or caused or permitted its use (s 4(3A))
+      `I have been convicted of it before` IS A BOOLEAN @desc Whether you have already been convicted of an offence under s 4(3A), so that this would be a second or later offence
+GIVETH AN `Amount`
+`What is the most I can be fined for using a vehicle on a road uninsured` MEANS
+    CONSIDER `my role`
+    WHEN `I own a vehicle, or have one on hire or hire purchase` THEN
+        IF `a vehicle was used on a road uninsured, and I am its owner or was using it`
+        THEN amount (`What is the most I can be fined for using my vehicle uninsured` `I have been convicted of it before`)
+        ELSE `does not arise for you`
+    WHEN `I drive a vehicle that someone else owns` THEN
+        IF `a vehicle was used on a road uninsured, and I am its owner or was using it`
+        THEN amount (`What is the most I can be fined for using my vehicle uninsured` `I have been convicted of it before`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+@export If I am convicted of using a vehicle on a road uninsured, for how many months will I lose my driver's licence and vehicle licence (Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 4(4))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `a vehicle was used on a road uninsured, and I am its owner or was using it` IS A BOOLEAN @desc Whether a motor vehicle with no compulsory third party policy in force was used on a road, and you are its owner, or you used it, or caused or permitted its use (s 4(3A))
+      `the court orders otherwise` IS A BOOLEAN @desc Whether the court thinks fit to order otherwise than disqualification
+GIVETH A `Months`
+`For how many months will I be disqualified for using a vehicle uninsured` MEANS
+    CONSIDER `my role`
+    WHEN `I own a vehicle, or have one on hire or hire purchase` THEN
+        IF `a vehicle was used on a road uninsured, and I am its owner or was using it`
+        THEN months (`For how many months am I disqualified` `the court orders otherwise`)
+        ELSE `does not arise for you`
+    WHEN `I drive a vehicle that someone else owns` THEN
+        IF `a vehicle was used on a road uninsured, and I am its owner or was using it`
+        THEN months (`For how many months am I disqualified` `the court orders otherwise`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+@export If I am convicted of using a vehicle on a road uninsured, must I also pay the annual licence fee that should have been paid (Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 4(3C))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `a vehicle was used on a road uninsured, and I am its owner or was using it` IS A BOOLEAN @desc Whether a motor vehicle with no compulsory third party policy in force was used on a road, and you are its owner, or you used it, or caused or permitted its use (s 4(3A))
+      `the owner held the vehicle licence` IS A BOOLEAN @desc Whether the owner held the vehicle licence the Road Traffic (Vehicles) Act requires for the vehicle at the time
+GIVETH A `Yes or no`
+`Must I also pay the annual licence fee` MEANS
+    CONSIDER `my role`
+    WHEN `I own a vehicle, or have one on hire or hire purchase` THEN
+        IF `a vehicle was used on a road uninsured, and I am its owner or was using it`
+        THEN `yes if` (`Must I also pay the licence fee` `the owner held the vehicle licence`)
+        ELSE `does not arise for you`
+    WHEN `I drive a vehicle that someone else owns` THEN
+        IF `a vehicle was used on a road uninsured, and I am its owner or was using it`
+        THEN `yes if` (`Must I also pay the licence fee` `the owner held the vehicle licence`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+@export Can I be punished for using a vehicle on a road uninsured when I have already been dealt with for using it unlicensed at the same time (Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 4(3B))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `a vehicle was used on a road uninsured, and I am its owner or was using it` IS A BOOLEAN @desc Whether a motor vehicle with no compulsory third party policy in force was used on a road, and you are its owner, or you used it, or caused or permitted its use (s 4(3A))
+      `already dealt with for the Vehicles Act s 4(2) offence` IS A BOOLEAN @desc Whether you have been convicted or acquitted of, or paid an infringement notice for, the Road Traffic (Vehicles) Act s 4(2) offence
+      `both offences were committed at the same time` IS A BOOLEAN @desc Whether both offences were committed simultaneously
+GIVETH A `Yes or no`
+`Can I be punished for uninsured use when already dealt with for unlicensed use` MEANS
+    CONSIDER `my role`
+    WHEN `I own a vehicle, or have one on hire or hire purchase` THEN
+        IF `a vehicle was used on a road uninsured, and I am its owner or was using it`
+        THEN `yes if` (`Can I be punished for uninsured use as well` `already dealt with for the Vehicles Act s 4(2) offence` `both offences were committed at the same time`)
+        ELSE `does not arise for you`
+    WHEN `I drive a vehicle that someone else owns` THEN
+        IF `a vehicle was used on a road uninsured, and I am its owner or was using it`
+        THEN `yes if` (`Can I be punished for uninsured use as well` `already dealt with for the Vehicles Act s 4(2) offence` `both offences were committed at the same time`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+@export Up to how many months after the offence can I be prosecuted for using a vehicle on a road uninsured (Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 4(5), (5A))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `a vehicle was used on a road uninsured, and I am its owner or was using it` IS A BOOLEAN @desc Whether a motor vehicle with no compulsory third party policy in force was used on a road, and you are its owner, or you used it, or caused or permitted its use (s 4(3A))
+      `months after the offence that the prosecutor learned of it` IS A NUMBER @desc How many months after the offence the prosecutor learned of it
+GIVETH A `Months`
+`Up to how many months after the offence can I be prosecuted for uninsured use` MEANS
+    CONSIDER `my role`
+    WHEN `I own a vehicle, or have one on hire or hire purchase` THEN
+        IF `a vehicle was used on a road uninsured, and I am its owner or was using it`
+        THEN months (`Up to how many months after the offence can I be prosecuted` `months after the offence that the prosecutor learned of it`)
+        ELSE `does not arise for you`
+    WHEN `I drive a vehicle that someone else owns` THEN
+        IF `a vehicle was used on a road uninsured, and I am its owner or was using it`
+        THEN months (`Up to how many months after the offence can I be prosecuted` `months after the offence that the prosecutor learned of it`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+§§ `For the driver of a vehicle someone else owns`
+
+§§§ `s 3(1) "insured person", s 6(1)(b), s 15 -- am I insured when I drive it`
+
+-- Helper (not in the baseline): s 3(1) makes "the driver at the material time whether with or without the consent of the
+-- owner" an insured person of a vehicle with a policy in force; s 15 takes away the indemnity of a driver "without the
+-- authority of the owner or without reasonable grounds for believing that he had the authority of the owner" and lets
+-- the Commission recover from them what it paid. Read with s 7(4), the injured person is paid either way.
+GIVEN `a policy is in force for the vehicle` IS A BOOLEAN
+      `I had the owner's authority, or reasonable grounds to believe I had it` IS A BOOLEAN
+GIVETH A `Whether I am insured as the driver`
+`the driver's cover under ss 3(1), 15` MEANS
+    IF (NOT `a policy is in force for the vehicle`)
+    THEN `no: no policy under this Act is in force for the vehicle (s 3(1))`
+    ELSE IF `I had the owner's authority, or reasonable grounds to believe I had it`
+         THEN `yes: you are an insured person while you drive it, with or without the owner's consent (s 3(1), s 6(1)(b))`
+         ELSE `the policy answers for your liability, but you had neither the owner's authority nor reasonable grounds to think you had it, so the Commission can recover from you what it pays (s 15)`
+
+@export Am I insured under the vehicle's compulsory third party policy when I drive a vehicle someone else owns (Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 3(1), s 6(1)(b), s 15)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `a policy is in force for the vehicle` IS A BOOLEAN @desc Whether a compulsory third party policy under the Act is in force for the vehicle (it is while its licence is current, s 4(8A))
+      `I had the owner's authority, or reasonable grounds to believe I had it` IS A BOOLEAN @desc Whether you drove it with the owner's authority, or with reasonable grounds for believing you had that authority (s 15)
+GIVETH A `Whether I am insured as the driver`
+`Am I insured when I drive this vehicle` MEANS
+    CONSIDER `my role`
+    WHEN `I drive a vehicle that someone else owns` THEN `the driver's cover under ss 3(1), 15` `a policy is in force for the vehicle` `I had the owner's authority, or reasonable grounds to believe I had it`
+    OTHERWISE `does not arise for you`
+
+§§ `For the person hurt by a motor vehicle`
+
+§§§ `ss 7, 8, 3(1), 3(3A), 3(7), 7(4) -- whom do I claim against`
+
+@export If the driver was drunk or unlicensed, or the owner misled the insurer, can the Insurance Commission refuse to pay me (Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 7(4))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH A `Yes or no`
+`Can the Insurance Commission refuse to pay me because the driver or owner broke the policy` MEANS
+    CONSIDER `my role`
+    WHEN `I was hurt by a motor vehicle` THEN `yes if` `Can the Commission refuse to pay me because of a breach of the policy`
+    OTHERWISE `does not arise for you`
+
+@export I was hurt by a vehicle: whom do I claim against (Motor Vehicle (Third Party Insurance) Act 1943 (WA) ss 7, 8, 3(1), 3(3A), 3(7))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what happened` IS A `What happened to me` @desc The vehicle that hurt you (insured, uninsured, Commonwealth, an uninsured State vehicle, a visiting vehicle, never identified, or not a motor vehicle), whether the harm came from its driving or its running out of control, whether someone was negligent, and whether that person is dead or cannot be found or served
+GIVETH A `Claim answer`
+`Whom do I claim against for my injury` MEANS
+    CONSIDER `my role`
+    WHEN `I was hurt by a motor vehicle` THEN `I claim against` (`Whom do I claim against` `what happened`)
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 29, 29A, 30, 7(2), 7(3), 8(6) -- notice of my claim, and what can bar it`
+
+@export Have I met the Act's conditions to bring or continue my claim for damages (Motor Vehicle (Third Party Insurance) Act 1943 (WA) ss 29, 29A, 30(5), 7(2), 7(3), 8(6))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what happened` IS A `What happened to me` @desc The vehicle that hurt you (insured, uninsured, Commonwealth, an uninsured State vehicle, a visiting vehicle, never identified, or not a motor vehicle), whether the harm came from its driving or its running out of control, whether someone was negligent, and whether that person is dead or cannot be found or served
+      `steps` IS A `My claim steps` @desc The notices you gave, any search you made, any court relief, and any refused examination or missed court deadline
+GIVETH A `Yes or no`
+`Have I met the Act's conditions to bring my claim` MEANS
+    CONSIDER `my role`
+    WHEN `I was hurt by a motor vehicle` THEN `yes if` (`Have I met the conditions for my claim` `what happened` `steps`)
+    OTHERWISE `does not arise for you`
+
+@export May the Insurance Commission ask a judge to order me to start my court action (Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 29(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I gave notice of intention to claim` IS A BOOLEAN @desc Whether you gave the Commission notice of your intention to claim
+      `I have commenced my action` IS A BOOLEAN @desc Whether you have started your court action
+      `months since the accident` IS A NUMBER @desc How many months have passed since the accident
+GIVETH A `Yes or no`
+`May the Insurance Commission ask a judge to order me to start my action` MEANS
+    CONSIDER `my role`
+    WHEN `I was hurt by a motor vehicle` THEN `yes if` (`May the Commission ask a judge to order me to sue` `I gave notice of intention to claim` `I have commenced my action` `months since the accident`)
+    OTHERWISE `does not arise for you`
+
+@export At least how many days before the hearing must I be served with the Insurance Commission's application to make me sue (Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 29(3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH A `Days`
+`At least how many days before the hearing must I be served with the Commission's application` MEANS
+    CONSIDER `my role`
+    WHEN `I was hurt by a motor vehicle` THEN days `At least how many days before the hearing must I be served`
+    OTHERWISE `does not arise for you`
+
+@export May I bring my lawyer to the Insurance Commission's medical examination (Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 30(4))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH A `Yes or no`
+`May I bring my lawyer to the Commission's medical examination` MEANS
+    CONSIDER `my role`
+    WHEN `I was hurt by a motor vehicle` THEN `yes if` `May I bring my lawyer to the examination`
+    OTHERWISE `does not arise for you`
+
+§§§ `s 8(1), (1A), (1B) -- an unpaid judgment against an uninsured owner or driver`
+
+-- Situation: I have a judgment against the owner or driver of an uninsured motor vehicle (s 8(1)).
+@export Can I claim my unpaid judgment against an uninsured driver or owner from the Insurance Commission, and how much (Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 8(1), (1A), (1B))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have a judgment against the owner or driver of an uninsured vehicle` IS A BOOLEAN @desc Whether you have obtained a court judgment for your injury against the owner or driver of an uninsured motor vehicle (s 8(1))
+      `whole months since judgment, not counting any stay pending appeal` IS A NUMBER @desc How many whole months have passed since judgment was entered, leaving out any time execution was stayed pending appeal
+      `the amount unpaid` IS A NUMBER @desc How much of the judgment, with costs, is unpaid, in dollars
+      `the judgment was obtained in WA` IS A BOOLEAN @desc Whether the judgment was obtained in Western Australia
+      `the Commission knew of the action before the hearing` IS A BOOLEAN @desc Whether the Insurance Commission knew the action had been commenced before it came on for hearing
+GIVETH AN `Amount`
+`How much of my unpaid judgment against an uninsured driver or owner can I claim from the Commission` MEANS
+    CONSIDER `my role`
+    WHEN `I was hurt by a motor vehicle` THEN
+        IF `I have a judgment against the owner or driver of an uninsured vehicle`
+        THEN amount (`How much of my unpaid judgment can I claim from the Commission` `whole months since judgment, not counting any stay pending appeal` `the amount unpaid` `the judgment was obtained in WA` `the Commission knew of the action before the hearing`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+§§§ `s 12, Regulations r 6 -- emergency treatment and the trip to hospital`
+
+-- Situation: a doctor or nurse gave me emergency treatment (s 12(1)(a)(i)).
+@export Will the Insurance Commission pay the doctor or nurse for my emergency treatment, so that I owe nothing (Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 12(1), (3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `a doctor or nurse gave me emergency treatment` IS A BOOLEAN @desc Whether a medical practitioner or registered nurse gave you emergency treatment, the treatment or examination immediately required because of the injury (s 12(4))
+      `the injury was caused by a motor vehicle` IS A BOOLEAN @desc Whether the injury was directly caused by, or by the driving of, a motor vehicle (insured or uninsured)
+      `the doctor or nurse gave notice within one month` IS A BOOLEAN @desc Whether the doctor or nurse gave the Commission written notice of the claim within one month of the accident
+GIVETH A `Yes or no`
+`Will the Insurance Commission pay for my emergency treatment` MEANS
+    CONSIDER `my role`
+    WHEN `I was hurt by a motor vehicle` THEN
+        IF `a doctor or nurse gave me emergency treatment`
+        THEN `yes if` (`Will the Commission pay for my emergency treatment` `the injury was caused by a motor vehicle` `the doctor or nurse gave notice within one month`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+@export How much of the emergency treatment charge is left for me to pay (Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 12(3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `a doctor or nurse gave me emergency treatment` IS A BOOLEAN @desc Whether a medical practitioner or registered nurse gave you emergency treatment, the treatment or examination immediately required because of the injury (s 12(4))
+      `the charge` IS A NUMBER @desc The doctor's or nurse's charge for the emergency treatment, in dollars
+      `the injury was caused by a motor vehicle` IS A BOOLEAN @desc Whether the injury was directly caused by, or by the driving of, a motor vehicle (insured or uninsured)
+      `the doctor or nurse gave notice within one month` IS A BOOLEAN @desc Whether the doctor or nurse gave the Commission written notice of the claim within one month of the accident
+GIVETH AN `Amount`
+`How much of the emergency treatment charge must I pay` MEANS
+    CONSIDER `my role`
+    WHEN `I was hurt by a motor vehicle` THEN
+        IF `a doctor or nurse gave me emergency treatment`
+        THEN amount (`How much of the emergency charge is left for me to pay` `the charge` `the injury was caused by a motor vehicle` `the doctor or nurse gave notice within one month`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+-- Situation: I was conveyed in a vehicle immediately after the injury (s 12(1)(a)(ii)).
+@export How much must the Insurance Commission pay the person who took me to hospital (Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 12(1)(a)(ii), (d); Motor Vehicle (Third Party Insurance) Regulations 2009 r 6)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I was carried in a vehicle straight after I was injured` IS A BOOLEAN @desc Whether, immediately after the injury, you were conveyed in any vehicle (an ambulance, or anyone else's car)
+      `an ambulance service under a written agreement with the Commission took me` IS A BOOLEAN @desc Whether you were taken by an ambulance service that has a written agreement with the Insurance Commission
+      `the amount under the agreement` IS A NUMBER @desc The amount calculated under that agreement, in dollars (0 if none)
+      `the distance in kilometres` IS A NUMBER @desc The distance, by the most practical route, from the accident to where you were taken, in kilometres
+      `the rate per kilometre` IS A NUMBER @desc The rate per kilometre under the Workers Compensation and Injury Management Regulations 2024 r 35(1) and (2), in dollars
+GIVETH AN `Amount`
+`How much must the Insurance Commission pay the person who took me to hospital` MEANS
+    CONSIDER `my role`
+    WHEN `I was hurt by a motor vehicle` THEN
+        IF `I was carried in a vehicle straight after I was injured`
+        THEN amount (`How much must the Commission pay the person who took me to hospital` `an ambulance service under a written agreement with the Commission took me` `the amount under the agreement` `the distance in kilometres` `the rate per kilometre`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 26, 27A -- waivers and legal fees`
+
+@export Have I lost my right to claim because I signed an agreement in advance not to claim for injury caused by a driver (Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 26)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH A `Yes or no`
+`Have I signed away my right to claim for a driver's negligence` MEANS
+    CONSIDER `my role`
+    WHEN `I was hurt by a motor vehicle` THEN `yes if` `Have I signed away my right to claim`
+    OTHERWISE `does not arise for you`
+
+@export Is my lawyer's fee agreement for my injury claim void (Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 27A)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the agreed fee` IS A NUMBER @desc The fee your lawyer's agreement provides, in dollars
+      `the fee the legal costs determination allows` IS A NUMBER @desc The most the legal costs determination in force provides for the work, in dollars
+GIVETH A `Yes or no`
+`Is my lawyer's fee agreement for my claim void` MEANS
+    CONSIDER `my role`
+    WHEN `I was hurt by a motor vehicle` THEN `yes if` (`Is my lawyer's fee agreement void` `the agreed fee` `the fee the legal costs determination allows`)
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 3C, 3D, 3F, 3FB -- what damages can I get`
+
+@export How much can I be awarded for pain and suffering and other non-pecuniary loss (Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 3C)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the amounts` IS A `The amounts in force` @desc Amounts A, B, C and D and the average weekly earnings figures in force on the date of the court's decision
+      `the assessed loss` IS A NUMBER @desc The court's assessment of your non-pecuniary loss, in dollars
+GIVETH AN `Amount`
+`How much can I be awarded for non-pecuniary loss` MEANS
+    CONSIDER `my role`
+    WHEN `I was hurt by a motor vehicle` THEN `amount from` (`How much for non-pecuniary loss` `the amounts` `the assessed loss`)
+    OTHERWISE `does not arise for you`
+
+@export How much can I be awarded for care my family gives me without charge (Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 3D)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the amounts` IS A `The amounts in force` @desc Amounts A, B, C and D and the average weekly earnings figures in force on the date of the court's decision
+      `the care would have been given anyway` IS A BOOLEAN @desc Whether the care would have been given even without the injury
+      `hours of care a week` IS A NUMBER @desc How many hours a week the care is given
+      `weeks of care` IS A NUMBER @desc For how many weeks
+      `the value assessed` IS A NUMBER @desc The court's valuation of the care, in dollars
+GIVETH AN `Amount`
+`How much can I be awarded for my family's unpaid care` MEANS
+    CONSIDER `my role`
+    WHEN `I was hurt by a motor vehicle` THEN amount (`How much for gratuitous care` `the amounts` `the care would have been given anyway` `hours of care a week` `weeks of care` `the value assessed`)
+    OTHERWISE `does not arise for you`
+
+@export What weekly earning capacity can count towards my damages for lost earnings (Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 3F)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the amounts` IS A `The amounts in force` @desc Amounts A, B, C and D and the average weekly earnings figures in force on the date of the court's decision
+      `my weekly earning capacity` IS A NUMBER @desc What you could have earned a week but for the injury, in dollars
+GIVETH AN `Amount`
+`What weekly earning capacity can count towards my lost earnings` MEANS
+    CONSIDER `my role`
+    WHEN `I was hurt by a motor vehicle` THEN amount (`What weekly earning capacity counts` `the amounts` `my weekly earning capacity`)
+    OTHERWISE `does not arise for you`
+
+@export Can my damages for the care of a catastrophic injury be cut because I was partly to blame (Motor Vehicle (Third Party Insurance) Act 1943 (WA) s 3FB)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH A `Yes or no`
+`Can my damages for catastrophic care be cut for my own fault` MEANS
+    CONSIDER `my role`
+    WHEN `I was hurt by a motor vehicle` THEN `yes if` `Can my catastrophic care damages be cut for my own fault`
+    OTHERWISE `does not arise for you`
