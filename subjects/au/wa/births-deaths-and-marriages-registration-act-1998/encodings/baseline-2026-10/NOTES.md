@@ -129,3 +129,79 @@ sex or gender, and the Register's internal machinery are out, because none of th
   were not checked.
 - The s 16 regulative rule has not been traced.
 - No case law was consulted, and there was no independent test pass.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026 as a layer: `bdm-qa.l4` (IMPORTs `prelude` and `bdm-registration`) and `bdm-qa-cases.l4` (IMPORTs those and
+`bdm-qa`). The baseline's files are unchanged. The design is the Graffiti Vandalism Act 2016 encoding's (its NOTES.md D2, D4,
+D8 and D8.1-D8.15): every exported question takes `my role` IS A Role first (`@desc Which of these describes you`), and answers
+`does not arise for you` for a role it is not about without reading any other input; a question that arises only in a
+situation takes that situation's fact second and answers `does not arise for you` when it does not hold, reading nothing
+else. No exported question takes a DEONTIC or EVENT input. One deployment serves every role.
+
+### Roles, and why
+
+| Role | Why | Questions |
+|---|---|---|
+| `I am a parent registering my child's birth` | the baseline's first seat; Part 3 is addressed to the parents (ss 15, 16, 22, 23) | 24 |
+| `I am marrying, or have married` | the baseline's seat for Part 6 | 7 |
+| `I am family, or the executor, of a person who has died` | the baseline's seat for Part 7, and the executor who needs the certificate | 20 |
+| `I am a funeral director, or I arrange the disposal of a person's remains` | new: ss 42, 45, 46 and 47 put their duties and the $1 000 penalties on this person | 13 |
+
+43 questions in all; a question shared by roles is counted under each. The certificate, fee and s 2 questions are shared by the
+parent, the couple and the family; the penalty question by the parent, the family and the funeral director; the questions of
+ss 42-48 by the family and the funeral director. The Registrar, the coroner, the courts and the hospital's chief executive are
+not seats. The doctor (ss 12(1)(b), 44) and the person in charge of an institution (s 42(b)) are not roles in this layer: the
+doctor's s 44 duty is asked from the family's and the funeral director's side ("Which doctor must certify", "Is the doctor in
+breach").
+
+### Situation inputs
+
+| Name | Type | Gives `does not arise for you` | Questions |
+|---|---|---|---|
+| `my child was born in Western Australia` | BOOLEAN | FALSE for the three s 12 questions ("When a child is born in the State", s 12(2)); TRUE for the s 13(3)-(6) question (a birth in the State must be registered, s 13(1)) | `Who must notify the Registrar of my child's birth`, `By what date must my child's birth be notified to the Registrar`, `Was my child's birth notified to the Registrar in time`, `May my child's birth be registered here although it need not be`; also taken, as an ordinary input, by `Must my child's birth be registered under this Act` |
+| `where the person died` | `Where the person died` (new: `in Western Australia`, `in an aircraft or on a vessel on its way to Western Australia`, `elsewhere in Australia`, `outside Australia`) | every value but `in Western Australia` for the four s 42 questions (s 42 "If a person dies in the State") and the two s 44 questions; `in Western Australia` for the s 40(4)-(6) question | `Who must notify the Registrar of the death`, `Must I notify the Registrar of this death`, `Within how many days must the death registration statement be lodged`, `Was the death notified to the Registrar in time`, `Which doctor must certify the cause of the death`, `Is the doctor in breach of the 48-hour duty to certify`, `May a death that happened outside Western Australia be registered here`; also, as an ordinary input, `Must the death be registered under this Act` |
+| `what has been done with the remains` | `What is done with the remains` (the baseline's own type) | `removal of cremated remains from the State` and `kept, not yet disposed of` for the two s 45/46(a) questions; every value but `removal of the uncremated remains from the State` for s 46(b); every value but `kept, not yet disposed of` for s 47 | `Within how many days must the Registrar be given notice of the disposal`, `Was the disposal notified to the Registrar in time`, `Within how many days of the disposal outside the State must the Registrar be told`, `Must the Registrar be told that the remains have not been disposed of`; also, as an ordinary input, `Is what has been done with the remains a disposal` |
+
+Each situation is read through a helper, or a CONSIDER, that lists every value with no OTHERWISE (graffiti finding 31).
+
+### Decisions
+
+- **Dates stay YYYYMMDD numbers,** as the baseline writes them, so `Date answer` is `by` HAS `the last day, written YYYYMMDD`
+  IS A NUMBER, not the graffiti layer's DATE. Converting would need a daydate module and would roll the baseline's
+  non-dates (20300231, which compares correctly as a number) forward to a wrong day.
+- **The s 44 questions take the place of death.** s 44 does not itself say "in the State", but its certificate goes to "the
+  person who is responsible under section 42", and s 42 applies only "If a person dies in the State". Read so, they arise only
+  for a death in the State. The other reading would ask them for every death.
+- **`removal of cremated remains from the State` gives `does not arise` for the s 45/46(a) questions.** The baseline counts that
+  removal as no disposal (s 4(d)) and answers 0 days; the cremation itself was a disposal with its own 7 days under s 45, which
+  the person reaches by answering `cremation`. For s 47 the same value counts as disposed of.
+- **s 47's `disposed of` is FALSE by the situation.** The question arises only for `kept, not yet disposed of`, so the baseline's
+  `disposed of` input is passed FALSE, as the graffiti layer passes facts its situation fixes.
+- **A death elsewhere in Australia** is neither s 40(4) nor s 40(5): the s 40(4)-(6) question answers no for it and reads nothing
+  else.
+- **Shared ordinary inputs were given one @desc.** `days after the birth` had three wordings in the baseline and `the death must
+  be reported to a coroner` two; in the layer each has one ("was, or will be, lodged"; "under s 17(3) of the Coroners Act
+  1996"), so the form can merge them.
+- **Added questions:** `Must we ourselves lodge our marriage certificate` (no: s 38 is a permission and its note puts the
+  lodging on the celebrant); `Must I notify the Registrar of this death` (the funeral director's s 42 duty; no where s 42(b) or
+  s 43 puts it on someone else); s 46(b)'s 28 days, which the baseline does not encode, as the helper `s 46(b) -- days to notify
+  the disposal outside the State`.
+
+### Not covered for the new role
+
+For the funeral director: s 46(b) asks only the number of days, not whether the second notice was in time; the s 47 notice's
+own time (the text gives none); the approved forms; the Cremation Act 1929 and the Cemeteries Act 1986, which govern the
+disposal itself. The penalty question gives the maximum for the offence, not whether the offence is made out on the facts.
+
+### Cases
+
+`bdm-qa-cases.l4`: 342 assertions, all satisfied. 164 written by hand for the roles each question is about (43 of them assert
+that the answer equals the baseline export's on the same facts, wrapped in the answer type; the rest give hand-worked values,
+most taken from the baseline's own cases); 108 for the roles a question is not about, every other input ASSUMEd; 70 for the
+situation values that do not hold, the inputs after them ASSUMEd. The last two groups were generated by a scratch script from
+the parameter list and the table above. Checked on stable l4 1.6.98: 0 errors and 0 warnings in all four files, 69 + 342
+assertions satisfied, `l4 check bdm-qa.l4` succeeds, and a parameter script confirms `my role` first everywhere, each shared
+input identical in name, type and @desc, each situation second and read first in each role branch, and no DEONTIC or EVENT
+input. A negative control on a scratch copy (a wrong expected value; a role branch that reads a later input; a situation
+helper that lets `elsewhere in Australia` through) failed 13 cases, as it should.
