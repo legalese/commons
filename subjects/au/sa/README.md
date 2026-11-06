@@ -2,7 +2,7 @@
 
 South Australian Acts, one subject-id per body of law, following the subject-sidecar shape described in [`subjects/README.md`](../README.md).
 
-**579 Acts are indexed here, and ten regulations were added on 2026-10-24. Twenty instruments (ten Acts and ten regulations) are sourced, all for the tax-and-benefits sample below and all from the Open Australian Legal Corpus. Nothing was encoded when they were deposited.**
+**579 Acts are indexed here; ten regulations were added on 2026-10-24 and eleven more on 2026-11-06. Forty-five instruments are sourced: twenty (ten Acts and ten regulations) for the tax-and-benefits sample below, from the Open Australian Legal Corpus, and twenty-five (fourteen Acts and eleven regulations) for claims, injury and compensation law, from the official register on 2026-11-06. Nothing was encoded when the twenty-five were deposited.**
 
 ## Indexed
 
@@ -131,6 +131,47 @@ The stable `l4` cannot IMPORT across encoding folders, so each link is recorded 
 
 Within South Australia, the encodings meet in three places. Victims of Crime Act s 17(5)(b) bars statutory compensation where a Return to Work payment or damages for death or non-economic loss is received or due for the same harm. The return to work encoding's s 58 and ss 59-62 answers are that input, and weekly payments alone do not bar it (victims of crime, finding 3). Stamp duty vehicle exemption 11 and policy exemption 6 take as a fact that the owner is "entitled under section 38 of the Motor Vehicles Act 1959" to a reduced registration fee, and the concessions encoding works out s 38 (`colc-vehicles.l4`). And the home: the s 71DD relief and the grant share one residence requirement (six months, beginning within 12 months), while land tax and the levy remission each ask about the principal place of residence in their own terms.
 
+## Claims, injury and compensation law (sourced 2026-11-06)
+
+On 2026-11-06 the official register answered again (see "Terms and access" below), so these twenty-five texts come from it, not from the corpus: each is the register's current **unauthorised** RTF, converted to plain text; the authorised PDF's address is in each `meta.json` (`authorised_pdf_url`). Each `meta.json` records the landing page and RTF requests, the version, both hashes and the converter; each `SOURCE-LICENSE.md` the terms read that day. The eleven regulations are new subjects, with `parent_act`.
+
+| Subject | Version (register) | Characters | Why |
+| --- | --- | --- | --- |
+| [`jurisdiction-of-courts-cross-vesting-act-1987`](jurisdiction-of-courts-cross-vesting-act-1987/) | 4.9.2006 | 32,651 | Cross-vesting: transfer of proceedings between the Supreme Court and federal, State and Territory courts (s 5), and the law to be applied in a transferred proceeding (s 11). |
+| [`legal-practitioners-act-1981`](legal-practitioners-act-1981/) | 1.9.2026 | 536,401 | Costs agreements and costs disclosure and adjudication (Schedule 3), the combined trust account (s 53; one formula, transcribed in the sidecar). |
+| [`limitation-of-actions-act-1936`](limitation-of-actions-act-1936/) | 1.7.2021 | 60,999 | Time limits for personal injury and other actions (s 36), extension of time (s 48), no limitation period for child abuse actions (Part 1A, s 3A), the s 45A notice for actions by minors, and limitation laws as substantive law (s 38A, South Australia's choice of law rule for limitation periods). |
+| [`south-australian-civil-and-administrative-tribunal-act-2013`](south-australian-civil-and-administrative-tribunal-act-2013/) | 1.6.2025 | 129,129 | The Tribunal's jurisdiction, applications, internal review and appeals, costs, federal jurisdiction proceedings (Part 3A). |
+| [`survival-of-causes-of-action-act-1940`](survival-of-causes-of-action-act-1940/) | 8.2.2006 | 6,751 | Survival of a cause of action for or against the estate; what the estate may recover, and the exception for dust-related conditions (s 3(2)). |
+| [`coroners-act-2003`](coroners-act-2003/) | 31.1.2023 | 59,933 | Reportable deaths, inquests, findings and recommendations. |
+| [`work-health-and-safety-act-2012`](work-health-and-safety-act-2012/) | 1.7.2025 | 330,724 | Duties of persons conducting a business or undertaking, officers and workers; offences, notices, review. |
+| [`motor-vehicle-accidents-lifetime-support-scheme-act-2013`](motor-vehicle-accidents-lifetime-support-scheme-act-2013/) | 2.12.2019 | 120,777 | The Lifetime Support Scheme for people catastrophically injured in motor accidents: eligibility, participation, treatment, care and support. |
+| [`health-and-community-services-complaints-act-2004`](health-and-community-services-complaints-act-2004/) | 4.12.2025 | 119,555 | Complaints about health and community services: who may complain, time limits, assessment, conciliation, investigation. |
+| [`dust-diseases-act-2005`](dust-diseases-act-2005/) | 1.1.2021 | 11,858 | Actions for dust diseases. |
+| [`equal-opportunity-act-1984`](equal-opportunity-act-1984/) | 1.4.2025 | 196,343 | Discrimination, harassment and victimisation; complaints to the Commissioner and the Tribunal. |
+| [`fair-work-act-1994`](fair-work-act-1994/) | 22.8.2026 | 374,052 | State industrial relations: unfair dismissal, monetary claims, awards and enterprise agreements in the State system. |
+| [`long-service-leave-act-1987`](long-service-leave-act-1987/) | 1.7.2017 | 33,089 | Entitlement to long service leave, payment on termination, records and claims. |
+| [`succession-act-2023`](succession-act-2023/) | 1.1.2025 | 168,806 | Wills, intestacy and family provision; replaced the Wills Act 1936 and the Inheritance (Family Provision) Act 1972 from 1 January 2025. |
+| [`legal-practitioners-regulations-2014`](legal-practitioners-regulations-2014/) | 1.7.2020 | 87,346 | Prescribed matters under the Legal Practitioners Act. |
+| [`limitation-of-actions-section-45a-notice-regulations-2019`](limitation-of-actions-section-45a-notice-regulations-2019/) | 23.5.2019 | 2,055 | The notice under s 45A of the Act. |
+| [`south-australian-civil-and-administrative-tribunal-regulations-2015`](south-australian-civil-and-administrative-tribunal-regulations-2015/) | 1.7.2020 | 19,214 | Prescribed matters under the SACAT Act. |
+| [`coroners-regulations-2020`](coroners-regulations-2020/) | 1.8.2020 | 1,935 | Prescribed matters, including the fee for an appointed coroner (reg 5; one formula, transcribed in the sidecar). |
+| [`work-health-and-safety-regulations-2012`](work-health-and-safety-regulations-2012/) | 1.7.2026 | 1,012,167 | The detailed duties under the Act. One formula (Schedule 15 clause 4) transcribed in the sidecar; five figures (placards and labels) not transcribed. |
+| [`motor-vehicle-accidents-lifetime-support-scheme-regulations-2014`](motor-vehicle-accidents-lifetime-support-scheme-regulations-2014/) | 30.5.2017 | 3,103 | Prescribed matters under the Lifetime Support Scheme Act. |
+| [`health-and-community-services-complaints-regulations-2019`](health-and-community-services-complaints-regulations-2019/) | 18.3.2019 | 21,699 | Prescribed matters under the Health and Community Services Complaints Act. |
+| [`dust-diseases-regulations-2021`](dust-diseases-regulations-2021/) | 17.6.2021 | 4,497 | Prescribed matters under the Dust Diseases Act. |
+| [`fair-work-general-regulations-2024`](fair-work-general-regulations-2024/) | 22.8.2024 | 18,448 | Prescribed matters under the Fair Work Act 1994. |
+| [`long-service-leave-regulations-2017`](long-service-leave-regulations-2017/) | 1.9.2017 | 5,616 | Prescribed matters under the Long Service Leave Act. |
+| [`succession-regulations-2024`](succession-regulations-2024/) | 1.1.2025 | 5,736 | Prescribed matters under the Succession Act. |
+
+Notes:
+
+- **Versions.** Every Act's version equals the one the Current Titles list of 22 September 2026 gave, where it gave one; the Fair Work Act 1994 (22.8.2026) and the Long Service Leave Act 1987 (1.7.2017) had none. Each `meta.json` has a `currency` note where the comparison was possible.
+- **Formulas.** Three formulas are pictures in the RTF: Legal Practitioners Act s 53(2), Coroners Regulations reg 5 and Work Health and Safety Regulations Schedule 15 clause 4. Each is transcribed in a `<slug>.formulas.md` sidecar from the RTF's own picture and has not yet been checked against the authorised PDF. The WHS Regulations also carry five figures (placards and labels) that are not transcribed.
+- **Ceased and replaced.** The register marks the Wills Act 1936 and the Inheritance (Family Provision) Act 1972 "ceased" (each last version ran to 31 December 2024). The Succession Act 2023, whose current version runs from 1 January 2025, replaced them and is deposited above. Neither ceased Act has a subject here.
+- **No separate Act.** South Australia has no Choice of Law (Limitation Periods) Act (the register answers "Title Error"); its rule that limitation laws are substantive law is s 38A of the Limitation of Actions Act 1936, deposited above.
+- **Child abuse.** The removal of the limitation period is Part 1A (s 3A) of the Limitation of Actions Act 1936, above. Institutional liability and the setting aside of settlements are Parts 7A and 7B of the Civil Liability Act 1936, whose text is already deposited (corpus, as at 2023-06-22, the version the register still shows as current on 2026-11-06).
+- **Not deposited.** The Uniform Civil Rules 2020 (representative actions): the register's page has no text and points to the Courts Administration Authority, whose `robots.txt` (read 2026-11-06) disallows `/rules-forms-fees/`, where the rules are published, so they were not taken. The LSS Rules made under the Lifetime Support Scheme Act also have no text on the register and were not taken. Court and tribunal rules listed under the Acts (SACAT Rules 2014, Coroners Court Rules 2005, Industrial Proceedings Rules 2010, Equal Opportunity Tribunal Rules) were not taken.
+
 ## Terms and access
 
 **Owner's ruling, 2026-10-24.** Michael ruled in chat, in these words: "On NT, Vic and SA, yes please go ahead". For South Australia this means the texts may be sourced the same way the New South Wales texts were on 2026-10-20, from the Open Australian Legal Corpus (CC BY 4.0), if the official register still refuses. It still refused on 2026-10-24 (below), so the corpus was used. The ruling is recorded in each deposited subject's `SOURCE-LICENSE.md` and `meta.json` (`ruling`).
@@ -160,3 +201,11 @@ The route used, the **Open Australian Legal Corpus** (Hugging Face, `isaacus/ope
 - The corpus has **no per-document licence field** (its fields are version_id, type, jurisdiction, source, mime, date, citation, url, when_scraped, text); each meta.json records the per-document licence as CC BY 4.0 by virtue of `LICENCE.md`. Every South Australian document the corpus holds was extracted from the register's unauthorised RTF (`mime` `application/rtf`), with striprtf.
 - Download: the documented file `corpus.jsonl` (9,401,179,433 bytes, 232,560 documents) was streamed once in full from `https://huggingface.co/datasets/isaacus/open-australian-legal-corpus/resolve/main/corpus.jsonl` on 2026-10-24 (04:24:59Z to 04:37:24Z) without being written to disk; its sha256 as computed, `5abc64a3ad35a44eca65706babd63d1095c29ebebf3f5c588beb56612097b758`, equals the file's published LFS oid (the same file the NSW texts came from). Only South Australian records were kept, and twenty were deposited.
 - Each text opens with the warning, an unofficial-version notice, the South Australian and corpus attributions, the corpus document's version_id, date, url and scrape time, and a note of the changes made (line endings and blank lines normalised; no wording changed). The same are in each meta.json (`corpus`, `warning`, `attribution`, `download_sha256`, `corpus_line_sha256`, `source_text_sha256`, `text_sha256`, `text_chars`) and SOURCE-LICENSE.md.
+
+On 2026-11-06, with the same User-Agent and at least 10 seconds between requests to the register (each deposit's `meta.json` records its requests):
+
+- `https://www.legislation.sa.gov.au/robots.txt` (12:00:54Z): HTTP 200, the same 277 bytes as on 2026-10-24.
+- The Limitation of Actions Act 1936 landing page (12:01:10Z): **HTTP 200, no bot challenge**, listing the current authorised PDF and unauthorised RTF. Its current RTF (12:02:24Z): HTTP 200, `text/rtf`.
+- `https://www.legislation.sa.gov.au/copyright` (12:02:38Z): HTTP 200: "the SA Content of this Website is licensed under the Creative Commons Attribution 4.0 International Licence (CC BY 4.0)", allowing sharing and adapting, including for commercial purposes.
+- So the claims, injury and compensation texts above came from the register itself. The twenty corpus texts of 2026-10-24 have not yet been replaced.
+- `https://www.courts.sa.gov.au/robots.txt` (12:26:56Z): `Crawl-delay: 10`, with `/rules-forms-fees/` (where the Uniform Civil Rules 2020 are published) disallowed. One request to `https://www.courts.sa.gov.au/rules-forms-fees/ucr2020/` was sent in the same command, before the robots file had been read; its content was discarded unread, and no further request was made there.
