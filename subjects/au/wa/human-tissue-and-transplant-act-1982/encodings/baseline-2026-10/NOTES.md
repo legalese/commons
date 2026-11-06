@@ -214,3 +214,77 @@ what the Act promises the donor about their identity.
   at exactly 24 hours?
 - **Encode the rest.** Postmortems (Part 4), the s 29A(4)(b)-(f) exceptions and
   ss 29B-29E in detail, s 30 and s 33 are left out.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026, after the graffiti encoding's design (Graffiti Vandalism Act 2016, `gva-seat.l4`, its NOTES D2,
+D4 and D8). The layer is `htta-qa.l4` (imports `prelude` and `htta-donation`), with its cases in `htta-qa-cases.l4`
+(imports `prelude`, `htta-donation` and `htta-qa`). The baseline's files are unchanged: no rule or export of
+`htta-donation.l4` was touched, and its 70 cases still pass. The layer calls the baseline's functions and restates none.
+
+**Why.** The site's question form asks only the inputs that can still change an open question. Every exported question
+takes `my role` first ("Which of these describes you"); for a role it is not about, it answers `does not arise for you`
+without reading any other input. Within a role, a question that arises only in a situation takes that situation's fact
+second, and answers `does not arise for you` when it does not hold, again reading nothing else.
+
+**Roles** (`Role`). The baseline was written from two seats, the potential donor and the senior available next of kin,
+and asks one question from a third, the parent of a child donor. Those are the roles:
+
+- `I may give tissue or blood, or want to know what happens to my body after I die`: the donor, living (Part 2) or
+  after death (Part 3), with the s 29A sale questions and s 34.
+- `I am next of kin of a person who has died, or may soon die`: the relative of s 3(1), whose consent or objection
+  counts under s 22(2)(b), (4) and (5).
+- `I am the parent or guardian of a child under 18 who may give tissue or blood`: the parent of ss 11-19. A guardian is
+  in the role's words so that a guardian who asks is told that a guardian's consent is not enough (s 13(1), with s 11's
+  meaning of parent), which the baseline's question already answers.
+
+The designated officer, the coroner, the Minister, the Chief Health Officer and the medical practitioners are not seats:
+what they decide or are satisfied of is asked as a fact, as in the baseline. A recipient of tissue is not a role: the
+only provision that gives a recipient anything in the encoded text is s 34, which the donor's question answers in the
+same words ("donor or recipient").
+
+**Situation inputs.** All are BOOLEAN; FALSE gives `does not arise for you`; each is the second input wherever it is
+taken.
+
+| Name | Role | Questions that take it |
+|---|---|---|
+| `I have signed a consent to give tissue or blood while I am alive` | donor | May my tissue be removed now under the consent I signed |
+| `the person is kept breathing by artificial means` | next of kin | Have the brain-death declarations been made about the person |
+| `I made my consent known while the person was unconscious, before death` | next of kin | May the officer act on the consent I gave while the person was unconscious |
+
+The Act ties these rules to those facts: ss 15, 16 and 20 make "a consent under section 8 [or 9, or this Division]"
+authority for the removal; s 24(2) applies where "the respiration and the circulation of the blood of a person are being
+maintained by artificial means"; s 22(4) to consent made known "at any time when the person is unconscious before
+death".
+
+**Decisions.**
+
+1. **The baseline's two seats, and its parent question, are all baseline roles.** Every question of the layer calls a
+   baseline export, so every own-role case is asserted against the baseline's answer as well as a hand-worked value.
+2. **The next of kin's after-death questions call the donor's functions.** "Whose consent governs donation of the
+   person's tissue", "May tissue be removed from the person's body" and "Does my objection stop the person's tissue being
+   taken" call the baseline's donor functions with the person's `Deceased` record (and, for the objection, the
+   relative's own `Relative` record as `me`). `Whose consent answer` words the baseline's four answers so that either
+   role can read them, through a helper that lists every value.
+3. **The donor's s 24(2) question takes no situation.** "Have the brain-death declarations been made about me" is asked
+   by the donor about what would be needed, before anyone is ventilated, so it arises in every situation of that role.
+   The next of kin's question of the same subject is asked about a person who is ventilated, and takes that situation.
+4. **"May I consent to giving this tissue" takes no situation**: it arises before any consent is signed.
+5. **The s 29A(3) penalty** is carried as `imprisonment or a fine, at most` with the months and the dollars (the
+   baseline's `Penalty` record, which has no `does not arise for you`).
+6. **Names.** Each question's name is a plain first-person question, different from the baseline function's name so the
+   two modules can be imported together.
+
+**Not covered for the new roles.** The next of kin's role adds no provision the baseline does not encode: the coroner's
+conditions (s 23(3), (4)), post-mortem examinations (Part 4) and who is the designated officer (ss 4, 5) stay out. For
+the parent: s 21 (an emergency transfusion on a child, where the child is the recipient) and the form of the parent's
+consent beyond its being in writing (s 17).
+
+**Checks.** 18 exported questions: 10 for the donor, 7 for the next of kin, 1 for the parent. `htta-qa-cases.l4` has
+153 assertions, all satisfied: 36 asking each question for the two roles it is not about, every other input ASSUMEd; 3
+asking each situation question with FALSE and every later input ASSUMEd; 57 hand-worked cases (32 donor, 20 next of
+kin, 5 parent), each also asserted equal to the baseline export's answer on the same facts (57). The cases restate the
+baseline's fixtures unchanged. 0 errors and 0 warnings in all four files (`htta-donation.l4`; `htta-cases-donation.l4`,
+70 satisfied; `htta-qa.l4`; `htta-qa-cases.l4`); `l4 check htta-qa.l4` succeeds. A script listed every `@export` with
+its inputs and checked `my role` first everywhere, the three situation inputs, each role branch reading its situation
+first, and no DEONTIC or EVENT input. Negative control: a case reading an ASSUMEd input fails.
