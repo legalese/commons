@@ -118,3 +118,84 @@ They are what a lawyer or the tribunal does, not what a party asks at the thresh
 - The severance provisos of ss 34(2)(a)(iii) and 36(1)(a)(iii) in full, and each s 36(1)(a) ground as its own fact.
 - The case law on "null and void, inoperative or incapable of being performed", on "question of law", and on the real danger of bias.
 - The facts of d038 and d051 confirmed with the scenario's author: how the agreement was recorded, the seat, and whether any arbitration was on foot.
+
+## Q&A layer (seat and situations as parameters)
+
+Added on 6 November 2026, following the design of the Graffiti Vandalism Act 2016 layer (its D2, D4 and D8). The
+layer is `caa-qa.l4`, which imports `prelude`, `daydate` and `caa-arbitration.l4`; its cases are `caa-qa-cases.l4`.
+`daydate` is imported as the baseline's rule file imports it, only to build placeholder dates. Nothing in
+`caa-arbitration.l4` or `caa-cases-arbitration.l4` was changed. The layer builds the baseline's records (`My arbitration
+agreement`, `My appointment facts`, `How I was heard`, `My setting-aside application`, `My appeal`) from plain answers
+and calls the baseline's functions. Every exported question takes `my role` first (`@desc Which of these describes
+you`) and answers `does not arise for you` for a role it is not about, without reading any other input. No exported
+question takes a DEONTIC or EVENT input.
+
+**Roles.**
+
+- `I am a party to an arbitration agreement or an arbitration`: the baseline's seat (21 questions: the baseline's 21).
+- `I am an arbitrator, or have been asked to be one` (9 questions).
+
+The arbitrator is a seat because the Act puts duties on them by name (s 12(1), (2), s 18, s 24, s 30(1), s 31(3),
+s 33(2)), and they are a private person the parties choose, not a public official. The Court is not a seat. Where the
+baseline already encodes a duty from the party's side (s 24(2), s 27D(1), (4)-(6), s 31(3)), the arbitrator's
+question calls the same rule, and a mirror case asserts the two seats agree.
+
+**Situation inputs.**
+
+| Name | Type | Does not arise for | Questions that take it |
+|---|---|---|---|
+| `a court case has been brought about a dispute my arbitration agreement covers` | BOOLEAN | FALSE | s 8(1) (party) |
+| `an arbitrator has been appointed in my arbitration` | BOOLEAN | FALSE | s 12 challenge, s 24(2) hearing, ss 18 and 24 denied hearing, s 27D(1) mediator (party) |
+| `the arbitrator has acted as mediator, and the mediation has ended` | BOOLEAN | FALSE | s 27D(4)-(6), asked of both roles |
+| `we have settled our dispute` | BOOLEAN | FALSE | s 30 settlement (party) |
+| `the award and me` | `The award and me` | `no award has been made yet`, for all 8 award questions; also `an award has been made, against me` for the enforcing question, and `an award has been made, in my favour` for the resisting question | s 31(3), s 33(1), s 34(3), s 34, s 34A(3), s 34A, ss 35-36, s 36(1) (party) |
+| `the parties have settled during the arbitral proceedings` | BOOLEAN | FALSE | s 30(1) (arbitrator) |
+| `a party has asked me to correct or interpret the award` | BOOLEAN | FALSE | s 33(2) (arbitrator) |
+
+Each situation is what the provision ties the rule to: "an action is brought" (s 8(1)), the arbitrator (ss 12, 18,
+24, 27D(1)), mediation proceedings "that are terminated" (s 27D(4)), the settlement (s 30), the award (ss 31, 33, 34,
+34A, 35, 36), and the request (s 33(2)). The questions about the agreement, the Act's reach, the number of arbitrators
+and who appoints them arise for every party and take none. `The award and me` is read only through three helpers,
+`no award has been made`, `there is no award in my favour to enforce` and `there is no award against me to resist`,
+which list every value with no OTHERWISE (graffiti finding 31).
+
+**Decisions.**
+
+- **QA1. Where a situation is the baseline's own input, it is passed TRUE within the situation.** For s 8(1), the
+  baseline's `the court action is in a matter the agreement covers` is the situation. Outside it, the question does
+  not arise, where the baseline answered no.
+- **QA2. An award partly in my favour and partly against me opens both the enforcing and the resisting question.**
+  Setting aside, appeal, reasons and correction arise for any award, whichever way it went, since s 34(3) and
+  s 34A(6) speak of "the party making that application" without regard to who won.
+- **QA3. Placeholders.** Where a baseline rule reads only some fields of its record, the others get fixed values it
+  never reads, each commented: the agreement's later fields for the s 7 questions, the seat for s 8 (which s 1(2)
+  applies wherever the seat is), the grounds for the s 34(3) time question, and the dates and agreement for the
+  s 34A(3) leave question (dates built with `Date 1 1 2000`).
+- **QA4. The arbitrator's own rules are helpers in the layer.** They are `s 12(1), (2) -- the arbitrator must disclose
+  the circumstances` (approached: disclose; appointed: disclose unless already told), `s 30(1) -- what the tribunal must
+  do on a settlement`, and `s 33(2) -- the days the tribunal has to correct the award` (30). s 18 and s 24(3)-(5) are
+  fixed answers for the role.
+- **QA5. s 33(2) answers 0 days for a request the arbitrator does not consider justified.** The duty arises only "if
+  the arbitral tribunal considers a request ... to be justified". The question text says what 0 means.
+
+**Not covered for the arbitrator.** The challenge procedure (s 13), withdrawal and substitution (ss 14, 15) beyond the
+s 27D(6) consequence, jurisdiction (s 16), interim measures (s 17 onwards), procedure and evidence (ss 19-27C),
+confidentiality (ss 27E-27I), the form of the award beyond reasons (s 31(1), (2), (4)), the correction on the
+arbitrator's own initiative and additional awards (s 33(4)-(7)), costs and interest (ss 33A-33F), and the arbitrator's
+immunity (s 39), none of which the baseline encodes.
+
+**Checks.** `caa-qa.l4` runs and `l4 check` succeeds, with 0 errors and 0 warnings. `caa-arbitration.l4` and
+`caa-cases-arbitration.l4` still give 0 errors and 0 warnings, and 69 of 69 assertions. `caa-qa-cases.l4` has **150
+assertions, 150 satisfied**:
+
+- 102 worked by hand (80 party, 22 arbitrator). Of these, 21 assert the party's answer equal to the baseline export's
+  on the same facts, one for each of the party's 21 questions. 3 mirror cases assert the arbitrator's answer equal to
+  the party's (s 24(2), s 27D(1), s 31(3)).
+- 28 ask each question for the role it is not about, with every other input ASSUMEd.
+- 20 ask each situation question, for its role, with each value under which the situation does not hold and the rest
+  ASSUMEd.
+
+The parameter script (`qa_params.py`, in the session scratchpad) lists all 29 exported questions with their
+parameters. It checks that `my role` comes first in each, that each situation input is identical in name, type and
+`@desc` wherever it appears (`the award and me` in 8 questions), and that no input is DEONTIC or EVENT. It also
+generated the 48 role and situation cases.
