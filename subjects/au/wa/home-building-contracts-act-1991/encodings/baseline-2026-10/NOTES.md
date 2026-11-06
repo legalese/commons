@@ -113,3 +113,86 @@ Unconscionable and misleading conduct (ss 15, 15A) are left out because each is 
 - Transportable dwellings (ss 10(2), 25D(2), (3)) and owner-builders (Part 3A Division 3).
 - A calendar for working days (public holidays by area), so that deadlines can be dates rather than counts.
 - Confirmation of Chloe's package split and builder's deposit from the scenario owner.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026 (batch qa11), following the graffiti model
+(`../../../graffiti-vandalism-act-2016/encodings/baseline-2026-10/`, D2, D4, D8). The baseline files are unchanged;
+the layer is added beside them: `hbc-qa.l4` (imports `prelude` and `hbc-contracts`) and `hbc-qa-cases.l4`.
+
+### Roles
+
+Every exported question takes `my role` IS A `Role` first ("Which of these describes you"), and answers
+`does not arise for you` for a role it is not about without reading any other input.
+
+| Role | Why | Questions |
+|---|---|---|
+| `I am the home owner having home building work done` | the baseline's seat (s 3(1) "owner") | 29 |
+| `I am the builder doing home building work for an owner` | the Act's duties fall on the builder (ss 4, 5, 7, 8, 10, 13, 14, 25C) | 15 |
+
+The Building Commissioner, the State Administrative Tribunal and the insurer are not seats. There are 43 questions;
+one (s 11, defects) is asked of both roles.
+
+### Situation inputs
+
+Each is placed straight after `my role`; when it is FALSE the question answers `does not arise for you` and reads
+nothing else. A shared input has one name, type and `@desc`.
+
+| Input | Type | Does not arise when | Questions |
+|---|---|---|---|
+| `the building work has started` | BOOLEAN | FALSE | Once work has started may my builder demand this payment; Once work has started may I demand this payment from the owner |
+| `the contract is being varied` | BOOLEAN | FALSE | Must this variation be in writing and signed by me; Was my variation made the way the Act requires; Within how many working days must I dispute the builder's unforeseen circumstances; Must this variation be in writing and signed by the owner; By when must I give the owner my variation statement |
+| `the builder wants to raise the price, or has given notice of a rise` | BOOLEAN | FALSE | Can my builder put my price up for this reason; After a notified price rise may I end the contract; May I put the owner's price up for this reason |
+| `the owner ended the contract after a notified price rise (Schedule 1 clause 4(b))` | BOOLEAN | FALSE | If I end the contract over a price rise must I pay the builder's reasonable costs; If the owner ends the contract over my price rise must they pay my reasonable costs |
+| `the building permit was not granted within 45 working days` | BOOLEAN | FALSE | If the permit is late what happens to my contract; If the permit is late what happens to my contract with the owner |
+| `a defect in the work has been found` | BOOLEAN | FALSE | Must the builder make good this defect (both roles) |
+
+### Decisions
+
+- **One `Contract` record for both roles.** The baseline's record speaks as the owner in two fields ("is signed by the
+  builder and by me", "I was given the notice before I signed"). It is kept unchanged (layers add, nothing is
+  replaced), and its `@desc` here says that "I" and "me" in its fields mean the owner. No builder question reads those
+  two fields.
+- **The builder's enums.** `Who failed` and `Reason for a price rise` speak as the owner ("me alone", "my failure
+  alone"). The builder's s 9 and s 13 questions take builder-worded enums (`Who failed, as the builder sees it`,
+  `Reason for my price rise`), mapped value for value to the baseline's by helpers with no OTHERWISE. Mirror cases show
+  the builder and the owner get the same answer on the same facts.
+- **The s 8(3) days (owner).** The baseline answers 10 for a statement of unforeseen circumstances and 0 otherwise.
+  Here the question arises only on such a statement: for the other three causes it answers `does not arise for you`
+  instead of 0. This is the one place an owner answer differs in form from the baseline's; where the question arises
+  it is the baseline's 10.
+- **Kept 0s.** The copy-of-contract days (s 5(3)), the insurance cover, the claim years and the excess answer 0 in the
+  baseline where the Act sets nothing for that contract (it does not cover it, or no insurance is required). Whether
+  it does is computed from the contract, not a fact the person states, so it is not a situation; the wrapped answers
+  keep the 0, and the question texts say "0 if ...".
+- **Schedule 1 cl 4(c).** The baseline's input "I terminated under clause 4" is its only input; it is the situation
+  here, worded for both roles. Where it holds the answer is the baseline's yes.
+- **s 4(1) for the builder** is asked as a duty ("Must my contract be in writing, dated and signed"), answered yes for
+  a home building work contract, from the baseline's s 3 rule. s 8's statement time is a helper over the s 8(1), (2),
+  (4) text, listing every cause.
+
+### Not covered for the builder
+
+- The builder's offences, fines and infringement notices (ss 30-31B, r 8), as in the baseline.
+- Understated prime cost items (s 12), unconscionable or misleading conduct (ss 15, 15A), and the adjustment of rights
+  after termination (s 20).
+- The builder's own right to terminate (s 19 applies to "a party"), the review of a price rise (Schedule 1 cl 5), and
+  the exemption-period notices (ss 25I-25L).
+- Whether a progress payment the builder demands was given with the insurance certificate first is asked only as the
+  owner's "May my builder ask me for this deposit now".
+
+### Cases
+
+`hbc-qa-cases.l4` has 193 cases, all satisfied:
+
+- 42 ask each question for the role it is not about, with every other input ASSUMEd;
+- 16 ask each situation question, for its own roles, with FALSE and the later inputs ASSUMEd;
+- 135 are worked by hand from the text; 29 of them assert the owner's answer equal to the baseline export's own on the
+  same facts, and 5 are mirror cases between the two roles.
+
+The contracts are the baseline cases' own fixtures, copied unchanged. The role and situation cases are generated from
+the exports' parameter lists by a script in the batch's scratch folder, which also checked every export: `my role`
+first; each parameter name with one type and one `@desc` across the file; each situation second and read first in
+every role branch; no DEONTIC or EVENT input. Two negative controls (a wrong permit outcome for the builder, ASSUMEd
+inputs read after a holding situation) failed as they should. All four files of the encoding run with 0 errors and 0
+warnings, and `l4 check hbc-qa.l4` succeeds.
