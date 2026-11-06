@@ -22,8 +22,8 @@ The four question modules import it:
 |---|---|
 | `fwa2-pay.l4` | s 62 (maximum weekly hours), s 323 (paid in full, in money, at least monthly; the duty as a regulative rule), ss 324, 326 (deductions), s 325 (being made to spend or pay), ss 327A(7), 546A(2) (the underpayment), s 327A with Sch 1 cl 98 (the wage theft offence and its penalties), s 545A (casual loading set off) |
 | `fwa2-protections.l4` | ss 340, 341, 342 items 1-4 with (2)-(4), 351, 352 with reg 3.01, 357, 358, 359, 359B, 359C, 360, 361, 365, 366, 369(1)(c), 370, 372 |
-| `fwa2-orders.l4` | ss 390, 391(1), (1A), 392(3)-(6) with reg 3.06; ss 789FC, 789FD, 789FE(1), 789FF; ss 527D, 527E(1)-(2), 527F, 527G, 527J(1)-(2), 527S(1)(e), 527T |
-| `fwa2-remedies.l4` | s 539(2) items 1, 2, 10, 11, 11A, 11B, 27A, 27B, 38 with the s 12 "selected civil remedy provision"; s 546(2), (2A), (2AA); s 546A(1); ss 557A(1), (2), (5A), 557B(1); s 550; ss 558A, 558B(1)-(3), (7); s 547; s 570 |
+| `fwa2-orders.l4` | ss 390, 391(1)-(4), 392(3)-(6) with reg 3.06; ss 789FC, 789FD, 789FE(1), 789FF; ss 527D, 527E(1)-(2), 527F, 527G, 527J(1)-(2), 527S(1)(e), 527T |
+| `fwa2-remedies.l4` | s 539(2) items 1, 2, 10, 11, 11A, 11B, 27A, 27B, 38 with the s 12 "selected civil remedy provision"; s 546(2), (2A), (2AA) (for an individual, a body corporate, and a person involved under s 550 that is either); s 546A(1); ss 557A(1), (2), (5A), 557B(1); s 550; ss 558A, 558B(1)-(3), (7); s 547; s 570 |
 
 Every question is published with `@export` and a description, and every input carries an `@desc` worded from the seat.
 Situations a person may not be in (dismissal, bullying, sexual harassment) are marked in the `§` headings.
@@ -53,9 +53,9 @@ With the stable `l4` of VS Code extension 1.6.98, `JL4_LIBRARY_PATH` unset (7 No
 |---|---|---|---|---|
 | `fwa2-pay-cases.l4` | 61 | 61 | 0 | 0 |
 | `fwa2-protections-cases.l4` | 55 | 55 | 0 | 0 |
-| `fwa2-orders-cases.l4` | 52 | 52 | 0 | 0 |
-| `fwa2-remedies-cases.l4` | 39 | 39 | 0 | 0 |
-| **Total** | **207** | **207** | 0 | 0 |
+| `fwa2-orders-cases.l4` | 57 | 57 | 0 | 0 |
+| `fwa2-remedies-cases.l4` | 47 | 47 | 0 | 0 |
+| **Total** | **220** | **220** | 0 | 0 |
 
 `l4 run` on each module (`fwa2-common.l4`, `fwa2-pay.l4`, `fwa2-protections.l4`, `fwa2-orders.l4`,
 `fwa2-remedies.l4`) gives no errors or warnings, and a file importing all four question modules together checks clean,
@@ -63,7 +63,8 @@ so no name is defined twice. `l4 run` exits 0 even when an assertion fails, so t
 control (three expected values altered in a copy of `fwa2-orders-cases.l4`) gave three "assertion failed". Every
 expected value was worked by hand from the text, with the edges: exactly 38 hours, the due day and the day after, one
 calendar month between pay days, the 21st and 22nd day, the 14th and 15th day after a certificate, 3 months' absence,
-the compensation cap a dollar either side, the 24-month anniversary, the underpayment multiple a dollar either side of
+the compensation cap a dollar either side, the 24-month anniversary, an individual and a company each involved under
+s 550, the underpayment multiple a dollar either side of
 the penalty-unit maximum, the penalty unit's indexation day.
 
 ## Seat
@@ -114,12 +115,40 @@ Out, and why:
   employer): the claims in focus are an individual's against an employer or principal; these are for a further layer.
 - **Application fees** (ss 367, 373, 395, 527H, 789FC(3)-(4), regs 3.02, 3.03): indexed each year by a CPI formula
   whose index numbers are not deposited.
-- **Arbitration outcomes and procedure** (ss 368(2)-(3), 369(2)-(3), 527R, 527S(2)-(3)), the FWC's power to dismiss
-  for defence or security (ss 527J(4), 789FE(2)), ss 527M-527Q, 789FH-789FL, 527L, 527CA.
+- **Arbitration outcomes and procedure** (ss 368, 369(2)-(3), 527R, 527S(2)-(3)): how the FWC conducts a conference and
+  what it may order once both sides have agreed to arbitration. The orders are open discretions with no test, cap or
+  formula for the claimant to meet (s 369(2) lists reinstatement, compensation, lost pay and continuity; s 527S(3)
+  compensation, lost pay, any reasonable act, and opinions); the steps that are the claimant's (the certificate, the
+  14 and 60 days to agree, the court deadlines) are in.
+- **Defence and security** (ss 527J(4), 789FE(2), 527M-527Q, 789FI-789FL): declarations by the Chief of the Defence
+  Force and the security agencies, which a claimant cannot know or test; the one rule a defence member meets
+  (s 527F(3)) is in, as a fork.
+- **ss 527L, 789FH** (actions under work health and safety laws still allowed) and **s 527CA** (State and Territory
+  laws run concurrently): they preserve claims under other laws and add no test under this Act.
 - **ss 727-734A** (one claim only; the bar on court after agreeing to arbitration): where the question turns on them,
   the answer is `NOTHING`.
-- **The other s 539 items, ss 545 (beyond what `baseline-2026-10` has), 548, 549, 551-556, 558, 558C, 569, 569A,
-  571.**
+- **The other s 539 items:** civil remedy provisions about bargaining, industrial action, right of entry, unions and
+  other subjects outside an individual's pay, dismissal, bullying or harassment claim.
+- **s 545(1)-(2)** (the Federal Court's and the Federal Circuit and Family Court's orders: injunctions, compensation,
+  reinstatement): the court "may make any order the court considers appropriate" once it is satisfied of a
+  contravention, with no further test, cap or formula; whether there was a contravention is what the questions here
+  answer, and the amount is the court's. s 545(3) (the State courts' power to order unpaid amounts) and the six-year
+  limit in s 545(5) are in `baseline-2026-10`.
+- **s 548** (small claims, $100,000 with reg 4.01): in `baseline-2026-10`.
+- **ss 549, 551-556** (a civil remedy provision is not an offence; civil rules of evidence; civil and criminal
+  proceedings and double jeopardy): rules about how the case is run and how it stands against a prosecution, not
+  tests the claimant meets.
+- **s 558** (regulations for infringement notices) and **s 558C** (a franchisor or holding company's right to recover
+  from the employer what it paid): the first is the Ombudsman's tool, the second is between the companies, not the
+  claimant's.
+- **ss 569, 569A** (Commonwealth and State Ministers may intervene) and **s 571** (no imprisonment for failing to pay
+  a penalty): no question for the claimant turns on them.
+- **s 388** (the Small Business Fair Dismissal Code): it decides whether a dismissal was unfair (s 385(c)), which
+  `baseline-2026-10` asks as an input; the Code is a legislative instrument made by the Minister, not deposited.
+  Here the FWC's finding of unfair dismissal is an input, and its `@desc` says it excludes a dismissal consistent with
+  the Code.
+- **s 391(4)** (what the FWC must take into account in fixing lost pay): "take into account", not "deduct", and no
+  cap, so the amount is the FWC's and no figure is computed; s 391(2) and (3) themselves are in.
 - **Junior doctors' overtime rates:** in the awards and enterprise agreements (none deposited). The Act gives the s 62
   limit, the s 323 duty to pay overtime in full (note 2), recovery and penalties; the hourly rate is an input.
 - **s 327B** (the voluntary small business code): a limit on what the Ombudsman may refer, not on the claimant.
@@ -163,6 +192,12 @@ Out, and why:
 11. **Who employs a public hospital doctor matters.** s 62 and the rest of these provisions reach national system
     employees (s 13). A doctor employed by a State health body in a State that has not referred its powers may not be
     one; whether the employer is a national system employer is a fact (asked in `baseline-2026-10`).
+12. **A company involved in a contravention faces the company maxima.** s 550 makes "a person" involved a contravener,
+    and s 546(2)(b) and (2AA) turn only on whether "the person is a body corporate". A labour-hire firm, payroll or
+    accounting firm, or parent company knowingly concerned in an award underpayment therefore faces 5 times the
+    column 4 maximum, or 25 times for a selected provision when it is not a small business employer when the case is
+    filed; only the underpayment multiple in s 546(2A) is barred to it (para (f)). Asserted (15,000 and 3,000 penalty
+    units; $5,460,000 where 3 times the underpayment would be $6,000,000).
 
 ## Forks (for the human reviewer)
 
