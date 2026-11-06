@@ -20,10 +20,10 @@ That one covers becoming and ceasing to be a participant; this one adds the comp
 
 Three files: `ndis-comp-dates.l4` (the only daydate import), `ndis-compensation.l4` (the questions), `ndis-cases-compensation.l4` (the cases).
 
-- `l4 run ndis-cases-compensation.l4`: 111 assertions written, 111 satisfied, 0 errors, 0 warnings.
+- `l4 run ndis-cases-compensation.l4`: 122 assertions written, 122 satisfied, 0 errors, 0 warnings.
 - `l4 run ndis-compensation.l4` and `l4 run ndis-comp-dates.l4`: 0 errors, 0 warnings.
 - A mutation of three expected values (one amount, two dates) was caught: 108 satisfied, 3 failed. The assertions are live.
-- Expected values were worked by hand from the text, with the section in a comment beside each group. Every `NOT` is bracketed. All 21 exported questions carry `@export` and a `@desc` on each input.
+- Expected values were worked by hand from the text, with the section in a comment beside each group. Every `NOT` is bracketed. All 23 exported questions carry `@export` and a `@desc` on each input.
 
 ## Seat
 
@@ -32,11 +32,11 @@ The question is "What does the NDIS Act do to my compensation claim, and what do
 Every exported question is that person's:
 
 - "Is this payment compensation?" (s 11)
-- "Can the CEO require me to take action to claim compensation?", "By when must I take the required action?", "Have I taken the required action in time?", "What happens to my plan if I do not act?", "Can the CEO claim in my name or take over my claim?" (ss 104, 105)
+- "Can the CEO require me to take action to claim compensation?", "By when must I take the required action?", "Have I taken the required action in time?", "What happens to my plan if I do not act?", "Can NDIS amounts be paid for a support during the suspension?", "Can I ask for a variation or reassessment during the suspension?", "Can the CEO claim in my name or take over my claim?" (ss 104, 105, 41(2))
 - "How much of the costs does the Agency pay?", "How much of the amount obtained is paid to me?" (ss 105A, 105B)
 - "Do I owe the Agency a recoverable amount?", "How much must I repay the Agency?" (ss 106–108, 116)
 - "By when must the person I claim against tell the CEO?", "Can the person I claim against pay me now?", "How much can the Agency recover from the person I claim against?", "How much compensation is still owed to me?", "How much do I still owe the Agency?" (ss 109–114)
-- "Can I ask for review of this decision?", "By when must I ask for review?" (s 99 items 23–28, s 100(2))
+- "Can I ask for review of this decision?", "By when must I ask for review?" (s 99 items 23–28 and 31–33, s 100(2))
 - "By when must the Agency sue me for the debt?", "Can my debt be waived as a small debt?", "How much of my debt must be waived?", "Can my debt be waived in special circumstances?" (ss 183, 193–195)
 
 The CEO's powers, and the duties of the person claimed against and its insurer (ss 109–115), are encoded for what they mean to the person: whether they can be paid, how much reaches them, what they still owe.
@@ -62,14 +62,14 @@ Where the text itself says no in its own words the answer is `JUST FALSE`; elsew
 
 | Provision | Function | Answer taken | Other reading |
 |---|---|---|---|
-| s 104(6) | `Can the CEO require me to take action to claim compensation` | An agreement giving up the right that the CEO is not satisfied is void: `NOTHING`. s 104(6) says when the CEO "may" form the opinion despite the agreement, not that it may not otherwise. | The agreement stops the opinion: `JUST FALSE`. |
+| s 104(6) | `Can the CEO require me to take action to claim compensation` | An agreement giving up the right that the CEO is not satisfied is void: `NOTHING`, but only once the flat bars are passed (reasonable action already taken, s 104(1)(b); prospects not satisfied, s 104(4): `JUST FALSE` whatever the agreement). s 104(6) says when the CEO "may" form the opinion despite the agreement, not that it may not otherwise. | The agreement stops the opinion: `JUST FALSE`. |
 | s 104(5) | `By when must I take the required action`, `Have I taken the required action in time` | A notice giving fewer than 28 days: `NOTHING`. The rule binds the CEO and is silent on the person's deadline. | The period is read up to 28 days (as the access encoding read a short s 29A cooling-off period up to 90). |
 | s 111(4)(b) | `How much can the Agency recover from the person I claim against` | No judgement or settlement yet, or a contested judgement with no past NDIS support component: `NOTHING`. There is no "recoverable amount in relation to the judgement". | Limb (b) drops out and the sum of the NDIS amounts is the amount. |
 | ss 99, 9 | `Can I ask for review of this decision` | The recoverable amount itself is not a reviewable decision: `FALSE` ("reviewable decision has the meaning given by subsections 99(1) and (2)", a closed definition). | — |
 
 ## In scope
 
-ss 11 (compensation), 104, 105, 105A(1), 105B, 106, 107, 108, 109 (as what s 110 and s 114 build on), 110 (the deadline only), 111(1)–(4), (6), 112, 113, 114 (whether the person can be paid), 116; s 99 table items 23–28 and s 100(2); ss 183, 193, 194, 195 for the debt that s 108 creates.
+ss 11 (compensation), 41(1)(b), (2)(a), (c) (the effect of a s 105(2) suspension), 104, 105, 105A(1), 105B, 106, 107, 108, 109 (as what s 110 and s 114 build on), 110 (the deadline only), 111(1)–(4), (6), 112, 113, 114 (whether the person can be paid), 116; s 99 table items 23–28 and 31–33 and s 100(2); ss 183, 193, 194, 195 for the debt that s 108 creates.
 
 ## Out of scope, and why
 
@@ -77,6 +77,8 @@ ss 11 (compensation), 104, 105, 105A(1), 105B, 106, 107, 108, 109 (as what s 110
 - **The penalties in ss 110 and 114, and s 115** (the payer's and insurer's liability to the Agency): they fall on the person claimed against and its insurer, not on the seat. Only what they mean for the person (when the Agency must be told; whether the person can be paid) is encoded.
 - **ss 32K(4), (4A) and 35(4), (5) (rules on taking compensation into account in a plan)**: they only empower the NDIS rules, which are not deposited.
 - **s 182 and the rest of Chapter 7, Part 1** (other debts, arrangements, financial institutions, information powers, write-off in s 190, administrative-error waiver in s 192): not compensation debts, or no answer for the person (a write-off "does not prevent" recovery, s 190(5)).
+- **s 99 table items 29 and 30** (decisions under s 190 and s 192): those powers are out, as above.
+- **s 41(2)(b) and (3)**: whether the Agency funds other supports during a suspension is the CEO's choice; when a support counts as acquired during the suspension is for the NDIS rules (asked as an input). ss 47A and 48 themselves (variation and reassessment) are not encoded; only s 41(2)(c)'s bar on requesting them is.
 - **Further review (s 103)** and the s 100(6A) review period.
 - Machinery: the Agency, the Board, the rule-making power, commencement.
 
@@ -91,7 +93,7 @@ ss 11 (compensation), 104, 105, 105A(1), 105B, 106, 107, 108, 109 (as what s 110
 7. **Contributory negligence reduces the repayment proportionately.** The past NDIS amounts are reduced "by the proportion corresponding to the proportion of liability that is apportioned to the participant". A 25% share turns $150,000 into $112,500. Asserted.
 8. **Other charges come first.** The recoverable amount cannot exceed the compensation less what the Health and Other Services (Compensation) Acts, Part 3.14 of the Social Security Act and prescribed laws take from it (ss 106(5), 107(4)). If those use the compensation up, the recoverable amount is nil (INFERENCE from "the difference (if any)"). Asserted.
 9. **s 183's extensions do not chain.** A part payment, acknowledgement or internal recovery activity extends the time for proceedings only if it happens "within the recovery period". That period is defined once, as the 6 years from the Agency's awareness. A second payment made during an extension, but after that first period, does not extend again on the text. A period "starting on" a day ends the day before its sixth anniversary; a period "after the end of" an activity ends on the anniversary (INFERENCE). The two drafting forms give answers a day apart. Asserted.
-10. **Review is three months from receipt of the notice.** The six Chapter 5 decisions in the s 99 table (items 23–28) are reviewable on a request made "within 3 months after receiving the notice" (s 100(2)). A recoverable amount under s 106 or s 107 arises without a decision and is not in the table. A notice received on 30 November 2026 gives until 28 February 2027 (INFERENCE, as in the access encoding). Asserted.
+10. **Review is three months from receipt of the notice.** The six Chapter 5 decisions in the s 99 table (items 23–28), and refusals to waive the debt under ss 193, 194(3) or (4) and 195 (items 31–33), are reviewable on a request made "within 3 months after receiving the notice" (s 100(2)). A recoverable amount under s 106 or s 107 arises without a decision and is not in the table. A notice received on 30 November 2026 gives until 28 February 2027 (INFERENCE, as in the access encoding). Asserted.
 11. **The 28 days before the CEO takes over a claim.** "28 days have passed since the notice was given" (s 105(6)(b)) is read as 28 whole days after the day of the notice. After a warning on 1 March 2027 the CEO may act on 30 March, not on 29 March (INFERENCE). Asserted.
 12. **s 105B says "the amount of those damages"** where no damages have been mentioned, only "any amount obtained". It is read as the amount obtained. Where the deductions exceed it, the balance is nil; s 105B does not make the person pay the shortfall (INFERENCE). Asserted.
 
