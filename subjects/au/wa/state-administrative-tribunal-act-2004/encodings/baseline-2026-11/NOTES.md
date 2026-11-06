@@ -44,13 +44,15 @@ deliberately wrong assertion was run once in a scratch copy, since deleted, and 
 | `sat-dates.l4` | 0 | 0 | 0 | 0 |
 | `sat-rules.l4` | 0 | 0 | 0 | 0 |
 | `sat-seat.l4` | 0 | 0 | 0 | 0 |
-| `sat-cases.l4` | 0 | 0 | 186 | 186 |
+| `sat-cases.l4` | 0 | 0 | 195 | 195 |
 
 Every expected value was worked by hand from the text, with the edges: every exported question at least twice; each
-28-day period on its last day and the day after (29 / 30 March 2026; 7 / 8 April 2026 from a s 20 notice; 20 / 21 March
-2026 for leave; 30 April / 1 May 2026 from written reasons); a period ending on 29 February 2028; the 21 days for
-instituting (1 / 2 July 2026); 90 days across February (1 December 2025 to 1 March 2026; 1 December 2026 to 1 March
-2027); the s 21(4) statement on the last day, late, and after the application; a court extension after the time passed
+28-day period on its last day and the day after (30 / 31 March 2026, the 28th day being Sunday 29 March; 7 / 8 April 2026
+from a s 20 notice; 20 / 21 March 2026 for leave; 30 April / 1 May 2026 from written reasons, and an application within
+28 days of the decision after reasons were asked for); a period ending on 29 February 2028; the 21 days for instituting
+(1 / 2 July 2026); 90 days across February (1 December 2025 to Sunday 1 March 2026, so Monday 2 March; 30 November 2025 to
+Saturday 28 February 2026, so Monday 2 March; 1 December 2026 to 1 March 2027); a statement due on Saturday 17 January
+2026, so Monday 19 January; the s 21(4) statement on the last day, late, and after the application; a court extension after the time passed
 (15 / 16 May 2026); the specified amount at $10,000 / $10,001 on 1 January 2009 and $7,500 / $7,501 / $10,000 on
 31 December 2008; the regulative rule on day 28 and day 29.
 
@@ -68,7 +70,9 @@ President, the decision-maker or the courts: their satisfaction, belief, leave, 
 The 2026-10-18 defaults:
 
 - **The Act alone, with the instruments that set its numbers.** Followed, except that the Rules and Regulations are not
-  deposited; what they decide is asked (see Edition).
+  deposited; what they decide is asked (see Edition). The Interpretation Act 1984 (WA) s 61(1)(e) is read for its rule
+  that a time limit ending on an excluded day runs to the next day that is not one (deposited at
+  `subjects/au/wa/interpretation-act-1984/registers/source-bundle/mrdoc_49111.txt`; fork F12).
 - **The actors the text names.** Followed: the applicant, the parties, the decision-maker, the executive officer, the
   Tribunal, a judicial member, the President, the Supreme Court and the Court of Appeal.
 - **Judgments answered conditionally.** Followed: "satisfied" (s 84(5)), "believes" (s 48), "considers" (ss 50, 105(12)),
@@ -88,7 +92,7 @@ The 2026-10-18 defaults:
 again, missed conferences, conference evidence), 64(3), 66(5), 68 (expert costs, witness fees, self-incrimination), 74,
 76, 78, 84, 85, 86 (decisions, reasons, absent parties, enforcement), 87(1), (3), 88 (costs), 92 (more time), 93 (minor
 proceedings and elections), 95-99, 103(3) (offences and penalties), 105, 106 (appeals); s 44(5) and s 93(5) through the
-appeal question. ss 20(4), (5), 22(2), 23(1), 25(2)-(6), 29(3), 42(2), 54, 79, 81, 87(3), 105(12) appear in descriptions.
+appeal question and the s 84 question. ss 20(4), (5), 22(2), 23(1), 25(2)-(6), 29(3), 42(2), 54, 79, 81, 87(3), 105(12) appear in descriptions.
 
 **Regulative rule:** one, used for five steps. Each time limit the Act fixes is modelled as a duty: `PARTY` the person (or
 the decision-maker) `MUST` take the step `WITHIN` the days allowed, `LEST BREACH ... BECAUSE` the time has passed. It runs
@@ -100,6 +104,8 @@ plain facts.
 **Out, and why:**
 - ss 1-7A, Part 2 (ss 7-12), Part 6 (ss 107-147), Part 7 (ss 148-151), ss 152-155, 157, 158, 161, 162, 168-173, Schedule 2:
   machinery -- commencement, constitution of the Tribunal, members, staff, rules committee, regulation-making.
+- s 24: the decision-maker is to give the Tribunal its statement of reasons and the relevant documents "in accordance
+  with the rules" (not deposited); a duty owed to the Tribunal, with no step, time limit or right for the person.
 - ss 16, 18, 27, 28, 29(1)-(4), (6)-(9), 30, 31: how the Tribunal conducts a review (de novo, correct and preferable
   decision, government policy); they bind the Tribunal and give the person no step, time limit or right a fact can test.
 - ss 32-38, 40, 46, 47, 50-52, 54, 56-63, 65, 66(1)-(4), (6), 67, 69-73, 75, 77, 79-81, 83, 89-91: the Tribunal's powers and
@@ -119,8 +125,10 @@ Each line: the provision, the function, the answer taken, the other reading.
 - **F3** "unless" met (ss 20(2), 21(2), 41, 87(1)) -- the s 20, s 21, s 41 functions answer `JUST FALSE` (the duty or right
   is switched off); s 87(1) answers `NOTHING` (the order or enabling Act decides what is borne) -- `NOTHING` throughout, or
   `JUST FALSE` for s 87(1).
-- **F4** s 21(3)(a) "or" (b) -- `s 21(3) -- the time limit to request reasons` -- either period suffices, so the later last
-  day; with s 20(1) applying and no notice given, no limit runs yet -- (b) displacing (a) entirely, or (a) running anyway.
+- **F4** s 21(3)(a) "or" (b), and s 105(5)(a) "or" (b) -- `s 21(3) -- the time limit to request reasons`, `s 105(5), (7)
+  -- the time limit for leave` -- either period suffices, so the later last day, counted from the decision; with s 20(1)
+  applying and no notice given, or s 78 reasons asked for and not yet given, no limit runs yet -- (b) displacing (a)
+  entirely, or (a) running anyway.
 - **F5** s 21(4) "as soon as practicable, and in any case within ... 28 days" -- the regulative rule -- only the 28 days
   are encoded -- a breach once "as soon as practicable" has passed, which is a judgment.
 - **F6** s 22(1) where the statement came after the 28 days but before the application -- `s 22(1) -- ...` -- the failure
@@ -137,6 +145,12 @@ Each line: the provision, the function, the answer taken, the other reading.
 - **F11** s 105(5)(b) "the party then requests [written reasons] under section 78" -- the leave time limit -- any request
   under s 78 moves the start to the day the reasons are given, and until then no limit runs -- only a request within the
   s 78(1) 28 days counts (asked in the description, not tested).
+- **F12** Interpretation Act 1984 (WA) s 61(1)(e), (2): a time limit that "expires or falls upon an excluded day" runs to
+  the next day that is not one -- `the date ... days after` (sat-dates.l4), so every period of ss 21(3), (4), 76, 78,
+  105(5), (6) -- a last day on a Saturday or Sunday moves to the Monday; public service, bank and public holidays are not
+  computed (no holiday list is deposited), so a last day on one, or a Monday after a weekend that is one, reads a day
+  early -- the holidays asked as a fact, or s 61(1)(e) read as not applying to the decision-maker's and the Tribunal's
+  own deadlines (ss 21(4), 76, 78(2)), which this encoding moves too.
 
 ## Rulings on negatives (copied word for word from docs/ENCODING-GUIDE.md section 5)
 
@@ -152,7 +166,7 @@ This encoding carries `NOTHING-kind` tags. The rulings it follows:
 
 Applied here: "cannot" (ss 19(3), 26, 39(3), 42(4), 49, 88(3), 92(4), 93(3)), "is not admissible ... unless" (ss 55, 68(2)),
 "does not apply ... unless" and "only applies ... on" (ss 64(3), 95(2)-(4)), "does not affect ... unless" (ss 25(1), 106(2)),
-"has to be made within" (s 84(3)), "means" (s 93(1)), the periods of ss 21(3), 78(1), 105(5), (6), and the "if" or "when"
+"has to be made within" (s 84(3)), "is not subject to appeal or review" (s 93(5), for s 105 and s 84), "means" (s 93(1)), the periods of ss 21(3), 78(1), 105(5), (6), and the "if" or "when"
 conditions of ss 20, 22(1), 44(3), 45(1), 74, 78(1), 84(2), (5) give `JUST FALSE`. `NOTHING` is answered where the enabling
 Act, the rules or a costs order decide (ss 25, 87(1), 92: *points outside the text*); where s 26, s 49, s 66(5), s 84 or
 s 105 speak only of their own case (*limited by its own wording*); for s 45(1) outside its open list and s 68(2) in the
@@ -189,5 +203,5 @@ sites are fork F3; s 68(2) is F7.
   uncommenced Evidence Act 2025 s 492(1).
 - Deposit the State Administrative Tribunal Rules 2004 and Regulations 2004, then encode the time limits for applying for
   review and under s 84, the s 22(2) notice, the fees and s 105(11)'s prescribed proceedings.
-- The Interpretation Act 1984 (WA) rule for reckoning periods (F1).
+- The public, bank and public service holidays for the Interpretation Act 1984 (WA) s 61(1)(e) (F12).
 - A lawyer's view on findings 1-3 and 7 and forks F3, F4, F6, F8, F11; an independent test pass and a human gate.
