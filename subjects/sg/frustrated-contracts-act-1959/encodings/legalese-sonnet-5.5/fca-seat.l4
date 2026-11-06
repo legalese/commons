@@ -1,0 +1,746 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `fca-nouns`
+IMPORT `fca-definitions`
+IMPORT `fca-s3-application`
+IMPORT `fca-s2-adjustment`
+
+-- Frustrated Contracts Act 1959 (Singapore), 2020 Revised Edition, informal consolidation -- THE SEAT LAYER (layer 2).
+--
+-- SEAT: a party to a contract that has become impossible to perform, asking, on facts they can state, what happens to money paid or
+-- payable and to benefits already received, and whether the Act applies to the contract at all.  This layer phrases the rules already
+-- encoded in the modules imported above as the questions that person would ask.  Nothing here is new law, and no rule is restated:
+-- every answer is a call to a layer-1 function.  There is no seat for the court: where a provision addresses only the court (ss 2(3), (5),
+-- (6), (7), 3(3), (4)) the person meets it as what the court may or must do with their money, their benefit or their contract.
+--
+-- PLAIN INPUTS.  Every question takes plain inputs -- yes/no, a number, a date, or a choice from a list -- one for each fact the person can
+-- state, each with an @desc worded as the person would be asked.  The records the long modules expect are built inside each question
+-- from those answers, and the SAME module rule is then called.
+--   * What the court thinks (that it considers something just, that it has said how much it allows) is asked as "Yes / No / I am not sure";
+--     "I am not sure" becomes NOTHING, and a rule that cannot answer without it answers NOTHING.  An amount the court has not yet fixed is
+--     asked with a "has the court decided" yes/no beside it.
+--   * A field that a question's rules never read gets a fixed placeholder, listed in the comment above that question ("not asked").
+--   * The Act's own dates (1 January 1959, 13 February 1959) are inside the modules.  The Sale of Goods Act 1979 section 7 is another
+--     Act that is not among the sources: whether it applies is a fact you state.
+--
+-- HOW TO READ A RESULT.  JUST TRUE and JUST FALSE are answers the Act itself gives; NOTHING means the Act does not answer on these facts
+-- (see NOTES.md, "Reading a result: FALSE and NOTHING").  Never read NOTHING as no.  The order of the groups below is the Act's own
+-- (s 2, then s 3); a form may well show the s 3 group ("Does the Act apply to my contract?") first.
+
+DECLARE `My answer` IS ONE OF
+    Yes
+    No
+    `I am not sure`
+
+DECLARE `Kind of matter I ask about` IS ONE OF
+    `The expenses the party who obtained the benefit incurred`
+    `The effect of the circumstances that frustrated the contract on the benefit`
+    `Some other circumstance of the case`
+    `Something that is not a circumstance of the case`
+
+DECLARE `The portion of my contract I ask about` IS ONE OF
+    `The part treated as a separate contract`
+    `The rest of my contract`
+
+-- ---------------------------------------------------------------------------
+-- Wiring: the person's answers become the modules' inputs.  Not questions.
+-- ---------------------------------------------------------------------------
+
+-- An answer of Yes, No or "I am not sure" as a MAYBE BOOLEAN.
+GIVEN answer IS A `My answer`
+GIVETH A MAYBE BOOLEAN
+`what I say, as a fact` MEANS
+    CONSIDER answer
+    WHEN Yes THEN JUST TRUE -- input mapping
+    WHEN No THEN JUST FALSE -- input mapping
+    WHEN `I am not sure` THEN NOTHING -- input mapping
+
+-- An amount the court may not yet have fixed: the yes/no says whether it has.
+GIVEN decided IS A BOOLEAN
+      amount IS A NUMBER
+GIVETH A MAYBE NUMBER
+`my amount if the court has decided` MEANS
+    IF decided THEN JUST amount ELSE NOTHING -- input mapping
+
+GIVEN matter IS A `Kind of matter I ask about`
+GIVETH A `Matter for section 2(4)`
+`the matter I ask about, in the Act's terms` MEANS
+    CONSIDER matter
+    WHEN `The expenses the party who obtained the benefit incurred` THEN `the expenses incurred before the time of discharge by the benefited party (paragraph (a))` -- input mapping
+    WHEN `The effect of the circumstances that frustrated the contract on the benefit` THEN `the effect, in relation to that benefit, of the circumstances giving rise to the frustration of the contract (paragraph (b))` -- input mapping
+    WHEN `Some other circumstance of the case` THEN `some other circumstance of the case` -- input mapping
+    WHEN `Something that is not a circumstance of the case` THEN `something that is not a circumstance of the case` -- input mapping
+
+GIVEN portion IS A `The portion of my contract I ask about`
+GIVETH A `Portion of a contract`
+`the portion in the Act's terms` MEANS
+    CONSIDER portion
+    WHEN `The part treated as a separate contract` THEN `the severed part` -- input mapping
+    WHEN `The rest of my contract` THEN `the remainder of the contract` -- input mapping
+
+-- The contract, from what the person knows.  The date the contract was made is read by no rule except s 3(1)'s one-answer rule, which
+-- has its own question; here it is a fixed placeholder (1 January 2000).  The time of discharge is the date given if the parties
+-- have been discharged, and is not given otherwise.
+GIVEN frustrated IS A BOOLEAN
+      discharged IS A BOOLEAN
+      `date of discharge` IS A DATE
+      government IS A BOOLEAN
+      charterparty IS A BOOLEAN
+      `time charterparty` IS A BOOLEAN
+      `charterparty by way of demise` IS A BOOLEAN
+      `carriage of goods by sea` IS A BOOLEAN
+      insurance IS A BOOLEAN
+      `section 7` IS A BOOLEAN
+      `specific goods` IS A BOOLEAN
+      perished IS A BOOLEAN
+GIVETH A `Contract facts`
+`my contract from what I know` MEANS
+    `Contract facts` OF frustrated, discharged, (IF discharged THEN JUST `date of discharge` ELSE NOTHING), Date 1 1 2000, government, charterparty, `time charterparty`, `charterparty by way of demise`, `carriage of goods by sea`, insurance, `section 7`, `specific goods`, perished -- input mapping
+
+-- The sums for the ceiling of s 2(3): the total paid and the total still to be paid, as the list of sums the layer-1 rule takes.
+-- Each is one sum; whether they were paid, or payable, in pursuance of the contract before the discharge is what the person says of all of them.
+GIVEN `total paid` IS A NUMBER
+      `total still to pay` IS A NUMBER
+      `every sum counted is within s 2(2)` IS A BOOLEAN
+GIVETH A LIST OF `Sum facts`
+`my sums taken together` MEANS
+    LIST (`Sum facts` OF `total paid`, TRUE, `every sum counted is within s 2(2)`, `every sum counted is within s 2(2)`), (`Sum facts` OF `total still to pay`, FALSE, `every sum counted is within s 2(2)`, `every sum counted is within s 2(2)`) -- input mapping
+
+§ `The Frustrated Contracts Act 1959 -- my questions`
+
+
+-- ---------------------------------------------------------------------------
+§§ `Does section 2 operate on my contract? (s 2(1))`
+-- ---------------------------------------------------------------------------
+
+-- s 2(1).  "Where" the contract has become impossible of performance or been otherwise frustrated and the parties have for that reason been discharged,
+-- section 2 has effect, subject to section 3.  Yes if so; No if either "where" is not met or section 3 says the Act does not apply; NOTHING if it cannot be told.
+-- Not asked (fixed placeholders; no rule this question reaches reads them): the Government is a party to my contract = FALSE; the date my contract was made = 1 January 2000.
+@export Does section 2 of the Act have effect in relation to my contract (s 2(1))?
+GIVEN `my contract has become impossible to perform or been otherwise frustrated` IS A BOOLEAN @desc Has your contract become impossible to perform, or been otherwise frustrated?
+      `the parties have been discharged from performing my contract any further` IS A BOOLEAN @desc Have the parties to your contract been discharged from performing it any further because of that?
+      `the date the parties were discharged` IS A DATE @desc On what date were the parties discharged from performing the contract any further? (If they have not been discharged, give any date: it is not used.)
+      `my contract is a charterparty` IS A BOOLEAN @desc Is your contract a charterparty?
+      `my charterparty is a time charterparty` IS A BOOLEAN @desc If your contract is a charterparty, is it a time charterparty? (Answer No if it is not a charterparty.)
+      `my charterparty is a charterparty by way of demise` IS A BOOLEAN @desc If your contract is a charterparty, is it a charterparty by way of demise? (Answer No if it is not a charterparty.)
+      `my contract is a contract for the carriage of goods by sea` IS A BOOLEAN @desc Is your contract a contract for the carriage of goods by sea?
+      `my contract is a contract of insurance` IS A BOOLEAN @desc Is your contract a contract of insurance?
+      `section 7 of the Sale of Goods Act 1979 applies to my contract` IS A BOOLEAN @desc Does section 7 of the Sale of Goods Act 1979 apply to your contract? (That section avoids a contract for the sale of specific goods which perish before the risk has passed to the buyer.)
+      `my contract is for the sale, or for the sale and delivery, of specific goods` IS A BOOLEAN @desc Is your contract for the sale, or for the sale and delivery, of specific goods?
+      `my contract is frustrated because the goods have perished` IS A BOOLEAN @desc Is your contract frustrated because the goods have perished?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Does section 2 have effect on my contract` IS
+    `s 2(1) section 2 has effect in relation to the contract` (`my contract from what I know` `my contract has become impossible to perform or been otherwise frustrated` `the parties have been discharged from performing my contract any further` `the date the parties were discharged` FALSE `my contract is a charterparty` `my charterparty is a time charterparty` `my charterparty is a charterparty by way of demise` `my contract is a contract for the carriage of goods by sea` `my contract is a contract of insurance` `section 7 of the Sale of Goods Act 1979 applies to my contract` `my contract is for the sale, or for the sale and delivery, of specific goods` `my contract is frustrated because the goods have perished`)
+
+-- ---------------------------------------------------------------------------
+§§ `Money paid, or payable, under the contract (s 2(2) and (3))`
+-- ---------------------------------------------------------------------------
+
+-- s 2(2).  Sums paid in pursuance of the contract before the parties were discharged are recoverable from the person who received them, subject to s 2(3).
+-- Not asked (fixed placeholders; no rule this question reaches reads them): the Government is a party to my contract = FALSE; the date my contract was made = 1 January 2000.
+@export Can I get back money I paid under the contract before it was discharged (s 2(2))?
+GIVEN `my contract has become impossible to perform or been otherwise frustrated` IS A BOOLEAN @desc Has your contract become impossible to perform, or been otherwise frustrated?
+      `the parties have been discharged from performing my contract any further` IS A BOOLEAN @desc Have the parties to your contract been discharged from performing it any further because of that?
+      `the date the parties were discharged` IS A DATE @desc On what date were the parties discharged from performing the contract any further? (If they have not been discharged, give any date: it is not used.)
+      `my contract is a charterparty` IS A BOOLEAN @desc Is your contract a charterparty?
+      `my charterparty is a time charterparty` IS A BOOLEAN @desc If your contract is a charterparty, is it a time charterparty? (Answer No if it is not a charterparty.)
+      `my charterparty is a charterparty by way of demise` IS A BOOLEAN @desc If your contract is a charterparty, is it a charterparty by way of demise? (Answer No if it is not a charterparty.)
+      `my contract is a contract for the carriage of goods by sea` IS A BOOLEAN @desc Is your contract a contract for the carriage of goods by sea?
+      `my contract is a contract of insurance` IS A BOOLEAN @desc Is your contract a contract of insurance?
+      `section 7 of the Sale of Goods Act 1979 applies to my contract` IS A BOOLEAN @desc Does section 7 of the Sale of Goods Act 1979 apply to your contract? (That section avoids a contract for the sale of specific goods which perish before the risk has passed to the buyer.)
+      `my contract is for the sale, or for the sale and delivery, of specific goods` IS A BOOLEAN @desc Is your contract for the sale, or for the sale and delivery, of specific goods?
+      `my contract is frustrated because the goods have perished` IS A BOOLEAN @desc Is your contract frustrated because the goods have perished?
+      `the amount of the sum` IS A NUMBER @desc What is the amount of the sum, in dollars?
+      `the sum was paid or payable in pursuance of the contract` IS A BOOLEAN @desc Was the sum paid, or payable, in pursuance of the contract?
+      `the sum was paid or fell payable before the parties were discharged` IS A BOOLEAN @desc Was the sum paid, or did it fall payable, before the parties were discharged? (The Act says "before the time"; if it was on the very day of the discharge, answer according to which came first.)
+GIVETH A MAYBE BOOLEAN
+DECIDE `Can I get back money I paid` IS
+    `s 2(2) a sum paid is recoverable from the party who received it` (`my contract from what I know` `my contract has become impossible to perform or been otherwise frustrated` `the parties have been discharged from performing my contract any further` `the date the parties were discharged` FALSE `my contract is a charterparty` `my charterparty is a time charterparty` `my charterparty is a charterparty by way of demise` `my contract is a contract for the carriage of goods by sea` `my contract is a contract of insurance` `section 7 of the Sale of Goods Act 1979 applies to my contract` `my contract is for the sale, or for the sale and delivery, of specific goods` `my contract is frustrated because the goods have perished`) (`Sum facts` OF `the amount of the sum`, TRUE, `the sum was paid or payable in pursuance of the contract`, `the sum was paid or fell payable before the parties were discharged`)
+
+-- s 2(2).  Sums payable in pursuance of the contract before the parties were discharged cease to be payable, subject to s 2(3).
+-- Not asked (fixed placeholders; no rule this question reaches reads them): the Government is a party to my contract = FALSE; the date my contract was made = 1 January 2000.
+@export Do sums I still had to pay under the contract before it was discharged stop being payable (s 2(2))?
+GIVEN `my contract has become impossible to perform or been otherwise frustrated` IS A BOOLEAN @desc Has your contract become impossible to perform, or been otherwise frustrated?
+      `the parties have been discharged from performing my contract any further` IS A BOOLEAN @desc Have the parties to your contract been discharged from performing it any further because of that?
+      `the date the parties were discharged` IS A DATE @desc On what date were the parties discharged from performing the contract any further? (If they have not been discharged, give any date: it is not used.)
+      `my contract is a charterparty` IS A BOOLEAN @desc Is your contract a charterparty?
+      `my charterparty is a time charterparty` IS A BOOLEAN @desc If your contract is a charterparty, is it a time charterparty? (Answer No if it is not a charterparty.)
+      `my charterparty is a charterparty by way of demise` IS A BOOLEAN @desc If your contract is a charterparty, is it a charterparty by way of demise? (Answer No if it is not a charterparty.)
+      `my contract is a contract for the carriage of goods by sea` IS A BOOLEAN @desc Is your contract a contract for the carriage of goods by sea?
+      `my contract is a contract of insurance` IS A BOOLEAN @desc Is your contract a contract of insurance?
+      `section 7 of the Sale of Goods Act 1979 applies to my contract` IS A BOOLEAN @desc Does section 7 of the Sale of Goods Act 1979 apply to your contract? (That section avoids a contract for the sale of specific goods which perish before the risk has passed to the buyer.)
+      `my contract is for the sale, or for the sale and delivery, of specific goods` IS A BOOLEAN @desc Is your contract for the sale, or for the sale and delivery, of specific goods?
+      `my contract is frustrated because the goods have perished` IS A BOOLEAN @desc Is your contract frustrated because the goods have perished?
+      `the amount of the sum` IS A NUMBER @desc What is the amount of the sum, in dollars?
+      `the sum was paid or payable in pursuance of the contract` IS A BOOLEAN @desc Was the sum paid, or payable, in pursuance of the contract?
+      `the sum was paid or fell payable before the parties were discharged` IS A BOOLEAN @desc Was the sum paid, or did it fall payable, before the parties were discharged? (The Act says "before the time"; if it was on the very day of the discharge, answer according to which came first.)
+GIVETH A MAYBE BOOLEAN
+DECIDE `Do sums I had to pay stop being payable` IS
+    `s 2(2) a sum payable ceases to be payable` (`my contract from what I know` `my contract has become impossible to perform or been otherwise frustrated` `the parties have been discharged from performing my contract any further` `the date the parties were discharged` FALSE `my contract is a charterparty` `my charterparty is a time charterparty` `my charterparty is a charterparty by way of demise` `my contract is a contract for the carriage of goods by sea` `my contract is a contract of insurance` `section 7 of the Sale of Goods Act 1979 applies to my contract` `my contract is for the sale, or for the sale and delivery, of specific goods` `my contract is frustrated because the goods have perished`) (`Sum facts` OF `the amount of the sum`, FALSE, `the sum was paid or payable in pursuance of the contract`, `the sum was paid or fell payable before the parties were discharged`)
+
+-- s 2(3).  If the party who received (or was to receive) the sums incurred expenses before the discharge in, or for the purpose of, performing the contract,
+-- the court may, if it considers it just, allow that party to keep (or recover) the whole or part of the sums.  Whether the court considers it just is the court's judgment: you tell us.
+-- Not asked (fixed placeholders; no rule this question reaches reads them): the Government is a party to my contract = FALSE; the amount of the sum = 0; the amount of those expenses = 0; the sum the court includes for overhead expenses = 0; the sum the court includes for work or services performed personally = 0; the date my contract was made = 1 January 2000.
+@export Can the court allow the other party to keep or recover part of the sums for the expenses they went to (s 2(3))?
+GIVEN `my contract has become impossible to perform or been otherwise frustrated` IS A BOOLEAN @desc Has your contract become impossible to perform, or been otherwise frustrated?
+      `the parties have been discharged from performing my contract any further` IS A BOOLEAN @desc Have the parties to your contract been discharged from performing it any further because of that?
+      `the date the parties were discharged` IS A DATE @desc On what date were the parties discharged from performing the contract any further? (If they have not been discharged, give any date: it is not used.)
+      `my contract is a charterparty` IS A BOOLEAN @desc Is your contract a charterparty?
+      `my charterparty is a time charterparty` IS A BOOLEAN @desc If your contract is a charterparty, is it a time charterparty? (Answer No if it is not a charterparty.)
+      `my charterparty is a charterparty by way of demise` IS A BOOLEAN @desc If your contract is a charterparty, is it a charterparty by way of demise? (Answer No if it is not a charterparty.)
+      `my contract is a contract for the carriage of goods by sea` IS A BOOLEAN @desc Is your contract a contract for the carriage of goods by sea?
+      `my contract is a contract of insurance` IS A BOOLEAN @desc Is your contract a contract of insurance?
+      `section 7 of the Sale of Goods Act 1979 applies to my contract` IS A BOOLEAN @desc Does section 7 of the Sale of Goods Act 1979 apply to your contract? (That section avoids a contract for the sale of specific goods which perish before the risk has passed to the buyer.)
+      `my contract is for the sale, or for the sale and delivery, of specific goods` IS A BOOLEAN @desc Is your contract for the sale, or for the sale and delivery, of specific goods?
+      `my contract is frustrated because the goods have perished` IS A BOOLEAN @desc Is your contract frustrated because the goods have perished?
+      `the sum was paid or payable in pursuance of the contract` IS A BOOLEAN @desc Was the sum paid, or payable, in pursuance of the contract?
+      `the sum was paid or fell payable before the parties were discharged` IS A BOOLEAN @desc Was the sum paid, or did it fall payable, before the parties were discharged? (The Act says "before the time"; if it was on the very day of the discharge, answer according to which came first.)
+      `expenses were incurred before the parties were discharged in, or for the purpose of, performing the contract` IS A BOOLEAN @desc Did the party who received the sum, or was to receive it, incur expenses before the parties were discharged in, or for the purpose of, performing the contract?
+      `the court considers it just to allow the party to retain or recover the sum` IS A `My answer` @desc Does the court consider it just, having regard to all the circumstances of the case, to allow the party to retain or recover the sum? (Choose I am not sure if the court has not yet decided.)
+GIVETH A MAYBE BOOLEAN
+DECIDE `Can the court allow the other party to keep or recover` IS
+    `s 2(3) the court may allow the party to retain or recover the whole or part of the sums` (`my contract from what I know` `my contract has become impossible to perform or been otherwise frustrated` `the parties have been discharged from performing my contract any further` `the date the parties were discharged` FALSE `my contract is a charterparty` `my charterparty is a time charterparty` `my charterparty is a charterparty by way of demise` `my contract is a contract for the carriage of goods by sea` `my contract is a contract of insurance` `section 7 of the Sale of Goods Act 1979 applies to my contract` `my contract is for the sale, or for the sale and delivery, of specific goods` `my contract is frustrated because the goods have perished`) (`Sum facts` OF 0, TRUE, `the sum was paid or payable in pursuance of the contract`, `the sum was paid or fell payable before the parties were discharged`) (`Expenses facts` OF `expenses were incurred before the parties were discharged in, or for the purpose of, performing the contract`, 0, 0, 0) (`what I say, as a fact` `the court considers it just to allow the party to retain or recover the sum`)
+
+-- s 2(3).  Not more than the expenses incurred (as estimated under s 2(5)), and not more than the sums themselves.  NOTHING where the court has no power to allow anything (see the question before).
+-- Not asked (fixed placeholders; no rule this question reaches reads them): the Government is a party to my contract = FALSE; the date my contract was made = 1 January 2000.
+@export What is the most the court may allow the other party to keep or recover for their expenses, where there is only one sum (s 2(3))?
+GIVEN `my contract has become impossible to perform or been otherwise frustrated` IS A BOOLEAN @desc Has your contract become impossible to perform, or been otherwise frustrated?
+      `the parties have been discharged from performing my contract any further` IS A BOOLEAN @desc Have the parties to your contract been discharged from performing it any further because of that?
+      `the date the parties were discharged` IS A DATE @desc On what date were the parties discharged from performing the contract any further? (If they have not been discharged, give any date: it is not used.)
+      `my contract is a charterparty` IS A BOOLEAN @desc Is your contract a charterparty?
+      `my charterparty is a time charterparty` IS A BOOLEAN @desc If your contract is a charterparty, is it a time charterparty? (Answer No if it is not a charterparty.)
+      `my charterparty is a charterparty by way of demise` IS A BOOLEAN @desc If your contract is a charterparty, is it a charterparty by way of demise? (Answer No if it is not a charterparty.)
+      `my contract is a contract for the carriage of goods by sea` IS A BOOLEAN @desc Is your contract a contract for the carriage of goods by sea?
+      `my contract is a contract of insurance` IS A BOOLEAN @desc Is your contract a contract of insurance?
+      `section 7 of the Sale of Goods Act 1979 applies to my contract` IS A BOOLEAN @desc Does section 7 of the Sale of Goods Act 1979 apply to your contract? (That section avoids a contract for the sale of specific goods which perish before the risk has passed to the buyer.)
+      `my contract is for the sale, or for the sale and delivery, of specific goods` IS A BOOLEAN @desc Is your contract for the sale, or for the sale and delivery, of specific goods?
+      `my contract is frustrated because the goods have perished` IS A BOOLEAN @desc Is your contract frustrated because the goods have perished?
+      `the amount of the sum` IS A NUMBER @desc What is the amount of the sum, in dollars?
+      `the sum was paid or payable in pursuance of the contract` IS A BOOLEAN @desc Was the sum paid, or payable, in pursuance of the contract?
+      `the sum was paid or fell payable before the parties were discharged` IS A BOOLEAN @desc Was the sum paid, or did it fall payable, before the parties were discharged? (The Act says "before the time"; if it was on the very day of the discharge, answer according to which came first.)
+      `expenses were incurred before the parties were discharged in, or for the purpose of, performing the contract` IS A BOOLEAN @desc Did the party who received the sum, or was to receive it, incur expenses before the parties were discharged in, or for the purpose of, performing the contract?
+      `the amount of those expenses` IS A NUMBER @desc What is the amount of those expenses, in dollars? (0 if none)
+      `the sum the court includes for overhead expenses` IS A NUMBER @desc What sum, in dollars, has the court included for overhead expenses? (0 if none)
+      `the sum the court includes for work or services performed personally` IS A NUMBER @desc What sum, in dollars, has the court included for work or services performed personally by that party? (0 if none)
+GIVETH A MAYBE NUMBER
+DECIDE `What is the most the court may allow` IS
+    `s 2(3) the most the court may allow to be retained or recovered` (`my contract from what I know` `my contract has become impossible to perform or been otherwise frustrated` `the parties have been discharged from performing my contract any further` `the date the parties were discharged` FALSE `my contract is a charterparty` `my charterparty is a time charterparty` `my charterparty is a charterparty by way of demise` `my contract is a contract for the carriage of goods by sea` `my contract is a contract of insurance` `section 7 of the Sale of Goods Act 1979 applies to my contract` `my contract is for the sale, or for the sale and delivery, of specific goods` `my contract is frustrated because the goods have perished`) (`Sum facts` OF `the amount of the sum`, TRUE, `the sum was paid or payable in pursuance of the contract`, `the sum was paid or fell payable before the parties were discharged`) (`Expenses facts` OF `expenses were incurred before the parties were discharged in, or for the purpose of, performing the contract`, `the amount of those expenses`, `the sum the court includes for overhead expenses`, `the sum the court includes for work or services performed personally`)
+
+-- s 2(3).  The amount allowed must not exceed the expenses incurred, and must be the whole or a part of the sums.
+-- Not asked (fixed placeholders; no rule this question reaches reads them): the Government is a party to my contract = FALSE; the date my contract was made = 1 January 2000.
+@export Is the amount the court allowed within the limit the Act sets, where there is only one sum (s 2(3))?
+GIVEN `my contract has become impossible to perform or been otherwise frustrated` IS A BOOLEAN @desc Has your contract become impossible to perform, or been otherwise frustrated?
+      `the parties have been discharged from performing my contract any further` IS A BOOLEAN @desc Have the parties to your contract been discharged from performing it any further because of that?
+      `the date the parties were discharged` IS A DATE @desc On what date were the parties discharged from performing the contract any further? (If they have not been discharged, give any date: it is not used.)
+      `my contract is a charterparty` IS A BOOLEAN @desc Is your contract a charterparty?
+      `my charterparty is a time charterparty` IS A BOOLEAN @desc If your contract is a charterparty, is it a time charterparty? (Answer No if it is not a charterparty.)
+      `my charterparty is a charterparty by way of demise` IS A BOOLEAN @desc If your contract is a charterparty, is it a charterparty by way of demise? (Answer No if it is not a charterparty.)
+      `my contract is a contract for the carriage of goods by sea` IS A BOOLEAN @desc Is your contract a contract for the carriage of goods by sea?
+      `my contract is a contract of insurance` IS A BOOLEAN @desc Is your contract a contract of insurance?
+      `section 7 of the Sale of Goods Act 1979 applies to my contract` IS A BOOLEAN @desc Does section 7 of the Sale of Goods Act 1979 apply to your contract? (That section avoids a contract for the sale of specific goods which perish before the risk has passed to the buyer.)
+      `my contract is for the sale, or for the sale and delivery, of specific goods` IS A BOOLEAN @desc Is your contract for the sale, or for the sale and delivery, of specific goods?
+      `my contract is frustrated because the goods have perished` IS A BOOLEAN @desc Is your contract frustrated because the goods have perished?
+      `the amount of the sum` IS A NUMBER @desc What is the amount of the sum, in dollars?
+      `the sum was paid or payable in pursuance of the contract` IS A BOOLEAN @desc Was the sum paid, or payable, in pursuance of the contract?
+      `the sum was paid or fell payable before the parties were discharged` IS A BOOLEAN @desc Was the sum paid, or did it fall payable, before the parties were discharged? (The Act says "before the time"; if it was on the very day of the discharge, answer according to which came first.)
+      `expenses were incurred before the parties were discharged in, or for the purpose of, performing the contract` IS A BOOLEAN @desc Did the party who received the sum, or was to receive it, incur expenses before the parties were discharged in, or for the purpose of, performing the contract?
+      `the amount of those expenses` IS A NUMBER @desc What is the amount of those expenses, in dollars? (0 if none)
+      `the sum the court includes for overhead expenses` IS A NUMBER @desc What sum, in dollars, has the court included for overhead expenses? (0 if none)
+      `the sum the court includes for work or services performed personally` IS A NUMBER @desc What sum, in dollars, has the court included for work or services performed personally by that party? (0 if none)
+      `the amount the court allows` IS A NUMBER @desc How much, in dollars, has the court allowed? (0 if it has not decided or allowed nothing)
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is the amount the court allowed within the limit` IS
+    `s 2(3) the amount the court allows is within the limit` (`my contract from what I know` `my contract has become impossible to perform or been otherwise frustrated` `the parties have been discharged from performing my contract any further` `the date the parties were discharged` FALSE `my contract is a charterparty` `my charterparty is a time charterparty` `my charterparty is a charterparty by way of demise` `my contract is a contract for the carriage of goods by sea` `my contract is a contract of insurance` `section 7 of the Sale of Goods Act 1979 applies to my contract` `my contract is for the sale, or for the sale and delivery, of specific goods` `my contract is frustrated because the goods have perished`) (`Sum facts` OF `the amount of the sum`, TRUE, `the sum was paid or payable in pursuance of the contract`, `the sum was paid or fell payable before the parties were discharged`) (`Expenses facts` OF `expenses were incurred before the parties were discharged in, or for the purpose of, performing the contract`, `the amount of those expenses`, `the sum the court includes for overhead expenses`, `the sum the court includes for work or services performed personally`) `the amount the court allows`
+
+-- s 2(3).  One ceiling for the sums paid and the sums payable together: not more than the expenses incurred (as estimated under s 2(5)), and not more than the sums themselves taken together.
+-- Ask this one, not the one before it, when you paid some sums and still owed others.  The Act does not say in what order the sums count, and the answer is the same in any order.  NOTHING where the court has no power to allow anything.
+-- Not asked (fixed placeholders; no rule this question reaches reads them): the Government is a party to my contract = FALSE; the date my contract was made = 1 January 2000.
+@export What is the most the court may allow the other party to keep or recover for their expenses, taking together the sums I paid and the sums I still had to pay (s 2(3))?
+GIVEN `my contract has become impossible to perform or been otherwise frustrated` IS A BOOLEAN @desc Has your contract become impossible to perform, or been otherwise frustrated?
+      `the parties have been discharged from performing my contract any further` IS A BOOLEAN @desc Have the parties to your contract been discharged from performing it any further because of that?
+      `the date the parties were discharged` IS A DATE @desc On what date were the parties discharged from performing the contract any further? (If they have not been discharged, give any date: it is not used.)
+      `my contract is a charterparty` IS A BOOLEAN @desc Is your contract a charterparty?
+      `my charterparty is a time charterparty` IS A BOOLEAN @desc If your contract is a charterparty, is it a time charterparty? (Answer No if it is not a charterparty.)
+      `my charterparty is a charterparty by way of demise` IS A BOOLEAN @desc If your contract is a charterparty, is it a charterparty by way of demise? (Answer No if it is not a charterparty.)
+      `my contract is a contract for the carriage of goods by sea` IS A BOOLEAN @desc Is your contract a contract for the carriage of goods by sea?
+      `my contract is a contract of insurance` IS A BOOLEAN @desc Is your contract a contract of insurance?
+      `section 7 of the Sale of Goods Act 1979 applies to my contract` IS A BOOLEAN @desc Does section 7 of the Sale of Goods Act 1979 apply to your contract? (That section avoids a contract for the sale of specific goods which perish before the risk has passed to the buyer.)
+      `my contract is for the sale, or for the sale and delivery, of specific goods` IS A BOOLEAN @desc Is your contract for the sale, or for the sale and delivery, of specific goods?
+      `my contract is frustrated because the goods have perished` IS A BOOLEAN @desc Is your contract frustrated because the goods have perished?
+      `the total of the sums I paid` IS A NUMBER @desc What is the total, in dollars, of the sums you paid under the contract before the parties were discharged? (0 if none)
+      `the total of the sums I still had to pay` IS A NUMBER @desc What is the total, in dollars, of the sums that had fallen payable by you before the parties were discharged but that you had not paid? (0 if none)
+      `every sum I have counted was paid or payable in pursuance of the contract before the parties were discharged` IS A BOOLEAN @desc Was every sum you have included in those two totals paid, or payable, in pursuance of the contract before the parties were discharged? (Leave out of the totals any sum that was not.)
+      `expenses were incurred before the parties were discharged in, or for the purpose of, performing the contract` IS A BOOLEAN @desc Did the party who received the sum, or was to receive it, incur expenses before the parties were discharged in, or for the purpose of, performing the contract?
+      `the amount of those expenses` IS A NUMBER @desc What is the amount of those expenses, in dollars? (0 if none)
+      `the sum the court includes for overhead expenses` IS A NUMBER @desc What sum, in dollars, has the court included for overhead expenses? (0 if none)
+      `the sum the court includes for work or services performed personally` IS A NUMBER @desc What sum, in dollars, has the court included for work or services performed personally by that party? (0 if none)
+GIVETH A MAYBE NUMBER
+DECIDE `What is the most the court may allow from all the sums together` IS
+    `s 2(3) the most the court may allow to be retained or recovered from the sums taken together` (`my contract from what I know` `my contract has become impossible to perform or been otherwise frustrated` `the parties have been discharged from performing my contract any further` `the date the parties were discharged` FALSE `my contract is a charterparty` `my charterparty is a time charterparty` `my charterparty is a charterparty by way of demise` `my contract is a contract for the carriage of goods by sea` `my contract is a contract of insurance` `section 7 of the Sale of Goods Act 1979 applies to my contract` `my contract is for the sale, or for the sale and delivery, of specific goods` `my contract is frustrated because the goods have perished`) (`my sums taken together` `the total of the sums I paid` `the total of the sums I still had to pay` `every sum I have counted was paid or payable in pursuance of the contract before the parties were discharged`) (`Expenses facts` OF `expenses were incurred before the parties were discharged in, or for the purpose of, performing the contract`, `the amount of those expenses`, `the sum the court includes for overhead expenses`, `the sum the court includes for work or services performed personally`)
+
+-- s 2(3).  The amount allowed out of all the sums together must not exceed the expenses incurred, and must be the whole or a part of the sums taken together.
+-- Not asked (fixed placeholders; no rule this question reaches reads them): the Government is a party to my contract = FALSE; the date my contract was made = 1 January 2000.
+@export Is the amount the court allowed, out of the sums I paid and the sums I still had to pay taken together, within the limit the Act sets (s 2(3))?
+GIVEN `my contract has become impossible to perform or been otherwise frustrated` IS A BOOLEAN @desc Has your contract become impossible to perform, or been otherwise frustrated?
+      `the parties have been discharged from performing my contract any further` IS A BOOLEAN @desc Have the parties to your contract been discharged from performing it any further because of that?
+      `the date the parties were discharged` IS A DATE @desc On what date were the parties discharged from performing the contract any further? (If they have not been discharged, give any date: it is not used.)
+      `my contract is a charterparty` IS A BOOLEAN @desc Is your contract a charterparty?
+      `my charterparty is a time charterparty` IS A BOOLEAN @desc If your contract is a charterparty, is it a time charterparty? (Answer No if it is not a charterparty.)
+      `my charterparty is a charterparty by way of demise` IS A BOOLEAN @desc If your contract is a charterparty, is it a charterparty by way of demise? (Answer No if it is not a charterparty.)
+      `my contract is a contract for the carriage of goods by sea` IS A BOOLEAN @desc Is your contract a contract for the carriage of goods by sea?
+      `my contract is a contract of insurance` IS A BOOLEAN @desc Is your contract a contract of insurance?
+      `section 7 of the Sale of Goods Act 1979 applies to my contract` IS A BOOLEAN @desc Does section 7 of the Sale of Goods Act 1979 apply to your contract? (That section avoids a contract for the sale of specific goods which perish before the risk has passed to the buyer.)
+      `my contract is for the sale, or for the sale and delivery, of specific goods` IS A BOOLEAN @desc Is your contract for the sale, or for the sale and delivery, of specific goods?
+      `my contract is frustrated because the goods have perished` IS A BOOLEAN @desc Is your contract frustrated because the goods have perished?
+      `the total of the sums I paid` IS A NUMBER @desc What is the total, in dollars, of the sums you paid under the contract before the parties were discharged? (0 if none)
+      `the total of the sums I still had to pay` IS A NUMBER @desc What is the total, in dollars, of the sums that had fallen payable by you before the parties were discharged but that you had not paid? (0 if none)
+      `every sum I have counted was paid or payable in pursuance of the contract before the parties were discharged` IS A BOOLEAN @desc Was every sum you have included in those two totals paid, or payable, in pursuance of the contract before the parties were discharged? (Leave out of the totals any sum that was not.)
+      `expenses were incurred before the parties were discharged in, or for the purpose of, performing the contract` IS A BOOLEAN @desc Did the party who received the sum, or was to receive it, incur expenses before the parties were discharged in, or for the purpose of, performing the contract?
+      `the amount of those expenses` IS A NUMBER @desc What is the amount of those expenses, in dollars? (0 if none)
+      `the sum the court includes for overhead expenses` IS A NUMBER @desc What sum, in dollars, has the court included for overhead expenses? (0 if none)
+      `the sum the court includes for work or services performed personally` IS A NUMBER @desc What sum, in dollars, has the court included for work or services performed personally by that party? (0 if none)
+      `the amount the court allows` IS A NUMBER @desc How much, in dollars, has the court allowed? (0 if it has not decided or allowed nothing)
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is the amount the court allowed from all the sums together within the limit` IS
+    `s 2(3) the amount the court allows from the sums taken together is within the limit` (`my contract from what I know` `my contract has become impossible to perform or been otherwise frustrated` `the parties have been discharged from performing my contract any further` `the date the parties were discharged` FALSE `my contract is a charterparty` `my charterparty is a time charterparty` `my charterparty is a charterparty by way of demise` `my contract is a contract for the carriage of goods by sea` `my contract is a contract of insurance` `section 7 of the Sale of Goods Act 1979 applies to my contract` `my contract is for the sale, or for the sale and delivery, of specific goods` `my contract is frustrated because the goods have perished`) (`my sums taken together` `the total of the sums I paid` `the total of the sums I still had to pay` `every sum I have counted was paid or payable in pursuance of the contract before the parties were discharged`) (`Expenses facts` OF `expenses were incurred before the parties were discharged in, or for the purpose of, performing the contract`, `the amount of those expenses`, `the sum the court includes for overhead expenses`, `the sum the court includes for work or services performed personally`) `the amount the court allows`
+
+-- s 2(2) and (3).  The whole sum paid, less whatever the court allows the other party to keep.  If the court does not consider it just to allow anything, or no expenses were incurred, the whole sum.
+-- NOTHING while the court has not said how much it allows.
+-- Not asked (fixed placeholders; no rule this question reaches reads them): the Government is a party to my contract = FALSE; the date my contract was made = 1 January 2000.
+@export How much of the money I paid can I get back once the court has allowed the other party to keep part of it (s 2(2) and (3))?
+GIVEN `my contract has become impossible to perform or been otherwise frustrated` IS A BOOLEAN @desc Has your contract become impossible to perform, or been otherwise frustrated?
+      `the parties have been discharged from performing my contract any further` IS A BOOLEAN @desc Have the parties to your contract been discharged from performing it any further because of that?
+      `the date the parties were discharged` IS A DATE @desc On what date were the parties discharged from performing the contract any further? (If they have not been discharged, give any date: it is not used.)
+      `my contract is a charterparty` IS A BOOLEAN @desc Is your contract a charterparty?
+      `my charterparty is a time charterparty` IS A BOOLEAN @desc If your contract is a charterparty, is it a time charterparty? (Answer No if it is not a charterparty.)
+      `my charterparty is a charterparty by way of demise` IS A BOOLEAN @desc If your contract is a charterparty, is it a charterparty by way of demise? (Answer No if it is not a charterparty.)
+      `my contract is a contract for the carriage of goods by sea` IS A BOOLEAN @desc Is your contract a contract for the carriage of goods by sea?
+      `my contract is a contract of insurance` IS A BOOLEAN @desc Is your contract a contract of insurance?
+      `section 7 of the Sale of Goods Act 1979 applies to my contract` IS A BOOLEAN @desc Does section 7 of the Sale of Goods Act 1979 apply to your contract? (That section avoids a contract for the sale of specific goods which perish before the risk has passed to the buyer.)
+      `my contract is for the sale, or for the sale and delivery, of specific goods` IS A BOOLEAN @desc Is your contract for the sale, or for the sale and delivery, of specific goods?
+      `my contract is frustrated because the goods have perished` IS A BOOLEAN @desc Is your contract frustrated because the goods have perished?
+      `the amount of the sum` IS A NUMBER @desc What is the amount of the sum, in dollars?
+      `the sum was paid or payable in pursuance of the contract` IS A BOOLEAN @desc Was the sum paid, or payable, in pursuance of the contract?
+      `the sum was paid or fell payable before the parties were discharged` IS A BOOLEAN @desc Was the sum paid, or did it fall payable, before the parties were discharged? (The Act says "before the time"; if it was on the very day of the discharge, answer according to which came first.)
+      `expenses were incurred before the parties were discharged in, or for the purpose of, performing the contract` IS A BOOLEAN @desc Did the party who received the sum, or was to receive it, incur expenses before the parties were discharged in, or for the purpose of, performing the contract?
+      `the amount of those expenses` IS A NUMBER @desc What is the amount of those expenses, in dollars? (0 if none)
+      `the sum the court includes for overhead expenses` IS A NUMBER @desc What sum, in dollars, has the court included for overhead expenses? (0 if none)
+      `the sum the court includes for work or services performed personally` IS A NUMBER @desc What sum, in dollars, has the court included for work or services performed personally by that party? (0 if none)
+      `the court considers it just to allow the party to retain or recover the sum` IS A `My answer` @desc Does the court consider it just, having regard to all the circumstances of the case, to allow the party to retain or recover the sum? (Choose I am not sure if the court has not yet decided.)
+      `the court has decided how much to allow` IS A BOOLEAN @desc Has the court decided how much to allow the party to retain or recover?
+      `the amount the court allows` IS A NUMBER @desc How much, in dollars, has the court allowed? (0 if it has not decided or allowed nothing)
+GIVETH A MAYBE NUMBER
+DECIDE `How much of the money I paid can I get back` IS
+    `s 2(2) subject to s 2(3) the amount of the sum paid that is recoverable` (`my contract from what I know` `my contract has become impossible to perform or been otherwise frustrated` `the parties have been discharged from performing my contract any further` `the date the parties were discharged` FALSE `my contract is a charterparty` `my charterparty is a time charterparty` `my charterparty is a charterparty by way of demise` `my contract is a contract for the carriage of goods by sea` `my contract is a contract of insurance` `section 7 of the Sale of Goods Act 1979 applies to my contract` `my contract is for the sale, or for the sale and delivery, of specific goods` `my contract is frustrated because the goods have perished`) (`Sum facts` OF `the amount of the sum`, TRUE, `the sum was paid or payable in pursuance of the contract`, `the sum was paid or fell payable before the parties were discharged`) (`Expenses facts` OF `expenses were incurred before the parties were discharged in, or for the purpose of, performing the contract`, `the amount of those expenses`, `the sum the court includes for overhead expenses`, `the sum the court includes for work or services performed personally`) (`what I say, as a fact` `the court considers it just to allow the party to retain or recover the sum`) (`my amount if the court has decided` `the court has decided how much to allow` `the amount the court allows`)
+
+-- s 2(2) and (3).  The sum ceases to be payable; what remains payable is what the court allows the other party to recover (0 if it allows nothing).
+-- NOTHING while the court has not said how much it allows.
+-- Not asked (fixed placeholders; no rule this question reaches reads them): the Government is a party to my contract = FALSE; the date my contract was made = 1 January 2000.
+@export How much of a sum I was to pay remains payable once the court has allowed the other party to recover part of it (s 2(2) and (3))?
+GIVEN `my contract has become impossible to perform or been otherwise frustrated` IS A BOOLEAN @desc Has your contract become impossible to perform, or been otherwise frustrated?
+      `the parties have been discharged from performing my contract any further` IS A BOOLEAN @desc Have the parties to your contract been discharged from performing it any further because of that?
+      `the date the parties were discharged` IS A DATE @desc On what date were the parties discharged from performing the contract any further? (If they have not been discharged, give any date: it is not used.)
+      `my contract is a charterparty` IS A BOOLEAN @desc Is your contract a charterparty?
+      `my charterparty is a time charterparty` IS A BOOLEAN @desc If your contract is a charterparty, is it a time charterparty? (Answer No if it is not a charterparty.)
+      `my charterparty is a charterparty by way of demise` IS A BOOLEAN @desc If your contract is a charterparty, is it a charterparty by way of demise? (Answer No if it is not a charterparty.)
+      `my contract is a contract for the carriage of goods by sea` IS A BOOLEAN @desc Is your contract a contract for the carriage of goods by sea?
+      `my contract is a contract of insurance` IS A BOOLEAN @desc Is your contract a contract of insurance?
+      `section 7 of the Sale of Goods Act 1979 applies to my contract` IS A BOOLEAN @desc Does section 7 of the Sale of Goods Act 1979 apply to your contract? (That section avoids a contract for the sale of specific goods which perish before the risk has passed to the buyer.)
+      `my contract is for the sale, or for the sale and delivery, of specific goods` IS A BOOLEAN @desc Is your contract for the sale, or for the sale and delivery, of specific goods?
+      `my contract is frustrated because the goods have perished` IS A BOOLEAN @desc Is your contract frustrated because the goods have perished?
+      `the amount of the sum` IS A NUMBER @desc What is the amount of the sum, in dollars?
+      `the sum was paid or payable in pursuance of the contract` IS A BOOLEAN @desc Was the sum paid, or payable, in pursuance of the contract?
+      `the sum was paid or fell payable before the parties were discharged` IS A BOOLEAN @desc Was the sum paid, or did it fall payable, before the parties were discharged? (The Act says "before the time"; if it was on the very day of the discharge, answer according to which came first.)
+      `expenses were incurred before the parties were discharged in, or for the purpose of, performing the contract` IS A BOOLEAN @desc Did the party who received the sum, or was to receive it, incur expenses before the parties were discharged in, or for the purpose of, performing the contract?
+      `the amount of those expenses` IS A NUMBER @desc What is the amount of those expenses, in dollars? (0 if none)
+      `the sum the court includes for overhead expenses` IS A NUMBER @desc What sum, in dollars, has the court included for overhead expenses? (0 if none)
+      `the sum the court includes for work or services performed personally` IS A NUMBER @desc What sum, in dollars, has the court included for work or services performed personally by that party? (0 if none)
+      `the court considers it just to allow the party to retain or recover the sum` IS A `My answer` @desc Does the court consider it just, having regard to all the circumstances of the case, to allow the party to retain or recover the sum? (Choose I am not sure if the court has not yet decided.)
+      `the court has decided how much to allow` IS A BOOLEAN @desc Has the court decided how much to allow the party to retain or recover?
+      `the amount the court allows` IS A NUMBER @desc How much, in dollars, has the court allowed? (0 if it has not decided or allowed nothing)
+GIVETH A MAYBE NUMBER
+DECIDE `How much of a sum I was to pay remains payable` IS
+    `s 2(2) subject to s 2(3) the amount of the sum payable that remains payable` (`my contract from what I know` `my contract has become impossible to perform or been otherwise frustrated` `the parties have been discharged from performing my contract any further` `the date the parties were discharged` FALSE `my contract is a charterparty` `my charterparty is a time charterparty` `my charterparty is a charterparty by way of demise` `my contract is a contract for the carriage of goods by sea` `my contract is a contract of insurance` `section 7 of the Sale of Goods Act 1979 applies to my contract` `my contract is for the sale, or for the sale and delivery, of specific goods` `my contract is frustrated because the goods have perished`) (`Sum facts` OF `the amount of the sum`, FALSE, `the sum was paid or payable in pursuance of the contract`, `the sum was paid or fell payable before the parties were discharged`) (`Expenses facts` OF `expenses were incurred before the parties were discharged in, or for the purpose of, performing the contract`, `the amount of those expenses`, `the sum the court includes for overhead expenses`, `the sum the court includes for work or services performed personally`) (`what I say, as a fact` `the court considers it just to allow the party to retain or recover the sum`) (`my amount if the court has decided` `the court has decided how much to allow` `the amount the court allows`)
+
+-- ---------------------------------------------------------------------------
+§§ `A valuable benefit (s 2(4))`
+-- ---------------------------------------------------------------------------
+
+-- s 2(4).  Where a party obtained a valuable benefit, other than a payment of money to which s 2(2) applies, before the discharge, by reason of what the other party did in performing the contract,
+-- a sum (if any) is recoverable from them as the court considers just.  How much is the court's judgment.
+-- Not asked (fixed placeholders; no rule this question reaches reads them): the Government is a party to my contract = FALSE; the value of the benefit to the party who obtained it = 0; the sums retained = 0; the date my contract was made = 1 January 2000.
+@export Can a sum be recovered from the party who obtained a valuable benefit from what the other party did under the contract (s 2(4))?
+GIVEN `my contract has become impossible to perform or been otherwise frustrated` IS A BOOLEAN @desc Has your contract become impossible to perform, or been otherwise frustrated?
+      `the parties have been discharged from performing my contract any further` IS A BOOLEAN @desc Have the parties to your contract been discharged from performing it any further because of that?
+      `the date the parties were discharged` IS A DATE @desc On what date were the parties discharged from performing the contract any further? (If they have not been discharged, give any date: it is not used.)
+      `my contract is a charterparty` IS A BOOLEAN @desc Is your contract a charterparty?
+      `my charterparty is a time charterparty` IS A BOOLEAN @desc If your contract is a charterparty, is it a time charterparty? (Answer No if it is not a charterparty.)
+      `my charterparty is a charterparty by way of demise` IS A BOOLEAN @desc If your contract is a charterparty, is it a charterparty by way of demise? (Answer No if it is not a charterparty.)
+      `my contract is a contract for the carriage of goods by sea` IS A BOOLEAN @desc Is your contract a contract for the carriage of goods by sea?
+      `my contract is a contract of insurance` IS A BOOLEAN @desc Is your contract a contract of insurance?
+      `section 7 of the Sale of Goods Act 1979 applies to my contract` IS A BOOLEAN @desc Does section 7 of the Sale of Goods Act 1979 apply to your contract? (That section avoids a contract for the sale of specific goods which perish before the risk has passed to the buyer.)
+      `my contract is for the sale, or for the sale and delivery, of specific goods` IS A BOOLEAN @desc Is your contract for the sale, or for the sale and delivery, of specific goods?
+      `my contract is frustrated because the goods have perished` IS A BOOLEAN @desc Is your contract frustrated because the goods have perished?
+      `a party has obtained a valuable benefit from what the other party did under the contract` IS A BOOLEAN @desc Has a party to the contract obtained a valuable benefit by reason of anything the other party did in, or for the purpose of, performing the contract?
+      `the benefit was obtained before the parties were discharged` IS A BOOLEAN @desc Was the benefit obtained before the parties were discharged? (The Act says "before the time"; if it was on the very day of the discharge, answer according to which came first.)
+      `the benefit is a payment of money to which section 2(2) applies` IS A BOOLEAN @desc Is the benefit a payment of money that was paid, or payable, under the contract before the parties were discharged?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Can a sum be recovered for a valuable benefit` IS
+    `s 2(4) a sum is recoverable from the party who obtained a valuable benefit` (`my contract from what I know` `my contract has become impossible to perform or been otherwise frustrated` `the parties have been discharged from performing my contract any further` `the date the parties were discharged` FALSE `my contract is a charterparty` `my charterparty is a time charterparty` `my charterparty is a charterparty by way of demise` `my contract is a contract for the carriage of goods by sea` `my contract is a contract of insurance` `section 7 of the Sale of Goods Act 1979 applies to my contract` `my contract is for the sale, or for the sale and delivery, of specific goods` `my contract is frustrated because the goods have perished`) (`Benefit facts` OF `a party has obtained a valuable benefit from what the other party did under the contract`, `the benefit was obtained before the parties were discharged`, `the benefit is a payment of money to which section 2(2) applies`, 0, 0)
+
+-- s 2(4).  Not more than the value of the benefit to the party who obtained it.
+-- Not asked (fixed placeholders; no rule this question reaches reads them): the Government is a party to my contract = FALSE; the sums retained = 0; the date my contract was made = 1 January 2000.
+@export What is the most that can be recovered for the valuable benefit (s 2(4))?
+GIVEN `my contract has become impossible to perform or been otherwise frustrated` IS A BOOLEAN @desc Has your contract become impossible to perform, or been otherwise frustrated?
+      `the parties have been discharged from performing my contract any further` IS A BOOLEAN @desc Have the parties to your contract been discharged from performing it any further because of that?
+      `the date the parties were discharged` IS A DATE @desc On what date were the parties discharged from performing the contract any further? (If they have not been discharged, give any date: it is not used.)
+      `my contract is a charterparty` IS A BOOLEAN @desc Is your contract a charterparty?
+      `my charterparty is a time charterparty` IS A BOOLEAN @desc If your contract is a charterparty, is it a time charterparty? (Answer No if it is not a charterparty.)
+      `my charterparty is a charterparty by way of demise` IS A BOOLEAN @desc If your contract is a charterparty, is it a charterparty by way of demise? (Answer No if it is not a charterparty.)
+      `my contract is a contract for the carriage of goods by sea` IS A BOOLEAN @desc Is your contract a contract for the carriage of goods by sea?
+      `my contract is a contract of insurance` IS A BOOLEAN @desc Is your contract a contract of insurance?
+      `section 7 of the Sale of Goods Act 1979 applies to my contract` IS A BOOLEAN @desc Does section 7 of the Sale of Goods Act 1979 apply to your contract? (That section avoids a contract for the sale of specific goods which perish before the risk has passed to the buyer.)
+      `my contract is for the sale, or for the sale and delivery, of specific goods` IS A BOOLEAN @desc Is your contract for the sale, or for the sale and delivery, of specific goods?
+      `my contract is frustrated because the goods have perished` IS A BOOLEAN @desc Is your contract frustrated because the goods have perished?
+      `a party has obtained a valuable benefit from what the other party did under the contract` IS A BOOLEAN @desc Has a party to the contract obtained a valuable benefit by reason of anything the other party did in, or for the purpose of, performing the contract?
+      `the benefit was obtained before the parties were discharged` IS A BOOLEAN @desc Was the benefit obtained before the parties were discharged? (The Act says "before the time"; if it was on the very day of the discharge, answer according to which came first.)
+      `the benefit is a payment of money to which section 2(2) applies` IS A BOOLEAN @desc Is the benefit a payment of money that was paid, or payable, under the contract before the parties were discharged?
+      `the value of the benefit to the party who obtained it` IS A NUMBER @desc What is the value of the benefit, in dollars, to the party who obtained it?
+GIVETH A MAYBE NUMBER
+DECIDE `What is the most that can be recovered for the benefit` IS
+    `s 2(4) the most that is recoverable for the valuable benefit` (`my contract from what I know` `my contract has become impossible to perform or been otherwise frustrated` `the parties have been discharged from performing my contract any further` `the date the parties were discharged` FALSE `my contract is a charterparty` `my charterparty is a time charterparty` `my charterparty is a charterparty by way of demise` `my contract is a contract for the carriage of goods by sea` `my contract is a contract of insurance` `section 7 of the Sale of Goods Act 1979 applies to my contract` `my contract is for the sale, or for the sale and delivery, of specific goods` `my contract is frustrated because the goods have perished`) (`Benefit facts` OF `a party has obtained a valuable benefit from what the other party did under the contract`, `the benefit was obtained before the parties were discharged`, `the benefit is a payment of money to which section 2(2) applies`, `the value of the benefit to the party who obtained it`, 0)
+
+-- s 2(4).  The sum must not exceed the value of the benefit to the party who obtained it.
+-- Not asked (fixed placeholders; no rule this question reaches reads them): the Government is a party to my contract = FALSE; the sums retained = 0; the date my contract was made = 1 January 2000.
+@export Is the sum the court considers just within the limit the Act sets for a valuable benefit (s 2(4))?
+GIVEN `my contract has become impossible to perform or been otherwise frustrated` IS A BOOLEAN @desc Has your contract become impossible to perform, or been otherwise frustrated?
+      `the parties have been discharged from performing my contract any further` IS A BOOLEAN @desc Have the parties to your contract been discharged from performing it any further because of that?
+      `the date the parties were discharged` IS A DATE @desc On what date were the parties discharged from performing the contract any further? (If they have not been discharged, give any date: it is not used.)
+      `my contract is a charterparty` IS A BOOLEAN @desc Is your contract a charterparty?
+      `my charterparty is a time charterparty` IS A BOOLEAN @desc If your contract is a charterparty, is it a time charterparty? (Answer No if it is not a charterparty.)
+      `my charterparty is a charterparty by way of demise` IS A BOOLEAN @desc If your contract is a charterparty, is it a charterparty by way of demise? (Answer No if it is not a charterparty.)
+      `my contract is a contract for the carriage of goods by sea` IS A BOOLEAN @desc Is your contract a contract for the carriage of goods by sea?
+      `my contract is a contract of insurance` IS A BOOLEAN @desc Is your contract a contract of insurance?
+      `section 7 of the Sale of Goods Act 1979 applies to my contract` IS A BOOLEAN @desc Does section 7 of the Sale of Goods Act 1979 apply to your contract? (That section avoids a contract for the sale of specific goods which perish before the risk has passed to the buyer.)
+      `my contract is for the sale, or for the sale and delivery, of specific goods` IS A BOOLEAN @desc Is your contract for the sale, or for the sale and delivery, of specific goods?
+      `my contract is frustrated because the goods have perished` IS A BOOLEAN @desc Is your contract frustrated because the goods have perished?
+      `a party has obtained a valuable benefit from what the other party did under the contract` IS A BOOLEAN @desc Has a party to the contract obtained a valuable benefit by reason of anything the other party did in, or for the purpose of, performing the contract?
+      `the benefit was obtained before the parties were discharged` IS A BOOLEAN @desc Was the benefit obtained before the parties were discharged? (The Act says "before the time"; if it was on the very day of the discharge, answer according to which came first.)
+      `the benefit is a payment of money to which section 2(2) applies` IS A BOOLEAN @desc Is the benefit a payment of money that was paid, or payable, under the contract before the parties were discharged?
+      `the value of the benefit to the party who obtained it` IS A NUMBER @desc What is the value of the benefit, in dollars, to the party who obtained it?
+      `the sum the court considers just` IS A NUMBER @desc What sum, in dollars, does the court consider just for the benefit?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is the sum the court considers just within the limit` IS
+    `s 2(4) the sum the court considers just is within the limit` (`my contract from what I know` `my contract has become impossible to perform or been otherwise frustrated` `the parties have been discharged from performing my contract any further` `the date the parties were discharged` FALSE `my contract is a charterparty` `my charterparty is a time charterparty` `my charterparty is a charterparty by way of demise` `my contract is a contract for the carriage of goods by sea` `my contract is a contract of insurance` `section 7 of the Sale of Goods Act 1979 applies to my contract` `my contract is for the sale, or for the sale and delivery, of specific goods` `my contract is frustrated because the goods have perished`) (`Benefit facts` OF `a party has obtained a valuable benefit from what the other party did under the contract`, `the benefit was obtained before the parties were discharged`, `the benefit is a payment of money to which section 2(2) applies`, `the value of the benefit to the party who obtained it`, 0) `the sum the court considers just`
+
+-- s 2(4)(a).  The expenses the party who obtained the benefit incurred before the discharge in performing the contract (as estimated under s 2(5)),
+-- including sums paid or payable by that party to another party which that party retains or may recover under s 2(3).
+-- Not asked (fixed placeholders; no rule this question reaches reads them): the Government is a party to my contract = FALSE; the value of the benefit to the party who obtained it = 0; the date my contract was made = 1 January 2000.
+@export What amount of the benefited party's expenses must the court have regard to when it fixes the sum for the benefit (s 2(4)(a))?
+GIVEN `my contract has become impossible to perform or been otherwise frustrated` IS A BOOLEAN @desc Has your contract become impossible to perform, or been otherwise frustrated?
+      `the parties have been discharged from performing my contract any further` IS A BOOLEAN @desc Have the parties to your contract been discharged from performing it any further because of that?
+      `the date the parties were discharged` IS A DATE @desc On what date were the parties discharged from performing the contract any further? (If they have not been discharged, give any date: it is not used.)
+      `my contract is a charterparty` IS A BOOLEAN @desc Is your contract a charterparty?
+      `my charterparty is a time charterparty` IS A BOOLEAN @desc If your contract is a charterparty, is it a time charterparty? (Answer No if it is not a charterparty.)
+      `my charterparty is a charterparty by way of demise` IS A BOOLEAN @desc If your contract is a charterparty, is it a charterparty by way of demise? (Answer No if it is not a charterparty.)
+      `my contract is a contract for the carriage of goods by sea` IS A BOOLEAN @desc Is your contract a contract for the carriage of goods by sea?
+      `my contract is a contract of insurance` IS A BOOLEAN @desc Is your contract a contract of insurance?
+      `section 7 of the Sale of Goods Act 1979 applies to my contract` IS A BOOLEAN @desc Does section 7 of the Sale of Goods Act 1979 apply to your contract? (That section avoids a contract for the sale of specific goods which perish before the risk has passed to the buyer.)
+      `my contract is for the sale, or for the sale and delivery, of specific goods` IS A BOOLEAN @desc Is your contract for the sale, or for the sale and delivery, of specific goods?
+      `my contract is frustrated because the goods have perished` IS A BOOLEAN @desc Is your contract frustrated because the goods have perished?
+      `a party has obtained a valuable benefit from what the other party did under the contract` IS A BOOLEAN @desc Has a party to the contract obtained a valuable benefit by reason of anything the other party did in, or for the purpose of, performing the contract?
+      `the benefit was obtained before the parties were discharged` IS A BOOLEAN @desc Was the benefit obtained before the parties were discharged? (The Act says "before the time"; if it was on the very day of the discharge, answer according to which came first.)
+      `the benefit is a payment of money to which section 2(2) applies` IS A BOOLEAN @desc Is the benefit a payment of money that was paid, or payable, under the contract before the parties were discharged?
+      `the sums the benefited party paid to another party and that party retains or may recover` IS A NUMBER @desc What sums, in dollars, did the party who obtained the benefit pay or owe to any other party under the contract, which that party retains or may recover under the court's allowance for expenses? (0 if none)
+      `expenses were incurred before the parties were discharged in, or for the purpose of, performing the contract` IS A BOOLEAN @desc Did the party who received the sum, or was to receive it, incur expenses before the parties were discharged in, or for the purpose of, performing the contract?
+      `the amount of those expenses` IS A NUMBER @desc What is the amount of those expenses, in dollars? (0 if none)
+      `the sum the court includes for overhead expenses` IS A NUMBER @desc What sum, in dollars, has the court included for overhead expenses? (0 if none)
+      `the sum the court includes for work or services performed personally` IS A NUMBER @desc What sum, in dollars, has the court included for work or services performed personally by that party? (0 if none)
+GIVETH A MAYBE NUMBER
+DECIDE `What expenses must the court have regard to` IS
+    `s 2(4)(a) the amount of the benefited party's expenses that the court has regard to` (`my contract from what I know` `my contract has become impossible to perform or been otherwise frustrated` `the parties have been discharged from performing my contract any further` `the date the parties were discharged` FALSE `my contract is a charterparty` `my charterparty is a time charterparty` `my charterparty is a charterparty by way of demise` `my contract is a contract for the carriage of goods by sea` `my contract is a contract of insurance` `section 7 of the Sale of Goods Act 1979 applies to my contract` `my contract is for the sale, or for the sale and delivery, of specific goods` `my contract is frustrated because the goods have perished`) (`Benefit facts` OF `a party has obtained a valuable benefit from what the other party did under the contract`, `the benefit was obtained before the parties were discharged`, `the benefit is a payment of money to which section 2(2) applies`, 0, `the sums the benefited party paid to another party and that party retains or may recover`) (`Expenses facts` OF `expenses were incurred before the parties were discharged in, or for the purpose of, performing the contract`, `the amount of those expenses`, `the sum the court includes for overhead expenses`, `the sum the court includes for work or services performed personally`)
+
+-- s 2(4).  The court has regard to all the circumstances of the case and, in particular, (a) the expenses of the party who obtained the benefit and (b) the effect of the circumstances that frustrated the contract on the benefit.
+-- Not asked (fixed placeholders; no rule this question reaches reads them): the Government is a party to my contract = FALSE; the value of the benefit to the party who obtained it = 0; the sums retained = 0; the date my contract was made = 1 January 2000.
+@export Must the court have regard to this matter when it fixes the sum for a valuable benefit (s 2(4))?
+GIVEN `my contract has become impossible to perform or been otherwise frustrated` IS A BOOLEAN @desc Has your contract become impossible to perform, or been otherwise frustrated?
+      `the parties have been discharged from performing my contract any further` IS A BOOLEAN @desc Have the parties to your contract been discharged from performing it any further because of that?
+      `the date the parties were discharged` IS A DATE @desc On what date were the parties discharged from performing the contract any further? (If they have not been discharged, give any date: it is not used.)
+      `my contract is a charterparty` IS A BOOLEAN @desc Is your contract a charterparty?
+      `my charterparty is a time charterparty` IS A BOOLEAN @desc If your contract is a charterparty, is it a time charterparty? (Answer No if it is not a charterparty.)
+      `my charterparty is a charterparty by way of demise` IS A BOOLEAN @desc If your contract is a charterparty, is it a charterparty by way of demise? (Answer No if it is not a charterparty.)
+      `my contract is a contract for the carriage of goods by sea` IS A BOOLEAN @desc Is your contract a contract for the carriage of goods by sea?
+      `my contract is a contract of insurance` IS A BOOLEAN @desc Is your contract a contract of insurance?
+      `section 7 of the Sale of Goods Act 1979 applies to my contract` IS A BOOLEAN @desc Does section 7 of the Sale of Goods Act 1979 apply to your contract? (That section avoids a contract for the sale of specific goods which perish before the risk has passed to the buyer.)
+      `my contract is for the sale, or for the sale and delivery, of specific goods` IS A BOOLEAN @desc Is your contract for the sale, or for the sale and delivery, of specific goods?
+      `my contract is frustrated because the goods have perished` IS A BOOLEAN @desc Is your contract frustrated because the goods have perished?
+      `a party has obtained a valuable benefit from what the other party did under the contract` IS A BOOLEAN @desc Has a party to the contract obtained a valuable benefit by reason of anything the other party did in, or for the purpose of, performing the contract?
+      `the benefit was obtained before the parties were discharged` IS A BOOLEAN @desc Was the benefit obtained before the parties were discharged? (The Act says "before the time"; if it was on the very day of the discharge, answer according to which came first.)
+      `the benefit is a payment of money to which section 2(2) applies` IS A BOOLEAN @desc Is the benefit a payment of money that was paid, or payable, under the contract before the parties were discharged?
+      `the matter I ask about` IS A `Kind of matter I ask about` @desc Which matter are you asking about: the expenses of the party who obtained the benefit, the effect of the circumstances that frustrated the contract on the benefit, some other circumstance of the case, or something that is not a circumstance of the case?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Must the court have regard to this matter` IS
+    `s 2(4) the court is to have regard to this matter` (`my contract from what I know` `my contract has become impossible to perform or been otherwise frustrated` `the parties have been discharged from performing my contract any further` `the date the parties were discharged` FALSE `my contract is a charterparty` `my charterparty is a time charterparty` `my charterparty is a charterparty by way of demise` `my contract is a contract for the carriage of goods by sea` `my contract is a contract of insurance` `section 7 of the Sale of Goods Act 1979 applies to my contract` `my contract is for the sale, or for the sale and delivery, of specific goods` `my contract is frustrated because the goods have perished`) (`Benefit facts` OF `a party has obtained a valuable benefit from what the other party did under the contract`, `the benefit was obtained before the parties were discharged`, `the benefit is a payment of money to which section 2(2) applies`, 0, 0) (`the matter I ask about, in the Act's terms` `the matter I ask about`)
+
+-- ---------------------------------------------------------------------------
+§§ `Expenses (s 2(5))`
+-- ---------------------------------------------------------------------------
+
+-- s 2(5).  The expenses incurred, plus the sums the court includes for overhead expenses and for work or services performed personally by that party.  NOTHING if no expenses were incurred.
+@export What are the expenses once the court adds a reasonable sum for overheads and for work done personally (s 2(5))?
+GIVEN `expenses were incurred before the parties were discharged in, or for the purpose of, performing the contract` IS A BOOLEAN @desc Did the party who received the sum, or was to receive it, incur expenses before the parties were discharged in, or for the purpose of, performing the contract?
+      `the amount of those expenses` IS A NUMBER @desc What is the amount of those expenses, in dollars? (0 if none)
+      `the sum the court includes for overhead expenses` IS A NUMBER @desc What sum, in dollars, has the court included for overhead expenses? (0 if none)
+      `the sum the court includes for work or services performed personally` IS A NUMBER @desc What sum, in dollars, has the court included for work or services performed personally by that party? (0 if none)
+GIVETH A MAYBE NUMBER
+DECIDE `What are the expenses as the court estimates them` IS
+    `s 2(5) the expenses as estimated` (`Expenses facts` OF `expenses were incurred before the parties were discharged in, or for the purpose of, performing the contract`, `the amount of those expenses`, `the sum the court includes for overhead expenses`, `the sum the court includes for work or services performed personally`)
+
+-- s 2(5).  In estimating the expenses incurred by a party, the court may include a reasonable sum for overhead expenses and for work or services that party performed personally.
+-- Not asked (fixed placeholders; no rule this question reaches reads them): the Government is a party to my contract = FALSE; the amount of those expenses = 0; the sum the court includes for overhead expenses = 0; the sum the court includes for work or services performed personally = 0; the date my contract was made = 1 January 2000.
+@export May the court include a reasonable sum for overhead expenses and for work I performed personally (s 2(5))?
+GIVEN `my contract has become impossible to perform or been otherwise frustrated` IS A BOOLEAN @desc Has your contract become impossible to perform, or been otherwise frustrated?
+      `the parties have been discharged from performing my contract any further` IS A BOOLEAN @desc Have the parties to your contract been discharged from performing it any further because of that?
+      `the date the parties were discharged` IS A DATE @desc On what date were the parties discharged from performing the contract any further? (If they have not been discharged, give any date: it is not used.)
+      `my contract is a charterparty` IS A BOOLEAN @desc Is your contract a charterparty?
+      `my charterparty is a time charterparty` IS A BOOLEAN @desc If your contract is a charterparty, is it a time charterparty? (Answer No if it is not a charterparty.)
+      `my charterparty is a charterparty by way of demise` IS A BOOLEAN @desc If your contract is a charterparty, is it a charterparty by way of demise? (Answer No if it is not a charterparty.)
+      `my contract is a contract for the carriage of goods by sea` IS A BOOLEAN @desc Is your contract a contract for the carriage of goods by sea?
+      `my contract is a contract of insurance` IS A BOOLEAN @desc Is your contract a contract of insurance?
+      `section 7 of the Sale of Goods Act 1979 applies to my contract` IS A BOOLEAN @desc Does section 7 of the Sale of Goods Act 1979 apply to your contract? (That section avoids a contract for the sale of specific goods which perish before the risk has passed to the buyer.)
+      `my contract is for the sale, or for the sale and delivery, of specific goods` IS A BOOLEAN @desc Is your contract for the sale, or for the sale and delivery, of specific goods?
+      `my contract is frustrated because the goods have perished` IS A BOOLEAN @desc Is your contract frustrated because the goods have perished?
+      `expenses were incurred before the parties were discharged in, or for the purpose of, performing the contract` IS A BOOLEAN @desc Did the party who received the sum, or was to receive it, incur expenses before the parties were discharged in, or for the purpose of, performing the contract?
+GIVETH A MAYBE BOOLEAN
+DECIDE `May the court include overheads and my own work` IS
+    `s 2(5) the court may include a reasonable sum for overhead expenses and for work performed personally` (`my contract from what I know` `my contract has become impossible to perform or been otherwise frustrated` `the parties have been discharged from performing my contract any further` `the date the parties were discharged` FALSE `my contract is a charterparty` `my charterparty is a time charterparty` `my charterparty is a charterparty by way of demise` `my contract is a contract for the carriage of goods by sea` `my contract is a contract of insurance` `section 7 of the Sale of Goods Act 1979 applies to my contract` `my contract is for the sale, or for the sale and delivery, of specific goods` `my contract is frustrated because the goods have perished`) (`Expenses facts` OF `expenses were incurred before the parties were discharged in, or for the purpose of, performing the contract`, 0, 0, 0)
+
+-- ---------------------------------------------------------------------------
+§§ `Insurance money (s 2(6))`
+-- ---------------------------------------------------------------------------
+
+-- s 2(6).  In considering whether any sum ought to be recovered or retained under section 2, the court shall not take into account insurance money that became payable to that party because of the frustration,
+-- unless there was an obligation to insure imposed by an express term of the frustrated contract or by or under any enactment.  Yes: it must leave it out.  No: the exception applies, so the bar does not.  NOTHING: other sums, or the Act does not say.
+@export Must the court leave out of account insurance money that has become payable to a party because of the frustration (s 2(6))?
+GIVEN `the court is considering whether any sum ought to be recovered or retained under section 2` IS A BOOLEAN @desc Is the court considering whether any sum ought to be recovered or retained under section 2 by that party?
+      `insurance money has become payable to that party because of the frustration` IS A BOOLEAN @desc Has money become payable to that party under a contract of insurance because of the circumstances that frustrated the contract?
+      `an express term of my contract required insurance` IS A BOOLEAN @desc Did an express term of the frustrated contract oblige a party to insure?
+      `a law required insurance` IS A BOOLEAN @desc Was there an obligation to insure imposed by or under any enactment?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Must the court leave insurance money out of account` IS
+    `s 2(6) the court shall not take the insurance sums into account` (`Insurance facts` OF `the court is considering whether any sum ought to be recovered or retained under section 2`, `insurance money has become payable to that party because of the frustration`, `an express term of my contract required insurance`, `a law required insurance`)
+
+-- s 2(6).  No where the bar applies.  NOTHING where the exception applies (the Act lifts the bar but does not itself say the court may count the money) or the sums are not within the bar.
+@export May the court take that insurance money into account (s 2(6))?
+GIVEN `the court is considering whether any sum ought to be recovered or retained under section 2` IS A BOOLEAN @desc Is the court considering whether any sum ought to be recovered or retained under section 2 by that party?
+      `insurance money has become payable to that party because of the frustration` IS A BOOLEAN @desc Has money become payable to that party under a contract of insurance because of the circumstances that frustrated the contract?
+      `an express term of my contract required insurance` IS A BOOLEAN @desc Did an express term of the frustrated contract oblige a party to insure?
+      `a law required insurance` IS A BOOLEAN @desc Was there an obligation to insure imposed by or under any enactment?
+GIVETH A MAYBE BOOLEAN
+DECIDE `May the court take insurance money into account` IS
+    `s 2(6) the court may take the insurance sums into account` (`Insurance facts` OF `the court is considering whether any sum ought to be recovered or retained under section 2`, `insurance money has become payable to that party because of the frustration`, `an express term of my contract required insurance`, `a law required insurance`)
+
+-- ---------------------------------------------------------------------------
+§§ `A benefit given to someone else (s 2(7))`
+-- ---------------------------------------------------------------------------
+
+-- s 2(7).  Where a person took on obligations in return for a benefit that another party conferred on someone else (a party or not),
+-- the court may, if it considers it just, treat that benefit, for s 2(4), as obtained by the person who took on the obligations.
+-- Not asked (fixed placeholders; no rule this question reaches reads them): the Government is a party to my contract = FALSE; the date my contract was made = 1 January 2000.
+@export May the court treat a benefit given to someone else as a benefit obtained by the person who took on the obligations (s 2(7))?
+GIVEN `my contract has become impossible to perform or been otherwise frustrated` IS A BOOLEAN @desc Has your contract become impossible to perform, or been otherwise frustrated?
+      `the parties have been discharged from performing my contract any further` IS A BOOLEAN @desc Have the parties to your contract been discharged from performing it any further because of that?
+      `the date the parties were discharged` IS A DATE @desc On what date were the parties discharged from performing the contract any further? (If they have not been discharged, give any date: it is not used.)
+      `my contract is a charterparty` IS A BOOLEAN @desc Is your contract a charterparty?
+      `my charterparty is a time charterparty` IS A BOOLEAN @desc If your contract is a charterparty, is it a time charterparty? (Answer No if it is not a charterparty.)
+      `my charterparty is a charterparty by way of demise` IS A BOOLEAN @desc If your contract is a charterparty, is it a charterparty by way of demise? (Answer No if it is not a charterparty.)
+      `my contract is a contract for the carriage of goods by sea` IS A BOOLEAN @desc Is your contract a contract for the carriage of goods by sea?
+      `my contract is a contract of insurance` IS A BOOLEAN @desc Is your contract a contract of insurance?
+      `section 7 of the Sale of Goods Act 1979 applies to my contract` IS A BOOLEAN @desc Does section 7 of the Sale of Goods Act 1979 apply to your contract? (That section avoids a contract for the sale of specific goods which perish before the risk has passed to the buyer.)
+      `my contract is for the sale, or for the sale and delivery, of specific goods` IS A BOOLEAN @desc Is your contract for the sale, or for the sale and delivery, of specific goods?
+      `my contract is frustrated because the goods have perished` IS A BOOLEAN @desc Is your contract frustrated because the goods have perished?
+      `a person has assumed obligations under the contract` IS A BOOLEAN @desc Has a person assumed obligations under the contract?
+      `the obligations were assumed in consideration of a benefit conferred by another party upon another person` IS A BOOLEAN @desc Were those obligations assumed in consideration of the conferring of a benefit by another party to the contract upon another person?
+      `the person who received the benefit is a party to the contract` IS A BOOLEAN @desc Is the person who received that benefit a party to the contract? (The Act applies whether or not they are.)
+      `the court considers it just to treat the benefit as obtained by the person who assumed the obligations` IS A `My answer` @desc Does the court consider it just, in all the circumstances of the case, to treat the benefit as obtained by the person who assumed the obligations? (Choose I am not sure if the court has not yet decided.)
+GIVETH A MAYBE BOOLEAN
+DECIDE `May the court treat the benefit as obtained by the person who took on the obligations` IS
+    `s 2(7) the court may treat the benefit conferred on another person as a benefit obtained by the person who assumed the obligations` (`my contract from what I know` `my contract has become impossible to perform or been otherwise frustrated` `the parties have been discharged from performing my contract any further` `the date the parties were discharged` FALSE `my contract is a charterparty` `my charterparty is a time charterparty` `my charterparty is a charterparty by way of demise` `my contract is a contract for the carriage of goods by sea` `my contract is a contract of insurance` `section 7 of the Sale of Goods Act 1979 applies to my contract` `my contract is for the sale, or for the sale and delivery, of specific goods` `my contract is frustrated because the goods have perished`) (`Obligor facts` OF `a person has assumed obligations under the contract`, `the obligations were assumed in consideration of a benefit conferred by another party upon another person`, `the person who received the benefit is a party to the contract`) (`what I say, as a fact` `the court considers it just to treat the benefit as obtained by the person who assumed the obligations`)
+
+-- ---------------------------------------------------------------------------
+§§ `Does the Act apply to my contract? (s 3(1) and (2), and s 3 as a whole)`
+-- ---------------------------------------------------------------------------
+
+-- s 3(1) and (5).  Yes if the parties were discharged on or after 1 January 1959 and none of the three exclusions in s 3(5) applies; No if either s 3(1) or an exclusion says it does not;
+-- NOTHING if the date of the discharge is not given.
+-- Not asked (fixed placeholders; no rule this question reaches reads them): my contract has become impossible to perform or been otherwise frustrated = TRUE; the Government is a party to my contract = FALSE; the date my contract was made = 1 January 2000.
+@export Does the Act apply to my contract (s 3)?
+GIVEN `the parties have been discharged from performing my contract any further` IS A BOOLEAN @desc Have the parties to your contract been discharged from performing it any further because of that?
+      `the date the parties were discharged` IS A DATE @desc On what date were the parties discharged from performing the contract any further? (If they have not been discharged, give any date: it is not used.)
+      `my contract is a charterparty` IS A BOOLEAN @desc Is your contract a charterparty?
+      `my charterparty is a time charterparty` IS A BOOLEAN @desc If your contract is a charterparty, is it a time charterparty? (Answer No if it is not a charterparty.)
+      `my charterparty is a charterparty by way of demise` IS A BOOLEAN @desc If your contract is a charterparty, is it a charterparty by way of demise? (Answer No if it is not a charterparty.)
+      `my contract is a contract for the carriage of goods by sea` IS A BOOLEAN @desc Is your contract a contract for the carriage of goods by sea?
+      `my contract is a contract of insurance` IS A BOOLEAN @desc Is your contract a contract of insurance?
+      `section 7 of the Sale of Goods Act 1979 applies to my contract` IS A BOOLEAN @desc Does section 7 of the Sale of Goods Act 1979 apply to your contract? (That section avoids a contract for the sale of specific goods which perish before the risk has passed to the buyer.)
+      `my contract is for the sale, or for the sale and delivery, of specific goods` IS A BOOLEAN @desc Is your contract for the sale, or for the sale and delivery, of specific goods?
+      `my contract is frustrated because the goods have perished` IS A BOOLEAN @desc Is your contract frustrated because the goods have perished?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Does the Act apply to my contract` IS
+    `s 3 this Act applies to the contract` (`my contract from what I know` TRUE `the parties have been discharged from performing my contract any further` `the date the parties were discharged` FALSE `my contract is a charterparty` `my charterparty is a time charterparty` `my charterparty is a charterparty by way of demise` `my contract is a contract for the carriage of goods by sea` `my contract is a contract of insurance` `section 7 of the Sale of Goods Act 1979 applies to my contract` `my contract is for the sale, or for the sale and delivery, of specific goods` `my contract is frustrated because the goods have perished`)
+
+-- s 3(1).  The Act applies where the time of discharge is on or after 1 January 1959, and not where it is before.
+-- Not asked (fixed placeholders; no rule this question reaches reads them): my contract has become impossible to perform or been otherwise frustrated = TRUE; the Government is a party to my contract = FALSE; my contract is a charterparty = FALSE; my charterparty is a time charterparty = FALSE; my charterparty is a charterparty by way of demise = FALSE; my contract is a contract for the carriage of goods by sea = FALSE; my contract is a contract of insurance = FALSE; section 7 of the Sale of Goods Act 1979 applies to my contract = FALSE; my contract is for the sale, or for the sale and delivery, of specific goods = FALSE; my contract is frustrated because the goods have perished = FALSE; the date my contract was made = 1 January 2000.
+@export Does the Act reach my contract, given the date the parties were discharged (s 3(1))?
+GIVEN `the parties have been discharged from performing my contract any further` IS A BOOLEAN @desc Have the parties to your contract been discharged from performing it any further because of that?
+      `the date the parties were discharged` IS A DATE @desc On what date were the parties discharged from performing the contract any further? (If they have not been discharged, give any date: it is not used.)
+GIVETH A MAYBE BOOLEAN
+DECIDE `Does the Act reach my contract by its discharge date` IS
+    `s 3(1) this Act applies to the contract by its time of discharge` (`my contract from what I know` TRUE `the parties have been discharged from performing my contract any further` `the date the parties were discharged` FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE)
+
+-- s 3(1).  The date the contract was made makes no difference: Yes whatever the date.
+@export Does the Act apply to my contract whether it was made before or after 13 February 1959 (s 3(1))?
+GIVEN `the date my contract was made` IS A DATE @desc On what date was your contract made?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Does it matter when my contract was made` IS
+    `s 3(1) this Act applies to a contract whether made before or after 13 February 1959` `the date my contract was made`
+
+-- s 3(2).  Yes if the Government is a party.  NOTHING if it is not: the subsection speaks only of the Government's contracts.
+-- Not asked (fixed placeholders; no rule this question reaches reads them): my contract has become impossible to perform or been otherwise frustrated = TRUE; the parties have been discharged from performing my contract any further = TRUE; the date the parties were discharged = (Date 1 1 2000); my contract is a charterparty = FALSE; my charterparty is a time charterparty = FALSE; my charterparty is a charterparty by way of demise = FALSE; my contract is a contract for the carriage of goods by sea = FALSE; my contract is a contract of insurance = FALSE; section 7 of the Sale of Goods Act 1979 applies to my contract = FALSE; my contract is for the sale, or for the sale and delivery, of specific goods = FALSE; my contract is frustrated because the goods have perished = FALSE; the date my contract was made = 1 January 2000.
+@export Does the Act apply to my contract with the Government in the same way as to a contract between private persons (s 3(2))?
+GIVEN `the Government is a party to my contract` IS A BOOLEAN @desc Is the Government of Singapore a party to your contract?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Does the Act apply to my Government contract in the same way` IS
+    `s 3(2) this Act applies in like manner to a contract to which the Government is a party` (`my contract from what I know` TRUE TRUE (Date 1 1 2000) `the Government is a party to my contract` FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE)
+
+-- ---------------------------------------------------------------------------
+§§ `My contract's own terms, and a part already performed (s 3(3) and (4))`
+-- ---------------------------------------------------------------------------
+
+-- s 3(3).  Where the contract is one the Act applies to and contains a provision meant to have effect if circumstances arise that frustrate the contract, or whether or not they arise,
+-- the court shall give effect to that provision.  No if the contract has no such provision or the Act does not apply.
+-- Not asked (fixed placeholders; no rule this question reaches reads them): my contract has become impossible to perform or been otherwise frustrated = TRUE; the Government is a party to my contract = FALSE; the date my contract was made = 1 January 2000.
+@export Must the court give effect to my contract's own provision about frustration (s 3(3))?
+GIVEN `the parties have been discharged from performing my contract any further` IS A BOOLEAN @desc Have the parties to your contract been discharged from performing it any further because of that?
+      `the date the parties were discharged` IS A DATE @desc On what date were the parties discharged from performing the contract any further? (If they have not been discharged, give any date: it is not used.)
+      `my contract is a charterparty` IS A BOOLEAN @desc Is your contract a charterparty?
+      `my charterparty is a time charterparty` IS A BOOLEAN @desc If your contract is a charterparty, is it a time charterparty? (Answer No if it is not a charterparty.)
+      `my charterparty is a charterparty by way of demise` IS A BOOLEAN @desc If your contract is a charterparty, is it a charterparty by way of demise? (Answer No if it is not a charterparty.)
+      `my contract is a contract for the carriage of goods by sea` IS A BOOLEAN @desc Is your contract a contract for the carriage of goods by sea?
+      `my contract is a contract of insurance` IS A BOOLEAN @desc Is your contract a contract of insurance?
+      `section 7 of the Sale of Goods Act 1979 applies to my contract` IS A BOOLEAN @desc Does section 7 of the Sale of Goods Act 1979 apply to your contract? (That section avoids a contract for the sale of specific goods which perish before the risk has passed to the buyer.)
+      `my contract is for the sale, or for the sale and delivery, of specific goods` IS A BOOLEAN @desc Is your contract for the sale, or for the sale and delivery, of specific goods?
+      `my contract is frustrated because the goods have perished` IS A BOOLEAN @desc Is your contract frustrated because the goods have perished?
+      `my contract has a provision for the event of frustration` IS A BOOLEAN @desc Does your contract contain a provision which, on its true construction, is meant to have effect if circumstances arise that frustrate the contract (or would, but for that provision)?
+      `my contract has a provision that has effect whether or not frustration arises` IS A BOOLEAN @desc Does your contract contain a provision which, on its true construction, is meant to have effect whether or not such circumstances arise?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Must the court give effect to my contract's own provision` IS
+    `s 3(3) the court is to give effect to the provision of the contract` (`my contract from what I know` TRUE `the parties have been discharged from performing my contract any further` `the date the parties were discharged` FALSE `my contract is a charterparty` `my charterparty is a time charterparty` `my charterparty is a charterparty by way of demise` `my contract is a contract for the carriage of goods by sea` `my contract is a contract of insurance` `section 7 of the Sale of Goods Act 1979 applies to my contract` `my contract is for the sale, or for the sale and delivery, of specific goods` `my contract is frustrated because the goods have perished`) (`Contract provision facts` OF `my contract has a provision for the event of frustration`, `my contract has a provision that has effect whether or not frustration arises`)
+
+-- s 3(3).  Section 2 is given effect only to the extent, if any, that appears to the court consistent with the contract's own provision, and never beyond what section 2 would give.
+-- NOTHING while the court has not said how much is consistent, or where the contract has no such provision.
+-- Not asked (fixed placeholders; no rule this question reaches reads them): my contract has become impossible to perform or been otherwise frustrated = TRUE; the Government is a party to my contract = FALSE; the date my contract was made = 1 January 2000.
+@export How much of the adjustment section 2 would give is given effect, now that my contract has its own provision (s 3(3))?
+GIVEN `the parties have been discharged from performing my contract any further` IS A BOOLEAN @desc Have the parties to your contract been discharged from performing it any further because of that?
+      `the date the parties were discharged` IS A DATE @desc On what date were the parties discharged from performing the contract any further? (If they have not been discharged, give any date: it is not used.)
+      `my contract is a charterparty` IS A BOOLEAN @desc Is your contract a charterparty?
+      `my charterparty is a time charterparty` IS A BOOLEAN @desc If your contract is a charterparty, is it a time charterparty? (Answer No if it is not a charterparty.)
+      `my charterparty is a charterparty by way of demise` IS A BOOLEAN @desc If your contract is a charterparty, is it a charterparty by way of demise? (Answer No if it is not a charterparty.)
+      `my contract is a contract for the carriage of goods by sea` IS A BOOLEAN @desc Is your contract a contract for the carriage of goods by sea?
+      `my contract is a contract of insurance` IS A BOOLEAN @desc Is your contract a contract of insurance?
+      `section 7 of the Sale of Goods Act 1979 applies to my contract` IS A BOOLEAN @desc Does section 7 of the Sale of Goods Act 1979 apply to your contract? (That section avoids a contract for the sale of specific goods which perish before the risk has passed to the buyer.)
+      `my contract is for the sale, or for the sale and delivery, of specific goods` IS A BOOLEAN @desc Is your contract for the sale, or for the sale and delivery, of specific goods?
+      `my contract is frustrated because the goods have perished` IS A BOOLEAN @desc Is your contract frustrated because the goods have perished?
+      `my contract has a provision for the event of frustration` IS A BOOLEAN @desc Does your contract contain a provision which, on its true construction, is meant to have effect if circumstances arise that frustrate the contract (or would, but for that provision)?
+      `my contract has a provision that has effect whether or not frustration arises` IS A BOOLEAN @desc Does your contract contain a provision which, on its true construction, is meant to have effect whether or not such circumstances arise?
+      `the amount section 2 would otherwise give effect to` IS A NUMBER @desc What amount, in dollars, would section 2 otherwise give effect to?
+      `the court has said what is consistent with the provision` IS A BOOLEAN @desc Has the court said how much of the section 2 adjustment appears to it to be consistent with the provision?
+      `the amount the court finds consistent with the provision` IS A NUMBER @desc How much, in dollars, of the section 2 adjustment does the court find consistent with the provision? (0 if it has not said, or if none)
+GIVETH A MAYBE NUMBER
+DECIDE `How much of section 2 is given effect` IS
+    `s 3(3) the amount of section 2 that is given effect` (`my contract from what I know` TRUE `the parties have been discharged from performing my contract any further` `the date the parties were discharged` FALSE `my contract is a charterparty` `my charterparty is a time charterparty` `my charterparty is a charterparty by way of demise` `my contract is a contract for the carriage of goods by sea` `my contract is a contract of insurance` `section 7 of the Sale of Goods Act 1979 applies to my contract` `my contract is for the sale, or for the sale and delivery, of specific goods` `my contract is frustrated because the goods have perished`) (`Contract provision facts` OF `my contract has a provision for the event of frustration`, `my contract has a provision that has effect whether or not frustration arises`) `the amount section 2 would otherwise give effect to` (`my amount if the court has decided` `the court has said what is consistent with the provision` `the amount the court finds consistent with the provision`)
+
+-- s 3(4).  Where it appears to the court that a part of the contract can properly be severed, being a part wholly performed before the discharge (or performed but for the payment of sums that are or can be ascertained),
+-- the court shall treat that part as a separate contract that was not frustrated.
+-- Not asked (fixed placeholders; no rule this question reaches reads them): my contract has become impossible to perform or been otherwise frustrated = TRUE; the Government is a party to my contract = FALSE; the date my contract was made = 1 January 2000.
+@export Must the court treat a part of my contract that was already performed as a separate contract that was not frustrated (s 3(4))?
+GIVEN `the parties have been discharged from performing my contract any further` IS A BOOLEAN @desc Have the parties to your contract been discharged from performing it any further because of that?
+      `the date the parties were discharged` IS A DATE @desc On what date were the parties discharged from performing the contract any further? (If they have not been discharged, give any date: it is not used.)
+      `my contract is a charterparty` IS A BOOLEAN @desc Is your contract a charterparty?
+      `my charterparty is a time charterparty` IS A BOOLEAN @desc If your contract is a charterparty, is it a time charterparty? (Answer No if it is not a charterparty.)
+      `my charterparty is a charterparty by way of demise` IS A BOOLEAN @desc If your contract is a charterparty, is it a charterparty by way of demise? (Answer No if it is not a charterparty.)
+      `my contract is a contract for the carriage of goods by sea` IS A BOOLEAN @desc Is your contract a contract for the carriage of goods by sea?
+      `my contract is a contract of insurance` IS A BOOLEAN @desc Is your contract a contract of insurance?
+      `section 7 of the Sale of Goods Act 1979 applies to my contract` IS A BOOLEAN @desc Does section 7 of the Sale of Goods Act 1979 apply to your contract? (That section avoids a contract for the sale of specific goods which perish before the risk has passed to the buyer.)
+      `my contract is for the sale, or for the sale and delivery, of specific goods` IS A BOOLEAN @desc Is your contract for the sale, or for the sale and delivery, of specific goods?
+      `my contract is frustrated because the goods have perished` IS A BOOLEAN @desc Is your contract frustrated because the goods have perished?
+      `it appears to the court that a part of my contract can properly be severed` IS A `My answer` @desc Does it appear to the court that a part of the contract can properly be severed from the remainder? (Choose I am not sure if the court has not yet said.)
+      `that part was wholly performed before the parties were discharged` IS A BOOLEAN @desc Was that part wholly performed before the parties were discharged?
+      `that part was performed except for payment of sums that are or can be ascertained under the contract` IS A BOOLEAN @desc Was that part performed except for the payment, in respect of that part, of sums which are or can be ascertained under the contract?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Must the court treat a performed part as a separate contract` IS
+    `s 3(4) the court is to treat the part of the contract as a separate contract that has not been frustrated` (`my contract from what I know` TRUE `the parties have been discharged from performing my contract any further` `the date the parties were discharged` FALSE `my contract is a charterparty` `my charterparty is a time charterparty` `my charterparty is a charterparty by way of demise` `my contract is a contract for the carriage of goods by sea` `my contract is a contract of insurance` `section 7 of the Sale of Goods Act 1979 applies to my contract` `my contract is for the sale, or for the sale and delivery, of specific goods` `my contract is frustrated because the goods have perished`) (`Severable part facts` OF (`what I say, as a fact` `it appears to the court that a part of my contract can properly be severed`), `that part was wholly performed before the parties were discharged`, `that part was performed except for payment of sums that are or can be ascertained under the contract`)
+
+-- s 3(4).  Where the severance rule applies, section 2 applies only to the remainder, not to the severed part.  NOTHING where it does not apply: s 3(4) then says nothing about either portion.
+-- Not asked (fixed placeholders; no rule this question reaches reads them): my contract has become impossible to perform or been otherwise frustrated = TRUE; the Government is a party to my contract = FALSE; the date my contract was made = 1 January 2000.
+@export Does section 2 apply to this portion of my contract (s 3(4))?
+GIVEN `the parties have been discharged from performing my contract any further` IS A BOOLEAN @desc Have the parties to your contract been discharged from performing it any further because of that?
+      `the date the parties were discharged` IS A DATE @desc On what date were the parties discharged from performing the contract any further? (If they have not been discharged, give any date: it is not used.)
+      `my contract is a charterparty` IS A BOOLEAN @desc Is your contract a charterparty?
+      `my charterparty is a time charterparty` IS A BOOLEAN @desc If your contract is a charterparty, is it a time charterparty? (Answer No if it is not a charterparty.)
+      `my charterparty is a charterparty by way of demise` IS A BOOLEAN @desc If your contract is a charterparty, is it a charterparty by way of demise? (Answer No if it is not a charterparty.)
+      `my contract is a contract for the carriage of goods by sea` IS A BOOLEAN @desc Is your contract a contract for the carriage of goods by sea?
+      `my contract is a contract of insurance` IS A BOOLEAN @desc Is your contract a contract of insurance?
+      `section 7 of the Sale of Goods Act 1979 applies to my contract` IS A BOOLEAN @desc Does section 7 of the Sale of Goods Act 1979 apply to your contract? (That section avoids a contract for the sale of specific goods which perish before the risk has passed to the buyer.)
+      `my contract is for the sale, or for the sale and delivery, of specific goods` IS A BOOLEAN @desc Is your contract for the sale, or for the sale and delivery, of specific goods?
+      `my contract is frustrated because the goods have perished` IS A BOOLEAN @desc Is your contract frustrated because the goods have perished?
+      `it appears to the court that a part of my contract can properly be severed` IS A `My answer` @desc Does it appear to the court that a part of the contract can properly be severed from the remainder? (Choose I am not sure if the court has not yet said.)
+      `that part was wholly performed before the parties were discharged` IS A BOOLEAN @desc Was that part wholly performed before the parties were discharged?
+      `that part was performed except for payment of sums that are or can be ascertained under the contract` IS A BOOLEAN @desc Was that part performed except for the payment, in respect of that part, of sums which are or can be ascertained under the contract?
+      `the portion of my contract I ask about` IS A `The portion of my contract I ask about` @desc Are you asking about the part treated as a separate contract, or about the rest of your contract?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Does section 2 apply to this portion of my contract` IS
+    `s 3(4) section 2 applies to this portion of the contract` (`my contract from what I know` TRUE `the parties have been discharged from performing my contract any further` `the date the parties were discharged` FALSE `my contract is a charterparty` `my charterparty is a time charterparty` `my charterparty is a charterparty by way of demise` `my contract is a contract for the carriage of goods by sea` `my contract is a contract of insurance` `section 7 of the Sale of Goods Act 1979 applies to my contract` `my contract is for the sale, or for the sale and delivery, of specific goods` `my contract is frustrated because the goods have perished`) (`Severable part facts` OF (`what I say, as a fact` `it appears to the court that a part of my contract can properly be severed`), `that part was wholly performed before the parties were discharged`, `that part was performed except for payment of sums that are or can be ascertained under the contract`) (`the portion in the Act's terms` `the portion of my contract I ask about`)
+
+-- ---------------------------------------------------------------------------
+§§ `Am I outside the Act? (s 3(5))`
+-- ---------------------------------------------------------------------------
+
+-- s 3(5)(a).  The Act does not apply to a charterparty (except a time charterparty or a charterparty by way of demise) or to a contract, other than a charterparty, for the carriage of goods by sea.
+-- Yes: outside the Act.  NOTHING: this paragraph does not catch your contract (a time or demise charterparty is excepted from the paragraph; the Act does not say more).
+-- Not asked (fixed placeholders; no rule this question reaches reads them): my contract has become impossible to perform or been otherwise frustrated = TRUE; the parties have been discharged from performing my contract any further = TRUE; the date the parties were discharged = (Date 1 1 2000); the Government is a party to my contract = FALSE; my contract is a contract of insurance = FALSE; section 7 of the Sale of Goods Act 1979 applies to my contract = FALSE; my contract is for the sale, or for the sale and delivery, of specific goods = FALSE; my contract is frustrated because the goods have perished = FALSE; the date my contract was made = 1 January 2000.
+@export Is my contract outside the Act because it is a charterparty or a contract for the carriage of goods by sea (s 3(5)(a))? Yes means this paragraph takes your contract out of the Act. No answer ("not covered") means this paragraph does not take your contract out; that is so for a time charterparty and for a charterparty by way of demise, and it does not mean the Act is excluded. To find out whether the Act applies to your contract, ask "Does the Act apply to my contract (s 3)?"
+GIVEN `my contract is a charterparty` IS A BOOLEAN @desc Is your contract a charterparty?
+      `my charterparty is a time charterparty` IS A BOOLEAN @desc If your contract is a charterparty, is it a time charterparty? (Answer No if it is not a charterparty.)
+      `my charterparty is a charterparty by way of demise` IS A BOOLEAN @desc If your contract is a charterparty, is it a charterparty by way of demise? (Answer No if it is not a charterparty.)
+      `my contract is a contract for the carriage of goods by sea` IS A BOOLEAN @desc Is your contract a contract for the carriage of goods by sea?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Am I outside the Act as a charterparty or sea carriage` IS
+    `s 3(5)(a) this Act shall not apply to the contract` (`my contract from what I know` TRUE TRUE (Date 1 1 2000) FALSE `my contract is a charterparty` `my charterparty is a time charterparty` `my charterparty is a charterparty by way of demise` `my contract is a contract for the carriage of goods by sea` FALSE FALSE FALSE FALSE)
+
+-- s 3(5)(b).  The Act does not apply to a contract of insurance, except as section 2(6) provides.
+-- Not asked (fixed placeholders; no rule this question reaches reads them): my contract has become impossible to perform or been otherwise frustrated = TRUE; the parties have been discharged from performing my contract any further = TRUE; the date the parties were discharged = (Date 1 1 2000); the Government is a party to my contract = FALSE; my contract is a charterparty = FALSE; my charterparty is a time charterparty = FALSE; my charterparty is a charterparty by way of demise = FALSE; my contract is a contract for the carriage of goods by sea = FALSE; section 7 of the Sale of Goods Act 1979 applies to my contract = FALSE; my contract is for the sale, or for the sale and delivery, of specific goods = FALSE; my contract is frustrated because the goods have perished = FALSE; the date my contract was made = 1 January 2000.
+@export Is my contract outside the Act because it is a contract of insurance (s 3(5)(b))? Yes means this paragraph takes your contract out of the Act (except as section 2(6) provides). No answer ("not covered") means this paragraph does not describe your contract; it does not mean the Act applies. To find out whether the Act applies to your contract, ask "Does the Act apply to my contract (s 3)?"
+GIVEN `my contract is a contract of insurance` IS A BOOLEAN @desc Is your contract a contract of insurance?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Am I outside the Act as an insurance contract` IS
+    `s 3(5)(b) this Act shall not apply to the contract` (`my contract from what I know` TRUE TRUE (Date 1 1 2000) FALSE FALSE FALSE FALSE FALSE `my contract is a contract of insurance` FALSE FALSE FALSE)
+
+-- s 3(5)(b).  The exclusion of contracts of insurance is "except as is provided by section 2(6)": what section 2(6) provides still applies.
+-- Not asked (fixed placeholders; no rule this question reaches reads them): my contract has become impossible to perform or been otherwise frustrated = TRUE; the parties have been discharged from performing my contract any further = TRUE; the date the parties were discharged = (Date 1 1 2000); the Government is a party to my contract = FALSE; my contract is a charterparty = FALSE; my charterparty is a time charterparty = FALSE; my charterparty is a charterparty by way of demise = FALSE; my contract is a contract for the carriage of goods by sea = FALSE; section 7 of the Sale of Goods Act 1979 applies to my contract = FALSE; my contract is for the sale, or for the sale and delivery, of specific goods = FALSE; my contract is frustrated because the goods have perished = FALSE; the date my contract was made = 1 January 2000.
+@export Does section 2(6) still apply although my contract is a contract of insurance (s 3(5)(b))?
+GIVEN `my contract is a contract of insurance` IS A BOOLEAN @desc Is your contract a contract of insurance?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Does section 2(6) still apply to my insurance contract` IS
+    `s 3(5)(b) section 2(6) still applies although the contract is a contract of insurance` (`my contract from what I know` TRUE TRUE (Date 1 1 2000) FALSE FALSE FALSE FALSE FALSE `my contract is a contract of insurance` FALSE FALSE FALSE)
+
+-- s 3(5)(c).  The Act does not apply to a contract to which section 7 of the Sale of Goods Act 1979 applies, or to any other contract for the sale of specific goods where the contract is frustrated because the goods have perished.
+-- Yes: outside the Act.  No: a contract for the sale of specific goods that has not been frustrated by their perishing.  NOTHING: not a sale of specific goods.
+-- Not asked (fixed placeholders; no rule this question reaches reads them): my contract has become impossible to perform or been otherwise frustrated = TRUE; the parties have been discharged from performing my contract any further = TRUE; the date the parties were discharged = (Date 1 1 2000); the Government is a party to my contract = FALSE; my contract is a charterparty = FALSE; my charterparty is a time charterparty = FALSE; my charterparty is a charterparty by way of demise = FALSE; my contract is a contract for the carriage of goods by sea = FALSE; my contract is a contract of insurance = FALSE; the date my contract was made = 1 January 2000.
+@export Is my contract outside the Act because it is a sale of specific goods that perished (s 3(5)(c))? Yes means this paragraph takes your contract out of the Act. No means it is a sale of specific goods that did not perish, so this paragraph does not take it out. No answer ("not covered") means this paragraph does not describe your contract; it does not mean the Act applies. To find out whether the Act applies to your contract, ask "Does the Act apply to my contract (s 3)?"
+GIVEN `section 7 of the Sale of Goods Act 1979 applies to my contract` IS A BOOLEAN @desc Does section 7 of the Sale of Goods Act 1979 apply to your contract? (That section avoids a contract for the sale of specific goods which perish before the risk has passed to the buyer.)
+      `my contract is for the sale, or for the sale and delivery, of specific goods` IS A BOOLEAN @desc Is your contract for the sale, or for the sale and delivery, of specific goods?
+      `my contract is frustrated because the goods have perished` IS A BOOLEAN @desc Is your contract frustrated because the goods have perished?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Am I outside the Act as a sale of goods that perished` IS
+    `s 3(5)(c) this Act shall not apply to the contract` (`my contract from what I know` TRUE TRUE (Date 1 1 2000) FALSE FALSE FALSE FALSE FALSE FALSE `section 7 of the Sale of Goods Act 1979 applies to my contract` `my contract is for the sale, or for the sale and delivery, of specific goods` `my contract is frustrated because the goods have perished`)
