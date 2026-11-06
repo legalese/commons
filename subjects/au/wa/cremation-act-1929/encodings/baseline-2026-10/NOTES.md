@@ -281,3 +281,14 @@ A scratch script checked every @export:
 - each situation input is identical wherever it is used;
 - no input is DEONTIC or EVENT;
 - each role branch reads its situation first.
+
+### Fix after verification (6 November 2026)
+
+An independent check through a local jl4-service form engine found that some inputs of the same name had different @desc values. The form shows one label per name. Fixed here (no answer changes; the 203 cases and the baseline's 62 are unchanged and satisfied):
+
+- `the death` (8 labels), `me` (2) and `a permit has been granted` (2) now carry one @desc each, worded to cover every question that takes them.
+- `at a licensed crematorium` meant a crematorium licensed under the Act for the arranger and the crematorium in the licence for the licensee. The licensee's input is now `at the crematorium named in my licence`.
+
+Not changed:
+
+- **Record inputs in questions of another role.** The arranger's questions take the `Death` record `the death` (and the licensee's s 9-14 question takes it too), so the form engine keeps them for the family, the crematorium and the doctor, and keeps the licensee's question for the arranger: it cannot settle a question while a record input is unanswered. The code already answers `does not arise for you` for those roles without reading the record; the gap is in how the engine decides what to drop (it should evaluate with the role alone first). Flattening the baseline's record into separate fields would restate the baseline, against the layering rule (see the decision above on the `Death` record).
