@@ -42,7 +42,7 @@ Personal state taxes:
 | [`land-tax-act-1956`](land-tax-act-1956/) | act-1956-027 (2024-12-02) | 48,801 | Imposes land tax and surcharge land tax and sets the rate scale. |
 | [`duties-act-1997`](duties-act-1997/) | act-1997-123 (2025-01-01) | 690,434 | Transfer duty on a home, the First Home Buyers Assistance Scheme, surcharge purchaser duty. |
 
-Eleven texts, 4,531,550 characters in all (including the notice header on each). The [`motor-accident-injuries-act-2017`](motor-accident-injuries-act-2017/) (statutory weekly benefits after a road injury) and [`energy-and-utilities-administration-act-1987`](energy-and-utilities-administration-act-1987/) already sit here and connect to the benefits topic, but were not part of this sample and have no text.
+Eleven texts, 4,531,550 characters in all (including the notice header on each). The [`motor-accident-injuries-act-2017`](motor-accident-injuries-act-2017/) (statutory weekly benefits after a road injury) and [`energy-and-utilities-administration-act-1987`](energy-and-utilities-administration-act-1987/) already sit here and connect to the benefits topic, but were not part of this sample and had no text (the Motor Accident Injuries Act 2017 text was deposited on 2026-11-06; see "Claims, injury and compensation law" below).
 
 ### Terms and access
 
@@ -105,7 +105,7 @@ By encoding:
 - **Workers Compensation Act.** None of the SIRA indexation orders is deposited, so every indexed amount is an input that defaults to the figure the deposited text states: for example the maximum weekly compensation amount of $1,838.70, the $788.32 floor for a worker with highest needs and the $750,000 death benefit. The cases use those figures, which are not 2026 amounts (findings 2, 3). The corpus dropped the s 66(2)(a) and (b) formulas, so the lump sum for permanent impairment of 11% to 50% answers `not covered` (finding 1). The Workers Compensation Guidelines (reasonable excuse, claim forms, work capacity) and the worker's age pension age are inputs.
 - **Victims Rights and Support Act.** The weekly rate for actual loss of earnings (Regulation cl 9) is the rate under the pre-2012 Workers Compensation Act 1987 s 37, indexed. Neither is deposited, so cl 9 answers `not covered`, and the weekly rate is an input, capped at $20,000 by cl 10(3)(a) and cl 11(2)(a) (finding 9). The Regulation's other amounts (cl 5, 8, 10-14) are fixed in the deposit and encoded as stated.
 
-**Not encoded at all:** the Motor Accident Injuries Act 2017 (statutory weekly benefits after a road injury) and the Energy and Utilities Administration Act 1987, which have no text here.
+**Not encoded at all:** the Motor Accident Injuries Act 2017 (statutory weekly benefits after a road injury; text deposited 2026-11-06) and the Energy and Utilities Administration Act 1987, which has no text here.
 
 ### The Commonwealth encodings each links to
 
@@ -119,3 +119,93 @@ The stable `l4` cannot IMPORT across encoding folders, so each link is recorded 
 - **Victims Rights and Support Act** links to [`social-security-act-1991/`](../social-security-act-1991/) and [`income-tax-assessment-act-1997/`](../income-tax-assessment-act-1997/): whether recognition payments and financial assistance count as income or compensation for a Centrelink payment, or as assessable income, is unverified. It also links to [`a-new-tax-system-goods-and-services-tax-act-1999/encodings/baseline-2026-10/`](../a-new-tax-system-goods-and-services-tax-act-1999/encodings/baseline-2026-10/): Regulation cl 8(5) takes "GST" from that Act, and the GST on counselling is an input.
 
 Within NSW, the encodings meet in three places. Victims support excludes financial assistance for loss already paid for, workers compensation included (s 30(2)), and borrows the pre-2012 workers compensation s 37 weekly rate (cl 9). Land tax takes "foreign person", "residential land" and "retirement visa holder" from Duties Act Chapter 2A, as facts. And the Duties Act scheme and the grant each set a residence requirement that starts with moving in within 12 months of completion, each with its own definition of a first home owner.
+
+## Claims, injury and compensation law (2026-11-06)
+
+> **Warning.** Every text deposited for this set is **taken from the Open Australian Legal Corpus, collected on 2025-03-10; it is not the current official text and may be out of date — check legislation.nsw.gov.au before relying on it.** Twenty-four of the 32 corpus documents were last scraped on 2024-09-13, not 2025-03-10 (the "scraped" date in each row), so a change made after that scrape may be missing even where the corpus was collected later.
+
+Thirty-two instruments for personal injury, compensation and the courts and tribunals that decide claims, deposited on 2026-11-06 by the route used for the October sample (see "Terms and access" above). Three of them -- the Motor Accident Injuries Act 2017, the Industrial Relations Act 1996 and the Long Service Leave Act 1955 -- were indexed on 2026-09-22 without text; their folders now hold the text, and their `SOURCE-LICENSE.md` and `meta.json` were rewritten in the corpus form. The rest are new subjects. Nothing in this set is encoded yet.
+
+Courts, procedure, time limits, damages, costs:
+
+| Subject | Text (corpus version date; scraped) | Characters | Why |
+| --- | --- | --- | --- |
+| [`jurisdiction-of-courts-cross-vesting-act-1987`](jurisdiction-of-courts-cross-vesting-act-1987/) | act-1987-125 (2023-07-14; 2024-09-13) | 33,910 | Cross-vests the jurisdiction of the NSW Supreme Court with the Federal Court, the Family Court and the other Supreme Courts, and governs the transfer of proceedings between them. |
+| [`choice-of-law-limitation-periods-act-1993`](choice-of-law-limitation-periods-act-1993/) | act-1993-094 (2010-01-08; 2024-09-13) | 3,612 | Treats the limitation law of another Australian place whose law governs a claim as substantive law, so its time limits apply in a NSW court. |
+| [`legal-profession-uniform-law-application-act-2014`](legal-profession-uniform-law-application-act-2014/) | act-2014-016 (2025-03-02; 2025-03-10) | 220,733 | Applies the Legal Profession Uniform Law as a law of NSW and adds the NSW provisions, including costs in personal injury damages matters. |
+| [`limitation-act-1969`](limitation-act-1969/) | act-1969-031 (2022-06-16; 2024-09-13) | 137,728 | The time limits for bringing civil claims, including personal injury (the 3-year discoverability and 12-year long-stop periods) and s 6A, which removes the limitation period for child abuse claims. |
+| [`civil-liability-act-2002`](civil-liability-act-2002/) | act-2002-022 (2022-06-16; 2024-09-13) | 196,877 | Negligence and the limits on personal injury damages (Part 2), mental harm, and Part 1B on the liability of organisations for child abuse, including the reverse onus and vicarious liability. |
+| [`civil-procedure-act-2005`](civil-procedure-act-2005/) | act-2005-028 (2024-07-01; 2024-09-13) | 215,767 | The overriding purpose, case management and costs, and Part 10, representative proceedings (class actions) in the Supreme Court. |
+| [`uniform-civil-procedure-rules-2005`](uniform-civil-procedure-rules-2005/) | sl-2005-0418 (2025-02-03; 2025-03-10) | 1,107,388 | The rules of practice and procedure for civil proceedings in the NSW courts: commencement, pleadings, service, evidence, offers of compromise and costs. |
+| [`law-reform-miscellaneous-provisions-act-1944`](law-reform-miscellaneous-provisions-act-1944/) | act-1944-028 (2007-12-07; 2024-09-13) | 5,629 | Survival of causes of action on death for or against the estate, and the damages the estate can recover. |
+| [`compensation-to-relatives-act-1897`](compensation-to-relatives-act-1897/) | act-1897-031 (2018-06-15; 2024-09-13) | 9,107 | The claim of a deceased person's relatives for the loss caused by a wrongful death. |
+| [`civil-and-administrative-tribunal-act-2013`](civil-and-administrative-tribunal-act-2013/) | act-2013-002 (2024-07-01; 2024-09-13) | 278,938 | Establishes NCAT, its divisions and jurisdiction, procedure, appeals and costs. |
+| [`coroners-act-2009`](coroners-act-2009/) | act-2009-041 (2024-11-21; 2025-03-10) | 199,007 | Reportable deaths, inquests and inquiries, and the coroner's findings and recommendations. |
+
+Workplace injury and disease:
+
+| Subject | Text (corpus version date; scraped) | Characters | Why |
+| --- | --- | --- | --- |
+| [`personal-injury-commission-act-2020`](personal-injury-commission-act-2020/) | act-2020-018 (2024-09-27; 2025-03-10) | 162,384 | Establishes the Personal Injury Commission, which decides workers compensation and motor accident disputes, with its medical assessment, merit review and appeal procedures. |
+| [`workers-compensation-dust-diseases-act-1942`](workers-compensation-dust-diseases-act-1942/) | act-1942-014 (2022-10-18; 2024-09-13) | 104,540 | No-fault compensation for workers, and the dependants of workers, disabled or killed by a dust disease such as asbestosis, mesothelioma or silicosis, paid by the Dust Diseases Authority. |
+| [`work-health-and-safety-act-2011`](work-health-and-safety-act-2011/) | act-2011-010 (2025-03-02; 2025-03-10) | 320,894 | The duties of persons conducting a business or undertaking, officers and workers, incident notification, and offences including industrial manslaughter. |
+
+Road and transport injury:
+
+| Subject | Text (corpus version date; scraped) | Characters | Why |
+| --- | --- | --- | --- |
+| [`motor-accident-injuries-act-2017`](motor-accident-injuries-act-2017/) | act-2017-010 (2023-04-01; 2024-09-13) | 429,831 | The CTP scheme for road injuries from 1 December 2017: statutory benefits (weekly payments and treatment and care), the steps of a claim and their deadlines, and common law damages. |
+| [`motor-accident-injuries-regulation-2017`](motor-accident-injuries-regulation-2017/) | sl-2017-0498 (2023-09-22; 2024-09-13) | 87,034 | The regulation under the 2017 Act: amounts, the threshold injury definitions, legal costs, and claim procedure. |
+| [`motor-accidents-compensation-act-1999`](motor-accidents-compensation-act-1999/) | act-1999-041 (2022-06-16; 2024-09-13) | 313,298 | The earlier CTP scheme, which still governs claims for motor accidents that happened before the Motor Accident Injuries Act 2017 took over on 1 December 2017. |
+| [`motor-accidents-lifetime-care-and-support-act-2006`](motor-accidents-lifetime-care-and-support-act-2006/) | act-2006-016 (2021-07-01; 2024-09-13) | 68,413 | Lifetime treatment and care for people with severe motor accident injuries, regardless of fault. |
+
+Medical negligence and health:
+
+| Subject | Text (corpus version date; scraped) | Characters | Why |
+| --- | --- | --- | --- |
+| [`health-practitioner-regulation-adoption-of-national-law-act-2009`](health-practitioner-regulation-adoption-of-national-law-act-2009/) | act-2009-086 (2024-07-01; 2024-09-13) | 345,042 | Applies the Health Practitioner Regulation National Law in NSW with the NSW variations, under which complaints and discipline are handled by the NSW councils and the Health Care Complaints Commission. |
+| [`health-records-and-information-privacy-act-2002`](health-records-and-information-privacy-act-2002/) | act-2002-071 (2024-05-27; 2024-09-13) | 130,348 | The Health Privacy Principles, including a patient's right of access to their own health records. |
+| [`health-care-complaints-act-1993`](health-care-complaints-act-1993/) | act-1993-105 (2024-05-31; 2024-09-13) | 173,337 | Complaints about health practitioners and health services to the Health Care Complaints Commission: who may complain, assessment, investigation and prosecution. |
+
+Dust diseases:
+
+| Subject | Text (corpus version date; scraped) | Characters | Why |
+| --- | --- | --- | --- |
+| [`dust-diseases-tribunal-act-1989`](dust-diseases-tribunal-act-1989/) | act-1989-063 (2024-11-15; 2025-03-10) | 70,892 | The Dust Diseases Tribunal's exclusive jurisdiction over common law claims for dust diseases, and its special rules (no limitation period, damages for a person who dies, use of evidence from earlier proceedings). |
+| [`dust-diseases-tribunal-regulation-2019`](dust-diseases-tribunal-regulation-2019/) | sl-2019-0405 (2022-07-01; 2024-09-13) | 222,009 | The claims resolution process for dust diseases claims, including statements of particulars, contribution assessments and mediation. |
+
+Employment:
+
+| Subject | Text (corpus version date; scraped) | Characters | Why |
+| --- | --- | --- | --- |
+| [`anti-discrimination-act-1977`](anti-discrimination-act-1977/) | act-1977-048 (2024-07-01; 2024-09-13) | 255,795 | Unlawful discrimination, sexual harassment and victimisation in work and other areas, and complaints to Anti-Discrimination NSW and NCAT. |
+| [`industrial-relations-act-1996`](industrial-relations-act-1996/) | act-1996-017 (2025-03-02; 2025-03-10) | 640,050 | The NSW industrial system for public sector and local government employees: awards, unfair dismissal, and the Industrial Relations Commission. |
+| [`restraints-of-trade-act-1976`](restraints-of-trade-act-1976/) | act-1976-067 (2015-01-08; 2024-09-13) | 4,175 | A restraint of trade is valid except so far as it is against public policy, so a court may read down a post-employment restraint. |
+| [`long-service-leave-act-1955`](long-service-leave-act-1955/) | act-1955-038 (2024-07-01; 2024-09-13) | 60,579 | Entitlement to long service leave and payment in lieu on termination after 5 or 10 years of continuous service. |
+| [`public-interest-disclosures-act-2022`](public-interest-disclosures-act-2022/) | act-2022-014 (2023-10-30; 2024-09-13) | 116,695 | Protections for public officials who report serious wrongdoing: what counts as a disclosure, detrimental action, and the right to compensation. |
+
+Wills and estates:
+
+| Subject | Text (corpus version date; scraped) | Characters | Why |
+| --- | --- | --- | --- |
+| [`succession-act-2006`](succession-act-2006/) | act-2006-080 (2023-07-14; 2024-09-13) | 175,474 | Wills, intestacy, and Chapter 3, family provision orders and notional estate, including who is an eligible person and the time for applying. |
+| [`probate-and-administration-act-1898`](probate-and-administration-act-1898/) | act-1898-013 (2020-09-28; 2024-09-13) | 102,305 | Grants of probate and administration, the duties of executors and administrators, and the distribution of an estate. |
+| [`powers-of-attorney-act-2003`](powers-of-attorney-act-2003/) | act-2003-053 (2025-03-02; 2025-03-10) | 88,176 | Making, revoking and reviewing general and enduring powers of attorney, and the attorney's duties. |
+| [`guardianship-act-1987`](guardianship-act-1987/) | act-1987-257 (2021-03-27; 2024-09-13) | 131,572 | Enduring guardianship, guardianship and financial management orders by NCAT, and consent to medical and dental treatment for people who cannot consent. |
+
+Thirty-two texts, 6,411,539 characters in all (including the notice header on each). Regulations and rules are their own subjects, with `parent_act` in `subject.json`: the Uniform Civil Procedure Rules 2005 (under the Civil Procedure Act 2005), the Motor Accident Injuries Regulation 2017 and the Dust Diseases Tribunal Regulation 2019.
+
+### Terms and access for this set
+
+- **legislation.nsw.gov.au.** `https://legislation.nsw.gov.au/robots.txt`, requested once at 2026-11-06T12:12:33Z with User-Agent `legalese-commons-source-fetcher/1.0 (+https://github.com/legalese/commons)`, again returned **HTTP 403 with a Cloudflare managed challenge** (`cf-mitigated: challenge`). No further request was made.
+- **Open Australian Legal Corpus.** `https://huggingface.co/robots.txt` (read 2026-11-06) still allows all user-agents; `LICENCE.md` (read 2026-11-06, dataset revision `ef45e3fec41a960919a31149eee6dab9aa39f725`) carries the same CC BY 4.0 terms and NSW attribution wording as on 2026-10-19. Every document taken is from NSW Legislation, so CC BY 4.0, State of New South Wales; none had different terms.
+- **Download.** `corpus.jsonl` (9,401,179,433 bytes) was streamed once in full from 12:19 to 12:42 UTC on 2026-11-06, resuming once with an HTTP range request after the connection closed at byte 2,524,978,200. The sha256 computed over all the bytes, `5abc64a3ad35a44eca65706babd63d1095c29ebebf3f5c588beb56612097b758`, equals the file's published LFS oid, so this is the same corpus file as the October deposits. Only the 32 documents in the tables were kept.
+- Each text opens with the warning, the unofficial-version notice, the NSW and corpus attributions, and the corpus document's version_id, date, url and scrape time; the same are in each meta.json and SOURCE-LICENSE.md.
+
+### Currency and gaps for this set
+
+- **Old versions.** Several corpus versions are years old: the Law Reform (Miscellaneous Provisions) Act 1944 at 2007-12-07, the Choice of Law (Limitation Periods) Act 1993 at 2010-01-08, the Restraints of Trade Act 1976 at 2015-01-08. These Acts change rarely, but each must be checked against the register. The Civil Liability Act 2002 and the Limitation Act 1969 are at 2022-06-16 and were scraped on 2024-09-13; any later amendment, including to the child abuse provisions (Civil Liability Act Part 1B; Limitation Act s 6A), is missing.
+- **Companion texts not taken.** Each of these applies a national or uniform law published as a separate NSW document, which is in the corpus but was not part of this set: the Legal Profession Uniform Law (NSW) (act-2014-16a) and its rules; the Health Practitioner Regulation National Law (NSW) (act-2009-86a), which carries the NSW variations to the National Law, and its regulations. Also in the corpus but not taken: the Civil Liability Regulation 2024, the Civil Procedure Regulation 2017, the Coroners Regulation 2021, the Personal Injury Commission Regulation 2020, the Workers' Compensation (Dust Diseases) Regulation 2023, the Motor Accidents Compensation Regulation 2020, the Motor Accidents (Lifetime Care and Support) Regulation 2020, the Motor Accident Injuries (Indexation) Order 2017, the Dust Diseases Tribunal Rules 2019, the Guardianship Regulation 2016, the Powers of Attorney Regulation 2024 and the Public Interest Disclosures Regulation 2022.
+- **Size.** The Jurisdiction of Courts (Cross-vesting) Act 1987 text is exactly 32,767 characters in the corpus, a number that can mark a cut-off; it ends cleanly at s 16 with no sign of truncation, but check it against the register.
+- **Tables.** As with the October sample, tables are as the corpus flattened them.
+- **To replace**: as above, when legislation.nsw.gov.au can be fetched, replace all 32 texts with current official ones.
