@@ -129,8 +129,11 @@ give".
   Interpretation Act s 36.
 - **F7** ss 230-231: where no s 231 ground is found, JUST FALSE ("on grounds permitted by this Part" closes the list).
   Where the information is outside s 230(1), NOTHING (a grant limited by its own wording).
-- **F8** s 28(1): a "prescribed judgment" flag does not make a disqualification decision need leave; s 28(1)(c) refers only
-  to jurisdiction "as mentioned in paragraph (a)" (child support). Other reading: (b) reaches every prescribed decision.
+- **F8** s 28(1): (b) reaches every prescribed judgment, a disqualification decision included (s 7: "judgment means a
+  judgment, decree or order, whether final or interlocutory, a decision or a sentence"); (c) adds leave for disqualification decisions in child support jurisdiction and takes nothing from (b). The
+  "prescribed" input is asked of the decision being appealed. Other reading: (c) is the only route for disqualification
+  decisions, so a prescribed one outside child support needs no leave (the first baseline took this reading; corrected
+  after verification, since nothing in (c) cuts down (b)).
 - **F9** s 215: the period is from the order (or the latest variation) to the last day it allows; giving security on that
   last day is in time.
 - **F10** s 136: where the public is excluded and the Judge also sits in Chambers, the exclusion order is reported.
@@ -161,12 +164,19 @@ Rules' time).
   which are in.
 - ss 134, 138-142 (associated matters, finality, completeness, orders, declarations, contempt): powers the claimant does
   not apply for in a way the Act conditions.
-- ss 144-148, 151-152, 154 (administration; Rules on transfer).
+- ss 144-148, 149(1)-(3), (5), 150-152, 153(1)-(5), 154 (transfers between the Divisions and to the Federal Court, and
+  their Rules): a court's discretion, on a party's application or its own initiative, guided by the Rules and the
+  interests of justice; nothing a claimant can compute. Only the bars on appeal (ss 149(4), 153(6)) are in.
+- s 173(1)-(3) (an order in the terms of an arbitration award, on a party's application, and its enforcement): the Court
+  "may" make it and the registration it needs is under the Rules (not deposited); only the s 173(4) bar on a writ of
+  attachment is in. A question "can my award be made an order" would be a good next one.
 - ss 157-160, 162-167, 171 (the Court's and lawyers' duty to consider dispute resolution; regulations and Rules; consent
   orders; an arbitrator's referral of a question of law): duties of officials and lawyers, or procedure left to the Rules.
 - ss 174-175, 177-184, 186-189, 193-210 (practice, representation, documents, venue, evidence, video links, witness
   offences, orders and reserved judgments): practice and procedure largely left to the Rules or the Court; s 175
   (representation) would be a useful next question.
+- ss 235 (exception for court officials disclosing in a public official capacity: no seat for officials) and 238
+  (Part 8 leaves the Court's other powers over vexatious proceedings untouched: a saving clause with no question).
 - ss 216-227, 240, 245-285 (Rules, administration, officers, certificates of vexatious orders, the Sheriff and Marshal,
   family consultants, review of the Act, regulations), except s 256.
 - Family Law Act 1975 Parts XI, XIA, XIB and s 117B; Fair Work Act 2009 s 570; AHRC Act s 46PSA; Public Interest
@@ -181,8 +191,9 @@ Rules' time).
    provisions do not. Asserted.
 2. **Mediation is protected, conciliation is not (in this Act).** s 169(4) makes what is said at a court-referred
    mediation inadmissible; s 161 (conciliation, which also can be ordered without consent) has no such provision. Any
-   protection for conciliation must come from the Rules or the Evidence Act 1995. Asserted (s 169(4) answers NOTHING
-   outside a s 169 referral).
+   protection for conciliation must come from the Rules or the Evidence Act 1995. Only the mediation half is asserted
+   (s 169(4) answers NOTHING outside a s 169 referral); the absence for conciliation is a reading of s 161, which has no
+   evidence question to test.
 3. **Arbitration is the only process that needs consent** (s 170(3)); conciliation and mediation can be ordered without
    it (ss 161(3), 169(3)). Asserted.
 4. **s 211 guarantees no minimum.** The Court must order interest (or a lump sum) unless good cause is shown, but it
@@ -190,8 +201,9 @@ Rules' time).
    given rate; a claimant cannot compute what the Court will in fact give. Fork F4.
 5. **s 212(3)(b) allows only a lower rate.** A rate the Court "determines" that is higher than the Rules' is not one the
    section authorises; the encoding keeps the Rules rate. Asserted.
-6. **s 28(1)(c) is narrow.** Leave for an appeal from a refusal to disqualify is needed only in child support
-   jurisdiction, not where the judgment in the case would be "prescribed" under (b). Asserted; fork F8.
+6. **s 28(1)(c) is narrow.** It adds leave for an appeal from a refusal to disqualify only in child support
+   jurisdiction; outside it, such a decision needs leave only if it is itself a prescribed judgment under (b). Asserted;
+   fork F8.
 7. **s 26(2)(a) cannot bite on a Division 2 judgment**: its three heads are all applications "in the Federal Circuit and
    Family Court of Australia (Division 1)". Only s 26(2)(b) limits appeals from Division 2. Asserted.
 8. **The Act gives no appeal from Division 2 in general federal law or Fair Work claims.** s 26(1)(c) covers only the
