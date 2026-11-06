@@ -187,3 +187,76 @@ The following are left out:
 - Read s 35 and the Building Services (Registration) Act 2011 on what an owner can do
   when the builder's registration lapses mid-build.
 - No SAT decision or case law was searched.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026, after the graffiti encoding's design (Graffiti Vandalism Act 2016, `gva-seat.l4`, its NOTES D2,
+D4 and D8). The layer is `ba-qa.l4` (imports `prelude` and `ba-house`), with its cases in `ba-qa-cases.l4` (imports
+`prelude`, `ba-house` and `ba-qa`). The baseline's files are unchanged: no rule or export of `ba-house.l4` was touched,
+and its 45 cases still pass. The layer calls the baseline's functions and restates none.
+
+**Why.** The site's question form asks only the inputs that can still change an open question. Every exported question
+of the layer takes `my role` first ("Which of these describes you"); for a role it is not about, it answers `does not
+arise for you` without reading any other input. Within a role, a question that arises only in a situation takes that
+situation's fact second, and answers `does not arise for you` when it does not hold, again reading nothing else.
+
+**Roles** (`Role`):
+
+- `I own the land the building is on, or will be on`: the baseline's seat, the "owner" of s 5. An owner-builder stays
+  in this role and says so through the baseline's `Person` input (`is named as the builder on the building permit`), so
+  every owner answer is the baseline's.
+- `I am the builder named on the building permit`: new. The "responsible person" (s 31). s 9 binds "a person" who does
+  building work; s 16(c) makes the builder name themselves in and sign the application; s 28(1)(a) gives them the permit;
+  s 33 (notice of completion), s 34 (notice of cessation and the owner's copy) and s 37(1) (the building standards on
+  completion) are theirs.
+- `I live in or use the building as a tenant or licensee`: new. The "occupier" (s 40), whom s 41(2), (3) forbid to
+  occupy or use a building without an occupancy permit or exemption.
+
+The permit authority, the building surveyor, the Building Commissioner and the State Administrative Tribunal are not
+seats. The neighbour of Part 6 would be a natural fourth seat, but the baseline does not encode Part 6, so it is left
+out (below).
+
+**Situation inputs.** Both are BOOLEAN; FALSE gives `does not arise for you`; each is the second input wherever it is
+taken, with the same name, type and `@desc` in every question.
+
+| Name | Questions that take it |
+|---|---|
+| `my building permit application was refused` | owner: Within how many days must I be told why my building permit was refused (s 24) |
+| `the named builder has given notice of ceasing to act on the permit` | owner: Within how many days must I be given a copy of the notice of cessation; builder: Within how many days must I give the owner a copy of my notice of cessation; What is the most I can be fined for not giving the owner a copy of the notice of cessation (s 34(3)) |
+
+s 24 is tied to "a decision to refuse to grant a building permit", and s 34(3) to the builder's "giving a notice of
+cessation". s 119 review is not given the refusal situation, because it also lies against a condition on a permit
+granted (s 119(b), (c)); it keeps the baseline's `I applied for the permit`.
+
+**Decisions.**
+
+1. **One question, several roles.** Where the Act gives two or three roles the same answer from the same rule, one
+   exported question serves them: building work, the permit, s 9 and its defences, s 4, s 32 for the owner and the
+   builder; the s 9/37/41 penalties and s 133 for all three; s 41 moving in for the owner and the occupier.
+2. **Fixed Person values for the new seats.** The baseline's questions take a `Person`. For the builder the layer passes
+   `the named builder, not an owner`, and for the occupier `an occupier, not an owner` (with the occupier flag TRUE in
+   the s 41 offence question), and does not read the asker's own `Person`. A builder who also owns the land is an
+   owner-builder and answers as the owner.
+3. **The baseline's situation-like inputs are kept.** `a decision has been made` (s 23), the `Work`, `Building` and
+   `Building permit application` records stay as the baseline has them, so that each owner answer equals the
+   baseline's; the form drops none of their questions for that, since each arises for every owner.
+4. **s 33's fine for the owner.** The baseline asks the notice-of-completion fine with no inputs; the layer keeps it for
+   the owner (the answer is the builder's fine, as the question text says) and for the builder.
+5. **The two builder questions of s 34(3)** are helpers in the layer: 7 days, and a fine of $10 000.
+6. **Answer types** carry `does not arise for you`: `Yes or no`, `Amount`, `Months`, `Days`, `Years`, and wrappers
+   around the baseline's own answer types (`Certificate source answer`, `Certificate answer`). The baseline's 0 for "not
+   my duty" in the days questions is kept for the owner, as the question texts say.
+
+**Not covered for the new roles.** For the builder: the display of the permit (s 30), suspension when registration
+lapses (s 35) beyond the s 11 defence, inspections (s 36), demolition permits and staged permits. For the occupier: the
+duties under an occupancy permit in effect (ss 42-44). The neighbour (Part 6, work affecting other land) is not a role,
+since nothing of Part 6 is encoded.
+
+**Checks.** 29 exported questions: 27 asked by the owner (every baseline export), 15 by the builder and 5 by the
+occupier. `l4 check ba-qa.l4` succeeds; `l4 run` of all four files shows no error and no warning. `ba-qa-cases.l4` has
+143 assertions, 143 satisfied: every question for every role it is not about, with every other input ASSUMEd; every
+situation question with its situation FALSE and every later input ASSUMEd; hand-worked answers for each role; and, for
+each of the baseline's questions, a case that the layer's answer equals the baseline export's on the same facts. A
+script (`check_params.py`, in the session's scratch folder) listed every export's parameters and confirmed: `my role`
+first everywhere; each situation parameter identical in name, type and `@desc`, and second, wherever taken; every other
+shared parameter identical too; no DEONTIC or EVENT input.
