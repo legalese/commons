@@ -18,10 +18,10 @@ imports `daydate`. The four question modules import it:
 
 | Module | Covers |
 |---|---|
-| `fwr-pay.l4` | regs 2.12A (what a deduction authorisation must say), 2.12 (reasonable and unreasonable deductions), 3.45, 3.46 (what a pay slip must show), 3.47, 3.48 (family and domestic violence leave kept off pay slips) |
-| `fwr-threshold.l4` | reg 2.13 (the high income threshold: 2009-10 and each later year), reg 3.05 (piece rates and non-money benefits added to earnings), s 382(b)(iii) of the Act (the comparison), reg 3.06 (leave without pay in the compensation cap) |
+| `fwr-pay.l4` | regs 2.12A (what a deduction authorisation must say), 2.12 (reasonable and unreasonable deductions), 2.03A (a casual loading set off against a claim for NES entitlements), 3.45, 3.46 (what a pay slip must show), 3.47, 3.48 (family and domestic violence leave kept off pay slips) |
+| `fwr-threshold.l4` | reg 2.13 (the high income threshold: 2009-10 and each later year), reg 1.08AA (the contractor high income threshold: 2024-25 and each later year), reg 3.05 (piece rates and non-money benefits added to earnings), s 382(b)(iii) of the Act (the comparison), reg 3.06 (leave without pay in the compensation cap) |
 | `fwr-fixed-term.l4` | reg 2.14 (the threshold for a part-time or part-year fixed term contract) with s 333F(1)(e) of the Act, reg 2.15 (the sport, international event, charity and medical research contracts outside the fixed term limits) |
-| `fwr-claims.l4` | regs 3.01, 6.04 (illness or injury that protects an absence); the application fees, hardship waiver and refund of regs 3.02, 3.03, 3.07, 3A.03, 3A.05, 6.05, 6.07A (the FWC's repayment duty as a regulative rule); reg 3.29A (defence members and stop sexual harassment orders); reg 4.01 (asking for the small claims procedure; representation); regs 6.01A, 6.01B (other proceedings) |
+| `fwr-claims.l4` | regs 3.01, 6.04 (illness or injury that protects an absence); the application fees, hardship waiver and refund of regs 3.02, 3.03, 3.07, 3A.03, 3A.05, 6.05, 6.07A (the FWC's repayment duty as a regulative rule); reg 3.29A (defence members and stop sexual harassment orders); reg 4.01 (asking for the small claims procedure; representation); regs 6.01A, 6.01B, 6.01C (other proceedings); reg 1.07 (the examples of serious misconduct) |
 
 Every question is published with `@export` and a description, and every input carries an `@desc` worded from the seat.
 Situations a person may not be in (dismissal, discontinuing an application, defence service, a small claim, a
@@ -46,11 +46,11 @@ With the stable `l4` of VS Code extension 1.6.98, `JL4_LIBRARY_PATH` unset (7 No
 
 | File | Assertions written | Satisfied | Errors | Warnings |
 |---|---|---|---|---|
-| `fwr-pay-cases.l4` | 31 | 31 | 0 | 0 |
-| `fwr-threshold-cases.l4` | 23 | 23 | 0 | 0 |
+| `fwr-pay-cases.l4` | 35 | 35 | 0 | 0 |
+| `fwr-threshold-cases.l4` | 27 | 27 | 0 | 0 |
 | `fwr-fixed-term-cases.l4` | 35 | 35 | 0 | 0 |
-| `fwr-claims-cases.l4` | 68 | 68 | 0 | 0 |
-| **Total** | **157** | **157** | 0 | 0 |
+| `fwr-claims-cases.l4` | 81 | 81 | 0 | 0 |
+| **Total** | **178** | **178** | 0 | 0 |
 
 `l4 run` on each module (`fwr-common.l4`, `fwr-pay.l4`, `fwr-threshold.l4`, `fwr-fixed-term.l4`, `fwr-claims.l4`) gives
 0 errors and 0 warnings. `l4 run` exits 0 even when an assertion fails, so the diagnostics were read. A negative control
@@ -82,7 +82,7 @@ satisfaction is always an input, answered conditionally ("if the FWC is satisfie
 - **The text's own actors:** the employee, the employer, the FWC, the court, the applicant.
 - **Judgments as inputs:** "such longer period as is reasonable in the circumstances" (regs 3.01, 6.04), the FWC's
   satisfaction (regs 3.05(6), the fee regulations (7)), "substantially the same" (reg 2.15(7)(e), (9)(f)), "evidence ...
-  that would satisfy a reasonable person" (reg 2.15(7A), (9A)), leave of the court (reg 4.01).
+  that would satisfy a reasonable person" (reg 2.15(7A), (9A)), leave of the court (reg 4.01), a "lawful and reasonable instruction" and what the employee "is able to show" (reg 1.07(2)(e), (3)).
 - **Definitions:** the regulations' own (performance support professional, high performance sport, the listings that
   count) worked out; borrowed terms (philanthropic entity, defence member, workplace instrument, annual rate of earnings,
   chosen and stapled fund) asked as facts.
@@ -92,8 +92,8 @@ satisfaction is always an input, answered conditionally ("if the FWC is satisfie
 
 ## Scope
 
-**In:** regs 2.12A, 2.12, 2.13, 2.14, 2.15 (subregs (1)-(4), (7)-(9A); there are no (5) and (6)), 3.01, 3.02, 3.03,
-3.05, 3.06, 3.07, 3.29A, 3.45-3.48, 3A.03, 3A.05, 4.01, 6.01A, 6.01B, 6.04, 6.05, 6.07A.
+**In:** regs 1.07, 1.08AA, 2.03A, 2.12A, 2.12, 2.13, 2.14, 2.15 (subregs (1)-(4), (7)-(9A); there are no (5) and (6)), 3.01, 3.02, 3.03,
+3.05, 3.06, 3.07, 3.29A, 3.45-3.48, 3A.03, 3A.05, 4.01, 6.01A, 6.01B, 6.01C, 6.04, 6.05, 6.07A.
 
 **Out, and why:**
 - **Schedule 3.1 and regs 3.04, 3.08, 3A.04, 6.06 (the schedule of costs):** a bill-of-costs tariff for lawyers'
@@ -102,7 +102,14 @@ satisfaction is always an input, answered conditionally ("if the FWC is satisfie
 - **Regs 3.31-3.44 (employee records):** the employer's record-keeping duties; the employee meets them only as evidence. A
   later layer.
 - **Reg 3.48's grace period (reg 7.06) and the other Chapter 7 transitional rules.**
-- **Part 1-2 definitions and Part 1-3 (application of the Act):** read where needed; the borrowed terms are inputs.
+- **Part 1-2 definitions other than regs 1.07 and 1.08AA, and Part 1-3 (application of the Act):** read where needed;
+  the borrowed terms are inputs.
+- **Reg 2.00 (flexible unpaid parental leave days: 110, 120, 130):** an NES entitlement figure for s 72A(1), not a
+  provision a claimant meets in bringing a claim; the parental leave entitlement is the Act's. A later layer.
+- **Reg 4.01A (standing, courts and penalties for the regulations' civil remedy provisions):** every provision in its
+  table (regs 3.13(7), (8), 3.19(10), 3.31(2), 3.41-3.44) is a ballot agent's or employer's duty that is out of this
+  encoding (ballots, employee records), so there is no encoded duty for the table to attach a remedy to. It goes with
+  the employee records layer.
 - **Part 2-2 (parental leave extension), Part 2-4 (bargaining), Part 3-3 (industrial action and ballots), Part 3-4
   (right of entry), Chapters 3A-3B minimum standards orders, Part 4-1 Division 4 (infringement notices), Chapter 5
   (administration), Part 6-2 (model dispute term), Part 6-3, Part 6-3A, Parts 6-4C to 6-4DA:** not provisions a claimant
@@ -142,12 +149,16 @@ Each line: the provision, the function, the answer taken, the other reading.
 - **F12** regs 6.05(3)(c), (5) "if the result is 5 cents", "if the result is 0.0005" -- `What is this year's application
   fee` -- read as "ends in", as in the other fee regulations (finding 2) -- read literally, a result that is not exactly
   5 cents or 0.0005 is rounded to the nearest without a tie rule.
+- **F13** reg 1.07(1)-(5) "has its ordinary meaning" and "includes" -- `Is my conduct an example of serious misconduct`
+  -- outside the examples (or with (2)(c)-(e) taken away by (3)): NOTHING, as the ordinary meaning may still reach the
+  conduct -- JUST FALSE.
+- **F14** reg 2.03A(1) "This regulation applies if" with (2) "To avoid doubt, the employer may make a claim" --
+  `Can my employer claim to offset my casual loading` -- (1) not met: NOTHING, as the regulation only removes doubt and
+  does not say the employer may not claim at general law -- JUST FALSE.
 
 ## Rulings on negatives (copied word for word from docs/ENCODING-GUIDE.md section 5)
 
 This encoding carries `NOTHING-kind` answers. The rulings it follows:
-
-This encoding carries `NOTHING-kind` tags. The rulings it follows:
 
 > In short, a function answers `JUST FALSE` only where the text itself says no to the case in its own words: a "means" definition, a condition the text introduces with "if", "only if", "as long as" or "unless" (and plain variants such as "while", "until" and "except"), a list the text closes with "only", a flat negative ("does not", "shall not", "may not").
 
@@ -157,22 +168,15 @@ This encoding carries `NOTHING-kind` tags. The rulings it follows:
 
 > - **Questions with no convention: decide case by case (Meng, typed 2026-11-05T10:25:24Z).** Six questions the rulings above leave open are decided site by site, at encoding time, on the text's own words and the encoder's best judgment: an "unless" or "except" once it is met; a bare "must" not done; "listed in Schedule N"; a duty whose "if" or "where" is unmet; "(other than X)"; a missing event in the state ledger. Each such site gets one fork line (the provision, the function, the answer taken, the other reading) for the human reviewer to overrule, and the rulings above still govern whatever they cover. Meng's words, asked of the session "Encodings": "re Encoding Conventions I believe I had a short discussion with GM where I basically said I agreed with its \"lean\"s -- does that mean we can retire the bench card or should I go over it still? In short I feel like these decisions need to be made case-by-case at encoding time, and you should go with your gut most of the time; and if the encoding turns out to be wrong, well, that's where the human review comes in." The bench that carried the six questions ("Encoding Conventions", artifact Hpg2k9HqExJN5zdtBYiJ72, collection `encodings-conventions-1105`) was retired unmarked, so it holds no marks.
 
-Applied here: "unless expressly prohibited" (s 5), "is not liable" (ss 12, 12A), "shall not exceed" (s 23), "shall not
-be made so as to affect prejudicially" (s 31(1)(a)), "no consent shall be required" and "shall not be necessary" (s 31(8),
-(9)), "shall not apply" (ss 37(5), 63A(4)), "only if" (ss 16(3), 37(3)), "unless" (ss 15, 31(5), (6), 38(5), 63A(1)
-proviso), the "if", "where" and "whenever" conditions of ss 11(2), 12A, 12D, 12E, 14, 16, 41(1), 41(6), 44, 48, 51(2)(i),
-55, 63, 67, 68, and the periods "during the minority", "on attaining the age of eighteen years ... thenceforth" (s 37),
-"at the expiration of the time fixed" (s 33(3)) and "after two-fifths ... has been paid" (s 17(4)) give `JUST FALSE`.
-`NOTHING` is answered where ss 6(1), 6(3), 38 defer to the instrument or the Court (*points outside the text*), where
-
 Applied here: "must also include" (reg 2.12A), "is not reasonable" (reg 2.12(3)), "is not a prescribed kind ... if"
 (regs 3.01(5), 6.04(4)), the "if" conditions of regs 2.15, 3.29A (through s 527F(3)'s "cannot"), 4.01(3), (4), 6.01A,
-6.01B and the fee regulations' (8), the "is" of reg 4.01(1), and the periods "on or after 6 December 2023", "on or after
+6.01B and the fee regulations' (8), the list "sections 20, 21 and 250 ... are specified" of reg 6.01C, the "is" of reg 4.01(1), and the periods "on or after 6 December 2023", "on or after
 1 November 2024 ... before 1 November 2026" give `JUST FALSE` (or a plain FALSE where the function answers a BOOLEAN).
 `NOTHING` is answered where reg 2.12A does not apply to a saved authorisation (reg 2.12A(3)), where reg 4.01(1) yields to
 rules of court (reg 4.01(2)), where reg 3.29A does not arise (the aggrieved person was not a defence member), where the
-routes of regs 3.01, 6.04 ("exists if") are not met, where none of reg 2.12's circumstances holds, and where reg 3.07(8)'s
-circumstance is not met (*limited by its own wording*, *silent*: none of these is closed with "only").
+routes of regs 3.01, 6.04 ("exists if") are not met, where none of reg 2.12's circumstances holds, where reg 3.07(8)'s
+circumstance is not met, where conduct is outside reg 1.07's examples ("includes", with the ordinary meaning
+left open, F13), and where reg 2.03A(1) is not met ("to avoid doubt", F14) (*limited by its own wording*, *silent*: none of these is closed with "only").
 
 ## What the Regulations turn out to say
 
