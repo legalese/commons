@@ -195,3 +195,13 @@ parameter script confirms `my role` first everywhere, each shared input identica
 system input second and read first in each role branch, the ended input third, and no DEONTIC or EVENT input. A negative
 control on a scratch copy (a wrong expected value; a weekly-rate question that reads the age with the national system check;
 a pay-out question that reads the hours with the ended check) failed 3 cases, as it should.
+
+### On the site's service (verification of 6 November 2026)
+
+The independent verification ran the site's form engine against a local jl4-service (the 1.6.98 tools) with 100 random
+completions per question per state. Deployed as two modules (`mce-qa.l4` importing `mce-employee`), every call into the
+baseline failed with "`What is my minimum weekly rate` is not in scope": the service does not resolve a call across modules
+of one deployment, a fault other Acts' layers met too. With the two files merged into one in scratch, every question was
+kept or dropped correctly for both roles (none dropped that arises, none kept that never does); 9 questions still failed in
+some completions on "`min`/`max` is not in scope", a prelude lookup the service gets wrong. Both are the service's faults;
+stable l4 1.6.98 runs every file cleanly, and the layer is unchanged by them.
