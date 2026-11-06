@@ -87,3 +87,78 @@ Not encoded:
 - s 20's non-criminal jurisdiction, which matters to a child in care or protection proceedings rather than to Jake.
 - The day that does not exist in the next month (31 January plus one month) is not handled in the s 40 deadline.
 - No case law or Children's Court practice direction was searched. Nothing here has been checked by a lawyer.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026 as a layer: `ccwa-qa.l4` (IMPORTs `prelude`, `daydate` and `ccwa-jurisdiction`) and
+`ccwa-qa-cases.l4` (IMPORTs those and `ccwa-qa`). The baseline's files are unchanged. The design is the Graffiti
+Vandalism Act 2016 encoding's (its NOTES.md D2, D4, D8 and D8.1-D8.15): every exported question takes `my role` IS A
+Role first (`@desc Which of these describes you`), and answers `does not arise for you` for a role it is not about
+without reading any other input; a question that arises only in a situation takes that situation's fact second and
+answers `does not arise for you` when it does not hold, reading nothing else. No exported question takes a DEONTIC or
+EVENT input. One deployment serves every role.
+
+### Roles, and why
+
+| Role | Why | Questions |
+|---|---|---|
+| `I am the child charged, or I was a child when the offence is said to have happened` | the baseline's seat | 20 |
+| `I am a parent or guardian of the child` | new: s 23 lets the Court order a parent or guardian to attend ($500, s 23(2)) and to be told in writing if it goes on without them (s 23(4)); s 31 may exclude them; s 36 binds "a person other than the child" | 7 |
+| `I am the victim of the offence, or someone else affected by it` | new: s 31(2) gives a person who suffered loss by the offence, or has other good cause, the child's name, age, address and the charge after a closed hearing; ss 35, 36 bind them | 5 |
+| `I publish or broadcast reports, or would pass on what happened in the case` | new: s 35 binds whoever publishes or broadcasts a report likely to identify the child, s 36 whoever discloses the outcome ($10 000 or 12 months) | 5 |
+
+37 questions in all. The Court, the President, a magistrate, a prescribed officer (s 33), the CEO (young offenders),
+the prosecutor, the Attorney General and the Commissioner of Police are not seats; s 36A(3)'s rule that only the last
+two may apply is asked by the victim and the publisher as "May I ask the Supreme Court".
+
+### Situation inputs
+
+| Name | Type | Gives `does not arise for you` | Questions |
+|---|---|---|---|
+| `how the case in the Children's Court has ended` | `How the case has ended` (new: `it has not ended yet`, `the charge was dismissed`, `the child was found guilty or convicted, and an order was made`) | `it has not ended yet`; and `the charge was dismissed` for the child's three order questions | child: `Is the order against me saved though the explanation fell short` (s 34(3)), `Can I ask the President to reconsider the order made against me` (s 40), `May I apply for my case to be reheard` (s 28), `May someone other than me tell this person how my case ended` (s 36); parent, victim, publisher: each one s 36 question |
+
+One input serves every role, so the form asks it once. It is read through `an order has been made, as told` and `the
+case has ended, as told`, which list every value with no OTHERWISE (graffiti finding 31). Every other question arises in
+every situation of its role and takes no situation input.
+
+### Decisions
+
+- **The situation is how the case ended, the fact ss 28, 34(3), 36 and 40 are tied to.** s 40 reconsiders an order made
+  on "a finding that a charge against a child is proved"; s 28 rehears an order; s 34(3) saves "an order or
+  adjudication"; s 36 restricts disclosure of "the dismissal, the conviction or finding of guilt or any relevant order".
+  So the order questions need the third value, and the s 36 questions the second or third.
+- **The baseline's s 36 fact is passed as TRUE** (graffiti D8.2): within the situation the case has ended in a dismissal
+  or a finding of guilt by the situation's own terms. The child's answer equals the baseline's with that fact TRUE.
+- **The other roles' s 36 recipients are their own enumeration** (`Who I would tell`), mapped value for value onto the
+  baseline's child-side `Recipient`, so the baseline's rule is called unchanged.
+- **The parent's attendance questions follow s 23(1a):** for proceedings against the child for an offence, s 23 does not
+  apply (the Young Offenders Act 1994 s 45 does), so the order to attend and the s 23(4) notice answer no. Whether a
+  parent is "a person who as part of the person's duties is concerned with the custody or welfare of the child" (s 36(1))
+  is not decided: the parent chooses the recipient, and the case asserts only that a parent telling an employer or
+  anyone else is barred.
+- **Added:** the s 23(2) penalty ($500) and the 12 months' imprisonment of ss 35(4)(b) and 36(2)(b), read from the
+  deposited text; the fine is the baseline's. Punishment by the Supreme Court as for a contempt (ss 35(4)(a), 36(2)(a))
+  is noted in a case comment, not encoded.
+- **The child's courtroom question keeps the baseline's `@desc`s.** The new roles' questions about the courtroom take
+  `the Court ordered me excluded`, one input with one `@desc` across the parent, the victim and the publisher.
+
+### Not covered for the new roles
+
+For the parent: which court deals with the child's charge and the sentencing limits (the child's questions, which a
+parent can ask from the child's seat); the Young Offenders Act 1994 s 45 duty for a charge (in that Act's encoding);
+s 20 proceedings (care and protection, school attendance). For the victim: s 35(3) (a child victim of a sexual offence
+under The Criminal Code Chapters XXII and XXXI); a victim's part in sentencing, which this Act does not govern. For the
+publisher: s 35(3); the contempt route; s 36A(4) directions in an order allowing publication.
+
+### Cases
+
+`ccwa-qa-cases.l4`: 262 assertions, all satisfied. 88 written by hand for the role each question is about (53 for the
+child, 15 for the parent, 10 for the victim, 10 for the publisher; the child's from the baseline's own cases, on its
+fixtures, copied in); 53 that assert, for each of the child's hand-written cases, that the answer equals the baseline
+export's on the same facts, carried in the answer type; 111 for the three roles a question is not about, every other
+input ASSUMEd; 10 for the situation values that do not hold (7 for the child, 1 for each other role), the inputs after
+them ASSUMEd. The last two groups and the baseline comparisons were generated by a scratch script from the parameter list
+and the table above. Checked on stable l4 1.6.98: 0 errors and 0 warnings in all four files, 45 + 262 assertions
+satisfied, `l4 check ccwa-qa.l4` succeeds, and a parameter script confirms `my role` first everywhere, the shared
+situation input identical in name, type and @desc, second and read first in each role branch, and no DEONTIC or EVENT
+input.
