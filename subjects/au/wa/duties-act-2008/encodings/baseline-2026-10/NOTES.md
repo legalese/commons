@@ -133,3 +133,70 @@ The plan named Chapter 6A as bearing on k074, so it is in. Everything else in th
 - Add linked entities, relevant arrangements and the s 189 reduction to landholder duty. Add foreign landholder duty, and foreign corporations and trusts.
 - Correct the lives' figures (c051, c074, c081, d055) and the ledger's provision references (Division 3, not 4; Chapter 3A, not "Chapter 2 Part 3B"; Schedule 2, not "Chapter 2 Part 5").
 - Check against Revenue WA's calculators and rulings. None were consulted.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026, after the graffiti encoding's design (Graffiti Vandalism Act 2016, `gva-seat.l4`, its NOTES D2,
+D4 and D8). The layer is `da-qa.l4` (imports `prelude`, `da-property` and `da-vehicles`), with its cases in
+`da-qa-cases.l4` (imports `prelude`, `da-property`, `da-vehicles` and `da-qa`). The baseline's files are unchanged: no
+rule or export of `da-property.l4` or `da-vehicles.l4` was touched, and their 74 cases still pass. The layer calls the
+baseline's functions and restates none. Both baseline modules define `the lesser of`; the layer imports both and never
+uses that name, so the clash does not arise.
+
+**Why.** The site's question form asks only the inputs that can still change an open question. Every exported question
+of the layer takes `my role` first ("Which of these describes you"); for a role it is not about, it answers `does not
+arise for you` without reading any other input. Within a role, a question that arises only in a situation takes that
+situation's fact second, and answers `does not arise for you` when it does not hold, again reading nothing else.
+
+**Roles** (`Role`). The baseline's one seat, the buyer, meets three duties that the Act puts on three different people,
+and these are the roles:
+
+- `I am buying a home or other land in Western Australia`: the transferee or purchaser of Schedule 1 column 4, liable
+  to transfer duty and, if a foreign person, to foreign transfer duty (s 205K).
+- `I am buying a vehicle, or having its licence granted or transferred to me`: the person who pays vehicle licence duty
+  (s 232(1)).
+- `I am acquiring shares in a company that may hold land in Western Australia`: the acquirer of an interest in a
+  landholder (Chapter 3).
+
+No other seat was added. The seller of land owes no transfer duty under the provisions encoded (Schedule 1 names the
+transferee or purchaser), the dealer's vehicle licence duty (s 252) is not encoded, and the Commissioner is not a seat.
+
+**Situation inputs.** All are BOOLEAN; FALSE gives `does not arise for you`; each is the second input wherever it is
+taken, with the same name, type and `@desc` in every question. All are for the buyer of land.
+
+| Name | Questions that take it |
+|---|---|
+| `I am buying a lot off the plan` | Is my agreement a concessional off-the-plan agreement under Chapter 6A; How much off-the-plan concession do I get under s 266L; Within how many months of completion must I apply for the off-the-plan concession |
+| `a foreign person is among the buyers` | What foreign transfer duty must we pay on the purchase; Within how many months must I lodge the foreign transfer duty declaration |
+| `every buyer is a concessional first home owner` | Up to how many months after completion may I seek the first home owner rate by reassessment |
+
+Chapter 6A is tied to "an agreement for the purchase, from the owner of land to be subdivided by the registration of an
+eligible scheme ..., of a lot in the scheme" (ss 266F(1)(a), 266FA(1)(a)); foreign transfer duty to the buyer being "a
+foreign person" (s 205K(1)(b)); s 144(2) to a "first home owner concessional transaction", which needs each transferee to
+be a concessional first home owner (s 142(1)(a)).
+
+**Decisions.**
+
+1. **The s 142 question takes no first home owner situation.** For a buyer who is not a first home owner it answers no,
+   which is the answer that buyer wants (as the graffiti layer's first s 18 question does, its D8.1), and it reads the
+   baseline's own field `each transferee is a concessional first home owner` for that.
+2. **The `Purchase` record is kept.** The baseline's land questions take one `Purchase` record. The layer takes the
+   same record, so its answers are the baseline's by construction. The situation inputs sit beside it; where a
+   situation holds but the record says otherwise (an off-the-plan situation with a purchase whose stage is "not an
+   off-the-plan purchase"), the baseline's answer is given (no concession).
+3. **Shared questions.** s 15 (dutiable property) and the general rate are asked by the buyer of land and by the
+   acquirer of shares, since landholder duty is charged at the general rate (s 184(1)).
+4. **Answer types** carry `does not arise for you`: `Yes or no`, `Amount`, `Months`, and `Time to pay answer`, a
+   wrapper around the baseline's `Time to pay`.
+
+**Not covered.** No new role, so nothing is missing for one; the baseline's own gaps stand (other dutiable transactions,
+exemptions, foreign landholder duty, the s 189 reduction, the dealer's liability).
+
+**Checks.** 20 exported questions: 16 asked by the buyer of land, 2 by the buyer of a vehicle and 4 by the acquirer of
+shares (two of them shared with the buyer of land). `l4 check da-qa.l4` succeeds; `l4 run` of all six files shows no
+error and no warning. `da-qa-cases.l4` has 105 assertions, 105 satisfied: every question for every role it is not
+about, with every other input ASSUMEd; every situation question with its situation FALSE and every later input ASSUMEd;
+hand-worked answers on the baseline's facts; and, for each of the baseline's questions, a case that the layer's answer
+equals the baseline export's on the same facts. A script (`check_params.py`, in the session's scratch folder) listed
+every export's parameters and confirmed: `my role` first everywhere; each situation parameter identical in name, type and
+`@desc`, and second, wherever taken; every other shared parameter identical too; no DEONTIC or EVENT input.
