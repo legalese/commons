@@ -115,3 +115,61 @@ Left out, because they shape the terms of an order or the procedure after it rat
 - The terms an order may contain (ss 10G, 13, 36) and the matters the court weighs (ss 10F, 12, 35) should be encoded, if the seat is to learn what the order will actually forbid.
 - s 10E (child exposure), the s 62 defences, Part 5 variation, and ss 63 and 63A (orders on conviction) are the next most likely questions for a threatened person.
 - An independent test pass, a coverage table, and the human gates.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026, after the model of the Graffiti Vandalism Act 2016 encoding's seat layer (its design decisions D2, D4 and D8). The baseline's files are unchanged: the layer is added, nothing is replaced. Two new files:
+
+- `ro-qa.l4` imports `prelude` and `ro-orders`. It has 33 exported questions.
+- `ro-qa-cases.l4` imports the same and `ro-qa`. It has 171 cases.
+
+### Roles
+
+`DECLARE Role IS ONE OF`:
+
+- `I want to be protected from someone`: the baseline's seat, the person seeking to be protected (22 questions, one for each baseline export).
+- `someone wants a restraining order against me, or one has been made against me`: the respondent, the person bound (11 questions).
+
+Why: the Act gives the right to apply to the person seeking to be protected, and puts its duties, its time limits and its offences on the person bound. The court, the registrar, the authorised magistrate and the police are never seats. A parent, guardian or child welfare officer applying for a child asks the protected person's questions for the child; "May this person apply for the order to protect me" already covers them, so they are not a separate seat. Every exported question takes `my role` IS A Role first, with `@desc Which of these describes you`, and for the other role answers `does not arise for you` without reading any other input.
+
+### The situation input
+
+One input, shared by both roles with the same name, type and `@desc`, always second: `the order so far`, of type `The order so far` (`no order has been made yet`, `an interim order has been made`, `a final order has been made`, `a police order has been made`). The Act ties each of these questions to an order having been made:
+
+| Questions | Arise when the order so far is | Does not arise for |
+|---|---|---|
+| Protected: `How many days does the respondent have to object to my interim order`. Respondent: `Within how many days must I return the endorsement copy of the interim order`, `If I do not return the endorsement copy does the interim order become final` (ss 31, 32) | an interim order | no order yet, a final order, a police order |
+| Protected: `How many months will the final order protect me`. Respondent: `How many months will the final order bind me` (ss 16A, 16B, 37, 50A) | an interim order (which becomes final, s 32) or a final order | no order yet, a police order |
+| Respondent: `For how many hours does the police order bind me`, `Within how many hours must the police order be served on me`, `Can the police extend or renew the police order against me` (ss 30F, 30H) | a police order | no order yet, an interim order, a final order |
+| Protected: `What is the most the respondent can be fined for breaching my order`, `What is the longest the respondent can be imprisoned for breaching my order`, `Must the respondent be imprisoned for breaching my order again`, `Do I commit an offence if I help the respondent breach my order`. Respondent: `What is the most I can be fined for breaching the order`, `What is the longest I can be imprisoned for breaching the order`, `Must I be imprisoned if I am convicted of breaching the order again`, `Within how long must a prosecution for my breach be started` (ss 61, 61A, 61B) | any order | no order yet |
+
+16 questions take it (6 of the protected person's, 10 of the respondent's). The protected person's other 16 questions are about getting an order (the relationship, the violence, which order, who may apply, telephone orders, interim orders, police orders on the spot, the fixed durations of telephone and police orders) and arise in every situation, so they take none; so does the respondent's `Can a restraining order be made against me at all`.
+
+### Decisions
+
+- **Q1. A police order is not asked its kind.** Where the order so far is a police order, the breach questions pass `a police order` to the baseline's rules and do not read `the order made` (helper `the kind bound by`). Where it is an interim or final order, the kind given is used as it is; an interim MRO cannot be made (baseline finding 8), but the encoding does not reject one.
+- **Q2. The protected person's breach and duration questions now arise only once an order is made.** In the baseline they could be asked before applying ("what would happen if they breach it"). The Act ties breach to "a person who is bound by" an order (s 61) and the duration to the order made (`months specified in the order`), so, as with the graffiti notice (D8.10), the order is the situation. Someone deciding whether to apply who answers "no order yet" is not told the penalties. Michael may prefer to leave these four ungated.
+- **Q3. Two fixed durations stay ungated for the protected person.** The 72 hours and the 24 hours of a police order, and the 3 months of a telephone order, describe the routes the person is choosing between, so they arise in every situation. The respondent's police order questions take the situation, since they are asked of an order made against them.
+- **Q4. Answers for the protected person are the baseline's own, wrapped.** Booleans become `Yes or no` through `yes if`; numbers become `Amount`, `Months`, `Days` or `Hours`; `Which restraining order can protect me` is wrapped in `Which order, if it arises`. Each question has a case that its answer equals the baseline export's on the same facts (22 cases).
+- **Q5. Inputs whose `@desc` differs by seat have different names.** The baseline names its kind-of-order input `the order` in every question, with four `@desc` texts. The layer uses `the order I want` ("The order you want") for applying and `the order made` (one `@desc`) for an order made, in both roles. The count of earlier breach days is `days the respondent committed breaches they were convicted of, in the 2 years before` for the protected person and `days I committed breaches I was convicted of, in the 2 years before` for the respondent. `my age in years` has one `@desc` ("Your age in years") in both roles. The baseline's record inputs (`r`, `d`, `c`) are renamed `how we are connected`, `what the respondent has done`, `my case`.
+- **Q6. Two respondent rules are helpers in the layer,** since the baseline does not export them: s 32(2) (an interim order not answered becomes final at the end of the 21 days) and s 61(6) (2 years to prosecute an FVRO, VRO or police order breach; none set for an MRO, baseline finding 12). `Can a restraining order be made against me at all` uses the baseline's own number for s 50 (`the youngest respondent`), with s 7 met by the person asking.
+- **Q7. "Not read" for the baseline's enumerations and records.** `the order so far` is read only through helpers that list every value with no OTHERWISE (graffiti finding 31). The baseline reads `Kind of order` through CONSIDER ... OTHERWISE, and its records only through fields; the cases still pass ASSUMEd values for them, and the parameter script and the code show the role and situation are checked first (graffiti D8.8).
+
+### Not covered for the respondent
+
+- Applying to set aside a final order made because the endorsement copy was not returned (s 32(5)-(10)), the objection hearing (s 33) and variation or cancellation (Part 5).
+- The s 62 defences to a breach, and s 61B(2), (2A) (when the protected person's aiding is not a mitigating factor).
+- The terms an order may contain (ss 10G, 13, 36, 30C), firearms (ss 14, 14A), and orders made on conviction (ss 63, 63A).
+- Where proceedings for a breach are brought (s 61(3): the Children's Court for a child, otherwise the Magistrates Court).
+
+### Cases
+
+171 in `ro-qa-cases.l4`, all satisfied, with 0 errors and 0 warnings:
+
+- 33 ask each question for the role it is not about, every other input ASSUMEd: `does not arise for you`;
+- 30 ask each situation question, for its own role, with each value of `the order so far` under which it does not arise, every later input ASSUMEd: `does not arise for you`;
+- 22 assert that the protected person's answer equals the baseline export's on the same facts;
+- 3 mirror cases ask one order from both seats (an MRO's 12 months and $1 000 fine, an interim order's 21 days);
+- 83 are worked by hand from the text, for both roles, on k063 and the baseline's variants (the baseline's fixtures are copied into the case file, since a case file cannot be imported without running its assertions).
+
+Checked with the stable `l4` of VS Code extension 1.6.98, `JL4_LIBRARY_PATH` unset: `ro-qa.l4`, `ro-qa-cases.l4`, and the baseline's `ro-orders.l4` and `ro-cases-orders.l4` (45 of 45, unchanged) give 0 errors and 0 warnings; `l4 check ro-qa.l4` succeeds. A script listed every `@export` of `ro-qa.l4` with its inputs and checked that `my role` is first in all 33, that `the order so far` has one name, type and `@desc` in all 16 questions that take it, and that no input is DEONTIC or EVENT. A negative control (a wrong number of hours, and two "no order" cases given a final order) gave 3 failures out of 171.
