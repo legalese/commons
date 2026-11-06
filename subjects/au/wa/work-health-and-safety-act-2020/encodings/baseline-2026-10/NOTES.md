@@ -148,3 +148,97 @@ another) was read and left out: a slip on a stair is the general duty and reg 40
 - A check of the regulations for any later prescription under ss 36 and 37, and of the General Regulations' Parts
   that set duties for particular hazards (falls, manual tasks, psychosocial risks).
 - A human gate.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026 as a layer: `whs-qa.l4` (IMPORTs `prelude`, `daydate` and `whs-duties`) and `whs-qa-cases.l4`
+(IMPORTs those and `whs-qa`). The baseline's files are unchanged. The design is the Graffiti Vandalism Act 2016
+encoding's (its NOTES.md D2, D4, D8 and D8.1-D8.15): every exported question takes `my role` IS A Role first (`@desc
+Which of these describes you`), and answers `does not arise for you` for a role it is not about without reading any
+other input; a question that arises only in a situation takes that situation's fact second and answers `does not arise
+for you` when it does not hold, reading nothing else. No exported question takes a DEONTIC or EVENT input. One
+deployment serves every role.
+
+### Roles, and why
+
+| Role | Why | Questions |
+|---|---|---|
+| `I work for a business or undertaking` | the baseline's seat (the worker, s 7) | 36 |
+| `I run a business or undertaking` | new: the person conducting a business or undertaking owes the duties of ss 19-21, 38, 39, 47 and 273, and may not discriminate for a prohibited reason (s 104) | 29 |
+| `I am a director or other officer of a business or undertaking` | new: s 27(1) puts its own duty of due diligence on the officer, with the officer's penalties in ss 30A(3), 31(2), 32 and 33 | 4 |
+
+69 questions in all. The regulator, an inspector, a health and safety representative acting as such, a court and the
+Tribunal are not seats. The person with management or control of a workplace (s 20) is not a separate role: it is a
+person conducting a business or undertaking "to the extent" it manages or controls the place, so its questions sit
+under the business. A visitor or other person at a workplace (s 29) is not a role either: its one duty is a question the
+worker already asks of it.
+
+### Situation inputs
+
+| Name | Type | Gives `does not arise for you` | Questions |
+|---|---|---|---|
+| `I live in accommodation that a business I work for owns, manages or controls` | BOOLEAN | FALSE | worker: `Must my employer maintain the accommodation I live in` (s 19(4)) |
+| `an incident has happened at my work` | BOOLEAN | FALSE | worker, 8: serious harm (s 30), serious injury or illness (s 36), dangerous incident (s 37), notifiable incident (s 35), must the business notify (s 38(1)), its fine for not notifying, the record's date (s 38(7)), may the site be disturbed (s 39) |
+| `I have ceased, or refused to carry out, work under section 84 or 85` | BOOLEAN | FALSE | worker: `Must I tell the business that I have stopped work` (s 86(a)), `Is my continuity of engagement protected after I stopped work` (s 88) |
+| `what was done to me` | `What was done to me` (the baseline's enumeration) | `none of these` | worker, 6: discriminatory conduct (ss 105, 106), the s 104 offence, its fine, the Tribunal's 1-year limit (s 113(1)), the Tribunal's order (ss 112, 113, 115), reinstatement (s 112(3)(b)) |
+| `a worker of mine lives in accommodation I own, manage or control` | BOOLEAN | FALSE | business: `Must I maintain the accommodation my worker lives in` (s 19(4)) |
+| `an incident has happened at work in my business or undertaking` | BOOLEAN | FALSE | business, 10: ss 35, 36, 37, the duty to notify and its fine (s 38(1)), the written notice within 48 hours (s 38(4)(b)), the record's date and its fine (s 38(7)), disturbing the site and its fine (s 39) |
+| `a worker of mine has ceased, or refused to carry out, work under section 84 or 85` | BOOLEAN | FALSE | business: `Must the worker tell me that they have stopped work` (s 86(a)), `Is the worker's continuity of engagement protected` (ss 87, 88) |
+| `what I did, or would do, to the worker` | `What I did to the worker` (new, the s 105 conduct from the business's side) | `none of these` | business, 3: discriminatory conduct (ss 105, 106), the s 104 offence, its fine |
+
+The officer's questions arise for every officer, so the officer has no situation input; nor does any question that
+arises in every situation of its role (who is a worker or a business, who owes which duty, what the duty requires, the
+penalties for failing in a duty, the right to stop work, s 85, s 267, s 272, s 273). The two enumerated situations are
+read through `something was done to me` and `I did, or would do, something to the worker`, which list every value with
+no OTHERWISE (graffiti finding 31).
+
+### Decisions
+
+- **The situation makes one baseline fact redundant, and it is passed as TRUE** (graffiti D8.2): s 19(4)(a) (the
+  accommodation is the business's) for both s 19(4) questions, and `I stopped work under section 84 or 85` for the four
+  questions of ss 86 and 88. The worker's answers equal the baseline's with that fact TRUE.
+- **A situation was chosen by what the Act ties the rule to.** ss 35-39 turn on a notifiable incident having occurred,
+  so the incident is the situation and whether it was notifiable stays an ordinary input. s 30 (serious harm) was put
+  under the incident too: the question asks of "my injury", which presupposes one. ss 30A-33 (the fines and prison
+  terms for failing in a duty) are not: s 33 needs no incident, so they arise in every situation.
+- **Discrimination is the s 105 conduct, not the reason.** The six worker questions of ss 104-115 arise when something in
+  s 105 was done; the s 106 reason stays an input, since a worker dismissed for another reason is told no, not that the
+  question does not arise. The worker's fine question is narrowed to discriminatory conduct (s 104): the baseline's text
+  also names coercion (ss 107, 108), which `what was done to me` does not describe, so the layer's text does not.
+- **The business says whether it conducts a business or undertaking.** The role does not settle s 5 (a volunteer
+  association or a person engaged only as a worker may pick it), so the duty questions of ss 19-21 and 38 take `I
+  conduct a business or undertaking` and fold it into the baseline's `The other person`, with the s 5 exclusions in that
+  one answer; "Do I conduct a business or undertaking" works it out from the five s 5 facts.
+- **The business's conduct and reasons are its own enumerations** (`What I did to the worker`, `Why I did it`), mapped
+  value for value onto the baseline's worker-side ones, so the baseline's rules are called unchanged.
+- **Added for the business:** the two-tier fines the baseline names in comments but does not compute: s 47(1)
+  ($25 000 / $115 000), s 38(7) ($5 500 / $30 000), s 39(1) ($12 500 / $55 000) and s 273 ($5 500 / $30 000), each read
+  from the deposited text; and the 48 hours of s 38(4)(b), from the baseline's own constant.
+- **The officer's penalties** call the baseline's ss 30A-33 functions with `an individual who is an officer`. Whether
+  the PCBU's conduct is attributable to the officer's neglect, consent or connivance (s 30A(3)) is folded into the
+  court's finding of knowledge and disregard, as the baseline does.
+- The baseline's s 20 and s 21 questions both name their record input `control`, with different `@desc`; the layer
+  names the s 21 one `control of the fixtures`, so the form does not merge two different facts.
+
+### Not covered for the new roles
+
+For the business: the upstream duties of designers, manufacturers, importers, suppliers and installers (ss 22-26A); the
+self-employed person's own duty (s 19(5)); consultation with other duty holders (s 46); the s 87 direction to alternative
+work as a rule of its own; Part 5 Divisions 3-5 and 7 (representatives, committees, issue resolution, provisional
+improvement notices); coercion and misrepresentation (ss 107-109); Tribunal proceedings against the business; the
+insurance-against-fines rule (s 272A); the regulator's and inspectors' powers. For the officer: whether a person is a
+Corporations Act s 9 officer is asked, not worked out; the content of due diligence (s 27(5)); the officer's liability
+for other offences.
+
+### Cases
+
+`whs-qa-cases.l4`: 401 assertions, all satisfied. 158 written by hand for the role each question is about (72 for the
+worker, 72 for the business, 14 for the officer; values worked from the text, the worker's mostly from the baseline's
+own cases, on its fixtures, copied in); 72 that assert, for each of the worker's hand-written cases, that the answer
+equals the baseline export's on the same facts, carried in the answer type; 138 for the two roles a question is not
+about, every other input ASSUMEd; 33 for the situation values that do not hold, the inputs after them ASSUMEd. The last
+two groups and the baseline comparisons were generated by a scratch script from the parameter list and the table above.
+Checked on stable l4 1.6.98: 0 errors and 0 warnings in all four files, 70 + 401 assertions satisfied, `l4 check
+whs-qa.l4` succeeds, and a parameter script confirms `my role` first everywhere, each shared situation input identical
+in name, type and @desc, each situation second and read first in each role branch, and no DEONTIC or EVENT input. A
+negative control on a scratch copy (one wrong expected value, asserted three times) failed 3 cases, as it should.
