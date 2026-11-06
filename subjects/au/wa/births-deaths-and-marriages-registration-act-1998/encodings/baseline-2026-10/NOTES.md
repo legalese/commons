@@ -187,6 +187,13 @@ Each situation is read through a helper, or a CONSIDER, that lists every value w
   lodging on the celebrant); `Must I notify the Registrar of this death` (the funeral director's s 42 duty; no where s 42(b) or
   s 43 puts it on someone else); s 46(b)'s 28 days, which the baseline does not encode, as the helper `s 46(b) -- days to notify
   the disposal outside the State`.
+- **No export name agrees with another's in its first 60 characters** (fixed 6 November 2026, after verification). The site
+  and its service keep only the first 60 characters of a function name (spaces and punctuation as hyphens), and the family's
+  s 48(3) question, `May the death be registered before the coroner finds the cause of death`, cut to the same id as the
+  baseline export `May the death be registered before the coroner finds the cause`, so the site ran the baseline's function
+  (no role) and gave every role its plain yes. It is renamed `Before the coroner finds the cause of death, may the death be
+  registered`; the @export text, the answer and the cases are otherwise unchanged. A scratch script now checks every export of
+  the four files for such clashes.
 
 ### Not covered for the new role
 
