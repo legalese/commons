@@ -231,3 +231,9 @@ Added 6 November 2026, following the Graffiti Vandalism Act encoding's design (D
   - `l4 check rta-qa.l4` succeeds.
   - `l4 run` gives 0 errors and 0 warnings for `rta-qa.l4`, `rta-qa-cases.l4`, `rta-renting.l4` and `rta-cases-renting.l4` (69 of 69, unchanged).
   - A parameter script (scratchpad `check_params.py`) lists every export. It confirms that `my role` is first everywhere, and that each situation input is identical in name, type and @desc and second wherever it appears. It also confirms that each role branch reads its situation first, and that no input is DEONTIC or EVENT.
+
+### After the independent check (6 Nov 2026)
+
+- **Inputs that shared a name but not a type.** The form merges inputs by name. `the notice` was `My rent increase notice` in the two rent increase questions and `My lessor's notice` in the two notice of termination questions. `the tenancy` was `My tenancy, for a rent increase` and `My tenancy, for a notice`. In the rent increase questions they are now `the rent increase notice` and `the tenancy, for a rent increase`. `the ground` now has one @desc in all four questions that take it.
+- **Not changed: `the agreement has terminated` next to `the tenancy has ended`.** They are different facts. s 27C(4) runs from "the termination of a tenancy or tenant's interest in a residential tenancy agreement", so one cotenant leaving is enough. s 81C(3) runs from when "the residential tenancy agreement terminates". Merging them would be wrong for a cotenant who leaves.
+- **Not changed: the service does not compile this encoding.** The verifier's local jl4-service rejects date comparisons and `the expiry day` in `rta-renting.l4` (lines 64, 672, 691), which the stable CLI accepts. Those are the baseline's rules, which this layer may not change. The layer itself has no date arithmetic. Once the baseline is made to compile on the service, the layer needs no change.
