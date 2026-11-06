@@ -203,3 +203,81 @@ Left out:
   transmissions, and the s 8(4)-(10) transitional rules if any life needs them.
 - No case law, industrial magistrate's decision or Wageline guidance was retrieved. The
   readings in findings 6, 8 and 11 rest on the text alone.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026, after the graffiti encoding's design (Graffiti Vandalism Act 2016, `gva-seat.l4`, its NOTES D2,
+D4 and D8). The layer is `lsl-qa.l4` (imports `prelude` and `lsl-employee`), with its cases in `lsl-qa-cases.l4`
+(imports `prelude`, `lsl-employee` and `lsl-qa`). The baseline's files are unchanged: no rule or export of
+`lsl-employee.l4` was touched, and its 68 cases still pass. The layer calls the baseline's functions and restates none.
+
+**Why.** The site's question form asks only the inputs that can still change an open question. Every exported question
+takes `my role` first ("Which of these describes you"); for a role it is not about, it answers `does not arise for you`
+without reading any other input. Within a role, a question that arises only in a situation takes that situation's fact
+second, and answers `does not arise for you` when it does not hold, again reading nothing else.
+
+**Roles** (`Role`):
+
+- `I am an employee in Western Australia`: the baseline's seat.
+- `I employ people in Western Australia`: the Act puts on the employer the duties to grant the leave and not refuse it
+  at a time that suits the employee (s 9(1), (1a)), to pay it out when the employment ends (s 9(2A)), to keep records
+  during the employment and 7 years after (s 26), to let the employee see them (s 26A), and on a transfer of business to
+  pass copies to the new employer (s 7I); and gives it the right to deduct leave taken in advance (s 10(2)) and to
+  withhold and reclaim leave pay from an employee who works elsewhere during the leave (s 27(2)).
+- `I am the personal representative of an employee who has died`: s 9(2A)(b) makes the employer pay the leave of an
+  employee who died "on request, to the employee's personal representative".
+
+An industrial inspector, the industrial magistrate's court and the Commission are not seats.
+
+**Situation inputs.** All are BOOLEAN; FALSE gives `does not arise for you`; each is the second input wherever it is
+taken, with the same name, type and `@desc` in every question.
+
+| Name | Role | Questions that take it |
+|---|---|---|
+| `my employment has ended` | employee | How many weeks of long service leave am I entitled to now my employment has ended; How many weeks of long service leave must I be paid out; How much must I be paid for long service leave now my employment has ended; How many weeks of leave taken in advance can my employer recover from my final pay |
+| `I have had an absence or break in my employment` | employee | Is my employment still continuous after this absence or break; Does this absence count towards my length of service |
+| `I have moved to a new employer` | employee | Does my service carry over to my new employer |
+| `I am taking, or about to take, long service leave` | employee | How many weeks of leave do I get if my request is granted; What fraction of my ordinary pay am I paid during my leave; Must I be paid for my leave before it starts; How many days longer is my leave because of public holidays; Do I forfeit the rest of my leave by working elsewhere during it |
+| `my employee's employment has ended` | employer | How many weeks of long service leave must I pay out to my employee; How much must I pay my employee for long service leave now their employment has ended; How many weeks of leave taken in advance may I deduct from my employee's final pay |
+
+The Act ties these rules to those facts: ss 8(3), 9(2), (2A) and 10(2) to the termination of the employment; s 6 to an
+absence, a dismissal and re-employment or a gap; ss 7E-7H to an employee whose employment with one employer ended and
+who "becomes employed by the new employer"; ss 9(1C), (1D), (3), (4) and 27 to a period of leave taken or asked for.
+
+**Decisions.**
+
+1. **The employer's questions about the employee's facts take the baseline's records.** `AbsenceFacts` and
+   `ChangeOfEmployer` keep their first-person field names ("my employment with the old employer ended"); the employer's
+   `@desc` says the fields are worded from the employee's side. Restating them would restate the rules.
+2. **s 7I is new.** "Must I pass my former employees' records to the new employer" uses the baseline's carry-over
+   function: a transfer of business under s 7E is exactly the case where service carries over, and for a business
+   transmitted before 20 June 2022 s 41(2)(b) disapplies Part II Division 3, s 7I with it. The helper lists all three
+   values with no OTHERWISE.
+3. **The personal representative's questions fix `I died`.** They call the baseline's termination functions with the
+   `Termination` value `I died`, and the first adds the request s 9(2A)(b) needs.
+4. **The apprenticeship and the cash-out questions take no situation.** "Does my apprenticeship count" answers no for an
+   apprenticeship with another employer, the answer that person wants (as the graffiti layer's D8.1); s 5 arises for
+   any employee with accrued leave.
+5. **Fixed answers settle on the role.** "How long must I keep my employees' long service leave records" (7 years after
+   the employment, s 26(2)(b)) and both "By when ... records" questions (s 26A(3)(d)) read only the role.
+6. **Answer types** carry `does not arise for you`: `Yes or no`, `Amount`, `Weeks answer`, `Days answer`, `Fraction
+   answer`, `Years answer`, `Text answer` (the baseline's s 26A(3)(d) answer is a STRING) and `Service answer`, the
+   baseline's three carry-over answers worded so either party can read them, through a helper that lists every value.
+7. **Names.** Each question's name is a plain first-person question, different from the baseline function's name so the
+   two modules can be imported together.
+
+**Not covered for the new roles.** For the employer: what goes in the records (s 26(1)) and the regulations on keeping
+them; the industrial magistrate's court and civil penalties (ss 11, 26(3)); leave taken in separate periods (s 9(1)(b));
+the pre-2006 transitional rules of s 8(4)-(9). For the personal representative: who is the personal representative (a
+question for the law of succession), and records (s 26A names only the employee, a person the employee authorised and an
+inspector).
+
+**Checks.** 39 exported questions: 20 for the employee, 16 for the employer, 3 for the personal representative.
+`lsl-qa-cases.l4` has 245 assertions, all satisfied: 78 asking each question for the two roles it is not about, every
+other input ASSUMEd; 15 asking each situation question with FALSE and every later input ASSUMEd; for the employee 58
+hand-worked cases, each also asserted equal to the baseline export's answer on the same facts (58); for the employer 30
+and for the personal representative 6 hand-worked cases. 0 errors and 0 warnings in all four files (`lsl-employee.l4`;
+`lsl-cases-employee.l4`, 68 satisfied; `lsl-qa.l4`; `lsl-qa-cases.l4`); `l4 check lsl-qa.l4` succeeds. A script listed
+every `@export` with its inputs and checked `my role` first everywhere, the five situation inputs identical wherever
+they occur, each role branch reading its situation first, and no DEONTIC or EVENT input. Negative control: a case
+reading an ASSUMEd input fails.
