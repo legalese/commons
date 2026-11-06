@@ -188,3 +188,72 @@ Left out:
   k076).
 - Leases and easements, the mortgagee's possession remedies, s 196 and the s 141A notice are untouched.
 - An independent test pass and a human gate.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026: `tla-qa.l4` (IMPORTs `prelude` and `tla-title`) and its cases `tla-qa-cases.l4`. It follows the
+graffiti Q&A design (Graffiti Vandalism Act 2016 baseline, D2, D4, D8). `tla-title.l4` and `tla-cases-title.l4` are
+unchanged. Every exported question takes `my role` first (`@desc Which of these describes you`) and answers `does not
+arise for you`, without reading any other input, for a role it is not about. No exported question takes a DEONTIC or
+EVENT input.
+
+**Roles** (type `Seat`; the parameter is `my role`):
+
+| Role | Why | Questions |
+|---|---|---|
+| `I own registered land, or a share in it` | the baseline's seat: proprietor, joint owner, mortgagor | 28 |
+| `I am buying registered land` | the baseline's seat: the buyer (ss 53, 58, 68, 88, 110, 148-149) | 8 (4 shared with the owner) |
+| `I am the survivor, executor or a beneficiary of someone registered for land who has died` | the baseline's seat as the lives meet a death (c087, c096, d093) | 5 |
+| `I lent money on a mortgage of someone's land` | new: the mortgagee, whom ss 105AA-123 give the notice, sale and foreclosure powers | 11 |
+| `I claim an interest in someone's land and have lodged a caveat` | new: the caveator (ss 138-142) | 5 |
+
+53 questions in all. The Registrar, the Commissioner and the Supreme Court are not seats.
+
+**Situation inputs** (each straight after `my role`, the default straight after the mortgage; one parameter per
+situation, with an identical name, type and `@desc` wherever it is taken, checked by script):
+
+| Name | Type | Does not arise when | Taken by |
+|---|---|---|---|
+| `there is a mortgage over my land` | BOOLEAN | FALSE | owner: the 12 mortgage questions (ss 58, 105, 105AA, 106-109, 113, 121-123) |
+| `I am in default under my mortgage` | BOOLEAN, 3rd | FALSE | owner: notice, service, sale, sale money, foreclosure, foreclosure order |
+| `a caveat has been lodged against my land` | BOOLEAN | FALSE | owner: ss 139/142, 138(3), 138B, 138D, 140 |
+| `I own the land with someone else` | BOOLEAN | FALSE | owner: joint tenants, separate certificates, "no survivorship" (ss 60, 61) |
+| `I have lost my land, or an interest in it, through fraud, error, misdescription or someone else's registration` | BOOLEAN | FALSE | owner: ss 201, 211 |
+| `someone holds or claims a lease of the land` | BOOLEAN | FALSE | owner and buyer: the lease and the option (s 68(1A)) |
+| `I take the land subject to a mortgage that stays on the title` | BOOLEAN | FALSE | buyer: s 88 |
+| `I am buying at a sale by a lender under its power of sale` | BOOLEAN | FALSE | buyer: s 110 |
+| `my capacity` | `Role` (the baseline's) | every value but the question's own | survivor, executor or beneficiary: s 227 (`the surviving joint proprietor`), s 187(1) and (3) (`the executor or administrator`), s 220 (`a devisee under the will`); the route question takes it as an ordinary input |
+| `the owner is in default under my mortgage` | BOOLEAN | FALSE | lender: notice, service, sale, surplus, foreclosure, foreclosure order |
+| `I have been served with notice that the owner has applied to register a dealing` | BOOLEAN | FALSE | caveator: s 138(3) |
+| `the Registrar has served me with a notice that my caveat will lapse in 21 days` | BOOLEAN | FALSE | caveator: s 138B |
+| `my earlier caveat over this land has come to an end` | BOOLEAN | FALSE | caveator: s 138D |
+
+**Decisions.**
+
+- The seat type is `Seat`, not `Role`: the baseline already declares `Role` (the capacity in which someone claims a
+  deceased's land), and the stable l4 rejects a second type of that name beside an imported one. That baseline `Role`
+  is reused as the death situation, `my capacity`.
+- The baseline's one seat (owner and buyer) is split into the owner and the buyer, and its death questions get a role
+  of their own, since an executor is neither. That makes five roles, one more than the brief's usual four.
+- Where a situation is the baseline's own first input (the s 201 deprivation, the s 88 mortgage, the s 138B notice),
+  the baseline is called with TRUE, by the situation's own terms. In the owner's s 61(3) question, `I am a registered
+  proprietor` is TRUE by the role, so the answer is yes either way. It is kept because it tells the owner that "no
+  survivorship" does not stop the registered owners dealing.
+- The baseline's `Mortgage` record is built from four plain answers. Answers in the baseline's own types (`Bound`,
+  `Route`, `MortgageEffect`) are mapped value by value onto Q&A types worded in the second person, with `does not arise
+  for you` added.
+- The lender's and the caveator's questions call the same baseline functions as the owner's, since the rules are the
+  same; only the question and the inputs are worded from their seat. The lender's surplus question is s 109(1): the
+  surplus "shall be paid to the mortgagor".
+
+**Not covered for the new roles.** The lender: possession and ejectment (ss 111-112A), actions on the covenants (ss
+116-120), transfers of mortgages, the s 109(1A) annuity deposit and conditional tenure land. The caveator: who may
+lodge and the form (s 137), the s 138C hearing (the Court's judgment), caveats against bringing land under the Act and
+the s 141A notice. As in the baseline, the amount of s 140 compensation is the judge's.
+
+**Cases.** `tla-qa-cases.l4`, generated by `gen_tla.py` in the session scratchpad: **438 assertions written, 438
+satisfied, 0 errors, 0 warnings**. They are 175 content cases (each baseline-seat answer also asserted equal to the
+baseline's export on the same facts), 208 role cases (every question for each role it is not about, every other input
+ASSUMEd) and 55 situation cases (each value under which a situation does not hold, later inputs ASSUMEd). `l4 check
+tla-qa.l4` succeeds. `l4 run` gives no diagnostics on `tla-title.l4` or `tla-qa.l4`, and `tla-cases-title.l4` still
+gives 70 of 70.
