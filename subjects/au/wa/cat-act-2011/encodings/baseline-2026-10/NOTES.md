@@ -190,3 +190,48 @@ Breeding (s 35 onward) is left out, except as the s 18(2)(b) exemption.
 - A domain expert's view on finding 2 (early registration of a kitten) and on
   the readings of Sch 3 item 1(a) and reg 12(2)(a)(ii).
 - An independent test pass and the human gates.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026, following the Graffiti Vandalism Act encoding's design (D2, D4, D8). Nothing in `cat-owner.l4` or `cat-cases-owner.l4` was changed: the layer is added, nothing is replaced.
+
+- **Files.** `cat-qa.l4` (imports `prelude`, `daydate` and `cat-owner`) and `cat-qa-cases.l4` (imports those and `cat-qa`).
+- **Roles** (`DECLARE Role`). Every exported question takes `my role` first, with `@desc Which of these describes you`:
+  - `I own or keep a cat`. This is the baseline's seat ("the owner of a cat", ss 4, 5, 6, 14, 18, 23, 25). The role's words take in the keeper, since s 4 decides who is the owner. All 15 baseline exports are asked. Each calls the baseline function and wraps its answer.
+  - `I am getting a cat from its owner, by sale or as a gift`. s 23 bars transferring a cat that is not microchipped or sterilised, and gives "the purchaser" the free sterilisation voucher (s 23(2)(b)). 1 question: may the cat be passed to me as it is. The baseline's s 23 answer is reworded for this role.
+  - `I am a veterinarian or a microchip implanter`. ss 15, 17, 20 and 21 put duties on them, and ss 14(3), 18(3) limit their certificates. 6 questions: can my certificate of exemption apply to this cat; by when must I notify the database of a microchip (s 15) or a sterilisation (s 20); must I give a certificate of sterilisation (s 21); may I remove or interfere with a microchip (s 17); the most fine ($5 000, ss 15, 17, 20, 21). None of these rules is in the baseline. They are encoded in `cat-qa.l4` as helpers from the deposited Act, with each section quoted.
+  - Not seats: the local government (never a seat). Also not seats, because they are outside the baseline: the microchip database company (s 16) and the approved cat breeder (s 35 onward). The breeder's s 18(2)(b) exemption is asked of the owner.
+- **Situation inputs.** All are BOOLEAN and all come straight after `my role`. FALSE gives `does not arise for you`, and nothing else is read.
+
+  | Name | Role | Questions |
+  |---|---|---|
+  | `my cat is registered with a local government` | owner | the tag (s 6); when the registration ends (reg 12); renewing from 1 November (reg 12(2)(b)) |
+  | `I am applying to register my cat, or to renew its registration` | owner | must it be refused (s 9); the fee (Sch 3) |
+  | `I am giving away or selling my cat` | owner | may I give it away or sell it as it is (s 23) |
+  | `my details as the cat's owner have changed` | owner | by when I must give notice (s 25) |
+  | `I have implanted a microchip in the cat` | veterinarian or implanter | by when to notify the database (s 15) |
+  | `I have sterilised the cat` | veterinarian or implanter | by when to notify the database (s 20); the certificate (s 21) |
+
+  Each is what the Act ties the rule to. s 6 applies to "a registered cat" and reg 12 to a registration. s 9 and Sch 3 apply to an application. s 23 is about a "transfer", s 25 about a change, s 15 about the implanting and ss 20, 21 about the sterilising. The person getting a cat is in the transfer by being in the role, so their question takes none. Questions that arise for every owner or every veterinarian or implanter take none.
+- **Decisions.**
+  - In the s 6 tag question, the situation input is passed to the baseline as its own `my cat is registered`. The s 5 question keeps the baseline's own input, renamed `my cat is now registered with that local government`, because there it is an ordinary input and not the situation. The name differs, so the two are not merged.
+  - s 20 applies only to a microchipped cat. That is an ordinary input after the situation. For a cat that is not microchipped, the answer is `no notice is needed: the cat is not microchipped (s 20)`, a value of the layer's own `Notice to the database` type, and the day is not read.
+  - "Within 7 days after" (ss 15, 20) is counted as the baseline counts s 25: the day plus 7. The Interpretation Act is not deposited, as the baseline notes.
+  - The s 9 input "the day" is renamed `the day the application is decided`, so that it is not merged with the other questions' `the day`, whose @desc is different.
+  - The s 23 inputs are renamed from "my cat" to "the cat". The owner's and the new owner's questions then share them.
+- **Not covered for the new roles:**
+  - the seller's notice (s 24), which the baseline leaves out;
+  - the new owner's duties once they own the cat, which are the owner's questions;
+  - for the veterinarian or implanter, the prescribed form and content of the notices (regs) and identifying a cat as sterilised (s 19);
+  - the database company's duty (s 16).
+- **Cases** (`cat-qa-cases.l4`): 121 assertions, 121 satisfied.
+  - 44 ask each question for the two roles it is not about, every other input ASSUMEd.
+  - 10 ask each situation question for its own role with the situation FALSE, every later input ASSUMEd.
+  - 50 are for the owner where the situation holds. 15 of them, one per question, assert the answer equal to the baseline export's on the same facts.
+  - 6 are for the person getting a cat and 11 for the veterinarian or implanter, worked by hand.
+
+  Two deliberately wrong assertions both failed: an ASSUMEd date read after TRUE inputs, and a certificate applying a day before 6 months.
+- **Checks.**
+  - `l4 check cat-qa.l4` succeeds.
+  - `l4 run` gives 0 errors and 0 warnings for `cat-qa.l4`, `cat-qa-cases.l4`, `cat-owner.l4` and `cat-cases-owner.l4` (47 of 47, unchanged).
+  - The parameter script (scratchpad `check_params.py`) confirms that `my role` is first everywhere and that each situation input is identical and second wherever it appears. It also confirms that each role branch reads its situation first, and that no input is DEONTIC or EVENT.
