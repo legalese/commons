@@ -185,3 +185,23 @@ read only through four helpers in the layer, which list every value with no OTHE
   branch reads it first. It found no DEONTIC or EVENT input, and no shared input with two types or texts.
 - Limit (graffiti finding 31): the baseline reads `My part in it` and `What it threatened` through OTHERWISE, so an
   ASSUMEd value of those types that is read is not caught.
+
+### After the independent check (6 Nov 2026)
+
+- **The site's form keeps the other role's questions, and the other offences', open.** The verifier's form-engine run
+  kept 23 questions open for the accused at the start (1 dropped, 93 inputs asked) and 17 for the victim. Examples:
+  "Did I steal the thing" for the victim, and "What threat offence was committed against me, if any" for the accused,
+  in every state; and the threat and damage questions with `what the offence is about` set to stealing.
+  - The layer is not wrong here. Every one of those questions answers `does not arise for you` from `my role` and
+    `what the offence is about` alone, before any other input is read; every case agrees, and no evaluation failed.
+  - The cause is the engine. To drop a question it evaluates every combination of its open yes/no and choice inputs,
+    up to 1 024 (`PROBE_CAP` in `interact-engine.ts`). The questions take the baseline's records whole: `What I did
+    with the thing` has 17 yes/no facts by itself (131 072 combinations), and `The threat made to me` a 7-value
+    choice and 5 yes/no facts, with 6 more in `The circumstances`. No question that takes one of them can be dropped
+    while it is open.
+  - No change to the layer fixes this without changing what is asked. The baseline's functions read those records, and
+    splitting them in the layer would ask the same facts under a second set of names.
+  - The fix belongs in the engine, as noted for the Civil Liability Act and the First Home Owner Grant Act: when the
+    combinations are over the cap, evaluate one completion with a trace, and settle when only answered inputs (the
+    role, and the situation) were read. That is exact, and it is the promise this layer makes.
+- No file was changed for this finding.
