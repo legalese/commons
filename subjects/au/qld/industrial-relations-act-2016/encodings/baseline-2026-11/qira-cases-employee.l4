@@ -1,0 +1,293 @@
+IMPORT prelude
+IMPORT `qira-dates`
+IMPORT `qira-claims`
+IMPORT `qira-seat`
+
+-- Industrial Relations Act 2016 (Qld) -- cases for the employee's questions (qira-seat.l4) and the core's rules
+-- (qira-claims.l4). Every expected value was worked by hand from the deposited text (act-2016-063.txt), with the
+-- working in the comment above the assertion; none was copied from the encoding's output. Edges are tested: the last
+-- day of each period and the day after, a wage at and just under the high income threshold, service at and just over
+-- each year boundary, the $100,000 cap and one cent over. Regulative rules are asserted with EVALTRACE where the trace
+-- ends FULFILLED, with a CONSIDER where it ends in a breach, and #TRACEd with an "-- expect:" line where a rule is left
+-- open. Clock: days.
+--
+-- Figures used as inputs (not from the Act): a high income threshold of $183,100 and a penalty unit of $166.90.
+--
+-- BASELINE. Not for public use as advice. See NOTES.md.
+
+§ `Cases: the employee`
+
+`threshold` MEANS 183100
+`penalty unit` MEANS 166.90
+
+-- An ongoing employee covered by an award, $60,000 a year, with the dates and probation given.
+GIVEN `start`     IS A DATE
+      `dismissed` IS A DATE
+      `basis`     IS A `Basis of engagement`
+      `probation` IS A `Probation agreement`
+      `months`    IS A NUMBER
+      `reasonable` IS A BOOLEAN
+GIVETH A BOOLEAN
+`may claim` `start` `dismissed` `basis` `probation` `months` `reasonable` MEANS
+    `can I claim unfair dismissal` `start` `dismissed` `basis` `probation` `months` `reasonable` FALSE FALSE FALSE FALSE FALSE FALSE TRUE FALSE 60000 `threshold`
+
+§§ `Unfair dismissal: who is covered (s 315(1), (9))`
+
+-- s 315(1)(a): started 1 Jan 2025; 3 months after is 1 Apr 2025, so 31 Mar 2025 is in the first 3 months: excluded.
+#ASSERT `may claim` (DATE_FROM_DMY 1 1 2025) (DATE_FROM_DMY 31 3 2025) `engaged on an ongoing basis` `no written agreement about probation` 0 FALSE EQUALS FALSE
+-- 1 Apr 2025 is not in the first 3 months: covered.
+#ASSERT `may claim` (DATE_FROM_DMY 1 1 2025) (DATE_FROM_DMY 1 4 2025) `engaged on an ongoing basis` `no written agreement about probation` 0 FALSE EQUALS TRUE
+-- s 315(1)(a) "unless ... agree in writing that the employee serve (i) a period of probation that is shorter": the
+-- exclusion does not apply at all, even inside the shorter period (finding 3).
+#ASSERT `may claim` (DATE_FROM_DMY 1 1 2025) (DATE_FROM_DMY 31 3 2025) `engaged on an ongoing basis` `a written agreement to serve a shorter probation than 3 months` 1 FALSE EQUALS TRUE
+-- (ii) no period of probation: covered from the start.
+#ASSERT `may claim` (DATE_FROM_DMY 1 1 2025) (DATE_FROM_DMY 15 1 2025) `engaged on an ongoing basis` `a written agreement to serve no probation` 0 FALSE EQUALS TRUE
+-- s 315(1)(b): a reasonable 6-month probation agreed before starting; 6 months after 1 Jan 2025 is 1 Jul 2025, so
+-- 30 Jun 2025 is inside it (excluded) and 1 Jul 2025 is not (covered).
+#ASSERT `may claim` (DATE_FROM_DMY 1 1 2025) (DATE_FROM_DMY 30 6 2025) `engaged on an ongoing basis` `a written agreement made before the employment started to serve a longer probation than 3 months` 6 TRUE EQUALS FALSE
+#ASSERT `may claim` (DATE_FROM_DMY 1 1 2025) (DATE_FROM_DMY 1 7 2025) `engaged on an ongoing basis` `a written agreement made before the employment started to serve a longer probation than 3 months` 6 TRUE EQUALS TRUE
+-- The same longer probation, not a reasonable period: (b) does not exclude; on 30 Jun 2025 (a) no longer does either.
+#ASSERT `may claim` (DATE_FROM_DMY 1 1 2025) (DATE_FROM_DMY 30 6 2025) `engaged on an ongoing basis` `a written agreement made before the employment started to serve a longer probation than 3 months` 6 FALSE EQUALS TRUE
+-- But on 15 Feb 2025 (a) still excludes: a longer probation is not one of (a)'s "unless" cases.
+#ASSERT `may claim` (DATE_FROM_DMY 1 1 2025) (DATE_FROM_DMY 15 2 2025) `engaged on an ongoing basis` `a written agreement made before the employment started to serve a longer probation than 3 months` 6 FALSE EQUALS FALSE
+-- s 315(1)(c), (9): a casual engaged regularly and systematically over 6 months, but with no reasonable expectation of
+-- further work, is a short term casual employee: excluded. With the expectation as well, covered.
+#ASSERT `can I claim unfair dismissal` (DATE_FROM_DMY 1 1 2024) (DATE_FROM_DMY 1 6 2025) `engaged as a casual employee` `no written agreement about probation` 0 FALSE TRUE TRUE FALSE FALSE FALSE FALSE TRUE FALSE 40000 `threshold` EQUALS FALSE
+#ASSERT `can I claim unfair dismissal` (DATE_FROM_DMY 1 1 2024) (DATE_FROM_DMY 1 6 2025) `engaged as a casual employee` `no written agreement about probation` 0 FALSE TRUE TRUE TRUE FALSE FALSE FALSE TRUE FALSE 40000 `threshold` EQUALS TRUE
+-- s 315(1)(d): engaged for a specific task: excluded.
+#ASSERT `may claim` (DATE_FROM_DMY 1 1 2024) (DATE_FROM_DMY 1 6 2025) `engaged for a specific period or task` `no written agreement about probation` 0 FALSE EQUALS FALSE
+-- (d)(i): the main purpose was to avoid division 2: covered.
+#ASSERT `can I claim unfair dismissal` (DATE_FROM_DMY 1 1 2024) (DATE_FROM_DMY 1 6 2025) `engaged for a specific period or task` `no written agreement about probation` 0 FALSE FALSE FALSE FALSE TRUE FALSE FALSE TRUE FALSE 60000 `threshold` EQUALS TRUE
+-- (d)(ii): in a labour market program and dismissed before the period ended: covered; in the program but dismissed at
+-- the end: excluded.
+#ASSERT `can I claim unfair dismissal` (DATE_FROM_DMY 1 1 2024) (DATE_FROM_DMY 1 6 2025) `engaged for a specific period or task` `no written agreement about probation` 0 FALSE FALSE FALSE FALSE FALSE TRUE TRUE TRUE FALSE 60000 `threshold` EQUALS TRUE
+#ASSERT `can I claim unfair dismissal` (DATE_FROM_DMY 1 1 2024) (DATE_FROM_DMY 1 6 2025) `engaged for a specific period or task` `no written agreement about probation` 0 FALSE FALSE FALSE FALSE FALSE TRUE FALSE TRUE FALSE 60000 `threshold` EQUALS FALSE
+-- Fork F1: engaged for a season counts as a specific period: excluded.
+#ASSERT `may claim` (DATE_FROM_DMY 1 1 2024) (DATE_FROM_DMY 1 6 2025) `engaged for the duration of a particular season` `no written agreement about probation` 0 FALSE EQUALS FALSE
+-- s 315(1)(e): no instrument, not a public servant on tenure, wages "equal to or more than" the threshold: excluded
+-- at $183,100; covered at $183,099.
+#ASSERT `can I claim unfair dismissal` (DATE_FROM_DMY 1 1 2024) (DATE_FROM_DMY 1 6 2025) `engaged on an ongoing basis` `no written agreement about probation` 0 FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE 183100 `threshold` EQUALS FALSE
+#ASSERT `can I claim unfair dismissal` (DATE_FROM_DMY 1 1 2024) (DATE_FROM_DMY 1 6 2025) `engaged on an ongoing basis` `no written agreement about probation` 0 FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE 183099 `threshold` EQUALS TRUE
+-- Over the threshold but under an instrument, or a public service officer on tenure: covered.
+#ASSERT `can I claim unfair dismissal` (DATE_FROM_DMY 1 1 2024) (DATE_FROM_DMY 1 6 2025) `engaged on an ongoing basis` `no written agreement about probation` 0 FALSE FALSE FALSE FALSE FALSE FALSE FALSE TRUE FALSE 200000 `threshold` EQUALS TRUE
+#ASSERT `can I claim unfair dismissal` (DATE_FROM_DMY 1 1 2024) (DATE_FROM_DMY 1 6 2025) `engaged on an ongoing basis` `no written agreement about probation` 0 FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE TRUE 200000 `threshold` EQUALS TRUE
+
+§§ `Unfair dismissal: time limits and lapse (ss 317-318)`
+
+-- s 317(2)(a): 10 Mar 2026 + 21 days = 31 Mar 2026.
+#ASSERT `last day to apply for reinstatement` (DATE_FROM_DMY 10 3 2026) EQUALS DATE_FROM_DMY 31 3 2026
+-- Across the year end: 15 Dec 2025 + 21 days = 5 Jan 2026 (16 days to 31 Dec, 5 more).
+#ASSERT `last day to apply for reinstatement` (DATE_FROM_DMY 15 12 2025) EQUALS DATE_FROM_DMY 5 1 2026
+-- s 317(6): 20 Feb 2026 + 21 days; February 2026 has 28 days, so 13 Mar 2026.
+#ASSERT `last day to insist my application proceed` (DATE_FROM_DMY 20 2 2026) EQUALS DATE_FROM_DMY 13 3 2026
+-- s 318(4): 6 months after 31 Aug 2026 is the end of February 2027, which has 28 days: 28 Feb 2027.
+#ASSERT `last day to act after conciliation` (DATE_FROM_DMY 31 8 2026) EQUALS DATE_FROM_DMY 28 2 2027
+-- No action: not lapsed on the last day, lapsed the day after.
+#ASSERT `has my application lapsed` (DATE_FROM_DMY 31 8 2026) FALSE (DATE_FROM_DMY 1 1 2000) (DATE_FROM_DMY 28 2 2027) EQUALS FALSE
+#ASSERT `has my application lapsed` (DATE_FROM_DMY 31 8 2026) FALSE (DATE_FROM_DMY 1 1 2000) (DATE_FROM_DMY 1 3 2027) EQUALS TRUE
+-- Action on the last day keeps it alive; action the day after comes too late.
+#ASSERT `has my application lapsed` (DATE_FROM_DMY 31 8 2026) TRUE (DATE_FROM_DMY 28 2 2027) (DATE_FROM_DMY 1 3 2027) EQUALS FALSE
+#ASSERT `has my application lapsed` (DATE_FROM_DMY 31 8 2026) TRUE (DATE_FROM_DMY 1 3 2027) (DATE_FROM_DMY 2 3 2027) EQUALS TRUE
+
+§§ `Unfair dismissal: what the commission considers, and remedies (ss 320-323)`
+
+-- s 320(1)(a)-(d) and (2): a dismissal about conduct at work that was unlawful: all of (a)-(d), and (2).
+#ASSERT `what will the commission consider` `the employee's conduct, capacity or performance` TRUE TRUE EQUALS LIST `whether the employee was notified of the reason for dismissal`, `whether the dismissal related to operational requirements or to conduct, capacity or performance`, `whether the employee had been warned about the conduct, capacity or performance`, `whether the employee was given an opportunity to respond`, `any other matters the commission considers relevant`, `the commission may decide the dismissal was not harsh, unjust or unreasonable because the conduct at work was unlawful or harassment`
+-- Conduct, but not unlawful or harassment: (a)-(d) only.
+#ASSERT `what will the commission consider` `the employee's conduct, capacity or performance` TRUE FALSE EQUALS LIST `whether the employee was notified of the reason for dismissal`, `whether the dismissal related to operational requirements or to conduct, capacity or performance`, `whether the employee had been warned about the conduct, capacity or performance`, `whether the employee was given an opportunity to respond`, `any other matters the commission considers relevant`
+-- Operational requirements: (c) does not arise.
+#ASSERT `what will the commission consider` `the operational requirements of the employer` FALSE FALSE EQUALS LIST `whether the employee was notified of the reason for dismissal`, `whether the dismissal related to operational requirements or to conduct, capacity or performance`, `any other matters the commission considers relevant`
+-- s 322(2)(a): under an instrument, $80,000 a year: 6 months is $40,000.
+#ASSERT `most unfair dismissal compensation` TRUE 80000 `threshold` TRUE EQUALS `the commission may award compensation of no more than` 40000
+-- s 322(2)(b): no instrument, $300,000 a year: the lesser of $150,000 and $183,100 / 2 = $91,550.
+#ASSERT `most unfair dismissal compensation` FALSE 300000 `threshold` TRUE EQUALS `the commission may award compensation of no more than` 91550
+-- No instrument, $150,000 a year: the lesser of $75,000 and $91,550 is $75,000.
+#ASSERT `most unfair dismissal compensation` FALSE 150000 `threshold` TRUE EQUALS `the commission may award compensation of no more than` 75000
+-- s 322(1) "If, and only if": reinstatement not impracticable, so no compensation.
+#ASSERT `most unfair dismissal compensation` TRUE 80000 `threshold` FALSE EQUALS `no compensation can be ordered, because the commission does not consider reinstatement or re-employment impracticable`
+-- s 323(1)(a)(i): 50 x $166.90 = $8,345.
+#ASSERT `most extra amount if not reinstated` `penalty unit` EQUALS 8345
+
+§§ `Requirements for dismissal (ss 315(4)-(8), 325-331)`
+
+-- s 315(5): started 1 Mar 2024; one year is reached on 1 Mar 2025. Dismissed 28 Feb 2025: less than 1 year, excluded.
+#ASSERT `do the requirements for dismissal protect me` (DATE_FROM_DMY 1 3 2024) (DATE_FROM_DMY 28 2 2025) `engaged on an ongoing basis` `no written agreement about probation` 0 FALSE FALSE FALSE FALSE FALSE FALSE FALSE TRUE FALSE 60000 `threshold` EQUALS FALSE
+#ASSERT `do the requirements for dismissal protect me` (DATE_FROM_DMY 1 3 2024) (DATE_FROM_DMY 1 3 2025) `engaged on an ongoing basis` `no written agreement about probation` 0 FALSE FALSE FALSE FALSE FALSE FALSE FALSE TRUE FALSE 60000 `threshold` EQUALS TRUE
+-- s 315(4)(a): any casual, even one not short term: excluded.
+#ASSERT `do the requirements for dismissal protect me` (DATE_FROM_DMY 1 3 2020) (DATE_FROM_DMY 1 3 2025) `engaged as a casual employee` `no written agreement about probation` 0 FALSE TRUE TRUE TRUE FALSE FALSE FALSE TRUE FALSE 60000 `threshold` EQUALS FALSE
+-- s 315(4)(b): engaged by the hour or day: excluded.
+#ASSERT `do the requirements for dismissal protect me` (DATE_FROM_DMY 1 3 2020) (DATE_FROM_DMY 1 3 2025) `engaged by the hour or day` `no written agreement about probation` 0 FALSE FALSE FALSE FALSE FALSE FALSE FALSE TRUE FALSE 60000 `threshold` EQUALS FALSE
+-- s 315(4)(c): a specific task, even if engaged that way to avoid division 2 (no exception in (4)): excluded.
+#ASSERT `do the requirements for dismissal protect me` (DATE_FROM_DMY 1 3 2020) (DATE_FROM_DMY 1 3 2025) `engaged for a specific period or task` `no written agreement about probation` 0 FALSE FALSE FALSE FALSE TRUE FALSE FALSE TRUE FALSE 60000 `threshold` EQUALS FALSE
+-- s 315(8): a labour market program: excluded.
+#ASSERT `do the requirements for dismissal protect me` (DATE_FROM_DMY 1 3 2020) (DATE_FROM_DMY 1 3 2025) `engaged on an ongoing basis` `no written agreement about probation` 0 FALSE FALSE FALSE FALSE FALSE TRUE FALSE TRUE FALSE 60000 `threshold` EQUALS FALSE
+-- s 315(4)(f): high income, no instrument: excluded.
+#ASSERT `do the requirements for dismissal protect me` (DATE_FROM_DMY 1 3 2020) (DATE_FROM_DMY 1 3 2025) `engaged on an ongoing basis` `no written agreement about probation` 0 FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE 190000 `threshold` EQUALS FALSE
+-- ss 327, 331: 20 Jan 2026 + 21 days = 10 Feb 2026.
+#ASSERT `last day to apply about severance or a mass dismissal` (DATE_FROM_DMY 20 1 2026) EQUALS DATE_FROM_DMY 10 2 2026
+-- s 328: 15 or more, for an economic, technological or structural reason.
+#ASSERT `did my employer have to notify and consult` 15 TRUE EQUALS TRUE
+#ASSERT `did my employer have to notify and consult` 14 TRUE EQUALS FALSE
+#ASSERT `did my employer have to notify and consult` 20 FALSE EQUALS FALSE
+-- ss 326(3)(b), 329(3)(c): 135 x $166.90 = $22,531.50; s 329(3)(b): 16 x $166.90 = $2,670.40.
+#ASSERT `most payable for a severance or notice breach` `penalty unit` EQUALS 22531.5
+#ASSERT `the most penalty under s 329(3)(b)` `penalty unit` EQUALS 2670.4
+
+§§ `Stand-down (ss 332-333)`
+
+-- s 332: continuous from 1 Jun 2025, stood down 20 Dec 2025, re-employed 5 Jan 2026: all four days fall between.
+#ASSERT `which stand-down holidays must I be paid for` FALSE FALSE (DATE_FROM_DMY 1 6 2025) (DATE_FROM_DMY 20 12 2025) (DATE_FROM_DMY 5 1 2026) EQUALS LIST `Christmas Eve, from 6pm to midnight`, `Christmas Day`, `Boxing Day`, `New Year's Day`
+-- Stood down on 25 Dec 2025, back 2 Jan 2026: Christmas Day (fork F3: the stand-down day counts), Boxing Day, New
+-- Year's Day; not Christmas Eve.
+#ASSERT `which stand-down holidays must I be paid for` FALSE FALSE (DATE_FROM_DMY 1 6 2025) (DATE_FROM_DMY 25 12 2025) (DATE_FROM_DMY 2 1 2026) EQUALS LIST `Christmas Day`, `Boxing Day`, `New Year's Day`
+-- Re-employed on 1 Jan 2026: New Year's Day is not before the re-employment.
+#ASSERT `which stand-down holidays must I be paid for` FALSE FALSE (DATE_FROM_DMY 1 6 2025) (DATE_FROM_DMY 20 12 2025) (DATE_FROM_DMY 1 1 2026) EQUALS LIST `Christmas Eve, from 6pm to midnight`, `Christmas Day`, `Boxing Day`
+-- Re-employed 31 Jan 2026 (the last day of "the next January"): all four. Re-employed 1 Feb 2026: s 332 does not apply.
+#ASSERT `which stand-down holidays must I be paid for` FALSE FALSE (DATE_FROM_DMY 1 6 2025) (DATE_FROM_DMY 20 12 2025) (DATE_FROM_DMY 31 1 2026) EQUALS LIST `Christmas Eve, from 6pm to midnight`, `Christmas Day`, `Boxing Day`, `New Year's Day`
+#ASSERT `which stand-down holidays must I be paid for` FALSE FALSE (DATE_FROM_DMY 1 6 2025) (DATE_FROM_DMY 20 12 2025) (DATE_FROM_DMY 1 2 2026) EQUALS EMPTY
+-- A casual employee: s 332 does not apply.
+#ASSERT `which stand-down holidays must I be paid for` TRUE FALSE (DATE_FROM_DMY 1 6 2025) (DATE_FROM_DMY 20 12 2025) (DATE_FROM_DMY 5 1 2026) EQUALS EMPTY
+-- At least 2 weeks before 20 Dec 2025: from 6 Dec 2025 (6 + 14 = 20 Dec) is enough; from 7 Dec 2025 is not.
+#ASSERT `which stand-down holidays must I be paid for` FALSE FALSE (DATE_FROM_DMY 6 12 2025) (DATE_FROM_DMY 20 12 2025) (DATE_FROM_DMY 5 1 2026) EQUALS LIST `Christmas Eve, from 6pm to midnight`, `Christmas Day`, `Boxing Day`, `New Year's Day`
+#ASSERT `which stand-down holidays must I be paid for` FALSE FALSE (DATE_FROM_DMY 7 12 2025) (DATE_FROM_DMY 20 12 2025) (DATE_FROM_DMY 5 1 2026) EQUALS EMPTY
+-- Stood down in November: not "during December".
+#ASSERT `which stand-down holidays must I be paid for` FALSE FALSE (DATE_FROM_DMY 1 6 2025) (DATE_FROM_DMY 30 11 2025) (DATE_FROM_DMY 5 1 2026) EQUALS EMPTY
+-- s 315(8): a labour market program participant: division 4 does not apply.
+#ASSERT `which stand-down holidays must I be paid for` FALSE TRUE (DATE_FROM_DMY 1 6 2025) (DATE_FROM_DMY 20 12 2025) (DATE_FROM_DMY 5 1 2026) EQUALS EMPTY
+-- s 333: cannot be usefully employed, for a cause outside the employer's control: may stand down without pay, unless
+-- an instrument provides otherwise; outside s 333's grant, no answer.
+#ASSERT `can I be stood down without pay` TRUE TRUE FALSE EQUALS JUST TRUE
+#ASSERT `can I be stood down without pay` TRUE TRUE TRUE EQUALS JUST FALSE
+#ASSERT `can I be stood down without pay` FALSE TRUE FALSE EQUALS NOTHING
+#ASSERT `can I be stood down without pay` TRUE FALSE FALSE EQUALS NOTHING
+
+§§ `Notice of termination (ss 120-124)`
+
+-- An ongoing employee under an award, $60,000 a year, born on the day given.
+GIVEN `start`     IS A DATE
+      `dismissed` IS A DATE
+      `born`      IS A DATE
+GIVETH A `Notice answer`
+`notice for` `start` `dismissed` `born` MEANS
+    `how much notice must I be given` `start` `dismissed` `born` `engaged on an ongoing basis` `no written agreement about probation` 0 FALSE FALSE FALSE FALSE FALSE FALSE FALSE TRUE FALSE 60000 `threshold`
+
+-- s 123(1)(a)(i): from 1 Jul 2020 to 1 Jul 2021 is not more than 1 year: 1 week (aged 31, no extra week).
+#ASSERT `notice for` (DATE_FROM_DMY 1 7 2020) (DATE_FROM_DMY 1 7 2021) (DATE_FROM_DMY 1 1 1990) EQUALS `the minimum notice, in weeks, is` 1
+-- (ii): 2 Jul 2021 is more than 1 year: 2 weeks.
+#ASSERT `notice for` (DATE_FROM_DMY 1 7 2020) (DATE_FROM_DMY 2 7 2021) (DATE_FROM_DMY 1 1 1990) EQUALS `the minimum notice, in weeks, is` 2
+-- (iii): 2 Jul 2023 is more than 3 years: 3 weeks; 1 Jul 2025 is not more than 5 years: still 3 weeks.
+#ASSERT `notice for` (DATE_FROM_DMY 1 7 2020) (DATE_FROM_DMY 2 7 2023) (DATE_FROM_DMY 1 1 1990) EQUALS `the minimum notice, in weeks, is` 3
+#ASSERT `notice for` (DATE_FROM_DMY 1 7 2020) (DATE_FROM_DMY 1 7 2025) (DATE_FROM_DMY 1 1 1990) EQUALS `the minimum notice, in weeks, is` 3
+-- (iv) and (b): 2 Jul 2025 is more than 5 years (4 weeks), and born 2 Jul 1980 the employee turns 45 that day with
+-- more than 2 years' service: 5 weeks. The day before, aged 44: 3 weeks.
+#ASSERT `notice for` (DATE_FROM_DMY 1 7 2020) (DATE_FROM_DMY 2 7 2025) (DATE_FROM_DMY 2 7 1980) EQUALS `the minimum notice, in weeks, is` 5
+#ASSERT `notice for` (DATE_FROM_DMY 1 7 2020) (DATE_FROM_DMY 1 7 2025) (DATE_FROM_DMY 2 7 1980) EQUALS `the minimum notice, in weeks, is` 3
+-- (b)(ii): aged 50 with service from 1 Jul 2023; on 30 Jun 2025 under 2 years (2 weeks, no extra), on 1 Jul 2025
+-- 2 years completed (2 + 1 = 3 weeks).
+#ASSERT `notice for` (DATE_FROM_DMY 1 7 2023) (DATE_FROM_DMY 30 6 2025) (DATE_FROM_DMY 1 1 1975) EQUALS `the minimum notice, in weeks, is` 2
+#ASSERT `notice for` (DATE_FROM_DMY 1 7 2023) (DATE_FROM_DMY 1 7 2025) (DATE_FROM_DMY 1 1 1975) EQUALS `the minimum notice, in weeks, is` 3
+-- s 120(a): a casual employee; s 120(d): dismissed in the first 3 months.
+#ASSERT `how much notice must I be given` (DATE_FROM_DMY 1 7 2020) (DATE_FROM_DMY 1 7 2025) (DATE_FROM_DMY 1 1 1990) `engaged as a casual employee` `no written agreement about probation` 0 FALSE TRUE TRUE TRUE FALSE FALSE FALSE TRUE FALSE 60000 `threshold` EQUALS `the notice subdivision does not apply to me (s 120)`
+#ASSERT `notice for` (DATE_FROM_DMY 1 7 2025) (DATE_FROM_DMY 30 9 2025) (DATE_FROM_DMY 1 1 1990) EQUALS `the notice subdivision does not apply to me (s 120)`
+-- s 124: 5 weeks x $1,500 = $7,500.
+#ASSERT `least pay instead of notice` (DATE_FROM_DMY 1 7 2020) (DATE_FROM_DMY 2 7 2025) (DATE_FROM_DMY 2 7 1980) `engaged on an ongoing basis` `no written agreement about probation` 0 FALSE FALSE FALSE FALSE FALSE FALSE FALSE TRUE FALSE 60000 `threshold` 1500 EQUALS `the minimum compensation instead of notice, in Australian dollars, is` 7500
+#ASSERT `least pay instead of notice` (DATE_FROM_DMY 1 7 2020) (DATE_FROM_DMY 2 7 2025) (DATE_FROM_DMY 2 7 1980) `engaged by the hour or day` `no written agreement about probation` 0 FALSE FALSE FALSE FALSE FALSE FALSE FALSE TRUE FALSE 60000 `threshold` 1500 EQUALS `the notice subdivision does not apply to me (s 120) so s 124 sets no minimum`
+-- s 121: theft, not rebutted: yes; rebutted under (3): no; other conduct: left open; no misconduct: no ("only if").
+#ASSERT `can I be dismissed without notice for misconduct` (DATE_FROM_DMY 1 7 2020) (DATE_FROM_DMY 1 7 2025) `engaged on an ongoing basis` `no written agreement about probation` 0 FALSE FALSE FALSE FALSE FALSE FALSE FALSE TRUE FALSE 60000 `threshold` `theft` FALSE EQUALS JUST TRUE
+#ASSERT `can I be dismissed without notice for misconduct` (DATE_FROM_DMY 1 7 2020) (DATE_FROM_DMY 1 7 2025) `engaged on an ongoing basis` `no written agreement about probation` 0 FALSE FALSE FALSE FALSE FALSE FALSE FALSE TRUE FALSE 60000 `threshold` `theft` TRUE EQUALS JUST FALSE
+#ASSERT `can I be dismissed without notice for misconduct` (DATE_FROM_DMY 1 7 2020) (DATE_FROM_DMY 1 7 2025) `engaged on an ongoing basis` `no written agreement about probation` 0 FALSE FALSE FALSE FALSE FALSE FALSE FALSE TRUE FALSE 60000 `threshold` `other conduct the employer calls misconduct` FALSE EQUALS NOTHING
+#ASSERT `can I be dismissed without notice for misconduct` (DATE_FROM_DMY 1 7 2020) (DATE_FROM_DMY 1 7 2025) `engaged on an ongoing basis` `no written agreement about probation` 0 FALSE FALSE FALSE FALSE FALSE FALSE FALSE TRUE FALSE 60000 `threshold` `no misconduct` FALSE EQUALS JUST FALSE
+-- A casual employee: s 121 does not govern the dismissal (s 120), no answer.
+#ASSERT `can I be dismissed without notice for misconduct` (DATE_FROM_DMY 1 7 2020) (DATE_FROM_DMY 1 7 2025) `engaged as a casual employee` `no written agreement about probation` 0 FALSE FALSE FALSE FALSE FALSE FALSE FALSE TRUE FALSE 60000 `threshold` `theft` FALSE EQUALS NOTHING
+-- s 122(3): 6 years after 29 Feb 2024 ends on 28 Feb 2030 (2030 is not a leap year).
+#ASSERT `last day to claim pay instead of notice` (DATE_FROM_DMY 29 2 2024) EQUALS DATE_FROM_DMY 28 2 2030
+
+§§ `Redundancy pay (ss 125-127)`
+
+-- An ongoing employee under an award from 1 Jul 2020, $1,200 a week, whose job is no longer needed.
+GIVEN `dismissed` IS A DATE
+GIVETH A `Redundancy answer`
+`redundancy on` `dismissed` MEANS
+    `what redundancy pay am I owed` (DATE_FROM_DMY 1 7 2020) `dismissed` `engaged on an ongoing basis` `no written agreement about probation` 0 FALSE FALSE FALSE FALSE FALSE FALSE FALSE TRUE FALSE 60000 `threshold` TRUE FALSE FALSE FALSE FALSE 0 1200
+
+-- s 125(3)(b): 30 Jun 2021 is less than 1 year: does not apply.
+#ASSERT `redundancy on` (DATE_FROM_DMY 30 6 2021) EQUALS `the redundancy pay subdivision does not apply to me (s 125)`
+-- s 126 table: 1 Jul 2021 is at least 1 year: 4 weeks x $1,200 = $4,800; exactly 2 years (1 Jul 2022) is still 4.
+#ASSERT `redundancy on` (DATE_FROM_DMY 1 7 2021) EQUALS `my redundancy pay, in Australian dollars, is` 4800
+#ASSERT `redundancy on` (DATE_FROM_DMY 1 7 2022) EQUALS `my redundancy pay, in Australian dollars, is` 4800
+-- More than 2 years (2 Jul 2022): 6 weeks = $7,200.
+#ASSERT `redundancy on` (DATE_FROM_DMY 2 7 2022) EQUALS `my redundancy pay, in Australian dollars, is` 7200
+-- More than 5 years (2 Jul 2025): 9 weeks = $10,800.
+#ASSERT `redundancy on` (DATE_FROM_DMY 2 7 2025) EQUALS `my redundancy pay, in Australian dollars, is` 10800
+-- Exactly 12 years (1 Jul 2032), more than 11: 15 weeks = $18,000; more than 12 (2 Jul 2032): 16 weeks = $19,200.
+#ASSERT `redundancy on` (DATE_FROM_DMY 1 7 2032) EQUALS `my redundancy pay, in Australian dollars, is` 18000
+#ASSERT `redundancy on` (DATE_FROM_DMY 2 7 2032) EQUALS `my redundancy pay, in Australian dollars, is` 19200
+-- s 125(1)(a): no applicable industrial instrument: does not apply.
+#ASSERT `what redundancy pay am I owed` (DATE_FROM_DMY 1 7 2020) (DATE_FROM_DMY 2 7 2025) `engaged on an ongoing basis` `no written agreement about probation` 0 FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE 60000 `threshold` TRUE FALSE FALSE FALSE FALSE 0 1200 EQUALS `the redundancy pay subdivision does not apply to me (s 125)`
+-- s 125(2): ordinary and customary turnover of labour: does not apply.
+#ASSERT `what redundancy pay am I owed` (DATE_FROM_DMY 1 7 2020) (DATE_FROM_DMY 2 7 2025) `engaged on an ongoing basis` `no written agreement about probation` 0 FALSE FALSE FALSE FALSE FALSE FALSE FALSE TRUE FALSE 60000 `threshold` TRUE TRUE FALSE FALSE FALSE 0 1200 EQUALS `the redundancy pay subdivision does not apply to me (s 125)`
+-- s 125(3)(a): a casual employee: does not apply.
+#ASSERT `what redundancy pay am I owed` (DATE_FROM_DMY 1 7 2020) (DATE_FROM_DMY 2 7 2025) `engaged as a casual employee` `no written agreement about probation` 0 FALSE TRUE TRUE TRUE FALSE FALSE FALSE TRUE FALSE 60000 `threshold` TRUE FALSE FALSE FALSE FALSE 0 1200 EQUALS `the redundancy pay subdivision does not apply to me (s 125)`
+-- s 125(3)(c): a fixed task does not apply; (4): unless a substantial reason was to avoid the division (then 9 weeks).
+#ASSERT `what redundancy pay am I owed` (DATE_FROM_DMY 1 7 2020) (DATE_FROM_DMY 2 7 2025) `engaged for a specific period or task` `no written agreement about probation` 0 FALSE FALSE FALSE FALSE FALSE FALSE FALSE TRUE FALSE 60000 `threshold` TRUE FALSE FALSE FALSE FALSE 0 1200 EQUALS `the redundancy pay subdivision does not apply to me (s 125)`
+#ASSERT `what redundancy pay am I owed` (DATE_FROM_DMY 1 7 2020) (DATE_FROM_DMY 2 7 2025) `engaged for a specific period or task` `no written agreement about probation` 0 FALSE FALSE FALSE FALSE FALSE FALSE FALSE TRUE FALSE 60000 `threshold` TRUE FALSE FALSE TRUE FALSE 0 1200 EQUALS `my redundancy pay, in Australian dollars, is` 10800
+-- s 125(3)(e): excluded by a regulation or the instrument.
+#ASSERT `what redundancy pay am I owed` (DATE_FROM_DMY 1 7 2020) (DATE_FROM_DMY 2 7 2025) `engaged on an ongoing basis` `no written agreement about probation` 0 FALSE FALSE FALSE FALSE FALSE FALSE FALSE TRUE FALSE 60000 `threshold` TRUE FALSE TRUE FALSE FALSE 0 1200 EQUALS `the redundancy pay subdivision does not apply to me (s 125)`
+-- s 127(3)-(4): the commission ordered the amount reduced to zero.
+#ASSERT `what redundancy pay am I owed` (DATE_FROM_DMY 1 7 2020) (DATE_FROM_DMY 2 7 2025) `engaged on an ongoing basis` `no written agreement about probation` 0 FALSE FALSE FALSE FALSE FALSE FALSE FALSE TRUE FALSE 60000 `threshold` TRUE FALSE FALSE FALSE TRUE 0 1200 EQUALS `my redundancy pay, in Australian dollars, is` 0
+
+§§ `General protections (s 310)`
+
+-- s 310(1)(a): 10 Mar 2026 + 21 days = 31 Mar 2026. (3): 6 years after 15 May 2020 = 15 May 2026.
+#ASSERT `last day to apply about a general protections dismissal` (DATE_FROM_DMY 10 3 2026) EQUALS DATE_FROM_DMY 31 3 2026
+#ASSERT `last day to apply about another contravention` (DATE_FROM_DMY 15 5 2020) EQUALS DATE_FROM_DMY 15 5 2026
+
+§§ `Unpaid wages and superannuation (ss 376, 379, 396, 475-477)`
+
+-- ss 379(3), 476(4): payable 31 Aug 2020, last day 31 Aug 2026; applying that day it can be ordered, the next day not.
+#ASSERT `last day to apply for unpaid wages` (DATE_FROM_DMY 31 8 2020) EQUALS DATE_FROM_DMY 31 8 2026
+#ASSERT `can this unpaid amount still be ordered` (DATE_FROM_DMY 31 8 2020) (DATE_FROM_DMY 31 8 2026) EQUALS TRUE
+#ASSERT `can this unpaid amount still be ordered` (DATE_FROM_DMY 31 8 2020) (DATE_FROM_DMY 1 9 2026) EQUALS FALSE
+-- Payable 29 Feb 2020: 6 years later ends 28 Feb 2026.
+#ASSERT `can this unpaid amount still be ordered` (DATE_FROM_DMY 29 2 2020) (DATE_FROM_DMY 28 2 2026) EQUALS TRUE
+#ASSERT `can this unpaid amount still be ordered` (DATE_FROM_DMY 29 2 2020) (DATE_FROM_DMY 1 3 2026) EQUALS FALSE
+-- s 476(1): $100,000 or less: both; one cent over: a magistrate only.
+#ASSERT `where can I claim unpaid wages` 100000 FALSE FALSE FALSE EQUALS LIST `a magistrate (s 379)`, `the commission (ss 475-476)`
+#ASSERT `where can I claim unpaid wages` 100000.01 FALSE FALSE FALSE EQUALS LIST `a magistrate (s 379)`
+-- s 476(3): already before a magistrate under s 379: not the commission. s 379(5): already before the commission
+-- under s 475: not a magistrate. An application under s 396 for the same matter bars both.
+#ASSERT `where can I claim unpaid wages` 50000 TRUE FALSE FALSE EQUALS LIST `a magistrate (s 379)`
+#ASSERT `where can I claim unpaid wages` 50000 FALSE TRUE FALSE EQUALS LIST `the commission (ss 475-476)`
+#ASSERT `where can I claim unpaid wages` 50000 FALSE FALSE TRUE EQUALS EMPTY
+-- s 376(3): overpaid 1 Mar 2025; deductions started 1 Mar 2026 (within 1 year); a deduction on 1 Mar 2031 (6 years)
+-- may be made, one on 2 Mar 2031 may not; deductions first started 2 Mar 2026 started too late.
+#ASSERT `can my employer deduct the overpayment` (DATE_FROM_DMY 1 3 2025) (DATE_FROM_DMY 1 3 2026) (DATE_FROM_DMY 1 3 2031) EQUALS TRUE
+#ASSERT `can my employer deduct the overpayment` (DATE_FROM_DMY 1 3 2025) (DATE_FROM_DMY 1 3 2026) (DATE_FROM_DMY 2 3 2031) EQUALS FALSE
+#ASSERT `can my employer deduct the overpayment` (DATE_FROM_DMY 1 3 2025) (DATE_FROM_DMY 2 3 2026) (DATE_FROM_DMY 2 3 2026) EQUALS FALSE
+
+§§ `Regulative rules`
+
+-- s 317: applied on day 21, the last day: fulfilled.
+#ASSERT EVALTRACE `s 317 -- the employee may apply for reinstatement within 21 days, and after that ask for a further period` 0 (LIST (EVENT `the employee` `apply for reinstatement` 21)) EQUALS FULFILLED
+-- Day 22 is late: the further-period application on day 30 takes up the permission left: fulfilled.
+#ASSERT EVALTRACE `s 317 -- the employee may apply for reinstatement within 21 days, and after that ask for a further period` 0 (LIST (EVENT `the employee` `apply for reinstatement` 22), (EVENT `the employee` `apply for a further period` 30)) EQUALS FULFILLED
+-- expect: no breach; the rule is left at PARTY the employee MAY apply for a further period (applied on day 22, late)
+#TRACE `s 317 -- the employee may apply for reinstatement within 21 days, and after that ask for a further period` AT 0 WITH
+    PARTY `the employee` DOES `apply for reinstatement` AT 22
+-- s 317(6)-(7): insisting on day 21 and the commission dealing with it: fulfilled.
+#ASSERT EVALTRACE `s 317(6)-(7) -- after a rejection, insisting within 21 days obliges the commission to deal with the application` 0 (LIST (EVENT `the employee` `inform the registrar the application is to proceed` 21), (EVENT `the commission` `deal with the application` 60)) EQUALS FULFILLED
+-- Insisting on day 22 is late: the rejection stands and nothing more is owed.
+#ASSERT EVALTRACE `s 317(6)-(7) -- after a rejection, insisting within 21 days obliges the commission to deal with the application` 0 (LIST (EVENT `the employee` `inform the registrar the application is to proceed` 22)) EQUALS FULFILLED
+-- expect: no breach; the rule is left at PARTY the commission MUST deal with the application (insisted on day 10)
+#TRACE `s 317(6)-(7) -- after a rejection, insisting within 21 days obliges the commission to deal with the application` AT 0 WITH
+    PARTY `the employee` DOES `inform the registrar the application is to proceed` AT 10
+-- s 310: applied on day 21: fulfilled; on day 22 then a further-period application: fulfilled.
+#ASSERT EVALTRACE `s 310 -- the employee may apply about a dismissal within 21 days, and after that ask for a further period` 0 (LIST (EVENT `the employee` `apply to the commission to deal with the dismissal dispute` 21)) EQUALS FULFILLED
+#ASSERT EVALTRACE `s 310 -- the employee may apply about a dismissal within 21 days, and after that ask for a further period` 0 (LIST (EVENT `the employee` `apply to the commission to deal with the dismissal dispute` 22), (EVENT `the employee` `apply for a further period` 25)) EQUALS FULFILLED
+-- s 373(1): last paid 31 Jan, next due by the same day next month; with 28 days, paying on day 28 is in time.
+#ASSERT EVALTRACE (`s 373 -- the employer must pay the wages at least monthly` 28) 0 (LIST (EVENT `the employer` `pay the wages` 28)) EQUALS FULFILLED
+-- Paying on day 29 is late: a breach by the employer.
+#ASSERT (CONSIDER EVALTRACE (`s 373 -- the employer must pay the wages at least monthly` 28) 0 (LIST (EVENT `the employer` `pay the wages` 29)) WHEN FULFILLED THEN FALSE, OTHERWISE TRUE)
+-- expect: BREACH BY the employer, "s 373(1): an employer must pay each employee's wages at least monthly ..." (paid on day 29)
+#TRACE `s 373 -- the employer must pay the wages at least monthly` 28 AT 0 WITH
+    PARTY `the employer` DOES `pay the wages` AT 29
