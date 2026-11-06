@@ -1,0 +1,660 @@
+IMPORT prelude
+IMPORT `lta-landtax`
+
+-- Land Tax Assessment Act 2002 (WA), with the Land Tax Act 2002 s 5 Table 11 -- the questions people ask, with the
+-- seat and the situation as parameters (the Q&A layer).
+--
+-- PURPOSE. One module whose exported questions serve every seat from one deployment. Every question takes `my role`
+-- first ("Which of these describes you"); a question about another role answers `does not arise for you` without
+-- reading any other input. The rules are the baseline's (lta-landtax.l4): this layer builds the baseline's records
+-- from plain answers and calls its functions. The rules the baseline does not have, for the two new roles (ss 9, 43,
+-- 45), are added here as helpers. As in the baseline, a day is the number YYYYMMDD and a financial year is named by the
+-- calendar year in which it ends (2029/30 is 2030).
+--
+-- ROLES. The owner of the land or home (the baseline's seat); the person who holds land for someone else, as agent,
+-- trustee, or executor or administrator of a dead owner's estate (s 9 makes them liable as if owner, within limits;
+-- s 23 gives the estate its exemption); and the person who rents or occupies land someone else owns (s 43 makes them
+-- answer the Commissioner; s 45 says a lease cannot shift the tax as against the Commissioner). The Commissioner, the
+-- Minister and the Valuer-General are never a seat.
+--
+-- SITUATIONS (design D8 of the Graffiti Vandalism Act layer). Within a role, a question that arises only in a
+-- situation takes that situation's fact straight after `my role`, and when it does not hold answers `does not arise
+-- for you` without reading anything else. The situations, each a BOOLEAN that gives `does not arise for you` when
+-- FALSE: for the owner, the land owned jointly (ss 7(4), 12(3)); a new home being built (ss 24, 24A); two homes owned
+-- at the taxing date while moving (s 27); being in full-time care at the taxing date (s 26B); a disabled person living
+-- there (s 26A); an assessment notice given (ss 6, 9A, and the holder's s 9(2)); an exemption or concession refused or
+-- revoked (s 20(4), (5)); an event that may affect an exemption (s 20A). For the holder, the owner having died with me
+-- as executor or administrator (s 23), and my having paid tax for the owner (s 9(3)). For the occupier, a lease that
+-- puts the tax on me (s 45), and a request from the Commissioner (s 43). The calendar, liability, s 21, taxable value
+-- and rate questions arise for every owner and take none.
+--
+-- BASELINE. Not for public use as advice. See NOTES.md, "Q&A layer (seat and situations as parameters)".
+
+§ `Land Tax Assessment Act 2002 (WA) -- the questions people ask`
+
+§§ `Who is asking, and the shape of the answers`
+
+DECLARE Role IS ONE OF
+    `I own the land, or the home I live in`
+    `I hold land for someone else, as their agent, a trustee, or an executor or administrator`
+    `I rent or occupy land that someone else owns`
+
+DECLARE `Yes or no` IS ONE OF
+    yes
+    no
+    `does not arise for you`
+
+DECLARE `Amount` IS ONE OF
+    `does not arise for you`
+    amount HAS dollars IS A NUMBER
+
+DECLARE `Day answer` IS ONE OF
+    `does not arise for you`
+    `the day` HAS `as YYYYMMDD` IS A NUMBER
+
+DECLARE `Year answer` IS ONE OF
+    `does not arise for you`
+    `the financial year ending 30 June` HAS `of the year` IS A NUMBER
+
+DECLARE `Days` IS ONE OF
+    `does not arise for you`
+    `days` HAS `number of days` IS A NUMBER
+
+DECLARE `Percentage` IS ONE OF
+    `does not arise for you`
+    `per cent` HAS `percentage` IS A NUMBER
+
+DECLARE `Exemption answer` IS ONE OF
+    `does not arise for you`
+    `the home is` HAS `how far exempt` IS AN `Exemption`
+
+§§ `Building the baseline's inputs, and the rules for the new roles`
+
+GIVEN `it holds` IS A BOOLEAN
+GIVETH A `Yes or no`
+`yes if` `it holds` MEANS
+    IF `it holds` THEN yes ELSE no
+
+GIVEN `owner` IS A BOOLEAN
+      `sale` IS A BOOLEAN
+      `seller` IS A BOOLEAN
+      `buyer` IS A BOOLEAN
+      `possession` IS A BOOLEAN
+GIVETH A `My position at the taxing date`
+`the position built from` MEANS
+    `My position at the taxing date` WITH
+        `I was the owner` IS `owner`
+        `there was an agreement for the sale of the land` IS `sale`
+        `I was the seller under the agreement` IS `seller`
+        `I was the buyer under the agreement` IS `buyer`
+        `the buyer had obtained possession` IS `possession`
+
+GIVEN `residence` IS A BOOLEAN
+      `hotel` IS A BOOLEAN
+      `trust` IS A BOOLEAN
+      `owners` IS A `Who owns it`
+      `lives there` IS A BOOLEAN
+      `guarantors only` IS A BOOLEAN
+      `share` IS A NUMBER
+GIVETH A `My home at the taxing date`
+`the home built from` MEANS
+    `My home at the taxing date` WITH
+        `has a building occupied or fit and intended to be occupied as a residence` IS `residence`
+        `the building is a hotel, motel, hostel, lodging or boarding house or ordinarily holiday accommodation` IS `hotel`
+        `is held in trust` IS `trust`
+        `owned by` IS `owners`
+        `an owner uses it as their primary residence` IS `lives there`
+        `every owner who does not live there is an owner only as a guarantor a lender required` IS `guarantors only`
+        `percentage owned by the owners who live there` IS `share`
+
+GIVEN `trust` IS A BOOLEAN
+      `owned from` IS A NUMBER
+      `commenced` IS A NUMBER
+      `completed` IS A NUMBER
+      `first occupant` IS A BOOLEAN
+      `lives there` IS A BOOLEAN
+      `income` IS A BOOLEAN
+      `another exempt` IS A BOOLEAN
+GIVETH A `My new home being built`
+`the build built from` MEANS
+    `My new home being built` WITH
+        `is held in trust` IS `trust`
+        `day I became owner of the land` IS `owned from`
+        `commencement day` IS `commenced`
+        `completion day` IS `completed`
+        `I am the first occupant` IS `first occupant`
+        `I use it as my primary residence in the year it is completed` IS `lives there`
+        `income was derived from the property before I first occupied it` IS `income`
+        `another home of mine is exempt as my primary residence for the year` IS `another exempt`
+
+GIVEN `exempt home` IS A BOOLEAN
+      `would have been` IS A BOOLEAN
+      `second acquired` IS A BOOLEAN
+      `lived in other` IS A BOOLEAN
+      `sold first` IS A BOOLEAN
+      `income` IS A BOOLEAN
+GIVETH A `My two homes`
+`the two homes built from` MEANS
+    `My two homes` WITH
+        `I owned both at the taxing date` IS TRUE
+        `the home I lived in at the taxing date is exempt for the year` IS `exempt home`
+        `the other home would have been exempt had I lived there instead` IS `would have been`
+        `I acquired the second home in the previous financial year` IS `second acquired`
+        `I lived in the other home before the previous one in that year or after it in the assessment year` IS `lived in other`
+        `I sold and handed over the home I acquired first during the assessment year` IS `sold first`
+        `income was derived from the home not lived in while I owned both` IS `income`
+
+GIVEN `trust` IS A BOOLEAN
+      `owned so` IS A BOOLEAN
+      `before care` IS A BOOLEAN
+      `income` IS A BOOLEAN
+      `another exempt` IS A BOOLEAN
+GIVETH A `My home while I am in care`
+`the care home built from` MEANS
+    `My home while I am in care` WITH
+        `is held in trust` IS `trust`
+        `owned at the taxing date by me alone, with my spouse or partner, or with guarantors only` IS `owned so`
+        `I am in full-time care at the taxing date` IS TRUE
+        `just before my care began I so owned it and lived in it as my primary residence` IS `before care`
+        `income was derived from it in the relevant period` IS `income`
+        `another property of mine is exempt as my primary residence` IS `another exempt`
+
+GIVEN `year of death` IS A NUMBER
+      `gave exemption` IS A BOOLEAN
+      `executor owns` IS A BOOLEAN
+      `income` IS A BOOLEAN
+GIVETH A `My home after my death`
+`the estate home built from` MEANS
+    `My home after my death` WITH
+        `the financial year of my death` IS `year of death`
+        `my ownership and use gave or would have given a s 21 or s 26B exemption that year` IS `gave exemption`
+        `my executor owns it at midnight on 30 June of the year of death` IS `executor owns`
+        `my estate derives rent or income from it before the end of the assessment year` IS `income`
+
+-- s 9(1): "An agent of an owner of taxable land, or a trustee in whom the legal estate of taxable land is vested ... is
+-- liable for the taxes payable on the land as if the agent or trustee were the beneficial owner of the land." (2): "However,
+-- the agent or trustee is not personally liable for the taxes to any greater extent than to the amount of any funds or
+-- securities for money of the principal or beneficiary, that the agent or trustee holds, or of which the agent or trustee has
+-- the controlling power, after receiving an assessment notice for the taxes." An executor or administrator holds the legal
+-- estate as trustee of the estate (INFERENCE).
+GIVEN `the taxes on the land` IS A NUMBER
+      `the funds held` IS A NUMBER
+GIVETH A NUMBER
+`s 9(2) -- the most the agent or trustee is personally liable for` MEANS
+    `the lesser of` `the taxes on the land` `the funds held`
+
+§§ `For the owner of the land or home`
+
+§§§ `ss 7, 8 -- when the tax is fixed, and whether I am the one liable`
+
+@export In which financial year does this day fall (named by the year in which it ends)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the day` IS A NUMBER @desc The day, as YYYYMMDD
+GIVETH A `Year answer`
+`Which financial year is this day in` MEANS
+    CONSIDER `my role`
+    WHEN `I own the land, or the home I live in` THEN `the financial year ending 30 June` (`In which financial year does this day fall` `the day`)
+    OTHERWISE `does not arise for you`
+
+@export At midnight on which day is my land tax for this assessment year fixed (Land Tax Assessment Act 2002 (WA) s 7(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the assessment year` IS A NUMBER @desc The assessment year, named by the year in which it ends (2029/30 is 2030)
+GIVETH A `Day answer`
+`On which day is my land tax fixed` MEANS
+    CONSIDER `my role`
+    WHEN `I own the land, or the home I live in` THEN `the day` (`At midnight on which day is my land tax fixed` `the assessment year`)
+    OTHERWISE `does not arise for you`
+
+@export Am I liable for the land tax on this land for the assessment year (Land Tax Assessment Act 2002 (WA) ss 7(1), 8(3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I was the owner at the taxing date` IS A BOOLEAN @desc Whether you were the owner of the land at midnight on 30 June before the assessment year (entitled to it for an estate of freehold in possession)
+      `the land was under an agreement for sale at the taxing date` IS A BOOLEAN @desc Whether, at that moment, there was an agreement for the sale of the land
+      `I was the seller under that agreement` IS A BOOLEAN @desc If so, whether you were the seller
+      `I was the buyer under that agreement` IS A BOOLEAN @desc If so, whether you were the buyer
+      `the buyer had possession by the taxing date` IS A BOOLEAN @desc If so, whether the buyer had obtained possession of the land by then
+GIVETH A `Yes or no`
+`Am I the one liable for the land tax` MEANS
+    CONSIDER `my role`
+    WHEN `I own the land, or the home I live in` THEN `yes if` (`Am I liable for the land tax on this land` (`the position built from` `I was the owner at the taxing date` `the land was under an agreement for sale at the taxing date` `I was the seller under that agreement` `I was the buyer under that agreement` `the buyer had possession by the taxing date`))
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 7(4), 12(3) -- land I own jointly (situation: joint ownership)`
+
+-- The baseline's s 7(4) question takes joint ownership as its one input; here it is the situation, so within it the
+-- answer is the baseline's with that input TRUE.
+@export Can I be made to pay all the land tax on land I own jointly with others (Land Tax Assessment Act 2002 (WA) s 7(4))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I own the land jointly or in common with others` IS A BOOLEAN @desc Whether you own the land jointly or in common with one or more other people
+GIVETH A `Yes or no`
+`Can I be made to pay all the tax on my joint land` MEANS
+    CONSIDER `my role`
+    WHEN `I own the land, or the home I live in` THEN
+        IF NOT `I own the land jointly or in common with others` THEN `does not arise for you`
+        ELSE `yes if` (`Can I be made to pay all the land tax on land I own jointly` TRUE)
+    OTHERWISE `does not arise for you`
+
+@export Is land I own jointly assessed together with land I own alone (Land Tax Assessment Act 2002 (WA) s 12(3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I own the land jointly or in common with others` IS A BOOLEAN @desc Whether you own the land jointly or in common with one or more other people
+GIVETH A `Yes or no`
+`Is my joint land assessed with the land I own alone` MEANS
+    CONSIDER `my role`
+    WHEN `I own the land, or the home I live in` THEN
+        IF NOT `I own the land jointly or in common with others` THEN `does not arise for you`
+        ELSE `yes if` `Is my joint land assessed with my own land`
+    OTHERWISE `does not arise for you`
+
+§§§ `s 21 and the Glossary -- is my home exempt as my primary residence`
+
+-- The baseline rule reads only the building facts; the ownership fields get fixed placeholders it never reads.
+@export Is my land private residential property (Land Tax Assessment Act 2002 (WA) Glossary clause 1)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `there is a building on it occupied, or fit and intended to be occupied, as a residence` IS A BOOLEAN @desc Whether at midnight on 30 June before the assessment year there was a building on the lot occupied, or fit to be occupied and intended by the owner to be occupied, as a place of residence
+      `the building is a hotel, motel, hostel, lodging or boarding house, or holiday accommodation` IS A BOOLEAN @desc Whether the building is used as a hotel, motel, hostel, lodging house or boarding house, or is ordinarily used for holiday accommodation
+GIVETH A `Yes or no`
+`Is my lot private residential property` MEANS
+    CONSIDER `my role`
+    WHEN `I own the land, or the home I live in` THEN `yes if` (`Is my land private residential property` (`the home built from` `there is a building on it occupied, or fit and intended to be occupied, as a residence` `the building is a hotel, motel, hostel, lodging or boarding house, or holiday accommodation` FALSE `one individual` FALSE FALSE 0))
+    OTHERWISE `does not arise for you`
+
+@export Is my home exempt from land tax as my primary residence (Land Tax Assessment Act 2002 (WA) s 21)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `there is a building on it occupied, or fit and intended to be occupied, as a residence` IS A BOOLEAN @desc Whether at midnight on 30 June before the assessment year there was a building on the lot occupied, or fit to be occupied and intended by the owner to be occupied, as a place of residence
+      `the building is a hotel, motel, hostel, lodging or boarding house, or holiday accommodation` IS A BOOLEAN @desc Whether the building is used as a hotel, motel, hostel, lodging house or boarding house, or is ordinarily used for holiday accommodation
+      `the home is held in trust` IS A BOOLEAN @desc Whether the home is held in trust
+      `who owns the home` IS A `Who owns it` @desc Who owned it at that moment: one individual; spouses; de facto partners who have lived together for at least 2 years; two or more other individuals; or a company or other body
+      `an owner lives there as their primary residence` IS A BOOLEAN @desc Whether at least one owner used it then as their sole or principal place of residence
+      `every owner who does not live there is on the title only as a guarantor for a lender` IS A BOOLEAN @desc Whether each owner who does not live there is an owner only because a lender required them as a guarantor
+      `the share owned by the owners who live there, in per cent` IS A NUMBER @desc The percentage of the home owned by the owners who live there
+GIVETH AN `Exemption answer`
+`How far is my home exempt as my primary residence` MEANS
+    CONSIDER `my role`
+    WHEN `I own the land, or the home I live in` THEN `the home is` (`Is my home exempt as my primary residence` (`the home built from` `there is a building on it occupied, or fit and intended to be occupied, as a residence` `the building is a hotel, motel, hostel, lodging or boarding house, or holiday accommodation` `the home is held in trust` `who owns the home` `an owner lives there as their primary residence` `every owner who does not live there is on the title only as a guarantor for a lender` `the share owned by the owners who live there, in per cent`))
+    OTHERWISE `does not arise for you`
+
+@export What percentage of my home is exempt as my primary residence (Land Tax Assessment Act 2002 (WA) ss 21, 12(2), 18)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `there is a building on it occupied, or fit and intended to be occupied, as a residence` IS A BOOLEAN @desc Whether at midnight on 30 June before the assessment year there was a building on the lot occupied, or fit to be occupied and intended by the owner to be occupied, as a place of residence
+      `the building is a hotel, motel, hostel, lodging or boarding house, or holiday accommodation` IS A BOOLEAN @desc Whether the building is used as a hotel, motel, hostel, lodging house or boarding house, or is ordinarily used for holiday accommodation
+      `the home is held in trust` IS A BOOLEAN @desc Whether the home is held in trust
+      `who owns the home` IS A `Who owns it` @desc Who owned it at that moment: one individual; spouses; de facto partners who have lived together for at least 2 years; two or more other individuals; or a company or other body
+      `an owner lives there as their primary residence` IS A BOOLEAN @desc Whether at least one owner used it then as their sole or principal place of residence
+      `every owner who does not live there is on the title only as a guarantor for a lender` IS A BOOLEAN @desc Whether each owner who does not live there is an owner only because a lender required them as a guarantor
+      `the share owned by the owners who live there, in per cent` IS A NUMBER @desc The percentage of the home owned by the owners who live there
+GIVETH A `Percentage`
+`What share of my home is exempt` MEANS
+    CONSIDER `my role`
+    WHEN `I own the land, or the home I live in` THEN `per cent` (`What percentage of my home is exempt` (`the home built from` `there is a building on it occupied, or fit and intended to be occupied, as a residence` `the building is a hotel, motel, hostel, lodging or boarding house, or holiday accommodation` `the home is held in trust` `who owns the home` `an owner lives there as their primary residence` `every owner who does not live there is on the title only as a guarantor for a lender` `the share owned by the owners who live there, in per cent`))
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 24, 24A -- building a new home (situation: a new home being built)`
+
+@export Is my land exempt for this year under the one year exemption for building my home (Land Tax Assessment Act 2002 (WA) s 24)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I am building, or have built, a new home on the land` IS A BOOLEAN @desc Whether a private residence is being, or has been, constructed on the land for you to live in
+      `the land is held in trust` IS A BOOLEAN @desc Whether the land is held in trust
+      `the day I became owner of the land` IS A NUMBER @desc The day you became the owner of the land, as YYYYMMDD
+      `the commencement day` IS A NUMBER @desc The day the building contract was made, or for an owner-builder the day the building permit was granted, as YYYYMMDD
+      `the completion day` IS A NUMBER @desc The day the home was, or will be, ready for occupation, as YYYYMMDD
+      `I am its first occupant` IS A BOOLEAN @desc Whether you are the first person to occupy the home
+      `I live in it as my primary residence in the year it is completed` IS A BOOLEAN @desc Whether you use it as your sole or principal place of residence in the assessment year in which it is completed
+      `income was derived from it before I first lived there` IS A BOOLEAN @desc Whether any income was derived from the property before you first occupied it
+      `another home of mine is exempt as my primary residence for the year` IS A BOOLEAN @desc Whether another home of yours is exempt for the same year as your primary residence
+      `the assessment year` IS A NUMBER @desc The assessment year, named by the year in which it ends (2029/30 is 2030)
+GIVETH A `Yes or no`
+`Is my land exempt this year under the one year building exemption` MEANS
+    CONSIDER `my role`
+    WHEN `I own the land, or the home I live in` THEN
+        IF NOT `I am building, or have built, a new home on the land` THEN `does not arise for you`
+        ELSE `yes if` (`Is my land exempt under the one year building exemption` (`the build built from` `the land is held in trust` `the day I became owner of the land` `the commencement day` `the completion day` `I am its first occupant` `I live in it as my primary residence in the year it is completed` `income was derived from it before I first lived there` `another home of mine is exempt as my primary residence for the year`) `the assessment year`)
+    OTHERWISE `does not arise for you`
+
+@export Is my land exempt for this year under the two year exemption for building my home (Land Tax Assessment Act 2002 (WA) s 24A)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I am building, or have built, a new home on the land` IS A BOOLEAN @desc Whether a private residence is being, or has been, constructed on the land for you to live in
+      `the land is held in trust` IS A BOOLEAN @desc Whether the land is held in trust
+      `the day I became owner of the land` IS A NUMBER @desc The day you became the owner of the land, as YYYYMMDD
+      `the commencement day` IS A NUMBER @desc The day the building contract was made, or for an owner-builder the day the building permit was granted, as YYYYMMDD
+      `the completion day` IS A NUMBER @desc The day the home was, or will be, ready for occupation, as YYYYMMDD
+      `I am its first occupant` IS A BOOLEAN @desc Whether you are the first person to occupy the home
+      `I live in it as my primary residence in the year it is completed` IS A BOOLEAN @desc Whether you use it as your sole or principal place of residence in the assessment year in which it is completed
+      `income was derived from it before I first lived there` IS A BOOLEAN @desc Whether any income was derived from the property before you first occupied it
+      `another home of mine is exempt as my primary residence for the year` IS A BOOLEAN @desc Whether another home of yours is exempt for the same year as your primary residence
+      `the assessment year` IS A NUMBER @desc The assessment year, named by the year in which it ends (2029/30 is 2030)
+GIVETH A `Yes or no`
+`Is my land exempt this year under the two year building exemption` MEANS
+    CONSIDER `my role`
+    WHEN `I own the land, or the home I live in` THEN
+        IF NOT `I am building, or have built, a new home on the land` THEN `does not arise for you`
+        ELSE `yes if` (`Is my land exempt under the two year building exemption` (`the build built from` `the land is held in trust` `the day I became owner of the land` `the commencement day` `the completion day` `I am its first occupant` `I live in it as my primary residence in the year it is completed` `income was derived from it before I first lived there` `another home of mine is exempt as my primary residence for the year`) `the assessment year`)
+    OTHERWISE `does not arise for you`
+
+@export Is my land exempt for this year while my new home is built (Land Tax Assessment Act 2002 (WA) s 24 or s 24A)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I am building, or have built, a new home on the land` IS A BOOLEAN @desc Whether a private residence is being, or has been, constructed on the land for you to live in
+      `the land is held in trust` IS A BOOLEAN @desc Whether the land is held in trust
+      `the day I became owner of the land` IS A NUMBER @desc The day you became the owner of the land, as YYYYMMDD
+      `the commencement day` IS A NUMBER @desc The day the building contract was made, or for an owner-builder the day the building permit was granted, as YYYYMMDD
+      `the completion day` IS A NUMBER @desc The day the home was, or will be, ready for occupation, as YYYYMMDD
+      `I am its first occupant` IS A BOOLEAN @desc Whether you are the first person to occupy the home
+      `I live in it as my primary residence in the year it is completed` IS A BOOLEAN @desc Whether you use it as your sole or principal place of residence in the assessment year in which it is completed
+      `income was derived from it before I first lived there` IS A BOOLEAN @desc Whether any income was derived from the property before you first occupied it
+      `another home of mine is exempt as my primary residence for the year` IS A BOOLEAN @desc Whether another home of yours is exempt for the same year as your primary residence
+      `the assessment year` IS A NUMBER @desc The assessment year, named by the year in which it ends (2029/30 is 2030)
+GIVETH A `Yes or no`
+`Is my land exempt this year while my home is built` MEANS
+    CONSIDER `my role`
+    WHEN `I own the land, or the home I live in` THEN
+        IF NOT `I am building, or have built, a new home on the land` THEN `does not arise for you`
+        ELSE `yes if` (`Is my land exempt while my new home is built` (`the build built from` `the land is held in trust` `the day I became owner of the land` `the commencement day` `the completion day` `I am its first occupant` `I live in it as my primary residence in the year it is completed` `income was derived from it before I first lived there` `another home of mine is exempt as my primary residence for the year`) `the assessment year`)
+    OTHERWISE `does not arise for you`
+
+§§§ `s 27 -- moving between 2 homes (situation: two homes owned at the taxing date)`
+
+-- The situation is the baseline's first condition, "I owned both at the taxing date", so within it that field is TRUE.
+@export Is the home I am not living in at the taxing date exempt because I am moving between 2 homes (Land Tax Assessment Act 2002 (WA) s 27)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I owned two homes at the taxing date, and am moving from one to the other` IS A BOOLEAN @desc Whether at midnight on 30 June before the assessment year you owned two private residential properties, and are moving from one to the other
+      `the home I lived in at the taxing date is exempt for the year` IS A BOOLEAN @desc Whether the home you lived in at that moment is exempt for the year as your primary residence
+      `the other home would have been exempt had I lived there instead` IS A BOOLEAN @desc Whether the other home would have been exempt had you lived there instead
+      `I acquired the second of them in the previous financial year` IS A BOOLEAN @desc Whether the home you acquired second was acquired in the financial year before the assessment year
+      `I lived in the other home before the first in that year, or after it in the assessment year` IS A BOOLEAN @desc Whether you lived in the other home as your primary residence in the previous financial year before living in the first, or in the assessment year after it
+      `I sold and handed over the home I acquired first during the assessment year` IS A BOOLEAN @desc Whether during the assessment year you sold or disposed of the home you acquired first, and delivered possession of it to the new owner
+      `income was derived from the home not lived in while I owned both` IS A BOOLEAN @desc Whether you or anyone else derived income from the home not being lived in while you owned both
+GIVETH A `Yes or no`
+`Is my other home exempt while I move house` MEANS
+    CONSIDER `my role`
+    WHEN `I own the land, or the home I live in` THEN
+        IF NOT `I owned two homes at the taxing date, and am moving from one to the other` THEN `does not arise for you`
+        ELSE `yes if` (`Is my other home exempt while I move` (`the two homes built from` `the home I lived in at the taxing date is exempt for the year` `the other home would have been exempt had I lived there instead` `I acquired the second of them in the previous financial year` `I lived in the other home before the first in that year, or after it in the assessment year` `I sold and handed over the home I acquired first during the assessment year` `income was derived from the home not lived in while I owned both`))
+    OTHERWISE `does not arise for you`
+
+@export Must I tell the Commissioner when I sell and hand over the home I acquired first (Land Tax Assessment Act 2002 (WA) s 27(3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I owned two homes at the taxing date, and am moving from one to the other` IS A BOOLEAN @desc Whether at midnight on 30 June before the assessment year you owned two private residential properties, and are moving from one to the other
+      `I rely on the moving exemption` IS A BOOLEAN @desc Whether you claim the s 27 exemption for the home you were not living in
+GIVETH A `Yes or no`
+`Must I tell the Commissioner when I hand over the first home` MEANS
+    CONSIDER `my role`
+    WHEN `I own the land, or the home I live in` THEN
+        IF NOT `I owned two homes at the taxing date, and am moving from one to the other` THEN `does not arise for you`
+        ELSE `yes if` (`Must I tell the Commissioner when I hand over my first home` `I rely on the moving exemption`)
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 26B, 26A -- care, and a disabled relative at home (situations: in care; a disabled person living there)`
+
+-- The situation is the baseline's "in full-time care at the taxing date", so within it that field is TRUE.
+@export Is my home exempt while I am in full-time care (Land Tax Assessment Act 2002 (WA) s 26B)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I was in full-time care at the taxing date` IS A BOOLEAN @desc Whether at midnight on 30 June before the assessment year you were in full-time care: cared for by a person qualified for carer payment, or living in a hospital, mental health service, aged care or palliative care facility or the like
+      `the home is held in trust` IS A BOOLEAN @desc Whether the home is held in trust
+      `I owned it then alone, with my spouse or partner, or with guarantors only` IS A BOOLEAN @desc Whether at that moment you owned it alone, with your spouse or a de facto partner of at least 2 years, or with owners who are only guarantors for a lender
+      `just before my care began I so owned it and lived in it` IS A BOOLEAN @desc Whether immediately before your care began you owned it in that way and lived in it as your primary residence
+      `income was derived from it in the relevant period` IS A BOOLEAN @desc Whether any income was derived from it in the period s 26B(5) describes
+      `another property of mine is exempt as my primary residence` IS A BOOLEAN @desc Whether another property of yours is exempt as your primary residence
+GIVETH A `Yes or no`
+`Is my home exempt while I am in full-time care` MEANS
+    CONSIDER `my role`
+    WHEN `I own the land, or the home I live in` THEN
+        IF NOT `I was in full-time care at the taxing date` THEN `does not arise for you`
+        ELSE `yes if` (`Is my home exempt while I am in care` (`the care home built from` `the home is held in trust` `I owned it then alone, with my spouse or partner, or with guarantors only` `just before my care began I so owned it and lived in it` `income was derived from it in the relevant period` `another property of mine is exempt as my primary residence`))
+    OTHERWISE `does not arise for you`
+
+-- The situation is the baseline's first input, so within it that input is TRUE.
+@export Is my home exempt because a disabled relative of mine lives in it (Land Tax Assessment Act 2002 (WA) s 26A)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `a disabled person lives on the land as their primary residence` IS A BOOLEAN @desc Whether at midnight on 30 June before the assessment year a person qualified for the disability support pension (or a child under 16 whose carer qualifies for carer payment) used the property as their primary residence
+      `an owner is the disabled person's parent, grandparent, brother, sister or child` IS A BOOLEAN @desc Whether the property is owned by individuals, at least one of whom is the disabled person's parent, grandparent, brother, sister or child (whole or half blood, natural or by written law)
+GIVETH A `Yes or no`
+`Is my home exempt because my disabled relative lives in it` MEANS
+    CONSIDER `my role`
+    WHEN `I own the land, or the home I live in` THEN
+        IF NOT `a disabled person lives on the land as their primary residence` THEN `does not arise for you`
+        ELSE `yes if` (`Is my home exempt because my disabled relative lives there` TRUE `an owner is the disabled person's parent, grandparent, brother, sister or child`)
+    OTHERWISE `does not arise for you`
+
+§§§ `s 23 -- the year after I die`
+
+-- Asked by an owner planning ahead, so it takes no situation input; the executor's own question is below.
+@export Will my home still be exempt for my estate in this assessment year after I die (Land Tax Assessment Act 2002 (WA) s 23)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the financial year of my death` IS A NUMBER @desc The financial year in which you die, named by the year in which it ends
+      `my ownership and use gave or would have given a s 21 or s 26B exemption that year` IS A BOOLEAN @desc Whether your ownership and use of the home as your primary residence gave, or (tested just before death) would have given, an exemption under s 21 or s 26B for that year
+      `my executor owns it at midnight on 30 June of that year` IS A BOOLEAN @desc Whether your executor or administrator is the owner of the home at midnight on 30 June of the financial year of your death
+      `my estate derives rent or income from it before the end of the assessment year` IS A BOOLEAN @desc Whether your estate derives any rent or other income from it between your death and the end of the assessment year
+      `the assessment year` IS A NUMBER @desc The assessment year, named by the year in which it ends (2029/30 is 2030)
+GIVETH A `Yes or no`
+`Will my home still be exempt for my estate after I die` MEANS
+    CONSIDER `my role`
+    WHEN `I own the land, or the home I live in` THEN `yes if` (`Is my home exempt for my estate after my death` (`the estate home built from` `the financial year of my death` `my ownership and use gave or would have given a s 21 or s 26B exemption that year` `my executor owns it at midnight on 30 June of that year` `my estate derives rent or income from it before the end of the assessment year`) `the assessment year`)
+    OTHERWISE `does not arise for you`
+
+§§§ `Glossary clause 6; Land Tax Act 2002 s 5 Table 11; ss 10, 11, 40 -- how much I pay`
+
+@export What is the taxable value of my land for the year (Land Tax Assessment Act 2002 (WA) Glossary clause 6)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the unimproved value` IS A NUMBER @desc The Valuer-General's unimproved value at midnight on 30 June before the year
+      `last year's taxable value` IS A NUMBER @desc The taxable value of the land for the previous financial year
+      `the prescribed percentage` IS A NUMBER @desc The percentage prescribed by regulations for the year (not deposited)
+      `the lot was created by a subdivision last year` IS A BOOLEAN @desc Whether the lot came into existence by a subdivision in the previous financial year
+GIVETH AN `Amount`
+`What is my land's taxable value` MEANS
+    CONSIDER `my role`
+    WHEN `I own the land, or the home I live in` THEN amount (`What is the taxable value of my land` `the unimproved value` `last year's taxable value` `the prescribed percentage` `the lot was created by a subdivision last year`)
+    OTHERWISE `does not arise for you`
+
+@export Does Table 11 of the Land Tax Act 2002 set the rate for this assessment year?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the assessment year` IS A NUMBER @desc The assessment year, named by the year in which it ends (2029/30 is 2030)
+GIVETH A `Yes or no`
+`Does Table 11 set my rate for this year` MEANS
+    CONSIDER `my role`
+    WHEN `I own the land, or the home I live in` THEN `yes if` (`Does Table 11 set the rate for this year` `the assessment year`)
+    OTHERWISE `does not arise for you`
+
+@export How much land tax is charged on this taxable value at the Table 11 rate (Land Tax Act 2002 s 5)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the taxable value` IS A NUMBER @desc The taxable value (or aggregated taxable value) of the land
+GIVETH AN `Amount`
+`How much land tax is charged on this taxable value` MEANS
+    CONSIDER `my role`
+    WHEN `I own the land, or the home I live in` THEN amount (`How much land tax is charged on this value` `the taxable value`)
+    OTHERWISE `does not arise for you`
+
+-- The lots are the baseline's own record list (each lot's taxable value and the percentage exempt): one assessment is
+-- a list of lots, which no fixed set of plain inputs can hold.
+@export How much land tax must I pay on all the land in this assessment (Land Tax Assessment Act 2002 (WA) ss 10, 11, 40)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my lots` IS A LIST OF `Lot` @desc Each lot in this assessment, with its taxable value and the percentage exempt
+      `I am a war widow or widower, or a veteran's widowed mother on the pension` IS A BOOLEAN @desc Whether s 40 applies to you: a war widow or widower under the Veterans' Entitlements Act 1986, or a veteran's widowed mother still paid the pension
+GIVETH AN `Amount`
+`How much land tax must I pay on my land` MEANS
+    CONSIDER `my role`
+    WHEN `I own the land, or the home I live in` THEN amount (`How much land tax must I pay` `my lots` `I am a war widow or widower, or a veteran's widowed mother on the pension`)
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 6, 9A -- my assessment notice (situation: a notice given)`
+
+@export On which day after the date of my assessment notice is my land tax due (Land Tax Assessment Act 2002 (WA) s 6(1); 0 means the day the notice gives)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have been given a land tax assessment notice` IS A BOOLEAN @desc Whether you have been given a land tax assessment notice for the land
+      `it is an original assessment` IS A BOOLEAN @desc Whether the notice is of an original assessment (not a reassessment, whose due date is in its notice)
+GIVETH A `Days`
+`On which day after my notice is my land tax due` MEANS
+    CONSIDER `my role`
+    WHEN `I own the land, or the home I live in` THEN
+        IF NOT `I have been given a land tax assessment notice` THEN `does not arise for you`
+        ELSE days (`On which day after the notice is my land tax due` `it is an original assessment`)
+    OTHERWISE `does not arise for you`
+
+@export Within how many days after my assessment notice must I report an error in it (Land Tax Assessment Act 2002 (WA) s 9A(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have been given a land tax assessment notice` IS A BOOLEAN @desc Whether you have been given a land tax assessment notice for the land
+      `the notice gives a due date` IS A BOOLEAN @desc Whether the notice specifies a due date for payment
+      `days from the notice to the due date it gives` IS A NUMBER @desc The number of days from the date of the notice to the due date it specifies
+GIVETH A `Days`
+`Within how many days must I report an error in my notice` MEANS
+    CONSIDER `my role`
+    WHEN `I own the land, or the home I live in` THEN
+        IF NOT `I have been given a land tax assessment notice` THEN `does not arise for you`
+        ELSE days (`Within how many days must I report an error in my notice` `the notice gives a due date` `days from the notice to the due date it gives`)
+    OTHERWISE `does not arise for you`
+
+@export What is the most I can be fined for not reporting an error in my assessment notice (Land Tax Assessment Act 2002 (WA) s 9A)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have been given a land tax assessment notice` IS A BOOLEAN @desc Whether you have been given a land tax assessment notice for the land
+GIVETH AN `Amount`
+`What is the most I may be fined for not reporting an error` MEANS
+    CONSIDER `my role`
+    WHEN `I own the land, or the home I live in` THEN
+        IF NOT `I have been given a land tax assessment notice` THEN `does not arise for you`
+        ELSE amount `What is the most I can be fined for not reporting an error`
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 20, 20A -- a refused exemption, and events affecting it (situations: refusal; an event)`
+
+@export Within how many days may I appeal to the Minister against a refused or revoked exemption (Land Tax Assessment Act 2002 (WA) s 20(4))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the Commissioner has refused or revoked an exemption or concession for my land` IS A BOOLEAN @desc Whether the Commissioner has refused to grant, or has revoked, an exemption or concession for your land under s 20(1)
+GIVETH A `Days`
+`Within how many days may I appeal to the Minister` MEANS
+    CONSIDER `my role`
+    WHEN `I own the land, or the home I live in` THEN
+        IF NOT `the Commissioner has refused or revoked an exemption or concession for my land` THEN `does not arise for you`
+        ELSE days `Within how many days may I appeal to the Minister`
+    OTHERWISE `does not arise for you`
+
+@export Must I still pay the land tax while my appeal to the Minister is pending (Land Tax Assessment Act 2002 (WA) s 20(5))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the Commissioner has refused or revoked an exemption or concession for my land` IS A BOOLEAN @desc Whether the Commissioner has refused to grant, or has revoked, an exemption or concession for your land under s 20(1)
+GIVETH A `Yes or no`
+`Must I still pay while I appeal to the Minister` MEANS
+    CONSIDER `my role`
+    WHEN `I own the land, or the home I live in` THEN
+        IF NOT `the Commissioner has refused or revoked an exemption or concession for my land` THEN `does not arise for you`
+        ELSE `yes if` `Must I still pay while my appeal is pending`
+    OTHERWISE `does not arise for you`
+
+@export By what day at the latest can I be required to report an event affecting my exemption (Land Tax Assessment Act 2002 (WA) s 20A(4)(b))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `an event has happened that may affect my land's exemption or concession` IS A BOOLEAN @desc Whether an event or circumstance has happened that may affect an exemption or concession your land has
+      `the day of the event` IS A NUMBER @desc The day the event happened, as YYYYMMDD
+GIVETH A `Day answer`
+`By what day must I report an event affecting my exemption` MEANS
+    CONSIDER `my role`
+    WHEN `I own the land, or the home I live in` THEN
+        IF NOT `an event has happened that may affect my land's exemption or concession` THEN `does not arise for you`
+        ELSE `the day` (`By what day at the latest must I report an event affecting my exemption` `the day of the event`)
+    OTHERWISE `does not arise for you`
+
+§§ `For the person who holds land for someone else: agent, trustee, executor or administrator (ss 9, 23)`
+
+-- The executor's s 23 question is the baseline's s 23 rule, asked of the dead owner's home in the executor's hands.
+@export Is the dead owner's home still exempt in this assessment year while I hold it as executor or administrator (Land Tax Assessment Act 2002 (WA) s 23)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the owner has died, and I am the executor or administrator of their estate` IS A BOOLEAN @desc Whether the owner of the land has died and you are the executor or administrator of their estate
+      `the financial year of their death` IS A NUMBER @desc The financial year in which they died, named by the year in which it ends
+      `their ownership and use gave or would have given a s 21 or s 26B exemption that year` IS A BOOLEAN @desc Whether their ownership and use of the home as their primary residence gave, or (tested just before death) would have given, an exemption under s 21 or s 26B for that year
+      `I owned it as executor at midnight on 30 June of that year` IS A BOOLEAN @desc Whether you, as executor or administrator, were the owner of the home at midnight on 30 June of the financial year of their death
+      `the estate derives rent or income from it before the end of the assessment year` IS A BOOLEAN @desc Whether the estate derives any rent or other income from it between the death and the end of the assessment year
+      `the assessment year` IS A NUMBER @desc The assessment year, named by the year in which it ends (2029/30 is 2030)
+GIVETH A `Yes or no`
+`Is the dead owner's home still exempt in my hands` MEANS
+    CONSIDER `my role`
+    WHEN `I hold land for someone else, as their agent, a trustee, or an executor or administrator` THEN
+        IF NOT `the owner has died, and I am the executor or administrator of their estate` THEN `does not arise for you`
+        ELSE `yes if` (`Is my home exempt for my estate after my death` (`the estate home built from` `the financial year of their death` `their ownership and use gave or would have given a s 21 or s 26B exemption that year` `I owned it as executor at midnight on 30 June of that year` `the estate derives rent or income from it before the end of the assessment year`) `the assessment year`)
+    OTHERWISE `does not arise for you`
+
+@export Up to how much of the land tax am I personally liable for, holding the land for someone else (Land Tax Assessment Act 2002 (WA) s 9(1), (2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have been given a land tax assessment notice` IS A BOOLEAN @desc Whether you have been given a land tax assessment notice for the land
+      `the land tax and other amounts payable on the land` IS A NUMBER @desc The land tax, with any penalties, interest or other amounts payable with it, on the land you hold, in dollars
+      `the funds of the owner or beneficiary I hold or control after the notice` IS A NUMBER @desc The funds or securities for money of the owner or beneficiary that you hold, or control, after receiving the assessment notice, in dollars
+GIVETH AN `Amount`
+`Up to how much of the land tax am I personally liable for` MEANS
+    CONSIDER `my role`
+    WHEN `I hold land for someone else, as their agent, a trustee, or an executor or administrator` THEN
+        IF NOT `I have been given a land tax assessment notice` THEN `does not arise for you`
+        ELSE amount (`s 9(2) -- the most the agent or trustee is personally liable for` `the land tax and other amounts payable on the land` `the funds of the owner or beneficiary I hold or control after the notice`)
+    OTHERWISE `does not arise for you`
+
+-- s 9(3): "If an agent or trustee is required to pay, and has paid, an amount of taxes on behalf of the principal or the
+-- beneficiary, the agent or trustee is entitled -- (a) to recover an equal amount from the principal or beneficiary; or
+-- (b) to retain an equal amount from any money that the agent or trustee receives in that capacity".
+@export May I get back from the owner or beneficiary the land tax I paid for them, or keep it out of their money I receive (Land Tax Assessment Act 2002 (WA) s 9(3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have paid land tax I was required to pay for the owner or beneficiary` IS A BOOLEAN @desc Whether you were required to pay, and have paid, land tax on behalf of the owner or beneficiary
+GIVETH A `Yes or no`
+`May I recover the land tax I paid for the owner` MEANS
+    CONSIDER `my role`
+    WHEN `I hold land for someone else, as their agent, a trustee, or an executor or administrator` THEN
+        IF NOT `I have paid land tax I was required to pay for the owner or beneficiary` THEN `does not arise for you`
+        ELSE yes
+    OTHERWISE `does not arise for you`
+
+-- s 9(4): "The agent or trustee is answerable for the doing of anything under a land tax Act that would be required to
+-- be done by the owner." (5): "... subject to the same penalties or liability for any neglect, refusal, or default ... as
+-- the principal or beneficiary would be." The answer is fixed for the role.
+@export Must I do what the land tax Acts require of the owner, on the same penalties (Land Tax Assessment Act 2002 (WA) s 9(4), (5))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH A `Yes or no`
+`Must I do what the owner must do` MEANS
+    CONSIDER `my role`
+    WHEN `I hold land for someone else, as their agent, a trustee, or an executor or administrator` THEN yes
+    OTHERWISE `does not arise for you`
+
+§§ `For the person who rents or occupies land someone else owns (ss 43, 45)`
+
+-- s 45(1): "A contract, agreement or understanding that has or purports to have or might have the effect of ... in any
+-- way affecting the incidence of an assessment or land tax ... is wholly void and inoperative as against the
+-- Commissioner". (3): "Except as provided in subsection (1), that subsection does not prejudice the validity of the
+-- contract". So a lease term that puts the land tax on the tenant cannot make the tenant liable to the Commissioner,
+-- but still binds the tenant and the owner between themselves. Both answers are fixed within the situation.
+@export Can my lease or agreement make me, instead of the owner, liable to the Commissioner for the land tax (Land Tax Assessment Act 2002 (WA) s 45(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my lease or agreement says I am to pay the land tax, or pay it back to the owner` IS A BOOLEAN @desc Whether your lease or another agreement or understanding with the owner says you are to pay the land tax, or to reimburse the owner for it
+GIVETH A `Yes or no`
+`Can my lease make me liable to the Commissioner for the land tax` MEANS
+    CONSIDER `my role`
+    WHEN `I rent or occupy land that someone else owns` THEN
+        IF NOT `my lease or agreement says I am to pay the land tax, or pay it back to the owner` THEN `does not arise for you`
+        ELSE no
+    OTHERWISE `does not arise for you`
+
+@export Does that term still bind me and the owner between ourselves (Land Tax Assessment Act 2002 (WA) s 45(3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my lease or agreement says I am to pay the land tax, or pay it back to the owner` IS A BOOLEAN @desc Whether your lease or another agreement or understanding with the owner says you are to pay the land tax, or to reimburse the owner for it
+GIVETH A `Yes or no`
+`Does the land tax term bind me and the owner` MEANS
+    CONSIDER `my role`
+    WHEN `I rent or occupy land that someone else owns` THEN
+        IF NOT `my lease or agreement says I am to pay the land tax, or pay it back to the owner` THEN `does not arise for you`
+        ELSE yes
+    OTHERWISE `does not arise for you`
+
+-- s 43(1): the Commissioner or an investigator "may request an occupier of land or a person in possession of land to --
+-- (a) disclose the name of the owner of the land or of the person entitled to receive the rents and profits of the land;
+-- and (b) give any other information in the possession or control of the occupier or person that is required for the
+-- purposes of a land tax Act." (2): "A person who does not comply with a request commits an offence. Penalty: $5 000."
+@export Must I tell the Commissioner who owns the land, and give the other information asked for (Land Tax Assessment Act 2002 (WA) s 43)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the Commissioner or an investigator has asked me for information about the land` IS A BOOLEAN @desc Whether the Commissioner of State Revenue or an investigator has asked you to name the owner of the land, or the person entitled to its rents, or for other information you have for the land tax Acts
+GIVETH A `Yes or no`
+`Must I answer the Commissioner about the land` MEANS
+    CONSIDER `my role`
+    WHEN `I rent or occupy land that someone else owns` THEN
+        IF NOT `the Commissioner or an investigator has asked me for information about the land` THEN `does not arise for you`
+        ELSE yes
+    OTHERWISE `does not arise for you`
+
+@export What is the most I can be fined for not answering the Commissioner's request (Land Tax Assessment Act 2002 (WA) s 43(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the Commissioner or an investigator has asked me for information about the land` IS A BOOLEAN @desc Whether the Commissioner of State Revenue or an investigator has asked you to name the owner of the land, or the person entitled to its rents, or for other information you have for the land tax Acts
+GIVETH AN `Amount`
+`What is the most I may be fined for not answering the Commissioner` MEANS
+    CONSIDER `my role`
+    WHEN `I rent or occupy land that someone else owns` THEN
+        IF NOT `the Commissioner or an investigator has asked me for information about the land` THEN `does not arise for you`
+        ELSE amount 5000
+    OTHERWISE `does not arise for you`

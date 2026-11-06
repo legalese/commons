@@ -130,3 +130,91 @@ Left out, because no owner in the lives meets them:
 - Add ss 22, 23A, 25, 25A, 27A and the subdivision rules if a life meets them.
 - Add the Taxation Administration Act 2003 machinery (objections, interest, penalty tax) as its own encoding.
 - Run the Legalese Studio stages this baseline skipped: Resolve, Refine and Test, an independent test pass, and the human gates.
+
+## Q&A layer (seat and situations as parameters)
+
+Added on 6 November 2026, following the design of the Graffiti Vandalism Act 2016 layer (its D2, D4 and D8). The
+layer is `lta-qa.l4`, which imports `prelude` and `lta-landtax.l4`; its cases are `lta-qa-cases.l4`. Nothing in
+`lta-landtax.l4` or `lta-cases-landtax.l4` was changed. The layer builds the baseline's records (`My position at the
+taxing date`, `My home at the taxing date`, `My new home being built`, `My two homes`, `My home while I am in care`,
+`My home after my death`) from plain answers and calls the baseline's functions. Every exported question takes
+`my role` first (`@desc Which of these describes you`) and answers `does not arise for you` for a role it is not
+about, without reading any other input. No exported question takes a DEONTIC or EVENT input.
+
+**Roles.**
+
+- `I own the land, or the home I live in`: the baseline's seat (26 questions, one for each of the baseline's 26
+  exports; the s 23 question is kept as the owner's planning question).
+- `I hold land for someone else, as their agent, a trustee, or an executor or administrator`: s 9 makes the agent or
+  trustee liable as if owner, within limits, and s 23 gives an executor's estate its exemption (4 questions).
+- `I rent or occupy land that someone else owns`: s 43 makes the occupier answer the Commissioner, and s 45 says a
+  lease cannot shift the tax as against the Commissioner (4 questions).
+
+The Commissioner, the Minister and the Valuer-General are not seats.
+
+**Situation inputs.** Each is a BOOLEAN. FALSE gives `does not arise for you` without reading anything else.
+
+| Name | Role | Questions that take it |
+|---|---|---|
+| `I own the land jointly or in common with others` | owner | s 7(4), s 12(3) |
+| `I am building, or have built, a new home on the land` | owner | s 24, s 24A, and either |
+| `I owned two homes at the taxing date, and am moving from one to the other` | owner | s 27, s 27(3) |
+| `I was in full-time care at the taxing date` | owner | s 26B |
+| `a disabled person lives on the land as their primary residence` | owner | s 26A |
+| `I have been given a land tax assessment notice` | owner, holder | s 6(1), s 9A(2), s 9A fine; the holder's s 9(2) |
+| `the Commissioner has refused or revoked an exemption or concession for my land` | owner | s 20(4), s 20(5) |
+| `an event has happened that may affect my land's exemption or concession` | owner | s 20A(4)(b) |
+| `the owner has died, and I am the executor or administrator of their estate` | holder | s 23 |
+| `I have paid land tax I was required to pay for the owner or beneficiary` | holder | s 9(3) |
+| `my lease or agreement says I am to pay the land tax, or pay it back to the owner` | occupier | s 45(1), s 45(3) |
+| `the Commissioner or an investigator has asked me for information about the land` | occupier | s 43, s 43(2) fine |
+
+Each situation is what the provision ties the rule to: joint ownership (s 7(4), s 12(3)), the construction
+(ss 24, 24A), owning both homes at the taxing date (s 27(1)(a)), care at the taxing date (s 26B(3)(a)(ii)), the
+disabled person's residence (s 26A(2)(a)), the notice (s 6, s 9A, s 9(2) "after receiving an assessment notice"), the
+refusal or revocation (s 20(3)), the event (s 20A), the death (s 23), the payment (s 9(3)), the agreement (s 45) and
+the request (s 43). The calendar, liability, s 21, taxable value and rate questions arise for every owner and take
+none.
+
+**Decisions.**
+
+- **QA1. Where a situation is a field or input of the baseline's rule, it is passed TRUE within the situation.** This
+  covers s 7(4) (`I am a joint owner`), s 27 (`I owned both at the taxing date`), s 26B (`I am in full-time care at
+  the taxing date`) and s 26A (`a disabled person uses it as their primary residence`). Within the situation the
+  answer equals the baseline's with that input TRUE. Outside it the question does not arise, where the baseline
+  answered no.
+- **QA2. s 23 is asked from two seats.** The baseline asks it of the owner planning ahead ("after I die"). That
+  question is kept, with no situation. The executor's own question calls the same rule, takes the death as its
+  situation, and words its inputs from the executor's seat. One case asserts the two agree on the same facts.
+- **QA3. s 9(2) is a helper here.** The agent's or trustee's personal liability is the lesser of the taxes and the
+  owner's or beneficiary's funds held or controlled after the notice. An executor or administrator is taken to be a
+  trustee in whom the legal estate is vested (INFERENCE).
+- **QA4. s 45 is answered both ways.** A lease term that puts the tax on the tenant is "wholly void and inoperative as
+  against the Commissioner" (s 45(1)), but subsection (3) keeps it valid otherwise. So the tenant is not liable to the
+  Commissioner, and is still bound to the owner.
+- **QA5. The lots stay a list.** "How much land tax must I pay on my land" takes the baseline's `LIST OF Lot`, since
+  one assessment is any number of lots. It is the one question with a record input.
+- **QA6. Placeholders.** "Is my lot private residential property" passes fixed ownership fields the baseline's rule
+  never reads.
+
+**Not covered for the new roles.** For the holder: s 9(4) and (5) are given as one fixed answer, not projected onto
+each owner's duty; ss 22 and 23A (executor exemptions for a beneficiary's right to reside or future ownership) are not
+in the baseline and were not added; the separate assessment of trust land (s 11(2), (3)) is not encoded. For the
+occupier: whether a particular lease term "affects the incidence" of land tax is taken as given by the situation; the
+s 43 request's scope ("required for the purposes of a land tax Act") is not tested.
+
+**Checks.** `lta-qa.l4` runs and `l4 check` succeeds, with 0 errors and 0 warnings. `lta-landtax.l4` and
+`lta-cases-landtax.l4` still give 0 errors and 0 warnings, and 70 of 70 assertions. `lta-qa-cases.l4` has **188
+assertions, 188 satisfied**:
+
+- 98 worked by hand (84 owner, 10 holder, 4 occupier). Of these, 26 assert the owner's answer equal to the baseline
+  export's on the same facts, one for each of the owner's 26 questions; one asserts the executor's s 23 answer equal to
+  the owner's.
+- 68 ask each question for each role it is not about, with every other input ASSUMEd.
+- 22 ask each situation question, for its role, with the situation FALSE and the rest ASSUMEd.
+
+The parameter script (`qa_params.py`, in the session scratchpad) lists all 34 exported questions with their
+parameters. It checks that `my role` comes first in each, that each situation input is identical in name, type and
+`@desc` wherever it appears (the notice input in the owner's three questions and the holder's one), and that no input
+is DEONTIC or EVENT. It also generated the 90 role and situation cases. `Who owns it` is read by the baseline through a
+CONSIDER that lists every value, so an ASSUMEd value would fail if read.
