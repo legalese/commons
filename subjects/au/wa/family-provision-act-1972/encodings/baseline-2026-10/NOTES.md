@@ -172,3 +172,13 @@ parameters. It checks that `my role` comes first in each, that each situation in
 The baseline reads `Relationship`, `When I was born`, `Standing` and `Timing` through CONSIDERs with OTHERWISE, so an
 ASSUMEd value of them would not fail if read (graffiti finding 31). They are read only after the role, which the
 script checks.
+
+**The site's form engine (verification of 6 November 2026).** The jl4-service built from l4-ide b98 rejects the
+deployment of `fp-qa.l4` with `fp-claims.l4`, and `fp-claims.l4` alone, with "multiple definitions for the identifier `__GEQ__`" in
+the baseline's `is on or after` (`Day a AT LEAST Day b`). The verifier found the same with `IMPORT daydate` removed from a scratch copy; the stable l4
+1.6.98 is clean (0 errors, and 103 of 103 assertions in `fp-qa-cases.l4`). In b98's libraries `__GEQ__` has overloads in `prelude` (MAYBE NUMBER), `daydate` (DATE),
+`datetime` and `time`, besides the built-in NUMBER comparison, and the baseline's comparison of `Day` numbers is not resolved
+among them there. The cause is in the baseline's rule file (or the service's libraries), not in the Q&A layer, and
+the layer may not change the baseline's rules (layers are added, nothing is replaced). So the Q&A layer cannot be
+served on the site until the baseline is made to compile in the service (for example by comparing the day numbers
+through a NUMBER-typed helper) or the service's overloads are fixed. For Michael.
