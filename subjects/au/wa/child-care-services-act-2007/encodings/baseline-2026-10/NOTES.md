@@ -223,6 +223,15 @@ s 25(3)(b) and (4) are tied to the CEO's "written notice given to the licensee" 
 6. **Answer types** carry `does not arise for you`: `Yes or no`, `Amount`, `Months`, `Days`, and wrappers around the
    baseline's own answer types (`Governing law answer`, `Licence answer`, `Lawfulness answer`, `Fee refund answer`),
    with `Refund order answer` for the provider.
+7. **The five s 29(2) grounds are one input** (fixed 6 November 2026, after verification). The two refund questions took
+   the `Service` record (448 combinations of its yes/no and choice fields) and the five grounds of s 29(2)(a)-(e) as
+   five yes/no inputs: 14 336 combinations, past the 1 024 the site's form tries before it gives up proving that a
+   question does not arise for the other role. So the parent's refund question stayed open for the provider and the
+   provider's for the parent, although the code answers `does not arise for you` from the role alone. The baseline reads
+   the grounds only as "any of (a) to (e)", so the layer now asks one, `a ground for disciplinary action in s 29(2)
+   exists` (its `@desc` lists the five), and passes it to the baseline as ground (a) with the other four FALSE: the same
+   answer for every input, and 896 combinations. Cases check the layer's TRUE against the baseline with each ground
+   alone TRUE.
 
 **Not covered for the provider:** the grant and renewal tests (ss 10-17, 22, 23A-24), licence conditions other than
 s 18, discipline of managerial officers (ss 30C, 30D), review (s 30), licence documents (ss 31-35), compliance notices
@@ -230,8 +239,8 @@ and the CEO's powers (Part 4), the Minister's exemption factors (s 45(4)), and t
 approvals (s 103), which are for an encoding of the National Law.
 
 **Checks.** 16 exported questions: 13 asked by the parent (every baseline export) and 14 by the provider. `l4 check
-ccsa-qa.l4` succeeds; `l4 run` of all four files shows no error and no warning. `ccsa-qa-cases.l4` has 64 assertions,
-64 satisfied: every single-role question for the other role, with every other input ASSUMEd; both situation questions
+ccsa-qa.l4` succeeds; `l4 run` of all four files shows no error and no warning. `ccsa-qa-cases.l4` has 70 assertions,
+70 satisfied: every single-role question for the other role, with every other input ASSUMEd; both situation questions
 with the situation FALSE, for each role; hand-worked answers for each role; and, for each of the baseline's questions, a
 case that the layer's answer equals the baseline export's on the same facts. A script (`check_params.py`, in the
 session's scratch folder) listed every export's parameters and confirmed: `my role` first everywhere; the situation
