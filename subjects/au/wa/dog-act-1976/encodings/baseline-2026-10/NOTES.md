@@ -244,3 +244,87 @@ of work.
   column. Only rows with a clear pair (item 1) are used.
 - Encode the dangerous dog regime (s 33GA-33M) and dog attacks (s 33D) from the
   same seat, if a life needs them.
+
+## Q&A layer (seat and situations as parameters)
+
+Added on 6 November 2026, after the graffiti encoding's design (D2, D4, D8). The baseline's files are unchanged; the layer is added beside them.
+
+- `doga-qa.l4` imports `prelude`, `daydate` and `doga-owner`. It has 19 exported questions.
+- `doga-qa-cases.l4` imports the same and `doga-qa`. It has 101 cases.
+
+### Roles
+
+`my role` is the first input of every question. A question about another role answers `does not arise for you` and reads nothing else.
+
+- **`I own or keep a dog`**: the baseline's seat (Chloe and Mochi, c075). s 3(1) "owner" includes a keeper. It has 16 questions, one for each baseline export. Each calls the baseline's function and wraps the answer:
+  - `yes if` for a BOOLEAN;
+  - `amount` for dollars;
+  - `by` and `it takes effect on` for the two s 33F dates;
+  - `the answer is` for the baseline's eight enumerations.
+- **`A dog has attacked, chased or threatened me or my animal`**: the person on the other side of an incident. It has 3 questions:
+  - can the dog be declared dangerous (s 33E, with s 3(1)'s provocation rule);
+  - is it already a dangerous dog (s 3(1));
+  - was it lawfully in the public place (ss 31, 32).
+
+  Each calls the baseline's function, with the dog input renamed `the dog` and described as the person knows it.
+
+The local government, its registration officer, an authorised person and the State Administrative Tribunal are not seats.
+
+### Situation inputs
+
+All are the owner's, and all are BOOLEAN. Each comes straight after `my role`. FALSE gives `does not arise for you` without reading anything else.
+
+| Input | Questions |
+|---|---|
+| `I have been given notice that my dog is declared dangerous` | the s 33F(2) objection deadline and the s 33F(3) day of effect (2) |
+| `I had my dog sterilised after registering it` | the r 19 refund (1) |
+| `my dog has been microchipped` | the s 23 notice of the microchip details (1) |
+| `I am said to have committed an offence under this Act` | the s 7(1) fine, the r 33 infringement amount, and the ss 21(2), 22(2) fine (3) |
+
+These questions take no situation input, because they arise for every owner:
+
+- is my dog dangerous;
+- must it be registered, and can the shire refuse;
+- the fee and when the registration ends;
+- must it be microchipped;
+- public places and the collar;
+- could it be declared dangerous.
+
+The person attacked has no situation input: every question of that role arises for everyone in it.
+
+### Decisions
+
+- **The baseline's facts about the dog stay in its `Dog` record.** These are whether it is registered, sterilised, microchipped or declared dangerous. None is made a situation that could contradict the record. The microchip situation is taken only by the s 23 question, which does not take the record.
+- **The microchip fine keeps the baseline's $0 for no breach.** Under the offence situation, the baseline's "What is the most I can be fined for not microchipping" gives $0 where there is no breach (a microchipped dog). The layer keeps that answer rather than turning it into `does not arise for you`.
+- **The question "could my dog be declared dangerous" keeps the incident as an ordinary input.** Its `none of these` value answers `no ground in s 33E(1)`. The baseline answers it, and an incident situation would repeat the same fact.
+- **The person attacked has no question on the owner's liability for the attack.** That is s 33D, which the baseline does not encode. The layer adds no rule for it.
+
+### Not covered for the new role
+
+For the person attacked:
+
+- s 33D (liability and penalties for an attack);
+- the duties of a dangerous dog's owner (ss 33GA-33M);
+- damages at common law;
+- the local government's seizure and destruction powers.
+
+### Cases
+
+The 101 cases in `doga-qa-cases.l4` are:
+
+| Kind | Cases |
+|---|---|
+| Each question for the role it is not about, every other input ASSUMEd | 19 |
+| Each situation question with FALSE, later inputs ASSUMEd | 7 |
+| Own role, worked by hand | 38 |
+| Owner's answer equal to the baseline export's answer on the same facts | 31 |
+| Mirror cases: a chase, a pit bull cross and a 3-metre leash, each from both seats | 6 |
+
+All 101 cases are satisfied, as are the baseline's 49. There are 0 errors and 0 warnings. `l4 check doga-qa.l4` succeeds.
+
+A scratch script checked every @export:
+
+- `my role` is first;
+- each situation input is identical wherever it is used;
+- no input is DEONTIC or EVENT;
+- each role branch reads its situation first.
