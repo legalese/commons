@@ -1,0 +1,565 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `cc-offences`
+
+-- The Criminal Code (WA), Criminal Code Act Compilation Act 1913 -- the Q&A layer: the questions people ask, with the
+-- seat and the situation as parameters.
+--
+-- PURPOSE. One module whose exported questions serve every seat from one deployment. Every exported question takes
+-- `my role` first ("Which of these describes you"). A question about another role answers `does not arise for you`
+-- without reading any other input, so the site's question form never asks those inputs and drops the question.
+--
+-- ROLES. The baseline (cc-offences.l4) already has two seats, because its two events put Jake on opposite sides of the
+-- Code: the accused person (k021, stealing at 15) and the victim (k063, the threat and the damage at his door). Here they
+-- are the two roles, and each now asks about all three offences the baseline encodes:
+--   - the person accused of an offence, or who did the act: s 29 and s 7, stealing (ss 22, 370, 371, 378, 426, 426A, 5),
+--     and, new from this seat, the threat (ss 338, 338A, 338B) and the damage (ss 444, 445) they are accused of;
+--   - the person an offence was committed against: the threat, the damage and their aggravation (ss 221, 80I), as in the
+--     baseline, and, new from this seat, whether what was done with their thing was stealing (ss 370, 371).
+-- The police, the prosecutor and the court are never seats: what they must prove or may decide is asked as a fact.
+--
+-- SITUATION (design D8 of the Graffiti Vandalism Act encoding). One situation input, shared by both roles with one name,
+-- type and @desc, so the form asks it once: `what the offence is about` (`What the offence is about`: stealing, a threat,
+-- or damage to property). It is placed straight after `my role` in every question that arises for only some of its
+-- values, and the questions of the other values answer `does not arise for you` without reading anything else:
+--   - the stealing questions arise only for `a thing taken or kept (stealing)`;
+--   - the threat questions only for `a threat`; the damage questions only for `damage to property`;
+--   - the victim's s 221 aggravation question for a threat or damage (s 221 is in Part V, and s 444(1A) borrows it);
+--     not for stealing, whose aggravation is s 378's own.
+-- s 29 (age) and s 7 (principal offenders) arise whatever the offence, so they take no situation input.
+--
+-- The rules are in cc-offences.l4. This module calls them and restates none. Where a new question needs the baseline's
+-- records from the other side (the threat and the damage asked by the accused; stealing asked by the owner), a helper
+-- here builds the record from plain inputs in the asker's words. For the baseline's own questions, where the situation
+-- holds, each answer is the baseline export's own, wrapped in a type that can also say `does not arise for you`. No
+-- exported question takes a DEONTIC or EVENT input.
+--
+-- BASELINE. Not for public use as advice. See NOTES.md, "Q&A layer (seat and situations as parameters)".
+
+§ `The Criminal Code (WA) -- the questions people ask`
+
+§§ `Who is asking, and the shape of the answers`
+
+DECLARE Role IS ONE OF
+    `I am accused of an offence, or did the act`
+    `an offence was committed against me or my property`
+
+-- The situation: what the offence is about. Read only through the four helpers below, which list every value and have
+-- no OTHERWISE (graffiti finding 31).
+DECLARE `What the offence is about` IS ONE OF
+    `a thing taken or kept (stealing)`
+    `a threat`
+    `damage to property`
+
+DECLARE `Yes or no` IS ONE OF
+    yes
+    no
+    `does not arise for you`
+
+DECLARE `Years` IS ONE OF
+    `does not arise for you`
+    `imprisonment for` HAS `the number of years` IS A NUMBER
+
+DECLARE `Amount` IS ONE OF
+    `does not arise for you`
+    amount HAS dollars IS A NUMBER
+
+DECLARE `Age answer` IS ONE OF
+    `does not arise for you`
+    `under s 29 I am` HAS `how s 29 treats me` IS A `Responsibility at my age`
+
+DECLARE `Prison answer` IS ONE OF
+    `does not arise for you`
+    `the most is` HAS `the maximum term` IS A `Maximum imprisonment`
+
+DECLARE `Penalty answer` IS ONE OF
+    `does not arise for you`
+    `the summary penalty is` HAS `the summary penalty` IS A `Summary penalty`
+
+DECLARE `Threat answer` IS ONE OF
+    `does not arise for you`
+    `the threat offence is` HAS `the threat offence` IS A `Threat offence`
+
+DECLARE `Damage answer` IS ONE OF
+    `does not arise for you`
+    `the damage offence is` HAS `the damage offence` IS A `Damage offence`
+
+GIVEN `it holds` IS A BOOLEAN
+GIVETH A `Yes or no`
+`yes if` `it holds` MEANS
+    IF `it holds` THEN yes ELSE no
+
+§§ `The situations a question arises in`
+
+GIVEN `the offence` IS A `What the offence is about`
+GIVETH A BOOLEAN
+DECIDE `the stealing situation does not hold` IF
+    CONSIDER `the offence`
+    WHEN `a thing taken or kept (stealing)` THEN FALSE
+    WHEN `a threat` THEN TRUE
+    WHEN `damage to property` THEN TRUE
+
+GIVEN `the offence` IS A `What the offence is about`
+GIVETH A BOOLEAN
+DECIDE `the threat situation does not hold` IF
+    CONSIDER `the offence`
+    WHEN `a thing taken or kept (stealing)` THEN TRUE
+    WHEN `a threat` THEN FALSE
+    WHEN `damage to property` THEN TRUE
+
+GIVEN `the offence` IS A `What the offence is about`
+GIVETH A BOOLEAN
+DECIDE `the damage situation does not hold` IF
+    CONSIDER `the offence`
+    WHEN `a thing taken or kept (stealing)` THEN TRUE
+    WHEN `a threat` THEN TRUE
+    WHEN `damage to property` THEN FALSE
+
+-- s 221(1) defines "circumstances of aggravation" for Part V (threats among them), and s 444(1A) borrows it for criminal
+-- damage. Stealing's aggravation is s 378's own, so the question does not arise for it.
+GIVEN `the offence` IS A `What the offence is about`
+GIVETH A BOOLEAN
+DECIDE `the aggravation situation does not hold` IF
+    CONSIDER `the offence`
+    WHEN `a thing taken or kept (stealing)` THEN TRUE
+    WHEN `a threat` THEN FALSE
+    WHEN `damage to property` THEN FALSE
+
+§§ `Building the baseline's records from the other side`
+
+-- The baseline's `The circumstances` (s 221, s 80I) is written from the victim. From the accused, in the same field
+-- order: family relationship, child present, restraining order, victim 60 or over, offender a child, racial hostility.
+GIVEN `I am in a family relationship with the victim` IS A BOOLEAN
+      `a child was present` IS A BOOLEAN
+      `it breached a restraining order` IS A BOOLEAN
+      `the victim is 60 or older` IS A BOOLEAN
+      `I was a child at the time` IS A BOOLEAN
+      `I showed or was moved by hostility to the victim's racial group` IS A BOOLEAN
+GIVETH A `The circumstances`
+`the circumstances, as the accused states them` MEANS
+    `The circumstances` `I am in a family relationship with the victim` `a child was present` `it breached a restraining order` `the victim is 60 or older` `I was a child at the time` `I showed or was moved by hostility to the victim's racial group`
+
+-- The baseline's `The threat made to me`, from the person who made it.
+GIVEN `what my words or behaviour threatened` IS A `What it threatened`
+      `the threatened thing would be unlawful` IS A BOOLEAN
+      `I meant to gain a benefit for someone` IS A BOOLEAN
+      `I meant to cause someone a detriment` IS A BOOLEAN
+      `I meant to stop them doing something they are entitled to do` IS A BOOLEAN
+      `I meant to make them do something they are entitled not to do` IS A BOOLEAN
+      `the circumstances` IS A `The circumstances`
+GIVETH A `The threat made to me`
+`the threat, as the accused states it` MEANS
+    `The threat made to me` `what my words or behaviour threatened` `the threatened thing would be unlawful` `I meant to gain a benefit for someone` `I meant to cause someone a detriment` `I meant to stop them doing something they are entitled to do` `I meant to make them do something they are entitled not to do` `the circumstances`
+
+-- The baseline's `The damage done to my property`, from the person who did it.
+GIVEN `the property was destroyed or damaged` IS A BOOLEAN
+      `I did it wilfully` IS A BOOLEAN
+      `I did it unlawfully` IS A BOOLEAN
+      `the owner consented` IS A BOOLEAN
+      `I did it by fire` IS A BOOLEAN
+      `the amount of the injury in dollars` IS A NUMBER
+      `the circumstances` IS A `The circumstances`
+GIVETH A `The damage done to my property`
+`the damage, as the accused states it` MEANS
+    `The damage done to my property` `the property was destroyed or damaged` `I did it wilfully` `I did it unlawfully` `the owner consented` `I did it by fire` `the amount of the injury in dollars` `the circumstances`
+
+-- The baseline's `What I did with the thing` (ss 370, 371), from the owner of the thing. The thing belongs to the owner
+-- asking, so "the property of any person" is TRUE by the question's own terms. The six s 371(2) intents are asked as
+-- one (the first field carries it, the other five are FALSE): any one makes the taking fraudulent, and nothing else
+-- in the baseline tells them apart. s 22 (claim of right) is about responsibility, not whether there was stealing, and
+-- is not read by `Did I steal it`; it is passed as FALSE.
+GIVEN `the thing is inanimate and movable, or has been made movable` IS A BOOLEAN
+      `the thing is an animal s 370 makes capable of being stolen` IS A BOOLEAN
+      `they took it` IS A BOOLEAN
+      `they converted it to their own or someone else's use` IS A BOOLEAN
+      `they meant to keep it from me for good, or had another s 371(2) intent` IS A BOOLEAN
+      `a court finds it fraudulent on other grounds` IS A BOOLEAN
+      `I had lost it and they found it` IS A BOOLEAN
+      `they knew I was the owner` IS A BOOLEAN
+      `they believed on reasonable grounds that I could not be found` IS A BOOLEAN
+      `they moved it or physically dealt with it` IS A BOOLEAN
+GIVETH A `What I did with the thing`
+`what was done with my thing, as its owner states it` MEANS
+    `What I did with the thing` TRUE `the thing is inanimate and movable, or has been made movable` `the thing is an animal s 370 makes capable of being stolen` `they took it` `they converted it to their own or someone else's use` `they meant to keep it from me for good, or had another s 371(2) intent` FALSE FALSE FALSE FALSE FALSE `a court finds it fraudulent on other grounds` `I had lost it and they found it` `they knew I was the owner` `they believed on reasonable grounds that I could not be found` `they moved it or physically dealt with it` FALSE
+
+§§ `For the person accused of an offence, or who did the act`
+
+§§§ `ss 29, 7 -- my age, and my part in it`
+
+@export How does The Criminal Code s 29 treat someone of my age at the time of the act?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my date of birth` IS A DATE @desc Your date of birth
+      `the date of the act` IS A DATE @desc The date of the act or omission you are accused of
+GIVETH AN `Age answer`
+`How does s 29 treat me at the age I was` MEANS
+    CONSIDER `my role`
+    WHEN `I am accused of an offence, or did the act` THEN `under s 29 I am` (`How does s 29 treat me at my age` `my date of birth` `the date of the act`)
+    OTHERWISE `does not arise for you`
+
+@export Can I be criminally responsible for what I did at my age (The Criminal Code s 29)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my date of birth` IS A DATE @desc Your date of birth
+      `the date of the act` IS A DATE @desc The date of the act or omission you are accused of
+      `it is proved I knew I ought not to do it` IS A BOOLEAN @desc Whether the prosecution proves that, at the time, you had capacity to know you ought not to do it (needed only if you were 10 to 13)
+GIVETH A `Yes or no`
+`Can I be criminally responsible at the age I was` MEANS
+    CONSIDER `my role`
+    WHEN `I am accused of an offence, or did the act` THEN `yes if` (`Can I be criminally responsible at my age` `my date of birth` `the date of the act` `it is proved I knew I ought not to do it`)
+    OTHERWISE `does not arise for you`
+
+@export Am I taken to have committed the offence with the others (The Criminal Code s 7)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my part` IS A `My part in it` @desc What you yourself did
+GIVETH A `Yes or no`
+`Am I taken to have committed the offence with the others` MEANS
+    CONSIDER `my role`
+    WHEN `I am accused of an offence, or did the act` THEN `yes if` (`Am I taken to have committed it` `my part`)
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 22, 370, 371, 378, 426, 426A, 5 -- stealing`
+
+@export Did I steal it, as The Criminal Code s 371 defines stealing (with s 370)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the offence is about` IS A `What the offence is about` @desc What the offence is, or is said to be, about: a thing taken or kept (stealing), a threat, or damage to property
+      `what I did` IS A `What I did with the thing` @desc The thing, what you did with it, and what you meant to do
+GIVETH A `Yes or no`
+`Did I steal the thing` MEANS
+    CONSIDER `my role`
+    WHEN `I am accused of an offence, or did the act` THEN
+        IF `the stealing situation does not hold` `what the offence is about`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Did I steal it` `what I did`)
+    OTHERWISE `does not arise for you`
+
+@export Can I be guilty of stealing it, given my age and any honest claim of right (The Criminal Code ss 371, 22, 29)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the offence is about` IS A `What the offence is about` @desc What the offence is, or is said to be, about: a thing taken or kept (stealing), a threat, or damage to property
+      `what I did` IS A `What I did with the thing` @desc The thing, what you did with it, and what you meant to do
+      `my date of birth` IS A DATE @desc Your date of birth
+      `the date of the act` IS A DATE @desc The date of the act or omission you are accused of
+      `it is proved I knew I ought not to do it` IS A BOOLEAN @desc Whether the prosecution proves that, at the time, you had capacity to know you ought not to do it (needed only if you were 10 to 13)
+GIVETH A `Yes or no`
+`Can I be guilty of stealing the thing` MEANS
+    CONSIDER `my role`
+    WHEN `I am accused of an offence, or did the act` THEN
+        IF `the stealing situation does not hold` `what the offence is about`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Can I be guilty of stealing it` `what I did` `my date of birth` `the date of the act` `it is proved I knew I ought not to do it`)
+    OTHERWISE `does not arise for you`
+
+@export What is the longest imprisonment I can be liable to for stealing (The Criminal Code s 378)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the offence is about` IS A `What the offence is about` @desc What the offence is, or is said to be, about: a thing taken or kept (stealing), a threat, or damage to property
+      `how` IS A `How I stole it` @desc What you stole, its value, the circumstances, and your recent stealing convictions
+GIVETH A `Years`
+`What is the longest imprisonment I face for stealing` MEANS
+    CONSIDER `my role`
+    WHEN `I am accused of an offence, or did the act` THEN
+        IF `the stealing situation does not hold` `what the offence is about`
+        THEN `does not arise for you`
+        ELSE `imprisonment for` (`What is the most imprisonment for my stealing in years` `how`)
+    OTHERWISE `does not arise for you`
+
+@export What summary conviction penalty applies to my stealing (The Criminal Code ss 426, 426A)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the offence is about` IS A `What the offence is about` @desc What the offence is, or is said to be, about: a thing taken or kept (stealing), a threat, or damage to property
+      `how` IS A `How I stole it` @desc What you stole, its value, the circumstances, and your recent stealing convictions
+GIVETH A `Penalty answer`
+`What summary conviction penalty applies to the stealing I am accused of` MEANS
+    CONSIDER `my role`
+    WHEN `I am accused of an offence, or did the act` THEN
+        IF `the stealing situation does not hold` `what the offence is about`
+        THEN `does not arise for you`
+        ELSE `the summary penalty is` (`What summary conviction penalty applies to my stealing` `how`)
+    OTHERWISE `does not arise for you`
+
+@export What is the largest fine I face if my stealing is dealt with summarily (The Criminal Code ss 426, 426A; 0 if there is no summary conviction penalty)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the offence is about` IS A `What the offence is about` @desc What the offence is, or is said to be, about: a thing taken or kept (stealing), a threat, or damage to property
+      `how` IS A `How I stole it` @desc What you stole, its value, the circumstances, and your recent stealing convictions
+GIVETH AN `Amount`
+`What is the largest summary fine I face for stealing` MEANS
+    CONSIDER `my role`
+    WHEN `I am accused of an offence, or did the act` THEN
+        IF `the stealing situation does not hold` `what the offence is about`
+        THEN `does not arise for you`
+        ELSE amount (`What is the largest summary fine for my stealing` `how`)
+    OTHERWISE `does not arise for you`
+
+@export Can I be imprisoned if my stealing is dealt with summarily (The Criminal Code ss 426, 426A)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the offence is about` IS A `What the offence is about` @desc What the offence is, or is said to be, about: a thing taken or kept (stealing), a threat, or damage to property
+      `how` IS A `How I stole it` @desc What you stole, its value, the circumstances, and your recent stealing convictions
+GIVETH A `Yes or no`
+`Can I be imprisoned on a summary conviction for stealing` MEANS
+    CONSIDER `my role`
+    WHEN `I am accused of an offence, or did the act` THEN
+        IF `the stealing situation does not hold` `what the offence is about`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Can I be imprisoned on a summary conviction for my stealing` `how`)
+    OTHERWISE `does not arise for you`
+
+@export Will my stealing charge be tried summarily by a magistrate (The Criminal Code s 5)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the offence is about` IS A `What the offence is about` @desc What the offence is, or is said to be, about: a thing taken or kept (stealing), a threat, or damage to property
+      `how` IS A `How I stole it` @desc What you stole, its value, the circumstances, and your recent stealing convictions
+      `the court decided under s 5(3) to send it for trial on indictment` IS A BOOLEAN @desc Whether, on an application before you pleaded, the court decided the charge should be tried on indictment
+GIVETH A `Yes or no`
+`Will my stealing charge be tried by a magistrate` MEANS
+    CONSIDER `my role`
+    WHEN `I am accused of an offence, or did the act` THEN
+        IF `the stealing situation does not hold` `what the offence is about`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Will my stealing charge be tried summarily` `how` `the court decided under s 5(3) to send it for trial on indictment`)
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 338, 338A, 338B, 221, 80I -- a threat I am accused of`
+
+@export What threat offence, if any, have I committed (The Criminal Code ss 338, 338A, 338B)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the offence is about` IS A `What the offence is about` @desc What the offence is, or is said to be, about: a thing taken or kept (stealing), a threat, or damage to property
+      `what my words or behaviour threatened` IS A `What it threatened` @desc What your statement or behaviour threatened, expressly or as it may reasonably be regarded (a judgment for the court)
+      `the threatened thing would be unlawful` IS A BOOLEAN @desc Whether doing what was threatened would be unlawful
+      `I meant to gain a benefit for someone` IS A BOOLEAN @desc Whether you made the threat meaning to gain a benefit, money or otherwise, for anyone
+      `I meant to cause someone a detriment` IS A BOOLEAN @desc Whether you made the threat meaning to cause anyone a detriment
+      `I meant to stop them doing something they are entitled to do` IS A BOOLEAN @desc Whether you meant to prevent or hinder someone doing an act they are lawfully entitled to do
+      `I meant to make them do something they are entitled not to do` IS A BOOLEAN @desc Whether you meant to compel someone to do an act they are lawfully entitled not to do (such as paying a debt that is not theirs)
+GIVETH A `Threat answer`
+`What threat offence have I committed` MEANS
+    CONSIDER `my role`
+    WHEN `I am accused of an offence, or did the act` THEN
+        IF `the threat situation does not hold` `what the offence is about`
+        THEN `does not arise for you`
+        -- The offence turns on the threat and the intent, not on the s 221 circumstances, which are not read: none is
+        -- passed (all FALSE).
+        ELSE `the threat offence is` (`What threat offence was committed against me` (`the threat, as the accused states it` `what my words or behaviour threatened` `the threatened thing would be unlawful` `I meant to gain a benefit for someone` `I meant to cause someone a detriment` `I meant to stop them doing something they are entitled to do` `I meant to make them do something they are entitled not to do` (`The circumstances` FALSE FALSE FALSE FALSE FALSE FALSE)))
+    OTHERWISE `does not arise for you`
+
+@export What is the longest imprisonment I can be liable to for the threat (The Criminal Code ss 338A, 338B, 221, 80I)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the offence is about` IS A `What the offence is about` @desc What the offence is, or is said to be, about: a thing taken or kept (stealing), a threat, or damage to property
+      `what my words or behaviour threatened` IS A `What it threatened` @desc What your statement or behaviour threatened, expressly or as it may reasonably be regarded (a judgment for the court)
+      `the threatened thing would be unlawful` IS A BOOLEAN @desc Whether doing what was threatened would be unlawful
+      `I meant to gain a benefit for someone` IS A BOOLEAN @desc Whether you made the threat meaning to gain a benefit, money or otherwise, for anyone
+      `I meant to cause someone a detriment` IS A BOOLEAN @desc Whether you made the threat meaning to cause anyone a detriment
+      `I meant to stop them doing something they are entitled to do` IS A BOOLEAN @desc Whether you meant to prevent or hinder someone doing an act they are lawfully entitled to do
+      `I meant to make them do something they are entitled not to do` IS A BOOLEAN @desc Whether you meant to compel someone to do an act they are lawfully entitled not to do (such as paying a debt that is not theirs)
+      `I am in a family relationship with the victim` IS A BOOLEAN @desc Whether you are in a family relationship with the victim (Restraining Orders Act 1997)
+      `a child was present` IS A BOOLEAN @desc Whether a child was present when the offence was committed
+      `it breached a restraining order` IS A BOOLEAN @desc Whether the conduct breached a restraining order (Restraining Orders Act 1997)
+      `the victim is 60 or older` IS A BOOLEAN @desc Whether the victim is 60 years old or older
+      `I was a child at the time` IS A BOOLEAN @desc Whether you were a child (under 18) when the offence was committed
+      `I showed or was moved by hostility to the victim's racial group` IS A BOOLEAN @desc Whether you showed hostility to the victim based on their being in a racial group, or were moved by hostility to people of that group (s 80I)
+GIVETH A `Years`
+`What is the longest imprisonment I face for the threat` MEANS
+    CONSIDER `my role`
+    WHEN `I am accused of an offence, or did the act` THEN
+        IF `the threat situation does not hold` `what the offence is about`
+        THEN `does not arise for you`
+        ELSE `imprisonment for` (`What is the most imprisonment for the threat in years` (`the threat, as the accused states it` `what my words or behaviour threatened` `the threatened thing would be unlawful` `I meant to gain a benefit for someone` `I meant to cause someone a detriment` `I meant to stop them doing something they are entitled to do` `I meant to make them do something they are entitled not to do` (`the circumstances, as the accused states them` `I am in a family relationship with the victim` `a child was present` `it breached a restraining order` `the victim is 60 or older` `I was a child at the time` `I showed or was moved by hostility to the victim's racial group`)))
+    OTHERWISE `does not arise for you`
+
+@export What summary conviction penalty applies to the threat I am accused of (The Criminal Code s 338B)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the offence is about` IS A `What the offence is about` @desc What the offence is, or is said to be, about: a thing taken or kept (stealing), a threat, or damage to property
+      `what my words or behaviour threatened` IS A `What it threatened` @desc What your statement or behaviour threatened, expressly or as it may reasonably be regarded (a judgment for the court)
+      `the threatened thing would be unlawful` IS A BOOLEAN @desc Whether doing what was threatened would be unlawful
+      `I meant to gain a benefit for someone` IS A BOOLEAN @desc Whether you made the threat meaning to gain a benefit, money or otherwise, for anyone
+      `I meant to cause someone a detriment` IS A BOOLEAN @desc Whether you made the threat meaning to cause anyone a detriment
+      `I meant to stop them doing something they are entitled to do` IS A BOOLEAN @desc Whether you meant to prevent or hinder someone doing an act they are lawfully entitled to do
+      `I meant to make them do something they are entitled not to do` IS A BOOLEAN @desc Whether you meant to compel someone to do an act they are lawfully entitled not to do (such as paying a debt that is not theirs)
+GIVETH A `Penalty answer`
+`What summary conviction penalty applies to the threat I am accused of` MEANS
+    CONSIDER `my role`
+    WHEN `I am accused of an offence, or did the act` THEN
+        IF `the threat situation does not hold` `what the offence is about`
+        THEN `does not arise for you`
+        -- The s 338B summary penalty turns on the threat alone, not on aggravation: no circumstance is passed.
+        ELSE `the summary penalty is` (`What summary conviction penalty applies to the threat` (`the threat, as the accused states it` `what my words or behaviour threatened` `the threatened thing would be unlawful` `I meant to gain a benefit for someone` `I meant to cause someone a detriment` `I meant to stop them doing something they are entitled to do` `I meant to make them do something they are entitled not to do` (`The circumstances` FALSE FALSE FALSE FALSE FALSE FALSE)))
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 444, 445, 221, 80I -- damage I am accused of`
+
+@export What property damage offence, if any, have I committed (The Criminal Code ss 444, 445)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the offence is about` IS A `What the offence is about` @desc What the offence is, or is said to be, about: a thing taken or kept (stealing), a threat, or damage to property
+      `the property was destroyed or damaged` IS A BOOLEAN @desc Whether the property was destroyed or damaged (whether paint or glue "damages" it is for the court)
+      `I did it wilfully` IS A BOOLEAN @desc Whether you did it wilfully
+      `I did it unlawfully` IS A BOOLEAN @desc Whether you did it unlawfully
+      `the owner consented` IS A BOOLEAN @desc Whether the owner of the property consented
+GIVETH A `Damage answer`
+`What damage offence have I committed` MEANS
+    CONSIDER `my role`
+    WHEN `I am accused of an offence, or did the act` THEN
+        IF `the damage situation does not hold` `what the offence is about`
+        THEN `does not arise for you`
+        -- The offence turns on damage, wilfulness, unlawfulness and consent; fire, the amount and the circumstances
+        -- are not read, and are passed as FALSE, 0 and none.
+        ELSE `the damage offence is` (`What damage offence was committed against me` (`the damage, as the accused states it` `the property was destroyed or damaged` `I did it wilfully` `I did it unlawfully` `the owner consented` FALSE 0 (`The circumstances` FALSE FALSE FALSE FALSE FALSE FALSE)))
+    OTHERWISE `does not arise for you`
+
+@export What is the longest imprisonment I can be liable to for the damage (The Criminal Code ss 444, 445, 221, 80I)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the offence is about` IS A `What the offence is about` @desc What the offence is, or is said to be, about: a thing taken or kept (stealing), a threat, or damage to property
+      `the property was destroyed or damaged` IS A BOOLEAN @desc Whether the property was destroyed or damaged (whether paint or glue "damages" it is for the court)
+      `I did it wilfully` IS A BOOLEAN @desc Whether you did it wilfully
+      `I did it unlawfully` IS A BOOLEAN @desc Whether you did it unlawfully
+      `the owner consented` IS A BOOLEAN @desc Whether the owner of the property consented
+      `I did it by fire` IS A BOOLEAN @desc Whether the property was destroyed or damaged by fire
+      `I am in a family relationship with the victim` IS A BOOLEAN @desc Whether you are in a family relationship with the victim (Restraining Orders Act 1997)
+      `a child was present` IS A BOOLEAN @desc Whether a child was present when the offence was committed
+      `it breached a restraining order` IS A BOOLEAN @desc Whether the conduct breached a restraining order (Restraining Orders Act 1997)
+      `the victim is 60 or older` IS A BOOLEAN @desc Whether the victim is 60 years old or older
+      `I was a child at the time` IS A BOOLEAN @desc Whether you were a child (under 18) when the offence was committed
+      `I showed or was moved by hostility to the victim's racial group` IS A BOOLEAN @desc Whether you showed hostility to the victim based on their being in a racial group, or were moved by hostility to people of that group (s 80I)
+GIVETH A `Prison answer`
+`What is the longest imprisonment I face for the damage` MEANS
+    CONSIDER `my role`
+    WHEN `I am accused of an offence, or did the act` THEN
+        IF `the damage situation does not hold` `what the offence is about`
+        THEN `does not arise for you`
+        -- The amount of the injury is read only by the summary penalty: it is passed as 0.
+        ELSE `the most is` (`What is the most imprisonment for the damage` (`the damage, as the accused states it` `the property was destroyed or damaged` `I did it wilfully` `I did it unlawfully` `the owner consented` `I did it by fire` 0 (`the circumstances, as the accused states them` `I am in a family relationship with the victim` `a child was present` `it breached a restraining order` `the victim is 60 or older` `I was a child at the time` `I showed or was moved by hostility to the victim's racial group`)))
+    OTHERWISE `does not arise for you`
+
+@export What summary conviction penalty applies to the damage I am accused of (The Criminal Code ss 444, 445)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the offence is about` IS A `What the offence is about` @desc What the offence is, or is said to be, about: a thing taken or kept (stealing), a threat, or damage to property
+      `the property was destroyed or damaged` IS A BOOLEAN @desc Whether the property was destroyed or damaged (whether paint or glue "damages" it is for the court)
+      `I did it wilfully` IS A BOOLEAN @desc Whether you did it wilfully
+      `I did it unlawfully` IS A BOOLEAN @desc Whether you did it unlawfully
+      `the owner consented` IS A BOOLEAN @desc Whether the owner of the property consented
+      `I did it by fire` IS A BOOLEAN @desc Whether the property was destroyed or damaged by fire
+      `the amount of the injury in dollars` IS A NUMBER @desc The amount of the injury done, in dollars (the cost of the damage)
+GIVETH A `Penalty answer`
+`What summary conviction penalty applies to the damage I am accused of` MEANS
+    CONSIDER `my role`
+    WHEN `I am accused of an offence, or did the act` THEN
+        IF `the damage situation does not hold` `what the offence is about`
+        THEN `does not arise for you`
+        -- The summary penalty does not turn on aggravation: no circumstance is passed.
+        ELSE `the summary penalty is` (`What summary conviction penalty applies to the damage` (`the damage, as the accused states it` `the property was destroyed or damaged` `I did it wilfully` `I did it unlawfully` `the owner consented` `I did it by fire` `the amount of the injury in dollars` (`The circumstances` FALSE FALSE FALSE FALSE FALSE FALSE)))
+    OTHERWISE `does not arise for you`
+
+§§ `For the person an offence was committed against`
+
+§§§ `ss 370, 371 -- my thing taken`
+
+@export Was what was done with my thing stealing, as The Criminal Code s 371 defines it (with s 370)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the offence is about` IS A `What the offence is about` @desc What the offence is, or is said to be, about: a thing taken or kept (stealing), a threat, or damage to property
+      `the thing is inanimate and movable, or has been made movable` IS A BOOLEAN @desc Whether your thing is an inanimate thing that can be moved, or has been made movable (a fixture once severed)
+      `the thing is an animal s 370 makes capable of being stolen` IS A BOOLEAN @desc Whether your thing is an animal that s 370 makes capable of being stolen (for example a tame animal kept for a purpose)
+      `they took it` IS A BOOLEAN @desc Whether the other person took the thing
+      `they converted it to their own or someone else's use` IS A BOOLEAN @desc Whether the other person converted it to their own use or someone else's (for example kept or sold something lent or found)
+      `they meant to keep it from me for good, or had another s 371(2) intent` IS A BOOLEAN @desc Whether they meant to deprive you of it permanently, or had another of the s 371(2) intents (to use it as a pledge, to part with it on a condition they might not meet, to deal with it so it cannot come back in the same condition, or, for money, to use it as they liked)
+      `a court finds it fraudulent on other grounds` IS A BOOLEAN @desc Whether a court would find the taking or conversion fraudulent on other grounds
+      `I had lost it and they found it` IS A BOOLEAN @desc Whether you had lost the thing and the other person found it
+      `they knew I was the owner` IS A BOOLEAN @desc If so: whether they knew you were the owner when they kept it
+      `they believed on reasonable grounds that I could not be found` IS A BOOLEAN @desc If so: whether they believed, on reasonable grounds, that the owner could not be discovered
+      `they moved it or physically dealt with it` IS A BOOLEAN @desc Whether they actually moved the thing, or dealt with it by some physical act
+GIVETH A `Yes or no`
+`Was what was done with my thing stealing` MEANS
+    CONSIDER `my role`
+    WHEN `an offence was committed against me or my property` THEN
+        IF `the stealing situation does not hold` `what the offence is about`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Did I steal it` (`what was done with my thing, as its owner states it` `the thing is inanimate and movable, or has been made movable` `the thing is an animal s 370 makes capable of being stolen` `they took it` `they converted it to their own or someone else's use` `they meant to keep it from me for good, or had another s 371(2) intent` `a court finds it fraudulent on other grounds` `I had lost it and they found it` `they knew I was the owner` `they believed on reasonable grounds that I could not be found` `they moved it or physically dealt with it`))
+    OTHERWISE `does not arise for you`
+
+§§§ `s 221 -- aggravation`
+
+@export Was the offence against me committed in circumstances of aggravation (The Criminal Code s 221)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the offence is about` IS A `What the offence is about` @desc What the offence is, or is said to be, about: a thing taken or kept (stealing), a threat, or damage to property
+      `c` IS A `The circumstances` @desc Who the offender is to you, who was there, any restraining order, your age
+GIVETH A `Yes or no`
+`Was the offence against me aggravated` MEANS
+    CONSIDER `my role`
+    WHEN `an offence was committed against me or my property` THEN
+        IF `the aggravation situation does not hold` `what the offence is about`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Was it aggravated` `c`)
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 338, 338A, 338B -- a threat made to me`
+
+@export What threat offence was committed against me (The Criminal Code ss 338, 338A, 338B)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the offence is about` IS A `What the offence is about` @desc What the offence is, or is said to be, about: a thing taken or kept (stealing), a threat, or damage to property
+      `the threat` IS A `The threat made to me` @desc What was said or done, what it threatened, what it was meant to achieve, and the circumstances
+GIVETH A `Threat answer`
+`What threat offence was committed against me, if any` MEANS
+    CONSIDER `my role`
+    WHEN `an offence was committed against me or my property` THEN
+        IF `the threat situation does not hold` `what the offence is about`
+        THEN `does not arise for you`
+        ELSE `the threat offence is` (`What threat offence was committed against me` `the threat`)
+    OTHERWISE `does not arise for you`
+
+@export What is the longest imprisonment the person who threatened me is liable to (The Criminal Code ss 338A, 338B, 221, 80I)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the offence is about` IS A `What the offence is about` @desc What the offence is, or is said to be, about: a thing taken or kept (stealing), a threat, or damage to property
+      `the threat` IS A `The threat made to me` @desc What was said or done, what it threatened, what it was meant to achieve, and the circumstances
+GIVETH A `Years`
+`What is the longest imprisonment the person who threatened me faces` MEANS
+    CONSIDER `my role`
+    WHEN `an offence was committed against me or my property` THEN
+        IF `the threat situation does not hold` `what the offence is about`
+        THEN `does not arise for you`
+        ELSE `imprisonment for` (`What is the most imprisonment for the threat in years` `the threat`)
+    OTHERWISE `does not arise for you`
+
+@export What summary conviction penalty applies to the threat made to me (The Criminal Code s 338B)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the offence is about` IS A `What the offence is about` @desc What the offence is, or is said to be, about: a thing taken or kept (stealing), a threat, or damage to property
+      `the threat` IS A `The threat made to me` @desc What was said or done, what it threatened, what it was meant to achieve, and the circumstances
+GIVETH A `Penalty answer`
+`What summary conviction penalty applies to the threat made to me` MEANS
+    CONSIDER `my role`
+    WHEN `an offence was committed against me or my property` THEN
+        IF `the threat situation does not hold` `what the offence is about`
+        THEN `does not arise for you`
+        ELSE `the summary penalty is` (`What summary conviction penalty applies to the threat` `the threat`)
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 444, 445 -- damage to my property`
+
+@export What property damage offence was committed against me (The Criminal Code ss 444, 445)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the offence is about` IS A `What the offence is about` @desc What the offence is, or is said to be, about: a thing taken or kept (stealing), a threat, or damage to property
+      `the damage` IS A `The damage done to my property` @desc What was damaged, how, whether wilfully, the amount of the injury, and the circumstances
+GIVETH A `Damage answer`
+`What damage offence was committed against me, if any` MEANS
+    CONSIDER `my role`
+    WHEN `an offence was committed against me or my property` THEN
+        IF `the damage situation does not hold` `what the offence is about`
+        THEN `does not arise for you`
+        ELSE `the damage offence is` (`What damage offence was committed against me` `the damage`)
+    OTHERWISE `does not arise for you`
+
+@export What is the longest imprisonment the person who damaged my property is liable to (The Criminal Code ss 444, 445)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the offence is about` IS A `What the offence is about` @desc What the offence is, or is said to be, about: a thing taken or kept (stealing), a threat, or damage to property
+      `the damage` IS A `The damage done to my property` @desc What was damaged, how, whether wilfully, the amount of the injury, and the circumstances
+GIVETH A `Prison answer`
+`What is the longest imprisonment the person who damaged my property faces` MEANS
+    CONSIDER `my role`
+    WHEN `an offence was committed against me or my property` THEN
+        IF `the damage situation does not hold` `what the offence is about`
+        THEN `does not arise for you`
+        ELSE `the most is` (`What is the most imprisonment for the damage` `the damage`)
+    OTHERWISE `does not arise for you`
+
+@export What summary conviction penalty applies to the damage done to my property (The Criminal Code ss 444, 445)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the offence is about` IS A `What the offence is about` @desc What the offence is, or is said to be, about: a thing taken or kept (stealing), a threat, or damage to property
+      `the damage` IS A `The damage done to my property` @desc What was damaged, how, whether wilfully, the amount of the injury, and the circumstances
+GIVETH A `Penalty answer`
+`What summary conviction penalty applies to the damage done to my property` MEANS
+    CONSIDER `my role`
+    WHEN `an offence was committed against me or my property` THEN
+        IF `the damage situation does not hold` `what the offence is about`
+        THEN `does not arise for you`
+        ELSE `the summary penalty is` (`What summary conviction penalty applies to the damage` `the damage`)
+    OTHERWISE `does not arise for you`

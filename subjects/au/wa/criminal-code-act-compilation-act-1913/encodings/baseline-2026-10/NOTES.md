@@ -101,3 +101,87 @@ Not encoded, in a very large Code:
 - The Young Offenders Act 1994 encoding should be joined to this one: the Code says what the offence carries; that Act says what a court may do to a 15-year-old.
 - The scenario should say what the paint at k063 said and who was home; the threat answer turns on it.
 - No case law was searched, including on the meaning of "damage" and of "fraudulently". Nothing here has been checked by a lawyer.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026 (batch qa13), on the pattern of the Graffiti Vandalism Act 2016 encoding's `gva-seat.l4` (its
+design D2, D4 and D8). The layer is `cc-qa.l4`, with cases in `cc-qa-cases.l4`. It imports `prelude`, `daydate` and
+`cc-offences`; `cc-offences.l4` and `cc-cases-offences.l4` are unchanged. Every exported question takes `my role`
+first (`@desc Which of these describes you`) and answers `does not arise for you`, reading nothing else, for the role
+it is not about. Every answer type carries that value: `Yes or no`, `Years`, `Amount`, and wrappers round the
+baseline's `Responsibility at my age`, `Maximum imprisonment`, `Summary penalty`, `Threat offence` and `Damage
+offence`. No exported question takes a DEONTIC or EVENT input.
+
+### Roles
+
+The baseline already has two seats, the accused (k021) and the victim (k063). They are the two roles here, and each now
+asks about all three offences the baseline encodes.
+
+- `I am accused of an offence, or did the act`: 16 questions. Ten are the baseline's: s 29 twice, s 7, and the seven
+  stealing questions. Six are new from this seat, the threat and the damage the person is accused of: what offence,
+  the longest imprisonment and the summary penalty, for each (ss 338, 338A, 338B; ss 444, 445; with ss 221 and 80I).
+- `an offence was committed against me or my property`: 8 questions. Seven are the baseline's: s 221, the three
+  threat questions and the three damage questions. One is new: whether what was done with my thing was stealing
+  (ss 370, 371).
+- Not seats: the police, the prosecutor and the court. What they must prove or may decide (capacity under s 29, "may
+  reasonably be regarded", "damages", s 5(3)) is asked as a fact, as in the baseline.
+
+### Situation input
+
+One input, shared by both roles with one name, type and `@desc`: `what the offence is about` (`What the offence is
+about`), placed second. Its values are `a thing taken or kept (stealing)`, `a threat` and `damage to property`.
+
+| Questions | Arise for | Do not arise for |
+|---|---|---|
+| the accused's 7 stealing questions; the victim's "Was what was done with my thing stealing" | stealing | `a threat`, `damage to property` |
+| the accused's 3 threat questions; the victim's 3 threat questions | a threat | stealing, `damage to property` |
+| the accused's 3 damage questions; the victim's 3 damage questions | damage | stealing, `a threat` |
+| the victim's s 221 aggravation question | a threat, damage | stealing |
+
+The accused's s 29 and s 7 questions arise whatever the offence, so they take no situation input. The situation is
+read only through four helpers in the layer, which list every value with no OTHERWISE.
+
+### Decisions
+
+- **Q1. The situation is the offence, not a yes/no per offence.** One person meets one charge at a time, and the
+  baseline's questions divide cleanly by the offence they are about, so one shared enumeration settles every question
+  at once.
+- **Q2. s 221 does not arise for stealing.** It defines aggravation "in this Part" (Part V, which has the threats), and
+  s 444(1A) borrows it. Stealing's special cases are s 378's own, which the accused's s 378 question already reads.
+- **Q3. New questions from the other side use the baseline's records, built from plain inputs.** The layer has helpers
+  that build `The circumstances`, `The threat made to me` and `The damage done to my property` from the accused's
+  inputs, and `What I did with the thing` from the owner's. A question that does not read part of a record passes a
+  neutral value for it, with a comment: what offence the accused committed, and the summary penalty, pass no
+  aggravation. The damage maximum passes $0 of injury, which only the summary penalty reads.
+- **Q4. The owner's stealing question asks the six s 371(2) intents as one fact,** carried in the first intent field.
+  Any one of them makes the taking fraudulent, and nothing in `Did I steal it` tells them apart. "The property of any
+  person" is TRUE by the question's own terms. s 22 is not read by `Did I steal it`, so it is passed as FALSE.
+- **Q5. Shared inputs have one text.** The accused's threat and damage questions share the six circumstance inputs
+  (`I am in a family relationship with the victim` and the rest), so the form asks them once. `the date of the act`
+  has one text in both s 29 questions and the stealing guilt question.
+
+### Not covered for the new questions
+
+- The victim of a stealing: the thief's maximum imprisonment and summary penalty (ss 378, 426, 426A). They turn on the
+  baseline's 18-field `How I stole it`, written from the thief's side. Asking it from the owner's side would need its
+  own helper, and was left out.
+- The accused of a threat or damage: s 5 (summary or indictment) for those offences, s 338C, s 338E, s 444A, s 445A.
+- Sentencing and the Young Offenders Act 1994, as in the baseline.
+
+### Checks
+
+- `l4 run` on `cc-qa.l4` and `cc-qa-cases.l4`, and on the baseline's `cc-offences.l4` and `cc-cases-offences.l4`
+  (unchanged): 0 errors and 0 warnings. `l4 check cc-qa.l4` succeeds.
+- `cc-qa-cases.l4`, generated by the scratchpad script `qa/b13/gen_cc_cases.py` with the expected values written by
+  hand in it: 156 assertions, 156 satisfied. Of these, 24 ask each question for the role it is not about, with every
+  other input ASSUMEd. Another 41 ask each situation question with each value under which it does not arise, every
+  later input ASSUMEd. The other 91 are in the role and situation that hold, and 24 of them (one per question) compare
+  the answer with the baseline function's own answer on the same facts. For the six new accused questions and the
+  owner's stealing question, that comparison is made on the baseline's fixture for the other side: the painted demand,
+  the paint and glue, and Jake's goods. So the two seats give the same answer on the same facts. With the baseline's
+  67, the encoding has 223 assertions.
+- A parameter script (scratchpad `qa/b13/check_params.py`) listed the 24 exports. It found `my role` first in each, and
+  the situation input second and identical in name, type and `@desc` in all 21 questions that take it. Each role
+  branch reads it first. It found no DEONTIC or EVENT input, and no shared input with two types or texts.
+- Limit (graffiti finding 31): the baseline reads `My part in it` and `What it threatened` through OTHERWISE, so an
+  ASSUMEd value of those types that is read is not caught.
