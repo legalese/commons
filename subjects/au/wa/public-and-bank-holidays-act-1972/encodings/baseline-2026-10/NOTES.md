@@ -151,3 +151,69 @@ days "declared or prescribed by or under a law of a State".
 - Encode s 7(1)(b) half-holidays and the district limits, if a life needs them.
 - Link Chloe's c042 to the Fair Work Act baseline's s 115, so that its State-law
   input is answered by this encoding.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026 as a layer: `pbha-qa.l4` (IMPORTs `prelude` and `pbha-holidays`; the daydate import stays in the
+baseline module, and the layer uses none of its functions) and `pbha-qa-cases.l4` (IMPORTs `prelude`, `daydate` for the
+dates, `pbha-holidays` and `pbha-qa`). The baseline's files are unchanged. The design is the Graffiti Vandalism Act 2016
+encoding's (its NOTES.md D2, D4, D8 and D8.1-D8.15): every exported question takes `my role` IS A Role first (`@desc Which of
+these describes you`), and answers `does not arise for you` for a role it is not about without reading any other input; a
+question that arises only in a situation takes that situation's fact second and answers `does not arise for you` when it
+does not hold, reading nothing else. No exported question takes a DEONTIC or EVENT input. One deployment serves every role.
+
+### Roles, and why
+
+| Role | Why | Questions |
+|---|---|---|
+| `I work in Western Australia` | the baseline's seat, the employee | 9 |
+| `I employ people in Western Australia` | new: which days are public holidays at the workplace, and how a WA industrial instrument stands against the Act (ss 3, 9) | 8 |
+| `I run a bank, or a bank branch, in Western Australia` | new: s 10 binds "all banks in the State" to close their premises to the public on bank holidays, the Act's one duty | 6 |
+
+10 questions in all; a question shared by roles is counted under each. The five calendar questions (on what day a holiday
+falls, the year's list and count, the holidays on a day, whether a day is a bank holiday) are asked by all three roles; the
+public-holiday-at-the-workplace question and the two s 3 questions by the employee and the employer; each s 10 question by
+one role. The Governor is not a seat: a proclamation under s 7 or s 8 is a fact stated from the Gazette.
+
+### Situation inputs
+
+| Name | Type | Gives `does not arise for you` | Questions |
+|---|---|---|---|
+| `a WA industrial instrument covers the work` | BOOLEAN | FALSE | `Does the industrial instrument or the Act prevail on public holidays`, `Does the instrument's public holiday provision apply to Easter Sunday` (employee, employer): s 3 speaks only of "an industrial instrument", an award, order or agreement under the Industrial Relations Act 1979 (WA) or an employer-employee agreement |
+| `I work in a bank` | BOOLEAN | FALSE | `Must the bank where I work close to the public on this day` (employee): s 10 binds banks |
+
+### Decisions
+
+- **The s 3 situation replaces the baseline's first answer.** The baseline's `Does my award or this Act prevail` answers
+  `not decided by this Act: s 3 reaches only instruments under the WA Industrial Relations Act 1979` when the instrument is not
+  a WA one, and `Does my award's public holiday provision apply to Easter Sunday` answers no. Under D8 the two questions arise
+  only where a WA instrument covers the work, so for FALSE they now do not arise, and the baseline is called with TRUE. Where
+  the situation holds, every answer is the baseline's. The other reading (keep the baseline's first answer, as graffiti D8.1
+  kept a no) was weighed: the form then keeps asking three more facts about an instrument the Act does not touch.
+- **Input names are neutral between the employee and the employer** ("at the workplace", "the instrument is inconsistent
+  ..."), where the baseline wrote them from the employee ("where I work", "my instrument"). The facts are the same whoever
+  answers.
+- **The bank's closing question has no situation.** It arises for every bank. Like the baseline's, it counts only Schedule
+  days: a bank holiday appointed by proclamation under s 7 or s 8 is not asked here (baseline: "Proclamations under ss 7, 8
+  are left out of these two questions").
+- **No question was added for the employer** beyond the baseline's rules: the Act puts no duty on employers; whether an
+  employee works or is paid on a public holiday is the Fair Work Act 2009 ss 114-116, the Minimum Conditions of Employment
+  Act 1993 ss 30-31 or the instrument, not this Act.
+
+### Not covered for the new roles
+
+For the employer: half-holidays (s 7(1)(b)); the district limits of ss 7 and 8 beyond "at the workplace"; pay and work on
+the day (other Acts). For the bank: bank holidays by proclamation (ss 7, 8), and s 10's reach beyond "premises to the
+public" (the Act says no more).
+
+### Cases
+
+`pbha-qa-cases.l4`: 65 assertions, all satisfied. 53 written by hand for the roles each question is about (16 of them
+assert that the employee's answer equals the baseline export's on the same facts, wrapped in the answer type; the rest give
+hand-worked values, most from the baseline's own cases); 7 for the roles a question is not about, every other input ASSUMEd;
+5 for the situation values that do not hold, the inputs after them ASSUMEd. The last two groups were generated by a scratch
+script from the parameter list and the table above. Checked on stable l4 1.6.98: 0 errors and 0 warnings in all four files,
+44 + 65 assertions satisfied, `l4 check pbha-qa.l4` succeeds, and a parameter script confirms `my role` first everywhere,
+each shared input identical in name, type and @desc, each situation second and read first in each role branch, and no
+DEONTIC or EVENT input. A negative control on a scratch copy (a wrong expected value; the bank question reading the day for
+another role; the s 3(2) question reading a later input with its situation) failed 4 cases, as it should.
