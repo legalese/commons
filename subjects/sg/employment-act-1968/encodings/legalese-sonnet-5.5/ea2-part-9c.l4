@@ -1,0 +1,480 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `ea-core`
+
+-- Employment Act 1968 (Singapore), 2020 Revised Edition, informal consolidation
+-- "version in force from 5/12/2025" -- LAYER 1, PART 9A, SECTION 87A (childcare leave).  Part ea2.
+-- Source text: inputs/EmA1968.txt (a converter rendering, not the official text).
+--
+-- Notes for the reader.
+--   * "below 7 years of age" is read as: the day is before the child's 7th birthday, counted with
+--     daydate `add months` (84 months).  A child born on 29 February has the 7th birthday counted as 28 February.
+--   * A plain BOOLEAN or NUMBER answer is a date or count comparison and carries no legal "no".
+--   * The cap of 14 days in subsection (2)(a) and a partly-taken entitlement under (4) are read in
+--     NOTES.md fork F9.
+
+§ `Part 9A -- who has childcare leave, and for which period (s 87A(1), (2), (8))`
+
+-- s 87A(8) "child": "includes (a) any adopted child and stepchild of the employee; and (b) any child to
+-- whom the employee is providing care, protection and supervision as a foster parent ...".  "Includes"
+-- opens the list: a child of the employee by birth is a child in the ordinary sense, and the definition
+-- does not say what else is not.
+-- src:3354 | “child”, in relation to an employee, includes —
+-- src:3356 | (a) any adopted child and stepchild of the employee; and
+-- src:3358 | (b) any child to whom the employee is providing care,
+-- src:3359 | protection and supervision as a foster parent under a
+-- src:3360 | voluntary care agreement as mentioned in section 15
+-- src:3361 | of the Children and Young Persons Act 1993, or an
+-- src:3362 | order under section 54(1)(b) or 56(2), or section 57
+-- src:3363 | (read with section 56) of that Act;
+@ref s 87A(8) "child" (src:3354-3363)
+GIVEN `the person is the employee's own child by birth` IS A BOOLEAN
+      `the person is an adopted child or stepchild of the employee` IS A BOOLEAN
+      `the person is a child the employee is fostering as the paragraph describes` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 87A(8) "child" the person is a child of the employee` MEANS
+    IF `the person is an adopted child or stepchild of the employee` OR `the person is a child the employee is fostering as the paragraph describes`
+    THEN JUST TRUE
+    ELSE
+        IF `the person is the employee's own child by birth`
+        THEN JUST TRUE
+        -- NOTHING-kind (list not closed): the definition "includes" adopted children, stepchildren and foster children and does not say that no other person is a child
+        ELSE NOTHING
+
+-- s 87A(8) "relevant period": "(a) any period of 12 months as is agreed to by the employee and his or
+-- her employer; or (b) where there is no such agreement, a calendar year."  The first day of the agreed
+-- 12 months is given when there is an agreement; without it the period is the calendar year.
+-- src:3368 | “relevant period”, in relation to an employee, means —
+-- src:3370 | (a) any period of 12 months as is agreed to by the
+-- src:3371 | employee and his or her employer; or
+-- src:3373 | (b) where there is no such agreement, a calendar year.
+@ref s 87A(8) "relevant period" (src:3368-3373)
+GIVEN `the first day of the 12 months the employee and the employer agreed` IS A MAYBE DATE
+      `the calendar year` IS A NUMBER
+GIVETH A `Period of days`
+`s 87A(8) "relevant period" the period` MEANS
+    CONSIDER `the first day of the 12 months the employee and the employer agreed`
+    WHEN JUST first THEN
+        `Period of days` WITH
+            `first day` IS first
+            `last day` IS `add months` first 12 MINUS 1
+    WHEN NOTHING THEN
+        `Period of days` WITH
+            `first day` IS Date 1 1 `the calendar year`
+            `last day` IS Date 31 12 `the calendar year`
+
+-- s 87A(1)(b): a child below 7 years of age at any time during the relevant period: born on or before
+-- the last day of the period, and the 7th birthday falls after the first day of the period.
+-- src:3242 | (b) has any child below 7 years of age at any time during any
+-- src:3243 | relevant period,
+-- src:3245 | the employee is entitled to childcare leave of 2 days for that relevant
+-- src:3246 | period.
+@ref s 87A(1)(b) (src:3242-3246)
+GIVEN `the day the child was born` IS A DATE
+      period IS A `Period of days`
+GIVETH A BOOLEAN
+`s 87A(1)(b) helper: the child is below 7 years of age at some time during the period` MEANS
+    `the day the child was born` AT MOST period's `last day`
+    AND period's `first day` LESS THAN `add months` `the day the child was born` 84
+
+GIVEN `the days the children were born` IS A LIST OF DATE
+      period IS A `Period of days`
+GIVETH A BOOLEAN
+`s 87A(1)(b) helper: some child is below 7 years of age at some time during the period` MEANS
+    CONSIDER `the days the children were born`
+    WHEN EMPTY THEN FALSE
+    WHEN d FOLLOWED BY rest THEN
+        `s 87A(1)(b) helper: the child is below 7 years of age at some time during the period` d period
+        OR `s 87A(1)(b) helper: some child is below 7 years of age at some time during the period` rest period
+
+-- s 87A(1): "where any employee (a) has served an employer for a period of not less than 3 months; and
+-- (b) has any child below 7 years of age at any time during any relevant period, the employee is
+-- entitled to childcare leave of 2 days for that relevant period."  The Act does not say as of what day the
+-- 3 months are counted (fork F9a); this takes completed months of service as of the day asked.
+-- src:3237 | 87A.—(1) Subject to subsection (2), where any employee —
+-- src:3239 | (a) has served an employer for a period of not less than
+-- src:3240 | 3 months; and
+-- src:3242 | (b) has any child below 7 years of age at any time during any
+-- src:3243 | relevant period,
+-- src:3245 | the employee is entitled to childcare leave of 2 days for that relevant
+-- src:3246 | period.
+@ref s 87A(1) (src:3237-3246)
+GIVEN `the completed months the employee has served the employer` IS A NUMBER
+      `the days the employee's children were born` IS A LIST OF DATE
+      period IS A `Period of days`
+GIVETH A MAYBE NUMBER
+`s 87A(1) the days of childcare leave the employee is entitled to for the relevant period` MEANS
+    IF `the completed months the employee has served the employer` AT LEAST 3
+       AND `s 87A(1)(b) helper: some child is below 7 years of age at some time during the period` `the days the employee's children were born` period
+    THEN JUST 2
+    -- FALSE-kind (the text says no in its own words): "where any employee"; the amount is 0 days where the "where" fails (JUST 0 stands in for "no" on an amount; fork F19), and the twin below carries the yes/no
+    ELSE JUST 0
+
+-- The twin that can say no: the text opens "where any employee (a) has served an employer for a period
+-- of not less than 3 months; and (b) has any child below 7 years of age at any time during any relevant
+-- period", so an employee with less service, or with no such child, is outside it (ruling (b) of
+-- 2026-11-05, "where" like "if"; fork F18).
+-- src:3237 | 87A.—(1) Subject to subsection (2), where any employee —
+-- src:3239 | (a) has served an employer for a period of not less than
+-- src:3240 | 3 months; and
+-- src:3242 | (b) has any child below 7 years of age at any time during any
+-- src:3243 | relevant period,
+-- src:3245 | the employee is entitled to childcare leave of 2 days for that relevant
+-- src:3246 | period.
+@ref s 87A(1) (src:3237-3246)
+GIVEN `the completed months the employee has served the employer` IS A NUMBER
+      `the days the employee's children were born` IS A LIST OF DATE
+      period IS A `Period of days`
+GIVETH A MAYBE BOOLEAN
+`s 87A(1) the entitlement to childcare leave for the relevant period arises` MEANS
+    IF `the completed months the employee has served the employer` AT LEAST 3
+       AND `s 87A(1)(b) helper: some child is below 7 years of age at some time during the period` `the days the employee's children were born` period
+    THEN JUST TRUE
+    -- FALSE-kind (the text says no in its own words): "where any employee"
+    ELSE JUST FALSE
+
+-- s 87A(2)(a): "An employee ... is not entitled to more than 14 days of childcare leave in respect of any child".
+-- src:3248 | (2) An employee —
+-- src:3250 | (a) is not entitled to more than 14 days of childcare leave in
+-- src:3251 | respect of any child; and
+@ref s 87A(2)(a) (src:3248-3251)
+GIVEN `the days of childcare leave already granted in respect of the child` IS A NUMBER
+      `the days of childcare leave now claimed in respect of the child` IS A NUMBER
+GIVETH A MAYBE BOOLEAN
+`s 87A(2)(a) the employee is entitled to the days now claimed in respect of the child` MEANS
+    IF `the days of childcare leave already granted in respect of the child` PLUS `the days of childcare leave now claimed in respect of the child` GREATER THAN 14
+    -- FALSE-kind (the text says no in its own words): "is not entitled to more than 14 days of childcare leave in respect of any child"
+    THEN JUST FALSE
+    -- NOTHING-kind (silent): the paragraph only caps the entitlement; it does not grant any
+    ELSE NOTHING
+
+-- s 87A(2)(a) as a count: the days still within the 14-day limit for the child.
+@ref s 87A(2)(a) (src:3248-3251)
+GIVEN `the days of childcare leave already granted in respect of the child` IS A NUMBER
+GIVETH A NUMBER
+`s 87A(2)(a) the days that remain within the 14-day limit for the child` MEANS
+    max 0 (14 MINUS `the days of childcare leave already granted in respect of the child`)
+
+-- s 87A(2)(b)(i): the first entitlement of 2 days for a relevant period is taken in that relevant
+-- period or the next succeeding one.  Relevant periods are numbered 1, 2, 3 ... in order.
+-- src:3253 | (b) must —
+-- src:3255 | (i) take his or her first entitlement of childcare leave of
+-- src:3256 | 2 days for a relevant period in that relevant period or
+-- src:3257 | the next succeeding relevant period; and
+-- src:3259 | (ii) then take his or her next and each subsequent
+-- src:3260 | entitlement of childcare leave of 2 days for a
+@ref s 87A(2)(b)(i) (src:3253-3260)
+GIVEN `the number of the relevant period for which the first entitlement arose` IS A NUMBER
+      `the number of the relevant period in which the first entitlement is taken` IS A NUMBER
+GIVETH A BOOLEAN
+`s 87A(2)(b)(i) the first entitlement is taken in time` MEANS
+    `the number of the relevant period in which the first entitlement is taken` EQUALS `the number of the relevant period for which the first entitlement arose`
+    OR `the number of the relevant period in which the first entitlement is taken` EQUALS `the number of the relevant period for which the first entitlement arose` PLUS 1
+
+-- s 87A(2)(b)(ii): the next and each subsequent entitlement is taken "in the next succeeding relevant
+-- period and in each subsequent succeeding relevant period, respectively": the second in the period
+-- after the one in which the first was taken, the third in the one after that, and so on (fork F9b).
+-- src:3266 | period and in each subsequent succeeding relevant
+-- src:3267 | period, respectively.
+@ref s 87A(2)(b)(ii) (src:3266-3267)
+GIVEN `the number of the relevant period in which the first entitlement was taken` IS A NUMBER
+      `which entitlement it is, counting the first as 1` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`s 87A(2)(b)(ii) the number of the relevant period in which the entitlement must be taken` MEANS
+    IF `which entitlement it is, counting the first as 1` AT LEAST 2
+    THEN JUST (`the number of the relevant period in which the first entitlement was taken` PLUS (`which entitlement it is, counting the first as 1` MINUS 1))
+    -- NOTHING-kind (limited by its own wording): paragraph (ii) is about "the next and each subsequent entitlement"; the first is under paragraph (i)
+    ELSE NOTHING
+
+-- s 87A(3): "The childcare leave is in addition to the rest days, holidays, annual leave and sick leave
+-- to which an employee is entitled under sections 36, 88, 88A and 89, respectively."
+-- src:3269 | (3) The childcare leave is in addition to the rest days, holidays,
+-- src:3270 | annual leave and sick leave to which an employee is entitled under
+-- src:3271 | sections 36, 88, 88A and 89, respectively.
+@ref s 87A(3) (src:3269-3271)
+GIVEN `the days of childcare leave` IS A NUMBER
+      `the rest days under section 36` IS A NUMBER
+      `the holidays under section 88` IS A NUMBER
+      `the days of annual leave under section 88A` IS A NUMBER
+      `the days of sick leave under section 89` IS A NUMBER
+GIVETH A NUMBER
+`s 87A(3) the total days off the employee is entitled to` MEANS
+    `the days of childcare leave` PLUS `the rest days under section 36` PLUS `the holidays under section 88` PLUS `the days of annual leave under section 88A` PLUS `the days of sick leave under section 89`
+
+§ `Part 9A -- when the leave must be taken, what is paid, and when it ends (s 87A(4) to (6))`
+
+-- s 87A(4): the employer must grant, and the employee must take, the 2 days not later than the last
+-- day of the relevant period; "any employee who fails to take that leave by that day (a) thereupon
+-- ceases to be entitled to that leave; and (b) is not entitled to any payment in lieu thereof."
+-- The days of the 2 that remain untaken at the end of the period are the days that go (fork F9c).
+-- src:3275 | (4) An employer must grant, and an employee who is entitled to
+-- src:3276 | childcare leave must take, the entitlement of childcare leave of 2 days
+-- src:3277 | for a relevant period not later than the last day of that relevant period,
+-- src:3278 | and any employee who fails to take that leave by that day —
+-- src:3280 | (a) thereupon ceases to be entitled to that leave; and
+-- src:3282 | (b) is not entitled to any payment in lieu thereof.
+@ref s 87A(4) (src:3275-3282)
+GIVEN `the days of the leave taken by the last day of the relevant period` IS A NUMBER
+      `the entitlement for the relevant period in days` IS A NUMBER
+GIVETH A NUMBER
+`s 87A(4) the days of the entitlement that are lost` MEANS
+    max 0 (`the entitlement for the relevant period in days` MINUS `the days of the leave taken by the last day of the relevant period`)
+
+@ref s 87A(4)(a) (src:3275-3280)
+GIVEN `the days of the leave taken by the last day of the relevant period` IS A NUMBER
+      `the entitlement for the relevant period in days` IS A NUMBER
+GIVETH A MAYBE BOOLEAN
+`s 87A(4)(a) the employee is still entitled to the days not taken by the last day` MEANS
+    IF `the days of the leave taken by the last day of the relevant period` LESS THAN `the entitlement for the relevant period in days`
+    -- FALSE-kind (the text says no in its own words): "thereupon ceases to be entitled to that leave"
+    THEN JUST FALSE
+    -- NOTHING-kind (limited by its own wording): the paragraph applies to an employee who fails to take that leave by the last day
+    ELSE NOTHING
+
+@ref s 87A(4)(b) (src:3275-3282)
+GIVEN `the days of the leave taken by the last day of the relevant period` IS A NUMBER
+      `the entitlement for the relevant period in days` IS A NUMBER
+GIVETH A MAYBE BOOLEAN
+`s 87A(4)(b) the employee is entitled to payment in lieu of the days not taken` MEANS
+    IF `the days of the leave taken by the last day of the relevant period` LESS THAN `the entitlement for the relevant period in days`
+    -- FALSE-kind (the text says no in its own words): "is not entitled to any payment in lieu thereof"
+    THEN JUST FALSE
+    -- NOTHING-kind (limited by its own wording): the paragraph applies to an employee who fails to take that leave by the last day
+    ELSE NOTHING
+
+-- s 87A(5): "An employer must pay an employee who is entitled to childcare leave his or her gross rate of
+-- pay for every day of such leave that is taken by the employee."  The gross rate for a day is the Third
+-- Schedule's answer (seam S6).
+-- src:3284 | (5) An employer must pay an employee who is entitled to childcare
+-- src:3285 | leave his or her gross rate of pay for every day of such leave that is
+-- src:3286 | taken by the employee.
+@ref s 87A(5) (src:3284-3286)
+GIVEN `the days of childcare leave taken` IS A NUMBER
+      `the answer of sch 3 gross rate of pay per day` IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+`s 87A(5) the amount the employer must pay for the childcare leave taken` MEANS
+    CONSIDER `the answer of sch 3 gross rate of pay per day`
+    WHEN JUST rate THEN JUST (`the days of childcare leave taken` TIMES rate)
+    -- NOTHING-kind (points outside the text): the gross rate of pay for a day is worked out under the Third Schedule, which is not given
+    WHEN NOTHING THEN NOTHING
+
+-- s 87A(5A): "Despite subsection (5), an employee is not entitled to take paid childcare leave on a day
+-- the employee takes no-pay leave."
+-- src:3288 | (5A) Despite subsection (5), an employee is not entitled to take paid
+-- src:3289 | childcare leave on a day the employee takes no-pay leave.
+@ref s 87A(5A) (src:3288-3289)
+GIVEN `the answer of s 2(1) "no-pay leave"` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 87A(5A) the employee is entitled to take paid childcare leave on the day` MEANS
+    IF `the answer of s 2(1) "no-pay leave"` EQUALS JUST TRUE
+    -- FALSE-kind (the text says no in its own words): "is not entitled to take paid childcare leave on a day the employee takes no-pay leave"
+    THEN JUST FALSE
+    -- NOTHING-kind (limited by its own wording): the subsection only takes away the entitlement on a day of no-pay leave
+    ELSE NOTHING
+
+-- s 87A(6): if the employment ends (resignation, dismissal, completion of the contract, or any other
+-- reason) before the 2 days for a relevant period are taken, the employee ceases to be entitled to that
+-- leave upon termination and is not entitled to any payment in lieu.
+-- src:3293 | (6) If the employment of an employee who is entitled to childcare
+-- src:3294 | leave is terminated (whether by resignation or dismissal, upon the
+-- src:3295 | completion of his or her contract of service, or for any other reason)
+-- src:3296 | before he or she has taken the entitlement of childcare leave of 2 days
+-- src:3297 | for a relevant period, the employee —
+-- src:3299 | (a) ceases to be entitled to that leave upon the termination of
+-- src:3300 | his or her employment; and
+@ref s 87A(6)(a) (src:3293-3300)
+GIVEN `how the employment ended` IS A `How the employment ended`
+      `the days of the entitlement not yet taken when the employment ended` IS A NUMBER
+GIVETH A MAYBE BOOLEAN
+`s 87A(6)(a) the employee is still entitled to the leave not yet taken` MEANS
+    IF NOT (`how the employment ended` EQUALS `Ending: it has not ended`)
+       AND `the days of the entitlement not yet taken when the employment ended` GREATER THAN 0
+    -- FALSE-kind (the text says no in its own words): "ceases to be entitled to that leave upon the termination of his or her employment"
+    THEN JUST FALSE
+    -- NOTHING-kind (silent): the paragraph never says she is still entitled, so the case outside its "If" is answered by the twin `s 87A(6)(a) the employee ceases to be entitled to the leave not yet taken` below
+    ELSE NOTHING
+
+-- src:3293 | (6) If the employment of an employee who is entitled to childcare
+-- src:3294 | leave is terminated (whether by resignation or dismissal, upon the
+-- src:3295 | completion of his or her contract of service, or for any other reason)
+-- src:3296 | before he or she has taken the entitlement of childcare leave of 2 days
+-- src:3297 | for a relevant period, the employee —
+-- src:3299 | (a) ceases to be entitled to that leave upon the termination of
+-- src:3300 | his or her employment; and
+@ref s 87A(6)(a) (src:3293-3300)
+GIVEN `how the employment ended` IS A `How the employment ended`
+      `the days of the entitlement not yet taken when the employment ended` IS A NUMBER
+GIVETH A MAYBE BOOLEAN
+`s 87A(6)(a) the employee ceases to be entitled to the leave not yet taken` MEANS
+    IF NOT (`how the employment ended` EQUALS `Ending: it has not ended`)
+       AND `the days of the entitlement not yet taken when the employment ended` GREATER THAN 0
+    THEN JUST TRUE
+    -- FALSE-kind (the text says no in its own words): "If the employment of an employee who is entitled to childcare leave is terminated"
+    ELSE JUST FALSE
+
+-- src:3302 | (b) is not entitled to any payment in lieu thereof.
+@ref s 87A(6)(b) (src:3302)
+GIVEN `how the employment ended` IS A `How the employment ended`
+      `the days of the entitlement not yet taken when the employment ended` IS A NUMBER
+GIVETH A MAYBE BOOLEAN
+`s 87A(6)(b) the employee is entitled to payment in lieu of the leave not yet taken` MEANS
+    IF NOT (`how the employment ended` EQUALS `Ending: it has not ended`)
+       AND `the days of the entitlement not yet taken when the employment ended` GREATER THAN 0
+    -- FALSE-kind (the text says no in its own words): "is not entitled to any payment in lieu thereof"
+    THEN JUST FALSE
+    -- NOTHING-kind (silent): the paragraph never says she is entitled to payment in lieu, so the case outside its "If" is answered by the twin `s 87A(6)(b) the employee is not entitled to payment in lieu of the leave not yet taken` below
+    ELSE NOTHING
+
+-- src:3302 | (b) is not entitled to any payment in lieu thereof.
+@ref s 87A(6)(b) (src:3302)
+GIVEN `how the employment ended` IS A `How the employment ended`
+      `the days of the entitlement not yet taken when the employment ended` IS A NUMBER
+GIVETH A MAYBE BOOLEAN
+`s 87A(6)(b) the employee is not entitled to payment in lieu of the leave not yet taken` MEANS
+    IF NOT (`how the employment ended` EQUALS `Ending: it has not ended`)
+       AND `the days of the entitlement not yet taken when the employment ended` GREATER THAN 0
+    THEN JUST TRUE
+    -- FALSE-kind (the text says no in its own words): "If the employment of an employee who is entitled to childcare leave is terminated"
+    ELSE JUST FALSE
+
+§ `Part 9A -- offences and penalties (s 87A(7) to (7C))`
+
+-- s 87A(7): "Any employer who contravenes subsection (5) shall be guilty of an offence".
+-- src:3304 | (7) Any employer who contravenes subsection (5) shall be guilty of
+-- src:3305 | an offence and shall be liable on conviction to a fine not exceeding
+-- src:3306 | $5,000 or to imprisonment for a term not exceeding 6 months or to
+-- src:3307 | both.
+@ref s 87A(7) (src:3304-3307)
+GIVEN `the employer failed to pay the employee's gross rate of pay for a day of childcare leave taken` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 87A(7) the employer is guilty of an offence` MEANS
+    IF `the employer failed to pay the employee's gross rate of pay for a day of childcare leave taken`
+    THEN JUST TRUE
+    -- NOTHING-kind (limited by its own wording): the offence is contravening subsection (5)
+    ELSE NOTHING
+
+@ref s 87A(7) (src:3304-3307)
+GIVETH A `Penalty on conviction`
+`s 87A(7) the penalty on conviction` MEANS
+    `Penalty on conviction` WITH
+        `least fine in dollars` IS 0
+        `greatest fine in dollars` IS JUST 5000
+        `longest imprisonment in months` IS JUST 6
+
+-- s 87A(7A): "Any employer who fails, without reasonable cause, to grant childcare leave to an employee
+-- who is entitled to and requests for the leave shall be guilty of an offence".
+-- src:3311 | (7A) Any employer who fails, without reasonable cause, to grant
+-- src:3312 | childcare leave to an employee who is entitled to and requests for the
+-- src:3313 | leave shall be guilty of an offence and shall be liable on conviction to
+-- src:3318 | a fine not exceeding $5,000 or to imprisonment for a term not
+-- src:3319 | exceeding 6 months or to both.
+@ref s 87A(7A) (src:3311-3319)
+GIVEN `the employer failed to grant childcare leave to an employee who is entitled to it and requests it` IS A BOOLEAN
+      `the employer had reasonable cause` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 87A(7A) the employer is guilty of an offence` MEANS
+    IF `the employer failed to grant childcare leave to an employee who is entitled to it and requests it`
+       AND (NOT `the employer had reasonable cause`)
+    THEN JUST TRUE
+    -- NOTHING-kind (limited by its own wording): the offence is a failure "without reasonable cause" to grant the leave to an employee who is entitled to it and requests it
+    ELSE NOTHING
+
+@ref s 87A(7A) (src:3311-3319)
+GIVETH A `Penalty on conviction`
+`s 87A(7A) the penalty on conviction` MEANS
+    `Penalty on conviction` WITH
+        `least fine in dollars` IS 0
+        `greatest fine in dollars` IS JUST 5000
+        `longest imprisonment in months` IS JUST 6
+
+-- s 87A(7B): the penalty for a repeat offender: a fine not exceeding $10,000 or imprisonment not
+-- exceeding 12 months or both.
+-- src:3323 | (7B) Where an employer who is convicted or found guilty of an
+-- src:3324 | offence under subsection (7) or (7A) is a repeat offender, that
+-- src:3325 | employer shall be liable on conviction to a fine not exceeding
+-- src:3326 | $10,000 or to imprisonment for a term not exceeding 12 months or to
+-- src:3327 | both.
+@ref s 87A(7B) (src:3323-3327)
+GIVEN `the person is a repeat offender` IS A MAYBE BOOLEAN
+GIVETH A MAYBE (`Penalty on conviction`)
+`s 87A(7B) the penalty on conviction of a person convicted under subsection (7) or (7A)` MEANS
+    CONSIDER `the person is a repeat offender`
+    WHEN JUST TRUE THEN
+        JUST (`Penalty on conviction` WITH
+            `least fine in dollars` IS 0
+            `greatest fine in dollars` IS JUST 10000
+            `longest imprisonment in months` IS JUST 12)
+    -- NOTHING-kind (limited by its own wording): subsection (7B) is for a repeat offender; a person who is not one is under subsection (7) or (7A); this type is a penalty record and cannot say no, so the twin below does (fork F18)
+    WHEN JUST FALSE THEN NOTHING
+    -- NOTHING-kind (points outside the text): whether the person is a repeat offender is the answer of subsection (7C), which is not given
+    WHEN NOTHING THEN NOTHING
+
+-- The twin that can say no: "Where an employer ... is a repeat offender" (ruling (b) of 2026-11-05).
+-- src:3323 | (7B) Where an employer who is convicted or found guilty of an
+-- src:3324 | offence under subsection (7) or (7A) is a repeat offender, that
+-- src:3325 | employer shall be liable on conviction to a fine not exceeding
+-- src:3326 | $10,000 or to imprisonment for a term not exceeding 12 months or to
+-- src:3327 | both.
+@ref s 87A(7B) (src:3323-3327)
+GIVEN `the person is a repeat offender` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 87A(7B) the penalty for a repeat offender applies` MEANS
+    CONSIDER `the person is a repeat offender`
+    WHEN JUST TRUE THEN JUST TRUE
+    -- FALSE-kind (the text says no in its own words): "Where an employer who is convicted or found guilty of an offence under subsection (7) or (7A) is a repeat offender"
+    WHEN JUST FALSE THEN JUST FALSE
+    -- NOTHING-kind (points outside the text): whether the person is a repeat offender is the answer of subsection (7C), which is not given
+    WHEN NOTHING THEN NOTHING
+
+DECLARE `s 87A(7C) Kind of earlier conviction` IS ONE OF
+    `s 87A(7C)(a) an offence under subsection (7) or (7A)`
+    `s 87A(7C)(b) an offence under section 12B(12) or (14) of the Child Development Co-Savings Act 2001`
+    `s 87A(7C)(c) an offence under section 12B(13) of the Child Development Co-Savings Act 2001`
+    `s 87A(7C) an offence of some other kind`
+
+DECLARE `s 87A(7C) Earlier conviction` HAS
+    `kind of offence` IS A `s 87A(7C) Kind of earlier conviction`
+    `the day the person was convicted or found guilty` IS A DATE
+
+GIVEN `the day of the current conviction` IS A DATE
+      earlier IS A LIST OF `s 87A(7C) Earlier conviction`
+GIVETH A NUMBER
+`s 87A(7C) helper: the earlier convictions that count` MEANS
+    CONSIDER earlier
+    WHEN EMPTY THEN 0
+    WHEN e FOLLOWED BY rest THEN
+        (IF NOT (e's `kind of offence` EQUALS `s 87A(7C) an offence of some other kind`)
+            AND e's `the day the person was convicted or found guilty` AT LEAST (Date 1 5 2013)
+            AND e's `the day the person was convicted or found guilty` LESS THAN `the day of the current conviction`
+         THEN 1
+         ELSE 0)
+        PLUS `s 87A(7C) helper: the earlier convictions that count` `the day of the current conviction` rest
+
+-- s 87A(7C): a person convicted of an offence under (7) or (7A) (the current offence) is a repeat
+-- offender if convicted of (a) an offence under (7) or (7A); (b) an offence under s 12B(12) or (14) of the
+-- Child Development Co-Savings Act 2001 in force before, on or after 1 May 2013; or (c) an offence
+-- under s 12B(13) of that Act, "on at least one other occasion on or after 1 May 2013 and before the date
+-- on which that person is convicted or found guilty of the current offence".
+-- src:3331 | (7C) For the purposes of subsection (7B), a person is a repeat
+-- src:3332 | offender in relation to an offence under subsection (7) or (7A) if the
+-- src:3333 | person who is convicted or found guilty of an offence under
+-- src:3334 | subsection (7) or (7A) (called the current offence) has been convicted
+-- src:3335 | or found guilty of —
+-- src:3337 | (a) an offence under subsection (7) or (7A);
+-- src:3339 | (b) an offence under section 12B(12) or (14) of the Child
+-- src:3340 | Development Co‑Savings Act 2001 in force before, on or
+-- src:3341 | after 1 May 2013; or
+-- src:3343 | (c) an offence under section 12B(13) of the Child
+-- src:3344 | Development Co‑Savings Act 2001,
+-- src:3346 | on at least one other occasion on or after 1 May 2013 and before the
+-- src:3347 | date on which that person is convicted or found guilty of the current
+-- src:3348 | offence.
+@ref s 87A(7C) (src:3331-3348)
+GIVEN `the day of the current conviction` IS A DATE
+      earlier IS A LIST OF `s 87A(7C) Earlier conviction`
+GIVETH A MAYBE BOOLEAN
+`s 87A(7C) the person is a repeat offender` MEANS
+    IF `s 87A(7C) helper: the earlier convictions that count` `the day of the current conviction` earlier AT LEAST 1
+    THEN JUST TRUE
+    -- FALSE-kind (the text says no in its own words): "a person is a repeat offender in relation to an offence under subsection (7) or (7A) if"
+    ELSE JUST FALSE
