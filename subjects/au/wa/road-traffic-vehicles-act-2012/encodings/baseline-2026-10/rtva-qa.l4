@@ -1,0 +1,617 @@
+IMPORT prelude
+IMPORT `rtva-licensing`
+
+-- Road Traffic (Vehicles) Act 2012 (WA), Part 2 -- the Q&A layer: the questions people ask, with the seat and the
+-- situation as parameters, over the baseline's rules in rtva-licensing.l4.
+--
+-- PURPOSE. One module whose exported questions serve every seat from one deployment. Every exported question takes
+-- `my role` first ("Which of these describes you"). A question about another role answers `does not arise for you`
+-- without reading any other input, so the site's form never asks those inputs and drops the question.
+--
+-- ROLES (type `Role`):
+--   * `I own a vehicle` -- the baseline's seat as the licence holder and "responsible person": must it be licensed, the
+--     s 4(2) offence, what it costs, CTP;
+--   * `I am selling, or have sold, a licensed vehicle` -- the baseline's seat as the seller (s 10(1), r 51,
+--     Administration Act s 6(2));
+--   * `I am buying, or have bought, a licensed vehicle` -- the baseline's seat as the buyer (s 5, s 7(2), s 10(2), (6),
+--     (7), r 21, r 100, Administration Act s 6(2)(b), (3), MVTPI s 20(1));
+--   * `I drive or ride a vehicle that is not mine` -- new: s 4(2) makes "each person who uses the vehicle on a road" liable
+--     as well as its responsible person.
+-- The CEO, the court and the Insurance Commission are never a seat; what they may or must do appears as what it means for
+-- the person asking.
+--
+-- SITUATIONS (graffiti design D8). Within a role, a question that arises only in a situation takes that situation's
+-- fact straight after `my role`, and answers `does not arise for you` when it does not hold, without reading anything
+-- else. The questions of one situation share one input, the same name, type and @desc:
+--   * `what the vehicle is` (`Kind of vehicle`): the e-bike question (owner and user) arises only for an e-bike; the
+--     licensing and offence questions take it as an ordinary input;
+--   * `my vehicle has been used on a road` (owner): the s 4(2) offence and the s 4(6) bar;
+--   * `I have used the vehicle on a road` (user): the same two questions, for the user;
+--   * `the CEO has issued me a notice to apply for transfer` (buyer): s 10(6) and s 10(7).
+-- The seller's questions arise for every seller, and the penalties, charges and CTP for every owner, user or buyer they
+-- are about, so they take no situation input.
+--
+-- Every helper here that reads a situation enumeration lists every value with no OTHERWISE (graffiti finding 31).
+--
+-- The rules are the baseline's; this module builds its records from plain answers and calls its functions, restating
+-- none. A record field that no rule reads on the path a question takes gets a fixed placeholder, with a comment. No
+-- exported question takes a DEONTIC or EVENT input. BASELINE. Not for public use as advice. See NOTES.md, "Q&A layer
+-- (seat and situations as parameters)".
+
+§ `Road Traffic (Vehicles) Act 2012 (WA) -- the questions people ask`
+
+§§ `Who is asking, and the shape of the answers`
+
+DECLARE Role IS ONE OF
+    `I own a vehicle`
+    `I am selling, or have sold, a licensed vehicle`
+    `I am buying, or have bought, a licensed vehicle`
+    `I drive or ride a vehicle that is not mine`
+
+DECLARE `Yes or no` IS ONE OF
+    yes
+    no
+    `does not arise for you`
+
+DECLARE `Amount` IS ONE OF
+    `does not arise for you`
+    amount HAS dollars IS A NUMBER
+
+DECLARE `Days` IS ONE OF
+    `does not arise for you`
+    `within` HAS `days` IS A NUMBER
+
+DECLARE `What the law says about licensing it` IS ONE OF
+    `does not arise for you`
+    `it needs a vehicle licence: it is a motor vehicle or trailer (r 15(1))`
+    `it needs no licence: an agricultural implement towed by a licensed or permitted vehicle (r 15(2)(a))`
+    `it needs no licence: towed by a licensed or permitted tow truck (r 15(2)(b))`
+    `it needs no licence: a motor vehicle designed not to exceed 10 km/h (r 15(2)(c))`
+    `it needs no licence: a declared electric personal transporter (r 15(2)(d))`
+    `it needs no licence: a motorised scooter or electric rideable device (r 15(2)(e))`
+    `it needs no licence: a power assisted pedal cycle is a bicycle, not a motor vehicle (encoder's reading)`
+    `it needs no licence: it is not a motor vehicle or trailer`
+
+DECLARE `CTP cover` IS ONE OF
+    `does not arise for you`
+    `insured: the CTP policy goes with the vehicle licence, and with the vehicle to each new owner`
+    `uninsured: the vehicle has no CTP cover`
+    `not decided here: a suspended, cancelled or void licence (see the MVTPI Act baseline)`
+
+§§ `Building the baseline's inputs`
+
+GIVEN `it holds` IS A BOOLEAN
+GIVETH A `Yes or no`
+`yes if` `it holds` MEANS
+    IF `it holds` THEN yes ELSE no
+
+GIVEN `what it is` IS A `Kind of vehicle`
+      `cannot exceed 10 km/h` IS A BOOLEAN
+      `agricultural implement towed` IS A BOOLEAN
+      `towed by a tow truck` IS A BOOLEAN
+      `pedal-driven` IS A BOOLEAN
+      `pedalec` IS A BOOLEAN
+      `watts` IS A NUMBER
+      `GVM` IS A NUMBER
+GIVETH A `My vehicle`
+`the vehicle from` `what it is` `cannot exceed 10 km/h` `agricultural implement towed` `towed by a tow truck` `pedal-driven` `pedalec` `watts` `GVM` MEANS
+    `My vehicle` WITH
+        `what it is` IS `what it is`
+        `it is designed so that it cannot go faster than 10 km/h` IS `cannot exceed 10 km/h`
+        `it is an agricultural implement towed by a licensed or permitted vehicle` IS `agricultural implement towed`
+        `it is being towed by a licensed or permitted tow truck` IS `towed by a tow truck`
+        `it is designed to be propelled by human power through its pedals` IS `pedal-driven`
+        `it is a pedalec meeting EN 15194` IS `pedalec`
+        `combined maximum output of its motors in watts` IS `watts`
+        `its GVM in kg` IS `GVM`
+
+-- For the e-bike question: only the pedals, the EN 15194 standard and the output are read (Administration Act s 4,
+-- Administration Regulations r 4). The other fields are fixed placeholders, which no rule on that path reads.
+GIVEN `pedal-driven` IS A BOOLEAN
+      `pedalec` IS A BOOLEAN
+      `watts` IS A NUMBER
+GIVETH A `My vehicle`
+`the e-bike from` `pedal-driven` `pedalec` `watts` MEANS
+    `the vehicle from` `a bicycle with an auxiliary motor (an e-bike)` FALSE FALSE FALSE `pedal-driven` `pedalec` `watts` 0
+
+-- For the infringement question: only the GVM is read (s 3(1) "light vehicle", Administration Regulations r 22). The
+-- other fields are fixed placeholders, which no rule on that path reads.
+GIVEN `GVM` IS A NUMBER
+GIVETH A `My vehicle`
+`a vehicle of GVM` `GVM` MEANS
+    `the vehicle from` `a self-propelled motor vehicle such as a car, motor cycle, bus or truck` FALSE FALSE FALSE FALSE FALSE 0 `GVM`
+
+GIVEN `the state of the licence` IS A `Licence status`
+      `days since expiry` IS A NUMBER
+      `permit` IS A BOOLEAN
+      `trade plates` IS A BOOLEAN
+      `interstate` IS A BOOLEAN
+      `resident` IS A BOOLEAN
+GIVETH A `The use`
+`a use on a road with` `the state of the licence` `days since expiry` `permit` `trade plates` `interstate` `resident` MEANS
+    `The use` WITH
+        `it was used on a road, and I am its responsible person or I used it` IS TRUE
+        `the licence` IS `the state of the licence`
+        `days since the licence expired` IS `days since expiry`
+        `it was used under and in accordance with a s 13(1) permit` IS `permit`
+        `it was used with s 13(2) number plates and their requirements` IS `trade plates`
+        `its use is authorised under the law of another jurisdiction` IS `interstate`
+        `a responsible person for it is ordinarily resident in WA` IS `resident`
+
+GIVEN `the answer` IS A `Licensing answer`
+GIVETH A `What the law says about licensing it`
+`the licensing answer` `the answer` MEANS
+    CONSIDER `the answer`
+    WHEN `a vehicle licence is required: it is a motor vehicle or trailer (r 15(1))` THEN `it needs a vehicle licence: it is a motor vehicle or trailer (r 15(1))`
+    WHEN `no licence: an agricultural implement towed by a licensed or permitted vehicle (r 15(2)(a))` THEN `it needs no licence: an agricultural implement towed by a licensed or permitted vehicle (r 15(2)(a))`
+    WHEN `no licence: towed by a licensed or permitted tow truck (r 15(2)(b))` THEN `it needs no licence: towed by a licensed or permitted tow truck (r 15(2)(b))`
+    WHEN `no licence: a motor vehicle designed not to exceed 10 km/h (r 15(2)(c))` THEN `it needs no licence: a motor vehicle designed not to exceed 10 km/h (r 15(2)(c))`
+    WHEN `no licence: a declared electric personal transporter (r 15(2)(d))` THEN `it needs no licence: a declared electric personal transporter (r 15(2)(d))`
+    WHEN `no licence: a motorised scooter or electric rideable device (r 15(2)(e))` THEN `it needs no licence: a motorised scooter or electric rideable device (r 15(2)(e))`
+    WHEN `no licence: a power assisted pedal cycle is a bicycle, not a motor vehicle (encoder's reading)` THEN `it needs no licence: a power assisted pedal cycle is a bicycle, not a motor vehicle (encoder's reading)`
+    WHEN `no licence: not a motor vehicle or trailer` THEN `it needs no licence: it is not a motor vehicle or trailer`
+
+GIVEN `the answer` IS A `CTP answer`
+GIVETH A `CTP cover`
+`the CTP answer` `the answer` MEANS
+    CONSIDER `the answer`
+    WHEN `insured: the CTP policy goes with the vehicle licence` THEN `insured: the CTP policy goes with the vehicle licence, and with the vehicle to each new owner`
+    WHEN `uninsured` THEN `uninsured: the vehicle has no CTP cover`
+    WHEN `not decided here: a suspended, cancelled or void licence (see the MVTPI Act baseline)` THEN `not decided here: a suspended, cancelled or void licence (see the MVTPI Act baseline)`
+
+§§ `The situations a question arises in`
+
+-- The e-bike question arises only for an e-bike. Every value is listed, with no OTHERWISE (graffiti finding 31).
+GIVEN `what the vehicle is` IS A `Kind of vehicle`
+GIVETH A BOOLEAN
+DECIDE `the vehicle is an e-bike` IF
+    CONSIDER `what the vehicle is`
+    WHEN `a self-propelled motor vehicle such as a car, motor cycle, bus or truck` THEN FALSE
+    WHEN `a trailer` THEN FALSE
+    WHEN `a bicycle with an auxiliary motor (an e-bike)` THEN TRUE
+    WHEN `a bicycle without a motor` THEN FALSE
+    WHEN `an electric rideable device` THEN FALSE
+    WHEN `a motorised scooter` THEN FALSE
+    WHEN `a vehicle declared an electric personal transporter under Code r 230B` THEN FALSE
+
+§§ `For the owner of a vehicle, and for someone driving or riding a vehicle that is not theirs`
+
+§§§ `s 4(1); Vehicles Regulations r 15; Administration Act s 4; Administration Regulations r 4 -- must it be licensed`
+
+@export Is the e-bike a power assisted pedal cycle: pedal-driven, with motors of at most 250 W for a pedalec meeting EN 15194, or 200 W for any other (Road Traffic (Administration) Act 2008 s 4; Road Traffic (Administration) Regulations 2014 r 4)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the vehicle is` IS A `Kind of vehicle` @desc What the vehicle is: a car, motor cycle, bus or truck; a trailer; a bicycle with an auxiliary motor (an e-bike); a bicycle without a motor; an electric rideable device; a motorised scooter; or a declared electric personal transporter
+      `it is designed to be propelled by human power through its pedals` IS A BOOLEAN @desc For an e-bike: whether it is designed to be propelled through a mechanism operated solely by human power (its pedals)
+      `it is a pedalec meeting EN 15194` IS A BOOLEAN @desc For an e-bike: whether it meets the European standard EN 15194 for power assisted pedal cycles (a pedalec)
+      `combined maximum output of its motors in watts` IS A NUMBER @desc For an e-bike: the combined maximum output of its auxiliary motors, in watts
+GIVETH A `Yes or no`
+`Is the e-bike a power assisted pedal cycle` MEANS
+    CONSIDER `my role`
+    WHEN `I own a vehicle` THEN
+        IF `the vehicle is an e-bike` `what the vehicle is`
+        THEN `yes if` (`Is my e-bike a power assisted pedal cycle` (`the e-bike from` `it is designed to be propelled by human power through its pedals` `it is a pedalec meeting EN 15194` `combined maximum output of its motors in watts`))
+        ELSE `does not arise for you`
+    WHEN `I drive or ride a vehicle that is not mine` THEN
+        IF `the vehicle is an e-bike` `what the vehicle is`
+        THEN `yes if` (`Is my e-bike a power assisted pedal cycle` (`the e-bike from` `it is designed to be propelled by human power through its pedals` `it is a pedalec meeting EN 15194` `combined maximum output of its motors in watts`))
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+@export What does the law say about licensing the vehicle: must it be licensed, or which exception frees it (Road Traffic (Vehicles) Act 2012 (WA) s 4(1); Road Traffic (Vehicles) Regulations 2014 r 15)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the vehicle is` IS A `Kind of vehicle` @desc What the vehicle is: a car, motor cycle, bus or truck; a trailer; a bicycle with an auxiliary motor (an e-bike); a bicycle without a motor; an electric rideable device; a motorised scooter; or a declared electric personal transporter
+      `it is designed so that it cannot go faster than 10 km/h` IS A BOOLEAN @desc Whether the vehicle is designed so that it cannot go faster than 10 km/h
+      `it is an agricultural implement towed by a licensed or permitted vehicle` IS A BOOLEAN @desc For a trailer: whether it is an agricultural implement towed on a road by a vehicle with a current licence or permit
+      `it is being towed by a licensed or permitted tow truck` IS A BOOLEAN @desc Whether the vehicle is being towed on a road by a tow truck with a current licence or permit
+      `it is designed to be propelled by human power through its pedals` IS A BOOLEAN @desc For an e-bike: whether it is designed to be propelled through a mechanism operated solely by human power (its pedals)
+      `it is a pedalec meeting EN 15194` IS A BOOLEAN @desc For an e-bike: whether it meets the European standard EN 15194 for power assisted pedal cycles (a pedalec)
+      `combined maximum output of its motors in watts` IS A NUMBER @desc For an e-bike: the combined maximum output of its auxiliary motors, in watts
+GIVETH A `What the law says about licensing it`
+`What does the law say about licensing the vehicle` MEANS
+    CONSIDER `my role`
+    WHEN `I own a vehicle` THEN `the licensing answer` (`What does the law say about licensing my vehicle` (`the vehicle from` `what the vehicle is` `it is designed so that it cannot go faster than 10 km/h` `it is an agricultural implement towed by a licensed or permitted vehicle` `it is being towed by a licensed or permitted tow truck` `it is designed to be propelled by human power through its pedals` `it is a pedalec meeting EN 15194` `combined maximum output of its motors in watts` 0))
+    WHEN `I drive or ride a vehicle that is not mine` THEN `the licensing answer` (`What does the law say about licensing my vehicle` (`the vehicle from` `what the vehicle is` `it is designed so that it cannot go faster than 10 km/h` `it is an agricultural implement towed by a licensed or permitted vehicle` `it is being towed by a licensed or permitted tow truck` `it is designed to be propelled by human power through its pedals` `it is a pedalec meeting EN 15194` `combined maximum output of its motors in watts` 0))
+    OTHERWISE `does not arise for you`
+
+-- The GVM is not read by r 15, so it is a fixed placeholder 0 here and in the next question.
+@export Must the vehicle be licensed (Road Traffic (Vehicles) Act 2012 (WA) s 4(1); Road Traffic (Vehicles) Regulations 2014 r 15)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the vehicle is` IS A `Kind of vehicle` @desc What the vehicle is: a car, motor cycle, bus or truck; a trailer; a bicycle with an auxiliary motor (an e-bike); a bicycle without a motor; an electric rideable device; a motorised scooter; or a declared electric personal transporter
+      `it is designed so that it cannot go faster than 10 km/h` IS A BOOLEAN @desc Whether the vehicle is designed so that it cannot go faster than 10 km/h
+      `it is an agricultural implement towed by a licensed or permitted vehicle` IS A BOOLEAN @desc For a trailer: whether it is an agricultural implement towed on a road by a vehicle with a current licence or permit
+      `it is being towed by a licensed or permitted tow truck` IS A BOOLEAN @desc Whether the vehicle is being towed on a road by a tow truck with a current licence or permit
+      `it is designed to be propelled by human power through its pedals` IS A BOOLEAN @desc For an e-bike: whether it is designed to be propelled through a mechanism operated solely by human power (its pedals)
+      `it is a pedalec meeting EN 15194` IS A BOOLEAN @desc For an e-bike: whether it meets the European standard EN 15194 for power assisted pedal cycles (a pedalec)
+      `combined maximum output of its motors in watts` IS A NUMBER @desc For an e-bike: the combined maximum output of its auxiliary motors, in watts
+GIVETH A `Yes or no`
+`Must the vehicle be licensed` MEANS
+    CONSIDER `my role`
+    WHEN `I own a vehicle` THEN `yes if` (`Must my vehicle be licensed` (`the vehicle from` `what the vehicle is` `it is designed so that it cannot go faster than 10 km/h` `it is an agricultural implement towed by a licensed or permitted vehicle` `it is being towed by a licensed or permitted tow truck` `it is designed to be propelled by human power through its pedals` `it is a pedalec meeting EN 15194` `combined maximum output of its motors in watts` 0))
+    WHEN `I drive or ride a vehicle that is not mine` THEN `yes if` (`Must my vehicle be licensed` (`the vehicle from` `what the vehicle is` `it is designed so that it cannot go faster than 10 km/h` `it is an agricultural implement towed by a licensed or permitted vehicle` `it is being towed by a licensed or permitted tow truck` `it is designed to be propelled by human power through its pedals` `it is a pedalec meeting EN 15194` `combined maximum output of its motors in watts` 0))
+    OTHERWISE `does not arise for you`
+
+§§§ `s 4(2)-(6) -- the offence of using an unlicensed vehicle`
+
+-- The use situation is the record's first field (used on a road, by or for its responsible person), TRUE by the
+-- situation's own terms. The GVM is not read by s 4(2)-(5), so it is a fixed placeholder 0.
+@export My vehicle has been used on a road: do I, as its responsible person, commit the offence of using an unlicensed vehicle (Road Traffic (Vehicles) Act 2012 (WA) s 4(2)-(5); 15 days' grace after expiry, Road Traffic (Vehicles) Regulations 2014 r 16)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my vehicle has been used on a road` IS A BOOLEAN @desc Whether your vehicle has been used on a road (by you or anyone else) while you were its responsible person: the licence holder, or the new owner named in a seller's notice
+      `what the vehicle is` IS A `Kind of vehicle` @desc What the vehicle is: a car, motor cycle, bus or truck; a trailer; a bicycle with an auxiliary motor (an e-bike); a bicycle without a motor; an electric rideable device; a motorised scooter; or a declared electric personal transporter
+      `it is designed so that it cannot go faster than 10 km/h` IS A BOOLEAN @desc Whether the vehicle is designed so that it cannot go faster than 10 km/h
+      `it is an agricultural implement towed by a licensed or permitted vehicle` IS A BOOLEAN @desc For a trailer: whether it is an agricultural implement towed on a road by a vehicle with a current licence or permit
+      `it is being towed by a licensed or permitted tow truck` IS A BOOLEAN @desc Whether the vehicle is being towed on a road by a tow truck with a current licence or permit
+      `it is designed to be propelled by human power through its pedals` IS A BOOLEAN @desc For an e-bike: whether it is designed to be propelled through a mechanism operated solely by human power (its pedals)
+      `it is a pedalec meeting EN 15194` IS A BOOLEAN @desc For an e-bike: whether it meets the European standard EN 15194 for power assisted pedal cycles (a pedalec)
+      `combined maximum output of its motors in watts` IS A NUMBER @desc For an e-bike: the combined maximum output of its auxiliary motors, in watts
+      `the state of the vehicle's licence` IS A `Licence status` @desc The state of the vehicle's licence at the time in question: granted and current, expired, never granted, or suspended, cancelled or of no effect
+      `days since the licence expired` IS A NUMBER @desc If the licence has expired: the number of days from its expiry to the use
+      `it was used under a s 13(1) permit` IS A BOOLEAN @desc Whether it was used under, and in accordance with, a permit issued under s 13(1)
+      `it was used with s 13(2) number plates` IS A BOOLEAN @desc Whether it was used with number plates mentioned in s 13(2) (trade plates), in accordance with each of their requirements
+      `its use is authorised under another jurisdiction's law` IS A BOOLEAN @desc Whether its use on a road is authorised under the law of another jurisdiction (for example, it is registered interstate)
+      `a responsible person for it is ordinarily resident in WA` IS A BOOLEAN @desc Whether a responsible person for the vehicle is ordinarily resident in Western Australia
+GIVETH A `Yes or no`
+`Do I commit the unlicensed-vehicle offence as its owner` MEANS
+    CONSIDER `my role`
+    WHEN `I own a vehicle` THEN
+        IF `my vehicle has been used on a road`
+        THEN `yes if` (`Do I commit the offence of using an unlicensed vehicle` (`the vehicle from` `what the vehicle is` `it is designed so that it cannot go faster than 10 km/h` `it is an agricultural implement towed by a licensed or permitted vehicle` `it is being towed by a licensed or permitted tow truck` `it is designed to be propelled by human power through its pedals` `it is a pedalec meeting EN 15194` `combined maximum output of its motors in watts` 0) (`a use on a road with` `the state of the vehicle's licence` `days since the licence expired` `it was used under a s 13(1) permit` `it was used with s 13(2) number plates` `its use is authorised under another jurisdiction's law` `a responsible person for it is ordinarily resident in WA`))
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+@export My vehicle has been used on a road: can I, as its responsible person, be convicted of using it unlicensed, given the bar on a second conviction for the same use (Road Traffic (Vehicles) Act 2012 (WA) s 4(2), (6); Motor Vehicle (Third Party Insurance) Act 1943 s 4(3B))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my vehicle has been used on a road` IS A BOOLEAN @desc Whether your vehicle has been used on a road (by you or anyone else) while you were its responsible person: the licence holder, or the new owner named in a seller's notice
+      `what the vehicle is` IS A `Kind of vehicle` @desc What the vehicle is: a car, motor cycle, bus or truck; a trailer; a bicycle with an auxiliary motor (an e-bike); a bicycle without a motor; an electric rideable device; a motorised scooter; or a declared electric personal transporter
+      `it is designed so that it cannot go faster than 10 km/h` IS A BOOLEAN @desc Whether the vehicle is designed so that it cannot go faster than 10 km/h
+      `it is an agricultural implement towed by a licensed or permitted vehicle` IS A BOOLEAN @desc For a trailer: whether it is an agricultural implement towed on a road by a vehicle with a current licence or permit
+      `it is being towed by a licensed or permitted tow truck` IS A BOOLEAN @desc Whether the vehicle is being towed on a road by a tow truck with a current licence or permit
+      `it is designed to be propelled by human power through its pedals` IS A BOOLEAN @desc For an e-bike: whether it is designed to be propelled through a mechanism operated solely by human power (its pedals)
+      `it is a pedalec meeting EN 15194` IS A BOOLEAN @desc For an e-bike: whether it meets the European standard EN 15194 for power assisted pedal cycles (a pedalec)
+      `combined maximum output of its motors in watts` IS A NUMBER @desc For an e-bike: the combined maximum output of its auxiliary motors, in watts
+      `the state of the vehicle's licence` IS A `Licence status` @desc The state of the vehicle's licence at the time in question: granted and current, expired, never granted, or suspended, cancelled or of no effect
+      `days since the licence expired` IS A NUMBER @desc If the licence has expired: the number of days from its expiry to the use
+      `it was used under a s 13(1) permit` IS A BOOLEAN @desc Whether it was used under, and in accordance with, a permit issued under s 13(1)
+      `it was used with s 13(2) number plates` IS A BOOLEAN @desc Whether it was used with number plates mentioned in s 13(2) (trade plates), in accordance with each of their requirements
+      `its use is authorised under another jurisdiction's law` IS A BOOLEAN @desc Whether its use on a road is authorised under the law of another jurisdiction (for example, it is registered interstate)
+      `a responsible person for it is ordinarily resident in WA` IS A BOOLEAN @desc Whether a responsible person for the vehicle is ordinarily resident in Western Australia
+      `I have already been convicted or acquitted of the uninsured-vehicle offence for the same use` IS A BOOLEAN @desc Whether you have already been convicted of, or charged with and acquitted of, the Motor Vehicle (Third Party Insurance) Act 1943 s 4(3A) offence for the same use
+GIVETH A `Yes or no`
+`Can I be convicted of the unlicensed-vehicle offence as its owner` MEANS
+    CONSIDER `my role`
+    WHEN `I own a vehicle` THEN
+        IF `my vehicle has been used on a road`
+        THEN `yes if` (`Can I be convicted of using an unlicensed vehicle` (`the vehicle from` `what the vehicle is` `it is designed so that it cannot go faster than 10 km/h` `it is an agricultural implement towed by a licensed or permitted vehicle` `it is being towed by a licensed or permitted tow truck` `it is designed to be propelled by human power through its pedals` `it is a pedalec meeting EN 15194` `combined maximum output of its motors in watts` 0) (`a use on a road with` `the state of the vehicle's licence` `days since the licence expired` `it was used under a s 13(1) permit` `it was used with s 13(2) number plates` `its use is authorised under another jurisdiction's law` `a responsible person for it is ordinarily resident in WA`) `I have already been convicted or acquitted of the uninsured-vehicle offence for the same use`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+@export I have used a vehicle that is not mine on a road: do I commit the offence of using an unlicensed vehicle (Road Traffic (Vehicles) Act 2012 (WA) s 4(2)-(5): "each person who uses the vehicle on a road"; 15 days' grace after expiry, Road Traffic (Vehicles) Regulations 2014 r 16)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have used the vehicle on a road` IS A BOOLEAN @desc Whether you have driven, ridden or otherwise used the vehicle on a road
+      `what the vehicle is` IS A `Kind of vehicle` @desc What the vehicle is: a car, motor cycle, bus or truck; a trailer; a bicycle with an auxiliary motor (an e-bike); a bicycle without a motor; an electric rideable device; a motorised scooter; or a declared electric personal transporter
+      `it is designed so that it cannot go faster than 10 km/h` IS A BOOLEAN @desc Whether the vehicle is designed so that it cannot go faster than 10 km/h
+      `it is an agricultural implement towed by a licensed or permitted vehicle` IS A BOOLEAN @desc For a trailer: whether it is an agricultural implement towed on a road by a vehicle with a current licence or permit
+      `it is being towed by a licensed or permitted tow truck` IS A BOOLEAN @desc Whether the vehicle is being towed on a road by a tow truck with a current licence or permit
+      `it is designed to be propelled by human power through its pedals` IS A BOOLEAN @desc For an e-bike: whether it is designed to be propelled through a mechanism operated solely by human power (its pedals)
+      `it is a pedalec meeting EN 15194` IS A BOOLEAN @desc For an e-bike: whether it meets the European standard EN 15194 for power assisted pedal cycles (a pedalec)
+      `combined maximum output of its motors in watts` IS A NUMBER @desc For an e-bike: the combined maximum output of its auxiliary motors, in watts
+      `the state of the vehicle's licence` IS A `Licence status` @desc The state of the vehicle's licence at the time in question: granted and current, expired, never granted, or suspended, cancelled or of no effect
+      `days since the licence expired` IS A NUMBER @desc If the licence has expired: the number of days from its expiry to the use
+      `it was used under a s 13(1) permit` IS A BOOLEAN @desc Whether it was used under, and in accordance with, a permit issued under s 13(1)
+      `it was used with s 13(2) number plates` IS A BOOLEAN @desc Whether it was used with number plates mentioned in s 13(2) (trade plates), in accordance with each of their requirements
+      `its use is authorised under another jurisdiction's law` IS A BOOLEAN @desc Whether its use on a road is authorised under the law of another jurisdiction (for example, it is registered interstate)
+      `a responsible person for it is ordinarily resident in WA` IS A BOOLEAN @desc Whether a responsible person for the vehicle is ordinarily resident in Western Australia
+GIVETH A `Yes or no`
+`Do I commit the unlicensed-vehicle offence as its user` MEANS
+    CONSIDER `my role`
+    WHEN `I drive or ride a vehicle that is not mine` THEN
+        IF `I have used the vehicle on a road`
+        THEN `yes if` (`Do I commit the offence of using an unlicensed vehicle` (`the vehicle from` `what the vehicle is` `it is designed so that it cannot go faster than 10 km/h` `it is an agricultural implement towed by a licensed or permitted vehicle` `it is being towed by a licensed or permitted tow truck` `it is designed to be propelled by human power through its pedals` `it is a pedalec meeting EN 15194` `combined maximum output of its motors in watts` 0) (`a use on a road with` `the state of the vehicle's licence` `days since the licence expired` `it was used under a s 13(1) permit` `it was used with s 13(2) number plates` `its use is authorised under another jurisdiction's law` `a responsible person for it is ordinarily resident in WA`))
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+@export I have used a vehicle that is not mine on a road: can I be convicted of using it unlicensed, given the bar on a second conviction for the same use (Road Traffic (Vehicles) Act 2012 (WA) s 4(2), (6); Motor Vehicle (Third Party Insurance) Act 1943 s 4(3B))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have used the vehicle on a road` IS A BOOLEAN @desc Whether you have driven, ridden or otherwise used the vehicle on a road
+      `what the vehicle is` IS A `Kind of vehicle` @desc What the vehicle is: a car, motor cycle, bus or truck; a trailer; a bicycle with an auxiliary motor (an e-bike); a bicycle without a motor; an electric rideable device; a motorised scooter; or a declared electric personal transporter
+      `it is designed so that it cannot go faster than 10 km/h` IS A BOOLEAN @desc Whether the vehicle is designed so that it cannot go faster than 10 km/h
+      `it is an agricultural implement towed by a licensed or permitted vehicle` IS A BOOLEAN @desc For a trailer: whether it is an agricultural implement towed on a road by a vehicle with a current licence or permit
+      `it is being towed by a licensed or permitted tow truck` IS A BOOLEAN @desc Whether the vehicle is being towed on a road by a tow truck with a current licence or permit
+      `it is designed to be propelled by human power through its pedals` IS A BOOLEAN @desc For an e-bike: whether it is designed to be propelled through a mechanism operated solely by human power (its pedals)
+      `it is a pedalec meeting EN 15194` IS A BOOLEAN @desc For an e-bike: whether it meets the European standard EN 15194 for power assisted pedal cycles (a pedalec)
+      `combined maximum output of its motors in watts` IS A NUMBER @desc For an e-bike: the combined maximum output of its auxiliary motors, in watts
+      `the state of the vehicle's licence` IS A `Licence status` @desc The state of the vehicle's licence at the time in question: granted and current, expired, never granted, or suspended, cancelled or of no effect
+      `days since the licence expired` IS A NUMBER @desc If the licence has expired: the number of days from its expiry to the use
+      `it was used under a s 13(1) permit` IS A BOOLEAN @desc Whether it was used under, and in accordance with, a permit issued under s 13(1)
+      `it was used with s 13(2) number plates` IS A BOOLEAN @desc Whether it was used with number plates mentioned in s 13(2) (trade plates), in accordance with each of their requirements
+      `its use is authorised under another jurisdiction's law` IS A BOOLEAN @desc Whether its use on a road is authorised under the law of another jurisdiction (for example, it is registered interstate)
+      `a responsible person for it is ordinarily resident in WA` IS A BOOLEAN @desc Whether a responsible person for the vehicle is ordinarily resident in Western Australia
+      `I have already been convicted or acquitted of the uninsured-vehicle offence for the same use` IS A BOOLEAN @desc Whether you have already been convicted of, or charged with and acquitted of, the Motor Vehicle (Third Party Insurance) Act 1943 s 4(3A) offence for the same use
+GIVETH A `Yes or no`
+`Can I be convicted of the unlicensed-vehicle offence as its user` MEANS
+    CONSIDER `my role`
+    WHEN `I drive or ride a vehicle that is not mine` THEN
+        IF `I have used the vehicle on a road`
+        THEN `yes if` (`Can I be convicted of using an unlicensed vehicle` (`the vehicle from` `what the vehicle is` `it is designed so that it cannot go faster than 10 km/h` `it is an agricultural implement towed by a licensed or permitted vehicle` `it is being towed by a licensed or permitted tow truck` `it is designed to be propelled by human power through its pedals` `it is a pedalec meeting EN 15194` `combined maximum output of its motors in watts` 0) (`a use on a road with` `the state of the vehicle's licence` `days since the licence expired` `it was used under a s 13(1) permit` `it was used with s 13(2) number plates` `its use is authorised under another jurisdiction's law` `a responsible person for it is ordinarily resident in WA`) `I have already been convicted or acquitted of the uninsured-vehicle offence for the same use`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+§§§ `s 4(2) penalty; Administration Regulations r 22 -- what the offence can cost`
+
+@export What fine does the Act set for using an unlicensed vehicle on a road (Road Traffic (Vehicles) Act 2012 (WA) s 4(2): 10 PU, at $50 a unit, Road Traffic (Administration) Act 2008 s 7)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH AN `Amount`
+`What is the fine for using an unlicensed vehicle` MEANS
+    CONSIDER `my role`
+    WHEN `I own a vehicle` THEN amount `What fine is set for using an unlicensed vehicle`
+    WHEN `I drive or ride a vehicle that is not mine` THEN amount `What fine is set for using an unlicensed vehicle`
+    OTHERWISE `does not arise for you`
+
+@export What further penalty must the court order on top of the fine: the licence charge for 6 months (Road Traffic (Vehicles) Act 2012 (WA) s 4(2); Road Traffic (Vehicles) Regulations 2014 r 54(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the annual vehicle licence charge` IS A NUMBER @desc The vehicle licence charge for one year for the vehicle, in dollars
+GIVETH AN `Amount`
+`What further penalty goes with the fine` MEANS
+    CONSIDER `my role`
+    WHEN `I own a vehicle` THEN amount (`What further penalty must the court order` `the annual vehicle licence charge`)
+    WHEN `I drive or ride a vehicle that is not mine` THEN amount (`What further penalty must the court order` `the annual vehicle licence charge`)
+    OTHERWISE `does not arise for you`
+
+@export What can a court make me pay, fine and further penalty together, for using an unlicensed car on a road (Road Traffic (Vehicles) Act 2012 (WA) s 4(2); Road Traffic (Vehicles) Regulations 2014 r 54(2), r 57)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `tare in kg` IS A NUMBER @desc The car's tare (unladen mass), in kg, as the manufacturer specifies it
+GIVETH AN `Amount`
+`What can I be made to pay for using an unlicensed car` MEANS
+    CONSIDER `my role`
+    WHEN `I own a vehicle` THEN amount (`What can a court make me pay for using my unlicensed car` `tare in kg`)
+    WHEN `I drive or ride a vehicle that is not mine` THEN amount (`What can a court make me pay for using my unlicensed car` `tare in kg`)
+    OTHERWISE `does not arise for you`
+
+@export Can the unlicensed-vehicle offence be dealt with by an infringement notice: only for a light vehicle, of GVM 4.5 t or less (Road Traffic (Administration) Regulations 2014 r 22; Road Traffic (Vehicles) Act 2012 (WA) s 3(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `its GVM in kg` IS A NUMBER @desc The vehicle's gross vehicle mass (GVM), in kg
+GIVETH A `Yes or no`
+`Can the offence be dealt with by infringement notice` MEANS
+    CONSIDER `my role`
+    WHEN `I own a vehicle` THEN `yes if` (`Can it be dealt with by infringement notice` (`a vehicle of GVM` `its GVM in kg`))
+    WHEN `I drive or ride a vehicle that is not mine` THEN `yes if` (`Can it be dealt with by infringement notice` (`a vehicle of GVM` `its GVM in kg`))
+    OTHERWISE `does not arise for you`
+
+@export What is the infringement notice penalty for using an unlicensed light vehicle on a road (Road Traffic (Administration) Regulations 2014 r 22: 5 PU)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH AN `Amount`
+`What is the infringement penalty for an unlicensed vehicle` MEANS
+    CONSIDER `my role`
+    WHEN `I own a vehicle` THEN amount `What is the infringement penalty for an unlicensed light vehicle`
+    WHEN `I drive or ride a vehicle that is not mine` THEN amount `What is the infringement penalty for an unlicensed light vehicle`
+    OTHERWISE `does not arise for you`
+
+§§ `For the owner of a vehicle: what licensing it costs`
+
+§§§ `r 31(1), r 54, r 54A, r 57, r 99(1) -- the charges`
+
+@export What is my car's vehicle licence charge for a year: $13.20 plus $29.76 per 100 kg or part of tare, at most $586 (Road Traffic (Vehicles) Regulations 2014 r 57)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `tare in kg` IS A NUMBER @desc The car's tare (unladen mass), in kg, as the manufacturer specifies it
+GIVETH AN `Amount`
+`What is the yearly licence charge for my car` MEANS
+    CONSIDER `my role`
+    WHEN `I own a vehicle` THEN amount (`What is my car's annual vehicle licence charge` `tare in kg`)
+    OTHERWISE `does not arise for you`
+
+@export What is my car's vehicle licence charge for the period I choose: a year less $6.60, or a half or a quarter of the yearly charge (Road Traffic (Vehicles) Regulations 2014 r 31(1), r 54, r 54A)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `tare in kg` IS A NUMBER @desc The car's tare (unladen mass), in kg, as the manufacturer specifies it
+      `the period` IS A `Licence period` @desc The period you choose: 1 year, 6 months or 3 months
+GIVETH AN `Amount`
+`What is the licence charge for my car for the period` MEANS
+    CONSIDER `my role`
+    WHEN `I own a vehicle` THEN amount (`What is my car's vehicle licence charge for the period` `tare in kg` `the period`)
+    OTHERWISE `does not arise for you`
+
+@export What will I pay to license or renew my car for the period I choose, with the $9.70 recording fee and the CTP premium (Road Traffic (Vehicles) Regulations 2014 r 54, r 54A, r 57, r 99(1); Motor Vehicle (Third Party Insurance) Act 1943 s 4(8))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `tare in kg` IS A NUMBER @desc The car's tare (unladen mass), in kg, as the manufacturer specifies it
+      `the period` IS A `Licence period` @desc The period you choose: 1 year, 6 months or 3 months
+      `the CTP premium for the period` IS A NUMBER @desc The compulsory third party insurance premium the Insurance Commission has set for your class of vehicle and the period, in dollars
+GIVETH AN `Amount`
+`What will licensing my car cost me` MEANS
+    CONSIDER `my role`
+    WHEN `I own a vehicle` THEN amount (`What will I pay to license my car` `tare in kg` `the period` `the CTP premium for the period`)
+    OTHERWISE `does not arise for you`
+
+§§ `For the owner, the buyer and the user: compulsory third party insurance`
+
+§§§ `Motor Vehicle (Third Party Insurance) Act 1943 s 4(8A), s 20(1), s 21`
+
+@export Is the vehicle covered by compulsory third party insurance: the policy goes with the licence, passes to a new owner, and runs on after expiry only if the licence is renewed within 15 days (Motor Vehicle (Third Party Insurance) Act 1943 s 4(8A), s 20(1), s 21)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the state of the vehicle's licence` IS A `Licence status` @desc The state of the vehicle's licence at the time in question: granted and current, expired, never granted, or suspended, cancelled or of no effect
+      `it was renewed within 15 days after it expired` IS A BOOLEAN @desc If it has expired: whether it was (or will be) renewed within 15 days after the day it expired
+GIVETH A `CTP cover`
+`Is the vehicle covered by CTP` MEANS
+    CONSIDER `my role`
+    WHEN `I own a vehicle` THEN `the CTP answer` (`Is my vehicle covered by CTP` `the state of the vehicle's licence` `it was renewed within 15 days after it expired`)
+    WHEN `I am buying, or have bought, a licensed vehicle` THEN `the CTP answer` (`Is my vehicle covered by CTP` `the state of the vehicle's licence` `it was renewed within 15 days after it expired`)
+    WHEN `I drive or ride a vehicle that is not mine` THEN `the CTP answer` (`Is my vehicle covered by CTP` `the state of the vehicle's licence` `it was renewed within 15 days after it expired`)
+    OTHERWISE `does not arise for you`
+
+§§ `For the seller of a licensed vehicle`
+
+§§§ `s 10(1); r 51; Administration Act s 6 -- what I must do when I sell, and by when`
+
+@export Within how many days after the sale must I give the CEO written notice of the new owner's name and address (Road Traffic (Vehicles) Act 2012 (WA) s 10(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH A `Days`
+`How long do I have to notify the CEO of my sale` MEANS
+    CONSIDER `my role`
+    WHEN `I am selling, or have sold, a licensed vehicle` THEN `within` (`Within how many days must I notify the CEO` `I sold it`)
+    OTHERWISE `does not arise for you`
+
+@export Have I committed the offence of not notifying the CEO of my sale within 7 days (Road Traffic (Vehicles) Act 2012 (WA) s 10(1)(a); a fine of 10 PU)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `days after the sale when I notified, or days so far if I have not` IS A NUMBER @desc The number of days after the change of ownership on which you gave written notice, or, if you have not, the number of days since it
+GIVETH A `Yes or no`
+`Have I notified my sale too late` MEANS
+    CONSIDER `my role`
+    WHEN `I am selling, or have sold, a licensed vehicle` THEN `yes if` (`Have I failed to notify the CEO in time` `I sold it` `days after the sale when I notified, or days so far if I have not`)
+    OTHERWISE `does not arise for you`
+
+@export When I sell, must I return the licence document and number plates to the CEO: only for a free or reduced-charge licence not since paid up (Road Traffic (Vehicles) Act 2012 (WA) s 10(1)(b))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the licence was free or reduced` IS A BOOLEAN @desc Whether the licence was granted free of charge or at a reduced charge
+      `the full charge or difference has been paid` IS A BOOLEAN @desc Whether the full charge, or the difference, has since been paid
+GIVETH A `Yes or no`
+`Must I hand back the licence document and plates` MEANS
+    CONSIDER `my role`
+    WHEN `I am selling, or have sold, a licensed vehicle` THEN `yes if` (`Must I return the licence document and plates` `the licence was free or reduced` `the full charge or difference has been paid`)
+    OTHERWISE `does not arise for you`
+
+@export When I sell the vehicle, must I give the buyer its licence document: the current one, or the most recent if it expired in the 3 months before (Road Traffic (Vehicles) Regulations 2014 r 51)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the state of the vehicle's licence` IS A `Licence status` @desc The state of the vehicle's licence at the time in question: granted and current, expired, never granted, or suspended, cancelled or of no effect
+      `it expired within the 3 months before the sale` IS A BOOLEAN @desc If it has expired: whether it expired within the 3 months before the sale
+GIVETH A `Yes or no`
+`Must I give the buyer the licence document` MEANS
+    CONSIDER `my role`
+    WHEN `I am selling, or have sold, a licensed vehicle` THEN `yes if` (`Must I hand the buyer the licence document` `the state of the vehicle's licence` `it expired within the 3 months before the sale`)
+    OTHERWISE `does not arise for you`
+
+@export I have sold my licensed vehicle: am I still its "responsible person", liable for its use, until I give the CEO the notice of sale (Road Traffic (Administration) Act 2008 s 6(2)(a), (b))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have given the CEO the s 10(1) notice` IS A BOOLEAN @desc Whether you have given the CEO written notice of the new owner's name and address
+GIVETH A `Yes or no`
+`Am I still responsible for the vehicle after selling it` MEANS
+    CONSIDER `my role`
+    WHEN `I am selling, or have sold, a licensed vehicle` THEN `yes if` (`Am I still responsible for the vehicle I sold` `I have given the CEO the s 10(1) notice`)
+    OTHERWISE `does not arise for you`
+
+@export What is the infringement notice penalty for not notifying the CEO of a sale or a purchase in time (Road Traffic (Administration) Regulations 2014 r 22: 2 PU)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH AN `Amount`
+`What is the infringement penalty for notifying late` MEANS
+    CONSIDER `my role`
+    WHEN `I am selling, or have sold, a licensed vehicle` THEN amount `What is the infringement penalty for a late sale notice`
+    WHEN `I am buying, or have bought, a licensed vehicle` THEN amount `What is the infringement penalty for a late sale notice`
+    OTHERWISE `does not arise for you`
+
+§§ `For the buyer of a licensed vehicle`
+
+§§§ `s 10(2); Administration Act s 6 -- my notice, and when the vehicle becomes my responsibility`
+
+@export Within how many days after becoming the owner must I give the CEO written notice of it (Road Traffic (Vehicles) Act 2012 (WA) s 10(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH A `Days`
+`How long do I have to notify the CEO of my purchase` MEANS
+    CONSIDER `my role`
+    WHEN `I am buying, or have bought, a licensed vehicle` THEN `within` (`Within how many days must I notify the CEO` `I bought it`)
+    OTHERWISE `does not arise for you`
+
+@export Have I committed the offence of not notifying the CEO within 14 days of becoming the owner (Road Traffic (Vehicles) Act 2012 (WA) s 10(2); a fine of 10 PU)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `days after the purchase when I notified, or days so far if I have not` IS A NUMBER @desc The number of days after you became the owner on which you gave written notice, or, if you have not, the number of days since then
+GIVETH A `Yes or no`
+`Have I notified my purchase too late` MEANS
+    CONSIDER `my role`
+    WHEN `I am buying, or have bought, a licensed vehicle` THEN `yes if` (`Have I failed to notify the CEO in time` `I bought it` `days after the purchase when I notified, or days so far if I have not`)
+    OTHERWISE `does not arise for you`
+
+@export I have bought a licensed vehicle: am I now its "responsible person", liable for its use (Road Traffic (Administration) Act 2008 s 6(2)(b), (3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the seller has notified the CEO naming me` IS A BOOLEAN @desc Whether the seller has given the CEO the s 10(1) notice naming you as the new owner
+      `I did not agree to become the owner and have told the CEO in writing` IS A BOOLEAN @desc Whether you did not agree to becoming an owner and have notified the CEO in writing
+GIVETH A `Yes or no`
+`Am I now responsible for the vehicle I bought` MEANS
+    CONSIDER `my role`
+    WHEN `I am buying, or have bought, a licensed vehicle` THEN `yes if` (`Am I responsible for the vehicle I bought` `the seller has notified the CEO naming me` `I did not agree to become the owner and have told the CEO in writing`)
+    OTHERWISE `does not arise for you`
+
+§§§ `s 5(1), (3), s 7(2); r 21, r 100 -- having the licence transferred to me`
+
+@export Am I old enough to apply for the transfer of the vehicle licence: 16, or 18 for a heavy vehicle (Road Traffic (Vehicles) Regulations 2014 r 21)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my age in years` IS A NUMBER @desc Your age in completed years
+      `it is a heavy vehicle` IS A BOOLEAN @desc Whether the vehicle is a heavy vehicle (an MRC over 4 500 kg, r 12)
+GIVETH A `Yes or no`
+`Am I old enough to have the licence transferred` MEANS
+    CONSIDER `my role`
+    WHEN `I am buying, or have bought, a licensed vehicle` THEN `yes if` (`Am I old enough to apply for a vehicle licence` `my age in years` `it is a heavy vehicle`)
+    OTHERWISE `does not arise for you`
+
+@export Must the CEO transfer the vehicle licence to me (Road Traffic (Vehicles) Act 2012 (WA) s 5(1), (3); Road Traffic (Vehicles) Regulations 2014 r 21)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my age in years` IS A NUMBER @desc Your age in completed years
+      `it is a heavy vehicle` IS A BOOLEAN @desc Whether the vehicle is a heavy vehicle (an MRC over 4 500 kg, r 12)
+      `I have given the proof of age and identity the CEO requires` IS A BOOLEAN @desc Whether you have given the proof of age and identity the CEO requires
+      `I have paid the transfer fee and the duty` IS A BOOLEAN @desc Whether you have paid the transfer fee and the duty (and any penalty tax) under the Duties Act 2008
+      `the vehicle meets the prescribed standards` IS A BOOLEAN @desc Whether the vehicle meets the prescribed standards and requirements and is fit for its purpose, or is a prescribed exception
+      `I have complied with the Duties Act 2008 on the transfer` IS A BOOLEAN @desc Whether you have complied with the applicable provisions of the Duties Act 2008 on the transfer
+      `the CEO is satisfied the vehicle is kept primarily in WA or in no jurisdiction` IS A BOOLEAN @desc Whether the CEO is satisfied the vehicle is kept primarily in Western Australia, or not primarily in any jurisdiction
+      `another jurisdiction's law would prevent me holding a licence for it` IS A BOOLEAN @desc Whether the law of another jurisdiction would prevent you holding a licence for the vehicle
+      `a fines enforcement order, immobilisation or plate removal affects the vehicle` IS A BOOLEAN @desc Whether a fines enforcement licence suspension order, an immobilisation or plate removal order, or a vehicle licence suspension or cancellation order affects the vehicle
+      `a licence warning notice is in force for the vehicle` IS A BOOLEAN @desc Whether a licence warning notice is in force for the vehicle
+GIVETH A `Yes or no`
+`Must the licence be transferred to me` MEANS
+    CONSIDER `my role`
+    WHEN `I am buying, or have bought, a licensed vehicle` THEN `yes if` (`Must the CEO transfer the licence to me` (`My transfer application` WITH
+        `my age in years` IS `my age in years`
+        `it is a heavy vehicle` IS `it is a heavy vehicle`
+        `I have given the proof of age and identity the CEO requires` IS `I have given the proof of age and identity the CEO requires`
+        `I have paid the transfer fee and the duty` IS `I have paid the transfer fee and the duty`
+        `the vehicle meets the prescribed standards and is fit for its purpose, or is a prescribed exception` IS `the vehicle meets the prescribed standards`
+        `I have complied with the Duties Act 2008 on the transfer` IS `I have complied with the Duties Act 2008 on the transfer`
+        `the CEO is satisfied the vehicle is kept primarily in WA or in no jurisdiction` IS `the CEO is satisfied the vehicle is kept primarily in WA or in no jurisdiction`
+        `another jurisdiction's law would prevent me holding a licence for it` IS `another jurisdiction's law would prevent me holding a licence for it`
+        `a fines enforcement order, immobilisation or plate removal affects the vehicle` IS `a fines enforcement order, immobilisation or plate removal affects the vehicle`
+        `a licence warning notice is in force for the vehicle` IS `a licence warning notice is in force for the vehicle`))
+    OTHERWISE `does not arise for you`
+
+@export What must I pay to have the licence transferred into my name: the $20.50 transfer fee and the duty, and no licence charge, recording fee or CTP premium (Road Traffic (Vehicles) Act 2012 (WA) s 5(1)(b), s 7(2); Road Traffic (Vehicles) Regulations 2014 r 100)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the duty on the transfer` IS A NUMBER @desc The vehicle licence duty (and any penalty tax) payable under the Duties Act 2008 on the transfer, in dollars
+GIVETH AN `Amount`
+`What does the transfer cost me` MEANS
+    CONSIDER `my role`
+    WHEN `I am buying, or have bought, a licensed vehicle` THEN amount (`What must I pay to transfer the licence` `the duty on the transfer`)
+    OTHERWISE `does not arise for you`
+
+§§§ `s 10(3)(b), (6), (7) -- the CEO's notice to apply for transfer`
+
+-- The notice is the situation, and is also the record's first field: TRUE by the situation's own terms.
+@export The CEO has issued me a notice to apply for transfer: have I committed the offence of not applying within 28 days, or the longer time allowed (Road Traffic (Vehicles) Act 2012 (WA) s 10(6))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the CEO has issued me a notice to apply for transfer` IS A BOOLEAN @desc Whether the CEO has issued you a notice under s 10(3)(b) to apply for the transfer of the vehicle's licence
+      `days since the notice was issued` IS A NUMBER @desc Days since the CEO's notice was issued
+      `further days the CEO allowed beyond 28` IS A NUMBER @desc Any further days the CEO allowed beyond the 28 (0 if none)
+      `I have applied for the transfer` IS A BOOLEAN @desc Whether you have applied for the transfer of the licence
+      `I did not agree to become an owner and told the CEO in writing` IS A BOOLEAN @desc Whether you did not agree to becoming an owner of the vehicle and have told the CEO so in writing
+      `another person has been nominated as owner` IS A BOOLEAN @desc Whether another person has been nominated as the owner
+      `the court accepts there was good reason for not applying` IS A BOOLEAN @desc Whether a court would accept there was good reason for not applying (or, with more than one owner, for not nominating one)
+GIVETH A `Yes or no`
+`Have I failed to apply for the transfer in time` MEANS
+    CONSIDER `my role`
+    WHEN `I am buying, or have bought, a licensed vehicle` THEN
+        IF `the CEO has issued me a notice to apply for transfer`
+        THEN `yes if` (`Have I failed to apply for transfer after the CEO's notice` (`The CEO's transfer notice` WITH
+                 `the CEO has issued me a notice to apply for transfer` IS TRUE
+                 `days since the notice was issued` IS `days since the notice was issued`
+                 `further days the CEO allowed beyond 28` IS `further days the CEO allowed beyond 28`
+                 `I have applied for the transfer` IS `I have applied for the transfer`
+                 `I did not agree to become an owner and told the CEO in writing` IS `I did not agree to become an owner and told the CEO in writing`
+                 `another person has been nominated as owner` IS `another person has been nominated as owner`
+                 `the court accepts there was good reason for not applying` IS `the court accepts there was good reason for not applying`))
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+@export The CEO has issued me a notice to apply for transfer: if I am convicted of not applying, what most can the court make me pay, the $2 500 fine with the transfer fee and the duty (Road Traffic (Vehicles) Act 2012 (WA) s 10(6), (7); Road Traffic (Vehicles) Regulations 2014 r 100)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the CEO has issued me a notice to apply for transfer` IS A BOOLEAN @desc Whether the CEO has issued you a notice under s 10(3)(b) to apply for the transfer of the vehicle's licence
+      `the duty on the transfer` IS A NUMBER @desc The vehicle licence duty (and any penalty tax) payable under the Duties Act 2008 on the transfer, in dollars
+GIVETH AN `Amount`
+`What can I be made to pay for not applying for the transfer` MEANS
+    CONSIDER `my role`
+    WHEN `I am buying, or have bought, a licensed vehicle` THEN
+        IF `the CEO has issued me a notice to apply for transfer`
+        THEN amount (`What most can a court make me pay for not applying for transfer` `the duty on the transfer`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
