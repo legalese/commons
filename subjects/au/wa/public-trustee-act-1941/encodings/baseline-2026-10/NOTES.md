@@ -215,3 +215,53 @@ Out:
 - Encode s 12(4)-(8), s 12A and s 13 if the seat is widened to executors who want to
   hand over an estate already granted.
 - An independent test pass and the human gates.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026, after the model of the Graffiti Vandalism Act 2016 encoding's seat layer (its design decisions D2, D4 and D8). The baseline's files are unchanged: the layer is added, nothing is replaced. Two new files:
+
+- `pta-qa.l4` imports `prelude` and `pta-small-estates`. It has 24 exported questions.
+- `pta-qa-cases.l4` imports the same and `pta-qa`. It has 175 cases.
+
+### Roles
+
+`DECLARE Role IS ONE OF`:
+
+- `I am next of kin of someone who has died`: the baseline's main seat (all 17 of its questions).
+- `I am making a will, or have made one`: the baseline's ss 7-8 seat, with s 47A and s 2(c) (3 questions).
+- `I am a beneficiary of an estate or trust the Public Trustee administers`: a client under s 2(a), (e), asking about fees and unclaimed money (5 questions).
+- `I am owed money by someone who has died`: the creditor s 11 sets against the Public Trustee (1 question).
+
+Why: the Act speaks to the Public Trustee and the Court; the people it is applied to are the family, the will-maker, the beneficiaries of what the Public Trustee administers, and a creditor who wants to administer. The Public Trustee and the Court are not seats. "Am I a client of the Public Trustee" is one question with a branch for each of the first three roles, since s 2 answers it for all of them. Every exported question takes `my role` IS A Role first, with `@desc Which of these describes you`, and for a role it is not about answers `does not arise for you` without reading any other input.
+
+### Situation input
+
+| Input | Type | Does not arise when | Taken by |
+|---|---|---|---|
+| `the Public Trustee's part in the estate` | `The Public Trustee's part` (`none yet`; `it has filed a small-estate election (s 14)`; `it administers the estate under an order to administer, a grant, or as executor`) | `none yet`, for all 8; also `it administers the estate under ...`, for the two questions of s 14(4) and (5), which speak "after filing such election" | next of kin: `Must the Public Trustee seek an order after all`, `Must the election be revoked and accounts filed` (s 14(4), (5)); `May the Public Trustee pay my child's share to me` (s 18); `May the Public Trustee charge for this`, `What is the most the Public Trustee may charge`, `Are the fees paid out of the estate` (ss 9, 38A, 38B, 47A, 62); `Must the Public Trustee advertise the unclaimed sum`, `May the sum go to the Consolidated Account` (s 45) |
+
+It is the second input, straight after `my role`, with one name, type and `@desc` everywhere, so the form asks it once. The two helpers that read it list all three values with no OTHERWISE (graffiti finding 31). The questions of whether the Public Trustee may take the estate on (ss 8, 10, 10(4), 11, 12, 14(1)) arise in every situation and take none. The will-maker, the beneficiary (whose role already says the Public Trustee administers) and the creditor have no situation input.
+
+### Decisions
+
+- **QA-1. The situation is what the Public Trustee has done, not what the family has done.** The Act ties s 14(4)-(5) to the election having been filed, and s 18, the fees and s 45 to the Public Trustee holding the estate (s 14(2) deems the election a grant). s 18's own input `the Public Trustee holds the grant` is kept, as the baseline asks it, so the answer still equals the baseline's.
+- **QA-2. One `@desc` for `the family`.** The baseline gives the same input two `@desc` texts in different questions; the layer gives every question one, "What the executor and next of kin are doing, and who has authorised the Public Trustee", so the form asks it once.
+- **QA-3. The will-maker's fee question builds the baseline's enumeration.** `May the Public Trustee charge me for preparing my will` asks only whether a legal practitioner directs and controls the preparation, and picks the baseline's `What the charge is for` value from it (s 47A(1)-(2)).
+- **QA-4. The creditor's answer is the baseline's s 11 answer turned round.** The creditor is preferred exactly when the Public Trustee is not, that is when the creditor proves to the Court it would be more beneficial.
+
+### Not covered for the new roles
+
+- Will-maker: deposit of wills (s 54) and the Public Trustee as trustee of a will trust (Division 3 onwards): out of the baseline's scope.
+- Beneficiary: the Common Account and investment, represented persons, accounts and inquiries (ss 55-61); a beneficiary's claim against the Public Trustee.
+- Creditor: the order of payment of debts and an insolvent estate: not in this Act's encoded sections (the Administration Act 1903 has them, also not encoded).
+
+### Cases
+
+175 in `pta-qa-cases.l4`, all satisfied, with 0 errors and 0 warnings:
+
+- 70 ask each question for each role it is not about, every other input ASSUMEd: `does not arise for you`;
+- 10 ask each situation question, for its own role, with each value that makes the situation not hold, every later input ASSUMEd: `does not arise for you`;
+- 20 assert that the next of kin's or will-maker's answer equals the baseline export's on the same facts (one for each of the 17 next-of-kin questions and the 3 will-maker questions);
+- 75 are worked by hand from the text, for all four roles, with the baseline's fixtures (Jake's death, k098, and the encoder's fee figures).
+
+Checked with the stable `l4` of VS Code extension 1.6.98, `JL4_LIBRARY_PATH` unset: `pta-qa.l4`, `pta-qa-cases.l4`, and the baseline's `pta-small-estates.l4` and `pta-cases-small-estates.l4` (48 of 48, unchanged) give 0 errors and 0 warnings; `l4 check pta-qa.l4` succeeds. A script listed every `@export` of `pta-qa.l4` with its inputs and checked that `my role` is first in all 24, that the situation input (and every other shared input) has one name, type and `@desc`, and that no input is DEONTIC or EVENT. A negative control (one expected fee altered) was caught. The mechanical cases are generated by the scratchpad script `gen_pta.py` from the layer's own `@export` list.
