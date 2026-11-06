@@ -2,7 +2,7 @@
 
 Victorian Acts, one subject-id per body of law, following the subject-sidecar shape described in [`subjects/README.md`](../README.md).
 
-The subjects here were laid out on 2026-09-22 for the Acts that govern twelve everyday topics -- payroll, leave, termination, pensions, government benefits, personal tax, insurance claims, utility billing, passenger compensation, consumer and tenancy, customs and duties, and work permits. The mapping and the check of each Act against the official register are in `tools/topics/`. No statute text has been deposited and nothing is encoded yet.
+The subjects here were laid out on 2026-09-22 for the Acts that govern twelve everyday topics -- payroll, leave, termination, pensions, government benefits, personal tax, insurance claims, utility billing, passenger compensation, consumer and tenancy, customs and duties, and work permits. The mapping and the check of each Act against the official register are in `tools/topics/`. No statute text was deposited then. Since 2026-11-06, 26 Acts and statutory rules are deposited from Word files the owner saved by hand (see [Claims, injury and compensation law](#claims-injury-and-compensation-law-deposited-2026-11-06)).
 
 ## Social security and benefits, and personal income tax (indexed 2026-10-20)
 
@@ -11,6 +11,7 @@ On 2026-10-20 eleven instruments were added and the three already here were chec
 **All fourteen are indexed (metadata only); none is sourced.** The reason was first the terms, below.
 Since 24 October 2026 the owner's ruling allows deposit (see the terms), but robots.txt still keeps a fetcher off the files that hold the texts, so they wait to be saved by hand (see [Sourcing, 2026-10-24](#sourcing-2026-10-24)).
 One instrument outside the fourteen is sourced: the workers' compensation indexation notice for 1 July 2026, from the Government Gazette.
+On 2026-11-06 four of the fourteen were deposited from Word files saved by hand (the victims of crime financial assistance Act, the 2013 workers' compensation Act and its Regulations, and the Transport Accident Act); the other ten still wait to be saved.
 
 ### Why Victorian law, and how it connects to the Commonwealth subjects
 
@@ -31,12 +32,12 @@ The fifteenth row, the Gazette notice, was added on 2026-10-24.
 | Subject | No. | Current version | Why it is in the set |
 |---|---|---|---|
 | **Benefits** | | | |
-| [`victims-of-crime-financial-assistance-scheme-act-2022`](victims-of-crime-financial-assistance-scheme-act-2022/) | Act 21/2022 | 002, effective 1 Dec 2025 | The financial assistance scheme for victims of crime, in operation from 18 Nov 2024: who may apply and what can be paid. *New.* |
+| [`victims-of-crime-financial-assistance-scheme-act-2022`](victims-of-crime-financial-assistance-scheme-act-2022/) | Act 21/2022 | 002, effective 1 Dec 2025 | The financial assistance scheme for victims of crime, in operation from 18 Nov 2024: who may apply and what can be paid. *New. Text deposited 2026-11-06.* |
 | [`victims-of-crime-financial-assistance-scheme-regulations-2024`](victims-of-crime-financial-assistance-scheme-regulations-2024/) | SR 127/2024 | 001, effective 18 Nov 2024 | Regulations made for the scheme's start; may carry prescribed amounts and procedure (not verified, text unread). *New.* |
-| [`workplace-injury-rehabilitation-and-compensation-act-2013`](workplace-injury-rehabilitation-and-compensation-act-2013/) | Act 67/2013 | 054, effective 2 Oct 2026 | Workers' compensation: weekly payments, step-downs, medical and like services, lump sums. *Already here; currency checked.* |
-| [`workplace-injury-rehabilitation-and-compensation-regulations-2024`](workplace-injury-rehabilitation-and-compensation-regulations-2024/) | SR 35/2024 | 001, effective 26 May 2024 | The regulations under that Act (content not verified, text unread). *New.* |
+| [`workplace-injury-rehabilitation-and-compensation-act-2013`](workplace-injury-rehabilitation-and-compensation-act-2013/) | Act 67/2013 | 054, effective 2 Oct 2026 | Workers' compensation: weekly payments, step-downs, medical and like services, lump sums. *Already here; currency checked. Text deposited 2026-11-06.* |
+| [`workplace-injury-rehabilitation-and-compensation-regulations-2024`](workplace-injury-rehabilitation-and-compensation-regulations-2024/) | SR 35/2024 | 001, effective 26 May 2024 | The regulations under that Act: full-time worker, pre-injury average weekly earnings, amounts that are not remuneration, payments to a worker overseas, self-insurers' contributions. *New. Text deposited 2026-11-06.* |
 | [`workers-compensation-annual-indexation-notice`](workers-compensation-annual-indexation-notice/) | Gazette S 363/2026 | 30 June 2026, rates from 1 July 2026 | The indexed amounts under that Act (maximum weekly payments, death benefits, impairment lump sums, damages thresholds), with the Accident Compensation Act 1985 and Workers Compensation Act 1958 notices in the same Gazette. *Added 2026-10-24; text deposited.* |
-| [`transport-accident-act-1986`](transport-accident-act-1986/) | Act 111/1986 | 158, effective 2 Oct 2026 | No-fault benefits after a road accident: loss of earnings, impairment, medical. *Already here; currency checked.* |
+| [`transport-accident-act-1986`](transport-accident-act-1986/) | Act 111/1986 | 158, effective 2 Oct 2026 (on 2026-11-06: 159, effective 1 Nov 2026) | No-fault benefits after a road accident: loss of earnings, impairment, medical. *Already here; currency checked. Version 159 deposited 2026-11-06.* |
 | [`transport-accident-regulations-2017`](transport-accident-regulations-2017/) | SR 40/2017 | 002, effective 23 Oct 2018 | The general regulations under that Act (content not verified, text unread). *New.* |
 | [`state-concessions-act-2004`](state-concessions-act-2004/) | Act 82/2004 | 003, effective 22 June 2011 | The statutory frame for concessions on energy, water and municipal rates for pensioners and low-income households. *New.* |
 | **Personal tax** | | | |
@@ -135,12 +136,87 @@ A version page also lists a bookmarked PDF for the State Concessions Act, which 
 
 ### Gaps and flags
 
-- **No Act or statutory rule text is deposited.** Until 2026-10-24 the obstacle was the terms; the owner's ruling of that day removed it. What remains is robots.txt, which the ruling does not lift: the files listed under Sourcing must be saved by hand before they can be converted and deposited. The only Victorian text deposited is the Gazette notice in `workers-compensation-annual-indexation-notice`.
+- **Superseded on 2026-11-06 for 26 instruments** (see [Claims, injury and compensation law](#claims-injury-and-compensation-law-deposited-2026-11-06)); for the ten of the set not yet saved it still holds. **No Act or statutory rule text is deposited.** Until 2026-10-24 the obstacle was the terms; the owner's ruling of that day removed it. What remains is robots.txt, which the ruling does not lift: the files listed under Sourcing must be saved by hand before they can be converted and deposited. The only Victorian text deposited is the Gazette notice in `workers-compensation-annual-indexation-notice`.
 - The content notes in the table for the regulations are deliberately hedged: the texts could not be read, so what numbers each regulation sets is not verified.
 - **Victims of Crime Assistance Act 1996** (Act 81/1996) is still listed in force (version 070, effective 18 Nov 2024, the day the new scheme began), presumably for applications made before then. Not indexed as a subject; add it if transitional claims matter.
 - The Transport Accident Act's indexed amounts for 1 July 2026 were not found in the Gazette (see Sourcing). The workers' compensation notice is now indexed and deposited.
-- Not indexed, considered: the Housing Act 1983 (public housing rent is set by policy rather than in the Act); the Taxation Administration Regulations 2017 (SR 111/2017, version 002, 3 June 2026); the Accident Compensation Act 1985, which still governs older workplace injuries.
+- Not indexed, considered: the Housing Act 1983 (public housing rent is set by policy rather than in the Act); the Taxation Administration Regulations 2017 (SR 111/2017, version 002, 3 June 2026); the Accident Compensation Act 1985, which still governs older workplace injuries (indexed and deposited on 2026-11-06).
 - Commonwealth law is the larger half of both topics; ask questions there first.
+
+## Claims, injury and compensation law (deposited 2026-11-06)
+
+On 2026-11-06 the owner saved by hand, in a browser, the Word files of 26 Victorian Acts and statutory rules: the ones he could find from a list of 39 behind personal injury, compensation, limitation, civil liability, wills, employment and victims law.
+Many of the list's links were 404s, because their addresses had been guessed; the correct pages are below.
+Each file was identified from its own cover (title, number, version, date), not from its file name, and matched against the register: every one is the current version ("In force") on its landing page read on 2026-11-06, and its size is the size its version page shows.
+No crawler fetched the Word files: robots.txt disallows them on both hosts (see Terms).
+Only the register's landing pages, version pages, sitemap, robots.txt and copyright page were read, with the User-Agent above and at least 3.5 seconds between requests, 2026-11-06T12:25Z to 12:45Z. The copyright notice is unchanged.
+
+**How each is deposited.** In `registers/source-bundle/` of its subject: `<source-id>.txt`, a plain-text conversion of the Word file (stdlib zipfile and ElementTree, the method of the ACT Word deposits), headed by the copyright notice, the Government Printer's attribution and an unofficial-version notice; and `<source-id>.meta.json`, which records that the owner saved it by hand on 2026-11-06, from which version page, the Word file's address, size and SHA-256, the pages read and their hashes, and the conversion.
+The Word file is not kept, as the existing deposits keep none of their originals.
+The table of provisions, running heads and footers are dropped; the marginal history notes are kept as `[Side note: ...]` lines; tables become `| a | b |` rows; Word equations are linearised.
+Embedded equation objects and images cannot be carried in text: each is marked in place and transcribed in a `<source-id>.formulas.md` sidecar (seven subjects: 57 equations and 11 images), from the Word file, **not yet checked against the authorised PDF**.
+One equation looks wrong in the Word file itself: s 129B(3) of the Accident Compensation Act 1985 reads (E / F) × F while its "where" list defines C, E and F (see that sidecar).
+The Workplace Injury Rehabilitation and Compensation Act 2013's flow charts 2 to 11 are images and are not transcribed; flow chart 1 is.
+The authorised PDFs were not saved; each meta.json gives the address of the one to check against.
+
+| Subject | No. | Version deposited | What it is for |
+|---|---|---|---|
+| [`workplace-injury-rehabilitation-and-compensation-act-2013`](workplace-injury-rehabilitation-and-compensation-act-2013/) | Act 67/2013 | 054, effective 2 Oct 2026 | Workers' compensation for injuries from 1 July 2014: the claim, weekly payments and their step-downs and the second-entitlement-period test, medical and like services, impairment benefits, death benefits, Part 7 common law damages and the serious injury gateway, mental injury, return to work, and the indexation formulas. Formulas sidecar: 14 equations, 11 images. *Already here; text deposited.* |
+| [`workplace-injury-rehabilitation-and-compensation-regulations-2024`](workplace-injury-rehabilitation-and-compensation-regulations-2024/) | SR 35/2024 | 001, effective 26 May 2024 | The regulations under the 2013 Act: prescribed forms, amounts, percentages and procedure that the Act leaves to regulation. *Already here; text deposited.* |
+| [`accident-compensation-act-1985`](accident-compensation-act-1985/) | Act 10191/1985 | 237, effective 2 Oct 2026 | Workers' compensation for injuries before 1 July 2014 (legacy claims): weekly payments, impairment, s 134AB serious injury and common law damages, s 135A, and the old contribution and indexation rules. Formulas sidecar: 12 equations. *New; text deposited.* |
+| [`transport-accident-act-1986`](transport-accident-act-1986/) | Act 111/1986 | 159, effective 1 Nov 2026 | No-fault transport accident benefits (loss of earnings, impairment, medical and like expenses, death benefits) and the s 93 serious injury and impairment thresholds for common law damages, with the benefit formulas. Formulas sidecar: 23 equations. *Already here; text deposited.* |
+| [`wrongs-act-1958`](wrongs-act-1958/) | Act 6420/1958 | 130, effective 25 Feb 2026 | Negligence and personal injury damages: Part VB thresholds and caps (significant injury, non-economic loss), Part X duty of care, contributory negligence, proportionate liability, and Part XIII organisational liability for child abuse (duty, reverse onus). Formulas sidecar: 1 equation. *New; text deposited.* |
+| [`supreme-court-act-1986`](supreme-court-act-1986/) | Act 110/1986 | 113, effective 15 Apr 2026 | Part 4A group proceedings (class actions) and s 33ZDA group costs orders; the Court's civil jurisdiction. *New; text deposited.* |
+| [`civil-procedure-act-2010`](civil-procedure-act-2010/) | Act 47/2010 | 022, effective 30 Sep 2026 | The overarching purpose and overarching obligations of parties and their lawyers in civil proceedings, pre-litigation requirements, and summary judgment. *New; text deposited.* |
+| [`county-court-act-1958`](county-court-act-1958/) | Act 6230/1958 | 186, effective 30 Sep 2026 | The County Court's jurisdiction and procedure, where most personal injury and workers' compensation common law claims are heard. *New; text deposited.* |
+| [`administration-and-probate-act-1958`](administration-and-probate-act-1958/) | Act 6191/1958 | 130, effective 22 Oct 2025 | Estates: s 29 survival of causes of action (including damages for dust-related conditions), Part IV family provision claims, administration and distribution on intestacy. Formulas sidecar: 3 equations. *New; text deposited.* |
+| [`victims-of-crime-financial-assistance-scheme-act-2022`](victims-of-crime-financial-assistance-scheme-act-2022/) | Act 21/2022 | 002, effective 1 Dec 2025 | Financial assistance for victims of crime from 18 November 2024: who may apply, what can be paid, time limits and recovery. *Already here; text deposited.* |
+| [`wills-act-1997`](wills-act-1997/) | Act 88/1997 | 036, effective 26 Apr 2021 | Making, altering and revoking a will; informal wills; rectification; construction. *New; text deposited.* |
+| [`equal-opportunity-act-2010`](equal-opportunity-act-2010/) | Act 16/2010 | 032, effective 15 Apr 2026 | Discrimination, sexual harassment and victimisation, including in employment; exceptions; the positive duty; complaints and VCAT. *New; text deposited.* |
+| [`long-service-leave-act-2018`](long-service-leave-act-2018/) | Act 12/2018 | 006, effective 12 Dec 2025 | Entitlement to long service leave, continuous employment, payment on termination, and the formulas for normal weekly hours. Formulas sidecar: 3 equations. *Already here; text deposited.* |
+| [`legal-profession-uniform-law-application-act-2014`](legal-profession-uniform-law-application-act-2014/) | Act 17/2014 | 018, effective 11 Oct 2023 | Applies the Legal Profession Uniform Law in Victoria; Schedule 1 is the Uniform Law itself (costs disclosure, costs agreements, costs assessment, trust money, complaints). *New; text deposited.* |
+| [`victorian-civil-and-administrative-tribunal-act-1998`](victorian-civil-and-administrative-tribunal-act-1998/) | Act 53/1998 | 145, effective 28 July 2026 | VCAT: review and original jurisdiction, procedure, costs and appeals. *New; text deposited.* |
+| [`coroners-act-2008`](coroners-act-2008/) | Act 77/2008 | 046, effective 1 Nov 2026 | Reportable and reviewable deaths, investigations, inquests, findings and the family's part in them. *New; text deposited.* |
+| [`occupational-health-and-safety-act-2004`](occupational-health-and-safety-act-2004/) | Act 107/2004 | 045, effective 6 Aug 2025 | Employers' and others' duties for health and safety at work, workplace manslaughter, inspectors and offences. Formulas sidecar: 1 equation. *New; text deposited.* |
+| [`health-practitioner-regulation-national-law-victoria-act-2009`](health-practitioner-regulation-national-law-victoria-act-2009/) | Act 79/2009 | 006, effective 31 May 2019 | Applies the Health Practitioner Regulation National Law in Victoria (the National Law itself is in the Schedule to the Queensland Act and is not in this file). *New; text deposited.* |
+| [`health-records-act-2001`](health-records-act-2001/) | Act 2/2001 | 050, effective 1 May 2026 | Access to and handling of health information: the Health Privacy Principles and a person's right of access to their own health records. *New; text deposited.* |
+| [`health-complaints-act-2016`](health-complaints-act-2016/) | Act 22/2016 | 011, effective 22 Oct 2025 | Complaints about health services to the Health Complaints Commissioner, and the general code of conduct for unregistered practitioners. *New; text deposited.* |
+| [`medical-treatment-planning-and-decisions-act-2016`](medical-treatment-planning-and-decisions-act-2016/) | Act 69/2016 | 012, effective 1 July 2024 | Advance care directives, medical treatment decision makers and consent to medical treatment. *New; text deposited.* |
+| [`mental-health-and-wellbeing-act-2022`](mental-health-and-wellbeing-act-2022/) | Act 39/2022 | 010, effective 30 Sep 2026 | Mental health services, compulsory assessment and treatment, rights and the Mental Health Tribunal. *New; text deposited.* |
+| [`labour-hire-licensing-act-2018`](labour-hire-licensing-act-2018/) | Act 25/2018 | 009, effective 1 Oct 2026 | Licensing of labour hire providers and the offences for using an unlicensed provider. *Already here; text deposited.* |
+| [`public-interest-disclosures-act-2012`](public-interest-disclosures-act-2012/) | Act 85/2012 | 032, effective 2 Oct 2026 | Whistleblower disclosures about the public sector and the protections for the person who makes one, including against detrimental action. *New; text deposited.* |
+| [`guardianship-and-administration-act-2019`](guardianship-and-administration-act-2019/) | Act 13/2019 | 010, effective 15 Apr 2026 | Guardians and administrators for adults without decision-making capacity, including the management of a compensation award. *New; text deposited.* |
+| [`trustee-act-1958`](trustee-act-1958/) | Act 6401/1958 | 127, effective 1 Sep 2023 | Trustees' powers and duties, investment, and the court's supervision of trusts (for example of damages held for a minor). *New; text deposited.* |
+
+Notes on the set:
+
+- The **Legal Profession Uniform Law** has no page of its own on the Victorian register: it is Schedule 1 to the Legal Profession Uniform Law Application Act 2014, and is in that subject's deposited text.
+- The **Workplace Injury Rehabilitation and Compensation Amendment (WorkCover Scheme Modernisation) Act 2024** (Act 8/2024) and the **Justice Legislation Amendment (Vicarious Liability for Child Abuse) Act 2026** (Act 5/2026) are amending Acts. Their amendments are already in the deposited versions of the 2013 Act (version 054) and the Wrongs Act 1958 (version 130: Part XIIIA, ss 93A-93D), so neither is needed for the law as it stands; save them only for their transitional provisions.
+- The **Health Practitioner Regulation National Law (Victoria) Act 2009** only applies the National Law; the National Law itself is the Schedule to the Health Practitioner Regulation National Law Act 2009 (Qld) and is not deposited.
+- The Transport Accident Act moved from version 158 (read 2026-10-24) to 159, effective 1 Nov 2026; 159 is deposited.
+
+### Not saved: the correct pages (read 2026-11-06)
+
+The list's addresses for these were wrong (the register drops "of" and "for" from its addresses, and some titles have changed), or the file was not saved.
+Each page below was read on 2026-11-06 and gives the current version; save the Word file from the version page.
+
+| List item | What the register shows | Page to save from |
+|---|---|---|
+| Limitation of Actions Act 1958 | Act 6295/1958, version 113, in force from 2 Oct 2026 | https://www.legislation.vic.gov.au/in-force/acts/limitation-actions-act-1958/113 |
+| Transport Accident Regulations 2017 | SR 40/2017, version 002, in force from 23 Oct 2018 (the list's address was right; the file was not saved) | https://www.legislation.vic.gov.au/in-force/statutory-rules/transport-accident-regulations-2017/002 |
+| Choice of Law (Limitation Periods) Act 1993 | Act 100/1993, version 003, in force from 16 Aug 2012 | https://www.legislation.vic.gov.au/in-force/acts/choice-law-limitation-periods-act-1993/003 |
+| Jurisdiction of Courts (Cross-vesting) Act 1987 | Act 29/1987, version 026, in force from 1 July 2015 | https://www.legislation.vic.gov.au/in-force/acts/jurisdiction-courts-cross-vesting-act-1987/026 |
+| Supreme Court (General Civil Procedure) Rules 2015 | **Revoked**: SR 103/2015, last version 052, to 31 Mar 2025. Replaced by the Supreme Court (General Civil Procedure) Rules 2025, SR 85/2025, version 003, in force from 1 Jan 2026 | https://www.legislation.vic.gov.au/in-force/statutory-rules/supreme-court-general-civil-procedure-rules-2025/003 |
+| Legal Identity of Defendants (Organisational Child Abuse) Act 2018 | Act 18/2018, version 002, in force from 1 May 2020 | https://www.legislation.vic.gov.au/in-force/acts/legal-identity-defendants-organisational-child-abuse-act-2018/002 |
+| Occupational Health and Safety Regulations 2017 | SR 22/2017, version 018, in force from 20 Oct 2026 (the list's address was right; the file was not saved). The Subordinate Legislation (Occupational Health and Safety Regulations 2017) Extension Regulations 2026 are also in force | https://www.legislation.vic.gov.au/in-force/statutory-rules/occupational-health-and-safety-regulations-2017/018 |
+| Wage Theft Act 2020 | **Renamed**: now the Workforce Inspectorate Victoria Act 2020, Act 21/2020, version 005, in force from 17 Dec 2025 (the address keeps the old name) | https://www.legislation.vic.gov.au/in-force/acts/wage-theft-act-2020-0/005 |
+| Powers of Attorney Act 2014 | Act 57/2014, version 007, in force from 26 Apr 2021 | https://www.legislation.vic.gov.au/in-force/acts/powers-attorney-act-2014/007 |
+| Charter of Human Rights and Responsibilities Act 2006 | Act 43/2006, version 015, in force from 1 June 2022 | https://www.legislation.vic.gov.au/in-force/acts/charter-human-rights-and-responsibilities-act-2006/015 |
+| Workplace Injury Rehabilitation and Compensation Amendment (WorkCover Scheme Modernisation) Act 2024 | Act 8/2024, an amending Act: as made only, no in-force page; its amendments are in the deposited 2013 Act | https://www.legislation.vic.gov.au/as-made/acts/workplace-injury-rehabilitation-and-compensation-amendment-workcover-scheme |
+| Justice Legislation Amendment (Vicarious Liability for Child Abuse) Act 2026 | Act 5/2026, an amending Act: as made only, no in-force page; its amendments are in the deposited Wrongs Act 1958 | https://www.legislation.vic.gov.au/as-made/acts/justice-legislation-amendment-vicarious-liability-child-abuse-act-2026 |
+| Legal Profession Uniform Law | No page of its own: Schedule 1 to the Application Act 2014, already deposited | (none needed) |
+
+The addresses were found in the register's sitemap (https://www.legislation.vic.gov.au/sitemap.xml and its seven pages, read 2026-11-06T12:33Z to 12:34Z), because the site's search runs on a separate search host, which was not used.
 
 ## Encodings (2026-10-24)
 
