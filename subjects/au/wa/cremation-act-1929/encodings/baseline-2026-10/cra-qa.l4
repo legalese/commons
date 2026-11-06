@@ -1,0 +1,494 @@
+IMPORT prelude
+IMPORT `cra-cremation`
+
+-- Cremation Act 1929 (WA), with the Cremation Regulations 1954 -- the Q&A layer: the questions people ask, with the
+-- seat and the situation as parameters, so that one deployment serves every seat and the question form drops the
+-- questions that do not arise.
+--
+-- SEATS (`my role`, the first input of every exported question, "Which of these describes you"):
+--   * the family member, executor or funeral director arranging the cremation -- the baseline's seat (Chloe, c086;
+--     Oliver, c098), whose 17 questions are asked here by calling the baseline's functions in cra-cremation.l4;
+--   * the spouse, de facto partner or next of kin -- whose written objection stops the cremation unless the deceased's
+--     attested writing asked for it (s 13(1)), and who has no claim to the ashes as family (s 7(1));
+--   * the licensee of a crematorium -- bound by ss 3, 9, 10, 13(1) and 14 before cremating, by s 7 over the ashes, and
+--     by s 15(4) for an offence of an employee or agent;
+--   * the doctor certifying the cause of death -- whose certificate s 8A(g) and s 12 can make unusable, and who
+--     commits an offence by signing one when s 12 bars it.
+-- A question about another role answers `does not arise for you` without reading any other input. The medical
+-- referee, the coroner, the Attorney General and the Chief Health Officer are never seats: what they may or must do
+-- appears as what it means for the person asking.
+--
+-- SITUATIONS (design D8 of the graffiti encoding): within a role, a question that arises only in a situation takes that
+-- situation's fact straight after `my role`, and when it does not hold answers `does not arise for you` without reading
+-- anything else. The questions of one situation share one input, character for character. All are BOOLEAN, FALSE
+-- being the value that does not hold:
+--   * `the medical referee refused my application for a permit` (the arranger): the s 8(6) review question;
+--   * `the body has been cremated` (the arranger, the family, the crematorium): the s 7 questions about the ashes;
+--   * `I am said to have committed an offence under this Act` (the arranger, the crematorium, the doctor): the s 15(1)
+--     fine and imprisonment;
+--   * `I have objected in writing to the body being cremated` (the family): whether the objection stops the cremation;
+--   * `an employee or agent of mine is said to have committed an offence at or near my crematorium` (the crematorium):
+--     s 15(4).
+-- A question that arises in every situation of its role takes no situation input. The baseline's objection, attested
+-- wish and coronial facts stay inside its `Death` record, as the baseline asks them, and are not made situations: a
+-- separate input for a fact the record also holds could contradict it.
+--
+-- No exported question takes a DEONTIC or EVENT input. The baseline's records (`Applicant`, `Death`, `Doctor`) are
+-- taken as the baseline takes them.
+--
+-- BASELINE. Not for public use as advice. See NOTES.md, "Q&A layer (seat and situations as parameters)".
+
+§ `Cremation Act 1929 (WA) -- the questions people ask`
+
+§§ `Who is asking, and the shape of the answers`
+
+DECLARE Role IS ONE OF
+    `I am arranging the cremation of someone who has died`
+    `I am the spouse, de facto partner or next of kin of someone who has died`
+    `I run a licensed crematorium`
+    `I am the doctor certifying the cause of death`
+
+DECLARE `Yes or no` IS ONE OF
+    yes
+    no
+    `does not arise for you`
+
+DECLARE `Amount` IS ONE OF
+    `does not arise for you`
+    amount HAS dollars IS A NUMBER
+
+DECLARE `Months` IS ONE OF
+    `does not arise for you`
+    `imprisonment for` HAS `months` IS A NUMBER
+
+DECLARE `What the referee will do, if it arises` IS ONE OF
+    `does not arise for you`
+    `the answer is` HAS `the answer` IS A `What the referee will do`
+
+§§ `Helpers`
+
+GIVEN `it holds` IS A BOOLEAN
+GIVETH A `Yes or no`
+`yes if` `it holds` MEANS
+    IF `it holds` THEN yes ELSE no
+
+-- The family's facts as the baseline's `Death` record, so that the baseline's s 13(1) and s 8A(b) tests decide. Only the
+-- four fields those tests read come from the family's answers; `Does the family's objection stop the cremation` reads
+-- the objection and the attested wish, and `Does the deceased's direction stop the cremation` the direction and the
+-- Chief Health Officer's order. The other fields are not read by either test and are filled with the plain case (a
+-- WA death, certified by an unrelated doctor, not coronial, no s 14 order).
+`an unrelated certifying doctor` MEANS Doctor WITH
+    `relationship to the deceased` IS `no relation`
+    `is in partnership with the medical referee` IS FALSE
+    `is the medical referee` IS FALSE
+    `knows they are or will become entitled to property because of the death` IS FALSE
+
+GIVEN `objected` IS A BOOLEAN
+      `attested wish` IS A BOOLEAN
+      `direction against` IS A BOOLEAN
+      `order to cremate` IS A BOOLEAN
+GIVETH A Death
+`the deceased's wishes as` MEANS
+    Death WITH
+        `died outside Western Australia` IS FALSE
+        `a certificate of cause of death has been provided` IS TRUE
+        `the certifying doctor` IS `an unrelated certifying doctor`
+        `left a written direction not to be cremated` IS `direction against`
+        `the Chief Health Officer has ordered the body to be cremated` IS `order to cremate`
+        `by attested will, codicil or signed and attested writing, directed or desired cremation` IS `attested wish`
+        `a spouse, de facto partner or next of kin has objected in writing` IS `objected`
+        `the fact and cause of death are definitely ascertained (referee)` IS TRUE
+        `appears due to violence or unnatural causes, or suspicious circumstances (referee)` IS FALSE
+        `the coroner has signified an intention to investigate (coroner)` IS FALSE
+        `a coroner has certified that the permit may be granted (coroner)` IS FALSE
+        `order under section 14` IS `no order`
+        `the organs have been removed and lodged as the order specifies` IS FALSE
+
+§§ `For the family member, executor or funeral director arranging the cremation (the baseline's seat)`
+
+-- Each question calls the baseline's function of the same subject (cra-cremation.l4) and restates no rule: for this
+-- role, and where its situation holds, its answer is the baseline's, carried in the answer types above.
+
+§§§ `ss 2, 8(3A), 8(3B), 8(4A) -- may I apply, must I declare, and the fee`
+
+@export Am I an administrator of the deceased (Cremation Act 1929 (WA) s 2)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `me` IS AN Applicant @desc Who you are in relation to the deceased and the body
+GIVETH A `Yes or no`
+`Am I an administrator of the deceased` MEANS
+    CONSIDER `my role`
+    WHEN `I am arranging the cremation of someone who has died` THEN `yes if` (`Am I an administrator` `me`)
+    OTHERWISE `does not arise for you`
+
+@export May I apply for a permit to cremate the deceased (Cremation Act 1929 (WA) ss 8(3A), 13(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `me` IS AN Applicant @desc Who you are, and what you know of any objection
+      `the death` IS A Death @desc The deceased's written wishes
+GIVETH A `Yes or no`
+`May I apply for a cremation permit` MEANS
+    CONSIDER `my role`
+    WHEN `I am arranging the cremation of someone who has died` THEN `yes if` (`May I apply for the permit` `me` `the death`)
+    OTHERWISE `does not arise for you`
+
+@export Must I make a statutory declaration with my application for a cremation permit (Cremation Act 1929 (WA) s 8(3B))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `me` IS AN Applicant @desc Who you are in relation to the deceased and the body
+GIVETH A `Yes or no`
+`Must I make a statutory declaration with my application` MEANS
+    CONSIDER `my role`
+    WHEN `I am arranging the cremation of someone who has died` THEN `yes if` (`Must I make a statutory declaration` `me`)
+    OTHERWISE `does not arise for you`
+
+@export What fee must I pay the medical referee for a cremation permit (Cremation Act 1929 (WA) s 8(4A); Regulations Sch 2 item 3, r 14(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the day` IS A `Day the permit is given` @desc The day the permit is given
+      `the hour` IS A NUMBER @desc The time it is given, as an hour on a 24-hour clock (14.5 is 2:30 pm)
+GIVETH AN `Amount`
+`What fee must I pay the medical referee for a cremation permit` MEANS
+    CONSIDER `my role`
+    WHEN `I am arranging the cremation of someone who has died` THEN `amount` (`What fee must I pay for the permit` `the day` `the hour`)
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 8A, 12, 13 -- the certificates, the deceased's wishes and the family's objection`
+
+@export Can the certifying doctor's certificate of cause of death support a cremation permit (Cremation Act 1929 (WA) s 8A(g), s 12)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the doctor` IS A Doctor @desc The doctor who certified the cause of death
+GIVETH A `Yes or no`
+`Can the doctor's certificate support the cremation permit` MEANS
+    CONSIDER `my role`
+    WHEN `I am arranging the cremation of someone who has died` THEN `yes if` (`Can the doctor's certificate support the permit` `the doctor`)
+    OTHERWISE `does not arise for you`
+
+@export Does the deceased's own written direction against cremation stop the cremation (Cremation Act 1929 (WA) s 8A(b))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the death` IS A Death @desc The deceased's written wishes and any order of the Chief Health Officer
+GIVETH A `Yes or no`
+`Does the deceased's own written direction stop the cremation` MEANS
+    CONSIDER `my role`
+    WHEN `I am arranging the cremation of someone who has died` THEN `yes if` (`Does the deceased's direction stop the cremation` `the death`)
+    OTHERWISE `does not arise for you`
+
+@export Does a written objection by the spouse, de facto partner or next of kin stop the cremation (Cremation Act 1929 (WA) s 13(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the death` IS A Death @desc The objection, and the deceased's attested wishes
+GIVETH A `Yes or no`
+`Does a written objection by the family stop the cremation` MEANS
+    CONSIDER `my role`
+    WHEN `I am arranging the cremation of someone who has died` THEN `yes if` (`Does the family's objection stop the cremation` `the death`)
+    OTHERWISE `does not arise for you`
+
+@export Must I use all reasonable endeavours to have the deceased cremated as they directed (Cremation Act 1929 (WA) s 13(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `me` IS AN Applicant @desc Who you are in relation to the deceased and the body
+      `the death` IS A Death @desc The deceased's attested wishes
+GIVETH A `Yes or no`
+`Must I use all reasonable endeavours to carry out the deceased's wish to be cremated` MEANS
+    CONSIDER `my role`
+    WHEN `I am arranging the cremation of someone who has died` THEN `yes if` (`Must I try to carry out the deceased's wish to be cremated` `me` `the death`)
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 8, 8A, 14 -- what the referee will do, and the coroner`
+
+@export What will the medical referee do with my application for a cremation permit (Cremation Act 1929 (WA) ss 8, 8A, 13)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `me` IS AN Applicant @desc Who you are, and what you know of any objection
+      `the death` IS A Death @desc The death, the certificates, the deceased's wishes and any objection or coronial involvement
+      `the application is on Form 6 with the fee and a Form 7 or coroner's certificate` IS A BOOLEAN @desc Whether your application is on Form 6, with the fee and a doctor's Form 7 certificate or a coroner's certificate
+GIVETH A `What the referee will do, if it arises`
+`What will the medical referee do with my application` MEANS
+    CONSIDER `my role`
+    WHEN `I am arranging the cremation of someone who has died` THEN `the answer is` (`What will the referee do with my application` `me` `the death` `the application is on Form 6 with the fee and a Form 7 or coroner's certificate`)
+    OTHERWISE `does not arise for you`
+
+@export Must the coroner be involved before the cremation can go ahead (Cremation Act 1929 (WA) s 8(5), s 8A(e), (f), s 14)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the death` IS A Death @desc The death, as it appears to the referee, and anything the coroner has done
+GIVETH A `Yes or no`
+`Must the coroner be involved before the cremation` MEANS
+    CONSIDER `my role`
+    WHEN `I am arranging the cremation of someone who has died` THEN `yes if` (`Must the coroner be involved` `the death`)
+    OTHERWISE `does not arise for you`
+
+@export If the medical referee refuses my permit, may I ask the State Administrative Tribunal to review it (Cremation Act 1929 (WA) s 8(6))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the medical referee refused my application for a permit` IS A BOOLEAN @desc Whether a medical referee has refused your application for a cremation permit
+      `the refusal was under section 8(5)` IS A BOOLEAN @desc Whether the referee refused because the death appeared violent, unnatural or suspicious
+GIVETH A `Yes or no`
+`May I ask the State Administrative Tribunal to review the refusal of my permit` MEANS
+    CONSIDER `my role`
+    WHEN `I am arranging the cremation of someone who has died` THEN
+        IF `the medical referee refused my application for a permit`
+        THEN `yes if` (`May I ask the Tribunal to review the refusal` `the refusal was under section 8(5)`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 3, 7, 9, 10, 14 -- the cremation and the ashes`
+
+@export May the cremation go ahead now (Cremation Act 1929 (WA) ss 3, 9, 10, 13, 14; Regulations Sch 1 Form 9)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the death` IS A Death @desc The death, any objection and any order forbidding cremation
+      `a permit has been granted` IS A BOOLEAN @desc Whether a medical referee has granted the permit
+      `hours since death` IS A NUMBER @desc How many hours have passed since the death
+      `at a licensed crematorium` IS A BOOLEAN @desc Whether the cremation is to be at a crematorium licensed under the Act
+GIVETH A `Yes or no`
+`May the cremation go ahead now, on these facts` MEANS
+    CONSIDER `my role`
+    WHEN `I am arranging the cremation of someone who has died` THEN `yes if` (`May the cremation go ahead now` `the death` `a permit has been granted` `hours since death` `at a licensed crematorium`)
+    OTHERWISE `does not arise for you`
+
+@export May the ashes be delivered to me to take away from the crematorium (Cremation Act 1929 (WA) s 7(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the body has been cremated` IS A BOOLEAN @desc Whether the body has been cremated (the questions about the ashes arise only then)
+      `I obtained the permit` IS A BOOLEAN @desc Whether you are the person who obtained the cremation permit
+GIVETH A `Yes or no`
+`May the crematorium deliver the ashes to me` MEANS
+    CONSIDER `my role`
+    WHEN `I am arranging the cremation of someone who has died` THEN
+        IF `the body has been cremated`
+        THEN `yes if` (`May the ashes be delivered to me` `I obtained the permit`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+@export May the ashes be removed from the crematorium for this purpose (Cremation Act 1929 (WA) s 7(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the body has been cremated` IS A BOOLEAN @desc Whether the body has been cremated (the questions about the ashes arise only then)
+      `to the person who obtained the permit` IS A BOOLEAN @desc Whether the ashes go to the person who obtained the permit
+      `for burial on the crematorium site` IS A BOOLEAN @desc Whether they are being moved only to be buried on the crematorium's own site
+GIVETH A `Yes or no`
+`May the ashes be removed from the crematorium for this purpose` MEANS
+    CONSIDER `my role`
+    WHEN `I am arranging the cremation of someone who has died` THEN
+        IF `the body has been cremated`
+        THEN `yes if` (`May the ashes be removed` `to the person who obtained the permit` `for burial on the crematorium site`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 13, 15 -- offences`
+
+@export Would I commit an offence by applying for the permit (Cremation Act 1929 (WA) s 13(1), s 15)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `me` IS AN Applicant @desc Who you are, and what you know of any objection
+      `the death` IS A Death @desc The deceased's attested wishes
+GIVETH A `Yes or no`
+`Would I commit an offence by applying for the permit` MEANS
+    CONSIDER `my role`
+    WHEN `I am arranging the cremation of someone who has died` THEN `yes if` (`Would applying be an offence` `me` `the death`)
+    OTHERWISE `does not arise for you`
+
+@export What is the most I can be fined for an offence against the Cremation Act 1929 (WA) (s 15(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I am said to have committed an offence under this Act` IS A BOOLEAN @desc Whether you have been charged with, or are said to have committed, an offence against the Cremation Act 1929 (the penalty questions arise only then)
+GIVETH AN `Amount`
+`What is the most I can be fined for an offence against the Act` MEANS
+    CONSIDER `my role`
+    WHEN `I am arranging the cremation of someone who has died` THEN
+        IF `I am said to have committed an offence under this Act`
+        THEN `amount` (`What is the most I can be fined`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+@export What is the longest I can be imprisoned for an offence against the Cremation Act 1929 (WA) (s 15(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I am said to have committed an offence under this Act` IS A BOOLEAN @desc Whether you have been charged with, or are said to have committed, an offence against the Cremation Act 1929 (the penalty questions arise only then)
+GIVETH A `Months`
+`What is the longest I can be imprisoned for an offence against the Act` MEANS
+    CONSIDER `my role`
+    WHEN `I am arranging the cremation of someone who has died` THEN
+        IF `I am said to have committed an offence under this Act`
+        THEN `imprisonment for` (`What is the longest I can be imprisoned in months`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+§§ `For the spouse, de facto partner or next of kin of the deceased (ss 7, 8A(b), 13(1))`
+
+-- s 13(1): no one may cremate, apply for or grant a permit if they know that the spouse, de facto partner or next of
+-- kin "has objected in writing", unless the deceased by attested will, codicil or signed and attested writing directed
+-- or desired cremation. s 8A(b): the deceased's own written direction against cremation bars the permit unless the
+-- Chief Health Officer orders cremation. s 7(1): the ashes may be delivered to "the person who obtained the permit".
+-- Each question builds the baseline's `Death` from the family's facts and calls the baseline's function.
+
+§§§ `ss 8A(b), 13(1) -- stopping the cremation`
+
+@export Does my written objection stop the body being cremated (Cremation Act 1929 (WA) s 13(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I have objected in writing to the body being cremated` IS A BOOLEAN @desc Whether you have objected in writing to the body being cremated (s 13(1))
+      `the deceased directed or desired cremation in an attested writing` IS A BOOLEAN @desc Whether the deceased, by will, codicil, or a memorandum or writing they signed and had attested, directed or expressed a desire to be cremated
+GIVETH A `Yes or no`
+`Does my written objection stop the cremation` MEANS
+    CONSIDER `my role`
+    WHEN `I am the spouse, de facto partner or next of kin of someone who has died` THEN
+        IF `I have objected in writing to the body being cremated`
+        THEN `yes if` (`Does the family's objection stop the cremation` (`the deceased's wishes as` TRUE `the deceased directed or desired cremation in an attested writing` FALSE FALSE))
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+@export Does the deceased's own written direction not to be cremated stop the cremation (Cremation Act 1929 (WA) s 8A(b))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the deceased left a written direction not to be cremated` IS A BOOLEAN @desc Whether the deceased left a written direction that their body not be cremated
+      `the Chief Health Officer has ordered the body to be cremated` IS A BOOLEAN @desc Whether the Chief Health Officer has ordered the body to be cremated
+GIVETH A `Yes or no`
+`Does the deceased's written direction against cremation stop it` MEANS
+    CONSIDER `my role`
+    WHEN `I am the spouse, de facto partner or next of kin of someone who has died` THEN `yes if` (`Does the deceased's direction stop the cremation` (`the deceased's wishes as` FALSE FALSE `the deceased left a written direction not to be cremated` `the Chief Health Officer has ordered the body to be cremated`))
+    OTHERWISE `does not arise for you`
+
+§§§ `s 7 -- the ashes`
+
+@export May the ashes be delivered to me, as the deceased's spouse, de facto partner or next of kin (Cremation Act 1929 (WA) s 7(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the body has been cremated` IS A BOOLEAN @desc Whether the body has been cremated (the questions about the ashes arise only then)
+      `I obtained the permit` IS A BOOLEAN @desc Whether you are the person who obtained the cremation permit
+GIVETH A `Yes or no`
+`May the ashes be given to me as family` MEANS
+    CONSIDER `my role`
+    WHEN `I am the spouse, de facto partner or next of kin of someone who has died` THEN
+        IF `the body has been cremated`
+        THEN `yes if` (`May the ashes be delivered to me` `I obtained the permit`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+§§ `For the licensee of a crematorium (ss 3, 7, 9, 10, 13, 14, 15)`
+
+-- s 3(1): no cremation "elsewhere than in a licensed crematorium". s 9: a permit lawfully granted is sufficient
+-- authority "by any licensees, or any person employed by them, at the crematorium specified in their licence". s 10:
+-- "no person shall cremate or permit the cremation of any human body without first having received the necessary
+-- permit". s 13(1) and s 14 bind the crematorium too. s 7: the ashes. s 15(4): an offence by an employee or agent at or
+-- near the crematorium is the licensee's too, unless the licensee proves no act or neglect of theirs facilitated or
+-- contributed to it.
+
+§§§ `ss 3, 9, 10, 13, 14 -- may I cremate`
+
+@export May I cremate this body now at my crematorium (Cremation Act 1929 (WA) ss 3, 9, 10, 13, 14; Regulations Sch 1 Form 9)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the death` IS A Death @desc The death, any written objection by the family that you know of, and any order forbidding cremation
+      `a permit has been granted` IS A BOOLEAN @desc Whether you have received a permit granted by a medical referee for this body
+      `hours since death` IS A NUMBER @desc How many hours have passed since the death
+      `at a licensed crematorium` IS A BOOLEAN @desc Whether the cremation is to be at the crematorium specified in your licence
+GIVETH A `Yes or no`
+`May I cremate this body now` MEANS
+    CONSIDER `my role`
+    WHEN `I run a licensed crematorium` THEN `yes if` (`May the cremation go ahead now` `the death` `a permit has been granted` `hours since death` `at a licensed crematorium`)
+    OTHERWISE `does not arise for you`
+
+§§§ `s 7 -- the ashes`
+
+@export May I deliver the ashes to this person for removal from my crematorium (Cremation Act 1929 (WA) s 7(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the body has been cremated` IS A BOOLEAN @desc Whether the body has been cremated (the questions about the ashes arise only then)
+      `the person obtained the permit` IS A BOOLEAN @desc Whether the person asking for the ashes is the person who obtained the cremation permit
+GIVETH A `Yes or no`
+`May I deliver the ashes to this person` MEANS
+    CONSIDER `my role`
+    WHEN `I run a licensed crematorium` THEN
+        IF `the body has been cremated`
+        THEN `yes if` (`May the ashes be delivered to me` `the person obtained the permit`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+@export May the ashes be removed from my crematorium for this purpose (Cremation Act 1929 (WA) s 7(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the body has been cremated` IS A BOOLEAN @desc Whether the body has been cremated (the questions about the ashes arise only then)
+      `to the person who obtained the permit` IS A BOOLEAN @desc Whether the ashes go to the person who obtained the permit
+      `for burial on the crematorium site` IS A BOOLEAN @desc Whether they are being moved only to be buried on the crematorium's own site
+GIVETH A `Yes or no`
+`May the ashes leave my crematorium for this purpose` MEANS
+    CONSIDER `my role`
+    WHEN `I run a licensed crematorium` THEN
+        IF `the body has been cremated`
+        THEN `yes if` (`May the ashes be removed` `to the person who obtained the permit` `for burial on the crematorium site`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+§§§ `s 15 -- penalties`
+
+@export Am I guilty of an offence my employee or agent committed at or near my crematorium (Cremation Act 1929 (WA) s 15(4))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `an employee or agent of mine is said to have committed an offence at or near my crematorium` IS A BOOLEAN @desc Whether someone employed by you, or your agent, is said to have committed an offence against the Act at or in the vicinity of your crematorium (s 15(4))
+      `I can prove no act or neglect of mine facilitated or contributed to it` IS A BOOLEAN @desc Whether you can prove that no act or neglect on your part facilitated or contributed to the offence
+GIVETH A `Yes or no`
+`Am I guilty of an offence my employee or agent committed at my crematorium` MEANS
+    CONSIDER `my role`
+    WHEN `I run a licensed crematorium` THEN
+        IF `an employee or agent of mine is said to have committed an offence at or near my crematorium`
+        THEN `yes if` (NOT `I can prove no act or neglect of mine facilitated or contributed to it`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+@export What is the most I can be fined for an offence against the Cremation Act 1929 (WA), as a crematorium licensee (s 15(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I am said to have committed an offence under this Act` IS A BOOLEAN @desc Whether you have been charged with, or are said to have committed, an offence against the Cremation Act 1929 (the penalty questions arise only then)
+GIVETH AN `Amount`
+`What is the most a crematorium licensee can be fined for an offence against the Act` MEANS
+    CONSIDER `my role`
+    WHEN `I run a licensed crematorium` THEN
+        IF `I am said to have committed an offence under this Act`
+        THEN `amount` (`What is the most I can be fined`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+@export What is the longest I can be imprisoned for an offence against the Cremation Act 1929 (WA), as a crematorium licensee (s 15(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I am said to have committed an offence under this Act` IS A BOOLEAN @desc Whether you have been charged with, or are said to have committed, an offence against the Cremation Act 1929 (the penalty questions arise only then)
+GIVETH A `Months`
+`What is the longest a crematorium licensee can be imprisoned for an offence against the Act` MEANS
+    CONSIDER `my role`
+    WHEN `I run a licensed crematorium` THEN
+        IF `I am said to have committed an offence under this Act`
+        THEN `imprisonment for` (`What is the longest I can be imprisoned in months`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+§§ `For the doctor certifying the cause of death (ss 8A(g), 12, 15)`
+
+-- s 8A(g): the certifying doctor must not be the deceased's parent, child, brother, sister, uncle, aunt, niece or
+-- nephew, nor the medical referee or in partnership with the referee. s 12: "No person who knows that ... he is entitled,
+-- or will become entitled, by reason or in consequence of the death ... to any real or personal property, shall give or
+-- sign any certificate concerning the death ... for any of the purposes of this Act." A contravention is an offence
+-- (s 15(1)). The s 8A(g) bar makes the certificate unusable; it is not itself an offence.
+
+§§§ `ss 8A(g), 12 -- my certificate`
+
+@export Can my certificate of cause of death support a cremation permit (Cremation Act 1929 (WA) s 8A(g), s 12)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `me as the certifying doctor` IS A Doctor @desc You, the certifying doctor: your relationship to the deceased and to the medical referee, and whether you know you will take property because of the death
+GIVETH A `Yes or no`
+`Can my certificate of cause of death support a cremation permit` MEANS
+    CONSIDER `my role`
+    WHEN `I am the doctor certifying the cause of death` THEN `yes if` (`Can the doctor's certificate support the permit` `me as the certifying doctor`)
+    OTHERWISE `does not arise for you`
+
+@export Would I commit an offence by signing a certificate concerning this death for the cremation (Cremation Act 1929 (WA) ss 12, 15(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I know I am or will become entitled to property because of the death` IS A BOOLEAN @desc Whether you know that, under a policy of life assurance, a will, a settlement, a statute or otherwise, you are or will become entitled to property because of the death
+GIVETH A `Yes or no`
+`Would I commit an offence by signing a certificate for this cremation` MEANS
+    CONSIDER `my role`
+    WHEN `I am the doctor certifying the cause of death` THEN `yes if` `I know I am or will become entitled to property because of the death`
+    OTHERWISE `does not arise for you`
+
+§§§ `s 15 -- penalties`
+
+@export What is the most I can be fined for an offence against the Cremation Act 1929 (WA), as the certifying doctor (s 15(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I am said to have committed an offence under this Act` IS A BOOLEAN @desc Whether you have been charged with, or are said to have committed, an offence against the Cremation Act 1929 (the penalty questions arise only then)
+GIVETH AN `Amount`
+`What is the most a doctor can be fined for an offence against the Act` MEANS
+    CONSIDER `my role`
+    WHEN `I am the doctor certifying the cause of death` THEN
+        IF `I am said to have committed an offence under this Act`
+        THEN `amount` (`What is the most I can be fined`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+@export What is the longest I can be imprisoned for an offence against the Cremation Act 1929 (WA), as the certifying doctor (s 15(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I am said to have committed an offence under this Act` IS A BOOLEAN @desc Whether you have been charged with, or are said to have committed, an offence against the Cremation Act 1929 (the penalty questions arise only then)
+GIVETH A `Months`
+`What is the longest a doctor can be imprisoned for an offence against the Act` MEANS
+    CONSIDER `my role`
+    WHEN `I am the doctor certifying the cause of death` THEN
+        IF `I am said to have committed an offence under this Act`
+        THEN `imprisonment for` (`What is the longest I can be imprisoned in months`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`

@@ -196,3 +196,88 @@ out and named.
   behind the Chief Health Officer's order were not read.
 - No case law was searched.
 - No independent test pass and no human gate.
+
+## Q&A layer (seat and situations as parameters)
+
+Added on 6 November 2026, after the graffiti encoding's design (D2, D4, D8). The baseline's files are unchanged; the layer is added beside them.
+
+- `cra-qa.l4` imports `prelude` and `cra-cremation`. It has 30 exported questions.
+- `cra-qa-cases.l4` imports the same and `cra-qa`. It has 203 cases.
+
+### Roles
+
+`my role` is the first input of every question. A question about another role answers `does not arise for you` and reads nothing else.
+
+- **`I am arranging the cremation of someone who has died`**: the baseline's seat (Chloe c086, Oliver c098). It has 17 questions, one for each baseline export. Each calls the baseline's function and wraps the answer: `yes if`, `amount`, `imprisonment for` (months), or `the answer is` for `What the referee will do`.
+- **`I am the spouse, de facto partner or next of kin of someone who has died`**: the people s 13(1) gives a written objection. It has 3 questions:
+  - does my objection stop the cremation;
+  - does the deceased's own written direction stop it (s 8A(b));
+  - may the ashes be delivered to me (s 7(1)).
+- **`I run a licensed crematorium`**: the licensee, bound by ss 3, 9, 10, 13(1), 14, 7 and 15(4). It has 6 questions:
+  - may I cremate this body now;
+  - may I deliver the ashes to this person;
+  - may the ashes leave for this purpose;
+  - am I guilty of my employee's or agent's offence;
+  - the fine;
+  - the imprisonment.
+- **`I am the doctor certifying the cause of death`**: the person ss 8A(g) and 12 address. It has 4 questions:
+  - can my certificate support the permit;
+  - would signing be an offence (s 12 with s 15(1));
+  - the fine;
+  - the imprisonment.
+
+The medical referee, the coroner, the Attorney General and the Chief Health Officer are not seats.
+
+### Situation inputs
+
+All are BOOLEAN. Each comes straight after `my role`. FALSE gives `does not arise for you` without reading anything else.
+
+| Input | Roles | Questions |
+|---|---|---|
+| `the medical referee refused my application for a permit` | arranger | the s 8(6) review (1) |
+| `the body has been cremated` | arranger, family, crematorium | the s 7 ashes questions (2 + 1 + 2) |
+| `I am said to have committed an offence under this Act` | arranger, crematorium, doctor | the s 15(1) fine and imprisonment (2 + 2 + 2) |
+| `I have objected in writing to the body being cremated` | family | does my objection stop the cremation (1) |
+| `an employee or agent of mine is said to have committed an offence at or near my crematorium` | crematorium | s 15(4) (1) |
+
+### Decisions
+
+- **The baseline's facts stay in its `Death` record.** The record holds the objection, the attested wish, the direction against cremation and the coronial facts, and the arranger's questions take it whole. None of those facts is made a separate situation input: a second input for a fact the record holds could contradict it.
+- **The family's questions build the record from plain answers.** `the deceased's wishes as` builds the baseline's `Death`, and the baseline's s 13(1) and s 8A(b) tests decide. Only the four fields those tests read come from the answers. The rest are filled with the plain case, which neither test reads.
+- **The crematorium's cremation question calls the baseline's.** It runs `May the cremation go ahead now`. s 13(1) binds a person who "knows" of the objection, so the @desc asks for the objections the licensee knows of. The baseline does not model knowledge separately.
+- **s 15(4) is a helper of the layer, not the baseline's.** It gives yes unless the licensee proves no act or neglect of theirs contributed.
+- **The doctor's offence question follows s 12 only.** Signing a certificate barred by s 8A(g) (a relative, or the referee's partner) makes it unusable, but s 8A(g) addresses the referee, not the doctor. Only s 12's "No person ... shall give or sign" is an offence of the doctor's.
+- **The penalty questions take the offence situation in every role.** In each role they settle on the role and that input alone.
+
+### Not covered for the new roles
+
+- **Crematorium:** licensing and its revocation (ss 4-6, 16), and the register and notices (regs 18-20).
+- **Doctor:** the Births, Deaths and Marriages Registration Act 1998 s 44 duty itself.
+- **Family:** whether "next of kin" follows reg 3's order (as in the baseline), and the ashes once removed.
+
+### Cases
+
+The 203 cases in `cra-qa-cases.l4` are:
+
+| Kind | Cases |
+|---|---|
+| Each question for the three roles it is not about, every other input ASSUMEd | 90 |
+| Each situation question with FALSE, later inputs ASSUMEd | 14 |
+| Own role, worked by hand | 56 |
+| Arranger's answer equal to the baseline export's answer on the same facts | 32 |
+| Mirror cases | 11 |
+
+The mirror cases ask three things from more than one seat:
+
+- Sue's objection, with and without Graham's attested wish, from the arranger, the family and the crematorium;
+- the ashes in c098, from all three seats;
+- the inheriting doctor, from the arranger and the doctor.
+
+All 203 cases are satisfied, as are the baseline's 62. There are 0 errors and 0 warnings. `l4 check cra-qa.l4` succeeds.
+
+A scratch script checked every @export:
+
+- `my role` is first;
+- each situation input is identical wherever it is used;
+- no input is DEONTIC or EVENT;
+- each role branch reads its situation first.
