@@ -1,0 +1,854 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `yoa-diversion`
+
+-- Young Offenders Act 1994 (WA) -- the questions people ask, for four seats in one layer (the Q&A layer).
+--
+-- ROLES. The seat is a parameter: every exported question takes `my role` first ("Which of these describes you"):
+--   - the young person dealt with by police for an offence (the baseline's seat, Jake at 15, and at 40 asking about
+--     his record);
+--   - the parent or other responsible adult (s 3): the team must give a responsible adult notice and can proceed only
+--     with one present and agreeing (s 30), and must tell them its determination (s 32(1a)(a));
+--   - the victim (s 31): the team must let the victim take part, cannot dispose of the matter without a present
+--     victim's agreement, and must tell the victim its determination (s 32(1a)(b));
+--   - a person who would publish or pass on information about someone else's matter: s 40 (no report identifying a
+--     young person dealt with by a team) and s 190(2) (no disclosure of a conviction that has stopped counting) bind
+--     "a person".
+-- A question about another role answers `does not arise for you` without reading any other input. Police, the team,
+-- the chief executive officer and the court are never seats: what they may or must do appears as what it means for the
+-- person asking.
+--
+-- SITUATIONS (design D8 of the graffiti encoding). Within a role, a question that arises only in a situation takes that
+-- situation's fact straight after `my role` and answers `does not arise for you` when it does not hold, reading nothing
+-- else. The questions of one situation share one input, character for character:
+--   - `the matter was referred to a juvenile justice team` (young person, parent, victim): Part 5 Division 2's team
+--     questions (ss 26, 30-33, 37A, 40, 62). FALSE gives does not arise;
+--   - `I was cautioned` (young person): the caution certificate (s 23A). FALSE gives does not arise;
+--   - `how it ended` (young person): s 55(4) arises only after a finding of guilt without a conviction recorded; s 189
+--     and s 190(2) only after a conviction recorded. The other values give does not arise. It is an ordinary input of s
+--     14 and of "Is there a conviction from my matter to spend", which arise however the matter ended.
+-- A question that arises in every situation of its role takes no situation input.
+--
+-- CONTENT. For the young person, every exported question of the baseline (yoa-diversion.l4) is asked by calling its
+-- function; the records the baseline takes (the matter, the team meeting, the conviction) are taken apart into plain
+-- inputs, and a field a function does not read is passed a fixed value and not asked (NOTES.md, Q&A layer). For the
+-- other roles the questions are those the Act's text gives them, by the baseline's functions where it has them, and
+-- by helpers here where it does not (s 30(2), s 31, s 32(1a), s 34, s 40(2)(b)).
+--
+-- No exported question takes a DEONTIC or EVENT input. Edition, scope and findings: NOTES.md.
+--
+-- BASELINE. Not for public use as advice. See NOTES.md.
+
+§ `Young Offenders Act 1994 (WA) -- the questions people ask`
+
+§§ `Who is asking, and the shape of the answers`
+
+DECLARE Role IS ONE OF
+    `I am, or was, a young person dealt with by police for an offence`
+    `I am a parent or other responsible adult of a young person dealt with for an offence`
+    `I am the victim of an offence by a young person`
+    `I would publish or pass on information about someone else's matter`
+
+DECLARE `Yes or no` IS ONE OF
+    yes
+    no
+    `does not arise for you`
+
+DECLARE `Amount` IS ONE OF
+    `does not arise for you`
+    amount HAS dollars IS A NUMBER
+
+DECLARE `Months` IS ONE OF
+    `does not arise for you`
+    `imprisonment for up to` HAS `months` IS A NUMBER
+
+DECLARE `At the team` IS ONE OF
+    `does not arise for you`
+    `at the team` HAS `team result` IS A `Team result`
+
+DECLARE `In court` IS ONE OF
+    `does not arise for you`
+    `in court` HAS `court outcome` IS A `Court outcome`
+
+DECLARE `To spend` IS ONE OF
+    `does not arise for you`
+    `there is` HAS `what there is to spend` IS A `What there is to spend`
+
+§§ `Building the baseline's inputs`
+
+GIVEN `it holds` IS A BOOLEAN
+GIVETH A `Yes or no`
+`yes if` `it holds` MEANS
+    IF `it holds` THEN yes ELSE no
+
+-- The situation helpers over `How my matter ended` list every value and have no OTHERWISE: on the stable l4 a CONSIDER
+-- with OTHERWISE takes the OTHERWISE branch for an ASSUMEd value instead of failing (graffiti finding 31).
+GIVEN `how it ended` IS A `How my matter ended`
+GIVETH A BOOLEAN
+DECIDE `there was no finding of guilt without a conviction` IF
+    CONSIDER `how it ended`
+    WHEN `police took no action` THEN TRUE
+    WHEN `a caution` THEN TRUE
+    WHEN `a juvenile justice team, terms completed` THEN TRUE
+    WHEN `a charge dismissed under s 33(2)` THEN TRUE
+    WHEN `a finding of guilt without a conviction recorded` THEN FALSE
+    WHEN `a finding of guilt with a conviction recorded` THEN TRUE
+
+GIVEN `how it ended` IS A `How my matter ended`
+GIVETH A BOOLEAN
+DECIDE `no conviction was recorded` IF
+    CONSIDER `how it ended`
+    WHEN `police took no action` THEN TRUE
+    WHEN `a caution` THEN TRUE
+    WHEN `a juvenile justice team, terms completed` THEN TRUE
+    WHEN `a charge dismissed under s 33(2)` THEN TRUE
+    WHEN `a finding of guilt without a conviction recorded` THEN TRUE
+    WHEN `a finding of guilt with a conviction recorded` THEN FALSE
+
+-- The matter, field by field. `I have been cautioned or been to a team before` is read by nothing (the baseline says so,
+-- s 29(2)) and is passed FALSE.
+GIVEN `the date of birth` IS A DATE
+      `the date of the offence` IS A DATE
+      `the schedule` IS A `Schedule status`
+      `a Weapons Act offence` IS A BOOLEAN
+      `enough evidence` IS A BOOLEAN
+      `previous offences make a caution inappropriate` IS A BOOLEAN
+      `an infringement notice can be given` IS A BOOLEAN
+      `an infringement notice is inappropriate` IS A BOOLEAN
+      `responsibility accepted` IS A BOOLEAN
+      `a team agreed to` IS A BOOLEAN
+      `every participant agrees` IS A BOOLEAN
+      `previously offended` IS A BOOLEAN
+GIVETH A `My matter`
+`the matter built from` MEANS
+    `My matter` WITH
+        `my date of birth` IS `the date of birth`
+        `the date of the offence` IS `the date of the offence`
+        `where the offence sits in the Schedules` IS `the schedule`
+        `it is a Weapons Act 1999 s 6(1), 6A(1) or (2) or 6B(1) or (2) offence` IS `a Weapons Act offence`
+        `there is enough evidence to charge me` IS `enough evidence`
+        `the officer judges my previous offences make a caution alone inappropriate` IS `previous offences make a caution inappropriate`
+        `an infringement notice can be given for it` IS `an infringement notice can be given`
+        `the officer judges an infringement notice inappropriate here` IS `an infringement notice is inappropriate`
+        `I accept responsibility for what I did` IS `responsibility accepted`
+        `I agree to a team rather than a court` IS `a team agreed to`
+        `every potential participant agrees to a team` IS `every participant agrees`
+        `I have previously offended, not counting cautions, infringement notices or team matters` IS `previously offended`
+        `I have been cautioned or been to a team before` IS FALSE
+
+GIVEN `the date of the meeting` IS A DATE
+      `a responsible adult takes part` IS A BOOLEAN
+      `a substitute was appointed` IS A BOOLEAN
+      `the team considers the young person independent` IS A BOOLEAN
+      `the responsible adult agrees to the disposal` IS A BOOLEAN
+      `a victim present` IS A BOOLEAN
+      `the victim agrees` IS A BOOLEAN
+      `the young person is present or has a good reason` IS A BOOLEAN
+      `the young person agrees to the terms` IS A BOOLEAN
+      `the team is unanimous` IS A BOOLEAN
+      `the team prefers a caution or a court` IS A BOOLEAN
+GIVETH A `My team meeting`
+`the meeting built from` MEANS
+    `My team meeting` WITH
+        `the date of the meeting` IS `the date of the meeting`
+        `a responsible adult was notified, is present and agrees to take part` IS `a responsible adult takes part`
+        `the team appointed an adult in place of a responsible adult` IS `a substitute was appointed`
+        `the team considers I live independently with sufficient maturity` IS `the team considers the young person independent`
+        `the responsible adult present agrees to the way of disposal` IS `the responsible adult agrees to the disposal`
+        `a victim is present` IS `a victim present`
+        `the victim agrees to the team and to the way of disposal` IS `the victim agrees`
+        `I am present or have a good reason not to be` IS `the young person is present or has a good reason`
+        `I agree to the terms the team specifies` IS `the young person agrees to the terms`
+        `the team members are unanimous` IS `the team is unanimous`
+        `the team thinks a caution or a court is the right course` IS `the team prefers a caution or a court`
+
+GIVEN `murder or manslaughter` IS A BOOLEAN
+      `the date of conviction` IS A DATE
+      `a sentence to discharge` IS A BOOLEAN
+      `the date discharged` IS A DATE
+      `a youth community based order` IS A BOOLEAN
+      `dealt with again` IS A BOOLEAN
+      `special circumstances` IS A BOOLEAN
+GIVETH A `My conviction`
+`the conviction built from` MEANS
+    `My conviction` WITH
+        `it is for murder, attempted murder or manslaughter` IS `murder or manslaughter`
+        `the date of conviction` IS `the date of conviction`
+        `a sentence had to be discharged` IS `a sentence to discharge`
+        `the date every sentence was discharged` IS `the date discharged`
+        `a youth community based order was made` IS `a youth community based order`
+        `I was later dealt with again for that offence` IS `dealt with again`
+        `the court declared special circumstances under s 189(3)` IS `special circumstances`
+
+-- Fixed values for fields a function does not read (passed so that the record can be built; never asked).
+`a date not read` MEANS Date 1 1 2000
+
+§§ `For the young person dealt with by police`
+
+§§§ `Am I a young person (ss 3, 4)`
+
+@export Am I a young person under the Young Offenders Act 1994 (WA) for this offence (ss 3, 4)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my date of birth` IS A DATE @desc Your date of birth
+      `the date of the offence` IS A DATE @desc The date the offence was (or is said to have been) committed
+GIVETH A `Yes or no`
+`Am I a young person for the offence` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or was, a young person dealt with by police for an offence` THEN
+        `yes if` (`Am I a young person for this offence` `my date of birth` `the date of the offence`)
+    OTHERWISE `does not arise for you`
+
+@export Am I an independent young person (Young Offenders Act 1994 (WA) s 3)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my date of birth` IS A DATE @desc Your date of birth
+      `the day asked about` IS A DATE @desc The day the question is asked about (for example, the day of the team meeting)
+      `I am mature enough to live independently and I do` IS A BOOLEAN @desc Whether you have the maturity to live without a responsible adult's guidance or control, and are doing so
+GIVETH A `Yes or no`
+`Am I independent` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or was, a young person dealt with by police for an offence` THEN
+        `yes if` (`Am I an independent young person` `my date of birth` `the day asked about` `I am mature enough to live independently and I do`)
+    OTHERWISE `does not arise for you`
+
+§§§ `What police may do (ss 22-23A, 25-29, 41)`
+
+@export Must police consider taking no action, or cautioning me, before charging me (Young Offenders Act 1994 (WA) s 22B)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my date of birth` IS A DATE @desc Your date of birth
+      `the date of the offence` IS A DATE @desc The date the offence was (or is said to have been) committed
+GIVETH A `Yes or no`
+`Must police consider no action or a caution first` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or was, a young person dealt with by police for an offence` THEN
+        `yes if` (`Must police consider no action or a caution before charging me` (`the matter built from` `my date of birth` `the date of the offence` `in neither Schedule` FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE))
+    OTHERWISE `does not arise for you`
+
+@export Is this option open to police in dealing with me (Young Offenders Act 1994 (WA) ss 22B, 41)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the option` IS A `Police option` @desc What police might do
+      `my date of birth` IS A DATE @desc Your date of birth
+      `the date of the offence` IS A DATE @desc The date the offence was (or is said to have been) committed
+      `where the offence sits in the Schedules` IS A `Schedule status` @desc Whether the offence is in Schedule 1 or Schedule 2 of the Act (for example robbery is in Schedule 2; shop stealing is in neither)
+      `it is a Weapons Act 1999 s 6(1), 6A or 6B offence` IS A BOOLEAN @desc Whether the offence is under the Weapons Act 1999 s 6(1), 6A(1) or (2) or 6B(1) or (2)
+      `there is enough evidence to charge me` IS A BOOLEAN @desc Whether police have enough evidence to charge you
+      `I accept responsibility for what I did` IS A BOOLEAN @desc Whether you accept responsibility for the offence
+      `I agree to a team rather than a court` IS A BOOLEAN @desc Whether you agree to the matter going to a juvenile justice team instead of a court
+      `every potential participant agrees to a team` IS A BOOLEAN @desc Whether everyone who would take part (such as a responsible adult and the victim) agrees to a team
+GIVETH A `Yes or no`
+`Is this option open to police for me` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or was, a young person dealt with by police for an offence` THEN
+        `yes if` (`Is this option open to police` `the option` (`the matter built from` `my date of birth` `the date of the offence` `where the offence sits in the Schedules` `it is a Weapons Act 1999 s 6(1), 6A or 6B offence` `there is enough evidence to charge me` FALSE FALSE FALSE `I accept responsibility for what I did` `I agree to a team rather than a court` `every potential participant agrees to a team` FALSE))
+    OTHERWISE `does not arise for you`
+
+@export May police caution me instead of charging me (Young Offenders Act 1994 (WA) s 22)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my date of birth` IS A DATE @desc Your date of birth
+      `the date of the offence` IS A DATE @desc The date the offence was (or is said to have been) committed
+      `where the offence sits in the Schedules` IS A `Schedule status` @desc Whether the offence is in Schedule 1 or Schedule 2 of the Act (for example robbery is in Schedule 2; shop stealing is in neither)
+      `it is a Weapons Act 1999 s 6(1), 6A or 6B offence` IS A BOOLEAN @desc Whether the offence is under the Weapons Act 1999 s 6(1), 6A(1) or (2) or 6B(1) or (2)
+      `there is enough evidence to charge me` IS A BOOLEAN @desc Whether police have enough evidence to charge you
+GIVETH A `Yes or no`
+`May police caution me` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or was, a young person dealt with by police for an offence` THEN
+        `yes if` (`May police caution me instead of charging me` (`the matter built from` `my date of birth` `the date of the offence` `where the offence sits in the Schedules` `it is a Weapons Act 1999 s 6(1), 6A or 6B offence` `there is enough evidence to charge me` FALSE FALSE FALSE FALSE FALSE FALSE FALSE))
+    OTHERWISE `does not arise for you`
+
+@export Should police caution me rather than charge me (Young Offenders Act 1994 (WA) s 23)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my date of birth` IS A DATE @desc Your date of birth
+      `the date of the offence` IS A DATE @desc The date the offence was (or is said to have been) committed
+      `where the offence sits in the Schedules` IS A `Schedule status` @desc Whether the offence is in Schedule 1 or Schedule 2 of the Act (for example robbery is in Schedule 2; shop stealing is in neither)
+      `it is a Weapons Act 1999 s 6(1), 6A or 6B offence` IS A BOOLEAN @desc Whether the offence is under the Weapons Act 1999 s 6(1), 6A(1) or (2) or 6B(1) or (2)
+      `there is enough evidence to charge me` IS A BOOLEAN @desc Whether police have enough evidence to charge you
+      `the officer judges my previous offences make a caution alone inappropriate` IS A BOOLEAN @desc Whether the officer judges that, because of the number and seriousness of offences you were charged with or dealt with under Part 5 before, only a caution would be inappropriate
+GIVETH A `Yes or no`
+`Should police caution me` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or was, a young person dealt with by police for an offence` THEN
+        `yes if` (`Should police caution me rather than charge me` (`the matter built from` `my date of birth` `the date of the offence` `where the offence sits in the Schedules` `it is a Weapons Act 1999 s 6(1), 6A or 6B offence` `there is enough evidence to charge me` `the officer judges my previous offences make a caution alone inappropriate` FALSE FALSE FALSE FALSE FALSE FALSE))
+    OTHERWISE `does not arise for you`
+
+@export Must I be given a caution certificate (Young Offenders Act 1994 (WA) s 23A)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I was cautioned` IS A BOOLEAN @desc Whether a police officer cautioned you for the offence
+GIVETH A `Yes or no`
+`Must I get a caution certificate` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or was, a young person dealt with by police for an offence` THEN
+        IF NOT `I was cautioned`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Must I be given a caution certificate` `I was cautioned`)
+    OTHERWISE `does not arise for you`
+
+@export Can what I said be used as evidence against me (Young Offenders Act 1994 (WA) ss 22(4), 25(4))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what I said` IS A `What I said` @desc What you admitted, and when
+GIVETH A `Yes or no`
+`Can what I said be used against me` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or was, a young person dealt with by police for an offence` THEN
+        `yes if` (`Can what I said be used as evidence against me` `what I said`)
+    OTHERWISE `does not arise for you`
+
+@export May police refer me to a juvenile justice team instead of charging me (Young Offenders Act 1994 (WA) ss 25, 27)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my date of birth` IS A DATE @desc Your date of birth
+      `the date of the offence` IS A DATE @desc The date the offence was (or is said to have been) committed
+      `where the offence sits in the Schedules` IS A `Schedule status` @desc Whether the offence is in Schedule 1 or Schedule 2 of the Act (for example robbery is in Schedule 2; shop stealing is in neither)
+      `there is enough evidence to charge me` IS A BOOLEAN @desc Whether police have enough evidence to charge you
+      `I accept responsibility for what I did` IS A BOOLEAN @desc Whether you accept responsibility for the offence
+      `I agree to a team rather than a court` IS A BOOLEAN @desc Whether you agree to the matter going to a juvenile justice team instead of a court
+      `every potential participant agrees to a team` IS A BOOLEAN @desc Whether everyone who would take part (such as a responsible adult and the victim) agrees to a team
+GIVETH A `Yes or no`
+`May police refer me to a team` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or was, a young person dealt with by police for an offence` THEN
+        `yes if` (`May police refer me to a juvenile justice team` (`the matter built from` `my date of birth` `the date of the offence` `where the offence sits in the Schedules` FALSE `there is enough evidence to charge me` FALSE FALSE FALSE `I accept responsibility for what I did` `I agree to a team rather than a court` `every potential participant agrees to a team` FALSE))
+    OTHERWISE `does not arise for you`
+
+@export Should I get an infringement notice rather than a team (Young Offenders Act 1994 (WA) s 25(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `an infringement notice can be given for it` IS A BOOLEAN @desc Whether another written law allows an infringement notice for the offence
+      `the officer judges an infringement notice inappropriate here` IS A BOOLEAN @desc Whether the officer judges an infringement notice inappropriate in the circumstances
+GIVETH A `Yes or no`
+`Should I get an infringement notice` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or was, a young person dealt with by police for an offence` THEN
+        `yes if` (`Should I get an infringement notice rather than a team` (`the matter built from` `a date not read` `a date not read` `in neither Schedule` FALSE FALSE FALSE `an infringement notice can be given for it` `the officer judges an infringement notice inappropriate here` FALSE FALSE FALSE FALSE))
+    OTHERWISE `does not arise for you`
+
+@export Must police favour sending me to a juvenile justice team (Young Offenders Act 1994 (WA) s 29)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my date of birth` IS A DATE @desc Your date of birth
+      `the date of the offence` IS A DATE @desc The date the offence was (or is said to have been) committed
+      `where the offence sits in the Schedules` IS A `Schedule status` @desc Whether the offence is in Schedule 1 or Schedule 2 of the Act (for example robbery is in Schedule 2; shop stealing is in neither)
+      `there is enough evidence to charge me` IS A BOOLEAN @desc Whether police have enough evidence to charge you
+      `I accept responsibility for what I did` IS A BOOLEAN @desc Whether you accept responsibility for the offence
+      `I agree to a team rather than a court` IS A BOOLEAN @desc Whether you agree to the matter going to a juvenile justice team instead of a court
+      `every potential participant agrees to a team` IS A BOOLEAN @desc Whether everyone who would take part (such as a responsible adult and the victim) agrees to a team
+      `I have previously offended, not counting cautions, infringement notices or team matters` IS A BOOLEAN @desc Whether you have offended before; a caution, an infringement notice, or accepting responsibility for or completing a team's terms does not count (s 29(2))
+GIVETH A `Yes or no`
+`Must police favour a team for me` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or was, a young person dealt with by police for an offence` THEN
+        `yes if` (`Must police favour sending me to a team` (`the matter built from` `my date of birth` `the date of the offence` `where the offence sits in the Schedules` FALSE `there is enough evidence to charge me` FALSE FALSE FALSE `I accept responsibility for what I did` `I agree to a team rather than a court` `every potential participant agrees to a team` `I have previously offended, not counting cautions, infringement notices or team matters`))
+    OTHERWISE `does not arise for you`
+
+§§§ `If my matter goes to a juvenile justice team (ss 26, 30-33, 37A, 40, 62)`
+
+-- s 26 is about an arrest when the matter is referred, so the referral is its situation and the baseline's
+-- `my matter was referred to a team` is TRUE by it.
+@export Must I be released if I was arrested and my matter is sent to a team (Young Offenders Act 1994 (WA) s 26)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the matter was referred to a juvenile justice team` IS A BOOLEAN @desc Whether the young person's matter (yours, if you are the young person) has been referred to a juvenile justice team
+      `I was arrested` IS A BOOLEAN @desc Whether you were arrested for the offence
+GIVETH A `Yes or no`
+`Must I be released when sent to a team` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or was, a young person dealt with by police for an offence` THEN
+        IF NOT `the matter was referred to a juvenile justice team`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Must I be released as soon as practicable` `I was arrested` TRUE)
+    OTHERWISE `does not arise for you`
+
+@export Can the juvenile justice team go ahead with me (Young Offenders Act 1994 (WA) s 30)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the matter was referred to a juvenile justice team` IS A BOOLEAN @desc Whether the young person's matter (yours, if you are the young person) has been referred to a juvenile justice team
+      `my date of birth` IS A DATE @desc Your date of birth
+      `the date of the meeting` IS A DATE @desc The date of the juvenile justice team meeting
+      `a responsible adult was notified, is present and agrees to take part` IS A BOOLEAN @desc Whether a responsible adult (a parent, guardian or other person caring for the young person day to day) was given notice, is present, and agrees to the team and to take part
+      `the team appointed an adult in place of a responsible adult` IS A BOOLEAN @desc Whether the team appointed another suitable adult to act in place of a responsible adult (s 30(4))
+      `the team considers I live independently with sufficient maturity` IS A BOOLEAN @desc Whether the team considers you have the maturity to live without a responsible adult's guidance and are doing so
+GIVETH A `Yes or no`
+`Can the team go ahead` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or was, a young person dealt with by police for an offence` THEN
+        IF NOT `the matter was referred to a juvenile justice team`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Can the team go ahead with me` `my date of birth` (`the meeting built from` `the date of the meeting` `a responsible adult was notified, is present and agrees to take part` `the team appointed an adult in place of a responsible adult` `the team considers I live independently with sufficient maturity` FALSE FALSE FALSE FALSE FALSE FALSE FALSE))
+    OTHERWISE `does not arise for you`
+
+@export What happens to my matter at the juvenile justice team (Young Offenders Act 1994 (WA) ss 30-32, 38)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the matter was referred to a juvenile justice team` IS A BOOLEAN @desc Whether the young person's matter (yours, if you are the young person) has been referred to a juvenile justice team
+      `my date of birth` IS A DATE @desc Your date of birth
+      `the date of the meeting` IS A DATE @desc The date of the juvenile justice team meeting
+      `a responsible adult was notified, is present and agrees to take part` IS A BOOLEAN @desc Whether a responsible adult (a parent, guardian or other person caring for the young person day to day) was given notice, is present, and agrees to the team and to take part
+      `the team appointed an adult in place of a responsible adult` IS A BOOLEAN @desc Whether the team appointed another suitable adult to act in place of a responsible adult (s 30(4))
+      `the team considers I live independently with sufficient maturity` IS A BOOLEAN @desc Whether the team considers you have the maturity to live without a responsible adult's guidance and are doing so
+      `the responsible adult present agrees to the way of disposal` IS A BOOLEAN @desc Whether the responsible adult present agrees to the way the team proposes to deal with the matter
+      `a victim is present` IS A BOOLEAN @desc Whether the victim of the offence is present at the team
+      `the victim agrees to the team and to the way of disposal` IS A BOOLEAN @desc Whether the victim agrees to the team dealing with the matter and to the way it does so
+      `I am present or have a good reason not to be` IS A BOOLEAN @desc Whether you are at the team meeting, or have a good reason for not being there
+      `I agree to the terms the team specifies` IS A BOOLEAN @desc Whether you agree to the terms the team sets
+      `the team members are unanimous` IS A BOOLEAN @desc Whether all the members of the team agree on the decision
+      `the team thinks a caution or a court is the right course` IS A BOOLEAN @desc Whether the team thinks the matter should be dealt with by a caution or in court instead
+GIVETH AN `At the team`
+`What happens at the team` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or was, a young person dealt with by police for an offence` THEN
+        IF NOT `the matter was referred to a juvenile justice team`
+        THEN `does not arise for you`
+        ELSE `at the team` (`What happens to my matter at the team` `my date of birth` (`the meeting built from` `the date of the meeting` `a responsible adult was notified, is present and agrees to take part` `the team appointed an adult in place of a responsible adult` `the team considers I live independently with sufficient maturity` `the responsible adult present agrees to the way of disposal` `a victim is present` `the victim agrees to the team and to the way of disposal` `I am present or have a good reason not to be` `I agree to the terms the team specifies` `the team members are unanimous` `the team thinks a caution or a court is the right course`))
+    OTHERWISE `does not arise for you`
+
+@export May the juvenile justice team's terms include this (Young Offenders Act 1994 (WA) s 32)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the matter was referred to a juvenile justice team` IS A BOOLEAN @desc Whether the young person's matter (yours, if you are the young person) has been referred to a juvenile justice team
+      `the term` IS A `Team term` @desc What the team might ask of you
+GIVETH A `Yes or no`
+`May the team's terms include it` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or was, a young person dealt with by police for an offence` THEN
+        IF NOT `the matter was referred to a juvenile justice team`
+        THEN `does not arise for you`
+        ELSE `yes if` (`May the team's terms include this` `the term`)
+    OTHERWISE `does not arise for you`
+
+@export May a lawyer represent me at the juvenile justice team (Young Offenders Act 1994 (WA) s 37A)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the matter was referred to a juvenile justice team` IS A BOOLEAN @desc Whether the young person's matter (yours, if you are the young person) has been referred to a juvenile justice team
+GIVETH A `Yes or no`
+`May a lawyer represent me at my team` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or was, a young person dealt with by police for an offence` THEN
+        IF NOT `the matter was referred to a juvenile justice team`
+        THEN `does not arise for you`
+        ELSE `yes if` `May a lawyer represent me at the team`
+    OTHERWISE `does not arise for you`
+
+@export What is the most a publisher who identifies me as dealt with by a team can be fined, in dollars (s 40)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the matter was referred to a juvenile justice team` IS A BOOLEAN @desc Whether the young person's matter (yours, if you are the young person) has been referred to a juvenile justice team
+GIVETH AN `Amount`
+`What is the most a publisher who identifies me can be fined, for me` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or was, a young person dealt with by police for an offence` THEN
+        IF NOT `the matter was referred to a juvenile justice team`
+        THEN `does not arise for you`
+        ELSE amount `What is the most a publisher who identifies me can be fined`
+    OTHERWISE `does not arise for you`
+
+@export Am I treated as a Crown worker for workers compensation while doing the team's work (s 62)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the matter was referred to a juvenile justice team` IS A BOOLEAN @desc Whether the young person's matter (yours, if you are the young person) has been referred to a juvenile justice team
+      `I am lawfully in paid employment` IS A BOOLEAN @desc Whether you have a lawful paid job at the time
+GIVETH A `Yes or no`
+`Am I a Crown worker doing the team's work` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or was, a young person dealt with by police for an offence` THEN
+        IF NOT `the matter was referred to a juvenile justice team`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Am I a Crown worker while doing the team's work` `I am lawfully in paid employment`)
+    OTHERWISE `does not arise for you`
+
+@export Can I still be charged after a referral to a juvenile justice team (Young Offenders Act 1994 (WA) s 33(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the matter was referred to a juvenile justice team` IS A BOOLEAN @desc Whether the young person's matter (yours, if you are the young person) has been referred to a juvenile justice team
+GIVETH A `Yes or no`
+`Can I still be charged after the team` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or was, a young person dealt with by police for an offence` THEN
+        IF NOT `the matter was referred to a juvenile justice team`
+        THEN `does not arise for you`
+        ELSE `yes if` `Can I still be charged after a team referral`
+    OTHERWISE `does not arise for you`
+
+@export What must a court do if I am charged after the juvenile justice team (Young Offenders Act 1994 (WA) s 33)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the matter was referred to a juvenile justice team` IS A BOOLEAN @desc Whether the young person's matter (yours, if you are the young person) has been referred to a juvenile justice team
+      `I complied with the team's terms` IS A BOOLEAN @desc Whether you did everything the team's terms asked
+      `I took steps towards complying` IS A BOOLEAN @desc Whether you did some of it
+GIVETH AN `In court`
+`What must a court do after the team` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or was, a young person dealt with by police for an offence` THEN
+        IF NOT `the matter was referred to a juvenile justice team`
+        THEN `does not arise for you`
+        ELSE `in court` (`What must a court do with a later charge` `I complied with the team's terms` `I took steps towards complying`)
+    OTHERWISE `does not arise for you`
+
+§§§ `What is recorded, and convictions (ss 14, 55, 71, 189, 190)`
+
+@export Does the Department keep a record of how my matter was dealt with (Young Offenders Act 1994 (WA) s 14)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `how it ended` IS A `How my matter ended` @desc How the young person's matter (yours, if you are the young person) was dealt with
+GIVETH A `Yes or no`
+`Does the Department keep a record` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or was, a young person dealt with by police for an offence` THEN
+        `yes if` (`Does the Department keep a record of my matter` `how it ended`)
+    OTHERWISE `does not arise for you`
+
+-- Asked before or after a finding of guilt ("if I am found guilty"), so it takes no situation.
+@export Will a conviction be recorded against me if I am found guilty (Young Offenders Act 1994 (WA) s 55)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `where the offence sits in the Schedules` IS A `Schedule status` @desc Whether the offence is in Schedule 1 or Schedule 2 of the Act (for example robbery is in Schedule 2; shop stealing is in neither)
+      `the sentence` IS A `Sentence` @desc What the court does with you
+      `the court finds exceptional reasons` IS A BOOLEAN @desc Whether the court is satisfied there are exceptional reasons to depart from the usual rule
+GIVETH A `Yes or no`
+`Will a conviction be recorded` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or was, a young person dealt with by police for an offence` THEN
+        `yes if` (`Will a conviction be recorded against me` `where the offence sits in the Schedules` `the sentence` `the court finds exceptional reasons`)
+    OTHERWISE `does not arise for you`
+
+@export What is the most I can be fined instead of imprisonment, in dollars (Young Offenders Act 1994 (WA) s 71)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH AN `Amount`
+`What is the most I can be fined` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or was, a young person dealt with by police for an offence` THEN amount `What is the most I can be fined instead of imprisonment`
+    OTHERWISE `does not arise for you`
+
+@export Am I treated as convicted for this purpose, though no conviction was recorded (Young Offenders Act 1994 (WA) s 55(4))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `how it ended` IS A `How my matter ended` @desc How the young person's matter (yours, if you are the young person) was dealt with
+      `the purpose` IS A `Purpose` @desc What the question of conviction is being asked for
+GIVETH A `Yes or no`
+`Am I treated as convicted` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or was, a young person dealt with by police for an offence` THEN
+        IF `there was no finding of guilt without a conviction` `how it ended`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Am I treated as convicted for this purpose` `the purpose`)
+    OTHERWISE `does not arise for you`
+
+@export Has my youth conviction stopped counting as a conviction (Young Offenders Act 1994 (WA) s 189)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `how it ended` IS A `How my matter ended` @desc How the young person's matter (yours, if you are the young person) was dealt with
+      `it is for murder, attempted murder or manslaughter` IS A BOOLEAN @desc Whether the conviction is for murder, attempted murder or manslaughter
+      `the date of conviction` IS A DATE @desc The date of the conviction
+      `a sentence had to be discharged` IS A BOOLEAN @desc Whether the court imposed a sentence that had to be served or completed (discharged)
+      `the date every sentence was discharged` IS A DATE @desc The date the last sentence for the conviction was discharged
+      `a youth community based order was made` IS A BOOLEAN @desc Whether the court made a youth community based order for the offence
+      `I was later dealt with again for that offence` IS A BOOLEAN @desc Whether you were later dealt with again for that offence (for example after breaching the order)
+      `the court declared special circumstances under s 189(3)` IS A BOOLEAN @desc Whether the court ordered under s 189(3) that, in special circumstances, the conviction is not to be regarded as a conviction
+      `the day it is asked` IS A DATE @desc The day the question is asked
+GIVETH A `Yes or no`
+`Has my conviction stopped counting` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or was, a young person dealt with by police for an offence` THEN
+        IF `no conviction was recorded` `how it ended`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Has my youth conviction stopped counting` (`the conviction built from` `it is for murder, attempted murder or manslaughter` `the date of conviction` `a sentence had to be discharged` `the date every sentence was discharged` `a youth community based order was made` `I was later dealt with again for that offence` `the court declared special circumstances under s 189(3)`) `the day it is asked`)
+    OTHERWISE `does not arise for you`
+
+-- Arises however the matter ended: for any ending but a conviction recorded the baseline answers "nothing" on that
+-- input alone.
+@export Is there a conviction from my matter to spend or disclose (Young Offenders Act 1994 (WA) ss 55, 189)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `how it ended` IS A `How my matter ended` @desc How the young person's matter (yours, if you are the young person) was dealt with
+      `it is for murder, attempted murder or manslaughter` IS A BOOLEAN @desc Whether the conviction is for murder, attempted murder or manslaughter
+      `the date of conviction` IS A DATE @desc The date of the conviction
+      `a sentence had to be discharged` IS A BOOLEAN @desc Whether the court imposed a sentence that had to be served or completed (discharged)
+      `the date every sentence was discharged` IS A DATE @desc The date the last sentence for the conviction was discharged
+      `a youth community based order was made` IS A BOOLEAN @desc Whether the court made a youth community based order for the offence
+      `I was later dealt with again for that offence` IS A BOOLEAN @desc Whether you were later dealt with again for that offence (for example after breaching the order)
+      `the court declared special circumstances under s 189(3)` IS A BOOLEAN @desc Whether the court ordered under s 189(3) that, in special circumstances, the conviction is not to be regarded as a conviction
+      `the day it is asked` IS A DATE @desc The day the question is asked
+GIVETH A `To spend`
+`Is there a conviction to spend` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or was, a young person dealt with by police for an offence` THEN
+        `there is` (`Is there a conviction from my matter to spend` `how it ended` (`the conviction built from` `it is for murder, attempted murder or manslaughter` `the date of conviction` `a sentence had to be discharged` `the date every sentence was discharged` `a youth community based order was made` `I was later dealt with again for that offence` `the court declared special circumstances under s 189(3)`) `the day it is asked`)
+    OTHERWISE `does not arise for you`
+
+@export May someone else disclose my youth conviction (Young Offenders Act 1994 (WA) s 190(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `how it ended` IS A `How my matter ended` @desc How the young person's matter (yours, if you are the young person) was dealt with
+      `it has stopped counting under s 189` IS A BOOLEAN @desc Whether the conviction is no longer to be regarded as a conviction (s 189)
+      `the disclosure is for this Act or a court of law` IS A BOOLEAN @desc Whether the disclosure is for the purposes of the Young Offenders Act or of a court of law
+GIVETH A `Yes or no`
+`May someone else disclose my conviction` MEANS
+    CONSIDER `my role`
+    WHEN `I am, or was, a young person dealt with by police for an offence` THEN
+        IF `no conviction was recorded` `how it ended`
+        THEN `does not arise for you`
+        ELSE `yes if` (`May someone else disclose my youth conviction` `it has stopped counting under s 189` `the disclosure is for this Act or a court of law`)
+    OTHERWISE `does not arise for you`
+
+§§ `For the parent or other responsible adult`
+
+§§§ `What police may do with my child (ss 3, 4, 22, 25, 27)`
+
+@export Is my child a young person under the Young Offenders Act 1994 (WA) for this offence (ss 3, 4)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my child's date of birth` IS A DATE @desc The young person's date of birth
+      `the date of the offence` IS A DATE @desc The date the offence was (or is said to have been) committed
+GIVETH A `Yes or no`
+`Is my child a young person for the offence` MEANS
+    CONSIDER `my role`
+    WHEN `I am a parent or other responsible adult of a young person dealt with for an offence` THEN
+        `yes if` (`Am I a young person for this offence` `my child's date of birth` `the date of the offence`)
+    OTHERWISE `does not arise for you`
+
+@export May police caution my child instead of charging them (Young Offenders Act 1994 (WA) s 22)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my child's date of birth` IS A DATE @desc The young person's date of birth
+      `the date of the offence` IS A DATE @desc The date the offence was (or is said to have been) committed
+      `where the offence sits in the Schedules` IS A `Schedule status` @desc Whether the offence is in Schedule 1 or Schedule 2 of the Act (for example robbery is in Schedule 2; shop stealing is in neither)
+      `it is a Weapons Act 1999 s 6(1), 6A or 6B offence` IS A BOOLEAN @desc Whether the offence is under the Weapons Act 1999 s 6(1), 6A(1) or (2) or 6B(1) or (2)
+      `there is enough evidence to charge my child` IS A BOOLEAN @desc Whether police have enough evidence to charge the young person
+GIVETH A `Yes or no`
+`May police caution my child` MEANS
+    CONSIDER `my role`
+    WHEN `I am a parent or other responsible adult of a young person dealt with for an offence` THEN
+        `yes if` (`May police caution me instead of charging me` (`the matter built from` `my child's date of birth` `the date of the offence` `where the offence sits in the Schedules` `it is a Weapons Act 1999 s 6(1), 6A or 6B offence` `there is enough evidence to charge my child` FALSE FALSE FALSE FALSE FALSE FALSE FALSE))
+    OTHERWISE `does not arise for you`
+
+@export May police refer my child to a juvenile justice team instead of charging them (Young Offenders Act 1994 (WA) ss 25, 27)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `my child's date of birth` IS A DATE @desc The young person's date of birth
+      `the date of the offence` IS A DATE @desc The date the offence was (or is said to have been) committed
+      `where the offence sits in the Schedules` IS A `Schedule status` @desc Whether the offence is in Schedule 1 or Schedule 2 of the Act (for example robbery is in Schedule 2; shop stealing is in neither)
+      `there is enough evidence to charge my child` IS A BOOLEAN @desc Whether police have enough evidence to charge the young person
+      `my child accepts responsibility` IS A BOOLEAN @desc Whether the young person accepts responsibility for the offence
+      `my child agrees to a team rather than a court` IS A BOOLEAN @desc Whether the young person agrees to the matter going to a juvenile justice team instead of a court
+      `every potential participant agrees to a team` IS A BOOLEAN @desc Whether everyone who would take part (such as a responsible adult and the victim) agrees to a team
+GIVETH A `Yes or no`
+`May police refer my child to a team` MEANS
+    CONSIDER `my role`
+    WHEN `I am a parent or other responsible adult of a young person dealt with for an offence` THEN
+        `yes if` (`May police refer me to a juvenile justice team` (`the matter built from` `my child's date of birth` `the date of the offence` `where the offence sits in the Schedules` FALSE `there is enough evidence to charge my child` FALSE FALSE FALSE `my child accepts responsibility` `my child agrees to a team rather than a court` `every potential participant agrees to a team` FALSE))
+    OTHERWISE `does not arise for you`
+
+@export Does the Department keep a record of how my child's matter was dealt with (Young Offenders Act 1994 (WA) s 14)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `how it ended` IS A `How my matter ended` @desc How the young person's matter (yours, if you are the young person) was dealt with
+GIVETH A `Yes or no`
+`Does the Department keep a record of my child's matter` MEANS
+    CONSIDER `my role`
+    WHEN `I am a parent or other responsible adult of a young person dealt with for an offence` THEN
+        `yes if` (`Does the Department keep a record of my matter` `how it ended`)
+    OTHERWISE `does not arise for you`
+
+§§§ `At the juvenile justice team (ss 30, 32, 37A)`
+
+-- s 30(1): the team "can only proceed if a responsible adult is present and has indicated agreement ..."; (3) unless
+-- it considers the young person independent; (4) a substitute adult may be appointed. The baseline's s 30 function,
+-- asked with my presence and agreement as the responsible adult's.
+@export Can the juvenile justice team deal with my child without me (Young Offenders Act 1994 (WA) s 30)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the matter was referred to a juvenile justice team` IS A BOOLEAN @desc Whether the young person's matter (yours, if you are the young person) has been referred to a juvenile justice team
+      `my child's date of birth` IS A DATE @desc The young person's date of birth
+      `the date of the meeting` IS A DATE @desc The date of the juvenile justice team meeting
+      `the team appointed an adult in place of a responsible adult` IS A BOOLEAN @desc Whether the team appointed another suitable adult to act in place of a responsible adult (s 30(4))
+      `the team considers my child lives independently with sufficient maturity` IS A BOOLEAN @desc Whether the team considers the young person has the maturity to live without a responsible adult's guidance and is doing so
+GIVETH A `Yes or no`
+`Can the team go ahead without me` MEANS
+    CONSIDER `my role`
+    WHEN `I am a parent or other responsible adult of a young person dealt with for an offence` THEN
+        IF NOT `the matter was referred to a juvenile justice team`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Can the team go ahead with me` `my child's date of birth` (`the meeting built from` `the date of the meeting` FALSE `the team appointed an adult in place of a responsible adult` `the team considers my child lives independently with sufficient maturity` FALSE FALSE FALSE FALSE FALSE FALSE FALSE))
+    OTHERWISE `does not arise for you`
+
+-- s 30(2): "If a responsible adult is present at the proceedings, a matter can only be disposed of by the team in a
+-- way to which the responsible adult agrees."
+@export If I am at the juvenile justice team, can it deal with my child's matter only in a way I agree to (Young Offenders Act 1994 (WA) s 30(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the matter was referred to a juvenile justice team` IS A BOOLEAN @desc Whether the young person's matter (yours, if you are the young person) has been referred to a juvenile justice team
+      `I am present at the team` IS A BOOLEAN @desc Whether you are present at the team's proceedings
+GIVETH A `Yes or no`
+`Must the team have my agreement to how it deals with the matter` MEANS
+    CONSIDER `my role`
+    WHEN `I am a parent or other responsible adult of a young person dealt with for an offence` THEN
+        IF NOT `the matter was referred to a juvenile justice team`
+        THEN `does not arise for you`
+        ELSE `yes if` `I am present at the team`
+    OTHERWISE `does not arise for you`
+
+-- s 32(1a)(a): the team is to give "the responsible adult, if any, who was given notice of the matter under section 30"
+-- notice of its determination.
+@export Must the juvenile justice team tell me how it has decided my child's matter should be dealt with (Young Offenders Act 1994 (WA) s 32(1a))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the matter was referred to a juvenile justice team` IS A BOOLEAN @desc Whether the young person's matter (yours, if you are the young person) has been referred to a juvenile justice team
+      `the team gave me notice of the matter under s 30` IS A BOOLEAN @desc Whether the team gave you notice that it proposed to deal with the young person (s 30(1))
+GIVETH A `Yes or no`
+`Must the team tell me its determination, as the responsible adult` MEANS
+    CONSIDER `my role`
+    WHEN `I am a parent or other responsible adult of a young person dealt with for an offence` THEN
+        IF NOT `the matter was referred to a juvenile justice team`
+        THEN `does not arise for you`
+        ELSE `yes if` `the team gave me notice of the matter under s 30`
+    OTHERWISE `does not arise for you`
+
+-- s 32(2), (3): if "a party withdraws his or her agreement", the team is to send the matter back; a responsible adult
+-- given notice under s 30 is a party. The baseline's team function answers it with that adult no longer agreeing.
+@export If I withdraw my agreement, what happens to my child's matter at the juvenile justice team (Young Offenders Act 1994 (WA) s 32(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the matter was referred to a juvenile justice team` IS A BOOLEAN @desc Whether the young person's matter (yours, if you are the young person) has been referred to a juvenile justice team
+      `my child's date of birth` IS A DATE @desc The young person's date of birth
+      `the date of the meeting` IS A DATE @desc The date of the juvenile justice team meeting
+GIVETH AN `At the team`
+`What happens if I withdraw my agreement` MEANS
+    CONSIDER `my role`
+    WHEN `I am a parent or other responsible adult of a young person dealt with for an offence` THEN
+        IF NOT `the matter was referred to a juvenile justice team`
+        THEN `does not arise for you`
+        ELSE `at the team` (`What happens to my matter at the team` `my child's date of birth` (`the meeting built from` `the date of the meeting` TRUE FALSE FALSE FALSE FALSE FALSE TRUE TRUE TRUE FALSE))
+    OTHERWISE `does not arise for you`
+
+@export May a lawyer represent me at the juvenile justice team dealing with my child (Young Offenders Act 1994 (WA) s 37A)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the matter was referred to a juvenile justice team` IS A BOOLEAN @desc Whether the young person's matter (yours, if you are the young person) has been referred to a juvenile justice team
+GIVETH A `Yes or no`
+`May a lawyer represent me at my child's team` MEANS
+    CONSIDER `my role`
+    WHEN `I am a parent or other responsible adult of a young person dealt with for an offence` THEN
+        IF NOT `the matter was referred to a juvenile justice team`
+        THEN `does not arise for you`
+        ELSE `yes if` `May a lawyer represent me at the team`
+    OTHERWISE `does not arise for you`
+
+§§ `For the victim`
+
+-- s 31(1): "Unless it is impracticable to do so, the juvenile justice team ... is to give any person it considers to
+-- have primarily suffered as a consequence of the offence (a victim) the opportunity to make submissions or otherwise
+-- participate in the proceedings as it sees fit."
+@export Must the juvenile justice team give me the chance to take part (Young Offenders Act 1994 (WA) s 31(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the matter was referred to a juvenile justice team` IS A BOOLEAN @desc Whether the young person's matter (yours, if you are the young person) has been referred to a juvenile justice team
+      `the team considers me to have primarily suffered from the offence` IS A BOOLEAN @desc Whether the team considers you the person who primarily suffered as a consequence of the offence
+      `it is impracticable for me to take part` IS A BOOLEAN @desc Whether it is impracticable for the team to give you the opportunity to take part
+GIVETH A `Yes or no`
+`Must the team let me take part` MEANS
+    CONSIDER `my role`
+    WHEN `I am the victim of an offence by a young person` THEN
+        IF NOT `the matter was referred to a juvenile justice team`
+        THEN `does not arise for you`
+        ELSE `yes if` (`the team considers me to have primarily suffered from the offence` AND (NOT `it is impracticable for me to take part`))
+    OTHERWISE `does not arise for you`
+
+-- s 31(2): if a victim is present, the matter "can only be disposed of by the team if the victim agrees". The
+-- baseline's team function, with every other party agreeing and me present and not agreeing, sends the matter back.
+@export If I am at the juvenile justice team and do not agree, can it still deal with the matter (Young Offenders Act 1994 (WA) s 31(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the matter was referred to a juvenile justice team` IS A BOOLEAN @desc Whether the young person's matter (yours, if you are the young person) has been referred to a juvenile justice team
+GIVETH A `Yes or no`
+`Can the team deal with the matter without my agreement` MEANS
+    CONSIDER `my role`
+    WHEN `I am the victim of an offence by a young person` THEN
+        IF NOT `the matter was referred to a juvenile justice team`
+        THEN `does not arise for you`
+        ELSE `yes if` (`What happens to my matter at the team` `a date not read` (`the meeting built from` `a date not read` TRUE FALSE FALSE TRUE TRUE FALSE TRUE TRUE TRUE FALSE) EQUALS `the team settles the terms and invites me to comply`)
+    OTHERWISE `does not arise for you`
+
+@export Must the juvenile justice team tell me how it has decided the matter should be dealt with (Young Offenders Act 1994 (WA) s 32(1a))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the matter was referred to a juvenile justice team` IS A BOOLEAN @desc Whether the young person's matter (yours, if you are the young person) has been referred to a juvenile justice team
+      `the team considers me to have primarily suffered from the offence` IS A BOOLEAN @desc Whether the team considers you the person who primarily suffered as a consequence of the offence
+GIVETH A `Yes or no`
+`Must the team tell me its determination, as the victim` MEANS
+    CONSIDER `my role`
+    WHEN `I am the victim of an offence by a young person` THEN
+        IF NOT `the matter was referred to a juvenile justice team`
+        THEN `does not arise for you`
+        ELSE `yes if` `the team considers me to have primarily suffered from the offence`
+    OTHERWISE `does not arise for you`
+
+@export Can the juvenile justice team order the young person to pay me restitution or compensation (Young Offenders Act 1994 (WA) s 32(5))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the matter was referred to a juvenile justice team` IS A BOOLEAN @desc Whether the young person's matter (yours, if you are the young person) has been referred to a juvenile justice team
+GIVETH A `Yes or no`
+`Can the team order restitution to me` MEANS
+    CONSIDER `my role`
+    WHEN `I am the victim of an offence by a young person` THEN
+        IF NOT `the matter was referred to a juvenile justice team`
+        THEN `does not arise for you`
+        ELSE `yes if` (`May the team's terms include this` `an order that I pay restitution or compensation`)
+    OTHERWISE `does not arise for you`
+
+@export Can the young person agree at the juvenile justice team to make restitution or compensation to me (Young Offenders Act 1994 (WA) s 32(5))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the matter was referred to a juvenile justice team` IS A BOOLEAN @desc Whether the young person's matter (yours, if you are the young person) has been referred to a juvenile justice team
+GIVETH A `Yes or no`
+`Can the young person undertake restitution to me` MEANS
+    CONSIDER `my role`
+    WHEN `I am the victim of an offence by a young person` THEN
+        IF NOT `the matter was referred to a juvenile justice team`
+        THEN `does not arise for you`
+        ELSE `yes if` (`May the team's terms include this` `restitution or compensation I undertake to make`)
+    OTHERWISE `does not arise for you`
+
+@export May a lawyer represent me at the juvenile justice team (Young Offenders Act 1994 (WA) s 37A), as the victim?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the matter was referred to a juvenile justice team` IS A BOOLEAN @desc Whether the young person's matter (yours, if you are the young person) has been referred to a juvenile justice team
+GIVETH A `Yes or no`
+`May a lawyer represent me at the team, as the victim` MEANS
+    CONSIDER `my role`
+    WHEN `I am the victim of an offence by a young person` THEN
+        IF NOT `the matter was referred to a juvenile justice team`
+        THEN `does not arise for you`
+        ELSE `yes if` `May a lawyer represent me at the team`
+    OTHERWISE `does not arise for you`
+
+@export If the young person is charged after the juvenile justice team, what must the court do (Young Offenders Act 1994 (WA) s 33)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the matter was referred to a juvenile justice team` IS A BOOLEAN @desc Whether the young person's matter (yours, if you are the young person) has been referred to a juvenile justice team
+      `the young person complied with the team's terms` IS A BOOLEAN @desc Whether the young person did everything the team's terms asked
+      `the young person took steps towards complying` IS A BOOLEAN @desc Whether the young person did some of it
+GIVETH AN `In court`
+`What happens to a later charge` MEANS
+    CONSIDER `my role`
+    WHEN `I am the victim of an offence by a young person` THEN
+        IF NOT `the matter was referred to a juvenile justice team`
+        THEN `does not arise for you`
+        ELSE `in court` (`What must a court do with a later charge` `the young person complied with the team's terms` `the young person took steps towards complying`)
+    OTHERWISE `does not arise for you`
+
+-- s 34: "Nothing in this Division affects any civil liability incurred in respect of an act or omission that
+-- constitutes an offence." It holds whether the young person was cautioned, sent to a team or neither, so it takes no
+-- situation.
+@export Does a caution or a juvenile justice team take away my right to sue the young person for my loss (Young Offenders Act 1994 (WA) s 34)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH A `Yes or no`
+`Does diversion take away my right to sue` MEANS
+    CONSIDER `my role`
+    WHEN `I am the victim of an offence by a young person` THEN no
+    OTHERWISE `does not arise for you`
+
+§§ `For a person who would publish or pass on information about someone else's matter`
+
+-- s 40(1): "A person is not to publish in any newspaper or other printed medium, or broadcast or televise, any report of
+-- the proceedings of a juvenile justice team or any information likely to identify any young person as a person dealt
+-- with by a juvenile justice team."
+@export May I publish or broadcast this about a juvenile justice team (Young Offenders Act 1994 (WA) s 40(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `it is a report of team proceedings or likely to identify a young person dealt with by a team` IS A BOOLEAN @desc Whether what you would publish, broadcast or televise is a report of a juvenile justice team's proceedings, or information likely to identify a young person as dealt with by one
+GIVETH A `Yes or no`
+`May I publish this` MEANS
+    CONSIDER `my role`
+    WHEN `I would publish or pass on information about someone else's matter` THEN
+        `yes if` (NOT `it is a report of team proceedings or likely to identify a young person dealt with by a team`)
+    OTHERWISE `does not arise for you`
+
+@export What is the most I can be fined for publishing a report that identifies a young person dealt with by a juvenile justice team, in dollars (Young Offenders Act 1994 (WA) s 40(2)(b))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH AN `Amount`
+`What is the most I can be fined for publishing` MEANS
+    CONSIDER `my role`
+    WHEN `I would publish or pass on information about someone else's matter` THEN amount `What is the most a publisher who identifies me can be fined`
+    OTHERWISE `does not arise for you`
+
+@export What is the longest I can be imprisoned for publishing a report that identifies a young person dealt with by a juvenile justice team, instead of a fine (Young Offenders Act 1994 (WA) s 40(2)(b); the Supreme Court may also punish it as a contempt, s 40(2)(a))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH A `Months`
+`What is the longest I can be imprisoned for publishing` MEANS
+    CONSIDER `my role`
+    WHEN `I would publish or pass on information about someone else's matter` THEN `imprisonment for up to` 12
+    OTHERWISE `does not arise for you`
+
+@export May I disclose this person's youth conviction (Young Offenders Act 1994 (WA) s 190(2))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `it has stopped counting under s 189` IS A BOOLEAN @desc Whether the conviction is no longer to be regarded as a conviction (s 189)
+      `the disclosure is for this Act or a court of law` IS A BOOLEAN @desc Whether the disclosure is for the purposes of the Young Offenders Act or of a court of law
+GIVETH A `Yes or no`
+`May I disclose this person's conviction` MEANS
+    CONSIDER `my role`
+    WHEN `I would publish or pass on information about someone else's matter` THEN
+        `yes if` (`May someone else disclose my youth conviction` `it has stopped counting under s 189` `the disclosure is for this Act or a court of law`)
+    OTHERWISE `does not arise for you`

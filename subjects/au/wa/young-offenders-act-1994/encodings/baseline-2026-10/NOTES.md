@@ -114,3 +114,73 @@ Not encoded:
 - The Spent Convictions Act 1988 (k036, k082) and the Children's Court of Western Australia Act 1988 (k022's "which court") need their own encodings.
 - The 29 February edge case in the s 189 two-year count is not handled.
 - No WA Police cautioning guidance and no case law was searched. Nothing here has been checked by a lawyer.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026, following the graffiti encoding's design (D2, D4, D8).
+The layer is `yoa-qa.l4`, and its cases are in `yoa-qa-cases.l4`.
+It imports `prelude`, `daydate` and `yoa-diversion`, and changes none of the baseline's rules or exports.
+Every exported question takes `my role` first ("Which of these describes you").
+For a role a question is not about, the answer is `does not arise for you`, and no other input is read.
+
+**Roles.** The Act puts duties on, or gives rights to, four kinds of person:
+
+- `I am, or was, a young person dealt with by police for an offence`: the baseline's seat (Jake).
+- `I am a parent or other responsible adult of a young person dealt with for an offence`. A team must give a responsible adult notice. It can go ahead only with a responsible adult present and agreeing (s 30(1)). If one is present, it can dispose of the matter only in a way that adult agrees to (s 30(2)). It must tell them its determination (s 32(1a)(a)).
+- `I am the victim of an offence by a young person`. The team must give the victim a chance to take part (s 31(1)). A victim who is present can veto how the team disposes of the matter (s 31(2)). The team must tell the victim its determination (s 32(1a)(b)).
+- `I would publish or pass on information about someone else's matter`. s 40(1) and s 190(2) bind "a person".
+
+Police, the team, the Coordinator, the chief executive officer and the court are never seats.
+
+**Situation inputs.** Each comes straight after `my role`, and is identical in name, type and `@desc` wherever it is taken.
+
+| Name | Type | Gives does not arise | Questions |
+| --- | --- | --- | --- |
+| `the matter was referred to a juvenile justice team` | BOOLEAN | FALSE | 21 questions. Young person: s 26, s 30, ss 30-32/38, s 32 terms, s 37A, s 40 fine, s 62, s 33(1), s 33. Parent: s 30 without me, s 30(2), s 32(1a), s 32(2) withdrawal, s 37A. Victim: s 31(1), s 31(2), s 32(1a), s 32(5) order, s 32(5) undertaking, s 37A, s 33 |
+| `I was cautioned` | BOOLEAN (the baseline's own input) | FALSE | The caution certificate, s 23A (young person) |
+| `how it ended` | `How my matter ended` (the baseline's own type) | For s 55(4): every value but `a finding of guilt without a conviction recorded`. For s 189 and s 190(2): every value but `a finding of guilt with a conviction recorded` | 3 young person questions. It is also an ordinary input, read however the matter ended, of the s 14 record question (young person and parent) and of "Is there a conviction from my matter to spend" |
+
+**Decisions.**
+
+- **D-QA1. The baseline's records are taken apart.** The records (`My matter`, `My team meeting`, `My conviction`) are built from plain inputs. Each question asks only for the fields its baseline function reads. The other fields get a fixed value and are never asked: "May police caution me", for example, asks no team or infringement facts. `I have been cautioned or been to a team before` is read nowhere in the baseline (s 29(2)), so it is always FALSE.
+- **D-QA2. Some inputs are fixed by the question's own terms.**
+  - In s 26, `my matter was referred to a team` is TRUE, because the referral is the situation.
+  - In the parent's "Can the team deal with my child without me", the responsible adult's presence is FALSE.
+  - In the parent's "If I withdraw my agreement", the young person attends and agrees, the team is unanimous, and the adult does not agree. The baseline's team function then answers that the matter goes back (s 32(2)).
+  - The victim's s 31(2) question also uses the baseline's team function, with everyone agreeing except the victim who is present.
+- **D-QA3. Questions with no situation.** "Will a conviction be recorded if I am found guilty" (s 55) takes no situation, because it is asked before the finding as well as after it. s 71's maximum fine and the publisher's penalty are fixed for their role, so they take none either.
+- **D-QA4. New helpers, worked from the text.**
+  - s 30(2): when the adult is present, their agreement is needed.
+  - s 31(1): the victim gets a chance to take part, unless that is impracticable.
+  - s 32(1a): the team gives notice of its determination to the adult who had s 30 notice, and to the victim.
+  - s 34: civil liability is not affected. So "Does diversion take away my right to sue" answers no. The question arises however the matter went, so it takes no situation.
+  - s 40(1): may I publish this.
+  - s 40(2)(b): up to 12 months' imprisonment.
+- **D-QA5. Each role keeps its own wording.** The parent's facts about the child are worded of the child, for example `my child's date of birth` and `there is enough evidence to charge my child`. They are not shared with the young person's first-person inputs. A name that is shared has one `@desc` everywhere, worded for every role that takes it, for example "the young person's matter (yours, if you are the young person)".
+
+**Not covered for the new roles.**
+
+- The parent: who may be appointed in the parent's place (s 30(4)-(5)); the bail and custody duties in Part 4; court orders against a responsible adult (Part 7); and the parent's own liability.
+- The victim: compensation orders made by a court; restitution under other Acts; and the victim's place in court proceedings.
+- The publisher: punishment as a contempt under s 40(2)(a), which is named only in the question text; ss 11CR and 15A, which are outside the baseline's scope; and the Spent Convictions Act.
+
+**Counts.** There are 48 questions: 27 for the young person (every baseline export), 9 for the parent, 8 for the victim and 4 for the publisher.
+`yoa-qa-cases.l4` has 308 cases:
+
+- 144 ask each question for the three roles it is not about, with every other input ASSUMEd.
+- 37 ask each value of a situation input under which the situation does not hold, with every later input ASSUMEd: 21 for the team referral, 1 for the caution and 15 for how the matter ended.
+- 90 are for the young person, worked by hand. 27 of them, one per question, assert that the answer equals the baseline export's on the baseline's own records.
+- 37 are for the other roles, worked by hand: 18 for the parent, 12 for the victim and 7 for the publisher.
+
+**A limit of the "not read" cases.** The baseline reads `Police option`, `Schedule status`, `What I said`, `Team term`, `Sentence` and `Purpose` through OTHERWISE (graffiti finding 31). For those inputs, the check that they are not read rests on the parameter script, not on the cases. The layer's own helpers over `How my matter ended` list every value.
+
+**Checks.** Run on the stable l4 (VS Code extension 1.6.98), with `JL4_LIBRARY_PATH` unset:
+
+- 0 errors and 0 warnings in all four files.
+- 378 assertions are satisfied: 70 in the baseline and 308 in the layer.
+- `l4 check yoa-qa.l4` succeeds.
+- The parameter script (`check_params.py`, in the session scratchpad) checked all 48 questions:
+  - `my role` comes first in each;
+  - every shared parameter is identical in type and `@desc`;
+  - each situation input comes straight after the role;
+  - no question takes a DEONTIC or EVENT input.
