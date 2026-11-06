@@ -307,3 +307,55 @@ Left out, with the reason:
   payments and appropriation dates are not modelled.
 - The s 43(1)(b) regulative rule is declared but not traced. No case law or
   Supreme Court probate practice was consulted.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026, after the model of the Graffiti Vandalism Act 2016 encoding's seat layer (its design decisions D2, D4 and D8). The baseline's files are unchanged: the layer is added, nothing is replaced. Two new files:
+
+- `aa-qa.l4` imports `prelude` and `aa-estates`. It has 33 exported questions.
+- `aa-qa-cases.l4` imports the same and `aa-qa`. It has 266 cases.
+
+### Roles
+
+`DECLARE Role IS ONE OF`:
+
+- `I am a member of the family of someone who has died`: the heir's half of the baseline's seat (20 questions).
+- `I am the executor of a will, or want to be granted administration of an estate`: the executor's half of the baseline's seat (9 questions).
+- `I am given something by a will`: the beneficiary of s 42 and s 143A, whose questions the baseline already encodes (2 questions).
+- `I am owed money by someone who has died`: the creditor, to whom s 25(1)(b) ("any other person, whether a creditor or not") and s 37 ("any creditor of the testator") give a route to a grant (2 questions).
+
+Why: the baseline's seat has two faces, the family and the person taking out the grant, and they ask different questions; the beneficiary and the creditor are the other people the Act gives rights to. The Court, the Principal Registrar, the Public Trustee and the bank are not seats: s 25(1)(b), s 44 and s 139 appear as what they mean for the person asking. Every exported question takes `my role` IS A Role first, with `@desc Which of these describes you`, and for a role it is not about answers `does not arise for you` without reading any other input.
+
+### Situation inputs
+
+| Input | Type | Does not arise when | Taken by |
+|---|---|---|---|
+| `what the person who died left` | `What the person who died left` (`no will`; `a will that leaves some of their property undisposed of`; `a will that disposes of all their property`) | `a will that disposes of all their property`, for the s 14, s 15, s 12A, s 13(1a), s 14(4) and Fourth Schedule questions (s 14(1) divides only "the property as to which they die intestate"); either will value, for the three s 25 questions (s 25 is "the estate of a person dying intestate"); `no will`, for the three s 71 and s 37 questions (they are about a will) | family: 17 questions (all but how much is left for the Table, s 139 and Part V); executor: `May I be granted administration of the estate`, `Can the will I am to prove be put in evidence`; creditor: both of its questions |
+| `I am named as executor in the will` | BOOLEAN | FALSE | `Have I lost my right to the executorship` (s 32), `Can the Court give administration to someone else because I delayed` (s 37) |
+| `a grant has been made to me` | BOOLEAN | FALSE | `What must the Principal Registrar do about my accounts` (ss 43(1)(b), 44) |
+
+Each is the second input, straight after `my role`, with one name, type and `@desc` everywhere, so the form asks it once. The helpers that read the estate situation list all three values with no OTHERWISE (graffiti finding 31). Questions that arise in every situation of their role take no situation input: how much is left for the Table, s 139 and Part V (family); which grant, what a grant vests, s 55 and Part V (executor); s 42 and s 143A (beneficiary).
+
+### Decisions
+
+- **QA-1. s 25(1)(b) in the baseline gives the wrong answer when the entitled person fails to appear.** The text: administration may go to "any other person ... if there be no such person entitled as aforesaid resident within the jurisdiction and fit to be so entrusted, or if the person entitled as aforesaid fails, when duly cited, to appear and apply". The baseline's `May an outsider be granted administration` writes `NOT a OR b` on one line, which the stable `l4` reads as `NOT (a OR b)`: with the entitled person cited and failing to appear it answers FALSE (checked: FALSE both for resident-and-fit with a failure to appear and for no one resident with a failure to appear). The baseline's cases never set that fact. The baseline is not changed; the family member's s 25(1)(b) question uses a helper in the layer with the NOT bracketed, and its answer equals the baseline's wherever no one failed to appear (2 cases). One case, `NOT (May an outsider be granted administration TRUE TRUE)`, records the baseline's present answer, so it fails, as a signal, once the baseline is corrected. The baseline's other uses of NOT with OR (s 15, s 25(1), the Fourth Schedule) are laid out over several lines and read as the text says; the layer's cases exercise them.
+- **QA-2. One estate situation with three values.** Whether there is a will and whether it disposes of everything settles three different sets of questions (intestacy, s 25, s 71 and s 37), so one input serves all of them and the form asks it once.
+- **QA-3. Two s 71 and two Part V questions.** The family member and the executor each ask whether the will can be used in evidence and whether duty is payable; each role gets its own question, calling the same baseline rule.
+- **QA-4. The creditor's questions call the baseline's rules.** s 25(1)(b) for a creditor is `May I be granted administration` with `I am entitled in distribution` FALSE (an adult creditor qualifies only if no entitled person is resident and fit, or one cited fails to appear). s 37 for a creditor is the baseline's executor-delay rule, asked about the executor's facts.
+- **QA-5. Left out of the layer.** The baseline's three line-count exports (`the lines of issue`, `the sibling lines`, `the uncle and aunt lines`) are counts of the family facts the form already asks and feed `How much do I take`; they are not asked as questions. The s 43(1)(b) duty is a DEONTIC (its `@export` is commented out in the baseline) and is not asked; s 44, what follows from it, is.
+
+### Not covered for the new roles
+
+- Beneficiary: a gift's validity, abatement or ademption (Wills Act 1970 and the general law); family provision claims (Family Provision Act 1972, preserved by s 60A).
+- Creditor: insolvent estates (s 10A, Fifth Schedule), the order of payment of debts, citations and caveats (Part IV): none is encoded in the baseline.
+
+### Cases
+
+266 in `aa-qa-cases.l4`, all satisfied, with 0 errors and 0 warnings:
+
+- 99 ask each question for each of the three roles it is not about, every other input ASSUMEd: `does not arise for you`;
+- 27 ask each situation question, for its own role, with each value that makes the situation not hold, every later input ASSUMEd: `does not arise for you`;
+- 31 assert that the family member's or executor's answer equals the baseline export's on the same facts (at least one for each of their 29 questions), and 1 records the baseline's s 25(1)(b) answer (QA-1);
+- 108 are worked by hand from the text, for all four roles, with the lives' facts (Sue in 2060, Jake and Ruby in 2079, Graham's will) and the baseline's worked families.
+
+Checked with the stable `l4` of VS Code extension 1.6.98, `JL4_LIBRARY_PATH` unset: `aa-qa.l4`, `aa-qa-cases.l4`, and the baseline's `aa-estates.l4` and `aa-cases-estates.l4` (70 of 70, unchanged) give 0 errors and 0 warnings; `l4 check aa-qa.l4` succeeds. A script listed every `@export` of `aa-qa.l4` with its inputs and checked that `my role` is first in all 33, that each situation input (and every other shared input) has one name, type and `@desc`, and that no input is DEONTIC or EVENT. A negative control (one expected share altered) was caught. The mechanical cases are generated by the scratchpad script `gen_aa.py` from the layer's own `@export` list.

@@ -1,0 +1,617 @@
+IMPORT prelude
+IMPORT `aa-estates`
+
+-- Administration Act 1903 (WA) -- the Q&A layer: the questions people ask about an estate, with the seat and the
+-- situation as parameters.
+--
+-- PURPOSE. One module whose exported questions serve every seat from one deployment. Every exported question takes
+-- `my role` first ("Which of these describes you"). A question about another role answers `does not arise for you`
+-- without reading any other input, so the site's question form never asks those inputs and drops the question.
+--
+-- ROLES. The baseline (aa-estates.l4) was written from one seat with two faces: the heir or next of kin, and the
+-- executor or would-be administrator. Here they are two roles, and two more people the Act gives rights to are added:
+--   - a member of the family of someone who has died: the heir's half of the baseline's seat (ss 12A, 13(1a), 14, 15,
+--     25(1)(b), 71, 139, Part V, Fourth Schedule);
+--   - the executor of a will, or a person who wants to be granted administration: the executor's half (ss 6-8, 25,
+--     32, 33, 36, 37, 44, 55, 71, Part V);
+--   - a person given something by a will (a beneficiary): s 42 (an order to hand over the gift) and s 143A (interest
+--     on a legacy), which the baseline already encodes from that person's seat;
+--   - a person owed money by someone who has died (a creditor): s 25(1)(b) (administration to "any other person,
+--     whether a creditor or not") and s 37 (administration with the will annexed "upon the application of ... any
+--     creditor of the testator").
+-- The Court, the Principal Registrar, the Public Trustee as an office and the bank are never seats: what they may or
+-- must do appears as what it means for the person asking.
+--
+-- SITUATIONS (design D8 of the Graffiti Vandalism Act encoding). Within a role, a question that arises only in a
+-- situation takes that situation's fact straight after `my role`, and answers `does not arise for you` when the
+-- situation does not hold, without reading anything else. The questions of one situation share one input, with the
+-- same name, type and @desc, so the form asks it once. There are three:
+--   - `what the person who died left` (`What the person who died left`): no will; a will that leaves some property
+--     undisposed of; a will that disposes of all their property. The Act ties s 14 and s 15 to "the property as to which
+--     they die intestate" (s 14(1)), so every question of the Table, s 12A, s 13(1a), s 14(4) and the Fourth Schedule
+--     does not arise for a will that disposes of everything. s 25 is about "the estate of a person dying intestate", so
+--     its three questions arise only for no will. s 71 and s 37 are about a will, so their questions do not arise for
+--     no will.
+--   - `I am named as executor in the will` (BOOLEAN): ss 32 and 37 are about "an executor"; FALSE, does not arise.
+--   - `a grant has been made to me` (BOOLEAN): s 44 follows s 43's duty of "every person to whom probate or
+--     administration is granted"; FALSE, does not arise.
+-- A question that arises in every situation of its role (how much is left for the Table, which grant, what a grant
+-- vests, s 55, s 139, Part V, and the beneficiary's two) takes no situation input.
+--
+-- The rules are in aa-estates.l4. This module calls them and restates none; for the family member and the executor
+-- each answer is the baseline export's own answer, wrapped. No exported question takes a DEONTIC or EVENT input (the
+-- baseline's s 43(1)(b) duty is a DEONTIC and is not asked; s 44, what follows, is).
+--
+-- BASELINE. Not for public use as advice. See NOTES.md, "Q&A layer (seat and situations as parameters)".
+
+§ `Administration Act 1903 (WA) -- the questions people ask`
+
+§§ `Who is asking, and the shape of the answers`
+
+DECLARE Role IS ONE OF
+    `I am a member of the family of someone who has died`
+    `I am the executor of a will, or want to be granted administration of an estate`
+    `I am given something by a will`
+    `I am owed money by someone who has died`
+
+-- The situation of the whole estate: whether there is a will, and whether it disposes of everything (s 14(1)).
+DECLARE `What the person who died left` IS ONE OF
+    `no will`
+    `a will that leaves some of their property undisposed of`
+    `a will that disposes of all their property`
+
+DECLARE `Yes or no` IS ONE OF
+    yes
+    no
+    `does not arise for you`
+
+DECLARE `Amount` IS ONE OF
+    `does not arise for you`
+    amount HAS dollars IS A NUMBER
+
+DECLARE `Fraction` IS ONE OF
+    `does not arise for you`
+    `a fraction of` HAS `the part` IS A NUMBER
+
+DECLARE `Rate` IS ONE OF
+    `does not arise for you`
+    `a yearly rate of` HAS `the yearly rate` IS A NUMBER
+
+DECLARE `Table item answer` IS ONE OF
+    `does not arise for you`
+    `the answer is` HAS `the item` IS A `Table item`
+
+DECLARE `Grant answer` IS ONE OF
+    `does not arise for you`
+    `the answer is` HAS `the grant` IS A `Grant`
+
+DECLARE `Home answer` IS ONE OF
+    `does not arise for you`
+    `the answer is` HAS `my right` IS A `My right to take the home`
+
+DECLARE `Registrar answer` IS ONE OF
+    `does not arise for you`
+    `the answer is` HAS `what follows` IS A `What s 44 does to me`
+
+§§ `Helpers`
+
+GIVEN `it holds` IS A BOOLEAN
+GIVETH A `Yes or no`
+`yes if` `it holds` MEANS
+    IF `it holds` THEN yes ELSE no
+
+-- The situation helpers list every value and have no OTHERWISE (graffiti finding 31: a CONSIDER with OTHERWISE takes
+-- the OTHERWISE branch for an ASSUMEd value instead of failing, so a case could not show the value was not read).
+GIVEN `what was left` IS A `What the person who died left`
+GIVETH A BOOLEAN
+DECIDE `nothing is left to intestacy` IF
+    CONSIDER `what was left`
+    WHEN `no will` THEN FALSE
+    WHEN `a will that leaves some of their property undisposed of` THEN FALSE
+    WHEN `a will that disposes of all their property` THEN TRUE
+
+GIVEN `what was left` IS A `What the person who died left`
+GIVETH A BOOLEAN
+DECIDE `there is a will` IF
+    CONSIDER `what was left`
+    WHEN `no will` THEN FALSE
+    WHEN `a will that leaves some of their property undisposed of` THEN TRUE
+    WHEN `a will that disposes of all their property` THEN TRUE
+
+-- s 25(1)(b), read again (finding QA-1 in NOTES.md): administration may go to "any other person ... if there be no such
+-- person entitled as aforesaid resident within the jurisdiction and fit to be so entrusted, or if the person entitled as
+-- aforesaid fails, when duly cited, to appear and apply". The baseline's `May an outsider be granted administration`
+-- writes this on one line as NOT a OR b, which the stable l4 reads as NOT (a OR b): it answers no when the entitled
+-- person was cited and failed to appear. The baseline is not changed (layers are added); this helper bracketing the NOT
+-- is what the family member's s 25(1)(b) question uses. It agrees with the baseline whenever no one failed to appear.
+GIVEN `someone entitled is resident in WA and fit` IS A BOOLEAN
+      `the entitled person failed to appear when cited` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `someone not entitled may be granted administration` IF
+    (NOT (`someone entitled is resident in WA and fit`)) OR `the entitled person failed to appear when cited`
+
+§§ `For a member of the family of someone who has died`
+
+§§§ `s 14(1) -- the intestate property`
+
+@export After the will, how much of my relative's net estate is left to be divided as intestate property (Administration Act 1903 (WA) s 14(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the net estate` IS A NUMBER @desc The net value of the estate at the date of death, in dollars
+      `the value the will disposes of` IS A NUMBER @desc The value of the property the will effectively gives away, in dollars (0 if there is no will)
+GIVETH AN `Amount`
+`How much of my relative's estate is left for the Table` MEANS
+    CONSIDER `my role`
+    WHEN `I am a member of the family of someone who has died` THEN amount (`How much is left for the Table` `the net estate` `the value the will disposes of`)
+    OTHERWISE `does not arise for you`
+
+§§§ `s 14(1) Table, s 15 -- who takes, and how much`
+
+@export Which item of the Table divides my relative's intestate property (Administration Act 1903 (WA) s 14(1))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the person who died left` IS A `What the person who died left` @desc Whether the person who died left a will, and whether it disposes of all their property
+      `the family` IS A `The family left behind` @desc Who survived the deceased
+GIVETH A `Table item answer`
+`Which item of the Table divides my relative's property` MEANS
+    CONSIDER `my role`
+    WHEN `I am a member of the family of someone who has died` THEN
+        IF `nothing is left to intestacy` `what the person who died left`
+        THEN `does not arise for you`
+        ELSE `the answer is` (`Which item of the Table applies` `the family`)
+    OTHERWISE `does not arise for you`
+
+@export Does my relative's intestate property pass to the Crown by escheat (Administration Act 1903 (WA) s 14(1), Table item 11)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the person who died left` IS A `What the person who died left` @desc Whether the person who died left a will, and whether it disposes of all their property
+      `the family` IS A `The family left behind` @desc Who survived the deceased
+GIVETH A `Yes or no`
+`Does my relative's property pass to the Crown` MEANS
+    CONSIDER `my role`
+    WHEN `I am a member of the family of someone who has died` THEN
+        IF `nothing is left to intestacy` `what the person who died left`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Does the property pass to the Crown` `the family`)
+    OTHERWISE `does not arise for you`
+
+@export How much do I take from my relative's intestate property, for a line the whole line's share (Administration Act 1903 (WA) ss 14, 15)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the person who died left` IS A `What the person who died left` @desc Whether the person who died left a will, and whether it disposes of all their property
+      `who I am` IS A `My place in the family` @desc How you were related to the deceased
+      `the family` IS A `The family left behind` @desc Who survived the deceased
+      `the sums` IS A `Legacy sums` @desc The legacy sums in force when the deceased died (the original sums unless a s 14A order applies)
+      `the net value` IS A NUMBER @desc Net value of the intestate property at the date of death in dollars, leaving out household chattels where a partner survives
+GIVETH AN `Amount`
+`How much of my relative's property do I take` MEANS
+    CONSIDER `my role`
+    WHEN `I am a member of the family of someone who has died` THEN
+        IF `nothing is left to intestacy` `what the person who died left`
+        THEN `does not arise for you`
+        ELSE amount (`How much do I take` `who I am` `the family` `the sums` `the net value`)
+    OTHERWISE `does not arise for you`
+
+@export What fraction of my relative's household chattels do I take (Administration Act 1903 (WA) s 14(1), Table item 1, with s 15)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the person who died left` IS A `What the person who died left` @desc Whether the person who died left a will, and whether it disposes of all their property
+      `who I am` IS A `My place in the family` @desc How you were related to the deceased
+      `the family` IS A `The family left behind` @desc Who survived the deceased
+GIVETH A `Fraction`
+`What fraction of the household chattels do I take` MEANS
+    CONSIDER `my role`
+    WHEN `I am a member of the family of someone who has died` THEN
+        IF `nothing is left to intestacy` `what the person who died left`
+        THEN `does not arise for you`
+        ELSE `a fraction of` (`What share of the household chattels do I take` `who I am` `the family`)
+    OTHERWISE `does not arise for you`
+
+@export Does my relative's de facto partner take on the intestacy (Administration Act 1903 (WA) s 15)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the person who died left` IS A `What the person who died left` @desc Whether the person who died left a will, and whether it disposes of all their property
+      `the family` IS A `The family left behind` @desc Who survived the deceased
+GIVETH A `Yes or no`
+`Does my relative's de facto partner take` MEANS
+    CONSIDER `my role`
+    WHEN `I am a member of the family of someone who has died` THEN
+        IF `nothing is left to intestacy` `what the person who died left`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Does a de facto partner take` `the family`)
+    OTHERWISE `does not arise for you`
+
+@export What fraction of the partner's entitlement goes to my relative's de facto partner (Administration Act 1903 (WA) s 15)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the person who died left` IS A `What the person who died left` @desc Whether the person who died left a will, and whether it disposes of all their property
+      `the family` IS A `The family left behind` @desc Who survived the deceased
+GIVETH A `Fraction`
+`What fraction goes to my relative's de facto partner` MEANS
+    CONSIDER `my role`
+    WHEN `I am a member of the family of someone who has died` THEN
+        IF `nothing is left to intestacy` `what the person who died left`
+        THEN `does not arise for you`
+        ELSE `a fraction of` (`the de facto partner's fraction` `the family`)
+    OTHERWISE `does not arise for you`
+
+@export Does anyone take as my relative's partner, a husband, wife or qualifying de facto partner (Administration Act 1903 (WA) ss 14, 15)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the person who died left` IS A `What the person who died left` @desc Whether the person who died left a will, and whether it disposes of all their property
+      `the family` IS A `The family left behind` @desc Who survived the deceased
+GIVETH A `Yes or no`
+`Does anyone take as my relative's partner` MEANS
+    CONSIDER `my role`
+    WHEN `I am a member of the family of someone who has died` THEN
+        IF `nothing is left to intestacy` `what the person who died left`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Does a partner take` `the family`)
+    OTHERWISE `does not arise for you`
+
+§§§ `s 14(1) Table, s 14(2b), (3), (3a) -- how the property is divided between the groups`
+
+@export How much of my relative's intestate property goes to the partner side, before any s 15 split (Administration Act 1903 (WA) s 14(1), Table items 2-4, s 14(3))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the person who died left` IS A `What the person who died left` @desc Whether the person who died left a will, and whether it disposes of all their property
+      `the family` IS A `The family left behind` @desc Who survived the deceased
+      `the sums` IS A `Legacy sums` @desc The legacy sums in force when the deceased died (the original sums unless a s 14A order applies)
+      `the net value` IS A NUMBER @desc Net value of the intestate property at the date of death in dollars, leaving out household chattels where a partner survives
+GIVETH AN `Amount`
+`How much goes to my relative's partner side` MEANS
+    CONSIDER `my role`
+    WHEN `I am a member of the family of someone who has died` THEN
+        IF `nothing is left to intestacy` `what the person who died left`
+        THEN `does not arise for you`
+        ELSE amount (`the partner's entitlement` `the family` `the sums` `the net value`)
+    OTHERWISE `does not arise for you`
+
+@export How much of my relative's intestate property goes to the issue, children and the issue of dead children, together (Administration Act 1903 (WA) s 14(1), Table items 2 and 5, s 14(2b))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the person who died left` IS A `What the person who died left` @desc Whether the person who died left a will, and whether it disposes of all their property
+      `the family` IS A `The family left behind` @desc Who survived the deceased
+      `the sums` IS A `Legacy sums` @desc The legacy sums in force when the deceased died (the original sums unless a s 14A order applies)
+      `the net value` IS A NUMBER @desc Net value of the intestate property at the date of death in dollars, leaving out household chattels where a partner survives
+GIVETH AN `Amount`
+`How much goes to my relative's issue` MEANS
+    CONSIDER `my role`
+    WHEN `I am a member of the family of someone who has died` THEN
+        IF `nothing is left to intestacy` `what the person who died left`
+        THEN `does not arise for you`
+        ELSE amount (`the issue's share` `the family` `the sums` `the net value`)
+    OTHERWISE `does not arise for you`
+
+@export How much of my relative's intestate property goes to the parents together (Administration Act 1903 (WA) s 14(1), Table items 3, 6 and 7)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the person who died left` IS A `What the person who died left` @desc Whether the person who died left a will, and whether it disposes of all their property
+      `the family` IS A `The family left behind` @desc Who survived the deceased
+      `the sums` IS A `Legacy sums` @desc The legacy sums in force when the deceased died (the original sums unless a s 14A order applies)
+      `the net value` IS A NUMBER @desc Net value of the intestate property at the date of death in dollars, leaving out household chattels where a partner survives
+GIVETH AN `Amount`
+`How much goes to my relative's parents` MEANS
+    CONSIDER `my role`
+    WHEN `I am a member of the family of someone who has died` THEN
+        IF `nothing is left to intestacy` `what the person who died left`
+        THEN `does not arise for you`
+        ELSE amount (`the parents' share` `the family` `the sums` `the net value`)
+    OTHERWISE `does not arise for you`
+
+@export How much of my relative's intestate property goes to the brothers and sisters, and the children of dead ones, together (Administration Act 1903 (WA) s 14(1), Table items 3, 6 and 8, s 14(3a))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the person who died left` IS A `What the person who died left` @desc Whether the person who died left a will, and whether it disposes of all their property
+      `the family` IS A `The family left behind` @desc Who survived the deceased
+      `the sums` IS A `Legacy sums` @desc The legacy sums in force when the deceased died (the original sums unless a s 14A order applies)
+      `the net value` IS A NUMBER @desc Net value of the intestate property at the date of death in dollars, leaving out household chattels where a partner survives
+GIVETH AN `Amount`
+`How much goes to my relative's brothers and sisters` MEANS
+    CONSIDER `my role`
+    WHEN `I am a member of the family of someone who has died` THEN
+        IF `nothing is left to intestacy` `what the person who died left`
+        THEN `does not arise for you`
+        ELSE amount (`the brothers' and sisters' share` `the family` `the sums` `the net value`)
+    OTHERWISE `does not arise for you`
+
+§§§ `s 14(4) -- interest on the partner's statutory legacy`
+
+@export How much interest am I owed on my statutory legacy, 5% a year from the death until it is paid (Administration Act 1903 (WA) s 14(4))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the person who died left` IS A `What the person who died left` @desc Whether the person who died left a will, and whether it disposes of all their property
+      `the sum unpaid` IS A NUMBER @desc The part of the item 2 or item 3 legacy sum still unpaid, in dollars
+      `years from the death to payment` IS A NUMBER @desc Years (may be fractional) from the death to payment or appropriation, whichever is earlier
+GIVETH AN `Amount`
+`How much interest am I owed on my statutory legacy` MEANS
+    CONSIDER `my role`
+    WHEN `I am a member of the family of someone who has died` THEN
+        IF `nothing is left to intestacy` `what the person who died left`
+        THEN `does not arise for you`
+        ELSE amount (`How much interest am I owed on my legacy` `the sum unpaid` `years from the death to payment`)
+    OTHERWISE `does not arise for you`
+
+§§§ `s 12A, s 13(1a) -- the relationship, and land held for two or more`
+
+@export Is my parent-child relationship with my relative recognised for the intestacy, if the Court is satisfied of the facts (Administration Act 1903 (WA) s 12A)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the person who died left` IS A `What the person who died left` @desc Whether the person who died left a will, and whether it disposes of all their property
+      `my parents are or have been married to each other` IS A BOOLEAN @desc Whether the child's parents are or ever were married to each other
+      `established under the Artificial Conception Act` IS A BOOLEAN @desc Whether the relationship was established by the Artificial Conception Act 1985
+      `parentage admitted or established in the parent's lifetime` IS A BOOLEAN @desc Whether the parent admitted parentage, or it was established against them, while the parent was alive
+      `I am the parent claiming from the child` IS A BOOLEAN @desc Whether the claim is a parent's claim on a child's estate
+      `parentage admitted or established in the child's lifetime` IS A BOOLEAN @desc Whether parentage was admitted or established while the child was alive
+GIVETH A `Yes or no`
+`Is my relationship with my relative recognised` MEANS
+    CONSIDER `my role`
+    WHEN `I am a member of the family of someone who has died` THEN
+        IF `nothing is left to intestacy` `what the person who died left`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Is my relationship recognised` `my parents are or have been married to each other` `established under the Artificial Conception Act` `parentage admitted or established in the parent's lifetime` `I am the parent claiming from the child` `parentage admitted or established in the child's lifetime`)
+    OTHERWISE `does not arise for you`
+
+@export Do we who inherit my relative's land on the intestacy hold it as tenants in common (Administration Act 1903 (WA) s 13(1a))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the person who died left` IS A `What the person who died left` @desc Whether the person who died left a will, and whether it disposes of all their property
+      `the persons entitled to the land` IS A NUMBER @desc How many people are entitled to the land under ss 14 and 15
+GIVETH A `Yes or no`
+`Do we hold my relative's land as tenants in common` MEANS
+    CONSIDER `my role`
+    WHEN `I am a member of the family of someone who has died` THEN
+        IF `nothing is left to intestacy` `what the person who died left`
+        THEN `does not arise for you`
+        ELSE `yes if` (`Do we hold the land as tenants in common` `the persons entitled to the land`)
+    OTHERWISE `does not arise for you`
+
+§§§ `Fourth Schedule cll 1-3 -- the surviving partner's election to take the home`
+
+@export As the surviving husband, wife or de facto partner, may I elect to take the home towards my share (Administration Act 1903 (WA) Fourth Schedule cll 1-3)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the person who died left` IS A `What the person who died left` @desc Whether the person who died left a will, and whether it disposes of all their property
+      `who I am` IS A `My place in the family` @desc How you were related to the deceased
+      `the family` IS A `The family left behind` @desc Who survived the deceased
+      `the sums` IS A `Legacy sums` @desc The legacy sums in force when the deceased died (the original sums unless a s 14A order applies)
+      `the net value` IS A NUMBER @desc Net value of the intestate property at the date of death in dollars, leaving out household chattels where a partner survives
+      `the home` IS A `The home` @desc Facts about the house you lived in
+GIVETH A `Home answer`
+`May I elect to take my relative's home` MEANS
+    CONSIDER `my role`
+    WHEN `I am a member of the family of someone who has died` THEN
+        IF `nothing is left to intestacy` `what the person who died left`
+        THEN `does not arise for you`
+        ELSE `the answer is` (`May I elect to take the home` `who I am` `the family` `the sums` `the net value` `the home`)
+    OTHERWISE `does not arise for you`
+
+§§§ `s 25(1)(b) -- an outsider as administrator`
+
+@export May someone not entitled to a share, such as the Public Trustee or a creditor, be granted administration of my relative's estate (Administration Act 1903 (WA) s 25(1)(b))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the person who died left` IS A `What the person who died left` @desc Whether the person who died left a will, and whether it disposes of all their property
+      `someone entitled is resident in WA and fit` IS A BOOLEAN @desc Whether at least one person entitled to a share lives in Western Australia and is fit to be entrusted
+      `the entitled person failed to appear when cited` IS A BOOLEAN @desc Whether the person entitled was duly cited and failed to appear and apply
+GIVETH A `Yes or no`
+`May someone not entitled be granted administration of my relative's estate` MEANS
+    CONSIDER `my role`
+    WHEN `I am a member of the family of someone who has died` THEN
+        IF `there is a will` `what the person who died left`
+        THEN `does not arise for you`
+        ELSE `yes if` (`someone not entitled may be granted administration` `someone entitled is resident in WA and fit` `the entitled person failed to appear when cited`)
+    OTHERWISE `does not arise for you`
+
+§§§ `s 139 -- a bank deposit paid without a grant`
+
+@export May the bank pay me my relative's deposit without any grant, if the manager is satisfied of my relationship (Administration Act 1903 (WA) s 139)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the balance` IS A NUMBER @desc The sum standing to the deceased's credit in the bank or other ADI, in dollars
+      `the proclaimed ceiling` IS A NUMBER @desc The amount declared by proclamation (the deposit's note gives $50,000; the Act's text $1,200)
+      `a month has passed since the death` IS A BOOLEAN @desc Whether one month has passed since the death
+      `a grant was produced to the bank within the month` IS A BOOLEAN @desc Whether probate or administration was produced to the bank within that month
+      `notice of a will or an application was given within the month` IS A BOOLEAN @desc Whether the bank was given written notice of a will to be proved or of an intended application for administration within that month
+      `my relation` IS A `My relation to the account holder` @desc How you were related to the deceased
+GIVETH A `Yes or no`
+`May the bank pay me my relative's deposit without a grant` MEANS
+    CONSIDER `my role`
+    WHEN `I am a member of the family of someone who has died` THEN
+        `yes if` (`May the bank pay me without a grant` `the balance` `the proclaimed ceiling` `a month has passed since the death` `a grant was produced to the bank within the month` `notice of a will or an application was given within the month` `my relation`)
+    OTHERWISE `does not arise for you`
+
+§§§ `s 71, Part V -- the will in evidence, and no death duty`
+
+@export Can my relative's will be put in evidence in these proceedings before a grant has issued (Administration Act 1903 (WA) s 71)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the person who died left` IS A `What the person who died left` @desc Whether the person who died left a will, and whether it disposes of all their property
+      `the proceeding` IS A `Proceeding` @desc The kind of proceeding the will is to be used in
+      `a grant has issued` IS A BOOLEAN @desc Whether probate or administration has already issued
+GIVETH A `Yes or no`
+`Can my relative's will be put in evidence` MEANS
+    CONSIDER `my role`
+    WHEN `I am a member of the family of someone who has died` THEN
+        IF `there is a will` `what the person who died left`
+        THEN `yes if` (`Is the will admissible in evidence` `the proceeding` `a grant has issued`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+@export Must my relative's estate pay death or succession duty under this Act (Administration Act 1903 (WA) Part V)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH A `Yes or no`
+`Must my relative's estate pay death duty` MEANS
+    CONSIDER `my role`
+    WHEN `I am a member of the family of someone who has died` THEN `yes if` `Must the estate pay death duty under this Act`
+    OTHERWISE `does not arise for you`
+
+§§ `For the executor of a will, or a person who wants to be granted administration`
+
+§§§ `ss 6, 7, 25, 33, 36 -- which grant`
+
+@export Which grant must be applied for to deal with the estate in Western Australia: probate, administration with the will annexed, or letters of administration (Administration Act 1903 (WA) ss 6, 7, 25, 33, 36)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the death` IS A `The death` @desc Whether there is a will and an executor able to act
+GIVETH A `Grant answer`
+`Which grant must I apply for` MEANS
+    CONSIDER `my role`
+    WHEN `I am the executor of a will, or want to be granted administration of an estate` THEN `the answer is` (`Which grant does the estate need` `the death`)
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 6, 8 -- what the grant carries`
+
+@export Does the grant vest this asset of the deceased in me as executor or administrator (Administration Act 1903 (WA) s 8)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the asset is in Western Australia` IS A BOOLEAN @desc Whether the asset is situated in Western Australia
+      `the asset passed outside the estate` IS A BOOLEAN @desc Whether other law passed it directly to someone at the death (survivorship of a joint owner, a binding super nomination)
+GIVETH A `Yes or no`
+`Does the grant vest this asset in me as executor or administrator` MEANS
+    CONSIDER `my role`
+    WHEN `I am the executor of a will, or want to be granted administration of an estate` THEN `yes if` (`Does the grant vest this asset in me` `the asset is in Western Australia` `the asset passed outside the estate`)
+    OTHERWISE `does not arise for you`
+
+§§§ `s 25 -- administration on intestacy`
+
+@export Am I someone the Court may grant administration of the estate to (Administration Act 1903 (WA) s 25)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the person who died left` IS A `What the person who died left` @desc Whether the person who died left a will, and whether it disposes of all their property
+      `my age` IS A NUMBER @desc Your age in years
+      `I am entitled in distribution` IS A BOOLEAN @desc Whether you take a share of the estate under s 14 or s 15
+      `someone entitled is resident in WA and fit` IS A BOOLEAN @desc Whether at least one person entitled to a share lives in Western Australia and is fit to be entrusted
+      `the entitled person failed to appear when cited` IS A BOOLEAN @desc Whether the person entitled was duly cited and failed to appear and apply
+GIVETH A `Yes or no`
+`May I be granted administration of the estate` MEANS
+    CONSIDER `my role`
+    WHEN `I am the executor of a will, or want to be granted administration of an estate` THEN
+        IF `there is a will` `what the person who died left`
+        THEN `does not arise for you`
+        ELSE `yes if` (`May I be granted administration` `my age` `I am entitled in distribution` `someone entitled is resident in WA and fit` `the entitled person failed to appear when cited`)
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 32, 37 -- losing the executor's place`
+
+@export As the executor named in the will, have I lost my right to the executorship (Administration Act 1903 (WA) s 32)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I am named as executor in the will` IS A BOOLEAN @desc Whether the will names you as an executor
+      `I renounced probate` IS A BOOLEAN @desc Whether you renounced probate of the will
+      `I was personally cited and did not appear` IS A BOOLEAN @desc Whether you were personally cited to take probate and did not appear
+GIVETH A `Yes or no`
+`Have I lost my right to the executorship` MEANS
+    CONSIDER `my role`
+    WHEN `I am the executor of a will, or want to be granted administration of an estate` THEN
+        IF NOT (`I am named as executor in the will`)
+        THEN `does not arise for you`
+        ELSE `yes if` (`Have I lost my right to be executor` `I renounced probate` `I was personally cited and did not appear`)
+    OTHERWISE `does not arise for you`
+
+@export As executor, can the Court now give administration to someone else because I have neither taken out nor renounced probate within 2 months (Administration Act 1903 (WA) s 37)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `I am named as executor in the will` IS A BOOLEAN @desc Whether the will names you as an executor
+      `I have obtained or renounced probate` IS A BOOLEAN @desc Whether you have already obtained or renounced probate
+      `I was under 18 at the death` IS A BOOLEAN @desc Whether you were under 18 when the testator died
+      `whole months since the death` IS A NUMBER @desc Whole months since the testator died
+      `whole months since I turned 18` IS A NUMBER @desc Whole months since your 18th birthday (if you were under 18 at the death)
+GIVETH A `Yes or no`
+`Can the Court give administration to someone else because I delayed` MEANS
+    CONSIDER `my role`
+    WHEN `I am the executor of a will, or want to be granted administration of an estate` THEN
+        IF NOT (`I am named as executor in the will`)
+        THEN `does not arise for you`
+        ELSE `yes if` (`Can the Court give administration to someone else for my delay` `I have obtained or renounced probate` `I was under 18 at the death` `whole months since the death` `whole months since I turned 18`)
+    OTHERWISE `does not arise for you`
+
+§§§ `ss 43(1)(b), 44 -- inventory and accounts`
+
+@export Having been granted probate or administration and not filed the inventory and accounts, what must the Principal Registrar now do about it (Administration Act 1903 (WA) ss 43(1)(b), 44)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `a grant has been made to me` IS A BOOLEAN @desc Whether probate or administration of the estate has been granted to you
+      `I have filed the inventory and passed the accounts` IS A BOOLEAN @desc Whether you have filed the inventory and passed the accounts
+      `whole months since the period fixed by the rules ended` IS A NUMBER @desc Whole months since the period the rules allow for filing expired (0 if not yet expired)
+GIVETH A `Registrar answer`
+`What must the Principal Registrar do about my accounts` MEANS
+    CONSIDER `my role`
+    WHEN `I am the executor of a will, or want to be granted administration of an estate` THEN
+        IF NOT (`a grant has been made to me`)
+        THEN `does not arise for you`
+        ELSE `the answer is` (`What happens if I have not filed my accounts` `I have filed the inventory and passed the accounts` `whole months since the period fixed by the rules ended`)
+    OTHERWISE `does not arise for you`
+
+§§§ `s 55 -- small estates`
+
+@export May I apply for the grant direct to the Principal Registrar or a district agent, because the estate is not over $10,000 (Administration Act 1903 (WA) s 55)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the value of the property` IS A NUMBER @desc Value of all the property the deceased left, in dollars
+GIVETH A `Yes or no`
+`May I apply direct to the Principal Registrar for the grant` MEANS
+    CONSIDER `my role`
+    WHEN `I am the executor of a will, or want to be granted administration of an estate` THEN `yes if` (`May I apply direct to the Principal Registrar` `the value of the property`)
+    OTHERWISE `does not arise for you`
+
+§§§ `s 71, Part V -- the will in evidence, and no death duty`
+
+@export Can the will be put in evidence in these proceedings before a grant has issued (Administration Act 1903 (WA) s 71)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the person who died left` IS A `What the person who died left` @desc Whether the person who died left a will, and whether it disposes of all their property
+      `the proceeding` IS A `Proceeding` @desc The kind of proceeding the will is to be used in
+      `a grant has issued` IS A BOOLEAN @desc Whether probate or administration has already issued
+GIVETH A `Yes or no`
+`Can the will I am to prove be put in evidence` MEANS
+    CONSIDER `my role`
+    WHEN `I am the executor of a will, or want to be granted administration of an estate` THEN
+        IF `there is a will` `what the person who died left`
+        THEN `yes if` (`Is the will admissible in evidence` `the proceeding` `a grant has issued`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
+
+@export Must the estate I administer pay death or succession duty under this Act (Administration Act 1903 (WA) Part V)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+GIVETH A `Yes or no`
+`Must the estate I administer pay death duty` MEANS
+    CONSIDER `my role`
+    WHEN `I am the executor of a will, or want to be granted administration of an estate` THEN `yes if` `Must the estate pay death duty under this Act`
+    OTHERWISE `does not arise for you`
+
+§§ `For a person given something by a will`
+
+§§§ `s 42 -- a gift held back`
+
+@export May I apply to the Court for an order making the executor hand over my gift (Administration Act 1903 (WA) s 42)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the executor has probate or is administrator with the will annexed` IS A BOOLEAN @desc Whether the person holding the estate has obtained probate or administration with the will annexed
+      `I asked in writing` IS A BOOLEAN @desc Whether you asked them in writing to transfer, pay or deliver the gift
+      `they neglected or refused` IS A BOOLEAN @desc Whether they neglected or refused to do so after the request
+GIVETH A `Yes or no`
+`May I apply for an order for my gift` MEANS
+    CONSIDER `my role`
+    WHEN `I am given something by a will` THEN `yes if` (`May I apply for an order to get my gift` `the executor has probate or is administrator with the will annexed` `I asked in writing` `they neglected or refused`)
+    OTHERWISE `does not arise for you`
+
+§§§ `s 143A -- interest on a legacy`
+
+@export At what yearly rate is interest on my legacy computed (Administration Act 1903 (WA) s 143A)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `the rate the will or the Court directs` IS A MAYBE NUMBER @desc The yearly rate (as a fraction, e.g. 0.03) directed by the will or a Court, if any
+GIVETH A `Rate`
+`At what rate is interest on my legacy computed` MEANS
+    CONSIDER `my role`
+    WHEN `I am given something by a will` THEN `a yearly rate of` (`At what rate is interest on my legacy` `the rate the will or the Court directs`)
+    OTHERWISE `does not arise for you`
+
+§§ `For a person owed money by someone who has died`
+
+§§§ `s 25(1)(b) -- administration to a creditor`
+
+@export As a creditor, may I be granted administration of the estate (Administration Act 1903 (WA) s 25(1)(b))?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the person who died left` IS A `What the person who died left` @desc Whether the person who died left a will, and whether it disposes of all their property
+      `my age` IS A NUMBER @desc Your age in years
+      `someone entitled is resident in WA and fit` IS A BOOLEAN @desc Whether at least one person entitled to a share lives in Western Australia and is fit to be entrusted
+      `the entitled person failed to appear when cited` IS A BOOLEAN @desc Whether the person entitled was duly cited and failed to appear and apply
+GIVETH A `Yes or no`
+`As a creditor may I be granted administration` MEANS
+    CONSIDER `my role`
+    WHEN `I am owed money by someone who has died` THEN
+        IF `there is a will` `what the person who died left`
+        THEN `does not arise for you`
+        ELSE `yes if` (`May I be granted administration` `my age` FALSE `someone entitled is resident in WA and fit` `the entitled person failed to appear when cited`)
+    OTHERWISE `does not arise for you`
+
+§§§ `s 37 -- administration with the will annexed when the executor delays`
+
+@export As a creditor, may the Court grant me administration with the will annexed because the executor has neither taken out nor renounced probate within 2 months (Administration Act 1903 (WA) s 37)?
+GIVEN `my role` IS A Role @desc Which of these describes you
+      `what the person who died left` IS A `What the person who died left` @desc Whether the person who died left a will, and whether it disposes of all their property
+      `the executor has obtained or renounced probate` IS A BOOLEAN @desc Whether the executor named in the will has already obtained or renounced probate
+      `the executor was under 18 at the death` IS A BOOLEAN @desc Whether the executor was under 18 when the testator died
+      `whole months since the death` IS A NUMBER @desc Whole months since the testator died
+      `whole months since the executor turned 18` IS A NUMBER @desc Whole months since the executor's 18th birthday (if the executor was under 18 at the death)
+GIVETH A `Yes or no`
+`As a creditor may I be granted administration with the will annexed` MEANS
+    CONSIDER `my role`
+    WHEN `I am owed money by someone who has died` THEN
+        IF `there is a will` `what the person who died left`
+        THEN `yes if` (`Can the Court give administration to someone else for my delay` `the executor has obtained or renounced probate` `the executor was under 18 at the death` `whole months since the death` `whole months since the executor turned 18`)
+        ELSE `does not arise for you`
+    OTHERWISE `does not arise for you`
