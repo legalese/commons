@@ -1,0 +1,358 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `roc-core`
+IMPORT `roc-definitions`
+
+-- Rules of Court 2021 (Singapore), G.N. No. S 914/2021, current version as at 5 November 2026.
+-- ORDER 3, RULES 3 AND 4: HOW A PERIOD IS COUNTED, AND WHEN THE COURT MAY EXTEND OR SHORTEN IT.
+-- Source: a plain-text rendering made by a converter script from Singapore Statutes Online.
+-- It is not the official text, and nothing here has been checked against the official text.
+--
+-- THIS MODULE ANSWERS THE SEAMS S-T1, S-T1b AND S-T2 of PLAN.md:
+--   `o 3 r 3 the last day for doing the act`            a DATE   (S-T1)
+--   `o 3 r 3 the first day on which the act may be done` a DATE   (S-T1b)
+--   `o 3 r 4 the last day as extended or shortened`     MAYBE DATE (S-T2)
+-- Other parts take those answers as inputs; a rule in THIS part calls the function.
+--
+-- WHY NO INTERPRETATION ACT MODULE.  Order 3, Rule 3(1) says "The Interpretation Act does not apply to the
+-- calculation of time in these Rules".  So the staged Interpretation Act module (sgia-interpretation-time) is
+-- not copied here, and the periods of this part are counted only by Order 3, Rule 3 (brief: "your text governs").
+--
+-- HOW A PERIOD IS READ HERE (the core's `Period` has a direction):
+--   `After the anchor`  = "within N [days] after or from the date": the act is in time up to and including the
+--                         last day this module returns (Rule 3(3): the period begins immediately after the date).
+--   `Before the anchor` = "not less than N [days] before the date": the last day this module returns is the
+--                         latest day on which the act may be done (Rule 3(4)).  A window "within N days before"
+--                         a date begins on `o 3 r 3(4) the first day of a window within a period before a date`.
+-- A DATE-valued function cannot say "the text does not cover this", so each has a yes/no twin that can:
+--   `o 3 r 3 the period can be counted under this Rule`  (NOTHING for hours: the Rule counts days, weeks and months).
+
+§§ `Order 3, Rule 3 -- calculation of time`
+
+-- ---------------------------------------------------------------------------
+-- Rule 3(1): the Interpretation Act does not apply
+-- ---------------------------------------------------------------------------
+
+-- src:324 | The Interpretation Act does not apply to the calculation of time in these Rules.
+@ref O 3 r 3(1) (src:324)
+GIVEN `the time to be calculated is time in these Rules` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`o 3 r 3(1) the Interpretation Act applies to the calculation of time in these Rules` MEANS
+    IF `the time to be calculated is time in these Rules`
+    THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "The Interpretation Act does not apply to the calculation of time in these Rules"
+    ELSE NOTHING -- NOTHING-kind (limited by its own wording): the flat negative reaches "the calculation of time in these Rules" only
+
+-- ---------------------------------------------------------------------------
+-- Rule 3(2): "month"
+-- ---------------------------------------------------------------------------
+
+-- src:324 | (2) The word “month” means a calendar month unless the context otherwise requires.
+@ref O 3 r 3(2) (src:324)
+GIVEN `the context otherwise requires` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`o 3 r 3(2) the word month is read as a calendar month` MEANS
+    IF `the context otherwise requires`
+    THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "unless the context otherwise requires"
+    ELSE JUST TRUE
+
+-- A period of N calendar months after a date ends on the corresponding day N months later.
+-- The Rules do not say where it ends when that month has no such day (31 January plus one month), so that case is NOTHING.
+-- (daydate's `add months` clamps to the end of the shorter month; the clamped date is not the text's.)
+-- src:324-325 | means a calendar month unless the context otherwise requires. (3) Where an act is required to be done within a specified period after or from a
+-- src:324-325 | specified date, the period begins immediately after that date.
+@ref O 3 r 3(2) and (3) (src:324-325)
+GIVEN anchor IS A DATE
+      months IS A NUMBER
+GIVETH A MAYBE BOOLEAN
+`o 3 r 3(2) a period of calendar months from a date ends on the corresponding day` MEANS
+    IF DATE_DAY (`add months` anchor months) EQUALS DATE_DAY anchor
+    THEN JUST TRUE
+    ELSE NOTHING -- NOTHING-kind (silent): the Rules do not say where a period of calendar months ends when the later month has no corresponding day
+
+-- ---------------------------------------------------------------------------
+-- Rule 3(6): non-court days are left out of a short period.  The helpers first.
+-- ---------------------------------------------------------------------------
+
+-- src:328 | any day that is a non‑court day is to be excluded in the calculation of time.
+@ref O 3 r 3(6) (src:328)
+GIVEN day IS A DATE
+      calendar IS A `Court calendar`
+GIVETH A BOOLEAN
+`o 3 r 3(6) the day is a non-court day to be left out` MEANS
+    CONSIDER `o 1 r 3(1) a day is a non-court day` day calendar
+    WHEN JUST nonCourt THEN nonCourt
+    WHEN NOTHING THEN FALSE -- guard only: with a `Court calendar` the non-court-day answer is never NOTHING (KEEL-NOTES K15)
+
+-- Step over `steps` court days from `start`, forwards or backwards, skipping non-court days.
+-- A day counted is the one stepped onto; the start itself is never counted.
+-- src:325-328 | the period begins immediately after that date. (4) Where an act is required to be done within or not less than a specified period before a specified
+-- src:325-328 | date, the period ends immediately before that date. (5) Where an act is required to be done a specified number of clear days before or after a
+-- src:325-328 | specified date, at least that number of days must intervene between the day on which the act is done and that date. (6) If the period in question is 6
+-- src:325-328 | days or less, any day that is a non‑court day is to be excluded in the calculation of time.
+@ref O 3 r 3(3), (4) and (6) (src:325-328)
+GIVEN start IS A DATE
+      steps IS A NUMBER
+      forwards IS A BOOLEAN
+      calendar IS A `Court calendar`
+GIVETH A DATE
+DECIDE `o 3 r 3(6) the day reached by counting court days` IS
+    IF steps AT MOST 0
+    THEN start
+    ELSE
+        IF `o 3 r 3(6) the day is a non-court day to be left out` (IF forwards THEN start PLUS 1 ELSE start MINUS 1) calendar
+        THEN `o 3 r 3(6) the day reached by counting court days` (IF forwards THEN start PLUS 1 ELSE start MINUS 1) steps forwards calendar
+        ELSE `o 3 r 3(6) the day reached by counting court days` (IF forwards THEN start PLUS 1 ELSE start MINUS 1) (steps MINUS 1) forwards calendar
+
+-- ---------------------------------------------------------------------------
+-- Rule 3(7): an expiry on a non-court day moves to the next court day
+-- ---------------------------------------------------------------------------
+
+-- src:329 | expires on a non‑court day, the act is in time if done on the next day, not being a non‑court day.
+@ref O 3 r 3(7) (src:329)
+GIVEN day IS A DATE
+      calendar IS A `Court calendar`
+GIVETH A DATE
+DECIDE `o 3 r 3(7) the last day moved past non-court days` IS
+    IF `o 3 r 3(6) the day is a non-court day to be left out` day calendar
+    THEN `o 3 r 3(7) the last day moved past non-court days` (day PLUS 1) calendar
+    ELSE day
+
+-- ---------------------------------------------------------------------------
+-- Rules 3(3) to (6): the count itself
+-- ---------------------------------------------------------------------------
+
+-- The day on which the period begins: "immediately after that date".
+-- src:325 | (3) Where an act is required to be done within a specified period after or from a specified date, the period begins immediately after that date.
+@ref O 3 r 3(3) (src:325)
+GIVEN anchor IS A DATE
+GIVETH A DATE
+`o 3 r 3(3) the first day of a period after or from a date` MEANS anchor PLUS 1
+
+-- The day before the date is where a period "before" a date ends: Rule 3(4).
+-- src:326 | (4) Where an act is required to be done within or not less than a specified period before a specified date, the period ends immediately before that
+-- src:326 | date.
+@ref O 3 r 3(4) (src:326)
+GIVEN anchor IS A DATE
+GIVETH A DATE
+`o 3 r 3(4) the last day of a period before a date` MEANS anchor MINUS 1
+
+-- The first day of a window "within" N days before a date: N days back, counting only court days when N is 6 or less.
+-- src:326-328 | (4) Where an act is required to be done within or not less than a specified period before a specified date, the period ends immediately before that
+-- src:326-328 | date. (5) Where an act is required to be done a specified number of clear days before or after a specified date, at least that number of days must
+-- src:326-328 | intervene between the day on which the act is done and that date. (6) If the period in question is 6 days or less, any day that is a non‑court day is
+-- src:326-328 | to be excluded in the calculation of time.
+@ref O 3 r 3(4) and (6) (src:326-328)
+GIVEN period IS A Period
+      anchor IS A DATE
+      calendar IS A `Court calendar`
+GIVETH A DATE
+`o 3 r 3(4) the first day of a window within a period before a date` MEANS
+    IF (period's `period unit` EQUALS Days OR period's `period unit` EQUALS `Working days`) AND (period's `period length` AT MOST 6 OR period's `period unit` EQUALS `Working days`)
+    THEN `o 3 r 3(6) the day reached by counting court days` anchor (period's `period length`) FALSE calendar
+    ELSE
+        CONSIDER period's `period unit`
+        WHEN Weeks THEN anchor MINUS (7 TIMES period's `period length`)
+        WHEN Months THEN `add months` anchor (0 MINUS period's `period length`)
+        WHEN Hours THEN anchor
+        OTHERWISE anchor MINUS period's `period length`
+
+-- Which periods this Rule can count: days, clear days, working days, weeks and months.  Hours it does not mention.
+-- src:325-329 | (3) Where an act is required to be done within a specified period after or from a specified date, the period begins immediately after that date. (4)
+-- src:325-329 | Where an act is required to be done within or not less than a specified period before a specified date, the period ends immediately before that date.
+-- src:325-329 | (5) Where an act is required to be done a specified number of clear days before or after a specified date, at least that number of days must intervene
+-- src:325-329 | between the day on which the act is done and that date. (6) If the period in question is 6 days or less, any day that is a non‑court day is to be
+-- src:325-329 | excluded in the calculation of time. (7) Where the time prescribed by these Rules, or by any judgment, order or direction, for doing any act expires
+-- src:325-329 | on a non‑court day, the act is in time if done on the next day, not being a non‑court day.
+@ref O 3 r 3 (src:325-329)
+GIVEN period IS A Period
+GIVETH A MAYBE BOOLEAN
+`o 3 r 3 the period can be counted under this Rule` MEANS
+    CONSIDER period's `period unit`
+    WHEN Hours THEN NOTHING -- NOTHING-kind (silent): Rule 3 counts days, clear days, weeks and months; it says nothing about hours
+    OTHERWISE JUST TRUE
+
+-- The last day for doing the act (seam S-T1).  `After the anchor`: within the period after or from the date.
+-- `Before the anchor`: the latest day on which an act required "not less than" the period before the date may be done.
+-- `Clear days` with `After the anchor` has no last day; the day returned is the EARLIEST day (Rule 3(5)).  See the fork register.
+-- src:325-329 | (3) Where an act is required to be done within a specified period after or from a specified date, the period begins immediately after that date. (4)
+-- src:325-329 | Where an act is required to be done within or not less than a specified period before a specified date, the period ends immediately before that date.
+-- src:325-329 | (5) Where an act is required to be done a specified number of clear days before or after a specified date, at least that number of days must intervene
+-- src:325-329 | between the day on which the act is done and that date. (6) If the period in question is 6 days or less, any day that is a non‑court day is to be
+-- src:325-329 | excluded in the calculation of time. (7) Where the time prescribed by these Rules, or by any judgment, order or direction, for doing any act expires
+-- src:325-329 | on a non‑court day, the act is in time if done on the next day, not being a non‑court day.
+@ref O 3 r 3(3) to (7) (src:325-329)
+GIVEN period IS A Period
+      anchor IS A DATE
+      calendar IS A `Court calendar`
+GIVETH A DATE
+`o 3 r 3 the last day for doing the act` MEANS
+    CONSIDER period's `period direction`
+    WHEN `After the anchor` THEN
+        CONSIDER period's `period unit`
+        WHEN Days THEN
+            `o 3 r 3(7) the last day moved past non-court days`
+                (IF period's `period length` AT MOST 6
+                 THEN `o 3 r 3(6) the day reached by counting court days` anchor (period's `period length`) TRUE calendar
+                 ELSE anchor PLUS period's `period length`)
+                calendar
+        WHEN `Clear days` THEN
+            IF period's `period length` AT MOST 6
+            THEN `o 3 r 3(6) the day reached by counting court days` anchor (period's `period length`) TRUE calendar PLUS 1
+            ELSE anchor PLUS period's `period length` PLUS 1
+        WHEN `Working days` THEN
+            `o 3 r 3(7) the last day moved past non-court days`
+                (`o 3 r 3(6) the day reached by counting court days` anchor (period's `period length`) TRUE calendar)
+                calendar
+        WHEN Weeks THEN `o 3 r 3(7) the last day moved past non-court days` (anchor PLUS (7 TIMES period's `period length`)) calendar
+        WHEN Months THEN `o 3 r 3(7) the last day moved past non-court days` (`add months` anchor (period's `period length`)) calendar
+        WHEN Hours THEN anchor
+    WHEN `Before the anchor` THEN
+        CONSIDER period's `period unit`
+        WHEN Days THEN
+            `o 3 r 3(7) the last day moved past non-court days`
+                (IF period's `period length` AT MOST 6
+                 THEN `o 3 r 3(6) the day reached by counting court days` anchor (period's `period length`) FALSE calendar
+                 ELSE anchor MINUS period's `period length`)
+                calendar
+        WHEN `Clear days` THEN
+            IF period's `period length` AT MOST 6
+            THEN `o 3 r 3(6) the day reached by counting court days` anchor (period's `period length`) FALSE calendar MINUS 1
+            ELSE anchor MINUS period's `period length` MINUS 1
+        WHEN `Working days` THEN
+            `o 3 r 3(7) the last day moved past non-court days`
+                (`o 3 r 3(6) the day reached by counting court days` anchor (period's `period length`) FALSE calendar)
+                calendar
+        WHEN Weeks THEN `o 3 r 3(7) the last day moved past non-court days` (anchor MINUS (7 TIMES period's `period length`)) calendar
+        WHEN Months THEN `o 3 r 3(7) the last day moved past non-court days` (`add months` anchor (0 MINUS period's `period length`)) calendar
+        WHEN Hours THEN anchor
+
+-- The first day on which the act may be done (seam S-T1b): the day after the date for a "within" period (Rule 3(3)),
+-- and for a number of CLEAR days after the date the first day on which that many days have intervened (Rule 3(5)).
+-- src:325-327 | (3) Where an act is required to be done within a specified period after or from a specified date, the period begins immediately after that date. (4)
+-- src:325-327 | Where an act is required to be done within or not less than a specified period before a specified date, the period ends immediately before that date.
+-- src:325-327 | (5) Where an act is required to be done a specified number of clear days before or after a specified date, at least that number of days must intervene
+-- src:325-327 | between the day on which the act is done and that date.
+@ref O 3 r 3(3) and (5) (src:325-327)
+GIVEN period IS A Period
+      anchor IS A DATE
+      calendar IS A `Court calendar`
+GIVETH A DATE
+`o 3 r 3 the first day on which the act may be done` MEANS
+    IF period's `period unit` EQUALS `Clear days` AND period's `period direction` EQUALS `After the anchor`
+    THEN `o 3 r 3 the last day for doing the act` period anchor calendar
+    ELSE anchor PLUS 1
+
+-- Is the act in time?  The count above, then any extension or shortening (Order 3, Rule 4), then the day it was done.
+-- A stated period: outside it the answer is JUST FALSE (ruling of 2026-11-05, (a)).
+-- src:325 | Where an act is required to be done within a specified period after or from a specified date, the period begins immediately after that date.
+@ref O 3 r 3(3) (src:325)
+GIVEN period IS A Period
+      anchor IS A DATE
+      `the day the act is done` IS A DATE
+      calendar IS A `Court calendar`
+      `o 3 r 4 the last day as extended or shortened` IS A MAYBE DATE
+GIVETH A MAYBE BOOLEAN
+`o 3 r 3 the act is in time` MEANS
+    CONSIDER `o 3 r 3 the period can be counted under this Rule` period
+    WHEN NOTHING THEN NOTHING -- NOTHING-kind (silent): Rule 3 does not count hours
+    WHEN JUST counted THEN
+        IF NOT counted
+        THEN NOTHING -- NOTHING-kind (silent): guard, the count never answers JUST FALSE
+        ELSE
+            IF period's `period unit` EQUALS `Clear days` AND period's `period direction` EQUALS `After the anchor`
+            THEN
+                IF `the day the act is done` AT LEAST `o 3 r 3 the first day on which the act may be done` period anchor calendar
+                THEN JUST TRUE
+                ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "at least that number of days must intervene between the day on which the act is done and that date" (a minimum gap, ruling of 2026-11-05 (a))
+            ELSE
+                IF `the day the act is done` AT MOST
+                    (CONSIDER `o 3 r 4 the last day as extended or shortened`
+                     WHEN JUST extended THEN extended
+                     WHEN NOTHING THEN `o 3 r 3 the last day for doing the act` period anchor calendar)
+                THEN JUST TRUE
+                ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "within a specified period after or from a specified date"
+
+-- Two acts ("file and serve") are each in time, or one is not.  A false beats a nothing; a nothing beats a true.
+-- src:325 | Where an act is required to be done within a specified period after or from a specified date, the period begins immediately after that date.
+@ref O 3 r 3(3) (src:325)
+GIVEN first IS A MAYBE BOOLEAN
+      second IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`o 3 r 3 both of two acts are in time` MEANS
+    CONSIDER first
+    WHEN JUST FALSE THEN JUST FALSE -- FALSE-kind (the text says no in its own words): one of the two acts is out of time
+    WHEN JUST TRUE THEN second
+    WHEN NOTHING THEN
+        CONSIDER second
+        WHEN JUST FALSE THEN JUST FALSE -- FALSE-kind (the text says no in its own words): one of the two acts is out of time
+        OTHERWISE NOTHING -- NOTHING-kind (silent): one of the two acts cannot be decided
+
+§§ `Order 3, Rule 4 -- extension or shortening of time`
+
+-- Rule 4(1): the Court's power.  It reaches "the period within which a person is required by these Rules or by any
+-- judgment, order or direction, to do any act in any proceedings" and no other period (a scope limit, no "only").
+-- src:331 | The Court may extend or shorten the period within which a person is required by these Rules or by any judgment, order or direction, to do any act in
+-- src:331 | any proceedings. (2) Unless these Rules otherwise provide, the Court may extend the period mentioned in paragraph (1) whether the application for
+-- src:331 | extension is made before or after the expiration of that period.
+@ref O 3 r 4(1) (src:331)
+GIVEN `the period is one within which a person is required by these Rules, or by a judgment, order or direction, to do an act in proceedings` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`o 3 r 4(1) the Court may extend or shorten the period` MEANS
+    IF `the period is one within which a person is required by these Rules, or by a judgment, order or direction, to do an act in proceedings`
+    THEN JUST TRUE
+    ELSE NOTHING -- NOTHING-kind (limited by its own wording): the power reaches "the period within which a person is required by these Rules or by any judgment, order or direction"
+
+-- Rule 4(2): "Unless these Rules otherwise provide ...": a period for which they do is outside the power (the text's own "Unless").
+-- Before or after the period expires makes no difference to the answer: the text says "whether ... before or after".
+-- src:331 | (2) Unless these Rules otherwise provide, the Court may extend the period mentioned in paragraph (1) whether the application for extension is made
+-- src:331 | before or after the expiration of that period.
+@ref O 3 r 4(2) (src:331)
+GIVEN `these Rules otherwise provide for this period` IS A BOOLEAN
+      `the application for extension is made after the period has expired` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`o 3 r 4(2) the Court may extend the period whether the application is made before or after it expires` MEANS
+    IF `these Rules otherwise provide for this period`
+    THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "Unless these Rules otherwise provide"
+    ELSE JUST TRUE -- the answer is the same whether the application is made before or after the period expires: "whether the application for extension is made before or after"
+
+-- Rule 4(3): ONE extension by written consent, of at most 14 days, with no order of the Court.
+-- The text limits the grant ("once", "a maximum period of 14 days"); outside it the answer is NOTHING, not JUST FALSE.
+-- src:332 | (3) The period within which a person is required by these Rules, or by any order, to serve, file or amend any pleading or other document may be
+-- src:332 | extended once by consent in writing for a maximum period of 14 days without an order of the Court being made for that purpose.
+@ref O 3 r 4(3) (src:332)
+GIVEN `the period is one within which a person is required by these Rules, or by an order, to serve, file or amend a pleading or other document` IS A BOOLEAN
+      `the extension is by consent in writing` IS A BOOLEAN
+      `the days by which the period is extended` IS A NUMBER
+      `an extension by consent has already been made` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`o 3 r 4(3) the period may be extended by consent in writing without an order of the Court` MEANS
+    BRANCH
+        IF NOT `the period is one within which a person is required by these Rules, or by an order, to serve, file or amend a pleading or other document`
+            THEN NOTHING -- NOTHING-kind (limited by its own wording): the paragraph reaches a period "to serve, file or amend any pleading or other document"
+        IF `the extension is by consent in writing` AND (NOT `an extension by consent has already been made`) AND `the days by which the period is extended` AT MOST 14
+            THEN JUST TRUE
+        OTHERWISE NOTHING -- NOTHING-kind (limited by its own wording): "may be extended once by consent in writing for a maximum period of 14 days without an order of the Court"
+
+-- S-T2: the last day as extended or shortened.  NOTHING means "not extended or shortened by anything this module can see".
+-- The Court's own order (Rule 4(1) and (2)) governs the day; a consent extension (Rule 4(3)) adds days to the last day under Rule 3.
+-- src:331-332 | (1) The Court may extend or shorten the period within which a person is required by these Rules or by any judgment, order or direction, to do any act
+-- src:331-332 | in any proceedings. (2) Unless these Rules otherwise provide, the Court may extend the period mentioned in paragraph (1) whether the application for
+-- src:331-332 | extension is made before or after the expiration of that period. (3) The period within which a person is required by these Rules, or by any order, to
+-- src:331-332 | serve, file or amend any pleading or other document may be extended once by consent in writing for a maximum period of 14 days without an order of the
+-- src:331-332 | Court being made for that purpose.
+@ref O 3 r 4 (src:331-332)
+GIVEN `the last day under Order 3, Rule 3` IS A DATE
+      `the day the Court has ordered the period to end` IS A MAYBE DATE
+      `the days by which the period was extended by consent in writing` IS A MAYBE NUMBER
+      `an extension by consent had already been made` IS A BOOLEAN
+GIVETH A MAYBE DATE
+`o 3 r 4 the last day as extended or shortened` MEANS
+    CONSIDER `the day the Court has ordered the period to end`
+    WHEN JUST ordered THEN JUST ordered
+    WHEN NOTHING THEN
+        CONSIDER `the days by which the period was extended by consent in writing`
+        WHEN JUST days THEN
+            IF days AT MOST 14 AND (NOT `an extension by consent had already been made`)
+            THEN JUST (`the last day under Order 3, Rule 3` PLUS days)
+            ELSE NOTHING -- NOTHING-kind (limited by its own wording): "once ... for a maximum period of 14 days"
+        WHEN NOTHING THEN NOTHING -- NOTHING-kind (silent): no order and no consent extension was made
