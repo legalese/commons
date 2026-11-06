@@ -208,3 +208,42 @@ Left out, each for a reason:
 - Parts 1B (mental harm) and 1A Division 7 (health professionals) are the next most
   likely questions from this seat.
 - A fork register for finding 3 (s 13A's reach) would need a lawyer's reading.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026, following the Graffiti Vandalism Act encoding's design (D2, D4, D8). Nothing in `cla-damages.l4` or `cla-cases-damages.l4` was changed: the layer is added, nothing is replaced.
+
+- **Files.** `cla-qa.l4` (imports `prelude` and `cla-damages`) and `cla-qa-cases.l4` (imports those, `cla-qa`, and `cla-cases-damages` for its fixtures only; an imported module's assertions are not run).
+- **Roles** (`DECLARE Role`). Every exported question takes `my role` first, with `@desc Which of these describes you`:
+  - `I was injured and am claiming damages`. This is the baseline's seat. All 17 baseline exports are asked. Each calls the baseline function and wraps its answer.
+  - `A claim for damages for an injury is made against me`. This is the defendant: a person or a business. Part 1A's rules are written in their terms: "is not liable" (ss 5H, 5I, 5J, 5P), "does not owe a duty" (s 5O), "is not negligent" unless (s 5B). Part 2's limits cap what they can be ordered to pay. The same 17 questions are asked from their side.
+  - Not seats: the court, the Minister (who only publishes the amounts) and an insurer. Part 3 (lawyers and touts) is out of scope, as in the baseline.
+- **Situation inputs.** All are BOOLEAN and all come straight after `my role`. FALSE gives `does not arise for you`, and nothing else is read. Each has one name, type and @desc for both roles.
+
+  | Name | Questions (per role) |
+  |---|---|
+  | `the injured person was doing a recreational activity` | 3: the dangerous recreational activity rule (s 5H), a risk warning (s 5I), a recreational services contract term (s 5J) |
+  | `the injured person was intoxicated when the harm was caused` | 1: the presumption of contributory negligence (s 5L) |
+  | `the injured person has lost earnings` | 2: the weekly cap and how much counts (s 11) |
+  | `the injured person is cared for without charge` | 1: gratuitous home care (s 12) |
+
+  Part 1A Division 4 is tied to a "recreational activity" (s 5E). s 5L is tied to the person being intoxicated, s 11 to a loss of earnings, and s 12 to gratuitous services. The other questions arise for every claim and take none: the reach of the Act and Part 2, the indexed amounts, general damages, the general duty, contributory negligence, and obvious and inherent risk.
+- **Decisions.**
+  - Whether a risk was "obvious" (ss 5F, 5N, 5O) stays an ordinary input. It is the court's finding inside the rule, not the occasion for asking.
+  - The situation inputs repeat a fact some records already hold. `My own conduct` says whether the person was intoxicated, and `The recreational facts` says what they were doing. Where the two disagree (a TRUE situation over facts that say "work"), the baseline's own answer governs, so the answer is what the baseline gives on the record.
+  - The defendant's questions take the baseline's records (`My claim`, `My own conduct`, `The recreational facts`, `The warning`), whose items are worded as the injured person would answer them. Their @desc says so.
+  - The s 5O answer is reworded for the defendant (`My duty to warn`), through a helper that lists both values with no OTHERWISE. The other enumerations (`Part 1A for me`, `The limits on my damages`) are worded for no seat and are wrapped unchanged.
+  - The baseline's general damages answer is a MAYBE NUMBER that is always JUST an amount. The layer gives it as an `Amount`, and its helper maps NOTHING, which cannot arise, to `does not arise for you`.
+  - The s 4 indexing question is asked of both roles, since either may need the year's amounts.
+- **Not covered for the defendant:** Part 1A Division 7 (professional negligence), Part 1B (mental harm), Part 1C (public bodies), Part 1CA, Part 1D (good samaritans) and Part 1E (apologies), whose protections are a defendant's own questions. Proportionate liability (Part 1F) and the contribution between defendants under the 1947 Act are also out. All are out of the baseline.
+- **Cases** (`cla-qa-cases.l4`): 145 assertions, 145 satisfied.
+  - 34 ask each question for the role it is not about, every other input ASSUMEd.
+  - 14 ask each situation question for its own role with the situation FALSE, every later input ASSUMEd.
+  - 55 are for the injured person where the situation holds. 17 of them, one per question, assert the answer equal to the baseline export's on the same facts.
+  - 42 are for the defendant, worked by hand.
+
+  Two deliberately wrong assertions both failed: an ASSUMEd number read after a TRUE situation, and a wrong amount.
+- **Checks.**
+  - `l4 check cla-qa.l4` succeeds.
+  - `l4 run` gives 0 errors and 0 warnings for `cla-qa.l4`, `cla-qa-cases.l4`, `cla-damages.l4` and `cla-cases-damages.l4` (51 of 51, unchanged).
+  - The parameter script (scratchpad `check_params.py`) confirms that `my role` is first everywhere and that each situation input is identical and second wherever it appears. It also confirms that each role branch reads its situation first, and that no input is DEONTIC or EVENT.
