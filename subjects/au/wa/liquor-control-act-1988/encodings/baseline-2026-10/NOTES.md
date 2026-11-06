@@ -214,3 +214,124 @@ read.
   10). No case law was searched.
 - Add s 119 (offences that bind everyone, juvenile or not), which a young person
   drinking in a park also meets, and the remaining limbs of s 120.
+
+## Q&A layer (seat and situations as parameters)
+
+Added on 6 November 2026 (batch qa1), on Michael's approval of the design of the graffiti encoding's seat layer
+(`subjects/au/wa/graffiti-vandalism-act-2016/encodings/baseline-2026-10/`, its D2, D4 and D8). The layer is
+`lca-qa.l4`, and its cases are in `lca-qa-cases.l4`. It imports `prelude` and `lca-juveniles`. The baseline's files are
+unchanged: the layer adds to them and replaces nothing.
+
+**Roles.** Every exported question takes `my role` IS A `Role` first ("Which of these describes you"). A question about
+another role answers `does not arise for you` without reading any other input.
+
+- `I am a young person (under 18, or about to turn 18)`: the baseline's seat. Its 25 questions are the baseline's 25
+  exports, each calling the baseline function.
+- `I am a parent, guardian or other adult with a young person`: Division 9 binds "a person" who:
+  - supplies liquor to a juvenile (ss 121(1)(c), 122(2), 122A);
+  - buys liquor for a juvenile at their request (s 121(3));
+  - accompanies a juvenile as a responsible adult (ss 121(5)(a)(i), (9), 122(3)(b));
+  - sends a juvenile for liquor (s 124).
+
+  9 questions.
+- `I hold a licence, manage licensed premises, or sell or serve liquor`: bound by ss 121(1), (4), (10) and 122(2), with
+  the s 125(1)(b) and (c) defences. The licensee, a manager and their staff are also "authorised persons" (s 3(1)), so
+  the s 126 powers are theirs. 11 questions.
+
+The Director, inspectors and the police are not seats. A police officer is an authorised person too, but appears only
+as what s 126 means for the young person.
+
+**Situation inputs.** Each one is a BOOLEAN placed second. FALSE gives `does not arise for you`.
+
+| Name | Role | Questions that take it |
+|---|---|---|
+| `the area is declared out of bounds to juveniles now` (the baseline's own input) | young person | 2: can I be made to leave (s 121(6)-(8)); have I committed an offence by not leaving (s 121(7)) |
+| `an authorised person has asked my age, or for evidence of it` | young person | 5: show evidence (s 126(1)(b)(i)); does it count (s 126(2C)); made to leave (s 126(1)(b)(ii)); confiscation (s 126(2a), (2D)); offence in answering (s 126(2)) |
+| `I have been required to leave, or removed from, the premises` | young person | 1: going back in within 24 hours (s 126(4)) |
+| `someone has given or sold me alcohol, or offered to` | young person | 3: is it lawful (ss 121(1), 122(2), 122A); the supplier's fine; the seller's s 125(1)(b) belief |
+| `I was sent to get liquor` (the baseline's own input) | young person | 1: s 124 |
+| `I work, or want to work, selling, supplying or serving liquor` | young person | 1: s 121(10), (11) |
+| `I have given, or would give, alcohol to a person under 18` | adult | 3: may I give it here (ss 121(1), 122(2), 122A); s 125(1)(b) belief; buying at their request (s 121(3)) |
+| `I am, or will be, with a person under 18 on licensed or regulated premises` | adult | 4: am I a responsible adult (s 125(2)(b)); their presence (s 121(4), (5)); leaving them behind (s 121(9)); regulated premises (s 122(3)(b)) |
+| `I have sent, or would send, a person under 18 to get liquor` | adult | 1: s 124 |
+| `liquor has been, or may be, sold or supplied to a person under 18 at my business` | licensee or seller | 3: ss 121(1), 122(2); s 125(1)(b); s 125(1)(c) |
+| `a person under 18 is, or wants to be, on my licensed premises` | licensee or seller | 1: s 121(4), (5) |
+| `I employ, or would employ, a person under 18 to sell, supply or serve liquor` | licensee or seller | 1: s 121(10), (11) |
+| `I suspect a person on the premises is under 18` | licensee or seller | 5: s 126(1)(a), (1)(b)(i), (2C), (1)(b)(ii), (2a) |
+
+The `@desc` texts are in `lca-qa.l4`, and in `encoding.json` under `qa_layer.situation_parameters`.
+
+**Decisions.**
+
+- QA1. **Two of the baseline's inputs became situations.** `the area is declared out of bounds to juveniles now` and
+  `I was sent to get liquor` are what ss 121(6)-(8) and 124 turn on.
+  - Each is placed second, with the baseline's name and `@desc`.
+  - Where the situation holds, the baseline is called with the input as given. So the answers are the baseline's, and
+    the situation-false cases show that nothing else is read.
+- QA2. **Several facts are TRUE by a question's own terms:**
+  - for the adult's s 124 question, that the young person was sent;
+  - for the licensee's s 126 questions, that the authorised person suspects the person is under 18 (that is the
+    situation);
+  - for the adult's s 125(2)(b) and s 121(4) questions, that the adult is 18 or over (the role).
+
+  Each is passed as TRUE, with a comment in the code.
+- QA3. **The adult's and the licensee's s 121(4)-(5) questions reuse the young person's.** s 121(4) makes the licensee,
+  a permitting employee or agent, and the juvenile each commit an offence on the same facts, and s 121(5) excepts them
+  all alike. So the baseline's `Is it an offence for me to be on licensed premises` decides the question; the licensee's
+  version adds the employee's permission (s 121(4)(b)). The baseline's `Reason` and `Evidence` choices are worded as
+  the young person would say them, and the `@desc` says so.
+- QA4. **The adult's and the licensee's companion choices** are their own enumerations (`How I am related to the young
+  person`, `Who is with the young person`), mapped onto the baseline's `Companion`, listing every value with no
+  OTHERWISE.
+- QA5. **Fork, s 122(2) and the licensee as such.** On regulated premises, and on a road, the licensee's question
+  answers no for `the licensee` and `the manager supervising the premises at the time`. s 122(2) names "a person who
+  sells or supplies, or permits", not the licensee as s 121(1)(a) does. A licensee who permitted the sale chooses
+  `a person who permitted it`. The other reading, that the licensee always permits what is done on their premises,
+  would answer yes. Asserted on the first reading.
+- QA6. **The licensee's sale question covers ss 121(1) and 122(2) only.** For a sale at another public place or a
+  private place it answers no, and its text names only those sections. s 122A is asked from the adult's seat.
+- QA7. **The penalty tables of the new roles are new helpers.** `the most an adult can be fined for` and `the most a
+  licensee or seller can be fined for` take the figures printed in the deposited text, as the baseline's table does for
+  the young person.
+
+**Not covered for the new roles.**
+
+- **The adult:**
+  - s 120(1) clubs, receptions and the like;
+  - s 121(1)(d), "any person who permits", beyond its fine;
+  - s 122(2)(b), permitting drinking or possession on regulated premises, beyond its fine;
+  - s 119 and the offences that bind everyone;
+  - the regulations' s 122A(3)(e) circumstances, which are an input.
+- **The licensee or seller:**
+  - s 121(2), permitting a juvenile to drink, and s 121(6) declaring an area out of bounds, beyond their fines;
+  - s 121(7) and (7a), removing a juvenile;
+  - s 125(1)(a), the family and lodger defences;
+  - s 126(3)-(5), removal and re-entry, from the licensee's seat;
+  - approvals under ss 126A and 126B;
+  - licensing itself, and s 115.
+
+**Cases.** `lca-qa-cases.l4` has 287 assertions. All 287 are satisfied, with 0 errors and 0 warnings, on the stable
+`l4` of VS Code extension 1.6.98 with `JL4_LIBRARY_PATH` unset. They are:
+
+- 90 cases that ask each of the 45 questions for the two roles it is not about, with every other input ASSUMEd;
+- 31 cases that ask each question with a situation input, for its own role, with the situation FALSE and every later
+  input ASSUMEd (13 for the young person, 8 for the adult, 10 for the licensee or seller);
+- 57 young-person cases against values worked by hand, most taken from the baseline's cases (c025, Chloe turning 18,
+  among them), and the same 57 again against the baseline export's own answer on the same facts;
+- 23 adult cases and 29 licensee or seller cases, worked by hand from the text.
+
+**Negative controls.** Each of these fails, as it should:
+
+- an adult question with the situation TRUE and an ASSUMEd relation;
+- a wrong expected value for the licensee.
+
+**Other checks.**
+
+- The parameter script (`check_params.py`, in the batch scratchpad) checked that:
+  - `my role` is first in each of the 45 questions;
+  - each of the 13 situation inputs is second, and identical in name, type and `@desc` wherever it occurs;
+  - each role branch reads its situation input first;
+  - no input is DEONTIC or EVENT.
+- No input name carries two `@desc` texts.
+- `l4 check lca-qa.l4` succeeds.
+- `lca-juveniles.l4` and `lca-cases-juveniles.l4` (45 of 45) still run with no error or warning.
