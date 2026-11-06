@@ -144,3 +144,53 @@ from before the proclaimed day.
   (WA) and any decided case.
 - Link each "what follows at 18" question in Chloe's c025 to the encodings of the
   other Acts it cites.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026, after the model of the Graffiti Vandalism Act 2016 encoding's seat layer (its design decisions D2, D4 and D8). The baseline's files are unchanged: the layer is added, nothing is replaced. Two new files:
+
+- `aoma-qa.l4` imports `prelude`, `daydate` and `aoma-majority`. It has 9 exported questions.
+- `aoma-qa-cases.l4` imports the same and `aoma-qa`. It has 63 cases.
+
+### Roles
+
+`DECLARE Role IS ONE OF`:
+
+- `I am the young person, asking about my own age`: the baseline's seat (4 questions, plus the shared word question).
+- `I am a parent, guardian, trustee or other person dealing with a young person`: a parent or guardian, a trustee or executor whose deed or will turns on an age, a seller or employer dealing with someone who may be under 18 (4 questions, plus the shared word question).
+
+Why: the Act puts no duty on anyone and names no official, but s 4 and s 5 apply "for all the purposes of the laws of the State", so whoever has to treat a young person as a minor or an adult asks the same questions about that person. No official is a seat. Every exported question takes `my role` IS A Role first, with `@desc Which of these describes you`, and for a role it is not about answers `does not arise for you` without reading any other input.
+
+### Situation inputs
+
+| Input | Type | Does not arise when | Taken by |
+|---|---|---|---|
+| `a law or document I am asking about uses a word like "minor" or "adult"` | BOOLEAN | FALSE | `How is a word like minor or adult read in this law or document` (both roles) |
+| `someone is said to lack the legal capacity to do something` | BOOLEAN | FALSE | `Does my coming of full age remove this incapacity of mine`; `Does the young person's coming of full age remove this incapacity of theirs` |
+
+Each is the second input, straight after `my role`, with one name, type and `@desc` everywhere, so the form asks it once. The questions of s 4 and s 5(1) arise for every person of each role, so they take no situation input.
+
+### Decisions
+
+- **Q1. One word question for both roles.** How "minor", "adult" and the like are read (s 5(2), (3), (5), (7)) does not depend on who asks, and the baseline's answers are not worded from a seat. So one exported question serves both roles. It reads the situation input first, in each role's branch.
+- **Q2. Answers for the young person are the baseline's own, wrapped.** Each answer type is `does not arise for you` or `the answer is` with the baseline export's own value, so for that role the answer equals the baseline's by construction, and the cases assert it on the same facts (11 cases).
+- **Q3. The other role's answers are reworded in the third person, value for value.** The baseline's answers say "I" ("not yet: I am not of full age on that day"). The other role gets its own answer types (`When the young person reaches an age`, `When the young person comes of full age`, `Whether the young person is an adult in law`) and its own cause enumeration (`What the young person's incapacity is due to`, with `their age` for the baseline's `my age`). The rewordings and the cause map list every value with no OTHERWISE (graffiti finding 31).
+- **Q4. Inputs about the young person carry their own names for the other role.** `the young person's date of birth`, `the cause of their incapacity`, `the young person has attained full age` stand beside the young person's `my date of birth`, `the cause`, `I have attained full age`, so no shared name has two `@desc` texts. `the age`, `the day asked about` and `the commencing day` are the same input, with the same `@desc`, for both roles.
+- **Q5. The commencing day stays an input,** as in the baseline. The cases use the baseline's placeholder, 1 January 1973.
+
+### Not covered for the new role
+
+- What the young person's coming of age means for the person dealing with them under other laws: the end of guardianship, a trustee's duty to pay capital, whether a contract with a minor binds (those are other Acts' encodings, as for the baseline).
+- The transitional subsections the baseline leaves out (s 5(6), (8)-(11)), which a trustee of a pre-commencement trust might ask about.
+
+### Cases
+
+63 in `aoma-qa-cases.l4`, all satisfied, with 0 errors and 0 warnings:
+
+- 8 ask each question for the role it is not about, every other input ASSUMEd: `does not arise for you`;
+- 4 ask each situation question with its situation FALSE, every later input ASSUMEd: `does not arise for you` (the word question once per role);
+- 11 assert that the young person's answer equals the baseline export's on the same facts;
+- 2 mirror cases ask Chloe's facts (c025) from both seats;
+- 38 are worked by hand from the text, for both roles.
+
+Checked with the stable `l4` of VS Code extension 1.6.98, `JL4_LIBRARY_PATH` unset: `aoma-qa.l4`, `aoma-qa-cases.l4`, and the baseline's `aoma-majority.l4` and `aoma-cases-majority.l4` (37 of 37, unchanged) give 0 errors and 0 warnings; `l4 check aoma-qa.l4` succeeds. A script listed every `@export` of `aoma-qa.l4` with its inputs and checked that `my role` is first in all 9, that each situation input has one name, type and `@desc`, and that no input is DEONTIC or EVENT. Two negative controls were caught: a wrong date expected for the trust at 25, and a situation case given TRUE with ASSUMEd inputs (it stops on the assumed term).
