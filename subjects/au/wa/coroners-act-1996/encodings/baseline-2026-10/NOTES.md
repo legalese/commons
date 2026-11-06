@@ -288,7 +288,7 @@ which the brief rules out as a seat.
 |---|---|---|---|
 | `I have asked the coroner to hold an inquest` | BOOLEAN | FALSE | `May I now apply to the Supreme Court for an order that an inquest be held` (family, other person): s 24(2) is open to the person who made a s 24(1) request |
 | `as senior next of kin, I asked the coroner not to direct a post mortem, and the coroner decided one is necessary` | BOOLEAN | FALSE | `Can the post mortem go ahead although I objected`, `May I still ask the Supreme Court to stop the post mortem` (family): s 37(1)-(3) arise on that request and decision |
-| `a post mortem examination has been held` | BOOLEAN | FALSE | `Must the coroner give me written information on the post mortem examination` (family): s 25(4) "Where a post mortem examination is held" |
+| `a post mortem examination has been held` | BOOLEAN | FALSE | `Must the coroner write to me about the post mortem examination` (family): s 25(4) "Where a post mortem examination is held" |
 | `the body is under the coroner's control` | BOOLEAN | FALSE | `May I view the body while the coroner holds it`, `May I touch the body while the coroner holds it` (family): s 30(2) "While a body is under the control of the coroner" |
 
 The doctor's questions arise for every doctor present, and the reporting questions for every person who asks them, so they
@@ -310,7 +310,36 @@ take no situation input.
   have it` works it out from the death; the person who is asking whether they may view the body usually knows where it is.
 - **Added:** the s 18(1) penalty (`What is the most I can be fined for not giving the coroner information`): $1 000 for a
   person who reported, and 0 under this Act for a doctor present relieved by s 17(4), which states no penalty.
-- The question texts and `@desc` of `the death` are now one wording across the layer, so the form asks the death once.
+- The question texts and `@desc` of the death's inputs are one wording across the layer, so the form asks the death once.
+- **The death is asked as four inputs, and the directions as one** (fixed 6 November 2026, after verification). As first
+  written, ten questions took the baseline's `Death` record (18 yes/no fields, 262 144 combinations) and two its `Directions`
+  (3 more). The site's form drops a question for a role it is not about only after trying every combination of the open
+  yes/no and choice inputs, and gives up past 1 024, so for the doctor and the other person six family-only questions stayed
+  on the form until the whole death was answered (verification: 198 ground-truth issues). The baseline's rules read the
+  record's fields only in groups, so each group is now one input, shared by every question that takes the death:
+
+  | Input | Type | Baseline fields it stands for |
+  |---|---|---|
+  | `where the person died, and where the body is` | `Where the death was`: in WA with the body in WA; in WA with the body now outside; outside WA with the body in WA; outside WA with the body outside too, but the cause arose in WA or the person lived or worked there; outside WA with none of these links | `occurred in Western Australia`, `the body is in Western Australia` (each read on its own by limb (i) and s 30(1)); the cause, residence and industry fields (read only in the OR of "Western Australian death") |
+  | `a doctor has certified, or will certify, the cause of death` | BOOLEAN | the s 44 certificate for a death in WA and the certificate there for a death elsewhere: limb (i) reads one or the other, never both |
+  | `how the death appears` | `How the death appears`, the first that fits: held in care immediately before death; caused or contributed to while held in care or by a police officer's action; unnatural or violent, injury, during or from an anaesthetic, identity unknown; none of these but unexpected; none of these | the ten limb fields: held in care is read also by s 3A and s 22(1), the care and police causes by s 22(1), the rest only in the OR of the limbs (s 19A's "not during an anaesthetic" is implied by "only because unexpected"), and unexpected matters only where no other limb holds |
+  | `whether the death followed a lawful abortion or voluntary assisted dying` | `Abortion or assisted dying`, the first that fits: a child after a lawful abortion; VAD; neither | s 3B (always excepts) and s 3A (unless held in care) |
+  | `any direction for an investigation or inquest` | `Direction`, the first that fits: a missing person investigation; an Attorney General's or State Coroner's inquest; none | the `Directions` record: the missing person direction makes the duty by itself, the other two only for a reportable death |
+
+  The layer builds the baseline's records from them (`the death, as the baseline records it`, `the directions, as the
+  baseline records them`, one field of each group TRUE and the rest FALSE, through helpers that list every value) and calls
+  the baseline's rules, which are not restated. A scratch check (a transcription of the baseline's rules) over all 262 144
+  records, with every direction and s 19A determination, found the answers on a record and on the record built from its
+  groups the same for ss 3, 19, 19A, 22, 23 and 30(1). The s 20 question takes `I am one of the deceased's next of kin`
+  (BOOLEAN, "see Am I one of the deceased's next of kin") instead of the Kin record, as ss 26A and 35 take being the senior
+  next of kin: with the Kin record's 96 combinations it would have been over the limit again; the layer records a next of kin
+  as a parent and anyone else as unrelated. The largest question that can not arise for a role now has 900 combinations (`Will
+  the coroner investigate this death`); the three s 17 reporting questions (2 400) arise for every role.
+- **No export name agrees with another's in its first 60 characters** (fixed 6 November 2026, after verification). The site
+  and its service keep only the first 60 characters of a function name, and the family's s 25(4) question, first named
+  `Must the coroner give me written information on the post mortem examination`, cut to the same id as the baseline export
+  `Must the coroner give me written information on the post mortem`, so on the site it ran the baseline's function and failed
+  for every role. It is renamed `Must the coroner write to me about the post mortem examination`; its @export text and answers are unchanged.
 
 ### Not covered for the new roles
 
@@ -322,13 +351,21 @@ fees.
 
 ### Cases
 
-`cor-qa-cases.l4`: 164 assertions, all satisfied. 123 written by hand for the roles each question is about (26 of them assert
+`cor-qa-cases.l4`: 239 assertions, all satisfied (164 as first written; 75 added on 6 November 2026 with the grouped death:
+54 that the answer on the groups equals the baseline export's on nine new full records chosen to use the groups' other
+values, several with more than one field of a group TRUE; 3 that the s 20 answer equals the baseline's on the Kin record; 5
+for the directions; 13 worked by hand. The earlier cases now give the Graham fixtures as groups and still compare with the
+baseline on the fixtures' own records). 123 written by hand for the roles each question is about (26 of them assert
 that the answer equals the baseline export's on the same facts, wrapped in the answer type; the rest give hand-worked values,
 most from the baseline's own cases, on its fixtures, copied in); 34 for the roles a question is not about, every other input
 ASSUMEd; 7 for the situation values that do not hold, the inputs after them ASSUMEd. The last two groups were generated by a
 scratch script from the parameter list and the table above. Checked on stable l4 1.6.98: 0 errors and 0 warnings in all four
-files, 58 + 164 assertions satisfied, `l4 check cor-qa.l4` succeeds, and a parameter script confirms `my role` first
+files, 58 + 239 assertions satisfied, `l4 check cor-qa.l4` succeeds, and a parameter script confirms `my role` first
 everywhere, each shared input identical in name, type and @desc, each situation second and read first in each role branch,
 and no DEONTIC or EVENT input. A negative control on a scratch copy (a wrong expected value; a role branch for the doctor
 that reads the ASSUMEd Death record; a situation check that reads the Kin record) failed 3 cases, as it should, which also
-shows that reading a field of an ASSUMEd record stops the evaluation.
+shows that reading a field of an ASSUMEd record stops the evaluation. After the 6 November fix, a negative control (a wrong
+expected value; the doctor's ASSUMEd case run as the family) failed 2 cases, which shows that CONSIDERing an ASSUMEd
+enumeration of the layer's stops the evaluation too. The site's form engine (`interact-engine.ts`, through a local jl4-service and
+100 random completions per question per state, every role and every finite input taken second) then found no ground-truth
+issues: the doctor's form keeps their 7 questions and drops the other 19, the other person's keeps their 11.
