@@ -291,3 +291,98 @@ Left out, with the reason:
   and the regulations' Schedule 2 notice text was not checked word by word.
 - An independent test pass and the coverage table of the `encoding-a-subject`
   workflow have not been done.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026 (batch qa13), on the pattern of the Graffiti Vandalism Act 2016 encoding's `gva-seat.l4` (its
+design D2, D4 and D8). The layer is `sta-qa.l4`, with cases in `sta-qa-cases.l4`. It imports `prelude` and
+`sta-strata`; `sta-strata.l4` and `sta-cases-strata.l4` are unchanged. Every exported question takes `my role` first
+(`@desc Which of these describes you`) and answers `does not arise for you`, reading nothing else, for a role it is not
+about. Every answer type carries that value: `Yes or no`, `Amount`, `Days`, `Working days`, `Vote answer` (wrapping
+the baseline's `Who casts my lot's vote`), `Variation answer` (wrapping `Notifiable variation`) and `Notice deadline`.
+No exported question takes a DEONTIC or EVENT input. The baseline's s 110 duty is a DEONTIC, and its `@export` was
+already commented out; it is not used here.
+
+### Roles
+
+The baseline's seat is "the owner of a lot ... and, before settlement, the buyer who is about to become one". The Act
+gives those two different questions, so the layer makes them two roles, and adds two more people the Act puts duties on.
+
+- `I own a lot in a strata titles scheme`: 20 questions. They are the baseline's owner questions: levies, the reserve
+  fund, interest, the budget, the vote, special resolutions, by-laws, s 83, s 47, the certificate, s 197 and s 210.
+  There is also one new question, s 45(4) (the owner's visitors).
+- `I am buying a lot in a strata titles scheme, or have just bought one`: 11 questions. They are the baseline's
+  Part 10 questions, s 100(6) arrears, and the certificate fee and its 14 days (s 107(2)(b) lets a buyer apply).
+- `I am selling a lot in a strata titles scheme`: 10 questions. Must I give the s 156 information (s 156(1), (5)); the
+  developer's extra disclosures (s 156(3), (4), the baseline's own rule); the onus of proof (s 156(6), s 157(6)); must I
+  notify this change (ss 3(1), 157(1), (4)) and by when (s 157(3)); may the buyer postpone (s 158) and by how much; may
+  the buyer avoid (s 159; ss 160-162, the baseline's rules from the other side); and what I must repay myself
+  (s 164(2)(a)).
+- `I rent or occupy a lot in a strata titles scheme, and do not own it`: 7 questions. Does a by-law bind me (s 45(1)(c),
+  (3), with the baseline's test), s 83, s 45(4), and the four s 47 questions.
+- Not seats: the strata company, its council, the scheme developer as such, the Tribunal and its President. A first
+  mortgagee may vote (s 126) and apply under s 47(3), but is not given a seat here.
+
+The 41 exports count each question once; 7 of them serve two roles (s 45(4) and the four s 47 questions for the owner
+and the occupier; the two certificate questions for the owner and the buyer).
+
+### Situation inputs
+
+Each is a BOOLEAN, placed second, straight after `my role`. FALSE gives `does not arise for you`, and nothing else is
+read. Each has one name, type and `@desc` across all its questions and roles (checked by script).
+
+| Input | Roles | Questions that take it |
+|---|---|---|
+| `the strata company says I have broken a by-law` | owner, occupier | 4: is the breach notice valid, can I be taken to the Tribunal, the most I can be ordered to pay, a daily penalty (s 47) |
+| `I paid a contribution late` | owner | 1: interest (s 100(4)(b)) |
+| `the Tribunal has made an order in my strata dispute` | owner | 1: internal review (s 210) |
+| `the contract of sale has been signed` | buyer, seller | buyer 6: the kind of variation, may I postpone, by how many working days, s 159, ss 160-162, s 163; seller 6: must I notify, by when, may the buyer postpone, by how many working days, s 159, ss 160-162 |
+| `the buyer has avoided the contract` | buyer, seller | buyer 1: how much I get back; seller 1: how much I must repay (s 164(2)) |
+
+A question that arises in every situation of its role takes none. That covers the owner's levy, reserve fund, budget,
+vote, by-law, s 83, s 45(4), certificate and s 197 questions; the buyer's s 100(6), s 156(4) and certificate
+questions; the seller's three s 156 questions; and the occupier's by-law, s 83 and s 45(4) questions.
+
+### Decisions
+
+- **Q1. The owner and the buyer are separate roles.** The baseline puts them in one seat, but a buyer before
+  settlement does not pay levies or vote, and an owner of some years does not ask Part 10's questions. The certificate
+  questions serve both.
+- **Q2. The contract, not the variation, is the situation for Part 10 after signing.** ss 157-163 all run "after a buyer
+  signs a contract". Whether a notifiable variation occurred is what the questions answer, so it is not a situation.
+- **Q3. The s 100(6) arrears question takes no situation.** It is asked "having bought my lot". The baseline's s 159
+  and s 160 questions already ask `settlement has happened` as an ordinary input; making it a situation of the arrears
+  question would have given one name two places in the form.
+- **Q4. The seller's notice duty (s 157(1), (4)) is a helper in the layer.** It is built on the baseline's s 3(1)
+  classification, and lists every value of `Notifiable variation` with no OTHERWISE. "By when" adds s 157(3)'s two
+  times. s 157(5)'s time for a notice of completion is asked as a fact.
+- **Q5. What the seller repays (s 164(2)(a))** is the baseline's sum with no held deposit and no rent: the money paid to
+  the seller. The deposit held on trust, less rent, comes back from its holder (s 164(2)(b)), as the baseline reads it.
+- **Q6. Shared inputs were made identical** so that a merging form cannot mix them. `the scheme is registered` has one
+  text for s 156(4) and s 163, and `the by-law` and `the sum of the unit entitlements` have one text each. The seller's
+  inputs are in the seller's words and have their own names, such as `I gave everything s 156 requires before the
+  buyer signed`.
+
+### Not covered for the new roles
+
+- The seller: the content of the s 156(1) items one by one (asked as one fact), the approved form (s 156(5)), s 157(2)
+  conclusive particulars, s 157(5) in detail, and Part 10 Division 2 for termination proposals.
+- The occupier: exclusive use by-laws (s 45(1)(e)), a lessee's covenant as a contract claim (s 45(3) beyond binding),
+  and the occupier's own applications under s 47(3)(d) and s 197.
+- The buyer and the seller: a dispute between them under s 197(1)(h) (the baseline's s 197 question is the owner's).
+
+### Checks
+
+- `l4 run` on `sta-qa.l4` and `sta-qa-cases.l4`, and on the baseline's `sta-strata.l4` and `sta-cases-strata.l4`
+  (unchanged): 0 errors and 0 warnings. `l4 check sta-qa.l4` succeeds.
+- `sta-qa-cases.l4`, generated by the scratchpad script `qa/b13/gen_sta_cases.py` with the expected values written by
+  hand in it: 280 assertions, 280 satisfied. Of these, 116 ask each question for each role it is not about, with every
+  other input ASSUMEd, and 24 ask each situation question with its situation FALSE and every later input ASSUMEd.
+  The other 140 are in the role and situation that hold, and 40 of them compare the answer with the baseline
+  function's own answer on the same facts. With the baseline's 69, the encoding has 349 assertions.
+- A parameter script (scratchpad `qa/b13/check_params.py`) listed the 41 exports. It found `my role` first in each,
+  and each situation input second and identical in name, type and `@desc` wherever it appears. Each situation's role
+  branch reads it first. It found no DEONTIC or EVENT input, and no shared input with two types or texts.
+- Limit (graffiti finding 31): the baseline reads `Kind of resolution` and `My dispute` through OTHERWISE, so an
+  ASSUMEd value of those types that is read is not caught. The situation inputs are BOOLEAN, and the layer's helper
+  over `Notifiable variation` lists every value.
