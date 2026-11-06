@@ -8,7 +8,7 @@ from the seat of the individual to whom the law is applied, with the design defa
 No pipeline, no coverage table, no independent test pass, no human gate. Not for public use as advice.
 
 This is the first encoding of the Act; nothing existing was touched. The dates are in one small module (`jcxv-dates.l4`,
-built-in date functions only, no daydate), the rules and the 20 exported questions in `jcxv-claims.l4`, and the worked
+built-in date functions only, no daydate), the rules and the 21 exported questions in `jcxv-claims.l4`, and the worked
 cases in `jcxv-cases.l4`.
 
 The focus asked for: the provisions a claimant meets. The Act is short (sections 1 to 16), so the whole operative Act is
@@ -46,7 +46,7 @@ scratch copy, since deleted, and showed as "assertion failed".
 |---|---|---|---|---|
 | `jcxv-dates.l4` | 0 | 0 | 0 | 0 |
 | `jcxv-claims.l4` | 0 | 0 | 0 | 0 |
-| `jcxv-cases.l4` | 0 | 0 | 144 | 144 |
+| `jcxv-cases.l4` | 0 | 0 | 152 | 152 |
 
 Every exported question has cases, with the edges: s 5(1) with only an "interests of justice" finding (no transfer);
 each route of s 5 and the routes it does not provide; the Family Court of Western Australia read in (s 3(2)) and read out
@@ -54,7 +54,8 @@ each route of s 5 and the routes it does not provide; the Family Court of Wester
 (ba) with the s 6A facts (s 6A cannot apply); notice to one Attorney-General only; the s 6(5)(b) notice on the day of
 the direction, before it, on the last day and the day after, and not given with today the last day and the day after; the
 regulative rule alone on day 0, the last day and the day after; each condition of s 10 failing in turn; each limb of the
-appeal rules in s 7.
+appeal rules in s 7, including an appeal from a judge of the Family Court of Western Australia under s 7(3), (5) and (6);
+s 14(3) with each condition failing in turn.
 
 **No mirror cases.** One seat.
 
@@ -66,7 +67,8 @@ be transferred, and where?", "Can I apply for it?", "Can my lawyer follow it?", 
 federal court?", "Can the Supreme Court keep it?", "Have I given the notice the court directed?", "Can I still get urgent
 interim relief?", "Where can my appeal go?", "Can my case be removed to the Supreme Court?", "Which law will the court
 apply?", "Do the steps already taken count?", "Who orders the costs of the earlier stage?", "Can I appeal the transfer?",
-"Can I enforce the judgment?".
+"Can I enforce the judgment?", "Does a Western Australian law that speaks of the
+Supreme Court cover what the other court did?".
 
 The Act speaks almost entirely to courts ("the Supreme Court shall transfer", "may order"); the encoding turns that into
 what it means for the party. The courts and the Attorneys-General get no seat: what a court finds, considers or is
@@ -94,7 +96,7 @@ The 2026-10-18 defaults:
 
 ## Scope
 
-**In.** ss 3, 3A, 4, 5, 6, 6A, 7, 8, 10, 11, 12, 13, 14; s 9 folded into the s 4 and s 5 answers (the receiving court may
+**In.** ss 3, 3A, 4, 5, 6, 6A, 7, 8, 10, 11, 12, 13, 14(2), (3) (s 14(1) is deleted); s 9 folded into the s 4 and s 5 answers (the receiving court may
 exercise the jurisdiction and hear the transferred proceeding).
 
 **Out, and why.**
@@ -115,9 +117,10 @@ Each line: the provision, the function, the answer taken, the other reading.
 - **F1** s 3(1) "proceeding does not include a criminal proceeding", s 3A -- every question about a pending proceeding
   (ss 4, 5, 5(7), 6, 7, 8, 10) -- a criminal proceeding or the Corporations Act jurisdiction gets the text's no first --
   for s 7(1), (2) and (4), which speak of "an appeal" rather than "a proceeding", the gate not applying.
-- **F2** s 3(2) -- `the Supreme Court, read with s 3(2)` -- "the Supreme Court" in ss 5(1), (2), (5), 6, 6A, 8 and 14
-  includes the Family Court of Western Australia, but not in ss 4(3), (6), (7), 5(3), (4), 7(4) -- reading s 3(2) only
-  where the context fits (it makes s 6(2)(b)(ii) odd: finding 2).
+- **F2** s 3(2) -- `the Supreme Court, read with s 3(2)`, `from a WA superior court judge` (s 7) and the s 10 inputs --
+  "the Supreme Court" in ss 5(1), (2), (5), 6, 6A, 7(3), (5), 8, 10 and 14 includes the Family Court of Western Australia,
+  but not in ss 4(3), (6), (7), 5(3), (4), 7(4) -- reading s 3(2) only where the context fits (it makes s 6(2)(b)(ii)
+  odd: finding 2; and s 7(3): fork F18).
 - **F3** s 5(2)-(5), limbs (i) and (ii) -- `s 5 -- must my proceeding be transferred` -- one input, "more appropriate",
   stands for both (each ends "it is more appropriate that ... be determined by" the other court) -- two inputs, with the
   relationship to another pending proceeding asked separately.
@@ -155,10 +158,16 @@ Each line: the provision, the function, the answer taken, the other reading.
 - **F16** s 13 -- `s 13 -- can I appeal that decision` -- other decisions: NOTHING-kind -- the text's no.
 - **F17** s 6(8), s 7(8) -- `s 6(8), s 7(8) -- is the decision invalid because it was not transferred` -- outside
   inadvertence (and s 7(7)): NOTHING-kind, "this Act does not say" -- "invalid" (the text's no to the saving).
+- **F18** s 7(3) read with s 3(2) -- `s 7 -- where can my appeal go` -- an appeal from a judge of the Family Court of
+  Western Australia in which no matter arises under a Schedule Act is instituted only in the Court of Appeal (and with a
+  Schedule Act matter and no other matter, s 7(5) sends it to a Full Court; s 7(5)'s exclusion of s 7(6) proceedings
+  shows s 7(5) is meant to reach Family Court of Western Australia appeals) -- s 3(2) not reaching "a single judge of the
+  Supreme Court" in s 7(3), leaving those appeals to the Family Court Act 1997 (WA) and the Family Law Act 1975 (Cth)
+  (not deposited). Finding 10.
 
 Sites decided without a fork line: s 3(1) and s 3A are flat negatives (the text's no); s 7(1), (2), (4) and s 13 are flat
 negatives ("shall not be instituted", "does not lie"); s 7(3), (5) are closed with "only"; ss 5, 5(7), 7(7), 8, 10, 11(1),
-11(3), 12 fail on "where" (ruling (b) of 2026-11-05), s 5(9), 6(1), 6(3), 6(7), 12 on "if": the text's no; the
+11(3), 12, 14(3) fail on "where" (ruling (b) of 2026-11-05), s 5(9), 6(1), 6(3), 6(7), 12 on "if": the text's no; the
 "State matter" and "federal matter proceeding" definitions are "means" definitions.
 
 ## Rulings on negatives (copied word for word from docs/ENCODING-GUIDE.md section 5)
@@ -208,9 +217,17 @@ direction).
    "firstmentioned" and "subsubparagraph" where the authorised text has hyphens; the short title and the compilation
    notes have "Cross-vesting". Not law; the deposited text is not altered.
 
+10. **s 3(2) sends some Family Court of Western Australia appeals to the Court of Appeal.** s 7(3) and (5) are not in
+   the s 3(2) exception list, so "a decision of a single judge of the Supreme Court" includes a decision of a judge of
+   the Family Court of Western Australia: with a Schedule Act matter (and no other matter) the appeal goes only to a Full
+   Court or the High Court (s 7(5)); with none, only to the Court of Appeal (s 7(3)). s 7(5)'s words "not being a
+   proceeding to which subsection (6) applies" confirm that s 7(5) reaches those appeals, since s 7(6) is only about
+   them. The s 7(3) result may clash with the appeal routes in the Family Court Act 1997 (WA), not deposited. Encoded as
+   written (forks F2, F18); asserted.
+
 ## Before this is worth relying on
 
 - The Commonwealth Jurisdiction of Courts (Cross-vesting) Act 1987 (its "special federal matter" definition and its
   Schedule), so those can be worked out rather than asked.
 - A check of findings 4, 5 and 7 against current Commonwealth law.
-- A lawyer's view on forks F1, F2, F5, F9, F10 and F11, and on finding 2; an independent test pass and a human gate.
+- A lawyer's view on forks F1, F2, F5, F9, F10, F11 and F18, and on findings 2 and 10; an independent test pass and a human gate.
