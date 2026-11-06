@@ -171,3 +171,69 @@ standing as the licence (s 5B).
 - Encode the National Law from the parent's seat: that is where Oliver's long day
   care is regulated.
 - No SAT decision or departmental practice has been searched.
+
+## Q&A layer (seat and situations as parameters)
+
+Added 6 November 2026, after the graffiti encoding's design (Graffiti Vandalism Act 2016, `gva-seat.l4`, its NOTES D2,
+D4 and D8). The layer is `ccsa-qa.l4` (imports `prelude` and `ccsa-services`), with its cases in `ccsa-qa-cases.l4`
+(imports `prelude`, `ccsa-services` and `ccsa-qa`). The baseline's files are unchanged: no rule or export of
+`ccsa-services.l4` was touched, and its 40 cases still pass. The layer calls the baseline's functions and restates none.
+
+**Why.** The site's question form asks only the inputs that can still change an open question. Every exported question
+of the layer takes `my role` first ("Which of these describes you"); for a role it is not about, it answers `does not
+arise for you` without reading any other input. Within a role, a question that arises only in a situation takes that
+situation's fact second, and answers `does not arise for you` when it does not hold, again reading nothing else.
+
+**Roles** (`Role`):
+
+- `I am the parent of a child who attends the service, or may`: the baseline's seat (s 3 "parent").
+- `I provide the service, or plan to`: new. The Act's duties are the provider's and licensee's: the licence (s 9), its
+  terms (ss 13, 20), the supervising officer's presence as a condition (s 18), advertising (s 36), a refund order
+  (s 29(4)(b)(ii), (5)), suspension (s 25) and publication (s 45A). A small business or an organisation is a fine seat.
+
+The CEO, the Minister and the State Administrative Tribunal are not seats. The supervising officer is not one either:
+s 18 puts the duty of their presence on the licensee.
+
+**Situation input.** One, BOOLEAN; FALSE gives `does not arise for you`; it is the second input wherever it is taken,
+with the same name, type and `@desc` in both questions.
+
+| Name | Questions that take it |
+|---|---|
+| `the CEO has suspended the service's licence by notice` | parent, provider: For how many days at most can the suspension last (s 25(3)(b)); Within how many days must the CEO take the suspension to the Tribunal (s 25(4)) |
+
+s 25(3)(b) and (4) are tied to the CEO's "written notice given to the licensee" suspending the licence (s 25(1)).
+
+**Decisions.**
+
+1. **Which law governs is not a situation.** Whether the National Law or this Act governs the service is the baseline's
+   first question, worked out from the `Service` record, and every later baseline question already answers "not for this
+   Act" (or no) where the National Law governs. Making it a situation would have needed a second input that repeats
+   the record, and could disagree with it.
+2. **Shared questions.** Eleven questions serve both roles from the same baseline rule: s 4, ss 4 and 5B, s 9 (licence,
+   lawfulness, and the three penalties), s 18, s 36 (may it advertise), and the two s 25 questions. Their export texts
+   are worded for either asker ("the provider", "this service").
+3. **The provider's refund question** reads the baseline's `Could I be refunded my fees` and words its answer from the
+   provider's seat (`the provider's side of`, a CONSIDER that lists every value of the baseline's `Fee refund`, with no
+   OTHERWISE), adding s 29(5): the order may be made after the provider stops being a licensee.
+4. **Two helpers for the provider:** the s 36 fine ($6 000), and s 45A: the CEO may publish information that identifies
+   the service or the provider (s 45A(3)), but only if satisfied it is in the public interest (s 45A(4)), which is the
+   CEO's judgment and an input.
+5. **Shared inputs unified.** `it is exempted from s 9 by a Ministerial order` had three `@desc` wordings in the
+   baseline; the layer gives it one, so the form asks it once.
+6. **Answer types** carry `does not arise for you`: `Yes or no`, `Amount`, `Months`, `Days`, and wrappers around the
+   baseline's own answer types (`Governing law answer`, `Licence answer`, `Lawfulness answer`, `Fee refund answer`),
+   with `Refund order answer` for the provider.
+
+**Not covered for the provider:** the grant and renewal tests (ss 10-17, 22, 23A-24), licence conditions other than
+s 18, discipline of managerial officers (ss 30C, 30D), review (s 30), licence documents (ss 31-35), compliance notices
+and the CEO's powers (Part 4), the Minister's exemption factors (s 45(4)), and the National Law's provider and service
+approvals (s 103), which are for an encoding of the National Law.
+
+**Checks.** 16 exported questions: 13 asked by the parent (every baseline export) and 14 by the provider. `l4 check
+ccsa-qa.l4` succeeds; `l4 run` of all four files shows no error and no warning. `ccsa-qa-cases.l4` has 64 assertions,
+64 satisfied: every single-role question for the other role, with every other input ASSUMEd; both situation questions
+with the situation FALSE, for each role; hand-worked answers for each role; and, for each of the baseline's questions, a
+case that the layer's answer equals the baseline export's on the same facts. A script (`check_params.py`, in the
+session's scratch folder) listed every export's parameters and confirmed: `my role` first everywhere; the situation
+parameter identical in name, type and `@desc`, and second, wherever taken; every other shared parameter identical too; no
+DEONTIC or EVENT input.
