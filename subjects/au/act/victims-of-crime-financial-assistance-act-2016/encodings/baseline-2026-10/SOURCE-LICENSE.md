@@ -59,8 +59,10 @@ The same notice is at the top of the deposited text.
 ## Status of this deposit
 
 Text deposited 2026-10-20: `registers/source-bundle/A2016-12.txt` (109,175 characters,
-sha256 `d95cdff61b99d9842fa42ba2921fedf21bd1419f5a0db153ae2f93a8bfa0f487`), converted from https://www.legislation.act.gov.au/DownloadFile/a/2016-12/current/DOCX/2016-12.DOCX
+sha256 `d95cdff61b99d9842fa42ba2921fedf21bd1419f5a0db153ae2f93a8bfa0f487` as first deposited), converted from https://www.legislation.act.gov.au/DownloadFile/a/2016-12/current/DOCX/2016-12.DOCX
 (266,706 bytes, sha256 `fc446cec20618fdf744e74b74861019d12ea0f9a99abe7e29b309b32e1ea614c`). Conversion: DOCX to UTF-8 plain text. Headings (chapter, part, division, section, schedule) kept with their numbers; Word automatic numbering written out; OMML equations linearised; tables as '| a | b |' rows; table of contents, running heads, footers and images dropped; required notice (unofficial version, CC BY 4.0 attribution, changes) placed at the top.
+
+Symbol characters restored, 2026-11-07: the converter had kept 16 bullets typed in the Symbol font as private-use code points that display as empty boxes (the dictionary's note 2 list of Legislation Act terms). All 16 were restored as "•" by hand, line by line from the same DOCX; nothing else changed. New text sha256 `88a69dae3f6b00f7c3fd5476b2e23a25262891e34de4d70080307334818c1be6`; details in `registers/source-bundle/A2016-12.meta.json`.
 
 ## Language
 
