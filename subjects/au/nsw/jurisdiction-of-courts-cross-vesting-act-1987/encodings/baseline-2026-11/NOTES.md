@@ -17,7 +17,7 @@ This is the first encoding of this subject; nothing existing was touched. Two fi
 | File | What it holds |
 |---|---|
 | `xv-rules.l4` | the whole operative Act, ss 3-14, one rule per provision named by section, each with an exported question beside it (22 questions); one regulative rule (s 6(5)(b)) run by `EVALTRACE` inside a question that takes plain facts |
-| `xv-cases.l4` | worked cases for every exported question (116 assertions) and one `#TRACE` of the breach |
+| `xv-cases.l4` | worked cases for every exported question (119 assertions) and one `#TRACE` of the breach |
 
 The Act is short (ss 1-16), so it is encoded whole apart from the machinery. It sets no number of its own that a party
 meets: no time limit, cap or threshold. Its only deadline for a party is the one a court gives when it directs a party
@@ -45,7 +45,7 @@ unset, one at a time. `l4 run` exits 0 even when an assertion fails, so the diag
 | File | Assertions written | Satisfied | Errors | Warnings |
 |---|---|---|---|---|
 | `xv-rules.l4` | 0 | 0 | 0 | 0 |
-| `xv-cases.l4` | 116 | 116 | 0 | 0 |
+| `xv-cases.l4` | 119 | 119 | 0 | 0 |
 
 Every exported question has cases: each limb of every "or" on and off, each condition of every "and" failing alone (the
 four s 6A(1) conditions against ss 5(1), 5(4) and 6; the five s 10 conditions; the four s 5(6) conditions), the s 6(9)
@@ -90,7 +90,12 @@ The 2026-10-18 defaults, all followed:
 **In:** ss 3 (definitions used), 3A, 4(3)-(5), 5(1)-(4), (6)-(9), 6, 6A, 7, 8, 10, 11(1), (3), 12, 13, 14(2). Section 9
 (the Supreme Court "may exercise" cross-vested jurisdiction and hear transferred cases) is the premise of the transfer
 questions and has no question of its own; ss 5(9) and 6A(4) ("nothing ... confers ... jurisdiction") are stated in
-finding 2.
+finding 2. Two parts of ss 6 and 6A bear only on a court's judgment, which the encoding takes as an input, and so have
+no rule of their own: s 6(6) (in deciding special reasons the court must weigh the general rule that special federal
+matters go to the federal courts, and any Attorney-General's submission) is in the gloss of the s 6(3) special-reasons
+input; s 6A(5) (the interests of justice elsewhere in the Act may also include keeping related proceedings together)
+is in the gloss of the "otherwise in the interests of justice" inputs, and is why the s 5(3), (4) input carries that
+phrase.
 
 **Out, and why:**
 
@@ -123,8 +128,11 @@ Each line: the provision, the function, the answer taken, the other reading.
   transfer required", so only the wording changes.
 - **F6** s 6A(2) "having regard to the interests of justice, including the desirability of related proceedings being
   heard in the same jurisdiction, the Federal Court ... considers it appropriate" -- `ss 5(3), (4), 6A(2) -- transfer
-  into the NSW Supreme Court` -- the s 5(4)(b)(iii) input ("otherwise in the interests of justice that NSW decide it")
-  stands for the federal court's s 6A(2) view -- a separate input.
+  into the NSW Supreme Court` -- the federal court's s 6A(2) view is read from the s 5(4)(b) inputs already asked: a
+  view that NSW is more appropriate because of a related case pending there (limb (i)) or that it is otherwise in the
+  interests of justice (limb (iii)) gives "may"; neither gives "no". Limb (ii) (where the case could have been brought,
+  the law it turns on) is not taken as the s 6A(2) view -- a separate input. Since s 6A(2)(b) names "the desirability
+  of related proceedings being heard in the same jurisdiction", the related-case view counts.
 - **F7** s 6(5)(b) (no period in the Act) -- `s 6(5)(b) -- the directed notice to the Attorneys-General` -- the period is
   the one the direction gives, counted in days from the day of the direction (that day is day 0; the last day is the
   direction day plus the period); notice is given on the day it reaches the second of the two Attorneys-General -- the
@@ -178,7 +186,8 @@ forks F3 (an "unless" once met) and F4 (a "where" unmet on a "which law" questio
 5. **NSW has no State Family Court.** Sections 3(2), 4(4) and 7(5) work only for another State's Family Court, which in
    practice means the Family Court of Western Australia. Section 7(5) says an appeal from "a judge of a State Family
    Court" may be dealt with as if it raised no Schedule matter, but s 7 does not say where that appeal goes.
-   The encoding answers "yes, s 7(5) applies", and otherwise "not covered". Asserted.
+   The encoding answers "not decided": s 7(5) applies, but the Act names no court for the appeal, so the answer is the
+   same whichever court is asked about and is never a yes for it; otherwise "not covered". Asserted.
 6. **"Territory" excludes the NT and the ACT.** Section 3(1) counts the NT and the ACT as States and says "Territory does
    not include" them. So "the Supreme Court of a Territory" in ss 4, 5 and 8 means an external Territory's court (for
    example Norfolk Island's). The glosses say so.
