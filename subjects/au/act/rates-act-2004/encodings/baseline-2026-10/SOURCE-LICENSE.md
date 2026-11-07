@@ -69,6 +69,8 @@ sha256 `c49323f7b265a8e8b3ade6373997a42d8c7548ae1cf307aee7fe94eb7ab98c9c`), conv
 
 The DOCX holds some formulas only as images or embedded objects. They were transcribed from the authorised PDF (https://www.legislation.act.gov.au/DownloadFile/a/2004-3/current/PDF/2004-3.PDF, retrieved 2026-10-19T17:21:04Z, sha256 `e296ad2f2e37bd4dbe48118eb011469cce2ea97fb1466af58c0d03a5fbcee472`) and are marked in the text: s 15 (2) formula (embedded object); s 15 (3) formula (embedded object); s 64 (3) (b) formula (image).
 
+Symbol characters restored, 2026-11-07: the converter wrote the two multiplication signs of sch 1 s 3.1A (3) (set in Word as Symbol-font characters) as "?", and kept the 14 Symbol-font bullets of the Dictionary's note 2 as the private-use code point U+F0B7. They were restored by hand, in place, from the same Word file: "(AUV × CP) × P" and "•". Nothing else changed. The text's sha256 is now `94ce50ee4bf53058af7e7913618b833ab13fcb9685df744d46cb532cac378091` (was `c49323f7b265a8e8b3ade6373997a42d8c7548ae1cf307aee7fe94eb7ab98c9c`); details in `A2004-3.meta.json`.
+
 ## Language
 
 English is the only language of ACT legislation.
