@@ -40,14 +40,19 @@ folder, at most two processes at a time. `l4 run` exits 0 even when an assertion
 |---|---|---|---|---|
 | `hcc-dates.l4` | 0 | 0 | 0 | 0 |
 | `hcc-complaints.l4` | 0 | 0 | 0 | 0 |
-| `hcc-cases.l4` | 0 | 0 | 179 | 179 |
+| `hcc-cases.l4` | 0 | 0 | 208 | 208 |
 
 Every expected value was worked by hand from the text, with the edges: the 60th day of the assessment and the 61st,
-from receipt and from the day set for further particulars, across a leap February (s 22); 60 and 61 days allowed for
+from receipt and from the day set for further particulars, across a leap February, and at the widest reach of s 21
+(particulars required on the 60th day for 60 days later: 180 days in all) (s 22); 60 and 61 days allowed for
 particulars (s 21); the 14th and 15th day for notice of the assessment decision (s 28(1)), with and without the s 28(4)
 excuse; the 28th day and the 29th for asking for a review (s 28(9)); five years to the day before the complaint and one
 day more, and from 29 February (s 27(1)(f)); each s 23(1)(b) limb alone; each s 27(1) reason alone, with s 27(3) and
-s 25A(2) against them; every route through s 28A; each offence's penalty.
+s 25A(2) against them; every route through s 28A; each consent missing alone under s 91A(5); each offence's penalty.
+
+The two periods the regulative rules use (60 days, s 22; 14 days, s 28(1)) are each written once, as
+`the days for the assessment (s 22)` and `the days for notice of the assessment decision (s 28(1))`, and used both
+after `WITHIN` in the MUST rule and in the questions that give the last day or test whether the time has passed.
 
 ## Seat
 
@@ -90,10 +95,15 @@ The 2026-10-18 defaults:
 s 11 (complaints made to a council); s 13(1) (with s 23); ss 16, 16A, 17 (who is told of the complaint and the
 complainant's identity); s 18 (withdrawal); s 20(2) (confirming the allegations); ss 21, 22 (particulars; the 60-day
 assessment); s 23 (must investigate); ss 25A(2), 25B(2), 27 (discontinuance); s 28 (notice of the assessment decision;
-review); s 28A (the client and the client's contacts); ss 39(1), 41, 42(1), 45 (outcomes, notice of results, review,
-the report); s 90CA (notice of the prosecution decision); ss 47, 48, 50, 51, 52, 56 and 58D (conciliation and
-complaints resolution); s 96(2) (no liability for complaining in good faith); ss 97A(d), 98, 99 (offences touching a
-complainant) and the penalties of ss 58 and 99A(1); s 99A(2)-(3) (the Commission cannot be compelled to give evidence).
+the 60-day review of a decision not to give notice, s 28(7); review) except s 28(2), (3), (6) (notice to the
+practitioner's employer or facility, a partial form of notice: the Commission's side); s 28A (the client and the
+client's contacts, with the s 28A(9) review) except s 28A(5) (the facility's duty to supply information); ss 39(1),
+41, 42(1), 45 (outcomes, notice of results, review, the report); ss 41B(3)(a), 45D(3)(a) (a statement of a
+prohibition-order or public-statement decision to the complainant); s 90CA (notice of the prosecution decision);
+ss 47, 48, 50, 51, 52, 56 (both subsections) and 58D (conciliation and complaints resolution); s 91A(5)-(6) (the
+expert's report in other proceedings); s 96(2) (no liability for complaining in good faith); ss 97A(d), 98, 99
+(offences touching a complainant) and the penalties of ss 58 and 99A(1); s 99A(2)-(3) (the Commission cannot be
+compelled to give evidence).
 
 **Out, and why:**
 - **ss 1-3A, 5, 6:** preliminary and explanatory (s 3A(6) says it affects nothing).
@@ -102,16 +112,21 @@ complainant) and the penalties of ss 58 and 99A(1); s 99A(2)-(3) (the Commission
   Commission's machinery; what they mean for the complainant enters through s 28 (the decision and its review) and
   s 27 (discontinuance after a referral). s 26(2) (must keep dealing after referral) repeats the s 18(2) limbs and is
   noted only.
-- **Division 5 (ss 29-38, investigation powers), s 40 (the practitioner's submissions), ss 41A-41E and 45A-45F
-  (prohibition orders):** the investigation and the practitioner's or organisation's side; prohibition orders are
-  reviewable by the practitioner, not the complainant. The outcomes appear in `What can the Commission do at the end of
-  the investigation`.
+- **Division 5 (ss 29-38, investigation powers), s 40 (the practitioner's submissions):** the investigation and the
+  practitioner's side. s 29A(1) (an investigation "is to be conducted as expeditiously as the proper investigation of
+  the complaint permits", particularly where the complainant or the client "is seriously ill") reaches the complainant
+  but sets no period, so there is nothing to compute; it is noted only.
+- **ss 41A, 41AA, 41B other than (3)(a), 41C-41E, 45A-45C, 45D other than (3)(a), 45E, 45F (prohibition orders):**
+  the making of the orders, their contents and their review belong to the Commission and to the practitioner or
+  organisation (only they can seek review, ss 41C, 45E). What reaches the complainant is encoded: the outcomes in
+  `What can the Commission do at the end of the investigation`, and the complainant's statement of the decision
+  (ss 41B(3)(a), 45D(3)(a)) in `Must I be given a statement of the prohibition decision`.
 - **ss 43, 44 (the organisation's submissions; implementing the report), ss 46, 49, 53-55, 57, 58A, 58B, 58C:**
   machinery of the Commission and the Registry; s 53(3) (the parties get a copy of the conciliator's report) is noted
   only.
 - **Parts 3, 3A (other investigations, compliance), 4 (Joint Committee), 5, 6, 6A except s 90CA (the Commission, the
   Registry, the Director of Proceedings):** machinery.
-- **ss 91-95, 96(1), 97, 97A(a)-(c), 97B, 99A(1) as a question, 99B, 100-104 and the Schedules:** machinery,
+- **ss 91, 91A(1)-(4), 92-95, 96(1), 97, 97A(a)-(c), 97B, 99A(1) as a question, 99B, 100-104 and the Schedules:** machinery,
   officials' immunity, offences not met by the complainant, savings and transitional (Schedule 3 cl 4, complaints about
   conduct before 1994, is not encoded).
 
@@ -119,7 +134,7 @@ complainant) and the penalties of ss 58 and 99A(1); s 99A(2)-(3) (the Commission
 
 Each line: the provision, the function, the answer taken, the other reading.
 
-- **F1** ss 16(1), 16(7), 21, 22, 27(1)(f), 28(1), 28(9), 47 -- every date question -- a period of n days "after" a day
+- **F1** ss 16(1), 16(7), 21, 22, 27(1)(f), 28(1), 28(7), 28(9), 28A(9), 47 -- every date question -- a period of n days "after" a day
   ends n days later, the day it runs from not counted, and an act on the last day is in time; five years "before" the
   complaint is the same day of the month five years earlier, or that month's last day (29 February back five years is
   28 February) -- the Interpretation Act 1987 (not deposited) might give another reading.
@@ -132,8 +147,9 @@ Each line: the provision, the function, the answer taken, the other reading.
   chosen representative) answers `NOTHING` (a grant limited in its own words, no "only") -- `JUST FALSE`.
 - **F5** s 21 "within such time, not exceeding 60 days" -- `Is the time for further particulars within the limit` --
   counted from the day the Commission requires the particulars -- from the day the complainant receives the requirement.
-- **F6** s 23(1) -- `Must the Commission investigate my complaint` -- where no limb holds, `JUST FALSE` (s 23 does not
-  require it; the Commission may still choose to investigate under s 20(1)) -- `NOTHING`.
+- **F6** ss 23(1), 56(2) -- `Must the Commission investigate my complaint`, `Must the Commission investigate after
+  conciliation` -- where no limb holds, `JUST FALSE` (the section does not require it; the Commission may still choose
+  to investigate under s 20(1), or under s 56(1) after conciliation) -- `NOTHING`.
 - **F7** s 41(3) -- `Must the Commission review its decision after the investigation` -- for a health organisation
   (Division 7) the Act gives no review: `NOTHING` -- `JUST FALSE`.
 - **F8** s 50 -- `May this person help me at the conciliation` -- a lawyer may not be the helper: `JUST FALSE` (s 50(1)
@@ -146,10 +162,17 @@ Each line: the provision, the function, the answer taken, the other reading.
 - **F11** ss 41(1), 45(1), 90CA -- `Must I be told the results of the investigation`, `May the Director of Proceedings
   tell me ...` -- a person who is not a party answers `NOTHING` (the Commission's discretion, ss 41(2), 45(2), 90CA(c))
   -- `JUST FALSE`.
-- **F12** s 99A(3) -- `Can the Commission be compelled to give its information in proceedings` -- in the listed
-  inquiries the bar is lifted but the Act does not say production can be compelled: `NOTHING` -- `JUST TRUE`.
+- **F12** ss 99A(3), 91A(6) -- `Can the Commission be compelled to give its information in proceedings`, `Can the
+  expert's report be compelled in proceedings` -- in the listed inquiries (s 99A(3)), or in proceedings under the Act
+  and disciplinary proceedings under the National Law (s 91A(6)), the bar is lifted but the Act does not say
+  production can be compelled: `NOTHING` -- `JUST TRUE`.
 - **F13** s 28A(1) -- `Is the Commission to tell me the outcome of the assessment` -- for a deceased or incapable client
   the s 28A(1) duty does not arise ("unless"); the s 28A(6) risk is checked after s 28A(4) -- the risk first.
+- **F14** ss 41B(1), 45D(1) -- `Must I be given a statement of the prohibition decision` -- an interim prohibition
+  order (ss 41AA, 45B) is not a decision "under section 41A" or "under section 45C", so the duty to give the
+  complainant a statement does not arise: `JUST FALSE` (a condition introduced by "if") -- `NOTHING` (the Act is
+  silent about telling the complainant of an interim order). A person who is not the complainant answers `NOTHING`
+  (as F11: the Commission may make the statement public, ss 41B(3)(c), 45D(3)(c)).
 
 The ruling of 2026-11-05 (c) ("when", "upon" read as "where") is applied to s 17 ("On receiving a complaint against a
 health organisation"): a complaint against a practitioner answers `JUST FALSE` for s 17.
@@ -169,11 +192,16 @@ health organisation"): a complaint against a practitioner answers `JUST FALSE` f
 | s 27 | the Commission | power to discontinue; disability (s 27(3)) | `Can the Commission discontinue my complaint` |
 | s 28(1) | the Commission | duty with a deadline (14 days) | MUST rule; `Was I told of the assessment decision in time` |
 | s 28(9) | the Commission | duty to review if asked within 28 days | `Must the Commission review its assessment decision` |
+| s 28(7), s 28A(9) | the Commission | duty to review a decision not to give notice, every 60 days | `When must the Commission first review its decision not to give notice of the investigation` |
 | s 41(3) | the Commission | duty to review if asked | `Must the Commission review its decision after the investigation` |
+| s 41B(3)(a), s 45D(3)(a) | the Commission | duty to give the complainant a statement of the decision | `Must I be given a statement of the prohibition decision` |
 | ss 48, 58D | the parties | privilege not to take part | `Must I take part` |
 | s 50 | the parties | no right to a lawyer | `May this person help me at the conciliation` |
 | s 51 | everyone | disability: evidence inadmissible | `Can what was said at conciliation be used as evidence` |
 | s 52(2) | the complainant | duty to notify without delay | `Must I tell the Registrar about our agreement` |
+| s 56(2) | the Commission | duty to investigate on its or the council's opinion | `Must the Commission investigate after conciliation` |
+| s 91A(5) | everyone | disability: the expert's report inadmissible in other proceedings without three consents | `Can the expert's report be used in these proceedings` |
+| s 91A(6) | the expert, the Commission, the Commissioner | immunity from compulsion | `Can the expert's report be compelled in proceedings` |
 | s 96(2) | the complainant | immunity | `Am I protected from being sued for complaining` |
 | s 98 | anyone | duty not to | `Was it an offence under section 98` |
 | s 99, s 97A(d) | the complainant (and anyone) | duty not to | `Could I commit an offence by what I tell the Commission` |
@@ -206,20 +234,28 @@ health organisation"): a complaint against a practitioner answers `JUST FALSE` f
    Director chooses (s 90CA "may"). Asserted as a power.
 7. **The Commission's file is closed to a later civil claim by compulsion.** s 99A(2) stops anyone being compelled in
    legal proceedings to give evidence of, or produce, information obtained under the Act (outside the s 99A(3)
-   inquiries), and s 51 makes conciliation evidence inadmissible without everyone's consent. The Commission may still
-   choose to disclose to a court or to the client (s 99B(1)(b), (i)), in the public interest. Asserted.
+   inquiries), and s 51 makes conciliation evidence inadmissible without everyone's consent. The expert's report the
+   Commission obtains is closed the same way: it may not be admitted or used in any other proceedings, a negligence
+   claim included, without the consent of the expert, the complainant and the person complained about (s 91A(5)(b)),
+   and the expert, the Commission and the Commissioner cannot be compelled to produce it or give evidence about it
+   there (s 91A(6)). So the complainant holds a veto over the report's use, but cannot use it alone: the practitioner's
+   consent is needed too. The Commission may still choose to disclose other material to a court or to the client
+   (s 99B(1)(b), (i)), in the public interest. Asserted.
 8. **Two clocks for one notice.** The person complained about is to be told of the complaint "not later than 14 days
    after the Commission's assessment" (s 16(1)), and the parties are to be told of the assessment decision "within 14
    days after the Commission takes that action or makes that decision" (s 28(1)); s 16(2) folds the one into the other.
    Where the decision follows the assessment by some days, the two deadlines differ. Both are given.
 9. **s 21 sets a ceiling with no starting point.** The Commission may set a time "not exceeding 60 days" for further
    particulars, without saying from when (fork F5); s 22(b) then restarts the 60-day assessment from the day set.
-   Asking for particulars can thus extend the assessment to about 120 days after receipt. Asserted (14 July for a
-   complaint received on 1 March).
+   Nor does s 21 say by what point in the assessment particulars must be required. A requirement made on the 60th day,
+   for particulars due 60 days later, puts the end of the assessment 180 days after receipt; a requirement made later
+   still would stretch it further, though by then s 22(a)'s 60 days would have run. Asserted: received 1 March 2026,
+   particulars required 30 April for 29 June, assessment due 28 August 2026 (180 days); and, less extreme, particulars
+   specified for 15 May give 14 July (135 days).
 
 ## Questions (exported)
 
-`hcc-complaints.l4` (43), in the Act's order: `Is it a relevant health organisation` (s 4); `Can I make a complaint about
+`hcc-complaints.l4` (48), in the Act's order: `Is it a relevant health organisation` (s 4); `Can I make a complaint about
 this` (ss 7, 8); `Am I the complainant` (s 4); `Has my complaint been made` (ss 9(1), 11); `Must the Commission's staff
 help me make my complaint` (s 9(3)); `Must the person I complain about be told of my complaint and who I am` (s 16);
 `By what day must the person I complain about be told` (s 16(1)); `When must the Commission first review its decision
@@ -231,15 +267,19 @@ assessing my complaint` (s 22); `Has the Commission assessed my complaint in tim
 Commission investigate my complaint` (ss 13(1), 23); `Did the matter happen more than 5 years before my complaint`
 (s 27(1)(f)); `Can the Commission discontinue my complaint` (ss 25A(2), 25B(2), 27); `By what day must I be told the
 assessment decision` (s 28(1)); `Was I told of the assessment decision in time` (s 28(1), (4), MUST rule); `Must the
-notice tell me I can ask for a review` (s 28(8)); `By what day must I ask for a review of the assessment decision`,
+notice tell me I can ask for a review` (s 28(8)); `When must the Commission first review its decision not to give
+notice of the investigation` (ss 28(7), 28A(9)); `By what day must I ask for a review of the assessment decision`,
 `Must the Commission review its assessment decision` (s 28(9)); `Is the Commission to tell me the outcome of the
 assessment` (s 28A); `What can the Commission do at the end of the investigation` (ss 39, 42); `Must I be told the
 results of the investigation` (ss 41(1), 45(1)); `Must the Commission review its decision after the investigation`
-(s 41(3)); `Can I have the report on the health organisation` (s 45(2A)); `May the Director of Proceedings tell me
+(s 41(3)); `Must I be given a statement of the prohibition decision` (ss 41B(3)(a), 45D(3)(a)); `Can I have the report on the
+health organisation` (s 45(2A)); `May the Director of Proceedings tell me
 whether my complaint will be prosecuted` (s 90CA); `By what day must the Registrar tell me about the conciliation`
 (s 47); `Must I take part` (ss 48, 58D); `May this person help me at the conciliation` (s 50); `Can what was said at
 conciliation be used as evidence` (s 51); `Has the conciliation ended` (s 52); `Must I tell the Registrar about our
-agreement` (s 52(2)); `Can the Commission investigate after conciliation` (s 56); `Am I protected from being sued for
+agreement` (s 52(2)); `Can the Commission investigate after conciliation` (s 56(1)); `Must the Commission investigate after conciliation`
+(s 56(2)); `Can the expert's report be used in these proceedings` (s 91A(5)); `Can the expert's report be compelled in
+proceedings` (s 91A(6)); `Am I protected from being sued for
 complaining` (s 96(2)); `Was it an offence under section 98`; `Could I commit an offence by what I tell the Commission`
 (ss 97A(d), 99); `What is the largest fine in penalty units`, `What is the longest prison term in months` (ss 58, 97A,
 98, 99, 99A); `Can the Commission be compelled to give its information in proceedings` (s 99A(2), (3)).
