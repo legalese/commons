@@ -53,8 +53,10 @@ The same notice is at the top of the deposited text.
 ## Status of this deposit
 
 Text deposited 2026-11-06: `registers/source-bundle/A1991-81.txt` (133,132 characters,
-sha256 `d112c30095f60ef3b71872037696870c1e6b1bd74e7bd2c8f7e993635f5f18da`), converted from https://www.legislation.act.gov.au/DownloadFile/a/1991-81/current/DOCX/1991-81.DOCX
+sha256 `d112c30095f60ef3b71872037696870c1e6b1bd74e7bd2c8f7e993635f5f18da` as first deposited), converted from https://www.legislation.act.gov.au/DownloadFile/a/1991-81/current/DOCX/1991-81.DOCX
 (219,261 bytes, sha256 `142d1785c0cef29c4d2186c4a07e93b6bfc6e940599691badc9933c3ef3d7522`). Conversion: DOCX to UTF-8 plain text. Headings (chapter, part, division, section, schedule) kept with their numbers; Word automatic numbering written out; OMML equations linearised; tables as '| a | b |' rows; table of contents, running heads, footers and images dropped; required notice (unofficial version, CC BY 4.0 attribution, changes) placed at the top.
+
+Symbol characters restored, 2026-11-07: the converter had kept 36 bullets typed in the Word Symbol font as private-use code points that display as empty boxes (examples to ss 23A, 23B, 33B and 75, and the dictionary's note 2 list). The text was regenerated from the same DOCX with the converter fixed to map Symbol-font characters; the only change is the 36 restored "•". New text sha256 `2a0da0dd8c1fcbb78b8f350e27f50df6b8bd5a5863b50baf554b842af1e6613f`; details in `A1991-81.meta.json`.
 
 ## Language
 
