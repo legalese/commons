@@ -38,11 +38,21 @@ No question takes a DEONTIC or an EVENT. This is the first encoding of the Act i
 
 - Stable `l4` of VS Code extension 1.6.98, `JL4_LIBRARY_PATH` unset. Commands: `l4 run nt-claims-dates.l4`,
   `l4 run nt-claims.l4`, `l4 run nt-claims-cases.l4`.
-- **129 assertions written, 129 satisfied, 0 errors, 0 warnings** in every file (2026-11-07).
+- **135 assertions written, 135 satisfied, 0 errors, 0 warnings** in every file (2026-11-07, after the fix below).
 - Every expected value was worked by hand from the text before the file was run, and none was copied from the
   encoding's output. All 129 passed on the first run of the cases file (after two missing date names were added).
 - In a scratch copy, the s 66(10)(c) last day for a notification day of 15 January 2026 was changed from 14 April 2026
   to 15 April 2026. The run reported one error, so the runner catches a wrong expectation.
+- **Fix after independent verification (2026-11-07).** The verifier found that month counting went wrong where the
+  notification day is the last day of a short month. The first version reused the start day's day of the month even
+  when the period starts the next day, and clamped a missing day before subtracting one. Two hand-worked expectations
+  were a day off: the s 66(10)(c) last day for 30 November 2025 (asserted 27 February 2026; it is 28 February 2026) and
+  the s 30(1)(a) registration day for 30 November 2025 (asserted 30 March 2026; it is 31 March 2026). The same fault made
+  s 32(3) end a day early and s 35(1) open a day early from such a day. The dates module now counts months as Acts
+  Interpretation Act 1901 ss 2G and 36(1) count them (fork F1), both expectations are corrected, and six assertions were
+  added for month-end start days (ss 32(3), 35(1), and the two dates functions). The s 66(10)(c) duty now names the
+  person who wants to be a party, not the applicant (who is a party already under s 84(2)). The s 30(1)(a)(i) filing
+  input now also covers an application given to a recognised State/Territory body.
 
 ## Seat
 
@@ -121,6 +131,10 @@ The 2026-10-18 defaults:
   procedure; s 190F(6) dismissal is mentioned in a comment.
 - **ss 66(1)-(9), 84(1), (4), (5A)-(9):** notice by the Registrar, Ministers as parties, and the Court's management of
   parties.
+- **ss 62A (the applicant's power to deal with matters arising), 64 (amending applications), 66A (notice of the
+  application to the Commonwealth Minister and others) and 66B(3), (4) (the Registrar's steps after a replacement
+  order):** machinery of the proceedings once the application is made, or duties of the Registrar. A member meets
+  s 62A and s 64 only through the applicant the group authorised.
 - **Parts 4-6 and 8-12 (Federal Court procedure, mediation, the NNTT, the registers, representative bodies and
   prescribed bodies corporate):** machinery, or duties of bodies the seat does not occupy.
 - **No requirement-ledger entry exists for these provisions** in `subjects/au/requirements.jsonl`, and none was
@@ -130,10 +144,16 @@ The 2026-10-18 defaults:
 
 Each line gives the provision, the function, the answer taken, and the other reading.
 
-- **F1** Months from a day (ss 29(4), 30(1)(a), 32(3), 35(1), 66(10)(c), 190A(2)). Function: `plus calendar months`
-  (nt-claims-dates.l4) and every function that uses it. Answer taken: the same day of the month that many months on,
-  or the last day of that month where it has no such day (31 October 2025 plus 4 months is 28 February 2026). Other
-  reading: the first day of the next month.
+- **F1** Months from a day (ss 29(4), 30(1)(a), 32(3), 35(1), 66(10)(c), 190A(2)). Functions: `the last day of ...
+  months starting on` and `plus calendar months` (nt-claims-dates.l4) and every function that uses them. Answer taken:
+  the Acts Interpretation Act 1901 (not deposited) counts a month from the start of a day to just before the start of
+  the corresponding day of the next month, or to the end of that month if it has no such day (s 2G), and a period
+  "after" a day starts the next day (s 36(1)). So a period of months starting on a day ends the day before the
+  corresponding day that many months on, or at the end of that month if it has no such day (30 November 2025, 3
+  months: 28 February 2026); a period of months after a day is counted the same way from the next day (31 October 2025
+  plus 4 months: 28 February 2026; 30 November 2025 plus 4 months: 31 March 2026). A period of several months is
+  counted straight to the corresponding day that many months on. Other reading: chain the months one at a time, which
+  can move the end of a period that starts on the 29th, 30th or 31st.
 - **F2** s 61A(2), (3) "previous exclusive possession act" and the State provision "as mentioned in section 23E" (and
   23F, 23I). Functions: `s 61A -- what it says about our application`, `s 61 -- can we make a native title
   determination application`. Answer taken: asked as facts, one input each, folding in whether the act is attributable
@@ -153,7 +173,8 @@ Each line gives the provision, the function, the answer taken, and the other rea
   day to object` and the questions that use them. Answer taken: "the period of 3 months starting on the notification
   day" (s 66(10)(c)) includes that day and ends the day before the same day 3 months on; "before the end of 3 months
   after the notification day" (s 30(1)(a)(i)) and "within the period of 4 months after the notification day" (s 32(3))
-  start the day after and end on the same day 3 or 4 months on. Other reading: all three end on the same day (finding 2).
+  start the day after and end on the same day 3 or 4 months on (at a month end, as F1 counts it). Other reading: all
+  three end on the same day (finding 2).
 - **F6** s 66B(1) "on the grounds that". Function: `s 66B -- can I apply to replace the applicant`. Answer taken: the
   three grounds in (1)(a) are closed, so with none of them (and no death or incapacity) the answer is the text's no.
   Other reading: NOTHING-kind, leaving the Court's general powers.
