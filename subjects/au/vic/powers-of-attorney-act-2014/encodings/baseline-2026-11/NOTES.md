@@ -33,6 +33,12 @@ four are encoded, with Part 1's definitions and Part 8 (VCAT).
   the Word file `14-57a007.docx` the owner saved by hand on 7 November 2026 (see that file's `.meta.json` and
   `subjects/au/vic/README.md`). Not checked against the authorised PDF, which was not saved. Version 007 includes the
   remote witnessing provisions (ss 5A-5D, inserted by Act No. 11/2021 from 26 April 2021).
+- **Deposit reconverted, 7 November 2026:** the deposited text was converted again with the fixed converter
+  (`vic_convert2.py`), which keeps the Word symbol characters (code F000 or more) the first converter dropped. In this Act
+  the only characters lost were the three Wingdings tick-boxes before the commencement options of the Schedule form
+  (general non-enduring power of attorney, s 7), now "[ ]". No number, decimal point or sign was lost. The Schedule
+  and Part 2 are not encoded, so nothing in this encoding relied on the changed lines and no value, case or finding
+  changes; the new text sha256 is 2f8df7437512208515a98505ff0aa3cb3beaa082d32a6e514c0e231f7af05aa4.
 - **Numbers set elsewhere:** the Act's own numbers are in the Act (age 18, 2 witnesses, $100, 6 months, 28 days, 600
   and 2400 penalty units, 5 years). Not deposited, so asked as inputs or left out: the Powers of Attorney Regulations
   (the prescribed forms, the s 67(3) prescribed amount -- an input, 0 for none -- and the prescribed class of special
