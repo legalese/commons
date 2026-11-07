@@ -36,7 +36,7 @@ Anti-Discrimination Act 1992 baseline.
 ## Checks
 
 Stable `l4` of VS Code extension 1.6.98 (`bin/win32-x64/l4.exe run <file>`), `JL4_LIBRARY_PATH` unset, run from this
-folder, never more than one process at a time. `l4 run` exits 0 even when an assertion fails, so the diagnostics were
+folder, never more than two processes at a time. `l4 run` exits 0 even when an assertion fails, so the diagnostics were
 read and the satisfied assertions counted.
 
 | File | Errors | Warnings | Assertions written | Satisfied |
@@ -44,7 +44,7 @@ read and the satisfied assertions counted.
 | `tad-dates.l4` | 0 | 0 | 0 | 0 |
 | `tad-rules.l4` | 0 | 0 | 0 | 0 |
 | `tad-seat.l4` | 0 | 0 | 0 | 0 |
-| `tad-cases.l4` | 0 | 0 | 156 | 156 |
+| `tad-cases.l4` | 0 | 0 | 161 | 161 |
 
 Every expected value was worked by hand from the text. Every one of the 33 exported questions is asserted, with the
 edges: the last day to complain and the day after (12 months; from 29 February 2024 to 28 February 2025; from 31
@@ -108,6 +108,13 @@ or an EVENT.
 - ss 61, 62(2), 62A, 65A, 67, 68(1)-(5), 69, 70, 71(1)-(3), 74-77, 78(1), (3), 79, 79A, 81-85, 86A, 89(3)-(5), 91(2),
   92(2)-(4), 94(1)-(3), 96, 96A, 97, 98, 98A, 99(1), (2), 103, 103A, 107, 107A: the Commissioner's and the Tribunal's
   procedure and powers; where they matter to the person they are asked as facts (a referral, a dismissal, a finding).
+- ss 60(2), (5)-(7) (the Commissioner's own-motion investigation, deemed a complaint): the Commissioner acts, not the
+  person aggrieved; s 64(3) (the Commissioner is to notify the complainant of acceptance or rejection) and s 65(1),
+  (2) (the statement of reasons and the right to apply for review): the notice and the decision are asked as facts,
+  and the right to apply is the premise of the encoded s 65(3); s 66(2) (what the Commissioner considers in judging
+  fairness): folded into the one "the Commissioner allows it" input; s 104(1)(a), (b) and (2) (the organisation's
+  duties to inform and to take reasonable steps): under the literal reading of (1)(c) and (3) they never decide
+  liability (F6, finding 4).
 - The offences (ss 75(2), 80(3), 92(4), 97(4), 98(4), 105, 106): prosecuted, not complained of; they bind the
   complainant as anyone else and could be a later layer.
 - s 68(4)(c) and s 96 (costs under the Tasmanian Civil and Administrative Tribunal Act 2020): that Act is not
@@ -131,8 +138,9 @@ Each line: the provision, the function, the answer taken, the other reading.
   outside -- JUST FALSE as flat negatives under ruling N2.
 - **F4** s 18(1) "because" -- `s 18 -- victimisation` -- a detriment for another reason, NOTHING -- JUST FALSE.
 - **F5** Part 5 -- `Part 5 -- the exception covers it` -- outside the ground or setting an exception names, NOTHING;
-  its "if" failing, JUST FALSE; ss 23, 26, 29, 31, 35, 37, 38, 40, 43(a), 46, 52(a)-(c), 53 and a granted exemption have
-  no "if" and answer only JUST TRUE or NOTHING -- every exception answering JUST FALSE outside its words ("this section
+  its "if" failing, JUST FALSE; ss 23, 26, 29, 31, 35, 37, 38, 40, 43(a), 46, 52(a)-(d), 53 and a granted exemption have
+  no "if" (the purposes in s 40(a)-(b) and the relative clause "any other act that (i) ... and (ii) ..." in s 52(d)
+  describe the setting, so a case outside them is outside the words) and answer only JUST TRUE or NOTHING -- every exception answering JUST FALSE outside its words ("this section
   gives no defence on these facts").
 - **F6** s 104(1)(c), (3) -- `s 104 -- the organisation is liable` -- read literally: a contravention by a member,
   officer, employee or agent is itself a failure to "ensure that no member ... engages in" it, so the organisation is
@@ -155,6 +163,10 @@ Each line: the provision, the function, the answer taken, the other reading.
   s 92's "substantiated complaint" read as not needing an inquiry (s 92 does not say "after an inquiry").
 - **F14** s 90 -- `s 90 -- enforceable as a Supreme Court order` -- an agreement recorded by the Tribunal (s 94) is
   enforceable once filed, like a s 89(1) order (s 94(4)) -- s 90(1)(b) names only the s 76 record (finding 8).
+- **F15** s 60(4) -- `s 60 -- the complaint may be made` -- "a complaint on behalf of another person" read as
+  reaching an agent (s 60(1)(e)) and a trade union representing one member (s 60(1)(c)(i)) as well as (f): without the
+  Commissioner's approval, JUST FALSE -- s 60(4) confined to (f), leaving (e) and (c)(i) JUST TRUE. Class complaints
+  ((b), (c)(ii), (d)) keep their own consent test only, and a litigation guardian is appointed by the Commissioner.
 
 ## Rulings on negatives (copied word for word from docs/ENCODING-GUIDE.md section 5)
 
