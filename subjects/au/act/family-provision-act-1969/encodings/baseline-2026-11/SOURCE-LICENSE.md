@@ -53,8 +53,10 @@ The same notice is at the top of the deposited text.
 ## Status of this deposit
 
 Text deposited 2026-11-06: `registers/source-bundle/A1969-15.txt` (37,479 characters,
-sha256 `e6e402185cd1025acc8dc5da4e7c055525e16f26832ccd5bb558605f4aed3e89`), converted from https://www.legislation.act.gov.au/DownloadFile/a/1969-15/current/DOCX/1969-15.DOCX
+sha256 `e6e402185cd1025acc8dc5da4e7c055525e16f26832ccd5bb558605f4aed3e89` as first deposited), converted from https://www.legislation.act.gov.au/DownloadFile/a/1969-15/current/DOCX/1969-15.DOCX
 (125,350 bytes, sha256 `fc15dfe8c79d440d4ab3cc2de52d735a55485ac683c6066c43fbc238e4dc83d8`). Conversion: DOCX to UTF-8 plain text. Headings (chapter, part, division, section, schedule) kept with their numbers; Word automatic numbering written out; OMML equations linearised; tables as '| a | b |' rows; table of contents, running heads, footers and images dropped; required notice (unofficial version, CC BY 4.0 attribution, changes) placed at the top.
+
+Symbol characters restored, 2026-11-07: the converter had kept 6 bullets typed in the Symbol font (dictionary note 2) as private-use code points that display as empty boxes. They were restored as "•" by regenerating the text from the same DOCX with the converter fixed to map Symbol-font characters; nothing else changed. New text sha256 `0c13e9e1f6c21522049af457c833503d7408ec6c5ed912982fd74e0a38c70c53`; details in `A1969-15.meta.json`.
 
 ## Language
 
