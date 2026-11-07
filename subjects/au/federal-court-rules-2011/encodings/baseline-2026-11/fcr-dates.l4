@@ -1,0 +1,144 @@
+IMPORT prelude
+IMPORT daydate
+
+-- Federal Court Rules 2011 (Cth) -- the date arithmetic the rules need: rule 1.61 (calculation of time) and the
+-- Dictionary's "business day", kept in one small module so that daydate is imported in one place only.
+-- Based on content from the Federal Register of Legislation: "Federal Court Rules 2011", Compilation No. 11 (11 June
+-- 2026), Commonwealth of Australia, CC BY 4.0. BASELINE ENCODING. Not for public use as advice. See NOTES.md.
+
+§ `Dates`
+
+-- A calendar date, day first.
+GIVEN d IS A NUMBER, m IS A NUMBER, y IS A NUMBER
+GIVETH A DATE
+`the day` d m y MEANS Date d m y
+
+GIVEN x IS A DATE, n IS A NUMBER
+GIVETH A DATE
+`the day n days after` x n MEANS DATE_FROM_SERIAL (DATE_SERIAL x PLUS n)
+
+-- How many days from the first date to the second (negative if the second is earlier).
+GIVEN a IS A DATE, b IS A DATE
+GIVETH A NUMBER
+`days from` a b MEANS DATE_SERIAL b MINUS DATE_SERIAL a
+
+GIVEN a IS A DATE, b IS A DATE
+GIVETH A BOOLEAN
+DECIDE `is on or before` a b IF `days from` a b AT LEAST 0
+
+GIVEN a IS A DATE, b IS A DATE
+GIVETH A DATE
+`the earlier date of` a b MEANS
+    IF `is on or before` a b
+    THEN a
+    ELSE b
+
+GIVEN a IS A DATE, b IS A DATE
+GIVETH A DATE
+`the later date of` a b MEANS
+    IF `is on or before` a b
+    THEN b
+    ELSE a
+
+§§ `Dictionary -- business day`
+
+-- Dictionary: "business day, in a place, means any day other than: (a) a Saturday or Sunday; or (b) a day that is a
+-- public holiday in the place; or (c) any other day on which the Registry in the place is closed."
+-- Public holidays differ by State and Territory and year, and are not deposited. Only the five fixed-date days that are
+-- a public holiday everywhere in Australia are known here (1 January, 26 January, 25 April, 25 December, 26 December),
+-- without substitute days; Easter, the King's Birthday, Labour Day, other State holidays and Registry closures are not.
+-- Fork F1.
+GIVEN x IS A DATE
+GIVETH A BOOLEAN
+DECIDE `is a fixed-date national public holiday` x IF
+        (DATE_MONTH x EQUALS 1 AND DATE_DAY x EQUALS 1)
+    OR  (DATE_MONTH x EQUALS 1 AND DATE_DAY x EQUALS 26)
+    OR  (DATE_MONTH x EQUALS 4 AND DATE_DAY x EQUALS 25)
+    OR  (DATE_MONTH x EQUALS 12 AND DATE_DAY x EQUALS 25)
+    OR  (DATE_MONTH x EQUALS 12 AND DATE_DAY x EQUALS 26)
+
+GIVEN x IS A DATE
+GIVETH A BOOLEAN
+DECIDE `is a business day` x IF
+        (NOT (`is weekend` x))
+    AND (NOT (`is a fixed-date national public holiday` x))
+
+-- The first business day after a day.
+GIVEN x IS A DATE
+GIVETH A DATE
+`the next business day after` x MEANS
+    IF `is a business day` (`the day n days after` x 1)
+    THEN `the day n days after` x 1
+    ELSE `the next business day after` (`the day n days after` x 1)
+
+-- The day itself if it is a business day, otherwise the next business day.
+GIVEN x IS A DATE
+GIVETH A DATE
+`the day or the next business day` x MEANS
+    IF `is a business day` x
+    THEN x
+    ELSE `the next business day after` x
+
+-- The nth business day after a day (the day itself not counted). Used where a rule counts business days in its own
+-- words (r 10.32, r 25.14 "the second business day after"), not under r 1.61.
+GIVEN x IS A DATE, n IS A NUMBER
+GIVETH A DATE
+`the nth business day after` x n MEANS
+    IF n AT MOST 0
+    THEN x
+    ELSE `the nth business day after` (`the next business day after` x) (n MINUS 1)
+
+§§ `r 1.61 -- calculation of time`
+
+-- r 1.61(5): "If the time fixed includes a day in the period starting on 24 December in a year and ending on 14 January
+-- in the next year, the day is not to be counted."
+GIVEN x IS A DATE
+GIVETH A BOOLEAN
+DECIDE `is in the Christmas break` x IF
+        (DATE_MONTH x EQUALS 12 AND DATE_DAY x AT LEAST 24)
+    OR  (DATE_MONTH x EQUALS 1 AND DATE_DAY x AT MOST 14)
+
+-- r 1.61(3): "If the time fixed includes a day that is not a business day ..., and the time fixed is 5 days or less, the
+-- day is not to be counted." With (5), whether a day counts towards a period of n days.
+GIVEN x IS A DATE, n IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `counts towards a period of` x n IF
+        (NOT (`is in the Christmas break` x))
+    AND (   n GREATER THAN 5
+         OR `is a business day` x)
+
+-- r 1.61(2), (3), (5): the last day of a period of n days after a day; the day itself is not counted.
+GIVEN x IS A DATE, n IS A NUMBER, k IS A NUMBER
+GIVETH A DATE
+`the kth counted day of n after` x n k MEANS
+    IF k AT MOST 0
+    THEN x
+    ELSE IF `counts towards a period of` (`the day n days after` x 1) n
+         THEN `the kth counted day of n after` (`the day n days after` x 1) n (k MINUS 1)
+         ELSE `the kth counted day of n after` (`the day n days after` x 1) n k
+
+-- The same, counting back from a day, for "at least n days before" (rr 8.06, 26.01(3)).
+GIVEN x IS A DATE, n IS A NUMBER, k IS A NUMBER
+GIVETH A DATE
+`the kth counted day of n before` x n k MEANS
+    IF k AT MOST 0
+    THEN x
+    ELSE IF `counts towards a period of` (`the day n days after` x (0 MINUS 1)) n
+         THEN `the kth counted day of n before` (`the day n days after` x (0 MINUS 1)) n (k MINUS 1)
+         ELSE `the kth counted day of n before` (`the day n days after` x (0 MINUS 1)) n k
+
+-- r 1.61(4): "An act or thing may be done on the next business day in a place if: (a) the last day for doing the act or
+-- thing is not a business day ...; and (b) the act or thing may only be done on a day that is a business day".
+GIVEN x IS A DATE, n IS A NUMBER, `business days only` IS A BOOLEAN
+GIVETH A DATE
+`r 1.61 -- the last day of n days after` x n `business days only` MEANS
+    IF `business days only`
+    THEN `the day or the next business day` (`the kth counted day of n after` x n n)
+    ELSE `the kth counted day of n after` x n n
+
+-- "At least n days before" a day: the latest day on which the act can be done, the day itself not counted (r 1.61(2))
+-- and the act's own day the nth counted day (fork F2: not n clear days).
+GIVEN x IS A DATE, n IS A NUMBER
+GIVETH A DATE
+`r 1.61 -- the last day at least n days before` x n MEANS
+    `the kth counted day of n before` x n n
