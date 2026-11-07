@@ -37,13 +37,14 @@ imported from elsewhere.
 Stable `l4` of VS Code extension 1.6.98 (`bin/win32-x64/l4.exe run <file>`), `JL4_LIBRARY_PATH` unset, run from this
 folder, at most two processes at a time. `l4 run` exits 0 even when an assertion fails, so the diagnostics were read. A
 deliberately wrong expected day (30 March 2026 for 29 March 2026, three assertions) was run once in a scratch copy
-outside the repository and showed as three "assertion failed" (169 satisfied).
+outside the repository and showed as three "assertion failed" (169 satisfied). After the verification fixes of
+2026-11-07 the files were run again: 182 written, 182 satisfied.
 
 | File | Errors | Warnings | Assertions written | Satisfied |
 |---|---|---|---|---|
 | `cpr-dates.l4` | 0 | 0 | 0 | 0 |
 | `cpr-claims.l4` | 0 | 0 | 0 | 0 |
-| `cpr-cases.l4` | 0 | 0 | 172 | 172 |
+| `cpr-cases.l4` | 0 | 0 | 182 | 182 |
 
 Every exported question has cases, with the edges: the last day of validity and the day after; a renewal's last day
 and the day after; 31 August plus 6 months in a leap and a common year; the rule's own r 75 example (1 July 2006 to
@@ -102,7 +103,15 @@ r 1619 (7), (8); r 1620 (1), (2); schedule 2 (all four tables and the post-2010 
 - Chapter 1, Part 2.1 (apart from r 20's meaning of plaintiff), and the content rules for originating process
   (r 30, r 31, r 33-r 37, r 50-r 54, r 60-r 64, r 70-r 73): form and content, not decisions a claimant asks about; r 52
   and r 53 (what a motor vehicle or employment injury statement of claim must contain) are lists for the pleader.
-- The rest of Part 2.3 (r 100, r 101, r 103-r 110, division 2.3.2): the defendant's side and possession of land.
+- The rest of Part 2.3 (r 100, r 101, r 103-r 110, division 2.3.2): the defendant's side and possession of land. Also
+  r 102 (2)-(5) (the court setting a time for a defence after a summary judgment application; the time for a notice of
+  intention to respond in a proceeding started by originating application; sealing; serving the sealed copy on the
+  plaintiff) and r 111 (1)-(2) (when a defendant must file a conditional notice; submission to the jurisdiction by an
+  unconditional one): a court order, another kind of proceeding, or the defendant's side, not a claimant test.
+- r 74 (2) (who may apply to renew) and r 74 (5) (stamping a renewed process before service): form, named in the answers
+  but not encoded. r 76 (1), (2) (applying to reinstate; the court's interests-of-justice power): court
+  powers, named in the answers. r 76 (4) (serving the reinstating document on each other active party within 3 days):
+  a duty of form that does not change whether r 76 (3) reinstates. Only r 76 (3) and (5) are encoded.
 - Part 2.4 apart from r 250, notably division 2.4.9 (people with a legal disability; court approval of settlements,
   r 282) and r 251 (adding a family member to a death claim -- named in an answer, not encoded): a claimant meets them,
   but they are court powers with no fixed test; a further layer could add them.
@@ -113,7 +122,7 @@ r 1619 (7), (8); r 1620 (1), (2); schedule 2 (all four tables and the post-2010 
 - The rest of Part 2.11 (r 1103, r 1104, division 2.11.2, r 1118 (2)-(6), r 1119, r 1127, r 1128, divisions 2.11.4 to
   2.11.7: partial defence, summary judgment, discontinuance, mediation): affidavit content and court powers.
 - Parts 2.12 to 2.15 and schedule 1 (expert evidence and the expert code, pre-trial, court supervision, trial).
-- The rest of Part 2.16, notably r 1619 (1)-(6), r 1621, r 1622 (the usual order as to interest, with its Medicare and
+- The rest of Part 2.16, notably r 1619 (1)-(6), r 1620 (3)-(5) (interest on costs), r 1621, r 1622 (the usual order as to interest, with its Medicare and
   Centrelink recovery conditions) and r 1623: r 1619 (1) is a discretion; r 1622 depends on Commonwealth notices
   not deposited.
 - Part 2.17 apart from r 1725 (costs generally, the scale of costs in schedule 4, assessment, security for costs):
@@ -144,11 +153,16 @@ Each line: the provision, the function, the answer taken, the other reading.
 - **F1** "personal injury claim" (r 1010, r 1011), undefined in the rules -- `Part 2.10 -- what costs follow the offer` --
   asked as a fact -- worked out from the Civil Law (Wrongs) Act 2002 definition of personal injury.
 - **F2** r 74 (1) "valid for service for 1 year starting on the day it is filed" -- `r 74 (1) -- the last day of the
-  first year of validity` -- the anniversary of the day before filing (filed 1 March 2026: last day 28 February 2027) --
-  the anniversary of the filing day itself.
+  first year of validity` -- the day before the same date a year on (filed 1 March 2026: last day 28 February 2027;
+  filed 1 March 2027: 29 February 2028); filed on 29 February, the last day is 28 February -- the anniversary of the
+  filing day itself. (Before the 2026-11-07 fix this was worked as the anniversary of the day before filing, which
+  clamped at 28 February and lost 29 February 2028 for a filing on 1 March 2027.)
 - **F3** periods in months and years (r 74, r 75, r 250, r 1002 (5)) -- `plus months` -- a day the month lacks becomes the
   last day of that month (31 August + 6 months = 28 or 29 February; a year from 29 February is 28 February) -- rolling
-  forward to 1 March.
+  forward to 1 March. A period "starting on" a day (r 74 (1), r 74 (3)) or running from the end of a day ("at the end of
+  1 year after the day", r 75, r 76 (3)) is counted from its first day: its last day is the day before the same date n
+  months on, or, where that later month lacks the date, that month's last day (`the last day of ... months starting
+  on`). So a r 74 (3) renewal from 1 March 2027 can run to 31 August 2027, not 28 August.
 - **F4** r 6350 (3) (25 December to 1 January excluded "in working out when the thing must or may be ... done") --
   applied to r 102, r 111, r 1002 (6)/r 1004 (1) (a) and r 1620 (2); not applied to r 74, r 75, r 76, r 250 or r 1002 (5)
   (validity, deeming, standing and the content of an offer, not something done within a period) -- applied to every
