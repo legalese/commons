@@ -25,9 +25,12 @@ person in custody or care most often relies on.
 - **Act:** Charter of Human Rights and Responsibilities Act 2006, Act No. 43/2006, Version No. 015, incorporating
   amendments as at 1 June 2022, deposited at
   `../../registers/source-bundle/charter-of-human-rights-and-responsibilities-act-2006.txt` (text sha256
-  e623948a...0ad82e per its `.meta.json`), a plain-text conversion of the Word file the owner saved by hand on
+  28827a48...633e88 per its `.meta.json`), a plain-text conversion of the Word file the owner saved by hand on
   7 November 2026 (see that file's `.meta.json` and `subjects/au/vic/README.md`). Version 015 was the current version
   ("In force") on 2026-11-07. Not checked against the authorised PDF, which was not saved.
+- **Reconverted 2026-11-07:** the first conversion (sha256 e623948a...0ad82e) dropped Word Symbol-font characters;
+  in this Act that lost only the four bullets of the Preamble's principles, now restored. No decimal point, × or −
+  was lost, and nothing encoded here rests on the Preamble, so no rule, case or finding changed.
 - **Numbers and dates set elsewhere:** none that the encoding needs. The Charter's days are its own commencements
   (s 2: 1 January 2007; Divisions 3 and 4 of Part 3, ss 32-39, on 1 January 2008, which the endnotes confirm) and the
   life of an override declaration (s 31(7)).

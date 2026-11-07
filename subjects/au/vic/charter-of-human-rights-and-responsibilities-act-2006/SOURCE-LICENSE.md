@@ -32,3 +32,6 @@ so the owner saved the Word file by hand, in a browser, on 2026-11-07, and it wa
 - **Deposited text**: `registers/source-bundle/charter-of-human-rights-and-responsibilities-act-2006.txt`, a plain-text conversion headed by the copyright notice, the Government
   Printer's attribution and an unofficial-version notice; hashes, the page read and the conversion are in `charter-of-human-rights-and-responsibilities-act-2006.meta.json`.
 - **Authorised version**: https://content.legislation.vic.gov.au/sites/default/files/2022-06/06-43aa015%20authorised.pdf. It was not saved; it is the version to check the conversion against.
+- **Reconverted, 7 November 2026**: the first converter (vic_convert.py) dropped characters the register sets in the Symbol
+  and Wingdings fonts. The text was converted again from the same Word file with vic_convert2.py, keeping the notice header
+  exactly; the only change is the four bullets of the Preamble's principles, restored as "•". Hashes in the `.meta.json`.
