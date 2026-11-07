@@ -201,10 +201,12 @@ give "not covered" (NOTHING kind) worded as such. The case-by-case sites are for
 
 ## What the Act turns out to say
 
-1. **Dictionary entries lost in the deposited text.** Schedule 2 reads "spouse ...", "de facto partner ...", "child in
-   a placement with the consent of a parent or guardian ...", "children's commissioner ..." and "health procedure ...".
-   The definitions themselves are missing, probably in conversion. "Spouse" is asked as a fact. The deposit should be
-   checked against the authorised PDF.
+1. **Dictionary entries cut short in the deposited text.** Schedule 2 reads "spouse ...", "de facto partner ...", "child
+   in a placement with the consent of a parent or guardian ...", "children's commissioner ..." and "health procedure ...".
+   These are most likely signpost entries ("see section ...", or a pointer to another Act) whose pointer was lost in
+   conversion, not lost definitions: "health procedure" is defined in full in s 10AA(5), and "spouse" and "de facto
+   partner" most likely point to the Acts Interpretation Act 1954 (Qld), which is not deposited. "Spouse" is asked as a
+   fact. The deposit should still be checked against the authorised PDF.
 2. **Only the deceased's chosen or highest-ranked relative is the "family member".** Schedule 2 picks one person in
    order (a documented wish, then spouse, adult child, parent, adult sibling). Paragraphs (v) and (vi) are not ranked
    against each other, so a close friend and an ATSI family member can both qualify. Asserted.
