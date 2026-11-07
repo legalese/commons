@@ -396,16 +396,20 @@ Left out:
     FWC order costs only for an application made vexatiously or without reasonable cause, or one
     that should reasonably have been seen to have no prospect. s 570 lets a court order costs in
     a Fair Work Act matter only for vexatious or unreasonable conduct, or an unreasonable refusal
-    to take part at the FWC on the same facts. That is the cost-risk contrast with a
-    discrimination claim taken from the AHRC to court, where costs are at the court's ordinary
-    discretion (not encoded here). Asserted for ss 570 and 611.
+    to take part at the FWC on the same facts. A discrimination claim taken from the AHRC to
+    court is not riskier: since 2 October 2024, AHRC Act s 46PSA bars costs against an applicant
+    except for vexatious or unreasonable conduct, or where the respondent has neither a
+    significant power advantage nor significantly greater resources, and requires costs for an
+    applicant who succeeds (encoded in that Act's baseline, `ahrc-complaints.l4`). Asserted for
+    ss 570 and 611.
 40. **s 351 turns on other Acts.** s 351(2)(a) disapplies the protection for action "not
     unlawful under any anti-discrimination law in force in the place where the action is taken",
     and s 351(3) lists them: the four Commonwealth Acts and one Act for each State and Territory
     (for Victoria, the Equal Opportunity Act 2010). Whether the dismissal is unlawful under one
-    of them is asked as a fact. The Disability Discrimination Act 1992 is deposited and not
-    encoded (REQ-0115); the Victorian Act is not deposited (REQ-0116). Asserted, with the input
-    set both ways.
+    of them is asked as a fact. Both Acts Lena needs now have baselines (the Disability
+    Discrimination Act 1992, `dda-seat.l4`; the Equal Opportunity Act 2010 (Vic), `eoa-seat.l4`),
+    which satisfied REQ-0115 and REQ-0116; the stable `l4` cannot IMPORT across subjects, so the
+    answer still arrives here as an input. Asserted, with the input set both ways.
 41. **The s 361 presumption does not help an interim injunction.** s 361(2). The reason alleged
     is otherwise presumed unless the employer proves it was not among its reasons (s 360).
     Asserted.
@@ -437,12 +441,10 @@ parsed as `NOT (a AND b)`. Every negation in the module is now bracketed.
 - Encode s 120, s 121(4), s 122, the s 87(3) shiftworker test, casual conversion (Division
   4A), the rest of the general protections (above), and the reg 3.46(5A) exception for a new
   employee's fund.
-- For the general protections: deposit the Equal Opportunity Act 2010 (Vic) and encode the
-  Disability Discrimination Act 1992's employment provisions, so that the s 351(2)(a) input
-  ("unlawful under an anti-discrimination law where it was taken") can be answered for Lena
-  rather than asked (REQ-0115, REQ-0116); encode s 545 (what a court may order) and s 539 (who
-  may apply, and the penalties); and encode the AHRC Act's Part IIB in full, so that the federal
-  discrimination route has its own costs and time rules beside these.
+- For the general protections: encode s 545 (what a court may order) and s 539 (who may apply,
+  and the penalties); and, when the language can IMPORT across subjects, take the s 351(2)(a)
+  input ("unlawful under an anti-discrimination law where it was taken") from the Disability
+  Discrimination Act and Equal Opportunity Act 2010 (Vic) baselines rather than asking it.
 - Take long service leave from the WA Long Service Leave Act 1958 for c056 and c072.
 - Ask the scenario authors to correct c063 (s 72) and c061 (s 83 → s 84), and to treat the
   resignation notice questions (c056, c072, d042) as contract or award matters.
