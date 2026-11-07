@@ -14,7 +14,7 @@ This is the first encoding of this subject; nothing existing was touched. Eight 
 |---|---|
 | `claq-dates.l4` | days, the financial year, the one year (2026-2027) for which a Minister's notice is deposited (built-in date functions, no daydate) |
 | `claq-common.l4` | s 5 (claims the Act does not decide), the schedule 2 kinds of harm and "dust-related condition"; 1 question |
-| `claq-liability.l4` | chapter 2 (breach, obvious and inherent risks, recreation, doctors and professionals, rescuers, proportionate liability, public authorities, volunteers and food donors, offenders, intoxication, failed sterilisation) and chapter 4 parts 1 and 1A (regret and apologies); 18 questions |
+| `claq-liability.l4` | chapter 2 (breach, obvious and inherent risks, recreation, doctors and professionals, rescuers, proportionate liability, public authorities, volunteers and food donors, offenders, intoxication, failed sterilisation) and chapter 4 parts 1 and 1A (regret and apologies); 20 questions |
 | `claq-damages.l4` | chapter 3 (general damages, earnings and super caps, consortium, care given and lost, interest, exemplary damages, the injury insurance scheme, mitigation notices, structured settlements) and s 73; 15 questions |
 | `claq-abuse.l4` | chapter 2 part 2A (claims against institutions for child abuse), with the one regulative rule; 9 questions |
 | `claq-cases-*.l4` | the worked cases, one file for each rule module (s 5 cases are with liability) |
@@ -35,7 +35,7 @@ transition, principles for the court with no answer the claimant could be given,
     table for s 62), s 5 ($197,770 for s 64(2)), all "for the 2026-2027 financial year". Hand-copied into
     `claq-damages.l4` with the item numbers.
   - Civil Liability Regulation 2025 (`sl-2025-0109`, in force from 1 September 2025), deposited at
-    `subjects/au/qld/civil-liability-regulation-2025/`: s 4 and sch 1 (the one entity prescribed for ss 26, 27), sch 2
+    `subjects/au/qld/civil-liability-regulation-2025/`: s 4 and sch 1 (the 21 entities prescribed for ss 26, 27), sch 2
     s 4 (multiple injuries: at most 100, more than 25% above the dominant maximum needs detailed reasons) and sch 2 s 14
     (an ISV is a whole number).
 - **Not deposited, and asked as facts:** the notices for other financial years (the answer is "not covered" outside
@@ -58,17 +58,18 @@ every diagnostic in the case files is `DiagnosticSeverity_Information` "assertio
 | `claq-liability.l4` | 0 | 0 | 0 | 0 |
 | `claq-damages.l4` | 0 | 0 | 0 | 0 |
 | `claq-abuse.l4` | 0 | 0 | 0 | 0 |
-| `claq-cases-liability.l4` | 0 | 0 | 116 | 116 |
+| `claq-cases-liability.l4` | 0 | 0 | 131 | 131 |
 | `claq-cases-damages.l4` | 0 | 0 | 90 | 90 |
 | `claq-cases-abuse.l4` | 0 | 0 | 52 | 52 |
 
-Every one of the 43 exported questions has cases, with the edges: every band of the general damages table, its first
+Every one of the 45 exported questions has cases, with the edges: every band of the general damages table, its first
 and last values, ISV 0 and 100, 101, 10.5 and -1, an injury on 1 December 2002, 30 June and 1 July 2026, 30 June and
 1 July 2027; an uplift of exactly 25% and one more; general damages of $59,299 and $59,300 for s 58 and s 59A; 5.9 and 6
 hours a week, 5 and 6 months (s 59); a breach on 30 June and 1 July 2010 (s 85); a blood alcohol of 149 and 150 (ss 47,
 49); ages 15 and 16 (s 48); contributory negligence of 49% and 50% (s 52C); a future loss award of $197,770 and
 $197,771 (s 64); the 119th and 120th day (s 33H(5)), across a leap day; the last day of a 28-day and a 14-day order and
-the day after (s 33H(7)).
+the day after (s 33H(7)); damages already recovered just below, at and above the loss (s 32B); sch 1 entities from
+the top, middle and end of the schedule (ss 26, 27).
 
 ## Seat
 
@@ -109,7 +110,7 @@ The 2026-10-18 defaults:
 - `claq-common.l4`: s 4(1); s 5(1)-(3) (workers' compensation, dust-related conditions, tobacco; section 59A damages
   survive); schedule 2 "dust-related condition", "harm".
 - `claq-liability.l4`: s 9(1); ss 13, 14, 15, 16; ss 17-19; ss 20-22; ss 25-27 with Regulation s 4 and sch 1; ss 28,
-  29, 31, 32(1), 32D-32G; ss 36, 37 (s 35 named in the answers); ss 38-44 (volunteers and food donors); s 45;
+  29, 31, 32(1)-(6), 32B, 32D-32G; ss 36, 37 (s 35 named in the answers); ss 38-44 (volunteers and food donors); s 45;
   ss 47-49 (s 24 and s 48(5) in the answers); ss 49A, 49B; ss 68-72 and 72A-72D.
 - `claq-damages.l4`: ss 50-52; ss 52A-52C; s 53; ss 54-56; s 58; s 59; ss 59A, 59B (s 59C glossed); s 60, with its
   example; ss 61, 62 with Notice s 4 and Regulation sch 2 ss 4, 14; s 64 with Notice s 5; s 66; s 73; s 85.
@@ -130,7 +131,9 @@ EVENT.
   drops history notes). Every question assumes a breach after these days; NOTES finding 4.
 - ss 10, 11, 12, 23, 35, 46: principles the court applies, not an answer a claimant can be given; the onus in s 12 (on
   the plaintiff, for causation) and the s 35 principles are named in descriptions.
-- ss 32(2)-(6), 32A-32C, 32H, 32I, 33: obligations and orders between concurrent wrongdoers and the court.
+- ss 32A, 32C, 32H, 32I, 33: contribution, joinder and other matters between concurrent wrongdoers and the court.
+  (ss 32(2)-(6) and 32B were out in the first commit; they are what a claimant must be given and what a claimant
+  may still recover, and were added after the verification of 2026-11-07.)
 - ss 33N, 33Q: machinery. ss 33O, 33P: asked (in the description of the "whom can I sue" question).
 - ss 55(1)-(3), 57: the court's method; the s 54 limit applies under s 55(4) and is encoded; the present value at the
   prescribed discount rate is asked.
@@ -246,9 +249,14 @@ asks.
 10. **Edges in the text.** "150mg or more of alcohol in 100mL of blood" (ss 47(5), 49(2)) includes 150; s 52C's "by less
    than 50%" excludes 50%; s 59's "at least 6 hours" and "at least 6 months" include 6; s 48 starts at "at least 16
    years". Asserted at each edge.
-11. **One prescribed rescuer.** The Regulation's sch 1 prescribes a single entity for ss 26 and 27 (an aeromedical, air
-   rescue and emergency helicopter service under an agreement with the State). Other first aid givers are not
-   protected by these sections; Law Reform Act 1995 part 5 (preserved by ss 26(2), 27(2)) is not deposited. Asserted.
+11. **Twenty-one prescribed rescuers.** The Regulation's sch 1 prescribes 21 entities for ss 26 and 27 (corrected
+   after verification: the first commit read it as one). They include the ambulance, fire, rural fire and State
+   emergency services, Marine Rescue Queensland, any local government and Brisbane City Council, the disaster
+   management department, the Royal Flying Doctor Service, St John Ambulance, first aid volunteers, the coast guard,
+   volunteer marine rescue, surf and royal life saving (with affiliated bodies), and five helicopter services, these
+   only "when providing aeromedical, air rescue or other emergency helicopter services under an agreement with the
+   State". Other first aid givers are not protected by these sections; Law Reform Act 1995 part 5 (preserved by
+   ss 26(2), 27(2)) is not deposited. Asserted.
 12. **Workers' compensation takes the whole claim out.** By the s 5 example, if any one injury from the event is one for
    which compensation is payable, the Act decides none of the personal injury claims arising from it, against any
    defendant, and whether compensation is claimed is immaterial (s 5(2)); only section 59A damages survive, and only
