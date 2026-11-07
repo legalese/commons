@@ -33,22 +33,23 @@ or an EVENT.
 Stable `l4` of VS Code extension 1.6.98 (`bin/win32-x64/l4.exe run <file>`), `JL4_LIBRARY_PATH` unset, run from this
 folder, at most two processes at a time. `l4 run` exits 0 even when an assertion fails, so the diagnostics were read. A
 deliberately wrong assertion (an action brought the day after the last day asserted to be in time) was run once in a
-scratch copy, since deleted, and showed as "assertion failed" (148 satisfied, 1 failed).
+scratch copy, since deleted, and showed as "assertion failed" (148 satisfied, 1 failed, before the fix of 2026-11-07 added 8 cases).
 
 | File | Errors | Warnings | Assertions written | Satisfied |
 |---|---|---|---|---|
 | `lact-dates.l4` | 0 | 0 | 0 | 0 |
 | `lact-claims.l4` | 0 | 0 | 0 | 0 |
-| `lact-cases.l4` | 0 | 0 | 148 | 148 |
+| `lact-cases.l4` | 0 | 0 | 156 | 156 |
 
 Every exported question has cases with hand-worked values, edges included: the last day and the day after; an action
 brought before time began; 29 February to a common year; each kind of injury claim and each of the s 16A conditions
 failing; s 10 for a work-related motor accident; s 16 with either period ending later; s 30B (3) with either period
 ending first; a child injured at 9 and a worker injured at 17 (s 30 minority); each limb of "under a disability" and the
 27th/28th day; s 30 with the disability beginning on and after the last day, ending before time began, still running,
-ending in death, overlapping the start; the s 21B window at 55 and 56 days, on the last day and after it; s 30A's relevant
+ending in death, overlapping the start, ending on the day time began, beginning on it; s 4 for the last day and in-time
+questions; the s 21B window at 55 and 56 days, on the last day and after it; s 30A's relevant
 period ending on and the day before the limitation period's end; 6 months from 31 August; s 32 on the last day and the
-day after; s 33 discovery before time began and after the period would have ended; every answer of s 36 and s 37.
+day after, the day after time began, and a year with no 29 February; s 33 discovery before time began and after the period would have ended; every answer of s 36 and s 37.
 
 **No mirror cases.** One seat.
 
@@ -88,7 +89,7 @@ The 2026-10-18 defaults:
 
 ## Scope
 
-**In.** s 4 (a); the dictionary's "under a disability"; Part 2: s 10, s 11, s 16, s 16A, s 16AA, s 16B, s 21, s 21B, s 21BA,
+**In.** s 4 ((a) and (b), asked as one fact); the dictionary's "under a disability"; Part 2: s 10, s 11, s 16, s 16A, s 16AA, s 16B, s 21, s 21B, s 21BA,
 s 21BB, s 21C; Part 3: s 30 (except (1) (e) and (3) (a)), s 30A, s 30B, s 31, s 32 (1), (2) (a), (4)-(6), s 33, s 34,
 Division 3.2 (s 36, s 37, s 38, s 39, s 40; s 35, s 41, s 42 as above).
 
@@ -105,6 +106,9 @@ Division 3.2 (s 36, s 37, s 38, s 39, s 40; s 35, s 41, s 42 as above).
 - Part 4: extinction of title, arbitration, set-off, joint rights and liabilities, s 54 and Division 4.4 (in
   `baseline-2026-11b`), Division 4.5 (machinery).
 - Several disabilities in one period (s 30 (2)) are not combined: the s 30 question takes one disability period (fork F7).
+- What the court weighs when it decides (s 21BB (3), s 30B (4), s 36 (3), s 38 (2), s 39 (3), (5), s 40 (2)):
+  considerations addressed to the court, not questions the claimant answers; the answers leave the decision to the court
+  in its own words ("just and reasonable" and the like).
 - No requirement ledger exists for the ACT, and no ledger entry names this Act; none was raised.
 
 ## Fork register
@@ -121,9 +125,11 @@ Each line: the provision, the function, the answer taken, the other reading.
   knowledge -- the later (as "and" in s 16B and s 30A); see finding 3.
 - **F4** s 30B and s 16B -- `the Part 2 time limit for` -- for a child's health-service claim s 30B alone sets the limit (s 9:
   Part 2 is subject to Part 3) -- s 16B also applies and the earlier ends the time; see finding 2.
-- **F5** s 32 (1), s 33 (1), s 34 (1) "does not count" -- the s 32, s 33, s 34 questions -- the days from the start to the
-  confirmation or discovery are added to the last day (so a 6-year period over a 29 February can end a day after the
-  same date counted afresh) -- the period counted again in years from that day.
+- **F5** s 32 (1), s 33 (1), s 34 (1) "does not count" -- the s 32, s 33, s 34 questions -- the days on which the period ran
+  "before the date" of the confirmation or discovery (from the day after time began, fork F1, to the day before that
+  date) are added to the last day as plain days, so the date itself counts as a day of the period; whether a 29 February
+  falls among the uncounted days or the added ones can move the result a day against a count in years -- the period
+  counted again in years from that date, or that date itself also not counted (a day later).
 - **F6** s 30 and s 16 -- `the last day for my injury claim` -- no minority postponement for a death claim (the claimants'
   ages are not asked); the s 30 question can be used for them -- postpone for a minor relative.
 - **F7** s 30 (1), (2) -- `s 30 -- my last day after a disability` -- one disability period; while it continues, no last
@@ -139,7 +145,7 @@ Each line: the provision, the function, the answer taken, the other reading.
   words: "maintainable at any time"), not "the text is silent" -- an enumerated answer.
 - **F12** s 16A and s 16AA for a work-related motor accident -- `the Part 2 time limit for` -- both apply and s 10 takes the
   earlier (3 years) -- the Motor Accident Injuries Act's ch 5 claim excludes s 16A.
-- **F13** s 4 (a) and s 21C (2) -- `which time limit applies to my injury claim` -- s 21C first ("despite ... another
+- **F13** s 4 and s 21C (2) -- `which time limit applies to my injury claim` -- s 21C first ("despite ... another
   territory law"), then s 4 -- s 4 first.
 - **F14** ss 16A, 16AA, 16B, 30B (2), (3) "not maintainable if brought N years after" -- every Part 3 question -- each is
   "a limitation period fixed by this Act" for Part 3 (as ss 30A (1) (c), 36 (5) treat it) -- they are bars, not periods,
@@ -147,8 +153,9 @@ Each line: the provision, the function, the answer taken, the other reading.
 - **F15** s 30A (1) (d) "does not end within the relevant period" -- the same function -- a limitation period ending on the
   last day of the relevant period ends within it (s 30A does not apply) -- "within" excludes the last day.
 - **F16** s 30 (1) (b), (c) -- `s 30 -- the last day after the disability` -- a disability that begins on or before the last
-  day and ends on or after the day time began counts; suspension runs from the later of the two beginnings to the end --
-  only a disability present on the day time began.
+  day and ends on or after the day time began counts; the suspended days are those on which the period runs (from the
+  day after time began, fork F1) and the person is under the disability (from the day it began up to, not including,
+  the day it ends) -- only a disability present on the day time began.
 
 Sites decided without a fork line: the dictionary's "under a disability", s 21BA (6) "associate", s 32 (2) (a), (5), (6)
 and s 33 (4) ("if, but only if") are closed: FALSE (or the unchanged last day) when they fail; s 36 (5), (6) and s 37 (2)
@@ -191,9 +198,11 @@ lost unless the court excuses it).
    a new last day 56 days after the notice day (fork F10). Asserted.
 6. **s 39 (2) says "beginning on the day of death", s 39 (4) says "from the date of death".** Read as written, the two
    routes of s 39 end a day apart (fork F2). Asserted.
-7. **s 30's suspension counted in days can end a day after "3 years from the 18th birthday".** A worker injured at 17 in
-   January 2020 gets 2 June 2023, not 1 June 2023, because the suspended period ran over 29 February 2020 (fork F5's
-   reading applied to s 30 (1) (d)). Asserted.
+7. **For a 3-year limit, s 30 (1) (f) decides a minor's last day.** Where the person is under the disability when time
+   begins (as a minor always is), the suspension counted in days never ends after "3 years after" the day the
+   disability ends, so (f) gives the last day. A worker injured at 17 on 1 January 2020 (18 on 1 June 2020) has 151
+   days suspended and gets 1 June 2023 either way. Asserted. (Corrected 2026-11-07: the first version counted the day
+   time began as a suspended day and gave 2 June 2023, blaming 29 February.)
 8. **The notes to s 16AA point to the Motor Accident Injuries Act's own 3-month windows** (ss 166, 220). Notes are not
    part of the Act (s 3); only s 16AA's 5 years is encoded.
 9. **s 21C is the only bar the Act lifts entirely**, "despite anything elsewhere in this Act or another territory law",
@@ -206,4 +215,4 @@ lost unless the court excuses it).
 - The borrowed definitions (Workers Compensation Act 1951, Motor Accident Injuries Act 2019, Civil Law (Wrongs) Act
   2002 s 114AA, Human Rights Commission Act 2005 s 7), deposited in Commons under their own subjects but not linked here
   (the stable `l4` imports only within a folder).
-- A lawyer's view on forks F2-F5, F8, F12, F14 and on findings 1-4 and 7; an independent test pass and a human gate.
+- A lawyer's view on forks F2-F5, F8, F12, F14 and on findings 1-4; an independent test pass and a human gate.
