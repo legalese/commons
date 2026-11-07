@@ -30,10 +30,10 @@ Not deposited, and so asked as facts: the Commonwealth Jurisdiction of Courts (C
 |---|---|---|
 | `jcxv-core.l4` | `l4 run` | 0 errors, 0 warnings |
 | `jcxv-seat.l4` | `l4 run` | 0 errors, 0 warnings |
-| `jcxv-cases-party.l4` | `l4 run` | 0 errors, 0 warnings; **104 assertions written, 104 satisfied** |
+| `jcxv-cases-party.l4` | `l4 run` | 0 errors, 0 warnings; **110 assertions written, 110 satisfied** |
 
 In addition, 2 `#TRACE`s of the s 6(5)(b) rule carry an `-- expect:` line (notice on the last day: FULFILLED; nothing by the day after: BREACH by the directed party); both were read and match.
-`l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read (run on 2026-11-07). Every expected value was written by hand from the text.
+`l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read (run on 2026-11-07, and again after the fix of 2026-11-07 below). Every expected value was written by hand from the text.
 
 ## Seat
 
@@ -60,7 +60,7 @@ The 2026-10-18 defaults:
 
 ## Scope
 
-**In:** s 3 (the definitions the operative sections use), s 3A, s 4, s 5(1)-(4), (6)-(8), s 6(1)-(9), s 6A(1)-(3), s 7(1)-(7), s 8(1), (3), s 9, s 10, s 11(1), (3), s 12, s 13, s 14(1).
+**In:** s 3 (the definitions the operative sections use), s 3A, s 4, s 5(1)-(4), (6)-(8), s 6(1)-(9) (s 6(9) including a pre-1993 s 6(1) order), s 6A(1)-(3), s 7(1)-(7), s 8(1), (3), s 9, s 10, s 11(1), (3), s 12, s 13, s 14(1).
 
 **Out, and why:**
 
@@ -95,12 +95,18 @@ Fork lines (case-by-case decisions under Meng's ruling of 2026-11-05, for the re
 3. **A State Act directing federal courts (READING).** s 5(4), s 6A(2) and s 7(4), (6) speak of what the Federal Court, the Family Court and their Full Courts "shall" do. A Queensland Act cannot by itself bind a federal court; the matching provisions of the Commonwealth Act are taken to do the work. Encoded as written, from the party's side ("must my proceeding be transferred").
 4. **"Family Court" is still "the Family Court of Australia"** (s 3(1)). The deposited version has been in force since 2011-01-01 and was not amended for later changes to the federal courts' structure; whether and how its references carry over is a question of Commonwealth law, outside the deposited sources. The encoding keeps the Act's names.
 5. **"Territory" excludes the NT and the ACT** (s 3(1)), and "State" includes them. "The Supreme Court of another State or of a Territory" therefore covers the NT and ACT Supreme Courts as "States", and "a Territory" means another (external) Territory. The `@desc`s say so.
-6. **State Family Court.** s 3(2), s 4(2) and s 7(5) speak of a State Family Court, a court to which Family Law Act 1975 (Cth) s 41 applies by proclamation. Whether Queensland has one is outside the deposited sources; s 7(5) is asked as a fact.
+6. **State Family Court.** s 3(2), s 4(2) and s 7(5) speak of a State Family Court, a court to which Family Law Act 1975 (Cth) s 41 applies by proclamation. Whether Queensland has one is outside the deposited sources; s 7(5) is asked as a fact. s 3(2) makes every reference to "the Supreme Court of a State" other than in s 4(1) include that State's State Family Court, so the State Family Court of another State (in practice the Family Court of Western Australia) is treated as "the Supreme Court of another State" in s 5(2), (3) (transfers both ways with the Supreme Court of Queensland), s 8(1)(b)(i) (the related proceeding) and s 10(a) (consumer law transfers down). Asserted. A Queensland State Family Court, if there were one, would likewise be within "the Supreme Court"; the court list has no value for it.
 7. **Missing subsections.** The deposited text has no s 5(5) and no s 11(2), with no "[Repealed]" marker (amendment-history notes were removed in conversion). Taken as repealed; nothing is encoded for them.
 8. **s 6(5)(b) fixes no time.** The court "may direct a party to ... give a notice"; the days come from the direction. The rule takes them as an input and treats the last day as the day the direction was given plus those days. Asserted (14 days from 3 March 2026 ends 17 March 2026; a notice on 18 March is late).
 9. **s 6(1A) transfers only part.** The Supreme Court must transfer "only ... so much of the proceeding as is ... within the jurisdiction" of the federal court; the answers say "the part within ...". The rest stays in the Supreme Court, which the Act does not say more about.
 10. **s 13 says "under this act".** The bar on appeals covers a transfer or removal under the Queensland Act; a transfer under the Commonwealth Act or another State's Act is outside its words (their own provisions may bar an appeal). Answered NOTHING for "some other decision" (fork line 8).
 11. **s 11(1)(b) reads "another State or Territory" from where the court sits (READING)**, not from Queensland: a Queensland Supreme Court hearing a right of action under a NSW statute applies NSW written and unwritten law. Asserted.
+
+## Fix of 2026-11-07 (after independent verification)
+
+- s 3(2) was applied only to s 4. It now also reaches s 5(2), (3), s 8(1)(b)(i) and s 10(a) (finding 6); 5 assertions added.
+- s 6(9) also covers an order under s 6(1) as in force before the 1993 amendment Act; the input and its `@desc` now say so; 1 assertion added.
+- Not changed: s 5(8) "not transferred" still answers no (fork line 3). The convention used here counts an unmet "if" as the text saying no, as for ss 5, 6(3)-(4), 8, 10, 11(3) and 12; the fork line is there for a reviewer to overrule.
 
 ## Before relying on it
 
