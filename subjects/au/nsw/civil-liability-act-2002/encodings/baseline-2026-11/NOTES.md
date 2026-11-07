@@ -46,12 +46,12 @@ folder, at most two processes at a time. `l4 run` exits 0 even when an assertion
 | File | Errors | Warnings | Exported questions | Assertions written | Satisfied |
 |---|---|---|---|---|---|
 | `cla-core.l4` | 0 | 0 | 1 | 0 | 0 |
-| `cla-child-abuse.l4` | 0 | 0 | 14 | 0 | 0 |
+| `cla-child-abuse.l4` | 0 | 0 | 16 | 0 | 0 |
 | `cla-damages.l4` | 0 | 0 | 12 | 0 | 0 |
 | `cla-liability.l4` | 0 | 0 | 9 | 0 | 0 |
-| `cla-cases-child-abuse.l4` | 0 | 0 | 0 | 106 | 106 |
+| `cla-cases-child-abuse.l4` | 0 | 0 | 0 | 119 | 119 |
 | `cla-cases-damages.l4` (s 3B and Part 2) | 0 | 0 | 0 | 132 | 132 |
-| `cla-cases-liability.l4` | 0 | 0 | 0 | 82 | 82 |
+| `cla-cases-liability.l4` | 0 | 0 | 0 | 89 | 89 |
 
 Every expected value was worked by hand from the text, with the edges: age 17 and 18 (s 6A); abuse on the commencement
 day and the day before (Sch 1 cll 43, 44); the 120th and 121st day after service (s 6N(1)), across months; the 28th and
@@ -60,7 +60,8 @@ the day before (s 7C); 5 and 6 hours a week, 5 and 6 months (ss 15, 15B); 39 and
 and just over three times average weekly earnings (s 12); severity 14%, 15%, every changing step of the Table, 33%, 34%,
 100%, a fraction, over 100% (s 16), with amounts that land on $250 and $750 (rounded up) and others rounded down;
 $100,000 and $100,001 of future loss (s 23); a 5-month and a 6-month maximum prison term (ss 54, 54A); each s 3B
-category against the provisions it keeps and drops; a failed condition meeting an open one.
+category against the provisions it keeps and drops (Part 1C included, through s 7C); a failed condition meeting an open
+one; each of the court's s 54(1) findings left undecided.
 
 ## Seat
 
@@ -80,8 +81,9 @@ The 2026-10-18 defaults:
 - **The actors the text names.** Followed: the claimant (plaintiff, applicant), the defendant, the organisation, its
   management members, proper defendants and trustees, the court, the victim (Part 3).
 - **Judgments answered conditionally.** Followed: reasonable precautions (s 6F), the occasion supplied by the role
-  (s 6H), just and reasonable (ss 7C(1)(c), 7D), the court's satisfaction (ss 15, 15B, 50), reasonable response (s 52)
-  are the court's findings, with "not decided" answering `NOTHING` or a "not settled" value.
+  (s 6H), just and reasonable (ss 7C(1)(c), 7D), the court's satisfaction (ss 15, 15B, 50, 54(1)), what the claimant's
+  conduct was "on the balance of probabilities" and whether it contributed materially (ss 54(1), 54A(1)), reasonable
+  response (s 52) are the court's findings, with "not decided" answering `NOTHING` or a "not settled" value.
 - **The Act's definitions worked out; borrowed terms asked.** Followed: child, organisation, responsible, associated,
   akin to an employee, child abuse, associated trust, suitable proper defendant, affected agreement, close member of the
   family, serious offence, intoxicated, dangerous recreational activity are worked out; "recognised psychiatric
@@ -99,26 +101,34 @@ The Act is large (Parts 1 to 12, with Part 2A on offenders in custody alone runn
 **In:**
 
 - s 3B (which provisions apply to which kind of claim) with s 3B(2) (motor accidents): `cla-core.l4`.
-- **Part 1B, whole** except the rule-making s 6Q: ss 6A-6E (definitions, responsibility, association), s 6F (duty and
-  reverse onus) with Sch 1 cl 43, ss 6G-6H (vicarious liability) with Sch 1 cl 44, Division 4 (ss 6J-6P, unincorporated
-  organisations and proper defendants) with Sch 1 cl 45: `cla-child-abuse.l4`.
-- **Part 1C, whole** (ss 7A-7F, setting aside child abuse settlements): `cla-child-abuse.l4`.
+- **Part 1B**, every provision with a question for the claimant: s 6A (definitions), s 6C (successor organisations),
+  ss 6D-6E (responsibility, association), s 6F (duty and reverse onus) with Sch 1 cl 43, ss 6G-6H (vicarious liability)
+  with Sch 1 cl 44, and in Division 4 (unincorporated organisations and proper defendants, with Sch 1 cl 45) ss 6J,
+  6K(1), 6L, 6M, 6N, 6O and 6P(2), (6): `cla-child-abuse.l4`. The rest of Part 1B is out, listed below.
+- **Part 1C, whole** (ss 7A-7F, setting aside child abuse settlements), gated by s 3B (finding 2): `cla-child-abuse.l4`.
 - **Part 2** (personal injury damages): ss 11, 11A (by way of the s 3B gate), 12 (earnings cap), 14 (discount rate),
   15, 15A (gratuitous attendant care: threshold and caps), 15B (lost capacity to provide domestic services: threshold,
   s 15B(6) and cap), 15C (superannuation cap), 16 with s 17(3) (non-economic loss: threshold, Table, rounding), 18(1)
   (no interest), 21 (no exemplary damages in negligence), 23 and 25 (structured settlements): `cla-damages.l4`.
-- **Part 1A** ss 5F-5I (obvious and inherent risks) and ss 5J-5L (dangerous recreational activities); **Part 3**
-  ss 27-31, 33 (mental harm); **Part 6** ss 47, 48, 50 (intoxication); **Part 7 Division 1** ss 51-54A (self-defence,
+- **Part 1A** ss 5F, 5H, 5I (obvious and inherent risks) and ss 5J-5L (dangerous recreational activities); **Part 3**
+  ss 27, 28, 30, 31, 33 (mental harm); **Part 6** ss 47, 48, 50 (intoxication); **Part 7 Division 1** ss 51-54A (self-defence,
   criminals): `cla-liability.l4`.
 
 **Out, and why:**
 
 - ss 1, 2, 4 (name, commencement, Crown, regulations, notes), s 3A (contracting out: no question for the claimant
-  alone), s 3C (folded into fork F1), s 6I (objects), s 6Q (rules of court), s 6P(1), (3)-(5) (trustees' powers and
-  indemnity, Corporations Act displacement): machinery or addressed to others with no question for the claimant.
+  alone), s 3C (folded into fork F1), s 6I (objects), s 6Q (rules of court), s 6K(2)-(4) (management members may exercise the
+  organisation's functions; the court's orders and directions for Division 4: addressed to the organisation and the
+  court, and a discretion), s 6P(1), (3)-(5) (trustees' powers and indemnity, Corporations Act displacement):
+  machinery or addressed to others with no question for the claimant.
+- s 6B(1) (nothing in s 5Q, Part 2A or Part 5 protects against or limits Part 1B liability): none of s 5Q, Part 2A or
+  Part 5 is encoded here, so there is nothing in these modules for it to switch off; a later layer that encodes any of
+  them must carve Part 1B liability out.
 - s 6B(2) (an award under Division 2 or 3 must take into account an award under the other): a direction about
   assessment, not a computable rule; noted.
-- Part 1A ss 5B-5E (breach and causation: judgments left wholly to the court), s 5M (risk warnings, 11 subsections),
+- Part 1A s 5G (the presumption that the injured person was aware of an obvious risk): a rule of proof that matters to
+  a defence of voluntary assumption of risk, which this baseline does not encode; no encoded question turns on
+  awareness (s 5L(2) says it does not matter). Part 1A ss 5B-5E (breach and causation: judgments left wholly to the court), s 5M (risk warnings, 11 subsections),
   s 5N (contract waivers for recreation services), ss 5O-5P (professional standard of care: peer opinion is a judgment),
   s 5Q, ss 5R-5T (contributory negligence: the court's percentage; s 5S allows 100%): not encoded in this baseline; s 5M
   is the first candidate for a later layer.
@@ -186,7 +196,8 @@ Each line: the provision, the function, the answer taken, the other reading.
    for intentional and sexual torts, but not Part 1C. Read literally, Part 1C (setting aside child abuse settlements)
    does not apply "to or in respect of" the abuser's own liability for sexual assault, nor (by (f)) to work injury
    damages; it still applies to the organisation's liability in negligence. The likelier intent is that Part 1C operates
-   on agreements whatever the liability. Asserted on the literal words (`JUST FALSE`).
+   on agreements whatever the liability. Asserted on the literal words (`JUST FALSE`), both through the s 3B question and
+   through the Part 1C questions themselves (ss 7C, 7D take the kind of claim settled).
 3. **Two meanings of child abuse in Part 1B.** ss 6F(5) and 6H(4) confine "child abuse" to sexual or physical abuse that
    was unlawful at the time; s 6J "child abuse proceedings" covers any "abuse (including sexual abuse) against a child",
    under Part 1B or the common law. So the Division 4 machinery (suing an unincorporated organisation, proper defendants,
@@ -214,13 +225,15 @@ Each line: the provision, the function, the answer taken, the other reading.
 
 `cla-core.l4` (1): `Does this part of the Act apply to my claim` (s 3B).
 
-`cla-child-abuse.l4` (14), in the Act's order: `What does section 6F mean for my claim` (ss 6A, 6D-6F; Sch 1 cl 43),
+`cla-child-abuse.l4` (16), in the Act's order: `Is the successor the same organisation under Part 1B` (s 6C), `What
+does section 6F mean for my claim` (ss 6A, 6D-6F; Sch 1 cl 43),
 `Is the organisation vicariously liable under section 6H` (ss 6G, 6H; cl 44), `Can I sue the unincorporated organisation
 in its own name` (ss 6J, 6K; cl 45), `Is the entity a suitable proper defendant` (s 6M), `Is it an associated trust`
 (s 6N(3)), `By when must a proper defendant be appointed` (s 6N(1)), `Can I apply for the trustees to be appointed`
 (ss 6L, 6N), `By when must the organisation identify its trusts` (s 6N(4)), `Has the organisation identified its trusts
-in time` (s 6N(4), the regulative rule), `The most I can recover from the trustees` (s 6P), `Is my settlement an affected
-agreement` (s 7C), `Can the court set aside my settlement` (s 7D), `Can the court also set aside this thing` (s 7E),
+in time` (s 6N(4), the regulative rule), `Does the proper defendant stand in for the organisation` (s 6O), `The most I
+can recover from the trustees` (s 6P), `Is my settlement an affected agreement` (ss 3B, 7C), `Can the court set aside my
+settlement` (ss 3B, 7D), `Can the court also set aside this thing` (s 7E),
 `Must I repay what I received under the settlement` (s 7F).
 
 `cla-damages.l4` (12): `What weekly earnings can the court count` (s 12), `What discount rate applies` (s 14), `Does
