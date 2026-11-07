@@ -39,7 +39,7 @@ folder, at most two processes at a time. `l4 run` exits 0 even when an assertion
 | File | Errors | Warnings | Assertions written | Satisfied |
 |---|---|---|---|---|
 | `cor-coroners.l4` | 0 | 0 | 0 | 0 |
-| `cor-cases.l4` | 0 | 0 | 197 | 197 |
+| `cor-cases.l4` | 0 | 0 | 222 | 222 |
 
 Every expected value was worked by hand from the text, with the edges: a death exactly 100 years before today and the day
 before (s 19); a risk-of-harm report exactly 3 years before the death, the day before, and a report after the death
@@ -47,7 +47,10 @@ before (s 19); a risk-of-harm report exactly 3 years before the death, the day b
 a post mortem at 47 and 48 hours after the notice, and a notice that wrongly gives less than 48 (s 96(4)(a)); an order to
 resume 13 and 14 days after notice to the State Coroner, and 14 days across a year end (s 79(2A)); each tier of the
 senior next of kin ladder with the tier above present and absent; a superseded spouse (s 4); each disposal document for
-an adult and for a stillborn child (s 100(3)); each offence's maximum penalty.
+an adult and for a stillborn child (s 100(3)); each offence's maximum penalty; the s 24(2) notice for a child at 17
+and at 18, with a report exactly 3 years before the death and the day before; s 25(3) with and without the coroner's
+opinion; each s 83(2), (3) ground; service of a Supreme Court order on the 21st day and the 22nd, across a year end and
+across 29 February (s 87(1)).
 
 ## Seat
 
@@ -84,14 +87,18 @@ The 2026-10-18 defaults:
 
 **In:** s 4 "spouse"; s 5 (relative); s 6 (reportable death); s 6A (senior next of kin); s 18 (connection with the State);
 s 19 (100 years); s 21 (general jurisdiction); ss 22-24 (senior coroners' exclusive jurisdiction: custody, police
-operations, children, disability); s 25 (dispensing); s 26 (reasons); s 27 (inquests required); ss 28-29 (directions);
+operations, children, disability; and s 24(2), the senior coroner's best endeavours to tell a child's family of any right
+to legal representation); s 25 (dispensing, and s 25(3), holding an inquest after dispensing); s 26 (reasons); s 27 (inquests required); ss 28-29 (directions);
 s 35 (duty to report); s 38 (death certificates); s 54 (notice of the inquest); s 56 (the coroner's right to the body);
 s 57 (leave to appear); s 60 (asking for a witness); s 61(7) (certified evidence in later proceedings); s 65 (the
-coroner's file); s 75 (self-inflicted deaths); s 79 (resuming a suspended inquest); s 81 (findings); s 83 (fresh
-inquests); ss 84-87 (Supreme Court orders); s 89(6) (dispensing with a post mortem); s 90(4)-(6) (whole organs); s 91
+coroner's file); s 75 (self-inflicted deaths); s 79 (resuming a suspended inquest); s 81 (findings); s 83(2)-(7) (fresh inquests: (2), (3), (4), (5) computed, (6), (7) stated in the export text of `Must a fresh inquest be
+held on my application`); ss 84-87 (Supreme Court orders, with s 87(1), the 21 days to serve the order on the State
+Coroner, computed, and ss 86A, 87(2) stated in the export text of `Can the Supreme Court order an inquest on my
+application`); s 89(6) (dispensing with a post mortem); s 90(4)-(6) (whole organs); s 91
 (exhumation); s 94 (protection of those conducting directed post mortems); ss 95-99 (objections by the senior next of
 kin, and the 48-hour Supreme Court route); ss 100-101 (disposal of remains); the maximum penalties of ss 35(2), 44, 53(5),
-62, 74(3), 75(7), 76, 100(1), (2) and 103A.
+62, 74(3), 75(7), 76, 100(1), (2) and 103A (the offences an individual can commit in the Chapters encoded, with s 44;
+not s 101M, in Chapter 9A, which is out).
 
 **Out, and why:**
 
@@ -113,7 +120,14 @@ kin, and the 48-hour Supreme Court route); ss 100-101 (disposal of remains); the
 - ss 88, 88A, 89(1)-(5), (7)-(9), 90(1)-(3), (7), 92, 93 (dignity, preliminary examinations, directions, reports, tissue,
   Coronial Medical Officers, fees): what investigators do; the family's points of entry (ss 89(6), 90(4)-(6), 94, 95-99)
   are encoded.
-- Chapter 9A (ss 101A-101P: the Domestic Violence Death Review Team): a review body, no claim machinery.
+- Chapter 9A (ss 101A-101P: the Domestic Violence Death Review Team): a review body, no claim machinery. Its offence
+  (s 101M, 50 penalty units or 12 months, or both, for a Team-related person) is out with it.
+- s 83(1) (what the section provides for) and s 83(8) (other powers to hold a fresh inquest are not limited): a
+  signpost and a saving; s 83(8) is why a "no" from `Must a fresh inquest be held on my application` and `May a fresh
+  inquest be held because of how the previous one ended` is about s 83 alone (forks F6, F15). s 83(1)(b) and the
+  inquiry limbs of ss 83-87 (fires and explosions) are out with Part 3.3.
+- s 86A (the Minister's intervention) and s 87(2): the Minister's and the State Coroner's part, stated in an export's
+  text with no computation.
 - ss 102, 102A, 103, 105-107 (assistance, databases, contempt, service, procedure for offences, corporations): machinery.
 - Schedule 2 (savings and transitional): deaths before the 2010 repeal of the 1980 Act, and deaths of the repealed
   s 6(1)(d) kind before its repeal (cl 26), are not covered. The text of repealed s 6(1)(d) is not in the deposit.
@@ -157,6 +171,25 @@ Each line: the provision, the function, the answer taken, the other reading.
 - **F12** s 96(5) with ss 96(3), (4), 97 -- `How can I object to the post mortem` -- a senior next of kin the coroner may
   refuse is told the objection "may" be refused, and the 48-hour route is not encoded as lost -- a refusal under s 96(5)
   ends the s 96(3) notice and the Supreme Court route for that person.
+- **F13** s 24(2) "the following persons" -- `Must the senior coroner try to tell me of my right to a lawyer` -- a person
+  outside (a)-(c) answers `NOTHING` (a list left open, no "only") -- `JUST FALSE`, reading the list as closed.
+- **F14** s 25(3) "may subsequently hold an inquest ... if the coroner is of the opinion" -- `Can the coroner still hold
+  the inquest it dispensed with` -- without the opinion, `JUST FALSE` (the "if" fails; s 25(3) gives no power) --
+  `NOTHING`, since ss 29 and 84 can still bring an inquest.
+- **F15** s 83(2), (3) "A fresh inquest may be held if" -- `May a fresh inquest be held because of how the previous one
+  ended` -- outside the listed grounds, `JUST FALSE` (the "if" fails; as F6) -- `NOTHING`, because s 83(8) keeps any
+  other power to hold a fresh inquest.
+- **F16** s 87(1) "within 21 days after it is made" -- `The last day to serve the order on the State Coroner`, `Was the
+  order served on the State Coroner in time` -- the day of making is not counted, so the last day is that day plus 21
+  (as the 14 days of s 79(2A)) -- the day of making is day 1, so the last day is that day plus 20.
+- **F17** s 24(1)(b), (c) "within the period of 3 years immediately preceding the child's death" -- `Which coroner can
+  hold an inquest`, `Must an inquest be held`, `Must the senior coroner try to tell me of my right to a lawyer` -- a
+  report made on the same calendar day 3 years before the death is within (as F3) -- it is outside (the period begins
+  the day after).
+- **F18** s 97(2) "The making of the application to the Supreme Court operates to stay" -- `Is my Supreme Court
+  application in time`, `Can the post mortem go ahead now` -- "the application" is the s 97(1) application, made within
+  the 48 hours, so one made later gives no stay and the post mortem may go ahead -- any application, even late, stays
+  the direction until the Court decides.
 
 ## What the Act turns out to say
 
@@ -228,20 +261,25 @@ Applied here: "means"/"is" definitions (ss 5, 6, 6A, 100(3)), "if", "unless" and
 97(1)) answer no when they fail; flat negatives (s 38(1), (3), s 61(7) "cannot", s 65(6), s 75(5), s 94 "does not",
 s 100) answer no; scope limits with no "only" and lists left open (ss 38, 54(1)(d), 56, 60, 61(7), 75(3), 75(5), 89(6),
 90(4), 94, 100(2)) answer `NOTHING` or a "not covered" constructor; the sites with no convention (a duty whose "if" is
-unmet, "(other than X)", a grant limited in its own words) each have a fork line above (F4, F5, F6, F9, F11).
+unmet, "(other than X)", a grant limited in its own words) each have a fork line above (F4, F5, F6, F9, F11, F14, F15).
+s 24(2)'s list of persons to be notified is a list left open (`NOTHING`, F13); its "if" and s 87(1)'s 21 days answer no
+when they fail.
 
 ## Questions (exported)
 
-`cor-coroners.l4` (31), in the Act's order: `Am I a relative` (s 5), `Am I the senior next of kin` (s 6A), `Is it a
-reportable death` (s 6), `Which coroner can hold an inquest` (ss 18, 19, 21-24), `Must an inquest be held` (ss 25, 27-29,
-87), `Must the coroner give me reasons for dispensing` (s 26), `Must I report the death` (s 35), `May the doctor certify
+`cor-coroners.l4` (36), in the Act's order: `Am I a relative` (s 5), `Am I the senior next of kin` (s 6A), `Is it a
+reportable death` (s 6), `Which coroner can hold an inquest` (ss 18, 19, 21-24), `Must the senior coroner try to tell me of my
+right to a lawyer` (s 24(2)), `Must an inquest be held` (ss 25, 27-29, 87), `Can the coroner still hold the inquest it
+dispensed with` (s 25(3)), `Must the coroner give me reasons for dispensing` (s 26), `Must I report the death` (s 35), `May the doctor certify
 the cause of death` (s 38), `Must the coroner tell me when and where the inquest is` (s 54), `Does the coroner's right to
 the body come first` (s 56), `Will I be given leave to appear` (s 57), `Must the coroner give me reasons for refusing my
 witness` (s 60), `Can certified evidence be used against the witness` (s 61(7)), `Can I get a copy of the coroner's file`
 (s 65), `Can a non-publication order protect me` (s 75(2), (3)), `May a report of the inquest be published` (s 75(5)),
 `Can the suspended inquest be resumed` (s 79), `The earliest day the inquest may be ordered resumed` (s 79(2A)), `Will the
 findings state the manner and cause of death` (s 81), `Can I apply for a fresh inquest` (s 83(5)), `Must a fresh inquest
-be held on my application` (s 83(4)), `Can the Supreme Court order an inquest on my application` (ss 84-87), `Can the
+be held on my application` (s 83(4)), `May a fresh inquest be held because of how the previous one ended` (s 83(2),
+(3)), `Can the Supreme Court order an inquest on my application` (ss 84-87), `The last day to serve the order on the State
+Coroner` (s 87(1)), `Was the order served on the State Coroner in time` (s 87(1)), `Can the
 coroner dispense with the post mortem at my family's wish` (s 89(6)), `Can the coroner keep a whole organ after the body
 is released` (s 90), `Can the coroner order the body exhumed` (s 91), `Can I claim against the post mortem doctor` (s 94),
 `How can I object to the post mortem` (ss 96, 98, 99), `Is my Supreme Court application in time` (s 97, with the
@@ -252,10 +290,12 @@ the remains` (s 100), `What is the maximum penalty` (penalty lines).
 
 | Provision | Bearer | Kind | Encoded as |
 |---|---|---|---|
+| s 24(2) | the senior coroner | duty (best endeavours) to the child's family | `Must the senior coroner try to tell me of my right to a lawyer` |
 | s 35(2) | any person with the grounds | duty | `Must I report the death` |
 | s 38(1), (3) | the doctor | prohibition (the relative holds a power to trigger it) | `May the doctor certify the cause of death` |
 | s 57(3) | the coroner | duty to the relative | `Will I be given leave to appear` |
 | s 96(1) | the senior next of kin | power (request) | `How can I object to the post mortem` |
+| s 87(1) | unnamed (the order "must be served") | duty with a time limit | `The last day to serve the order on the State Coroner`, `Was the order served on the State Coroner in time` |
 | s 97(1) | the senior next of kin | power with a time limit | regulative rule (`MUST ... WITHIN 48 ... LEST BREACH`, modelling the lapse) |
 | s 94 | the post mortem doctor | immunity (the family's disability) | `Can I claim against the post mortem doctor` |
 | s 100(1), (2) | anyone | prohibition | `May I bury, cremate or remove the remains` |
@@ -265,7 +305,7 @@ the remains` (s 100), `What is the maximum penalty` (penalty lines).
 - Replace the corpus text with the current official text from legislation.nsw.gov.au and re-check every quotation.
 - Deposit the Coroners Regulation and replace the inputs it settles (excluded procedures, prescribed assistance,
   specialist disability accommodation, fees, authorised disposals).
-- Have a lawyer review the forks, especially F2 (minors and "available"), F8 and F12 (the post mortem before the
+- Have a lawyer review the forks, especially F2 (minors and "available"), F18 (a late application and the stay), F8 and F12 (the post mortem before the
   coroner's decision, and after a s 96(5) refusal).
 - An independent test pass and the human gates.
 
