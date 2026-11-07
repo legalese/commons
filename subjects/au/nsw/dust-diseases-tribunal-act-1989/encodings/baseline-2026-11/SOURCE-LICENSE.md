@@ -26,3 +26,7 @@ The corpus text is reproduced with whitespace normalised and a notice header add
 ## Status of this deposit
 
 Text deposited 2026-11-06 as `registers/source-bundle/act-1989-063.txt` (70892 characters). It is unofficial and possibly out of date; replace it with text from legislation.nsw.gov.au when that site can be fetched.
+
+## Also quoted
+
+`ddt-claims.l4` and `NOTES.md` also quote the Dust Diseases Tribunal Regulation 2019 (cl 3 "asbestos-related condition", cl 71(2), cl 97), from the deposit at `subjects/au/nsw/dust-diseases-tribunal-regulation-2019/registers/source-bundle/sl-2019-0405.txt`. Same source and licence: sourced from the New South Wales Legislation website via the Open Australian Legal Corpus, State of New South Wales, CC BY 4.0; see that subject's SOURCE-LICENSE.md for the corpus document and terms read.

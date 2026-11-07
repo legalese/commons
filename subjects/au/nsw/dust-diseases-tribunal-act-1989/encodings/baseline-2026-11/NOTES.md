@@ -23,8 +23,13 @@ This is the first encoding of the Act; nothing existing was touched.
   15 November 2024), deposited at `../../registers/source-bundle/act-1989-063.txt` (text sha256 062491...3c6db8 per its
   `.meta.json`), taken from the Open Australian Legal Corpus (collected 10 March 2025) because legislation.nsw.gov.au
   returned a bot challenge. Not the authorised text.
-- **Not deposited here, asked as facts:** the Dust Diseases Tribunal Regulation and the Tribunal's rules (conduct money,
-  the claims resolution process, what claim information is required and when, the time to appeal); the Limitation Act
+- **Regulation:** the Dust Diseases Tribunal Regulation 2019 (corpus version as at 1 July 2022, older than the Act's) is deposited, with its own baseline encoding, at
+  `subjects/au/nsw/dust-diseases-tribunal-regulation-2019`. IMPORT does not reach across folders, so the clauses that set
+  this Act's numbers are written here from that deposited text: cl 97(1), (2)(a), (4) with the cl 3 "asbestos-related
+  condition" (when the s 32I claim information is due) and cl 71(2) (what the s 20(6) amount is). The claims resolution
+  process (Part 3 of the Regulation) is encoded there, not here.
+- **Not deposited here, asked as facts:** the Tribunal's other rules (the time to appeal) and the costs scale for
+  witnesses' expenses that cl 71(2) points to (so the s 20(6) amount stays an input); public and bank holidays; the Limitation Act
   1969, the Law Reform (Miscellaneous Provisions) Act 1944, the Workers Compensation Act 1987 (ss 151AB, 151AC), the Civil
   Procedure Act 2005 and the Corporations Act 2001, which are separate subjects (some encoded in Commons) and cannot be
   imported across folders; the commencement dates of ss 11A, 12A-12D and 25A-25B (inserted by amending Acts whose dates
@@ -39,15 +44,18 @@ folder, at most two processes at a time. `l4 run` exits 0 even when an assertion
 |---|---|---|---|---|
 | `ddt-dates.l4` | 0 | 0 | 0 | 0 |
 | `ddt-claims.l4` | 0 | 0 | 0 | 0 |
-| `ddt-cases.l4` | 0 | 0 | 151 | 151 |
+| `ddt-cases.l4` | 0 | 0 | 161 | 161 |
 
 Every expected value was worked by hand from the text, with the edges: every Schedule 1 shape of answer and both
-"means" exclusions; each limb of s 11(1) failing in turn; a claim 51 years after exposure and one filed on the day the
-cause arose (s 12A); the conduct-money tender on the last day (23 November for a 30 November subpoena with 7 days'
-reasonable time), the day after, a dollar short and over the prescribed amount (s 20(6)); the claim information on the
-28th day and the 29th, given and not given (s 32I(4)); an appeal from a final decision involving exactly $20,000 and
-$19,999 (s 32(4)(c)); service on none, one and all of those jointly liable (s 17(1)); the interim payment ceiling with
-assessed and unassessed damages and a nil proportion (s 43(4)).
+"means" exclusions; each limb of s 11(1) failing in turn; s 12A in and out of its reach (it asks no dates, because with
+no deadline no date can change the answer); the conduct-money tender on the last day (23 November for a 30 November
+subpoena with 7 days' reasonable time), the day after, a dollar short and over the prescribed amount (s 20(6)); the
+claim information on the 30th business day after finalisation (Monday 14 December 2026 for a claim settled on Monday 2
+November) and the day after, with one weekday holiday, finalisation on a costs assessment, an unfinalised claim,
+silicosis and a para (b) condition (no duty), and settlement on 30 June and 1 July 2005 (s 32I(4), Regulation cl 97); a
+Commonwealth subpoena (s 32I(8), fork F13); an appeal from a final decision involving exactly $20,000 and $19,999
+(s 32(4)(c)); service on none, one and all of those jointly liable (s 17(1)); the interim payment ceiling with assessed
+and unassessed damages, a nil proportion and no inter-insurer dispute (s 43(1), (4)).
 
 ## Seat
 
@@ -63,8 +71,10 @@ the designated insurer under Part 6) could be added.
 
 The 2026-10-18 defaults:
 
-- **The Act alone, with the instruments that set its numbers.** Followed as far as deposited: the Act's own figure
-  ($20,000 in s 32(4)(c)) is encoded; the rules' and regulations' amounts and times are inputs.
+- **The Act alone, with the instruments that set its numbers.** Followed: the Act's own figure ($20,000 in
+  s 32(4)(c)) is encoded, and so are the deposited Regulation's 30 business days, its finalisation rule and its
+  asbestos-only reach (cl 97) for s 32I(4); cl 71(2) says what the s 20(6) amount is, but its figure comes from a costs
+  scale not in Commons, so the amount stays an input.
 - **The actors the text names.** Followed: the Tribunal, the registrar, the Supreme Court, the designated insurer, the
   joint tortfeasors, the Australian legal practitioner, the Registrar's officers.
 - **Judgments answered conditionally.** Followed: the Tribunal's leave (ss 19, 25(3), 25A, 25B), its satisfaction
@@ -81,7 +91,8 @@ The 2026-10-18 defaults:
 
 **In:** s 3 (dust-related condition, settlement); Sch 1; s 10(1), (6), (7); s 11(1)-(5); s 11A; s 12; s 12A with Sch 3
 cl 7(2); s 12B; s 12C(1); s 12D; s 13(5); s 14(1)-(3); s 17(1), (2), (4); s 19; s 20(1), (6); s 22(2), (4); s 24;
-s 25(3); s 25A; s 25B(1)-(3); s 32(1), (4); s 32I(1), (2), (4), (8); s 40; s 41; s 43; s 44; s 45; s 46 (by its silence).
+s 25(3); s 25A; s 25B(1)-(3); s 32(1), (4); s 32I(1), (2), (4), (8); ss 40-44; s 45(1), (2)(a), (3). From the
+deposited Regulation: cl 3 ("asbestos-related condition"), cl 71(2), cl 97(1), (2)(a), (4).
 
 **Out, and why:**
 - ss 1, 2 (name, commencement); Part 2, ss 4-9 (the Tribunal, its members, President and staff); Sch 2 (members): machinery.
@@ -93,7 +104,10 @@ s 25(3); s 25A; s 25B(1)-(3); s 32(1), (4); s 32I(1), (2), (4), (8); s 40; s 41;
 - s 32(2), (3) (what the Supreme Court may do on appeal); the time to appeal (in rules not deposited).
 - Part 3A (the Rule Committee), s 32G, s 32H (regulations for claims resolution), s 32I(3), (5), (6) (the practitioner's
   conduct, the Registrar's database and reports), ss 33-37: rule- and regulation-making, fees, Schedule amendments,
-  offences procedure, savings: machinery. The claims resolution process the regulations set up is not deposited.
+  offences procedure, savings: machinery. The claims resolution process the regulations set up is in the Regulation's own
+  encoding.
+- Regulation cl 97(2)(b), (5) (revised information after an appeal or a later costs assessment): further deadlines on the
+  same model, not encoded; cl 71(1) (what a subpoena may require), the rest of the Regulation: in its own encoding.
 - Part 5 (arbitration of disputes between insurers under s 151AC of the 1987 Act): a dispute between insurers, conducted
   under rules not deposited; s 38(4)'s period to set aside a determination is "prescribed by the rules".
 - s 45(2)(b), (c), s 46(2)-(5): orders between insurers and other parties.
@@ -128,9 +142,17 @@ Each line: the provision, the function, the answer taken, the other reading.
   for a directed subpoena; the last day not counted.
 - **F9** s 43(4) "one or more payments of such amounts as it thinks just but not exceeding" -- `What is the most the
   interim payments can be` -- the ceiling is on the total -- on each payment.
-- **F10** s 32I(4) "as and when an Australian legal practitioner ... would be required" -- `Have I given the claim
-  information in time` -- the regulations' period is an input in days, its last day counted in -- the regulations' own
-  counting (not deposited).
+- **F10** s 32I(4) "as and when an Australian legal practitioner ... would be required", Regulation cl 97(2)(a) "within
+  30 business days after the claim is finalised" -- `Have I given the claim information in time` -- the 30 business days
+  are counted from the day after finalisation, the 30th day counted in -- the finalisation day counted as day one.
+- **F13** s 32I(8)(c) "a law of the State (other than a requirement imposed by a subpoena or other compulsory process) or
+  of the Commonwealth" -- `Can my claim information be recorded or divulged` -- the parenthesis qualifies the State limb
+  only, so a Commonwealth subpoena or other compulsory process is `JUST TRUE` -- the parenthesis reaches both limbs
+  (`JUST FALSE`).
+- **F14** Regulation cl 97(2)(a) "business days" -- `Have I given the claim information in time` -- weekdays less the
+  weekday public and bank holidays throughout NSW, the holidays counted by the user (the Regulation's own definition in
+  cl 11(1) is for Part 3; the Interpretation Act 1987 meaning, which adds bank holidays, is taken) -- the Part 3
+  definition (public holidays only).
 - **F11** s 25(3), s 25A "may, with the leave" -- `Can evidence from another case be used in mine`, `Can material from
   another case be used in mine` -- without leave or consent, `NOTHING` -- `JUST FALSE`.
 - **F12** s 10(6), (7) -- `Whose leave do I need to sue the company` -- the Tribunal's leave is needed in place of the
@@ -149,7 +171,7 @@ Each line: the provision, the function, the answer taken, the other reading.
 | s 19 | the claimant | liberty to appear; disability without leave | `Can this person appear for me` |
 | s 20(6) | the person subpoenaed | no duty unless tendered conduct money in time | DO rule (a condition) |
 | s 32 | the claimant | power to appeal, by leave in four cases | `Can I appeal ...` |
-| s 32I(4) | the unrepresented claimant | duty; offence, 5 penalty units | MUST rule |
+| s 32I(4), Reg cl 97 | the unrepresented claimant in an asbestos-related claim | duty within 30 business days of finalisation; offence, 5 penalty units | MUST rule |
 | s 32I(8) | the Registrar's officers | duty not to record or divulge; offence, 50 penalty units | `Can my claim information be ...` |
 | s 43, 45 | the designated insurer; the claimant | liability to interim payment; liability to repay | conditional questions |
 
@@ -164,7 +186,7 @@ Each line: the provision, the function, the answer taken, the other reading.
    repealed.
 3. **s 12's two paragraphs disagree.** Para (a) transfers proceedings pending at commencement only if the hearing "has
    not begun"; para (b) transfers proceedings that "after that commencement ... are pending", which literally includes
-   the same proceedings with the hearing begun. Fork F4; asserted `NOTHING`. Spent in practice (1989).
+   the same proceedings with the hearing begun. Fork F4; asserted `NOTHING`. Spent in practice.
 4. **No limitation period, ever.** s 12A sets none and displaces every statute of limitations; the encoding writes it as
    a permission with no `WITHIN`, which is fulfilled whenever the claim is brought (asserted 51 years on). The one
    exception is a cause of action already determined before s 12A commenced (Sch 3 cl 7(2)).
@@ -178,7 +200,10 @@ Each line: the provision, the function, the answer taken, the other reading.
    for, or a question relating to" an amount is wide; the claimant states the amount.
 8. **Much of the claims process is not in the Act.** The claims resolution process, compulsory mediation, offers and
    costs (s 32H), the claim information (s 32I), conduct money (s 20(6)), the time to appeal and the procedure for
-   provisional damages (s 33(4)(b1)) are left to regulations and rules that are not deposited.
+   provisional damages (s 33(4)(b1)) are left to regulations and rules. The Regulation (deposited) confines the s 32I
+   duty to asbestos-related claims settled or determined on or after 1 July 2005 (cl 97(1)), so an unrepresented
+   claimant with silicosis has no claim-information duty at all, and it fixes the s 20(6) amount only by reference to
+   witnesses' expenses recoverable as costs (cl 71(2)).
 9. **s 43(4) does not say whether its ceiling is per payment or in total.** Fork F9.
 10. **s 32I(4) is the one offence a claimant can commit under the Act** (5 penalty units, the value of a unit set
     elsewhere); a represented claimant's practitioner bears the duty, the solicitor where a barrister also acts.
@@ -202,11 +227,10 @@ interim payment`.
 ## Before relying on it
 
 - Replace the corpus text with the current official text and re-check every quotation and figure.
-- Deposit the Dust Diseases Tribunal Regulation and the Tribunal's rules (conduct money, claim information, claims
-  resolution, time to appeal).
+- Deposit the Tribunal's remaining rules (time to appeal) and the costs scale for witnesses' expenses (cl 71(2)).
 - Link to the Workers' Compensation (Dust Diseases) Act 1942, Limitation Act 1969, Law Reform (Miscellaneous Provisions)
   Act 1944, Compensation to Relatives Act 1897 and Civil Procedure Act 2005 encodings.
-- Have a lawyer review forks F4, F5, F9 and F12.
+- Have a lawyer review forks F4, F5, F9, F12 and F13.
 - An independent test pass and the human gates.
 
 Based on content from the New South Wales Legislation website (CC BY 4.0), as collected by the Open Australian Legal
