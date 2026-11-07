@@ -9,7 +9,7 @@ No pipeline, no coverage table, no independent test pass, no human gate. Not for
 
 The focus asked for was costs agreements: what a person bringing a claim (a personal injury, workers compensation, will or
 discrimination claim) meets when a lawyer acts for them on a costs agreement, including a no-win no-fee one. Division 3.2.5
-(costs agreements) is encoded whole, with the claims machinery around it in Part 3.2: whether the Part applies, the duty to
+(costs agreements) is encoded apart from s 286 (enforcement and mediation), with the claims machinery around it in Part 3.2: whether the Part applies, the duty to
 disclose costs and what follows a failure, the basis of charging, interest, itemised bills, when the lawyer may sue for
 costs, the time to apply for a costs assessment, and what follows an assessment.
 
@@ -41,21 +41,35 @@ the client's 12 months to apply for a costs assessment (`MUST ... WITHIN ... LES
 Stable `l4` of VS Code extension 1.6.98 (`bin/win32-x64/l4.exe run <file>`), `JL4_LIBRARY_PATH` unset, run from this
 folder, at most two processes at a time. `l4 run` exits 0 even when an assertion fails, so the diagnostics were read. A
 deliberately wrong assertion (the s 284 (4) (b) cap on $20 000 asserted as $5 000.01) was run once in a scratch copy, since
-deleted, and showed as "assertion failed" (154 satisfied, 1 failed).
+deleted, and showed as "assertion failed" (154 satisfied, 1 failed). After the independent verification the cases were
+corrected and extended (2026-11-07, below) and all files re-run.
+
+**Fixes after the independent verification (2026-11-07).**
+- s 281: the interest question refused all interest where a costs agreement provided for interest but the bill did not
+  say it was payable under the agreement. s 281 (2) is an additional route ("may also"), and s 281 (3) (c) is asked only
+  of agreement interest, so the s 281 (1) route is still open on (3) (a) and (b). The question now falls through to
+  s 281 (1); the wrong case was corrected and two added.
+- Fork F5 now takes the clear-days reading of "until at least N days after the day": all N days must have passed, so the
+  earliest day is day N + 1 (1 August after a 1 July bill, not 31 July). The bar and the earliest-day question share one
+  definition of the barred days and named lengths (`the s 289 (1) days`, `the s 292 (6) days`, `the s 292 (7) days`), so
+  the deadline lives in one place.
+- The out list now names s 283 (4), s 289 (3), s 292 (5) and (9); s 281 (5) is taken in through the bill-day input; s 286
+  is listed once (out).
 
 | File | Errors | Warnings | Assertions written | Satisfied |
 |---|---|---|---|---|
 | `lpact-dates.l4` | 0 | 0 | 0 | 0 |
 | `lpact-costs.l4` | 0 | 0 | 0 | 0 |
-| `lpact-cases.l4` | 0 | 0 | 154 | 154 |
+| `lpact-cases.l4` | 0 | 0 | 156 | 156 |
 
 Every exported question has cases, with the edges: s 264 (4) notification on day 28 and day 29 after being told; disclosure
 at exactly $1 500 and at $1 500.01; each s 272 exception; each s 282 and s 283 requirement failing in turn, and the
 sophisticated client's exemptions (and what they do not reach); a cooling-off notice on the last day and the day after; an
 uplift fee of exactly 25% and one cent over, and outside a litigious matter; each kind of void agreement, with fair value
 below, between and above the agreement figures; the s 281 example's own dates (bill 1 May 2008; 31 May and 1 June); an
-itemised bill asked for on day 90 and day 91, at $1 500 and $1 500.01; suing on day 29 and day 30 after a bill, day 89 and
-day 90 after a lump sum bill, day 29 and day 30 after an itemised bill, before the bill, and with leave to sue sooner; an
+itemised bill asked for on day 90 and day 91, at $1 500 and $1 500.01; s 281 (1) interest where the bill fails s 281 (3) (c);
+suing on day 30 and day 31 after a bill, day 90 and day 91 after a lump sum bill, day 30 and day 31 after an itemised bill,
+before the bill, and with leave to sue sooner; an
 assessment application on the last day of the 12 months and the day after, before time began, and from 29 February 2024;
 costs cut by exactly 15% and by 14.99%.
 
@@ -99,10 +113,10 @@ The 2026-10-18 defaults:
 
 **In.** s 261 (the definitions used); ss 263, 264, 265 (application and displacement), with s 268 (2) in an answer; s 269
 with ss 271, 272 and 275 (the duty to disclose, when and how, its exceptions); s 274 (uplift disclosure); s 277 (effect of
-failure to disclose); s 278 (1), (2) (progress reports); s 279 (basis of recovery); s 281 (interest); **Division 3.2.5 whole**
-(s 282 making costs agreements, s 283 conditional costs agreements and cooling off, s 284 uplift fees, s 285 contingency
-fees, s 286 by reference only, s 287 void agreements, s 288 setting aside); s 289 (no proceeding until 30 days after a
-bill); s 292 (itemised bills and the 90-day bar); s 294A (1), (3) to (7) (the client's application and its time limit);
+failure to disclose); s 278 (1), (2) (progress reports); s 279 (basis of recovery); s 281 (interest; (5) through the bill-day input); **Division 3.2.5**
+apart from s 286 (s 282 making costs agreements, s 283 conditional costs agreements and cooling off, s 284 uplift fees,
+s 285 contingency fees, s 287 void agreements, s 288 setting aside); s 289 (1), (2), (4) (no proceeding until 30 days after
+a bill); s 292 (1) to (4), (6) to (8), (10) (itemised bills and the 90-day bar); s 294A (1), (3) to (7) (the client's application and its time limit);
 s 298 (b); s 300C; s 302; s 304; s 304A; s 307A (claim farming).
 
 **Out, and why.**
@@ -116,6 +130,12 @@ s 298 (b); s 300C; s 302; s 304; s 304A; s 307A (claim farming).
 - s 290 and s 291 (form and giving of a bill, statement of rights): asked as one fact ("a bill complying with ss 290 and
   291") in the suing questions.
 - s 295, s 296 (law practices' own applications for assessment), s 297 (form of application).
+- s 283 (4) (conditional costs agreements between law practices, under s 282 (1) (c)): not the client's agreement.
+- s 289 (3) (a court must stay a proceeding brought too early): the court's procedure; the suing questions already say
+  the proceeding may not be started.
+- s 292 (5) (a person liable for only part of the costs asks only about that part): one case is the client liable for the
+  whole bill; s 292 (9) (ss 290 (2) and (5) applied to an itemised bill): the form of a bill, taken with ss 290 and 291 as
+  one fact.
 - ss 284 (6), (7) and 285 (3), (4) (offences, 50 penalty units each): they bind the law practice and its principals, not
   the client; the client's consequences (void agreement, repayment) are encoded through s 287.
 - ss 262, 305 to 307 (purposes, regulation-making, imputation, principals' liability): machinery.
@@ -141,7 +161,9 @@ Each line: the provision, the function, the answer taken, the other reading.
   day 30: no interest; unpaid on day 31: interest from the day after the bill, as the example says) -- unpaid at any time on
   day 30 being enough.
 - **F5** s 289 (1), s 292 (6), (7) "until at least N days after the day" -- the suing questions and the regulative rule --
-  the earliest day is day N after the bill day (day 30 after 1 July is 31 July) -- day N + 1 (all N days having passed).
+  all N days must have passed (the clear-days reading of "at least N days"), so the earliest day is day N + 1 after the
+  bill day (1 August after 1 July) -- day N (31 July). Changed to this reading after the independent verification; the
+  ACT Legislation Act 2001, which could settle it, is not deposited.
 - **F6** s 289 (2) (a court may authorise a proceeding "sooner") -- the suing questions -- lifts the s 289 (1) bar only,
   not the s 292 (6) or (7) bars -- lifts every bar in Division 3.2.6.
 - **F7** s 287 (3) and (4) together, under a void agreement that contravened s 284 -- `the most recoverable under s 287` --
@@ -202,7 +224,7 @@ NOTHING answers. The rulings it follows:
    contravened; any other contravention leaves the scale or fair value, capped at the agreement. Asserted.
 4. **s 287 (3) and (4) leave open what cap applies after a s 284 contravention** (fork F7).
 5. **s 292 (6) and (7) leave open whether the 90-day bar survives a request for an itemised bill** (fork F10). On the
-   reading taken, an itemised bill given early can let the law practice sue before day 90 (asserted: 14 September after a
+   reading taken, an itemised bill given early can let the law practice sue before day 91 (asserted: 15 September after a
    1 July bill, itemised bill on 15 August).
 6. **s 281 (1)'s example confirms interest runs back to the day after the bill**, not from day 31, once the 30 days have
    passed; the boundary day itself is not settled by the example (fork F4). The cap is the judgment rate (cash rate plus 6
