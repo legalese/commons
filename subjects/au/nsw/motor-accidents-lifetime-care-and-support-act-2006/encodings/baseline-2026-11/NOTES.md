@@ -12,7 +12,9 @@ on 2026-10-18 and the rulings on negatives of 2026-11-04 and 2026-11-05 (`JUST F
 words; `NOTHING`, with a `NOTHING-kind` comment, where it does not answer; enumerated answers carry a "the Act does not
 say" constructor instead). Two regulative rules (the participant's 28 days to ask for an assessor, s 24(2), and to refer
 an assessor's determination for review, s 25(2)), each run by `EVALTRACE` inside an exported question that takes only
-plain facts. No REFUSE, no `#ASSERT REFUSED`, no BECAUSE except in `LEST BREACH`. No pipeline, no coverage table, no
+plain facts; the two last-day questions take their deadline from those rules (the last day number on which `EVALTRACE`
+still finds the act FULFILLED), so the 28 days are written once, in `WITHIN`. No REFUSE, no `#ASSERT REFUSED`, no
+BECAUSE except in `LEST BREACH`. No pipeline, no coverage table, no
 independent test pass, no human gate. Not for public use as advice.
 
 This is the first encoding of the Act; nothing existing was touched. The focus is the provisions an injured person
@@ -42,15 +44,16 @@ folder, at most two processes at a time. `l4 run` exits 0 even when an assertion
 | `ltcs-dates.l4` | 0 | 0 | 0 | 0 |
 | `ltcs-scheme.l4` | 0 | 0 | 0 | 0 |
 | `ltcs-seat-owner-driver.l4` | 0 | 0 | 0 | 0 |
-| `ltcs-cases.l4` | 0 | 0 | 128 | 128 |
+| `ltcs-cases.l4` | 0 | 0 | 134 | 134 |
 | `ltcs-cases-owner-driver.l4` | 0 | 0 | 26 | 26 |
 
 Every expected value was worked by hand from the text, with the edges: the 16th birthday on the day of the accident
 and the day after (s 3); an accident on 1 October 2007 and the day before (s 4(1)); the third birthday on and the day
 after acceptance (s 9(5), (5A)); acceptance and birthdays on 29 February; the last day of interim participation and the
 day after (ss 9, 11(2)); the day count over the whole two years (730 days) and to a lifetime acceptance (292 days); the
-28th day after a certificate and the 29th (ss 24(2), 25(2)), across February and a year end; a request before the
-certificate; a contribution or legal cost equal to, one dollar under and one dollar over its cap (ss 11AA(2), 21(4));
+28th day after a certificate and the 29th (ss 24(2), 25(2)), across February, a leap February and a year end; a request
+before the certificate; the s 9(3) step from interim to lifetime participation with and without an application, during
+and after interim participation; a contribution or legal cost equal to, one dollar under and one dollar over its cap (ss 11AA(2), 21(4));
 contributory negligence of 0, 25, 100 and 101 per cent (s 54(2)); each defence proved and not (s 54(7), (8)).
 
 ## Seats
@@ -92,11 +95,13 @@ The 2026-10-18 defaults:
 ## Scope
 
 **In:** s 3 (relevant Scheme commencement date, motor accident injury); s 4 (application); s 5A (treatment and care
-needs); s 7 (eligibility); ss 7A, 7B (buying in); s 8(1), (2) (who may apply; s 8(3)-(6) in comments); s 9 (acceptance
-and duration); s 11(2) (the pause in time limits; s 11(1) in a comment); ss 11A, 11AA, 11B, 11C (payments); ss 14, 15
-(eligibility disputes and review); ss 17, 18 (costs of eligibility disputes); s 20 (motor accident injury disputes);
-s 21 (legal costs of those disputes); ss 23-25, 27, 29 (treatment and care needs assessment, disputes, review,
-co-operation, legal costs); s 54 (recovery from the owner or driver, or another person at fault); Schedule 3 cl 2 (in a
+needs); s 7 (eligibility); ss 7A, 7B (buying in); s 8(1), (2) (who may apply; s 8(3), (4), (5) and (6) in comments,
+s 8(4) also asked as "duly made"); s 9 (acceptance and duration); s 11(2) (the pause in time limits; s 11(1) in a
+comment); ss 11A, 11AA, 11B, 11C (payments; s 11A(4), payment by agreed amounts over a fixed period, in a comment);
+ss 14, 15 (eligibility disputes and review); ss 17, 18 (costs of eligibility disputes); s 20 (motor accident injury
+disputes; s 20(2), who is an interested person, in a comment); s 21 (legal costs of those disputes); ss 23-25, 27, 29
+(treatment and care needs assessment, disputes, review, co-operation, legal costs; s 25(5), the Review Panel's duty to
+take the participant's written submissions into account, in a comment); s 54 (recovery from the owner or driver, or another person at fault); Schedule 3 cl 2 (in a
 comment).
 
 **Out, and why:** ss 1, 2 (name, commencement); s 5 (borrowing the 1999 Act's meanings: applied by asking); ss 12, 13,
@@ -131,7 +136,10 @@ Each line: the provision, the function, the answer taken, the other reading.
 - **F6** s 9(5) "for a period of 2 years only" -- `the last day of interim participation for ... accepted on ...` -- the
   two years include the day of acceptance (last day: the day before the second anniversary); "until the person is 5"
   ends the day before the fifth birthday; an anniversary on 29 February falls on 28 February -- the Interpretation Act
-  1987 s 36 (not deposited) excludes the first day, which would add a day.
+  1987 s 36 (not deposited) excludes the first day, which would add a day. This counts differently from F11 on purpose:
+  s 9(1) makes the person a participant on the day of acceptance, so that day belongs to the period the person "remains"
+  a participant, whereas ss 24(2) and 25(2) count days "after" a certificate. If s 36 is held to govern s 9(5) too, the
+  two counts become one and the s 9(5) last day moves to the second anniversary (and finding 9 changes with it).
 - **F7** s 3(1) "under 16 years of age", s 9(5), (5A) "3 years of age", "5 years of age" -- `the age of someone born
   on ... on ...` -- a person born on 29 February reaches an age on 28 February in a common year -- on 1 March.
 - **F8** s 11(2) "While a person is an interim participant ... time does not run" -- `How many days has my interim
@@ -146,17 +154,25 @@ Each line: the provision, the function, the answer taken, the other reading.
   person's share is applied, not the s 54(2) reduction as well -- both apply.
 - **F11** ss 24(2), 25(2) "more than 28 days after", "not later than 28 days after" -- the two rules -- the 28th day after
   the certificate is given is in time and the 29th is not (WITHIN 28 from day 0, the day given) -- the day of giving is
-  day 1.
+  day 1. (Contrast F6, which includes the day of acceptance.)
 - **F12** s 5A(1) "the treatment and care needs ... are" -- `Will the Authority pay for this` -- something outside the
   list (and not prescribed) is not a treatment and care need, and the Authority is not required to pay -- `the Act does
   not say`.
+- **F13** s 21(2), (4) -- `How much of my legal costs will the Authority pay` -- the regulations' maximum caps the
+  Authority's payment, because s 21(1) and (2) measure it by the costs "payable by the injured person", which cannot
+  exceed what s 21(4) lets the practitioner recover, and s 21(6) makes any costs assessment give effect to the regulation
+  -- s 21(4) binds only the practitioner, and the Authority pays the Commission's figure as it stands.
+- **F14** s 9(2), (3) -- `Must the Authority accept me as a participant` -- s 9(3) is its own duty: while the person is
+  still an interim participant, the Authority becoming satisfied of lifetime eligibility is enough, with no duly made
+  application; once interim participation has ended (s 9(7)), the duty is s 9(2)'s and needs an application -- s 9(3)
+  presupposes an application under s 9(2) in every case.
 
 ## Jural relations
 
 | Provision | Bearer | Kind | Encoded as |
 |---|---|---|---|
 | s 8(1), 7A(4), 7B(4) | the person, the insurer | power to apply; the insurer's disability for a buy-in | `Can this person apply for me` |
-| s 9(2), (3) | the Authority | duty to accept | `Must the Authority accept me as a participant` |
+| s 9(2), (3) | the Authority | duty to accept (s 9(3) without an application, fork F14) | `Must the Authority accept me as a participant` |
 | s 9(6) | the Authority | disability: no second interim acceptance | constructor `it cannot accept me as an interim participant again` |
 | s 11A(1), 11B | the Authority | duty to pay; no duty (with a privilege to elect) | `Will the Authority pay for this` |
 | s 24(1), (2) | the participant; the Authority | power to request within 28 days; duty to refer | MUST rule, WITHIN 28 |
@@ -220,7 +236,7 @@ vehicle.
 - Replace the corpus text with the current official text from legislation.nsw.gov.au and re-check every quotation,
   especially the references to the 1999 and 2017 Acts (finding 2).
 - Deposit the LTCS Guidelines and the regulations, and bring their criteria and numbers in.
-- Have a lawyer review the forks, especially F1-F4 (buying in), F6 and F8 (counting) and F9-F10 (s 54).
+- Have a lawyer review the forks, especially F1-F4 (buying in), F6, F8 and F11 (counting), F9-F10 (s 54), F13 (legal costs) and F14 (s 9(3)).
 - Link the encoding to the motor accidents, limitation and civil liability encodings for damages and time limits.
 - An independent test pass and the human gates.
 
