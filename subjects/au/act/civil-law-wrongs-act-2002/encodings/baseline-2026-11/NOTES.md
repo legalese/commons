@@ -39,9 +39,11 @@ Time in those rules is counted in day serials (`DATE_SERIAL`), so a rule's deadl
 - **Act:** Civil Law (Wrongs) Act 2002 (ACT), A2002-40, Republication No 77 (R77), effective 16 May 2026, last amended by
   A2026-7, as deposited at `../../registers/source-bundle/A2002-40.txt` (converted 2026-11-06 from the register's DOCX,
   which the register marks as an unauthorised version; the authorised text is the register's PDF).
-- **Commencement dates used:** division 8A.1A.2 (duty of organisations to prevent child abuse) was inserted by the Civil
-  Law (Wrongs) (Organisational Child Abuse Liability) Amendment Act 2025 (A2025-32), whose remainder commenced on
-  13 November 2025 (endnote 3 of the republication). s 114BBB applies the division to abuse on or after that day.
+- **Commencement dates used:** division 8A.1A.2 (duty of organisations to prevent child abuse, ss 114BBB-114BBD) was
+  inserted by the Civil Law (Wrongs) Amendment Act 2026 (A2026-7) s 10 (endnote 4), whose remainder commenced on
+  16 May 2026 (endnote 3). The earlier Civil Law (Wrongs) (Organisational Child Abuse Liability) Amendment Act 2025
+  (A2025-32, commenced 13 November 2025) inserted only pt 8A.1A, ss 114BB, 114BBA (then s 114BD), 114BC and 114BE.
+  s 114BBB applies the division to abuse on or after 16 May 2026.
 - **Numbers set elsewhere:** the Civil Law (Wrongs) Regulation 2003 (SL2003-20) is **not deposited**. Chapter 5 lets it
   prescribe the information and documents a notice must contain (s 51 (2)), excuses that are reasonable (s 51 (8)), and
   the periods for most steps; Chapter 14 lets it change the s 181 relevant amount ($10,000) and percentage (20%). Where
@@ -61,7 +63,7 @@ read. Deliberately wrong assertions were run once in a scratch copy of each case
 | `clwa-precourt.l4` | 0 | 0 | 0 | 0 |
 | `clwa-liability.l4` | 0 | 0 | 0 | 0 |
 | `clwa-precourt-cases.l4` | 0 | 0 | 111 | 111 |
-| `clwa-liability-cases.l4` | 0 | 0 | 143 | 143 |
+| `clwa-liability-cases.l4` | 0 | 0 | 146 | 146 |
 
 Every exported question has cases, with the edges: the last day for a notice and the day after, each limb of s 51 (3)
 deciding, month ends (31 May + 9 months = 28 February; 30 November 2027 + 3 months = 29 February 2028), across a year end,
@@ -69,7 +71,7 @@ a child whose legal disability ends at 18, the motor accident period; the respon
 after, and from 31 January; a response a day late; the 1-month minimum to fix a notice on both sides; the 6-month offer
 and the 3-month answer on their last days and the day after; every deadline step; a panel of 3, 2 and 1; 200 and 201
 pages; age 15 and 16 for the presumptions; earnings at, below and just over 3 times AWE; reductions of 0%, 25% and
-100% and a liability limit below, at and above the reduced figure; child abuse on 12 and 13 November 2025; the 120th day
+100% and a liability limit below, at and above the reduced figure, and a limit where no reduction is allowed; child abuse on 13 November 2025 and on 15 and 16 May 2026; the 120th day
 after a proceeding started and the 121st; recoveries of $50,000 and $50,001 for the costs cap.
 
 **No mirror cases.** One seat.
@@ -130,6 +132,19 @@ The 2026-10-18 defaults:
 - Chapter 14: s 181 (maximum costs for claims of $50,000 or less).
 
 **Out, and why.**
+- Part 2.2 ss 10, 11 (the Territory assuming a community organisation's liability by the Minister's agreement, and
+  directions about insurance): arrangements between government and organisations; whether an agreement is in force
+  could be asked as a fact beside ss 8, 9. Part 2.4 ss 17, 18 (a cause of action against a person who died before or
+  with the damage is taken to have existed; rights additional to part 3.1 and the Motor Accident Injuries Act 2019):
+  tractable, could be added beside s 16.
+- s 36 (2)-(6) (the court's directions where several family members sue, the action for all of them, damages
+  proportional to the damage, and their division): the court's procedure and discretion; only s 36 (1) states who can
+  claim.
+- Part 7.3 ss 104, 105: s 104 (a third person's damages are reduced for the first person's contributory negligence, as
+  for a s 36 claimant whose relative was partly at fault) could be added beside s 102 (the s 102 question takes the
+  share as an input, so the first person's share can be entered there); s 105 is between wrongdoers.
+- s 114D (3) "unless the court otherwise orders": no order is assumed; an order changing the 120 days is not taken as an
+  input.
 - Part 2.2A (food donors, s 11B) and part 2.5 (contribution between wrongdoers, ss 19-22): a narrow defence and rules
   between wrongdoers; tractable, could be added.
 - ss 24, 25 (liability and damages for a death): they hand the amount to the court ("proportional to the damage");
@@ -199,6 +214,14 @@ Each line: the provision, the function, the answer taken, the other reading.
   error.
 - **F18** s 59 (1) and s 54 (3) -- `s 59 -- can I proceed further with my claim` -- the presumption is asked as a fact (it
   is the s 54 question's answer) -- computed again inside s 59.
+- **F19** s 102 (3) "the amount of damages awarded ... because of subsection (1)" -- `s 102 -- my damages after
+  contributory negligence` -- the maximum limit caps only damages reduced under s 102 (1); where no reduction is allowed
+  (s 27, s 102 (2)) the unreduced damages are answered, and the limit applies on its own terms outside s 102 -- the
+  cap applies to every award in a contributory negligence case.
+- **F20** s 114BBB "child abuse that happens ... on or after the day this division commences", abuse over a period that
+  reaches that day -- `s 114BBD -- is the organisation taken to have breached its duty` -- asked by the abuse's last day:
+  the division reaches the abuse on or after 16 May 2026 -- the whole course of abuse is outside the division if it began
+  before.
 
 Sites decided without a fork line: the "means" and "if" conditions of ss 5, 8, 37, 50 (2), 66, 67, 94-97, 107B, 113,
 114BBB, 114BBD (3), 181 answer the text's no when they fail; s 14, s 26 and s 38 (1) are flat negatives ("is not",
@@ -261,9 +284,10 @@ answer, and the answers marked "the text's no" are JUST FALSE. The rulings it fo
 12. **"Subject to part 7.1" in s 27 (2) and s 102 (5) is not explained.** Whether an unrebutted s 95-97 presumption, which
     says damages "must be reduced", overrides the rule that a death claim is not reduced (s 27 (1)) is not said (fork
     F12).
-13. **Division 8A.1A.2 starts on 13 November 2025**, and its reversed onus (the organisation is taken to have breached
-    its duty unless it proves reasonable precautions, s 114BBD (3)) does not reach earlier abuse; s 114BE (vicarious
-    liability) does. Asserted (12 and 13 November 2025).
+13. **Division 8A.1A.2 starts on 16 May 2026**, six months after the rest of part 8A.1A (13 November 2025), and its
+    reversed onus (the organisation is taken to have breached its duty unless it proves reasonable precautions,
+    s 114BBD (3)) does not reach earlier abuse; s 114BE (vicarious liability) does. The note to s 114BA says the same.
+    Asserted (13 November 2025, 15 and 16 May 2026). Abuse that went on across that day is fork F20.
 
 ## Before this is worth relying on
 
@@ -272,7 +296,7 @@ answer, and the answers marked "the text's no" are JUST FALSE. The rulings it fo
 - The Legislation Act 2001 (ACT) for counting periods and moving a last day off a weekend or holiday (fork F2), and for
   "domestic partner".
 - The Court Procedures Rules 2006 (deposited as its own subject) for who brings a death claim and for whom (finding 1).
-- A lawyer's view on forks F4, F6, F7, F10, F11, F12, F14 and on findings 1, 7, 10 and 12; an independent test pass and a
+- A lawyer's view on forks F4, F6, F7, F10, F11, F12, F14, F19, F20 and on findings 1, 7, 10 and 12; an independent test pass and a
   human gate.
 - Read with: the Limitation Act 1985 (ACT) encodings beside this one (the limitation periods themselves, legal
   disability, s 21C for child abuse, s 30A for injuries to children), the Motor Accident Injuries Act 2019 (ACT)
