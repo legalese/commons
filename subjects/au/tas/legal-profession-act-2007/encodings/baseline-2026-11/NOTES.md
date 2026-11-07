@@ -38,20 +38,22 @@ Stable `l4` of VS Code extension 1.6.98 (`bin/win32-x64/l4.exe run <file>`), `JL
 folder, at most two processes at a time. `l4 run` exits 0 even when an assertion fails, so the diagnostics were read. Two
 deliberately wrong assertions (a cooling-off notice on the sixth business day asserted in time; proceedings on the 29th
 day after the bill asserted allowed) were run once in a scratch copy, since deleted, and showed as "assertion failed"
-(187 satisfied, 2 failed).
+(187 satisfied, 2 failed). After the verification fixes of 2026-11-07 (below) the cases file has 195
+assertions, all satisfied.
 
 | File | Errors | Warnings | Assertions written | Satisfied |
 |---|---|---|---|---|
 | `lpatas-dates.l4` | 0 | 0 | 0 | 0 |
 | `lpatas-costs.l4` (38 questions) | 0 | 0 | 0 | 0 |
-| `lpatas-cases.l4` | 0 | 0 | 187 | 187 |
+| `lpatas-cases.l4` | 0 | 0 | 195 | 195 |
 
 Every expected value was worked by hand from the text before the run, and all held on the first run. Every exported
 question has cases, with the edges: the $1,500 threshold at $1,500 and $1,500.01, and a higher prescribed amount at and
 above it; each exception to disclosure, two at once; each disclosure item, two missing at once; the s 286(4) notice on
 the 28th and 29th day; the 30-day interest start on day 29 and 30, a rate at and above the maximum; each excluded matter
 for a conditional agreement; 4 and 5 cooling-off days; the cooling-off end from a Monday and a Friday, with a holiday, and
-across the new year; a notice on the last business day and the day after, and before the agreement; the uplift fee at
+across the new year (three weekday holidays: 25 and 28 December 2026 and 1 January 2027, so the end is Monday 4 January,
+with the undercount that lands on New Year's Day shown too); a notice on the last business day and the day after, and before the agreement; the uplift fee at
 exactly 25% and one cent over, outside litigation, and outside a conditional agreement; each s 311 ground and three at
 once; each repayment rule, capped by the agreement and by the scale; the itemised bill on day 21 and 22; suing on day 29
 and 30 after the bill, after an itemised bill, with a court order on a lump sum and on an itemised bill; the 60-day
@@ -83,17 +85,18 @@ count are asked as a number, not worked out (fork F4).
 
 **In** (Part 3.3):
 - Division 1: s 283 (sophisticated client, uplift fee, litigious matter, business day), s 284 (third party payers).
-- Division 2: ss 285, 286 (including the 28 days of s 286(4)), 287(2).
-- Division 3: ss 291 and 292 (as a checklist), 294 (in the disclosure question's gloss), 295 (exceptions, the $1,500
-  threshold), 296 (settlement), 297 (uplift), 300(1), (2), (5), 301 (reports and what they cost).
+- Division 2: ss 285, 286 (including the 28 days of s 286(4)), 287(1), (2).
+- Division 3: ss 291(1), (4) and 292 (as a checklist), 294(1), (2) (in the disclosure question's gloss), 295(1), (2), (5)
+  (exceptions, the $1,500 threshold), 296 (settlement), 297 (uplift), 300(1), (2), (3) (a further ground to apply to set
+  the agreement aside, in the s 312 question), (5), 301(1), (2) (reports and what they cost).
 - Division 4: s 303 (basis of recovery), s 305 (interest).
 - Division 5: ss 306(2) to (5), 307 (excluded matters, formal requirements, cooling-off, what may be recovered after
   cooling off), 308 (uplift fees, the 25% cap), 309 (contingency fees), 311 (void agreements and repayment), 312(1),
   (5), (6), (12) with s 306(6) (setting aside).
-- Division 6: s 313 (no suit for 30 days, the court order, the stay), s 314(1) (bill forms, in the glosses), s 316
-  (itemised bills, 21 days, 30 days). Regulative: s 316(2) (MUST within 21 days) and ss 313(1), 316(4), (5) (SHANT
+- Division 6: s 313(1) to (3) (no suit for 30 days, the court order, the stay), s 314(1) (bill forms, in the glosses),
+  s 316(1), (2), (4), (5) (itemised bills, 21 days, 30 days). Regulative: s 316(2) (MUST within 21 days) and ss 313(1), 316(4), (5) (SHANT
   for 30 days), run by EVALTRACE inside the questions.
-- Division 7: s 319(1), (2), (5), (6), s 321(4), s 323, s 328, s 331(2), (3), (6), ss 333(1), 334(1), (2), s 338.
+- Division 7: s 319(1), (2), (5), (6), s 321(4), s 323(b), s 328(1), s 331(2), (3), (6), ss 333(1), 334(1), (2), s 338.
 
 **Out**, and why:
 - s 282 (purposes), s 288 (where instructions are received: in the glosses only), s 289 (regulation-making), s 290
@@ -101,12 +104,19 @@ count are asked as a number, not worked out (fork F4).
 - ss 291(2), (3), (5) to (7), 293 (disclosure where another law practice is retained: the client sees it through the
   s 296 and s 300(5) questions), 294(3), 295(3), (4), 298 (plain language, oral disclosure), 299 (ongoing disclosure:
   "as soon as is reasonably practicable" has no countable deadline), 300(4), (6), (7) (the assessor's discretion and
-  professional conduct), 302 (disclosure to associated payers, beyond what the questions accept).
+  professional conduct), 301(3), (4) (a law practice retained by another: the client's reports come from the practice
+  the client retained), 302 (disclosure to associated payers, beyond what the questions accept).
 - s 304 (security for costs: the law practice "may take reasonable security", a judgment with no countable rule).
-- s 306(1) (who may make a costs agreement, inter-practice agreements), s 310 (enforced like any contract), s 312(2),
-  (3), (7) to (11) (the assessor's considerations and procedure).
-- s 313(4), ss 314(2) to (7), 315 (how a bill is signed and given, and the rights statement: taken as the fact "a bill
-  has been given"), s 317 (interim bills).
+- s 306(1) (who may make a costs agreement, inter-practice agreements), s 310 (enforced like any contract), s 312(2) to
+  (4), (7) to (11) (the assessor's considerations, orders and procedure).
+- s 313(4) (costs agreement or not: the questions do not turn on it), ss 314(2) to (7), 315, 316(6) (how a bill is signed
+  and given, and the rights statement: taken as the fact "a bill has been given"), s 316(3) (a request by a person liable
+  for part of the costs reaches only that part: the extent of a request, not whether or when it may be made), s 317
+  (interim bills).
+- s 321(1) to (3) (which costs the law practice itself may put to assessment: the question asks only from what day it
+  may apply), s 323(a) (no payment into court), s 328(2) (what the assessor need not examine), s 331(1), (4), (5) (the
+  assessor fixing the costs of assessment, costs of delay, referral to the Supreme Court: the assessor's and the Court's
+  discretion).
 - ss 318, 319(3), (4), (7) to (10), 320 (applications by a retaining law practice), 322 (form of application; the fee
   waiver on serious hardship is the assessor's judgment), 324 to 327, 329, 330, 332, 333(2) to (6), 334(3), (4), 335 to
   337, 339 to 341: procedure, the assessor's powers and criteria, certificates, enforcement, referral for discipline,
@@ -154,8 +164,9 @@ Each line: the provision, the function, the answer taken, the other reading.
   the certificate, s 336).
 - **F4** s 283 "business day", s 307(3)(e), `s 307(3)(e) -- by what day can I cool off`: Saturdays and Sundays are
   worked out; the statutory holidays falling on a weekday in the period are a number the person gives, each pushing the
-  end one weekday on; "clear" days start the day after the agreement is made; other reading: count from the day after
-  the client receives the signed agreement.
+  end one weekday on, and they are counted to the end of the period as the holidays extend it (a Monday on which a
+  weekend holiday is observed counts); "clear" days start the day after the agreement is made; other reading: count from
+  the day after the client receives the signed agreement.
 - **F5** s 306(3), (4), `s 306 -- the agreement is properly made`: the s 306(4) statements are required of every
   agreement made by accepting a written offer, whether accepted in writing or by conduct; other reading: only where
   acceptance is by conduct.
@@ -179,8 +190,8 @@ Each line: the provision, the function, the answer taken, the other reading.
   s 313(1) bar; for a lump sum bill, s 316(4) and (5) still bar suit for 30 days (finding 3); other reading: the order
   authorises suit despite s 316 too.
 - **F12** s 321(4), `s 321(4) -- from what day can the law practice apply for assessment`: (a), (b) and (c) are
-  alternatives, so the earliest day any allows; other reading: 30 days must also have passed since another person's
-  application (finding 5).
+  alternatives, so the earliest day any allows (another person's application can come first, finding 5); other reading:
+  30 days must also have passed since another person's application.
 - **F13** periods: "within 60 days after", "within 21 days after", "within 14 days after", "within 28 days" let the last
   day be the day plus the number; "at least 30 days after" and "unpaid 30 days or more after" first allow the day plus
   30; other reading: the Acts Interpretation Act 1931 (Tas), not deposited, may count differently when the last day is a
@@ -204,10 +215,13 @@ Each line: the provision, the function, the answer taken, the other reading.
 4. **The disclosure promises a 30-day limit that the billing Division does not state.** s 291(1)(b)(iii) says the client
    must be told of the right to "request an itemised bill within 30 days after receipt of a lump sum bill", but s 316(1)
    sets no time for the request: anyone entitled to apply for assessment may ask. Encoded per s 316 (fork F10).
-5. **The law practice's own assessment start has an alternative that never comes first.** s 321(4) lets the law
-   practice apply once 30 days have passed since (a) the bill, (b) payment, or (c) "an application has been made under
-   this Division by another person". Since s 321(1) requires a bill to have been given, (c) can only fall after (a) and
-   so, read as an alternative, never brings the day forward. Asserted (an application on 15 June leaves the day at 1 July).
+5. **The law practice's own assessment start can be brought forward by another person's application.** s 321(4) lets
+   the law practice apply once 30 days have passed since (a) the bill, (b) payment, or (c) "an application has been made
+   under this Division by another person". s 321(1) requires a bill only for the law practice's own application; a client
+   or third party payer may apply before any bill, for costs paid without one (s 319(1), (4)), so (c) can come before (a)
+   and, read as an alternative, bring the day forward. Asserted (an application on 15 June leaves the day at 1 July after
+   a bill on 1 June; an application on 5 May, before a bill on 1 June, brings it to 4 June). Corrected on 2026-11-07: the
+   first version said (c) could only fall after (a) and never came first; the code already took the earliest day.
 6. **The uplift fee cap is 25% only in litigation.** s 308(4)(b) caps the uplift at 25% of the legal costs (excluding
    disbursements) otherwise payable "If a conditional costs agreement relates to a litigious matter"; elsewhere the Act
    sets no cap, only disclosure (s 297) and an estimate (s 308(3)). A litigious matter includes one "likely to involve"
