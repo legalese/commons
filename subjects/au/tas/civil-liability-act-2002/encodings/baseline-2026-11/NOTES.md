@@ -31,7 +31,7 @@ uses), `clatas-damages.l4`, `clatas-liability.l4`, `clatas-abuse.l4`. Cases: one
 | File | Assertions written | Satisfied | Errors | Warnings |
 |---|---|---|---|---|
 | `clatas-damages-cases.l4` | 134 | 134 | 0 | 0 |
-| `clatas-liability-cases.l4` | 135 | 135 | 0 | 0 |
+| `clatas-liability-cases.l4` | 141 | 141 | 0 | 0 |
 | `clatas-abuse-cases.l4` | 57 | 57 | 0 | 0 |
 
 `l4 run` on each module succeeds with no diagnostics. `l4 run` exits 0 even when an assertion fails, so the diagnostics
@@ -82,7 +82,8 @@ Each 2026-10-18 default:
 No exported question takes a DEONTIC or EVENT input. The one duty with a deadline a claimant meets, s 49P(4) (the
 unincorporated organisation must identify its associated trusts within 28 days after the plaintiff's application), is a
 regulative rule (`PARTY ... MUST ... WITHIN 28 ... LEST BREACH ... BECAUSE`) run by `EVALTRACE` inside a question that
-takes dates and a yes/no.
+takes dates and a yes/no. The 28 days are held once (`the s 49P(4) period, in days`), and both the rule's `WITHIN` and
+the deadline question read them from there.
 
 ## Scope
 
@@ -101,7 +102,18 @@ In (the whole Act so far as a claimant meets it):
 Out, and why:
 
 - Machinery: s 1, s 2, s 4AA, s 3B(5)-(6) (regulation-making; no regulation deposited), s 49S (rules of court),
-  Part 11 (regulations), s 49R(5) (a Corporations Act s 5G declaration).
+  Part 11 (regulations), s 49R(5) (a Corporations Act s 5G declaration), s 49M(2)-(4) (management members may exercise
+  the organisation's functions; the court's orders and directions to them).
+- Definitions and glosses taken into an input's `@desc` rather than encoded as a rule: s 37 ("public or other
+  authority": the Crown, councils, statutory authorities and the rest, partly by prescription; asked as a fact), s 49E
+  (an organisation and its successor are the same organisation; the claimant names the organisation as the court will
+  treat it).
+- s 46: (1) Part 10 "applies to civil liability for a thing done by a volunteer after the commencement of this Part";
+  the encoding dates Part 10 by the accrual of the cause of action under s 4(3) instead (fork F15). (2) Part 10 "does
+  not limit the protection from liability given by another written law": other written laws are outside this Act.
+- s 4(3C): the 2013 amendment of s 28C (which added the loss of capacity to provide gratuitous services) does not reach
+  a cause of action accrued before 1 March 2014. Not a separate rule: the only question that turns on that limb of
+  s 28C is the s 28BA question, which s 4(3B) already confines to causes of action accrued from 1 March 2014.
 - Principles with no fact of the claimant's to turn: s 3A, s 3C, s 12, s 13(3) (how a court decides what the plaintiff
   would have done), s 14 (onus on causation), s 15(2)-(5) (glosses on "obvious", folded into the input's `@desc`),
   s 23 (the standard for contributory negligence under the Wrongs Act 1954), s 28 (earlier awards as tariffs), s 31,
@@ -127,6 +139,8 @@ outside its scope. As applied:
   is no liability ... unless" (s 33), "cannot make an award ... unless" (s 35), "does not owe a duty" (ss 17, 39),
   "does not constitute ... unless" (s 40), "is not liable ... except as provided" (s 49A(2)): `JUST FALSE`.
 - "does not apply" (ss 3B, 4, 5(4), 7(3), 21(2), 22(5), 49B(3), 7AA(3), 7AB): `NOTHING`, the general law decides.
+- "If ... the court may" with no "only if" (ss 8, 8B(1)): `JUST TRUE` where the condition is met, `NOTHING` where it is
+  not; the Act gives the power and says nothing of other cases.
 - Where a defence or limit does not arise, the Act is silent and the answer is `NOTHING`, never `TRUE`: the claimant
   still has to make out the claim at common law.
 
@@ -160,7 +174,16 @@ outside its scope. As applied:
 - **F12** s 49P(4): where the organisation has not identified its trusts, an identification on the day asked about
   stands for "had it done so that day"; if that would not keep the duty, it is late.
 - **F13** Part 10A takes no s 3B class: every s 3B exclusion concerns personal injury, intent or a scheme, not a guest's
-  property.
+  property. Part 10B does take one (s 49B): the claim against the employee is classed under s 3B like any other, so a
+  Part III motor accident injury, an intentional act, child abuse or a workers compensation Division 2 injury gives
+  "s 49B does not apply". Asserted.
+- **F14** s 7AB: in proceedings begun or determined before the Justice Miscellaneous (Commission of Inquiry) Act 2024
+  received the Royal Assent, s 7 stands as it was before that Act (with the earlier s 7(3), and without s 6B). That
+  earlier text is not deposited, so the s 7 question answers `NOTHING` for those proceedings, as the s 7AA question
+  does.
+- **F15** s 46(1): Part 10 reaches "a thing done by a volunteer after the commencement of this Part"; the encoding uses
+  the s 4(3) accrual date (4 July 2003) instead. They differ only where the volunteer acted before 4 July 2003 and the
+  cause of action accrued on or after it. Other reading: ask the day of the volunteer's act.
 
 ## What the Act turns out to say
 
@@ -183,7 +206,8 @@ outside its scope. As applied:
 8. **The aftermath of mere peril does not count.** s 32(2)(a) lets a witness at the scene recover for seeing the victim
    "killed, injured or put in peril", but for the aftermath only "of the victim being killed or injured". Asserted.
 9. **An individual's apology for child abuse has no s 7 protection** (s 7(3), substituted in 2024), and an
-   organisation's apology made by the alleged perpetrator has none under s 7AA(3). Asserted.
+   organisation's apology made by the alleged perpetrator has none under s 7AA(3). Both hold only in proceedings begun
+   after the 2024 Act received the Royal Assent (s 7AB, fork F14). Asserted.
 10. **Exactly 6 hours a week, or exactly 6 months, fails** ss 28B(2) and 28BA(2) ("more than"); so does an offence
     punishable by exactly 6 months' imprisonment for s 6 ("greater than"). Asserted.
 11. **ss 49H and 49J reach only abuse after 1 May 2020**, but Division 4 (suing an unincorporated organisation and its
@@ -202,5 +226,5 @@ outside its scope. As applied:
 - Search for regulations under ss 3B(5), 28A, 37, 44, 45 and 49G, and fill the published Amounts A and B, adult average
   weekly earnings and the Hobart CPI series into worked examples.
 - Confirm the commencement days in fork F1 against the proclamations, and the Act's own commencement day.
-- A lawyer's reading of forks F2-F13 and findings 2, 5, 6 and 12.
+- A lawyer's reading of forks F2-F15 and findings 2, 5, 6 and 12.
 - Check the deposited text against the authorised version: it was retrieved on 6 November 2026.
