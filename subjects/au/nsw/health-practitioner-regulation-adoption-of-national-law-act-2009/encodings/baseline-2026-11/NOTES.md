@@ -47,7 +47,7 @@ folder, at most two processes at a time. `l4 run` exits 0 even when an assertion
 | `hpr-seat.l4` | 0 | 0 | 0 | 0 |
 | `hpr-seat-practitioner.l4` | 0 | 0 | 0 | 0 |
 | `hpr-cases.l4` | 0 | 0 | 149 | 149 |
-| `hpr-cases-practitioner.l4` | 0 | 0 | 66 | 66 |
+| `hpr-cases-practitioner.l4` | 0 | 0 | 71 | 71 |
 
 Every expected value was worked by hand from the text, with the edges: a 5% shareholding and 4.99% (s 139B(2)(a));
 disclosure meeting the "unless" (s 139B(1)(i)); profession-specific heads asked of the wrong profession (ss 139C, 139D);
@@ -55,7 +55,22 @@ the outcome notice on day 0, 30 and 31, and its last day over February in 2026 a
 and 29, across a year end and across February in a common and a leap year (s 161); a point of law appeal on day 28 and 29
 (s 158A(2)(a)); 14 and 13 clear days' notice of an inquiry, across a month end (s 171(4)); each fine cap, with a court
 penalty, no "no other order" finding, the wrong body for the profession, and a penalty unit of 100 and 110; each limb of
-s 149C; each document of ss 147B, 147C, 148I, 150, 150A, 150B. Mirror cases ask the same facts from both seats.
+s 149C; each document of ss 147B, 147C, 148I, 150, 150A, 150B; for s 163A, a suspension or conditions made by a Council
+by urgent action (s 150) against the same order made at a Council meeting or by a named body. Mirror cases ask the same
+facts from both seats.
+
+The periods of the three regulative rules are named once in `hpr-law.l4` (`the s 145BA(2) period`, `the s 161 period`,
+`the s 158A(2)(a) period`); each rule takes its period after `WITHIN`, the last days (`last day to give notice of the
+outcome`, `last day to appeal`) are worked from the same names, and "not yet due" is asked of the s 145BA(2) rule
+itself, so no date can drift from its rule. The earliest day of a Professional Standards Committee inquiry (s 171(4))
+is not a regulative rule: it is 14 clear days, worked as the day of notice plus 15.
+
+**Fix after an independent check (2026-11-08).** `Can I apply for review of the order` answered yes to any suspension
+or conditions without asking who made the order. s 163A(4) makes a "relevant order" one "made by a decision-making
+entity", and a Council counts "but only" for orders under Division 8, Subdivision 5 of Division 3 or s 155C(1)(f); a
+Council's urgent suspension or conditions under s 150 is outside it. The question now asks who made the order (fork
+F12). The deadlines were also re-tied to the rules' periods (above), and the Out list now names every operative section
+of the Part that is not encoded.
 
 ## Seats
 
@@ -115,7 +130,7 @@ of their own); Schedule 1 item [13]: ss 139, 139B, 139C, 139D, 139E, 139G, 139H;
   National Law Part 8 Division 2, not deposited.
 - s 144A and the student provisions (ss 145E-145F as to students, 148E(2), 149A(2), 149C(2), 152C, 152M, 159A): the
   seat is a patient's complaint about a practitioner.
-- ss 145A, 145B(2)-(4), 145C, 145E, 146A-146B, 146E, 147B(1)-(2), 147C(1)-(2), (4)-(6), 147D, 148A-148C, 148D(1)-(5),
+- ss 145A, 145B(2)-(4), 145C, 145E, 146A-146B, 146E, 147B(1)-(2), 147C(1)-(2), (4)-(6), 148A-148C, 148D(1)-(5),
   (7), 148E(1)(a), (c)-(g), 148H(2)-(8), 149A, 149D, 150(5)-(7), 150C-150J: the bodies' procedure and the list of
   non-monetary orders, which give the parties nothing to compute beyond what the encoded questions already answer.
 - Divisions 4 and 5 (ss 152-157: impairment and performance assessment): a referral there "ceases to be a complaint"
@@ -125,6 +140,26 @@ of their own); Schedule 1 item [13]: ss 139, 139B, 139C, 139D, 139E, 139G, 139H;
   ss 165A-165I, 165K-165M, 169-171A, 171C-171G, 172-174D: machinery; Division 14A (ss 175-175C): appeals against
   National Board registration decisions, not the complaints route; Division 14B (ss 176-176F): notices to employers
   and protections, addressed to bodies.
+- ss 139A (confidential information in a statement of a decision), 139F (a "complaint" includes a matter arising from
+  its investigation), 144F (a Council or the Commission may ask the complainant for further particulars), 144G (a
+  Council must notify the Commission and the National Board of a complaint): definitions and steps addressed to the
+  bodies, with no period and no answer the parties compute. s 144F's consequence for the complainant (a complaint may
+  then not be referred, s 145J) is encoded through `Can my complaint be referred for a hearing`.
+- s 147D (the Assessment Committee's recommendations): (1) and (4) are the bodies' procedure. (3)(b) does give the
+  practitioner (and the Commission) a period: the Council must allow "not less than 21 days after they have been given
+  a copy of the Committee's report" to make submissions, unless the Committee recommended an inquiry at a Council
+  meeting ((3)(a)). It is a minimum the Council must allow, with no last day the practitioner must meet, and it arises
+  only for an Assessment Committee, which hears complaints about medical and nursing and midwifery practitioners
+  (s 147); not encoded in this pass, and left for a later one. (An earlier version of this note said s 147D gave
+  "nothing to compute"; that was wrong as to (3)(b).)
+- s 159C (the Tribunal's powers on an appeal against a Council's decision): confirm, set aside, or set aside and
+  substitute; (2) a suspension or conditions imposed by a Council cannot, by the Tribunal's order, outlast the day a
+  related complaint is disposed of. It describes what the Tribunal may do once an appeal is heard, not whether the
+  practitioner may appeal or by when; not encoded. (2) matches s 150(2), which is encoded.
+- ss 160, 160A (Division 6 Subdivision 3: appeals against a Performance Review Panel's decisions, including a point of
+  law appeal "within 28 days after the date of the Performance Review Panel's decision" during a performance review):
+  they arise only from a performance review under Division 5, the separate pathway left out below, and the
+  complainant is not a party to it.
 - Schedule 5D cl 12 (an inquiry may be ended; it must end if the practitioner dies): consistent with s 145H, which is
   encoded; not encoded separately. Schedule 5D cll 1-11, Schedules 5A-5C, 5E, 5F (including pharmacy business
   ownership), items [16]-[25] (confidentiality, protection from liability, evidentiary certificates, regulations,
@@ -160,6 +195,21 @@ Each line: the provision, the function, the answer taken, the other reading.
   complaint is proved (Subdivision 5 has no "if proved" condition) -- the power arises only on a finding.
 - **F11** s 150(1) "must, if ... satisfied" -- `Must the Council act against me now` -- a duty once the Council is
   satisfied, and no action if not ("if") -- a discretion.
+- **F12** s 163A(4) "decision-making entity ... (b1) a Council, but only in relation to orders made under this
+  Division, Subdivision 5 of Division 3 or section 155C (1) (f)" -- `Can I apply for review of the order` -- a Council's
+  suspension or conditions under any other provision (such as urgent action under s 150) answers `JUST FALSE` (a limb
+  the text closes with "only"; the routes are s 150A and ss 159, 159B) -- `NOTHING`, as a scope limit of the right to
+  review. An order by a body s 163A(4) does not name answers `NOTHING`.
+- **F13** s 145BA(1)(b) "refers ... for assessment under section 145B (1) (f)" -- `When must the Council tell me the
+  outcome` -- a referral to an Impaired Registrants Panel (s 145B(1)(f)(ii)) is grouped with a health assessment
+  ((f)(i)): both are referrals under s 145B(1)(f), and s 145BA(5) ties (1)(b) to the s 145B(3) effect of any (f)
+  referral -- only a health assessment under (f)(i) is a referral "for assessment", so the outcome of a Panel referral
+  is not a notifiable outcome.
+- **F14** s 139H(3) "applies only to the extent (a) a notification about the person's behaviour could have been made
+  under the corresponding prior Act; and (b) proceedings of that type could have been taken under the corresponding
+  prior Act" -- `Can I make a complaint` -- only (a) is asked: it limits the complaint, while (b) limits the
+  proceedings that may follow it, which the question does not ask (the answer says "to the extent that Act allowed")
+  -- both limbs gate the complaint, so (b) would be asked too.
 
 ## What the Act turns out to say
 
@@ -220,7 +270,7 @@ Applied here: "means" definitions (ss 139E, 146, 147, 168), "only if" and "if" c
 147E, 148, 148D(6), 159(2), 163A(3)) and periods the text fixes (ss 145BA(2), 158A(2)(a), 161) answer no when they fail;
 the "includes" list of s 139B(1), the open lists of s 144 and s 163A, silence (costs and refunds before other bodies,
 the stages s 158A(2) does not cover) and matters outside the deposit (Part 7 registration) answer `NOTHING` or a "not
-covered" constructor. Sites with no convention have fork lines (F7, F9, F10, F11).
+covered" constructor. Sites with no convention have fork lines (F7, F9, F10, F11, F12, F13, F14).
 
 ## Questions (exported)
 
