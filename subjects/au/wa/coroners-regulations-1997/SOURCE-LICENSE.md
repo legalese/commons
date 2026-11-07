@@ -30,3 +30,9 @@ https://www.legislation.wa.gov.au/legislation/statutes.nsf/RedirectURL?OpenAgent
 
 Subsidiary legislation made under the Coroners Act 1996
 (subject `subjects/au/wa/coroners-act-1996/`).
+
+Symbol characters restored, 2026-11-07: the converter had dropped the 11 symbol characters the Word file writes as
+w:sym, all Monotype Sorts tick boxes in the Schedule 1 forms (Forms 7, 10 and 12), restored as "[ ]". The text was
+regenerated from the same Word file with the deposit's converter fixed to map them; nothing else changed. New text
+sha256 `c034c8b77352c9e0b8799f2d0f188ff255a9aaafe2016ae4861195732f3df6eb`; details in
+`registers/source-bundle/mrdoc_49623.meta.json`.
