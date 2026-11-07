@@ -56,6 +56,12 @@ Text deposited 2026-11-06: `registers/source-bundle/SL2006-29.txt` (1,866,020 ch
 sha256 `e3f35a38b5bc95f21133e07c854a6e30ba176595211b90a929a8d207b62e58d6`), converted from https://www.legislation.act.gov.au/DownloadFile/sl/2006-29/current/DOCX/2006-29.DOCX
 (1,400,403 bytes, sha256 `16cf5ba0512cded80c798135bdeceaf8c4320abdb1fdb1c8bb8de3cee3a5c5a5`). Conversion: DOCX to UTF-8 plain text. Headings (chapter, part, division, section, schedule) kept with their numbers; Word automatic numbering written out; OMML equations linearised; tables as '| a | b |' rows; table of contents, running heads, footers and images dropped; required notice (unofficial version, CC BY 4.0 attribution, changes) placed at the top.
 
+Reconverted 2026-11-07 from the same DOCX: the first converter dropped the bullets Word writes as Symbol-font
+characters and kept others as private-use code points (U+F0B7, U+F020). The text was converted again with a copy of the
+converter that maps them (kept outside the repository), keeping the notice header exactly: 161 lost bullets restored,
+422 private-use bullets now "•", one private-use space now a space; no other change. Now 1,866,342 characters, sha256
+`bef80da0113fb602367dcb0e723e302cd1d37289a60a332c485f057f34f17100`. Details in `SL2006-29.meta.json`.
+
 ## Language
 
 English is the only language of ACT legislation.
