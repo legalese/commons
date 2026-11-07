@@ -53,8 +53,10 @@ The same notice is at the top of the deposited text.
 ## Status of this deposit
 
 Text deposited 2026-11-06: `registers/source-bundle/A2011-35.txt` (364,229 characters,
-sha256 `88bf2a14a6ca53f60c2c9a898f8a1fdfb65b515777136baff9c94804d7a461d4`), converted from https://www.legislation.act.gov.au/DownloadFile/a/2011-35/current/DOCX/2011-35.DOCX
+sha256 `88bf2a14a6ca53f60c2c9a898f8a1fdfb65b515777136baff9c94804d7a461d4` as first deposited), converted from https://www.legislation.act.gov.au/DownloadFile/a/2011-35/current/DOCX/2011-35.DOCX
 (469,400 bytes, sha256 `8ad4c00c98f0a0dacebc98bb2be96ab70fc232e5dcc0081aeb1be88a9c85dba7`). Conversion: DOCX to UTF-8 plain text. Headings (chapter, part, division, section, schedule) kept with their numbers; Word automatic numbering written out; OMML equations linearised; tables as '| a | b |' rows; table of contents, running heads, footers and images dropped; required notice (unofficial version, CC BY 4.0 attribution, changes) placed at the top.
+
+Symbol characters restored, 2026-11-07: the converter had kept 24 bullets typed in the Symbol font as private-use code points that display as empty boxes (the lists in s 12 (1) note 2 and the s 27 (5) examples, and the dictionary note). All 24 were restored as "•" by regenerating the text from the same DOCX with the deposit's converter fixed to map symbols; nothing else changed. New text sha256 `574678894c9c4bfe34c05ae7ae619ed34000f3f62489b0221a1735e1921f1bba`; details in `registers/source-bundle/A2011-35.meta.json`.
 
 ## Language
 
