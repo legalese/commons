@@ -14,7 +14,7 @@ records law, and it is the first step in most medical negligence and injury clai
 controlling the medical reports an insurer or employer wants.
 
 This is the first encoding of the Act; nothing existed to extend. Three files: the dates (`hrpa-dates.l4`, built-in date
-functions only, no daydate), the rules and the 30 exported questions (`hrpa-consumer.l4`), and the worked cases
+functions only, no daydate), the rules and the 32 exported questions (`hrpa-consumer.l4`), and the worked cases
 (`hrpa-cases.l4`). Four duties with deadlines are regulative rules (`PARTY ... MUST ... WITHIN ... HENCE ... LEST BREACH
 ... BECAUSE`), run by EVALTRACE inside exported questions that take only plain facts: the record keeper's answer within 2
 weeks (s 13 (2)); access by the 30-day or fee day (s 13B (2), s 13BA (2)); the record to the nominated provider within 2
@@ -44,14 +44,17 @@ deleted, and showed as "assertion failed".
 |---|---|---|---|---|
 | `hrpa-dates.l4` | 0 | 0 | 0 | 0 |
 | `hrpa-consumer.l4` | 0 | 0 | 0 | 0 |
-| `hrpa-cases.l4` | 0 | 0 | 177 | 177 |
+| `hrpa-cases.l4` | 0 | 0 | 197 | 197 |
 
 Every exported question has cases, with the edges: an opinion recorded on 31 January 1998 and on 1 February 1998; each
 bar to access on its own, and confidential material from each kind of giver; each person who may ask; writing required
 for each kind of requester, and the parent who consented within 12 months; the answer on the 14th day and the 15th; the
 access day with no fee, with the fee paid so that 1 week after payment falls before, on, and after the 30th day, and
 with the fee unpaid; a s 9 agreement later and earlier than the Act's day; access refused by notice in time and after
-time; an objection to a nominee on the 14th and 15th day and one s 16D (4) forbids; each valid and invalid signer of a
+time; access after a fee notice paid, late, for an adult (deemed refusal) and for a child or young person (s 13BA, not
+listed in s 13D); access with no fee notice on the 30th day (fork F14); the evidence bar with and without a timely
+answer; a refusal of only part of the record (s 13 (5)); a consent void under s 26 (2) or s 27 (3), and the signers
+those subsections do not reach; an objection to a nominee on the 14th and 15th day and one s 16D (4) forbids; each valid and invalid signer of a
 consent; a health status report that is not one (outside the ACT, for the person's own care); destruction on the 7-year
 anniversary and the day after, the 25th birthday, and a 29 February birthday and last service; a transfer request on the
 14th and 15th day after the notice; a fee notice on the 7th and 8th day; urgent services with and without a fee.
@@ -95,8 +98,9 @@ The 2026-10-18 defaults:
 
 ## Scope
 
-**In.** s 7 whole; Part 3: s 9, s 10 (1)-(3), (7), (8), s 10A, s 12, s 13, s 13A, s 13B, s 13BA (2), (6), s 13C, s 13D,
-s 14, s 14A, s 15, s 16A, s 16B, s 16D, s 17; s 18; ss 20-23 (maximum penalties only); ss 25-27 (who acts); ss 31, 32;
+**In.** s 7 whole; Part 3 (not whole: the parts left out are listed below): s 9, s 10 (1)-(3), (7), (8), s 10A, s 12,
+s 13 (with (5), a refusal of part of the record), s 13A, s 13B, s 13BA (2), (6), s 13C, s 13D,
+s 14, s 14A, s 15, s 16A, s 16B, s 16D, s 17; s 18; ss 20-23 (maximum penalties only); ss 25-27 (who acts, and the void consents of s 26 (2) and s 27 (3)); ss 31, 32;
 schedule 1 principle 4.1 cl 2, 3; principle 6 cl 4; principle 7 cl 3; principle 10 cl 2 (c), cl 7; principle 11 cl 2,
 3 (b), 5, 6; principles 12.1 and 12.2 cl 2-4; dictionary terms as listed above.
 
@@ -144,14 +148,18 @@ Each line: the provision, the function, the answer taken, the other reading.
 - **F5** s 12 (2) "A request must" (a bare "must" not done, decided case by case) -- `s 12 -- is my request properly made`
   -- a request missing a requirement does not start the s 13 clock -- the clock runs and the record keeper must still
   answer.
-- **F6** s 13B (4) "need not provide access" -- `s 13D -- is access taken to have been refused` -- not a refusal, and
-  checked before the timing -- a failure to give access in time that is still a deemed refusal.
+- **F6** s 13B (4), s 13BA (6) "need not provide access" -- `s 13D -- is access taken to have been refused` -- not a
+  refusal; it relieves the giving of access only, so it is checked after the s 13 (2) answer day (a record keeper that
+  gave no answer at all in 2 weeks is taken to have refused) and before the access day -- a failure to answer or to give
+  access in time that is still a deemed refusal; or, the other way, the evidence bar also excusing the answer where the
+  only answer open was access itself (no fee determined, no ground to refuse).
 - **F7** principle 10 cl 7 (a) (i) "a child or young person who does not have sufficient maturity" -- `principle 10 cl 7
   -- is my consent to disclosure valid` -- every child under 12 consents through the person with parental
   responsibility -- a mature child under 12 signs personally.
-- **F8** principle 10 cl 7 and s 7 (4), a deceased consumer with no legal representative -- both consent questions -- no
-  valid signer (s 27 (2) gives the dead consumer's powers to the legal representative only) -- the immediate family
-  member signs as "consumer" under the dictionary's (d).
+- **F8** principle 10 cl 7 and s 7 (4), a deceased consumer with no legal representative -- both consent questions --
+  the immediate family member signs, under (a) (iii) "in any other case, by the consumer" and the dictionary's
+  "consumer" (d), as for access (s 13B (3) (c) (ii) (B)) -- no valid signer, s 27 (2) giving the dead consumer's powers
+  to the legal representative only.
 - **F9** s 16B (3) (a) "a notice under section 16D" -- `s 16B -- must my nominee get the record` -- an objection s 16D (4)
   forbids, or one given after the 2 weeks, is not such a notice, so the duty stands -- any objection notice excuses.
 - **F10** principles 12.1 and 12.2 cl 2 (a) "not later than 7 days after" -- `principle 12 -- by when must my record reach
@@ -164,6 +172,15 @@ Each line: the provision, the function, the answer taken, the other reading.
 - **F13** principle 4.1 cl 3 (b) (i), (ii), "when the information is collected" -- the principle 4.1 questions -- one age
   at collection per record, as the consumer states it -- each piece of information tested apart (a record with
   information from both before and after 18 would have two days).
+- **F14** s 13 (2) (d) (i) against s 13B (2) (b) / s 13BA (2) (b) -- `s 13D -- is access taken to have been refused`,
+  `ss 13B, 13BA -- by when must I be given access` -- read as written: where no fee notice is given, access itself is
+  the answer due within 2 weeks, so a record keeper that gives no access (and no notice) by then is taken to have
+  refused (s 13D (a) (i)), and the 30 days of s 13B (2) (b) never extend it; a promise of access without a fee is not an
+  answer s 13 (2) lists -- s 13B (2) (b) as the specific rule: access with no fee notice may be given up to the 30th day,
+  reading s 13 (2) (d) (i) as access "in accordance with" s 13B, with no deemed refusal until day 31 (finding 12).
+- **F15** s 13D (a), which lists ss 13, 13A, 13B and 13C but not s 13BA -- `s 13D -- is access taken to have been
+  refused` -- late access to a child or young person under s 13BA (2) is a breach the text does not deem a refusal
+  (NOTHING-kind) -- s 13BA read in as the children's twin of s 13B, so late access is a deemed refusal (finding 11).
 
 Sites decided without a fork line: the "means" definitions (health status report, child, legal representative) and the
 "if" conditions of s 7 (3), s 13A (1), s 16A (1), s 17 (2), (3), principle 7 cl 3 answer the text's no when they fail;
@@ -212,6 +229,19 @@ The periods the text fixes (14 days in principle 11 cl 3 (b)) answer the text's 
 9. **Principle 4.1 cl 3 (b) turns on the consumer's age when "the information is collected"**, but destruction is of the
    record; a record holding information from both childhood and adulthood has two different days (fork F13).
 10. **Neither s 18 nor s 31 sets a time limit**; the Human Rights Commission Act 2005 governs complaints.
+11. **s 13D (a) does not list s 13BA.** Late access to a child or young person (or the parent acting for one) breaches
+    s 13BA (2), which sets the same days as s 13B (2), but s 13D (a) deems a refusal only for ss 13, 13A, 13B and 13C.
+    Probably an oversight when s 13BA was split from s 13B. Encoded as NOTHING-kind (fork F15). Asserted.
+12. **s 13 (2) (d) (i) and s 13B (2) (b) conflict.** Unless a fee notice is given, s 13 (2) (d) (i) requires access
+    within 2 weeks; s 13B (2) (b) allows 30 days where no fee notice was given. s 13 (2) (d) (i) also says access "in
+    accordance with section 13A", which is now the disclosure-by-consent section; s 13B (giving access) was probably
+    meant, a cross-reference left behind by renumbering. Read as written (fork F14). Asserted.
+13. **s 16A (3) (a) lapses a nomination when the record keeper gives "a notice under section 16B"**, but s 16B provides
+    for no notice; s 16D (the objection notice) was probably meant. Since the lapse is asked as a fact, the answer quotes
+    the text's words and flags the slip.
+14. **s 26 (2) and s 27 (3) void a guardian's or a legal representative's consent given against the person's earlier
+    wishes, but not a consent by an immediate family member** of a deceased consumer with no legal representative, who
+    is "the consumer" under the dictionary's (d), nor by a person with parental responsibility. Asserted.
 
 ## Before this is worth relying on
 
@@ -219,4 +249,4 @@ The periods the text fixes (14 days in principle 11 cl 3 (b)) answer the text's 
   deposited.
 - The Children and Young People Act 2008 s 12 ("young person") and the Human Rights Commission Act 2005 (how and when to
   complain).
-- A lawyer's view on forks F1, F6, F8, F9, F12 and F13, and on findings 1-6; an independent test pass and a human gate.
+- A lawyer's view on forks F1, F6, F8, F9, F12, F13, F14 and F15, and on findings 1-6 and 11-14; an independent test pass and a human gate.
