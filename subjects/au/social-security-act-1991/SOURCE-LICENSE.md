@@ -25,3 +25,11 @@ https://api.prod.legislation.gov.au/v1/Documents/Find(titleid='C2004A04121',asat
 (compilation register id: C2026C00336). sha256 of the download: `d27fbedc87ab08dcfac494b3059c7c25d7325bc3e43e38ef86d2603b2a0e01e5`.
 
 Formulas, symbols and pictures the text deposit lost are transcribed 2026-10-24 in `registers/source-bundle/C2004A04121.formulas.md`, from the Word rendering of the same compilation (C2026C00336) on the same Register and under the same licence (CC BY 4.0, as above): https://api.prod.legislation.gov.au/v1/Documents/Find(registerid='C2026C00336',type='Primary',format='Word',uniquetypenumber=0,volumenumber=1,rectificationspecification='Latest') (volumes 1 to 6).
+
+- **Reconverted, 7 November 2026**: the first converter (docx_text() in the workbench's tools/fetch/fetch-source.py)
+  dropped Word symbol characters and kept Symbol-font characters typed as text as private-use code points. The text
+  was converted again from the same six Word volumes (same download sha256) with cth_convert_sym.py (kept outside the
+  repository); the only changes are the × restored in the s 1061ED(4) example ("6% × $4680 = $280.80", line 12313)
+  and 7 bullets restored as "•" in the s 92A outline (lines 4337-4343). Now 3,224,808 characters, sha256
+  `29d52f56cdab87e0984e0f622e2295ed1692cc97bca829eb238735f17edf9d4d` (was
+  `d9cf23cca26627480a7725d9c4d201b1d6376e8fd04bc4c22e34a5b99c7b9cf9`); details in `C2004A04121.meta.json`.
