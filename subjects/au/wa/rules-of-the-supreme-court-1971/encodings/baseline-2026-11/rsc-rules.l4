@@ -1,0 +1,629 @@
+IMPORT prelude
+IMPORT `rsc-dates`
+
+-- Rules of the Supreme Court 1971 (WA) -- the rules a person bringing a claim meets: time (O. 3), the writ and its
+-- validity (O. 5 r. 11, O. 7), service and default of appearance (O. 9 r. 1(4), O. 13), pleadings (O. 20), summary
+-- judgment (O. 14 r. 1), discontinuance (O. 23), offers of compromise (O. 24A), security for costs (O. 25), medical
+-- examination (O. 28 r. 1), persons under disability (O. 70) and inactive cases (O. 4A Division 5).
+-- Hand-worked from the deposited text, version 09-am0-00 (from 11 December 2025), with the rule number on each rule.
+-- BASELINE ENCODING. Not for public use as advice. See NOTES.md.
+
+§ `Helpers`
+
+GIVEN a IS A MAYBE BOOLEAN, b IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`both` a b MEANS
+    IF (a EQUALS JUST FALSE) OR (b EQUALS JUST FALSE)
+    THEN JUST FALSE
+    ELSE IF (a EQUALS JUST TRUE) AND (b EQUALS JUST TRUE)
+         THEN JUST TRUE
+         ELSE NOTHING
+
+§ `Order 3 -- time`
+
+-- O. 3 rr. 2-4: the last day of a period of n days after day x. Thin wrapper over the dates module.
+GIVEN x IS A DATE, n IS A NUMBER, `a pleading step` IS A BOOLEAN, `needs the office open` IS A BOOLEAN
+GIVETH A DATE
+`O. 3 rr. 2-4 -- the last day` x n `a pleading step` `needs the office open` MEANS
+    `O. 3 -- the last day of n days after` x n `a pleading step` `needs the office open`
+
+-- O. 3 r. 7: "Where a year or more has elapsed since the last proceeding in an action, the party who desires to proceed
+-- must give to every other party not less than one month's notice of his intention to proceed." The year has elapsed
+-- from the day after the last day of the 12 months after the last proceeding (fork F7). "Where": no, if not (ruling (b)).
+GIVEN `the last proceeding` IS A DATE, `the day I want to proceed` IS A DATE
+GIVETH A MAYBE BOOLEAN
+`O. 3 r. 7 -- notice of intention to proceed is needed` `the last proceeding` `the day I want to proceed` MEANS
+    IF `days from` (`the last day of n months after` `the last proceeding` 12) `the day I want to proceed` GREATER THAN 0
+    THEN JUST TRUE
+    ELSE JUST FALSE
+
+-- "not less than one month's notice": the earliest day to proceed is the day after the month after the notice ends
+-- (fork F7).
+GIVEN `the day notice is given` IS A DATE
+GIVETH A DATE
+`O. 3 r. 7 -- the earliest day to proceed after notice` `the day notice is given` MEANS
+    `the day n days after` (`the last day of n months after` `the day notice is given` 1) 1
+
+§ `Order 4A Division 5 -- inactive cases`
+
+-- r. 24: "If no procedural step is taken in a case for 12 months by any party to the case, the case is taken to be
+-- inactive unless the case manager for the case orders otherwise." The first day the case is taken to be inactive.
+GIVEN `the last procedural step` IS A DATE
+GIVETH A DATE
+`O. 4A r. 24 -- the day the case is taken to be inactive` `the last procedural step` MEANS
+    `the day n days after` (`the last day of n months after` `the last procedural step` 12) 1
+
+GIVEN `the last day` IS A DATE, `today` IS A DATE
+GIVETH A MAYBE BOOLEAN
+`O. 4A r. 28 -- past the last day` `the last day` `today` MEANS
+    IF `days from` `the last day` `today` GREATER THAN 0
+    THEN JUST TRUE
+    ELSE JUST FALSE
+
+-- r. 28(1), (1A): on the list "for 6 continuous months after the date on which notice is given" (the last of the dates
+-- where notices went out on different days): taken to have been dismissed. r. 28(2): taken off the list, then no
+-- procedural step "in the 6 months after the date on which" it was ordered off: dismissed. Both are "if"s: no, if not.
+GIVEN `the day notice was given` IS A DATE, `taken off the list` IS A BOOLEAN, `the day taken off` IS A DATE,
+      `a step since taken` IS A BOOLEAN, `the day of the first step since` IS A DATE, `today` IS A DATE
+GIVETH A MAYBE BOOLEAN
+`O. 4A r. 28 -- the case is taken to have been dismissed` `the day notice was given` `taken off the list` `the day taken off` `a step since taken` `the day of the first step since` `today` MEANS
+    IF (NOT `taken off the list`) OR `days from` `the end of the 6 months on the list` `the day taken off` GREATER THAN 0
+    THEN `O. 4A r. 28 -- past the last day` `the end of the 6 months on the list` `today`
+    ELSE IF `a step since taken` AND `days from` `the day of the first step since` `the end of the 6 months off the list` AT LEAST 0
+         THEN JUST FALSE
+         ELSE `O. 4A r. 28 -- past the last day` `the end of the 6 months off the list` `today`
+    WHERE
+        `the end of the 6 months on the list` MEANS `the last day of n months after` `the day notice was given` 6
+        `the end of the 6 months off the list` MEANS `the last day of n months after` `the day taken off` 6
+
+§ `Orders 5 and 7 -- the writ`
+
+DECLARE `Place of service` IS ONE OF
+    `in Western Australia`
+    `elsewhere in Australia`
+    `outside Australia`
+
+-- O. 5 r. 11(1)-(3): the least time a writ may give a defendant to appear. Interstate service: the Service and Execution
+-- of Process Act 1992 (Cth), not deposited here (NOTHING, outside the sources). Outside Australia: 42 days "unless the
+-- Court otherwise orders under Order 10 rule 9" (an order: NOTHING, the order's figure is not known).
+GIVEN `where served` IS A `Place of service`, `km from Perth` IS A NUMBER, `the Court ordered another time` IS A BOOLEAN
+GIVETH A MAYBE NUMBER
+`O. 5 r. 11 -- the least time to appear` `where served` `km from Perth` `the Court ordered another time` MEANS
+    CONSIDER `where served`
+    WHEN `in Western Australia` THEN
+        IF `km from Perth` LESS THAN 300
+        THEN JUST 10
+        ELSE IF `km from Perth` LESS THAN 600
+             THEN JUST 16
+             ELSE JUST 21
+    WHEN `elsewhere in Australia` THEN NOTHING
+    WHEN `outside Australia` THEN
+        IF `the Court ordered another time`
+        THEN NOTHING
+        ELSE JUST 42
+
+-- O. 7 r. 1(1): "valid in the first instance for 12 months beginning with the date of its issue". The last day.
+GIVEN `the day the writ was issued` IS A DATE
+GIVETH A DATE
+`O. 7 r. 1(1) -- the last day the writ is valid` `the day the writ was issued` MEANS
+    `the last day of n months beginning with` `the day the writ was issued` 12
+
+-- O. 7 r. 1(2): "Where a writ has not been served on a defendant, the Court may by order extend the validity ... for such
+-- period, not exceeding 12 months at any one time, beginning with the day next following that on which it would
+-- otherwise expire ... if an application is made to the Court before that day or such later day (if any) as the Court
+-- may allow." "Where" and "if": no, if not.
+GIVEN `the day it would expire` IS A DATE, `it has been served` IS A BOOLEAN, `the day I apply` IS A DATE,
+      `the Court allows a later day` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`O. 7 r. 1(2) -- the Court can extend the writ` `the day it would expire` `it has been served` `the day I apply` `the Court allows a later day` MEANS
+    IF `it has been served`
+    THEN JUST FALSE
+    ELSE IF `days from` `the day I apply` `the day it would expire` AT LEAST 0 OR `the Court allows a later day`
+         THEN JUST TRUE
+         ELSE JUST FALSE
+
+-- The latest day one extension can run to: 12 months beginning with the day after expiry.
+GIVEN `the day it would expire` IS A DATE
+GIVETH A DATE
+`O. 7 r. 1(2) -- the latest day one extension can reach` `the day it would expire` MEANS
+    `the last day of n months beginning with` (`the day n days after` `the day it would expire` 1) 12
+
+-- O. 7 r. 4(1), (2): "If at any time after 6 months after a writ is issued ... (a) no affidavit of service ... has been
+-- filed ... and (b) no appearance has been entered", the Court may hold a show-cause hearing; "If at the hearing the Court
+-- is not satisfied that the writ has not been served for good reason the Court may (a) strike out the writ". "If": no,
+-- if not. The Court not being satisfied is an input.
+GIVEN `the day the writ was issued` IS A DATE, `the day of the hearing` IS A DATE, `affidavit of service filed` IS A BOOLEAN,
+      `appearance entered` IS A BOOLEAN, `the Court accepts my reason for not serving` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`O. 7 r. 4 -- the writ can be struck out` `the day the writ was issued` `the day of the hearing` `affidavit of service filed` `appearance entered` `the Court accepts my reason for not serving` MEANS
+    IF      `days from` (`the last day of n months after` `the day the writ was issued` 6) `the day of the hearing` GREATER THAN 0
+        AND (NOT `affidavit of service filed`)
+        AND (NOT `appearance entered`)
+        AND (NOT `the Court accepts my reason for not serving`)
+    THEN JUST TRUE
+    ELSE JUST FALSE
+
+§ `Orders 9 and 13 -- appearance and default judgment`
+
+-- The last day for the defendant to appear: O. 5 r. 11(4) excludes the day of service; O. 3 r. 2(1) includes the last
+-- day; r. 4 extends a last day the Central Office is closed (fork F5: applied, the later and safer day for the plaintiff).
+GIVEN `the day the writ was served` IS A DATE, `days given to appear` IS A NUMBER
+GIVETH A DATE
+`O. 5 r. 11, O. 3 -- the last day to appear` `the day the writ was served` `days given to appear` MEANS
+    `O. 3 -- the last day of n days after` `the day the writ was served` `days given to appear` FALSE TRUE
+
+DECLARE `Kind of claim` IS ONE OF
+    `a debt or other liquidated demand only`
+    `unliquidated damages only`
+    `detention of goods only`
+    `possession of land only`
+    `a mortgage action`
+    `two or more of those kinds only`
+    `any other claim`
+
+DECLARE `Default judgment` IS ONE OF
+    `none: the defendant has appeared`
+    `none yet: service must first be proved`
+    `none yet: the time to appear has not run out`
+    `judgment for the sum claimed and costs`
+    `judgment, with damages to be assessed by a master`
+    `judgment for the goods or their value, or for their value, to be assessed`
+    `judgment for possession and costs, on filing the certificate`
+    `judgment for the relief and costs, after the mortgage steps`
+    `judgment on each claim as if it were the only one`
+    `apply to the Court on motion for judgment`
+
+-- O. 13 r. 1(2), (3): "If a defendant does not enter an appearance within the time limited for appearing, the plaintiff
+-- may enter judgment"; "Judgment must not be entered ... unless (a) an affidavit is filed ... proving service ... and
+-- indorsement of service in accordance with Order 9 rule 1(4); or (b) the plaintiff produces the writ indorsed by the
+-- defendant's solicitor" accepting service. rr. 2-9: what judgment, by the kind of claim.
+GIVEN `kind` IS A `Kind of claim`, `the last day to appear` IS A DATE, `the day I would enter it` IS A DATE,
+      `the defendant has appeared` IS A BOOLEAN, `service is proved` IS A BOOLEAN
+GIVETH A `Default judgment`
+`O. 13 -- the default judgment I can enter` `kind` `the last day to appear` `the day I would enter it` `the defendant has appeared` `service is proved` MEANS
+    IF `the defendant has appeared`
+    THEN `none: the defendant has appeared`
+    ELSE IF NOT `service is proved`
+         THEN `none yet: service must first be proved`
+         ELSE IF `days from` `the last day to appear` `the day I would enter it` AT MOST 0
+              THEN `none yet: the time to appear has not run out`
+              ELSE CONSIDER `kind`
+                   WHEN `a debt or other liquidated demand only` THEN `judgment for the sum claimed and costs`
+                   WHEN `unliquidated damages only` THEN `judgment, with damages to be assessed by a master`
+                   WHEN `detention of goods only` THEN `judgment for the goods or their value, or for their value, to be assessed`
+                   WHEN `possession of land only` THEN `judgment for possession and costs, on filing the certificate`
+                   WHEN `a mortgage action` THEN `judgment for the relief and costs, after the mortgage steps`
+                   WHEN `two or more of those kinds only` THEN `judgment on each claim as if it were the only one`
+                   WHEN `any other claim` THEN `apply to the Court on motion for judgment`
+
+-- O. 9 r. 1(4): personal service gives no default judgment "unless, within 3 days after service, the person serving it
+-- indorses on the sealed copy of the writ" the particulars; O. 13 r. 1(3): service proved by affidavit, or the writ
+-- indorsed by the defendant's solicitor accepting service (O. 9 r. 1(2), where no indorsement under r. 1(4) is needed).
+GIVEN `the solicitor accepted service` IS A BOOLEAN, `indorsed within 3 days` IS A BOOLEAN, `affidavit of service filed` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `O. 9 r. 1(4), O. 13 r. 1(3) -- service is proved` `the solicitor accepted service` `indorsed within 3 days` `affidavit of service filed` IF
+        `the solicitor accepted service`
+    OR  (`indorsed within 3 days` AND `affidavit of service filed`)
+
+-- O. 9 r. 1(4) "within 3 days after service": fewer than 7 days, so days the Central Office is closed are not reckoned
+-- (O. 3 r. 2(2)); the plaintiff's own step, so no r. 4 extension (fork F5).
+GIVEN `the day the writ was served` IS A DATE
+GIVETH A DATE
+`O. 9 r. 1(4) -- the last day to indorse service` `the day the writ was served` MEANS
+    `O. 3 -- the last day of n days after` `the day the writ was served` 3 FALSE FALSE
+
+§ `Order 14 -- summary judgment`
+
+-- r. 1(1): the plaintiff may apply "within 21 days after appearance or at any later time by leave of the Court". The last
+-- day without leave; the plaintiff's own step, so no r. 4 extension (fork F5).
+GIVEN `the day the defendant appeared` IS A DATE
+GIVETH A DATE
+`O. 14 r. 1 -- the last day to apply without leave` `the day the defendant appeared` MEANS
+    `O. 3 -- the last day of n days after` `the day the defendant appeared` 21 FALSE FALSE
+
+§ `Order 20 -- pleadings`
+
+DECLARE `Party` IS ONE OF `the plaintiff`, `the defendant`
+DECLARE `Step` IS ONE OF
+    `serve the statement of claim`
+    `acknowledge receipt of the offer`
+    `pay the sum offered`
+
+-- r. 1: unless the Court gives leave or the statement of claim is indorsed on the writ, the plaintiff "must serve a
+-- statement of claim on the defendant ... either when the writ is served ... or at any time after service of the writ but
+-- before the expiration of 14 days after that defendant enters an appearance". A pleading (O. 3 r. 3 applies); the
+-- plaintiff's own step (no r. 4 extension, fork F5).
+GIVEN `the day the defendant appeared` IS A DATE
+GIVETH A DATE
+`O. 20 r. 1 -- the last day to serve my statement of claim` `the day the defendant appeared` MEANS
+    `O. 3 -- the last day of n days after` `the day the defendant appeared` 14 TRUE FALSE
+
+-- The duty as a regulative rule, counted in days from the appearance.
+GIVEN `days allowed` IS A NUMBER
+GIVETH A DEONTIC `Party` `Step`
+`O. 20 r. 1 -- my duty to serve the statement of claim` `days allowed` MEANS
+    PARTY `the plaintiff`
+    MUST `serve the statement of claim`
+    WITHIN `days allowed`
+    HENCE FULFILLED
+    LEST BREACH BY `the plaintiff` BECAUSE "statement of claim not served before the expiration of 14 days after appearance (O. 20 r. 1)"
+
+-- Runs the rule. Service on or before the day of appearance (after the writ was served) is in time without a trace.
+GIVEN `the day the defendant appeared` IS A DATE, `the day I served it` IS A DATE
+GIVETH A BOOLEAN
+`O. 20 r. 1 -- my statement of claim was served in time` `the day the defendant appeared` `the day I served it` MEANS
+    IF `t` AT MOST 0
+    THEN TRUE
+    ELSE CONSIDER EVALTRACE (`O. 20 r. 1 -- my duty to serve the statement of claim` `n`) 0 (LIST (EVENT `the plaintiff` `serve the statement of claim` `t`), (WAITUNTIL (`t` PLUS `n` PLUS 2)))
+         WHEN FULFILLED THEN TRUE
+         OTHERWISE FALSE
+    WHERE
+        `n` MEANS `days from` `the day the defendant appeared` (`O. 20 r. 1 -- the last day to serve my statement of claim` `the day the defendant appeared`)
+        `t` MEANS `days from` `the day the defendant appeared` `the day I served it`
+
+-- r. 4(1): the defendant "must ... serve a defence on the plaintiff before the expiration of 14 days after the time
+-- limited for appearing or after the statement of claim is served on him, whichever is the later." r. 4(2): not where a
+-- summary judgment summons was served first (then 14 days after the order giving leave to defend). A pleading (O. 3
+-- r. 3); the defendant's step, so r. 4 extension applied (fork F5).
+GIVEN `the last day to appear` IS A DATE, `the day my statement of claim was served` IS A DATE, `a summary judgment summons came first` IS A BOOLEAN
+GIVETH A MAYBE DATE
+`O. 20 r. 4 -- the last day for the defence` `the last day to appear` `the day my statement of claim was served` `a summary judgment summons came first` MEANS
+    IF `a summary judgment summons came first`
+    THEN NOTHING
+    ELSE JUST (`O. 3 -- the last day of n days after` (`the later date of` `the last day to appear` `the day my statement of claim was served`) 14 TRUE TRUE)
+
+-- r. 5(4): "A reply to any defence must be served by the plaintiff before the expiration of 14 days after the service on
+-- him of that defence". A pleading; the plaintiff's step.
+GIVEN `the day the defence was served` IS A DATE
+GIVETH A DATE
+`O. 20 r. 5(4) -- the last day for my reply` `the day the defence was served` MEANS
+    `O. 3 -- the last day of n days after` `the day the defence was served` 14 TRUE FALSE
+
+-- r. 20(1): pleadings closed "at the expiration of 14 days after service of the reply or, if there is no reply but only a
+-- defence to counterclaim, after service of the defence to counterclaim; or (b) if neither ... is served, at the
+-- expiration of 14 days after service of the defence." Not a time for doing an act: plain counting (fork F6). The day
+-- given is the last of the 14 days; the pleadings are closed at its end.
+GIVEN `the day of the last pleading served` IS A DATE
+GIVETH A DATE
+`O. 20 r. 20 -- the day the pleadings close` `the day of the last pleading served` MEANS
+    `the day n days after` `the day of the last pleading served` 14
+
+§ `Order 23 -- discontinuance`
+
+-- r. 2(1), (3): the plaintiff may discontinue by notice "at any time before receipt of the defendant's defence, or after
+-- the receipt thereof before taking any other step in the action"; otherwise "it shall not be competent for the
+-- plaintiff ... to discontinue the action without leave of the Court".
+GIVEN `I have received the defence` IS A BOOLEAN, `I have taken another step since` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `O. 23 r. 2 -- I can discontinue by notice` `I have received the defence` `I have taken another step since` IF
+        NOT `I have received the defence`
+    OR  (NOT `I have taken another step since`)
+
+-- r. 2(1): on a discontinuance by notice "he shall pay such defendant's costs of the action" (or of the part withdrawn);
+-- with leave, the Court sets the terms as to costs (r. 2(3)): NOTHING.
+GIVEN `by notice` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`O. 23 r. 2(1) -- I must pay the defendant's costs` `by notice` MEANS
+    IF `by notice`
+    THEN JUST TRUE
+    ELSE NOTHING
+
+-- r. 4: "If any subsequent action shall be brought before payment of the costs of a discontinued action, for the same, or
+-- substantially the same, cause of action, the Court may ... order a stay". "If": no, if the costs were paid.
+GIVEN `same cause of action` IS A BOOLEAN, `I have paid those costs` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`O. 23 r. 4 -- my new action can be stayed` `same cause of action` `I have paid those costs` MEANS
+    IF `same cause of action` AND (NOT `I have paid those costs`)
+    THEN JUST TRUE
+    ELSE JUST FALSE
+
+§ `Order 24A -- offers of compromise`
+
+-- r. 3(3): a time limit "shall not be less than 28 days after it is made"; r. 3(5)(a): accept before "the expiration of
+-- the time specified ... or, if no time is specified, the expiration of 28 days after the offer is made". A shorter
+-- stated time is read as 28 (fork F8). Days the offer gives: 0 if none stated.
+GIVEN `the day the offer was made` IS A DATE, `days the offer is open` IS A NUMBER
+GIVETH A DATE
+`O. 24A r. 3(5) -- the last day to accept` `the day the offer was made` `days the offer is open` MEANS
+    `the day n days after` `the day the offer was made` `the days`
+    WHERE
+        `the days` MEANS
+            IF `days the offer is open` AT LEAST 28
+            THEN `days the offer is open`
+            ELSE 28
+
+-- r. 3(5), (8): acceptance "before ... (a) the expiration of the time ... or (b) the time prescribed by subrule (8)",
+-- that is, after the judge begins to sum up to a jury or begins to give the decision or reasons. A period fixed in the
+-- text: outside it, no (ruling (a)). Acceptance before the offer: NOTHING.
+GIVEN `the day the offer was made` IS A DATE, `days the offer is open` IS A NUMBER, `the day I accept` IS A DATE,
+      `the judge has begun the decision` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`O. 24A r. 3 -- I can accept the offer` `the day the offer was made` `days the offer is open` `the day I accept` `the judge has begun the decision` MEANS
+    IF `days from` `the day the offer was made` `the day I accept` LESS THAN 0
+    THEN NOTHING
+    ELSE IF `the judge has begun the decision`
+         THEN JUST FALSE
+         ELSE IF `days from` `the day I accept` (`O. 24A r. 3(5) -- the last day to accept` `the day the offer was made` `days the offer is open`) AT LEAST 0
+              THEN JUST TRUE
+              ELSE JUST FALSE
+
+-- r. 3(4): "An offeree shall, within 3 days after service, serve a written acknowledgment of receipt on the offeror."
+-- Fewer than 7 days: closed days not reckoned (O. 3 r. 2(2)).
+GIVEN `the day the offer was served on me` IS A DATE
+GIVETH A DATE
+`O. 24A r. 3(4) -- the last day to acknowledge` `the day the offer was served on me` MEANS
+    `O. 3 -- the last day of n days after` `the day the offer was served on me` 3 FALSE FALSE
+
+GIVEN `days allowed` IS A NUMBER
+GIVETH A DEONTIC `Party` `Step`
+`O. 24A r. 3(4) -- my duty to acknowledge the offer` `days allowed` MEANS
+    PARTY `the plaintiff`
+    MUST `acknowledge receipt of the offer`
+    WITHIN `days allowed`
+    HENCE FULFILLED
+    LEST BREACH BY `the plaintiff` BECAUSE "no written acknowledgment of receipt served within 3 days after service of the offer (O. 24A r. 3(4))"
+
+GIVEN `the day the offer was served on me` IS A DATE, `the day I acknowledged` IS A DATE
+GIVETH A BOOLEAN
+`O. 24A r. 3(4) -- I acknowledged in time` `the day the offer was served on me` `the day I acknowledged` MEANS
+    IF `t` LESS THAN 0
+    THEN FALSE
+    ELSE CONSIDER EVALTRACE (`O. 24A r. 3(4) -- my duty to acknowledge the offer` `n`) 0 (LIST (EVENT `the plaintiff` `acknowledge receipt of the offer` `t`), (WAITUNTIL (`t` PLUS `n` PLUS 2)))
+         WHEN FULFILLED THEN TRUE
+         OTHERWISE FALSE
+    WHERE
+        `n` MEANS `days from` `the day the offer was served on me` (`O. 24A r. 3(4) -- the last day to acknowledge` `the day the offer was served on me`)
+        `t` MEANS `days from` `the day the offer was served on me` `the day I acknowledged`
+
+-- r. 4: "An offer to pay a sum of money to a plaintiff shall, unless the notice of offer otherwise provides, be taken to
+-- be an offer to pay that sum within 28 days after acceptance of the offer." Days for payment in the offer: 0 if none.
+GIVEN `days the offer gives to pay` IS A NUMBER
+GIVETH A NUMBER
+`O. 24A r. 4 -- days to pay` `days the offer gives to pay` MEANS
+    IF `days the offer gives to pay` GREATER THAN 0
+    THEN `days the offer gives to pay`
+    ELSE 28
+
+GIVEN `days allowed` IS A NUMBER
+GIVETH A DEONTIC `Party` `Step`
+`O. 24A r. 4 -- the defendant's duty to pay` `days allowed` MEANS
+    PARTY `the defendant`
+    MUST `pay the sum offered`
+    WITHIN `days allowed`
+    HENCE FULFILLED
+    LEST BREACH BY `the defendant` BECAUSE "sum not paid within the time after acceptance (O. 24A r. 4); the plaintiff may withdraw the acceptance (r. 5(1)(a)) or seek judgment (r. 8)"
+
+-- Runs the duty to `today`: JUST TRUE paid in time, JUST FALSE not paid in time, NOTHING still within time and unpaid.
+GIVEN `the day I accepted` IS A DATE, `days the offer gives to pay` IS A NUMBER, `it has been paid` IS A BOOLEAN,
+      `the day it was paid` IS A DATE, `today` IS A DATE
+GIVETH A MAYBE BOOLEAN
+`O. 24A r. 4 -- the sum was paid in time` `the day I accepted` `days the offer gives to pay` `it has been paid` `the day it was paid` `today` MEANS
+    CONSIDER EVALTRACE (`O. 24A r. 4 -- the defendant's duty to pay` `n`) 0 `the events`
+    WHEN FULFILLED THEN JUST TRUE
+    OTHERWISE
+        IF `t today` GREATER THAN `n`
+        THEN JUST FALSE
+        ELSE NOTHING
+    WHERE
+        `n` MEANS `O. 24A r. 4 -- days to pay` `days the offer gives to pay`
+        `t today` MEANS `days from` `the day I accepted` `today`
+        `t paid` MEANS `days from` `the day I accepted` `the day it was paid`
+        `the events` MEANS
+            IF `it has been paid` AND `t paid` AT MOST `t today`
+            THEN LIST (EVENT `the defendant` `pay the sum offered` `t paid`), (WAITUNTIL `t today`)
+            ELSE LIST (WAITUNTIL `t today`)
+
+DECLARE `How the sum was paid` IS ONE OF
+    `not paid`
+    `paid into Court`
+    `paid to me (not into Court)`
+
+-- r. 5(1): the acceptor may withdraw "(a) where the offer provides for payment of a sum of money and the sum is not paid
+-- into Court within 28 days after acceptance of the offer; or (b) where the Court gives leave so to do." Read as written:
+-- the 28 days are fixed (not the offer's own time under r. 4), and "into Court". A sum paid to the plaintiff in time,
+-- not into Court: NOTHING (finding 3, fork F9). Before the 28 days have run: no (ruling (a)).
+GIVEN `the day I accepted` IS A DATE, `how it was paid` IS A `How the sum was paid`, `the day it was paid` IS A DATE,
+      `the day I withdraw` IS A DATE, `the Court gives leave` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`O. 24A r. 5 -- I can withdraw my acceptance` `the day I accepted` `how it was paid` `the day it was paid` `the day I withdraw` `the Court gives leave` MEANS
+    IF `the Court gives leave`
+    THEN JUST TRUE
+    ELSE IF `days from` `the day I accepted` `the day I withdraw` AT MOST 28
+         THEN JUST FALSE
+         ELSE CONSIDER `how it was paid`
+              WHEN `not paid` THEN JUST TRUE
+              WHEN `paid into Court` THEN
+                  IF `days from` `the day I accepted` `the day it was paid` AT MOST 28
+                  THEN JUST FALSE
+                  ELSE JUST TRUE
+              WHEN `paid to me (not into Court)` THEN
+                  IF `days from` `the day I accepted` `the day it was paid` AT MOST 28
+                  THEN NOTHING
+                  ELSE JUST TRUE
+
+DECLARE `Who made the offer` IS ONE OF `I did`, `the defendant did`
+
+DECLARE `Costs on the offer` IS ONE OF
+    `my costs throughout, on the ordinary basis`
+    `my costs to the offer on the ordinary basis, and from the day of the offer on the indemnity basis`
+    `my costs up to and including the day of the offer; the defendant's costs after it`
+    `my costs up to and including the day of the offer; the defendant's costs after it on the indemnity basis`
+    `my costs up to 11 a.m. the day after the offer; the defendant's costs after that`
+    `my costs up to 11 a.m. the day after the offer; the defendant's costs after that on the indemnity basis`
+    `no costs consequence from the offer under r. 10`
+
+-- r. 10(3)-(7A): an offer of a sum not accepted in time. (3) only "if the Court is satisfied by the party who made the
+-- offer that the party was at all material times willing and able to comply"; (4) the plaintiff's offer and a judgment
+-- "no less favourable"; (5A) indemnity if the defendant's failure to accept was unreasonable, "unless the interests of
+-- justice require otherwise"; (5) the defendant's offer and a judgment "not more favourable"; (6) an offer made on or
+-- after the first day of trial: 11 a.m. the next day; (7A) indemnity for the defendant; (7) interest for the time after
+-- the day of the offer is disregarded. "Unless the Court otherwise orders": NOTHING.
+GIVEN `who` IS A `Who made the offer`, `the sum offered` IS A NUMBER, `the judgment` IS A NUMBER,
+      `interest after the offer in the judgment` IS A NUMBER, `made on or after the first day of trial` IS A BOOLEAN,
+      `the offeror was willing and able` IS A BOOLEAN, `not accepting was unreasonable` IS A BOOLEAN,
+      `justice requires otherwise` IS A BOOLEAN, `the Court orders otherwise` IS A BOOLEAN
+GIVETH A MAYBE `Costs on the offer`
+`O. 24A r. 10 -- the costs that follow the offer` `who` `the sum offered` `the judgment` `interest after the offer in the judgment` `made on or after the first day of trial` `the offeror was willing and able` `not accepting was unreasonable` `justice requires otherwise` `the Court orders otherwise` MEANS
+    IF `the Court orders otherwise`
+    THEN NOTHING
+    ELSE IF NOT `the offeror was willing and able`
+         THEN JUST `no costs consequence from the offer under r. 10`
+         ELSE CONSIDER `who`
+              WHEN `I did` THEN
+                  IF `the judgment counted` AT LEAST `the sum offered`
+                  THEN IF `indemnity`
+                       THEN JUST `my costs to the offer on the ordinary basis, and from the day of the offer on the indemnity basis`
+                       ELSE JUST `my costs throughout, on the ordinary basis`
+                  ELSE JUST `no costs consequence from the offer under r. 10`
+              WHEN `the defendant did` THEN
+                  IF `the judgment counted` AT MOST `the sum offered`
+                  THEN IF `made on or after the first day of trial`
+                       THEN IF `indemnity`
+                            THEN JUST `my costs up to 11 a.m. the day after the offer; the defendant's costs after that on the indemnity basis`
+                            ELSE JUST `my costs up to 11 a.m. the day after the offer; the defendant's costs after that`
+                       ELSE IF `indemnity`
+                            THEN JUST `my costs up to and including the day of the offer; the defendant's costs after it on the indemnity basis`
+                            ELSE JUST `my costs up to and including the day of the offer; the defendant's costs after it`
+                  ELSE JUST `no costs consequence from the offer under r. 10`
+    WHERE
+        `the judgment counted` MEANS `the judgment` MINUS `interest after the offer in the judgment`
+        `indemnity` MEANS `not accepting was unreasonable` AND (NOT `justice requires otherwise`)
+
+-- r. 8(1): where a party to an accepted offer fails to comply, "then unless for special cause the Court otherwise
+-- orders, the other party (a) shall be entitled to an order ... where the party in default is the defendant, that the
+-- defence be struck out, and ... to judgment accordingly". r. 9: with defendants jointly liable and rights of
+-- contribution, "rule 8 shall not apply ... unless" the offer covers all of them (and, if made by 2 or more defendants,
+-- they are jointly liable for the whole). "Unless": no, if not.
+GIVEN `the defendant has failed to comply` IS A BOOLEAN, `the Court finds special cause` IS A BOOLEAN,
+      `jointly liable defendants with contribution rights` IS A BOOLEAN, `the offer covers all of them` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`O. 24A rr. 8, 9 -- I am entitled to have the defence struck out` `the defendant has failed to comply` `the Court finds special cause` `jointly liable defendants with contribution rights` `the offer covers all of them` MEANS
+    IF NOT `the defendant has failed to comply`
+    THEN JUST FALSE
+    ELSE IF `jointly liable defendants with contribution rights` AND (NOT `the offer covers all of them`)
+         THEN JUST FALSE
+         ELSE IF `the Court finds special cause`
+              THEN JUST FALSE
+              ELSE JUST TRUE
+
+§ `Order 25 -- security for costs`
+
+DECLARE `Why security is sought` IS ONE OF
+    `I ordinarily live outside Western Australia`
+    `I am about to leave Western Australia`
+    `I am immune from execution here`
+    `I am an undischarged bankrupt or have suspended payment of my debts`
+    `I am a company in liquidation, official management or receivership`
+    `I am suing as a relator for a public right, trust or charity`
+    `I have not paid costs ordered in an earlier case on the same matter`
+    `I have vexatiously sued before`
+    `I am suing the sheriff about an execution`
+    `only that I am poor or could not pay the costs`
+    `some other reason`
+
+-- r. 1: "The Court may order security for costs to be given by a plaintiff, but no order shall be made merely on account
+-- of the poverty of the plaintiff or the likely inability of the plaintiff to pay any costs". r. 2 lists grounds
+-- "Without limiting the generality of rule 1". r. 3: the Court's discretion. A yes means the Court can, not that it will.
+GIVEN `why` IS A `Why security is sought`
+GIVETH A MAYBE BOOLEAN
+`O. 25 rr. 1, 2 -- the Court can order me to give security` `why` MEANS
+    CONSIDER `why`
+    WHEN `only that I am poor or could not pay the costs` THEN JUST FALSE
+    OTHERWISE JUST TRUE
+
+-- r. 6: "Where security is ordered the action ... shall be stayed until the security is furnished, unless the Court
+-- otherwise orders."
+GIVEN `security was ordered` IS A BOOLEAN, `I have given it` IS A BOOLEAN, `the Court ordered no stay` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`O. 25 r. 6 -- my action is stayed` `security was ordered` `I have given it` `the Court ordered no stay` MEANS
+    IF `security was ordered` AND (NOT `I have given it`) AND (NOT `the Court ordered no stay`)
+    THEN JUST TRUE
+    ELSE JUST FALSE
+
+§ `Order 28 -- medical examination`
+
+-- r. 1(1): "Where it becomes material ... to consider the question of the physical or mental condition of any party, any
+-- opposing party may serve on such first-mentioned party a notice to submit himself for examination at a specified time
+-- and place by a medical practitioner provided and paid by the party requiring the examination." r. 1(3): failing to
+-- submit can lead to a stay or a pleading struck out. r. 1(2A): an objection goes to the Court, whose order governs.
+GIVEN `my condition is material` IS A BOOLEAN, `notice with time and place served` IS A BOOLEAN,
+      `their doctor, at their cost` IS A BOOLEAN, `the Court ordered I need not attend` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`O. 28 r. 1 -- I must submit to the examination` `my condition is material` `notice with time and place served` `their doctor, at their cost` `the Court ordered I need not attend` MEANS
+    IF `the Court ordered I need not attend`
+    THEN JUST FALSE
+    ELSE IF `my condition is material` AND `notice with time and place served` AND `their doctor, at their cost`
+         THEN JUST TRUE
+         ELSE JUST FALSE
+
+-- r. 1(2): "A reasonable sum to cover the travelling and other expenses of the party to be examined ... including the
+-- expenses of having the medical adviser chosen by him attend the examination, shall on demand be paid".
+GIVEN `I have demanded it` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`O. 28 r. 1(2) -- my expenses must be paid` `I have demanded it` MEANS
+    IF `I have demanded it`
+    THEN JUST TRUE
+    ELSE JUST FALSE
+
+-- r. 1(4), (5): the examining party "shall serve on the party who has been examined a full and true copy of such
+-- report". "If default be made for one week in serving the copy ... or if the party examined alleges that the report is
+-- insufficient or incomplete, such party may obtain an order for service of the report or of a further and better
+-- report". When the week starts is not said (finding 5): asked as a fact.
+GIVEN `the copy has been served` IS A BOOLEAN, `a week has passed since the report` IS A BOOLEAN, `I say it is incomplete` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`O. 28 r. 1(5) -- I can get an order for the report` `the copy has been served` `a week has passed since the report` `I say it is incomplete` MEANS
+    IF ((NOT `the copy has been served`) AND `a week has passed since the report`) OR `I say it is incomplete`
+    THEN JUST TRUE
+    ELSE JUST FALSE
+
+§ `Order 70 -- persons under disability`
+
+-- r. 1: "person under disability means (a) a person who is an infant; or (b) a represented person; or (c) a person ...
+-- declared by the Court to be incapable of managing their affairs". "Infant" is borrowed (under 18, Age of Majority Act
+-- 1972): asked.
+GIVEN `I am under 18` IS A BOOLEAN, `I am a represented person` IS A BOOLEAN, `declared incapable` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `O. 70 r. 1 -- I am a person under disability` `I am under 18` `I am a represented person` `declared incapable` IF
+        `I am under 18`
+    OR  `I am a represented person`
+    OR  `declared incapable`
+
+-- r. 2(1)(a): a person under disability "cannot bring, or make a claim in, any proceedings except by the person's next
+-- friend"; r. 2(4): a judge may permit an infant to sue without one.
+GIVEN `I am under 18` IS A BOOLEAN, `I am a represented person` IS A BOOLEAN, `declared incapable` IS A BOOLEAN,
+      `a judge permitted me to sue alone` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `O. 70 r. 2 -- I must sue by a next friend` `I am under 18` `I am a represented person` `declared incapable` `a judge permitted me to sue alone` IF
+        `O. 70 r. 1 -- I am a person under disability` `I am under 18` `I am a represented person` `declared incapable`
+    AND (NOT (`a judge permitted me to sue alone` AND (NOT `I am a represented person`) AND (NOT `declared incapable`)))
+
+-- r. 10(1): "No settlement or compromise, and no acceptance of money paid into court ... in any cause or matter (other
+-- than an appeal to the Court of Appeal) in which there is a claim by or on behalf of ... a person under disability, is
+-- valid unless it is approved by the Court." r. 11: before proceedings, approval may be sought ("if it is desired"); the
+-- rules do not say an unapproved pre-action settlement is invalid (NOTHING). Not under disability, or an appeal: the
+-- rule does not reach it (NOTHING).
+GIVEN `under disability` IS A BOOLEAN, `proceedings have begun` IS A BOOLEAN, `it is an appeal to the Court of Appeal` IS A BOOLEAN,
+      `the Court approved it` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`O. 70 rr. 10, 11 -- the settlement is valid` `under disability` `proceedings have begun` `it is an appeal to the Court of Appeal` `the Court approved it` MEANS
+    IF `the Court approved it`
+    THEN JUST TRUE
+    ELSE IF `under disability` AND `proceedings have begun` AND (NOT `it is an appeal to the Court of Appeal`)
+         THEN JUST FALSE
+         ELSE NOTHING
+
+DECLARE `Where the money goes` IS ONE OF
+    `to the Public Trustee, to invest for me`
+    `as the Court orders`
+    `the disability rule does not apply`
+
+-- r. 12(1): money recovered for a person under disability "must, unless otherwise ordered by the Court, be paid to the
+-- Public Trustee for investment on behalf of the person under disability".
+GIVEN `under disability` IS A BOOLEAN, `the Court ordered otherwise` IS A BOOLEAN
+GIVETH A `Where the money goes`
+`O. 70 r. 12 -- where my money goes` `under disability` `the Court ordered otherwise` MEANS
+    IF NOT `under disability`
+    THEN `the disability rule does not apply`
+    ELSE IF `the Court ordered otherwise`
+         THEN `as the Court orders`
+         ELSE `to the Public Trustee, to invest for me`

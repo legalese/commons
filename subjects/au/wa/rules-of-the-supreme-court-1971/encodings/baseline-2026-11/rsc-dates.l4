@@ -1,0 +1,154 @@
+IMPORT prelude
+IMPORT daydate
+
+-- Rules of the Supreme Court 1971 (WA) -- the date arithmetic the rules need: Order 3 (time) and Order 68 r. 5 (the days
+-- the Central Office is open), kept in one small module so that daydate is imported in one place only.
+-- BASELINE ENCODING. Not for public use as advice. See NOTES.md.
+
+§ `Dates`
+
+-- A calendar date, day first.
+GIVEN d IS A NUMBER, m IS A NUMBER, y IS A NUMBER
+GIVETH A DATE
+`the day` d m y MEANS Date d m y
+
+GIVEN x IS A DATE, n IS A NUMBER
+GIVETH A DATE
+`the day n days after` x n MEANS DATE_FROM_SERIAL (DATE_SERIAL x PLUS n)
+
+-- How many days from the first date to the second (negative if the second is earlier).
+GIVEN a IS A DATE, b IS A DATE
+GIVETH A NUMBER
+`days from` a b MEANS DATE_SERIAL b MINUS DATE_SERIAL a
+
+GIVEN a IS A DATE, b IS A DATE
+GIVETH A DATE
+`the later date of` a b MEANS
+    IF `days from` a b GREATER THAN 0
+    THEN b
+    ELSE a
+
+§§ `Months (O. 3 r. 1: a month is a calendar month)`
+
+-- The date n calendar months on from x, on the same day of the month; where that month has no such day, the date rolls
+-- into the next month (Date 30 2 2027 is 2 March 2027), and the caller takes the last day of the month instead.
+GIVEN x IS A DATE, n IS A NUMBER
+GIVETH A DATE
+`the same day n months on from` x n MEANS
+    Date (DATE_DAY x) `the month` `the year`
+    WHERE
+        `the months counted` MEANS DATE_MONTH x MINUS 1 PLUS n
+        `the year` MEANS DATE_YEAR x PLUS FLOOR (`the months counted` DIVIDED BY 12)
+        `the month` MEANS (`the months counted` MODULO 12) PLUS 1
+
+GIVEN x IS A DATE, n IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `the month n months on has the same day` x n IF
+    DATE_DAY (`the same day n months on from` x n) EQUALS DATE_DAY x
+
+-- The last day of a period of n calendar months beginning with day x (the day x itself counted): the day before the
+-- day numerically corresponding to x, n months on; where there is no such day, the last day of that month (fork F3).
+GIVEN x IS A DATE, n IS A NUMBER
+GIVETH A DATE
+`the last day of n months beginning with` x n MEANS
+    IF `the month n months on has the same day` x n
+    THEN `the day n days after` (`the same day n months on from` x n) (0 MINUS 1)
+    ELSE `the day n days after` (`the same day n months on from` x n) (0 MINUS (DATE_DAY (`the same day n months on from` x n)))
+
+-- The last day of a period of n calendar months after day x (O. 3 r. 2(1): day x itself excluded).
+GIVEN x IS A DATE, n IS A NUMBER
+GIVETH A DATE
+`the last day of n months after` x n MEANS
+    `the last day of n months beginning with` (`the day n days after` x 1) n
+
+§§ `O. 68 r. 5 -- the days the Central Office is closed`
+
+-- Easter Sunday in year y (the Gregorian computus, anonymous algorithm).
+GIVEN y IS A NUMBER
+GIVETH A DATE
+`Easter Sunday in` y MEANS
+    Date `the day of the month` `the month of Easter` y
+    WHERE
+        a MEANS y MODULO 19
+        b MEANS FLOOR (y DIVIDED BY 100)
+        c MEANS y MODULO 100
+        d MEANS FLOOR (b DIVIDED BY 4)
+        e MEANS b MODULO 4
+        f MEANS FLOOR ((b PLUS 8) DIVIDED BY 25)
+        g MEANS FLOOR ((b MINUS f PLUS 1) DIVIDED BY 3)
+        h MEANS ((19 TIMES a) PLUS b MINUS d MINUS g PLUS 15) MODULO 30
+        i MEANS FLOOR (c DIVIDED BY 4)
+        k MEANS c MODULO 4
+        l MEANS (32 PLUS (2 TIMES e) PLUS (2 TIMES i) MINUS h MINUS k) MODULO 7
+        mm MEANS FLOOR ((a PLUS (11 TIMES h) PLUS (22 TIMES l)) DIVIDED BY 451)
+        `the sum` MEANS h PLUS l MINUS (7 TIMES mm) PLUS 114
+        `the month of Easter` MEANS FLOOR (`the sum` DIVIDED BY 31)
+        `the day of the month` MEANS (`the sum` MODULO 31) PLUS 1
+
+GIVEN x IS A DATE
+GIVETH A BOOLEAN
+DECIDE `a Saturday or Sunday` x IF
+        `Weekday of` x EQUALS 6
+    OR  `Weekday of` x EQUALS 0
+
+-- O. 68 r. 5: "The several offices of the Supreme Court shall be open on every day of the year, except Saturdays and
+-- Sundays, Good Friday and Monday in Easter week, Christmas Day and all Public Service holidays." Public Service holidays
+-- are not computed (fork F2): on such a day the answer here treats the office as open.
+GIVEN x IS A DATE
+GIVETH A BOOLEAN
+DECIDE `the Central Office is closed on` x IF
+        `a Saturday or Sunday` x
+    OR  `days from` (`Easter Sunday in` (DATE_YEAR x)) x EQUALS (0 MINUS 2)
+    OR  `days from` (`Easter Sunday in` (DATE_YEAR x)) x EQUALS 1
+    OR  (DATE_DAY x EQUALS 25 AND DATE_MONTH x EQUALS 12)
+
+§§ `O. 3 r. 3 -- 24 December to 15 January`
+
+-- "the period or any part of the period which is between 24 December and 15 January next following shall not be
+-- reckoned": both days taken as inside the period (fork F4).
+GIVEN x IS A DATE
+GIVETH A BOOLEAN
+DECIDE `between 24 December and 15 January` x IF
+        (DATE_MONTH x EQUALS 12 AND DATE_DAY x AT LEAST 24)
+    OR  (DATE_MONTH x EQUALS 1 AND DATE_DAY x AT MOST 15)
+
+§§ `O. 3 rr. 2-4 -- the last day of a period of days`
+
+-- Whether a day counts towards a period: r. 2(2) drops days the Central Office is closed when fewer than 7 days are
+-- prescribed; r. 3 drops 24 December to 15 January for a pleading or notice of appeal.
+GIVEN x IS A DATE, n IS A NUMBER, `a pleading step` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `the day is reckoned` x n `a pleading step` IF
+        (NOT (n LESS THAN 7 AND `the Central Office is closed on` x))
+    AND (NOT (`a pleading step` AND `between 24 December and 15 January` x))
+
+-- Counting on from x until `left` reckoned days have passed.
+GIVEN x IS A DATE, `left` IS A NUMBER, n IS A NUMBER, `a pleading step` IS A BOOLEAN
+GIVETH A DATE
+`the day reached counting on from` x `left` n `a pleading step` MEANS
+    IF `left` AT MOST 0
+    THEN x
+    ELSE IF `the day is reckoned` (`the day n days after` x 1) n `a pleading step`
+         THEN `the day reached counting on from` (`the day n days after` x 1) (`left` MINUS 1) n `a pleading step`
+         ELSE `the day reached counting on from` (`the day n days after` x 1) `left` n `a pleading step`
+
+-- r. 4(1): a time expiring on a day the Central Office is closed is extended to the next day it is open, where the act
+-- cannot be done on the closed day; r. 4(2): not for a document that must be filed electronically.
+GIVEN x IS A DATE
+GIVETH A DATE
+`the next day the Central Office is open from` x MEANS
+    IF `the Central Office is closed on` x
+    THEN `the next day the Central Office is open from` (`the day n days after` x 1)
+    ELSE x
+
+-- The last day for an act to be done within n days after day x (not clear days): r. 2(1) excludes day x and includes
+-- the last day; r. 2(2) and r. 3 drop days as above; r. 4 extends a last day on which the office is closed when the act
+-- needs the office open.
+GIVEN x IS A DATE, n IS A NUMBER, `a pleading step` IS A BOOLEAN, `needs the office open` IS A BOOLEAN
+GIVETH A DATE
+`O. 3 -- the last day of n days after` x n `a pleading step` `needs the office open` MEANS
+    IF `needs the office open`
+    THEN `the next day the Central Office is open from` `the counted day`
+    ELSE `the counted day`
+    WHERE
+        `the counted day` MEANS `the day reached counting on from` x n n `a pleading step`
