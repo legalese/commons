@@ -122,7 +122,8 @@ s 64 (identity); ss 67, 68 (intimidation, reprisals); s 71 (prosecution time); s
 - s 23(6), (7) (telling the Commissioner of a change of name or address): a bare duty with no period or consequence;
   noted, not asked.
 - Powers exercised over the complainant only as one of many persons: s 26 (enquiries), ss 43-54 (investigation powers,
-  search warrants, privilege, Supreme Court applications), s 46(3), s 70 (offences of not providing information), s 48
+  search warrants, privilege, Supreme Court applications), s 46(3), s 69 (offence of obstructing the Commissioner),
+  s 70 (offences of not providing information), s 48
   (witness expenses: the amounts are prescribed and not deposited).
 - The Commissioner's internal steps that give the complainant nothing to ask: ss 24A, 25(1B), (2), (2A), (3), 25A, 28,
   29, 29A, 29B, 31, 32, 34-36, 38, 41, 42, 49, 50, 59-62D, 63, 65, 72, 74, 75, 78. s 35(3) (a copy of the conciliator's
@@ -170,6 +171,9 @@ Each line: the provision, the function, the answer taken, the other reading.
 - **F10** s 25(7)(d) "the requirement is unsatisfied" -- `s 25(7) -- the Commissioner may dismiss my complaint on that
   day` -- read on the day asked about, so a requirement met late (after the 14 days) but before that day bars dismissal
   -- read at the end of the 14 days.
+- **F11** s 22(b) "a health service user who is a child", "has attained the age of 14 years" -- `ss 22, 22A -- I am
+  entitled to complain` -- the patient's age is taken on the day the complaint is made (s 22 is about who "is entitled to
+  make a complaint") -- the age when the health service was sought, used or received (the Act does not say).
 
 ## Rulings on negatives (copied word for word from docs/ENCODING-GUIDE.md section 5)
 
@@ -233,5 +237,5 @@ duty).
 - Check the text against the authorised version on legislation.tas.gov.au.
 - The Acts Interpretation Act 1931 (Tas) for reckoning periods (F1, F5) and the Health Complaints Regulations (codes of
   conduct, prescribed services and providers), if deposited.
-- A lawyer's view on forks F2, F3, F6-F10 and findings 1-5; an independent test pass and a human gate.
+- A lawyer's view on forks F2, F3, F6-F11 and findings 1-5; an independent test pass and a human gate.
 - Seats for the health service provider and the health care worker, if wanted.
