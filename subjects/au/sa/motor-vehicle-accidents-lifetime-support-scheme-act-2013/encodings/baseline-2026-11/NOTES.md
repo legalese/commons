@@ -70,13 +70,15 @@ read.
 | `lss-core.l4` | 0 | 0 | 0 | 0 |
 | `lss-seat.l4` | 0 | 0 | 0 | 0 |
 | `lss-seat-owner-driver.l4` | 0 | 0 | 0 | 0 |
-| `lss-cases.l4` | 0 | 0 | 164 | 164 |
+| `lss-cases.l4` | 0 | 0 | 166 | 166 |
 | `lss-cases-owner-driver.l4` | 0 | 0 | 27 | 27 |
 
 Negative controls: with the Tribunal's 28 days changed to 27, `lss-cases.l4` failed exactly the 5 predicted assertions
 (the two "by when" dates, the application on the last day, not yet applied on the last day, and the 2025 "still in
 time" case); with s 45(2)'s reduction for contributory negligence removed, `lss-cases-owner-driver.l4` failed exactly
-the 2 predicted (25% and 100%). Both were reverted and rechecked (164 and 27 satisfied).
+the 2 predicted (25% and 100%). Both were reverted and rechecked (164 and 27 satisfied). After the independent
+verification of 2026-11-07 (ambulance and private hospital rates corrected, forks F11 and F12 recorded) all six files
+were run again: 0 errors, 0 warnings, 166 and 27 satisfied.
 
 Edges asserted: the commencement day (1 July 2014) and the day before; the last day of each 28-day period and the day
 after, applied and not yet applied; a 28-day count across 29 February 2024; s 52's 28 days back across February in a
@@ -129,6 +131,11 @@ assessment, with reasons, and give the participant a copy) is reflected in the s
 
 **Out, and why:**
 
+- s 5(3) (the Act also applies, for a participant, to related injuries and to whatever other injuries, needs and
+  expenses the LSS Rules cover): not a separate question; whether a need is covered is asked through the s 27
+  assessment and the LSS Rules inputs of "Will the Scheme pay".
+- s 40(3) (a provider the Authority has not paid may recover the payment from it as a debt): the provider's remedy,
+  not the injured person's.
 - Part 2 (ss 7 to 23: the Authority, its board, functions, staff, accounts, report, code of conduct): machinery. s 23's
   complaints process is named in the "how can I challenge" answer for a decision Part 5 does not reach.
 - s 27(5) (the Authority may pay a participant an amount to cover expenses over a fixed period, by agreement): it rests
@@ -153,7 +160,7 @@ assessment, with reasons, and give the participant a copy) is reflected in the s
   the Motor Accident Commission's contribution; Part 7 (review by a Parliamentary committee) is spent. The 2019 SACAT
   transitional provision (unexercised District Court appeals) is spent.
 
-## Forks (decided case by case, ruling of 2026-11-05)
+## Forks (decided case by case, ruling of 2026-11-05; F11 and F12 recorded after the verification of 2026-11-07)
 
 Each is the provision, the function, the answer taken, and the other reading, for a reviewer to overrule.
 
@@ -190,6 +197,17 @@ Each is the provision, the function, the answer taken, and the other reading, fo
   incurred or the service provided, asked as a fact. The other reading looks to the day of payment.
 - **F10** ss 35, 37, 38, 52, `the timing of`: a step taken before the day the period starts (an application dated before
   the determination) is in time; the encoding does not ask whether it was premature.
+- **F11** s 25(7) and s 26(10), `is the application within the period the Act guarantees (ss 25(7), 26(10))` and
+  `the last day the Act guarantees for applying (ss 25(7), 26(10))`: s 25(7)'s 3-year floor is for an "initial
+  application"; s 26(10) only requires the LSS Rules to add interim participation to whatever period they set for an
+  application to become a lifetime participant. The encoding takes that period to be at least the 3 years, so 3 years
+  plus the interim days is treated as guaranteed, and the answer says it rests on this fork. The other reading: the Act
+  guarantees nothing for a lifetime application after interim participation beyond adding the days to the Rules' own
+  period, so only the plain 3 years is guaranteed.
+- **F12** s 45(5) to (7), `can the Authority recover from this person (s 45)`: a person who was both owner and driver
+  is treated as owner (s 45(5)) and has neither defence: not s 45(6), since no one else drove, and not s 45(7), taking
+  the driver's defence as one for a driver who is not the owner. The other reading lets an owner-driver use s 45(7),
+  since on its words they drove with the owner's authority and may have reasonably believed the vehicle was insured.
 
 ## What the Act turns out to say (findings)
 
@@ -197,13 +215,16 @@ Each is the provision, the function, the answer taken, and the other reading, fo
    application answer says so).
 2. **The Act fixes almost none of the Scheme's numbers.** Eligibility criteria, application periods, excluded needs,
    payment limits and extensions of time are all left to the LSS Rules (not deposited). The Act's own floor is s 25(7):
-   the Rules must let an initial application be made within 3 years of the accident, longer by any interim
-   participation for a lifetime application (s 26(10)). Asserted.
+   the Rules must let an initial application be made within 3 years of the accident. For a lifetime application after
+   interim participation, s 26(10) adds the interim days to the Rules' own period; that the 3 years plus those days is
+   guaranteed is fork F11. Asserted.
 3. **s 26(11) changes the Limitation of Actions Act from outside it.** Any period of interim participation is added to
    the 3 years in s 36 of the Limitation of Actions Act 1936, "and that section will be taken to have been modified
    accordingly"; a reader of that Act alone would miss it. Asserted.
-4. **Ambulance has no maximum fee.** s 40 covers conveying by ambulance, but s 41(1) does not list it, so s 40(2)(b)
-   can never apply: unless bulk billed, ambulance is paid at the customary rate (s 40(2)(c)). Asserted.
+4. **Ambulance has a maximum fee only if the Minister names it.** s 40 covers conveying by ambulance, but s 41(1)(a)
+   to (d) do not list it; a maximum can be fixed for it only after the Minister identifies it for s 41 by Gazette notice
+   (s 41(1)(e)). Until then, unless bulk billed, ambulance is paid at the customary rate (s 40(2)(c)); after, at the
+   maximum fixed (s 40(2)(b)). Asserted.
 5. **s 45(3) reaches beyond uninsured vehicles on its words** (fork F7). Asserted.
 6. **The Authority's discretion to pay anyway (s 28(2)) covers s 28(1) only**, not services provided while
    participation is suspended (s 28(6)). Asserted.
@@ -219,12 +240,12 @@ Each is the provision, the function, the answer taken, and the other reading, fo
 10. **The owner is liable even when not driving**, jointly with the driver or alone (s 45(5)), unless the owner proves
     the driver had no authority (s 45(6)); the driver's defence (s 45(7)) needs both authority (or a reasonable belief
     in it) and a reasonable belief that the vehicle was insured. A person who was both owner and driver has neither
-    defence. Asserted.
+    defence (fork F12). Asserted.
 11. **Numbering and renaming.** s 2 was omitted under the Legislation Revision and Publication Act 2002, so the Act runs
     s 1, s 3; ss 35 and 37 were substituted in 2019 to send reviews to the Tribunal rather than the District Court.
 
 ## Before relying on it
 
 Deposit and encode the current LSS Rules (they decide eligibility, periods and limits); check the register for a
-version later than 2 December 2019; have a lawyer review forks F1, F2, F4 and F7; encode the Limitation of Actions Act
+version later than 2 December 2019; have a lawyer review forks F1, F2, F4, F7, F11 and F12; encode the Limitation of Actions Act
 1936 s 36 and link it; run an independent test pass.
