@@ -54,3 +54,14 @@ Once they are saved, convert the Word file to plain text (checking it against th
 copyright notice, the Government Printer's attribution and an unofficial-version notice at its head, deposit it in
 `registers/source-bundle/` with its `.meta.json`, and record the deposit here. Any formula or table lost in
 conversion goes in a `<source-id>.formulas.md` sidecar.
+
+## Deposit, 7 November 2026
+
+The text is deposited, under the ruling above; this replaces "No text is deposited yet" above. robots.txt still keeps a crawler off the register's Word and PDF files,
+so the owner saved the Word file by hand, in a browser, on 2026-11-07, and it was converted from that copy.
+
+- **Saved from**: https://www.legislation.vic.gov.au/in-force/statutory-rules/transport-accident-regulations-2017/002 (Version No. 002, incorporating amendments as at 23 October 2018, the current version on 2026-11-07).
+- **Word file**: https://content.legislation.vic.gov.au/sites/default/files/6cfa1271-b08c-36b7-9474-03ccbf778d7a_17-40sr002.docx (identified from its own cover: title, number, version and date).
+- **Deposited text**: `registers/source-bundle/transport-accident-regulations-2017.txt`, a plain-text conversion headed by the copyright notice, the Government
+  Printer's attribution and an unofficial-version notice; hashes, the page read and the conversion are in `transport-accident-regulations-2017.meta.json`.
+- **Authorised version**: https://content.legislation.vic.gov.au/sites/default/files/ffee8252-91f8-3920-98c5-7e21c78a89d4_17-40sra002%20authorised.pdf. It was not saved; it is the version to check the conversion against.
