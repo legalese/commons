@@ -19,9 +19,11 @@ Victoria has no requirement ledger, so no ledger line is closed or raised.
 
 ## Edition
 
-**Workplace Injury Rehabilitation and Compensation Act 2013**, Act No. 67/2013, **Version No. 054, as at 2 October 2026**, deposited at `../../registers/source-bundle/workplace-injury-rehabilitation-and-compensation-act-2013.txt` (sha256 `b7b33dfc074ef55499d66fa194717105cbbfce50112275384a97c649366611ad`).
+**Workplace Injury Rehabilitation and Compensation Act 2013**, Act No. 67/2013, **Version No. 054, as at 2 October 2026**, deposited at `../../registers/source-bundle/workplace-injury-rehabilitation-and-compensation-act-2013.txt` (sha256 `059d7303f7d30beca9e77f472eb210e7fd9191b07f39d5bb19d93e60b16ce081`).
 The Word file was saved by hand by the owner on 2026-11-06 from the version page and converted to text; `workplace-injury-rehabilitation-and-compensation-act-2013.meta.json` records the file, its hash and the conversion, and `subjects/au/vic/README.md` records the deposit. Line numbers in the modules are lines of that text.
 The version includes the Workplace Injury Rehabilitation and Compensation Amendment (WorkCover Scheme Modernisation) Act 2024 (No. 8/2024; ss 4-26 in force 31 March 2024, endnote at line 10204): the new definition of mental injury and ss 39(1A), (2A), 40(1A), (2A), the substituted s 163(1), and the transitional s 625.
+
+**Reconverted deposit, 2026-11-07.** The text was first deposited on 2026-11-06 with sha256 `b7b33dfc074ef55499d66fa194717105cbbfce50112275384a97c649366611ad`. Its converter dropped the characters the Word file sets in the Symbol font, so the s 211(2) and s 212 formulas this encoding reads printed without their multiplication signs ("$11 670 + [(D – 10) $9940]", "{...} 1·1"). The deposit was converted again on 2026-11-07 and now prints them ("$11 670 + [(D – 10) × $9940]", "{...} × 1·1"); the hash above is the new text's. This encoding had already read each of those formulas as a multiplication, so no rule, amount or case changes, and no finding rested on the lost signs. The other lines restored (s 54(4) example, s 63(1)(c) and (3)(c), s 213(1), Schedule 7 clause 1(2)(a)) are outside its scope. Line numbers are unchanged.
 
 None of the 14 equations or 11 images in the `.formulas.md` sidecar is used. The sidecar's equations are the indexation formulas (ss 542-545), the enhancement formula (s 157), and formulas in sections out of scope. Flow chart 1 (s 15), the one image transcribed, is the notice of injury, and agrees with s 18 as encoded.
 
@@ -37,7 +39,7 @@ The day that picks the year is the one the Act names where it names one: the rel
 | `wirc-seat.l4` | none (0 errors, 0 warnings) |
 | `wirc-cases.l4` | 192 written, 192 satisfied (0 errors, 0 warnings) |
 
-`l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read (2026-11-06). A copy of the case file with one expected value changed was run first, to confirm that a failure is reported; it was not kept.
+`l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read (2026-11-06; run again 2026-11-07 after the deposit was reconverted, same counts). A copy of the case file with one expected value changed was run first, to confirm that a failure is reported; it was not kept.
 Every expected value was worked by hand from the deposited text and the Gazette rows, with the arithmetic in the comment above the assertion. The edges asserted include: the 30th and 31st day for notice; 28 February for a 2-year or 6-month period from 29 February or 31 August; the last day for a decision and the day after; weeks 13, 14, 130 and 131; 20 and 21 per cent whole person impairment; 14 and 15 hours and $256 and $257 for s 165; 910 and 911 days before retirement age; 11, 12, 51 and 52 weeks for s 189; each band edge of s 211 (9, 10, 10.5, 11, 29, 30, 31, 70, 71, 79, 80, 85) and of s 212 (29, 30, 31, 81); the maximum and just over it; 1 to 6 dependent children; the s 340 thresholds and a dollar under; 24 December to 9 January in the s 329A count; 30 June 2025 and 1 July 2027 outside the figures.
 Breached traces are asserted through a helper (`ends fulfilled`) and `NOT`, because `EVALTRACE ... EQUALS` cannot test a breach.
 
