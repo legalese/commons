@@ -34,3 +34,11 @@ Subordinate legislation made under the Migration Act 1958 (subject `subjects/au/
   Schedule 10, Form 2 (line 27335). Now 2,962,724 characters, sha256
   `e42ec59d4288b3ac009058cb2430ce14856df0bd089142c3ace8c765b9f556a7` (was
   `8a05f2fc10197b8b43fde075da8af128fd7e39148462e5d24990d767cc572380`); details in `registers/source-bundle/F1996B03551.meta.json`.
+
+- **Reconverted again, 8 November 2026**: the 7 November reconversion missed eight bullets (•) that Word draws
+  from automatic numbering in the Symbol font, in the two lists of visas in the Schedule 2 Subclass 489 criteria
+  (lines 21148-21151 and 21228-21231). The text was converted again from the same four Word volumes (same download
+  sha256) with cth_convert_sym_v5n.py (kept outside the repository), which also writes out those bullets; only those
+  eight lines changed. Now 2,962,740 characters, sha256
+  `ab11e9cd6021605140793f54cc0a07d22f310d9d3aa467ff7bb5bc8a65c938bc` (was
+  `e42ec59d4288b3ac009058cb2430ce14856df0bd089142c3ace8c765b9f556a7`); details in `registers/source-bundle/F1996B03551.meta.json`.
