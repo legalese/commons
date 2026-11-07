@@ -23,3 +23,5 @@ terms.
 Statute text deposited 2026-10-13: `registers/source-bundle/C1914A00012.txt`, converted to plain text from
 https://api.prod.legislation.gov.au/v1/Documents/Find(titleid='C1914A00012',asatspecification='Current',type='Primary',format='Word',uniquetypenumber=0,volumenumber=1..3,rectificationspecification='Latest')
 (compilation register id: C2026C00368). sha256 of the download: `c9e2d0d2889c52a9b5dc200b72f7f5448c1540d79f8e067437ff475995c62765`.
+
+Symbol characters restored, 2026-11-07: the converter dropped the three characters the Word volumes set as Symbol-font characters, the multiplication sign of s 3ZM(6)(m)(ii) ("250mm × 200mm") and the division signs of s 4AB(1)(a) and (b) ("if D ÷ 100 is ..."). The text was regenerated from the same Word volumes by a copy of the same converter that maps them (kept outside the repository); nothing else changed. The text's sha256 is now `db0d28704a845061a6db944eb77b2424b5f57e2c2b95eb064d64991c0f79b49d` (was `7908ee650ce230835d62a7bb0514269dabf4ad393b58a51a331ccdbb997c313e`); details in `registers/source-bundle/C1914A00012.meta.json`.
