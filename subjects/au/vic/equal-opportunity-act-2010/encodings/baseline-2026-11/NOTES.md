@@ -14,7 +14,7 @@ imports the rules and restates none. The cases are in `eoa-cases.l4`.
 ## Edition
 
 - **Act:** Equal Opportunity Act 2010, Act No. 16/2010, Version No. 032, incorporating amendments as at 15 April 2026,
-  deposited at `../../registers/source-bundle/equal-opportunity-act-2010.txt` (sha256 07154252...d473b10ca as committed), a
+  deposited at `../../registers/source-bundle/equal-opportunity-act-2010.txt` (sha256 bca02743...b248205b since the 2026-11-07 reconversion; encoded from 07154252...d473b10ca, which differs only in the bullets below), a
   plain-text conversion of the Word file the owner saved by hand on 6 November 2026 (see that file's `.meta.json` and
   `subjects/au/vic/README.md`). The register showed it as the current version on that day. Not checked against the
   authorised PDF, which was not saved.
@@ -216,6 +216,12 @@ is for the law of evidence (*points outside the text*).
 10. **Conversion.** s 104(1)(h)(iii) and the closing words of s 104(1) ("or because the person believes ...") print
     without the indent of their neighbours, and s 1(ab) and s 4 "sex characteristics" (a), (b) likewise; the text is
     otherwise as the Word file has it.
+11. **Reconverted, 7 November 2026.** The converter that made the first deposit dropped the Word file's Symbol-font
+    characters, which here were only the bullets before each item of the examples to ss 20, 22A, 33, 40, 45 and 56. The
+    text was reconverted with the fixed converter and the bullets are restored; no number or sign was lost. The encoding
+    relies on ss 20, 22A and 33 (the adjustment duty), but not on the wording of their examples beyond the paraphrase
+    in the `do I need adjustments` description, which stands; ss 40, 45 and 56 are out of scope. No value, case or
+    finding changed.
 
 ## Before this is worth relying on
 
