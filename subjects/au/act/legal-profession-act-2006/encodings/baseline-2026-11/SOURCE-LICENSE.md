@@ -56,7 +56,7 @@ Text deposited 2026-11-06: `registers/source-bundle/A2006-25.txt` (727,301 chara
 sha256 `455c98fd7869291e6a8ebecb049889e7dc855a500c5b6fcc9d6086e8cf247d72` as first deposited), converted from https://www.legislation.act.gov.au/DownloadFile/a/2006-25/current/DOCX/2006-25.DOCX
 (530,168 bytes, sha256 `1d48a581a64c401895c8f27914cf804780400c4f862c9c07b05332ffa416dc65`). Conversion: DOCX to UTF-8 plain text. Headings (chapter, part, division, section, schedule) kept with their numbers; Word automatic numbering written out; OMML equations linearised; tables as '| a | b |' rows; table of contents, running heads, footers and images dropped; required notice (unofficial version, CC BY 4.0 attribution, changes) placed at the top.
 
-Symbol characters restored, 2026-11-07: the converter had kept 47 bullets typed in the Symbol font as private-use code points that display as empty boxes (the lists in s 18 (1), s 123 (2) and s 453, and the dictionary note). All 47 were restored as "•" by regenerating the text from the same DOCX with the deposit's converter fixed to map symbols; nothing else changed. New text sha256 `a467e5a14fddeeb4574c1d3ef0b61d9a070efef6d30ace672d16519403b9f96e`; details in `registers/source-bundle/A2006-25.meta.json`.
+Symbol characters restored, 2026-11-07: the converter had kept 47 bullets typed in the Symbol font as private-use code points that display as empty boxes (the lists in s 18 (1), s 123 (2) and s 453, and the dictionary note). All 47 were restored as "•" by regenerating the text from the same DOCX with the deposit's converter fixed to map symbols; nothing else changed. New text sha256 `c370a615e3887898f65883eef7344d1bf97a1d0634166e5264fb7c831a27a912`; details in `registers/source-bundle/A2006-25.meta.json`.
 
 ## Language
 
