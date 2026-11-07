@@ -22,11 +22,12 @@ formula in s 1237AAB(6), lost from the text deposit, is taken from `../../regist
 
 - `ssa-debts-dates.l4`: the date arithmetic, the only module that imports `daydate`.
 - `ssa-debts.l4`: the rules and the exported questions.
-- `ssa-cases-debts.l4`: 121 assertions, expected values worked by hand from the text (the compounding interest and the
+- `ssa-cases-debts.l4`: 126 assertions, expected values worked by hand from the text (the compounding interest and the
   present value with a calculator, separately from the encoding).
 
 **Checks:** `l4 run` with the stable `l4` of VS Code extension 1.6.98, `JL4_LIBRARY_PATH` unset, on each of the three
-files: 0 errors, 0 warnings; `ssa-cases-debts.l4` has 121 assertions written and 121 satisfied (2026-11-07). A
+files: 0 errors, 0 warnings; `ssa-cases-debts.l4` has 126 assertions written and 126 satisfied (2026-11-07, after the fixes
+from the independent verification). A
 deliberately wrong assertion added to a scratch copy was reported as failed.
 
 ## Seat
@@ -59,13 +60,13 @@ The defaults followed:
 
 **In:**
 
-- **Part 5.2:** s 1223(1), (1AA)-(1AG), (1B), (1C), (2), (9); s 1224AB; s 1228B(1)-(4); s 1229; ss 1229A, 1229B,
+- **Part 5.2:** s 1223(1), (1AA)-(1AG), (1B), (1C), (2), (9); s 1224AB; s 1228B(1)-(5); s 1229(1)-(2); ss 1229A, 1229B,
   1229C(3), 1229D, 1229E, 1229F(1)-(2) (the determination as an input); s 1230C(1)-(3); s 1230D.
-- **Part 5.3:** s 1231(1A), (1AA), (1B), (2); s 1233(2), (4); s 1234(1A), (4); s 1234B.
+- **Part 5.3:** s 1231(1A), (1AA), (1B), (2); s 1233(1)(e), (2), (4); s 1234(1A), (4); s 1234B.
 - **Part 5.4:** s 1236(1A)-(1C), (3) (in the description); s 1237A; s 1237AA; s 1237AAA; s 1237AAB(1)-(6);
   s 1237AAC(4)-(6) (the notional entitlement as an input); s 1237AAD.
 
-**Exported questions (30), each with `@export` and `@desc` on every input:**
+**Exported questions (31), each with `@export` and `@desc` on every input:**
 
 - `Does section 1223 make my payment a debt`
 - `Am I jointly liable for the other person's debt`
@@ -82,6 +83,7 @@ The defaults followed:
 - `Must my debt be deducted from my payment`
 - `Can my payment be reduced to nil`
 - `When can a garnishee notice first take my money`
+- `What is the most a garnishee notice can take`
 - `Can my arrangement be ended or changed`
 - `Is there a time limit on recovering my debt`
 - `Can my debt be written off`
@@ -100,15 +102,29 @@ The defaults followed:
 
 **Regulative rules:** the duty to pay the debt by the due day (s 1229(2), 28 days from the notice) and the duty to make an
 arrangement payment by the end of its day (s 1234(1A)) are `DEONTIC` rules whose `LEST BREACH` says what the breach
-starts: interest charge under s 1229A or s 1229B. The exported interest questions take plain dates and build the trace
+starts: interest charge under s 1229A or s 1229B. The 28 days are one definition (`the days to pay`), used both as the
+duty's `WITHIN` and by `By when must I pay my debt`, so the due day and the duty cannot drift apart. The exported interest questions take plain dates and build the trace
 inside, so no exported question takes a `DEONTIC` or `EVENT` input.
 
 **Out, and why:**
 
-- **The special debt provisions** (ss 1223(7)-(8) add-on amounts, 1223A income streams, 1223AA-1224EA one-off and advance
+- **The special debt provisions** (ss 1223(7)-(8) add-on amounts, 1223A income streams, 1223AA-1224EA (other than s 1224C, below) one-off and advance
   payments, 1227 assurance of support, 1227B, 1228 overpayments under other Acts, 1228A comparable foreign payments).
   Each is a separate debt head for a particular payment, outside the general debt a claimant meets. s 1222A's "if, and
   only if" means that s 1223's "no" is only a no under s 1223 (see "Negatives").
+- **s 1224C (Data-matching Program debts)**: not tied to one payment, and close to the income-data debts this encoding is
+  about, but it only makes recoverable an amount that is already a debt under s 11(6) of the Data-matching Program
+  (Assistance and Tax) Act 1990. That Act is not deposited, so whether such a debt exists cannot be worked out here.
+- **s 1229(3)** (more than one notice may be given): changes no answer from the debtor's seat; the due day runs from "the
+  date of the notice" the person is asked about. Which of several notices fixes the due day is not settled by the text.
+- **s 1233(1)(f)-(g)** (amounts or percentages out of each later payment) and **s 1233(3)-(8)**: the notice's terms are
+  the Secretary's choice, and the offence and the payer's protection are the garnishee's seat.
+- **s 1234(2)-(3)** (when an arrangement takes effect): reflected in the input "was an arrangement in effect" of the
+  interest charge questions, not asked separately; the commencement day is a term of the arrangement.
+- **ss 1236(2) and 1237(2)** (when a write-off or waiver decision takes effect): the day is set by the decision itself,
+  which the debtor cannot state in advance. The note to s 1237(2) is reflected in finding 2.
+- **s 1237(1)** (waiver only in the listed sections): reflected by encoding each listed section on its own; a debtor who
+  meets none of them gets 0 or FALSE from each. s 1237AB is out (below).
 - **The garnishee debtor's own liability** (ss 1230, 1230A) and **the financial institution's** (s 1234AA): these are
   another person's seat.
 - **Deductions by consent from another person's payment** (s 1234A): that is the consenting person's seat. The consent is
@@ -141,6 +157,11 @@ s 1230C(2) "only if", s 1231(1A) "if", s 1231(1AA) "must not", s 1237AAB(5) "mus
   is `NOTHING`, because s 1230D is silent there.
 - **s 1237AAD and s 1236**: "may". `TRUE` means the power is open on these facts, not that it will be exercised. The
   descriptions say so.
+
+- **s 1236(1C)**, `Can my debt be written off`: if the debt is recoverable by deductions without severe financial hardship,
+  the debtor is taken to have capacity. With hardship, the "unless" only lifts the deeming; capacity is then the same
+  open question as when deductions are not available (`no capacity to repay otherwise`), not deemed absent. Corrected on
+  2026-11-07 after the independent verification (the first version treated hardship as no capacity).
 
 ## What the Act turns out to say
 
