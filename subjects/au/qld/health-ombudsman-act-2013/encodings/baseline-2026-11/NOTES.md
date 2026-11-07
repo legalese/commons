@@ -12,8 +12,8 @@ This is the first encoding of this subject; nothing existing was touched. Five f
 | File | What it holds |
 |---|---|
 | `hoq-common.l4` | dates and business days (built-in date functions, no daydate), the regulative vocabulary, the two regulative rules (decide-then-tell, ss 35, 49, 50, 278; tell, s 278) and their EVALTRACE helpers |
-| `hoq-complaints.l4` | ss 7, 8, 20-23, 31, 32, 34, 35, 35A, 38(2), 39(2), 44, 47-50, 53-56, 278; 14 questions |
-| `hoq-outcomes.l4` | ss 35K(3), 71, 84, 85, 90F, 95, 140, 145(4), 149, 150, 232, 261-263A, 264, 275; 10 questions |
+| `hoq-complaints.l4` | ss 7, 8, 20-23, 31, 32, 34(4), (5), 35, 35A, 38(2), 39(2), 44, 47-50, 53-56, 278; 15 questions |
+| `hoq-outcomes.l4` | ss 35K(3), 58A(4), 58B(6), (7), 60(4), 65(2), 71, 76(2), 84, 85, 90F, 90L(1), 90M(2), 95, 139, 140, 145(4), 146(1), 149, 150, 232, 261-263A, 264, 275, 278(2); 11 questions |
 | `hoq-cases-complaints.l4` | worked cases for the common and complaints modules |
 | `hoq-cases-outcomes.l4` | worked cases for the outcomes module |
 
@@ -51,9 +51,9 @@ unset, at most two at a time. `l4 run` exits 0 even when an assertion fails, so 
 | `hoq-common.l4` | 0 | 0 | 0 | 0 |
 | `hoq-complaints.l4` | 0 | 0 | 0 | 0 |
 | `hoq-outcomes.l4` | 0 | 0 | 0 | 0 |
-| `hoq-cases-complaints.l4` | 89 | 89 | 0 | 0 |
-| `hoq-cases-outcomes.l4` | 70 | 70 | 0 | 0 |
-| **Total** | **159** | **159** | 0 | 0 |
+| `hoq-cases-complaints.l4` | 92 | 92 | 0 | 0 |
+| `hoq-cases-outcomes.l4` | 85 | 85 | 0 | 0 |
+| **Total** | **177** | **177** | 0 | 0 |
 
 Every exported question has cases, with the edges: the last business day and the day after, a weekend receipt, the
 Christmas and New Year holidays of 2026-27 supplied and not supplied, the 10-business-day limit and one day over, an
@@ -105,11 +105,13 @@ The 2026-10-18 defaults:
 **In:**
 
 - Part 1: ss 7, 8, 20-23 (s 23(1)(a), (2) as a complaint on behalf of a person who died).
-- Part 3: ss 31, 32, 34(4), (5) (in the s 35 days not counted), 35, 35A, 35K(3).
+- Part 3: ss 31, 32, 34(4), (5) (in the s 35 days not counted, and its own question), 35, 35A, 35K(3).
 - Part 4: ss 38(2), 39(2), 44.
-- Part 5: ss 47-50. Part 6: ss 53-56. Part 7: s 71. Part 8: ss 84, 85. Part 8A: s 90F.
-- Part 10: s 95. Part 11: ss 140, 145(2), (4), 149, 150 (named in an answer).
-- Part 15 division 6: s 232. Part 17: ss 261-263A, 264, 275. Part 19: s 278.
+- Part 5: ss 47-50. Part 6: ss 53-56. Part 7: ss 58A(4), 58B(6)(b)(ii), (7), 60(4), 65(2)(b)(iii), 71, 76(2)(b) (the
+  notices to the complainant). Part 8: ss 84, 85. Part 8A: ss 90F, 90L(1)(a)(ii), 90M(2)(b) (the same).
+- Part 10: s 95. Part 11: ss 139, 140, 145(2), (4), 146(1) (in the s 145 answer), 149, 150 (named in an answer).
+- Part 15 division 6: s 232. Part 17: ss 261-263A, 264, 275. Part 19: s 278 (with (2)(a), oral notice of not
+  accepting an oral complaint, and (4)).
 
 **Out, and why:**
 
@@ -121,14 +123,14 @@ The 2026-10-18 defaults:
   the s 35(2)(b) and s 49(3) days not counted, asked as numbers); s 36, s 37 (notifications and referred matters
   dealt with as complaints: s 37(2) needs only the person's agreement).
 - ss 38(1), (3), 39(1), 40-43A (the menu of relevant actions and the ombudsman's freedom to combine them).
-- Part 7 other than s 71, Part 8A other than s 90F, Part 8AA, Part 10 divisions 1 (other than s 95) to 6 (immediate
+- Part 7 other than the notices to the complainant above, Part 8A other than the same, Part 8AA, Part 10 divisions 1 (other than s 95) to 6 (immediate
   action, prohibition orders, public statements, QCAT's jurisdiction and orders, assessors): the practitioner's seat or
   officials. s 99 (QCAT may exclude a complainant witness until they give evidence) is QCAT's power.
 - ss 80-83, 86-90 (the ombudsman's power to investigate and the report: s 87(2) leaves giving the report to the
   complainant to the ombudsman's discretion, so there is no answer for the complainant beyond "may"); Part 9 other than
   s 35K(3).
-- Part 11 ss 134-139, 141-144, 146-148 (s 146: the parties "may enter into a contract in settlement", and s 139 the
-  duty to negotiate in good faith, are noted in the answers; ss 147, 148 decisions are notified under s 278, encoded).
+- Part 11 ss 134-138, 141-144, 146(2), 147, 148 (s 146(2) binds the conciliator; ss 147, 148 decisions are notified
+  under s 278, encoded).
 - Part 12 (inquiries), Part 15 other than s 232 (authorised persons' powers, warrants, seizure, internal review and
   appeal of s 235-244: for a person whose things are seized, a further seat).
 - ss 265-271 (fines and offence proceedings; s 269's time limit binds the prosecutor), 272-274, 276 (confidentiality
@@ -229,6 +231,25 @@ facts" or "s 35A gives no ground" rather than "no".
 11. **s 149(3)** makes conciliation statements inadmissible even "in a proceeding to enforce a contract mentioned in
     section 146" -- the settlement contract must be proved by its own terms, without what was said in reaching it,
     unless everyone consents (s 149(4)).
+
+## After verification (2026-11-07)
+
+An independent verification found, and this revision fixes:
+
+- **s 60(4) was misread.** `Must I be told question` said the Act does not require the complainant to be told of
+  immediate registration action. s 60(4) does: "If the immediate registration action was taken in response to a
+  complaint, the health ombudsman must give notice of the immediate registration action to the complainant." The answer
+  and its case are corrected, and "it arose from my complaint" now decides it.
+- **Other notices to the complainant were left out silently.** Added to the same question: a variation of immediate
+  registration action (s 58B(6)(b)(ii) when varied as the practitioner asked; ss 58A(4) and 58B(7) apply s 60 to other
+  variations; the verifier cited this as s 59(6), but the text puts it in s 58B), its revocation or removal (s
+  65(2)(b)(iii)), revocation of an interim prohibition order (s 76(2)(b)), variation and revocation of a prohibition
+  order (ss 90L(1)(a)(ii), 90M(2)(b)). The "immediate registration action" input now includes an accepted undertaking (s
+  65(2)(a)(iii)).
+- **ss 139 and 146 were said to be noted in answers and were not.** s 139 now has its own question (`Must I negotiate
+  in good faith question`); s 146(1) is in the s 145 answer.
+- **ss 278(2)(a) and 34(5).** Oral notice of not accepting an oral complaint is a limb of `Must I be told question`;
+  s 34(5) has its own question (`Must the ombudsman deal with my complaint before I answer its request question`).
 
 ## Before relying on it
 
