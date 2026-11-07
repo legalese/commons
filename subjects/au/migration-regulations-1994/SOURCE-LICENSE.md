@@ -25,3 +25,12 @@ https://api.prod.legislation.gov.au/v1/Documents/Find(titleid='F1996B03551',asat
 (compilation register id F2026C01017; compilation No. 289, compilation date 2 October 2026). sha256 of the download: `d6990d42eac0cf10a1fe3aea77f915394a927fbf6c8e505acef611ad337ebea4`.
 
 Subordinate legislation made under the Migration Act 1958 (subject `subjects/au/migration-act-1958/`).
+
+- **Reconverted, 7 November 2026**: the first converter (docx_text() of the workbench's fetch-source.py) dropped
+  characters Word writes in the Symbol font and kept Symbol text typed as private-use code points. The text was
+  converted again from the same four Word volumes (same download sha256) with cth_convert_sym_v5.py (kept outside the
+  repository); the only changes are two bullets (•) in the note to reg 2.07AK(1) (lines 2147-2148), three degree signs
+  (°) in reg 5.15C(2) (lines 7273, 7276, 7279, "north of latitude 21° south") and the dotted signature line (…) of
+  Schedule 10, Form 2 (line 27335). Now 2,962,724 characters, sha256
+  `e42ec59d4288b3ac009058cb2430ce14856df0bd089142c3ace8c765b9f556a7` (was
+  `8a05f2fc10197b8b43fde075da8af128fd7e39148462e5d24990d767cc572380`); details in `registers/source-bundle/F1996B03551.meta.json`.
