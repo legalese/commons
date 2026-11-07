@@ -14,7 +14,7 @@ It is written in layers:
 
 - **`niis-core.l4`**, the seat-neutral core, in the Act's own actors and terms ("the injured person", "the participant", "the agency", "the insurer", "the court", "the medical tribunal", "QCAT"). Each function is preceded by the words of the section it encodes. Where the text sets a deadline there is a regulative rule (`DEONTIC`): eight in all (ss 13(3)-(4), 22(7) with 24, 37(4), 41(1)/(3)-(4), 44(2), 50(1), 53(2), 118(3)). The late preservation notice of s 41(4) is a permission (`MAY`), so missing the 14 days is no breach.
 - **`niis-dates.l4`**, small date helpers on the stable prelude's date primitives, including business days. The `daydate` library is not imported and no `YMD` is defined. The date readings are stated at its top.
-- **`niis-seat.l4`**, the injured person's seat: 33 questions, each with `@export` and a `@desc` on every input, grouped under `§§` headings in the order the scheme is met. It builds the core's inputs from plain answers and restates no rule. No exported question takes a `DEONTIC` or `EVENT` input.
+- **`niis-seat.l4`**, the injured person's seat: 34 questions, each with `@export` and a `@desc` on every input, grouped under `§§` headings in the order the scheme is met. It builds the core's inputs from plain answers and restates no rule. No exported question takes a `DEONTIC` or `EVENT` input.
 - **`niis-cases-injured-person.l4`**, the cases, around one HYPOTHETICAL person (Mia, a passenger with a spinal cord injury from a collision on the Bruce Highway on 14 March 2025).
 
 No earlier encoding of this Act existed. The Motor Accident Insurance Act 1994 baseline (`subjects/au/qld/motor-accident-insurance-act-1994/encodings/baseline-2026-11/`) asks this Act's facts (participant, s 44(3)(a) payment) for its s 42(3); it is untouched, and nothing is imported from it (IMPORT cannot cross folders).
@@ -40,7 +40,7 @@ Not deposited, and so asked as facts:
 | `niis-dates.l4` | `l4 run` | 0 errors, 0 warnings |
 | `niis-core.l4` | `l4 run` | 0 errors, 0 warnings |
 | `niis-seat.l4` | `l4 run` | 0 errors, 0 warnings |
-| `niis-cases-injured-person.l4` | `l4 run` | 0 errors, 0 warnings; **186 assertions written, 186 satisfied** |
+| `niis-cases-injured-person.l4` | `l4 run` | 0 errors, 0 warnings; **193 assertions written, 193 satisfied** |
 
 In addition, 7 `#TRACE`s carry an `-- expect:` line, one per regulative rule that can end in a breach (s 13 contribution, s 22 decision, s 37 payment, s 53 claim notice, s 44 acceptance notice, s 50 absence notice, s 118 documents), each a day late; each was read and ends in the breach expected with the reason written. The s 41 rule is asserted FULFILLED both in time and by the late route.
 `l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read (run on 2026-11-07). Every expected value was written by hand from the text, with the arithmetic in the comment above the assertion.
@@ -51,6 +51,7 @@ In addition, 7 `#TRACE`s carry an `-- expect:` line, one per regulative rule tha
 
 - "Does the Act cover my injury? Am I eligible? If not, can I buy in, and have I paid in time?"
 - "By when should I apply? Must the agency take my application? Can I apply now, or can someone apply for me?"
+- "Must the agency accept me, for how long, and may it refuse me after a s 44(3)(a) payment?"
 - "By when must the agency decide, and is it taken to have refused?"
 - "When does my interim participation end, and do I become a lifetime participant?"
 - "Is this care excluded? By when must I ask for an expense to be paid? Must the agency pay, how much and by when? Has my payment request lapsed?"
@@ -83,14 +84,15 @@ One departure: the payment-request question (`Must the agency approve my payment
 - s 12: eligibility, with s 12(2) (damages paid) and (3) (no permanent increase of an earlier disability)
 - s 13: buying in, and the 28 days to pay the contribution (s 13(4))
 - ss 16-18: the 1-year application period, when an application may not be made (s 17), who may apply (s 18)
+- ss 22(1)-(6), 23: accepting or refusing the application, acceptance for life (s 22(2)-(3)), the power to refuse an eligible applicant after a s 44(3)(a) payment unless the agency is satisfied of severe financial hardship, and conditions (s 22(4)-(6)), and the information notice for a refusal or conditions (s 23(2)); the same s 22(4)-(5) caution is added to the s 16 and s 17 answers after a payment
 - ss 21(2), 22(7)-(8), 24, 29(2), 31(2), 32, 36(2)(a), 37(1), 39, schedule 1 decision-making period: by when the agency must decide, and deemed refusal
 - schedule 1 participation period, s 45(3), ss 46-48: the end of interim participation, becoming a lifetime participant
-- ss 35-37: the 6 months for a payment request, lapse after an information request (s 36(3)-(4)), when the agency must approve, the cap, and the 28 days to pay
+- ss 35-37: the 6 months for a payment request, lapse after an information request (s 36(3)-(4)), when the agency must approve (s 37(1)-(3)), no payment request for an expense incurred during a suspension (s 52(6)), the cap, and the 28 days to pay
 - ss 40-44: the preservation notice and its deadline, when the agency stops being liable to contribute, the acceptance period, and what follows acceptance or rejection
 - ss 49-50, 52: notice before leaving Australia, and the power to suspend
 - s 53: telling the agency of a claim within 14 days
 - ss 105, 106(2)-(3), 107, 109(4), (7), 110(3)-(4), 112(1)-(3), 118(3), (6)-(7), 123, 127: reviews, the medical tribunal, QCAT
-- ss 50(1), 53(2), 131(4), 132(1), 133, 134(2): the maximum penalties, the s 133(2) exception, and the time to prosecute
+- ss 50(1), 53(2), 132(1), 133, 134(2): the maximum penalties, the s 133(2) exception, and the time to prosecute
 
 **Out, and why:**
 
@@ -98,9 +100,13 @@ One departure: the payment-request question (`Must the agency approve my payment
 - ss 19-20 (the contents of an application and notice to the insurer): the approved form and the regulation's information, not deposited.
 - ss 25-27 (assessment and support plans), ss 28-31 (service requests, other than the decision deadline), s 34 (funding agreements), s 51 (amending plans for an absence): the agency's discretion, with no date or amount the person can compute beyond what is in.
 - s 45(1), (2), (4) (when reviews happen): the agency's.
-- chapters 3-5 (the agency, its chief executive, reporting, the fund, the levy, recovery from wrongdoers and interstate insurers, the commission) and chapter 7 (information exchange, other than the s 131(4) penalty): machinery; s 101(3)(a) (no right of recovery against a participant) is noted here only.
+- chapters 3-5 (the agency, its chief executive, reporting, the fund, the levy, recovery from wrongdoers and interstate insurers, the commission) and chapter 7 (information exchange): machinery; the s 131(4) offence binds an entity given personal information by the agency, not the injured person, so it is outside the seat; s 101(3)(a) (no right of recovery against a participant) is noted here only.
 - ss 113-117, 119-122, 124-126, 128-129 (referral, the tribunal's constitution and procedure, the right to be heard, finality, the agency's re-review, QCAT procedure): procedure the person meets without a date or amount to compute; s 119 (only the injured person and their representative may be heard) noted.
 - ss 135-149 (directions, forms, regulations, transitional provisions): machinery.
+- s 8 (treatment, care and support needs): a definition used through s 9 and s 12(2), whose facts are asked directly. s 33 (about part 4): an overview with no rule.
+- s 38 (notice of a refused payment request), s 47(2) (when the review notice is an information notice), s 23(1) (who is given notice of an application decision): who is told and in what form, with no date or amount; the s 39(2) and s 24(2) entitlements and s 23(2) are named in the answers.
+- s 54 (electronic applications): how the form is given, tied to ss 19-20, which are out.
+- s 111 (asking for a decision notice): a right with no date or amount; s 111(2) (the missing notice does not limit a QCAT application) is noted here only.
 
 ## Negatives (the convention of 2026-10-29 and the rulings of 2026-11-04 and 2026-11-05)
 
@@ -115,6 +121,7 @@ Fork lines (case-by-case decisions under Meng's ruling of 2026-11-05, for the re
 5. s 36(3)-(4), `the s 36 answer`: a due day less than 10 days after the request answers that the Act does not say whether the request can lapse; the other readings are that it lapses on the stated day, or on the tenth day. Asserted.
 6. s 112(3), `the s 112 answer`: the Act gives no power to extend the 28 days for a referral request (unlike s 107(2) for internal review), so a late request answers no; the other reading is that the agency may still refer it.
 7. s 52(1)(a), `the s 52 answer`: "more than 3 consecutive months" is computed from the day of leaving and the last day of the absence so far, and the agency's satisfaction is assumed to follow the dates; the other reading asks the agency's satisfaction as a fact.
+8. s 52(6) with s 35(1), `the s 37 answer`: an expense incurred during a suspension is read as giving no payment request at all, since the participant is "taken not to be a participant" for division 3 and s 35(1) needs an expense "of a participant"; the other reading is that a request lies and the agency may approve or refuse under s 37(1). Asserted. (An expense incurred while the person was not a participant at all answers that s 37(2) does not bind the agency and s 37(1) leaves it to decide; s 37(3) is cited only for a participant's service that is not an approved service.)
 
 ## What the Act turns out to say (findings)
 
@@ -130,6 +137,7 @@ Fork lines (case-by-case decisions under Meng's ruling of 2026-11-05, for the re
 10. **The decision-making period's extension is for applications only.** s 22(8) lets the agency extend the time for an application by up to 28 days; there is no matching power for service or payment requests (ss 31, 37). Asserted.
 11. **s 134(2) read as the later of its two limbs**, with limb (b) capped at 2 years after the offence. The "or" does not say which governs when both are open. Asserted at three points.
 12. **"At least 1 month before" a 31st.** Leaving on 31 March 2027, the same day a month earlier does not exist, so the notice is read as due by 28 February 2027 (the last day of the shorter month). The Act does not say how to count back a month; the Acts Interpretation Act 1954 is not deposited. Asserted.
+13. **Conditions on acceptance only after a s 44(3)(a) payment.** s 22(6) ("the acceptance may be subject to conditions") is one of the two subsections s 22(4) switches on, so the Act gives a power to set conditions only where the person received a s 44(3)(a) payment and the agency is not satisfied of severe financial hardship; yet s 23(2) speaks of acceptance "on conditions" generally. Asserted through the s 22 answer.
 
 ## Before relying on it
 
