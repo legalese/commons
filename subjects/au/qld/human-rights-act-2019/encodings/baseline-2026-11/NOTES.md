@@ -50,12 +50,13 @@ deliberately wrong assertion was run once in a scratch file in this folder, sinc
 | `hrq-dates.l4` | 0 | 0 | 0 | 0 |
 | `hrq-core.l4` | 0 | 0 | 0 | 0 |
 | `hrq-seat.l4` | 0 | 0 | 0 | 0 |
-| `hrq-cases.l4` | 0 | 0 | 251 | 251 |
+| `hrq-cases.l4` | 0 | 0 | 256 | 256 |
 
 Every exported question has cases, with the edges: every kind of entity in s 9 with and without the fact its head
 needs, each exclusion beating an inclusion (a regulation excluding a department and a s 60 entity), a court deciding a
 case and acting administratively; the s 10(3) listed functions against a finding; each limb of ss 16, 17, 25, 26(2), 29,
-30, 31, 33 and 37 alone, together and not met, including a person not arrested with every other fact set against them;
+30, 31, 33 and 37 alone, together and not met, including a person not arrested with every other fact set against them,
+and a child detained without charge (s 33(1) but never s 33(2), which reaches only an accused child);
 each s 58 exclusion beating an unjustified limit, and (a), (b) and both; the 45th business day itself and the next day,
 with and without public holidays; the 1-year last day and the day after, from 29 February; the both-periods window
 closing on its last day (a complaint to the entity on 7 April 2026 for a contravention of 10 June 2025) and one day
@@ -123,17 +124,24 @@ s 108(2) (proceedings, and acts and decisions, before the commencement).
   units for an individual). Built only where a direction covers the information and I have no reasonable excuse.
 
 **Out, and why:**
-- The other Part 2 rights limb by limb (ss 15, 18-24, 27, 28, 32, 34-36): further from injury and custody claims; each is
-  named in `Human right` and reaches s 58 through the "limits a human right" finding. Encoding them limb by limb is the
+- The other Part 2 rights limb by limb (ss 15, 18-24, 26(1), 26(3), 27, 28, 32, 34-36): further from injury and custody
+  claims (s 26(1) protects families as a unit, s 26(3) gives a right to a name and birth registration); each is
+  named in `Human right` (s 26 as a whole) and reaches s 58 through the "limits a human right" finding. Encoding them limb by limb is the
   next step if a scenario needs it.
 - Part 3, Division 1 (ss 38-42, scrutiny of Bills and subordinate legislation), ss 43, 44, 47 (how Parliament makes an
   override), ss 50, 51 (the Attorney-General's and the commission's power to intervene), s 53 (the Supreme Court's
   declaration procedure; its effect, s 54(b), is in), ss 55-57 (the Minister's and committee's response), s 60(1), (2)
   (the entity's own request): duties and powers of Parliament, courts, the Minister and the commission that change
   nothing the person can claim.
-- Part 4, Division 1 (ss 61, 62, functions and powers), s 66(1), (2)(a), s 68, s 74, s 77, s 79-81, s 85 (how the
+- Part 4, Division 1 (ss 61, 62, functions and powers), s 66(1), (2)(a), s 68, s 74, s 77, ss 79, 80, s 85 (how the
   commissioner and the referral entities work; ss 66(2)(b), 73, 75 and 76 are in for what they mean to the person),
   Division 3 and Part 5 reporting (ss 91-98), s 101, s 103 (deemed address), ss 104, 105: machinery.
+- s 81 (the commissioner may direct a person, the complainant included, to take part in a conciliation conference,
+  enforceable as a court order once filed): a power of the commissioner, not a duty the Act itself puts on the person.
+  The person's duty comes from a direction once given, and the Act sets no content, time or consequence for it beyond
+  filing and enforcement as a court order (s 81(2), (3)), which is the court's own law (not deposited). Unlike s 78(5),
+  which the Act states as "must comply", there is nothing to write as a regulative rule; it would be the next step if a
+  scenario reaches a direction.
 - ss 1-6, 12, 14, 106, 107, s 108(1), (3): no rule a person applies (s 12 is reflected in the s 59 answers' sense that
   other rights and remedies stay).
 - The other law that gives the claim (negligence, false imprisonment, judicial review; the Civil Liability Act 2003,
