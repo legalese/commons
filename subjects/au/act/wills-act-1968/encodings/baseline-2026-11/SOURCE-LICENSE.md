@@ -53,8 +53,14 @@ The same notice is at the top of the deposited text.
 ## Status of this deposit
 
 Text deposited 2026-11-06: `registers/source-bundle/A1968-11.txt` (85,911 characters,
-sha256 `c12e4c2446ebddf04903e4488f88bd0972135e44785aa2dc8a3660f5c6cfa08d`), converted from https://www.legislation.act.gov.au/DownloadFile/a/1968-11/current/DOCX/1968-11.DOCX
+sha256 `c12e4c2446ebddf04903e4488f88bd0972135e44785aa2dc8a3660f5c6cfa08d`; reconverted 2026-11-07, below), converted from https://www.legislation.act.gov.au/DownloadFile/a/1968-11/current/DOCX/1968-11.DOCX
 (170,949 bytes, sha256 `c6f590d5dd632b77e9f3abbfbfa3bc6e5b6a8f3d304bdfc4db3fb95334c5a7c7`). Conversion: DOCX to UTF-8 plain text. Headings (chapter, part, division, section, schedule) kept with their numbers; Word automatic numbering written out; OMML equations linearised; tables as '| a | b |' rows; table of contents, running heads, footers and images dropped; required notice (unofficial version, CC BY 4.0 attribution, changes) placed at the top.
+
+- **Reconverted, 7 November 2026**: the first converter (act_convert.py) kept 13 Symbol-font bullets as private-use
+  code points that display as empty boxes (the dictionary's list of Legislation Act terms); nothing had been dropped.
+  The text was converted again from the same Word file with act_convert_sym.py (kept outside the repository), keeping
+  the notice header exactly; the only change is the bullets, restored as "•". Still 85,911 characters, now sha256
+  `cace71b74ffb0238ab2b936dcb84b135aded72b177f3815a1b8e5557b1b85ebb`; details in `A1968-11.meta.json`.
 
 ## Language
 
