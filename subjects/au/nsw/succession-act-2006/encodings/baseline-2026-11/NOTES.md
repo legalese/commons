@@ -15,7 +15,8 @@ words; `NOTHING`, with a `NOTHING-kind` comment, where it does not answer). One 
 human gate. Not for public use as advice.
 
 This is the first encoding of the Act; nothing existing was touched. It covers Chapter 3 (family provision and notional
-estate) whole, ss 55 to 100, with the Chapter 1 definitions Chapter 3 uses and the Schedule 1 Part 3 transitional rule.
+estate) whole, ss 55 to 100, with the Chapter 1 definitions Chapter 3 uses and the Schedule 1 Part 3 cl 11 transitional
+rule.
 Chapters 2 (wills) and 4 (intestacy) are left for other encodings (see Scope).
 
 ## Edition
@@ -40,14 +41,17 @@ read.
 |---|---|---|---|---|
 | `sfp-dates.l4` | 0 | 0 | 0 | 0 |
 | `sfp-claims.l4` | 0 | 0 | 0 | 0 |
-| `sfp-cases.l4` | 0 | 0 | 155 | 155 |
+| `sfp-cases.l4` | 0 | 0 | 172 | 172 |
 
 Every expected value was worked by hand from the text, with the edges: the last day of the 12 months, the day after,
 the day of death, and a death on 29 February (s 58); the first day of the three-year and one-year windows and the day
 before each, with a 29 February death (s 80(2)); a transaction taking effect on the day of death and the day after;
+a power, joint tenancy, policy or fund membership ended by an event other than the death, ten years before it and at the
+edges of each window (s 77(2), (3)); filing on the last day of the 12 months and the day after (s 90(1)(a));
 six months exactly and a day short, a 29-day and a 30-day notice period, distribution on the specified day and the day
 after, and the day before and on the twelve months (ss 93, 94(4)); designation equal to, nil, and one dollar over the
-estate (s 89(2)); each head of s 57 and each s 3(4) exclusion; each limb of s 59(3), (4).
+estate (s 89(2)); each head of s 57, each s 57(2) head against a de facto, a domestic and no relationship, and each
+s 3(4) exclusion; each limb of s 59(3), (4).
 
 ## Seat
 
@@ -72,7 +76,8 @@ The 2026-10-18 defaults:
   provision (s 59(2)) is never computed.
 - **The Act's definitions worked out; borrowed terms asked.** Followed: "eligible person" (s 57 with s 3(1)), "close
   personal relationship" (s 3(3), (4)), "child" as widened by s 3(2) and s 57(2), "relevant property transaction"
-  (ss 75, 76) and its effect date (s 77) are worked out; "spouse", "de facto relationship", "domestic relationship",
+  (ss 75, 76) and its effect date (s 77) are worked out, and s 90(1)(a)'s "later than 12 months after the date of the
+  death" from the filing day with the s 58(2) date rule; "spouse", "de facto relationship", "domestic relationship",
   "child" in the general sense, "domiciled" and "full valuable consideration" are asked.
 - **One case.** One applicant, one estate.
 - **The Act's terms with plain glosses.** Followed, in each `@desc`.
@@ -81,15 +86,24 @@ The 2026-10-18 defaults:
 ## Scope
 
 **In:** s 3(1)-(4) as Chapter 3 uses it; s 55 (in glosses: administration, legal representative); s 57 (eligible
-persons); s 58 (time and filing; s 58(1) in a comment); s 59 (when an order may be made; s 59(2) as the Court's
-discretion); s 63 (property available); s 64 (property outside NSW); s 70(2), (3) (variation for another eligible
-person); s 72(1) (effect of an order); s 73 (notional estate treated as estate); ss 74-77 (relevant property
-transactions and when they take effect); s 78 (purpose of a notional estate order); ss 79-82 (the four routes); s 83
+persons, with s 57(2)(c), (d) limited to a de facto relationship); s 58 (time and filing; s 58(1) in a comment); s 59 (when an order may be made; s 59(2) as the Court's
+discretion); s 63 (property available); s 64 (property outside NSW); s 70(1) (in a comment); s 70(2), (3) (variation
+for another eligible person); s 72(1) (effect of an order); s 73 (notional estate treated as estate); ss 74-77
+(relevant property transactions and when they take effect, including s 77(2), (3) for an event other than the death;
+s 75(2) needs no rule, each act being asked about on its own); s 78 (purpose of a notional estate order); ss 79-82 (the
+four routes; which property may be designated under s 80(3), 81(2) and 82(2) is carried by the property asked about,
+in comments); s 83
 (disadvantage); s 87 (comment); s 88 (estate insufficient); s 89(2), (3) (how much, trustee-only holders); s 90 (late
 or repeat applications); ss 93, 94 (protection of the legal representative); ss 95, 96 (releases); s 97 (in a gloss);
-s 98(2) (mediation; (3) in a comment); s 99(1) with s 78(2) (costs); Sch 1 Pt 3 cl (1), (2) (deaths before Chapter 3).
+s 98(2) (mediation; (3) in a comment); s 99(1) with s 78(2) (costs); Sch 1 Pt 3 cl 11(1), (2) (deaths before
+Chapter 3), with cl 11(4) in a comment (it extends s 59(3)(b), (4) to orders made before commencement, but the rest of
+such a claim is under the 1982 Act, so the answer stays `NOTHING`).
 
-**Out, and why:** s 56 (binds the Crown) and Sch 1 Pt 3's other clauses: machinery. s 60 (matters the Court may
+**Out, and why:** s 56 (binds the Crown), Sch 1 Pt 3 cl 9 (definitions) and cl 10 (general savings): machinery.
+Sch 1 Pt 3 cl 11(3), (5), (6): they keep the 1982 Act, the 1916 provisions and s 41A of the Probate and Administration
+Act 1898 for earlier deaths and applications, outside the sources. s 70(4) (an order is revoked with the grant of
+administration unless the Court otherwise provides): it turns on the revocation of the grant under the 1898 Act, not
+deposited, and the Court's choice. s 60 (matters the Court may
 consider): a list of considerations for the Court's discretion, not a test with an answer; it informs the "Court
 finds" inputs. s 61 (disregarding non-applicants), s 62 (interim orders and restraint), ss 65-69 and 71 (form, content,
 ancillary orders, undertakings, exoneration, vesting), s 72(2) (abatement), ss 84-86 (effect of a notional estate order,
@@ -107,7 +121,8 @@ Each line: the provision, the function, the answer taken, the other reading.
   a person who may make an application ... under section 57" hands the definition to the list (ruling of 2026-11-05,
   delegated definitions (a)) -- `NOTHING`, the s 57 list not being closed with "only".
 - **F2** s 57(2) -- `I count as their child` -- the s 57(2) heads count only where the dead person was in a de facto or
-  domestic relationship at death; otherwise that route answers no and the person must rely on being a child in the
+  domestic relationship at death, and (c), (d) only where it was a de facto relationship (the man-woman and two-women
+  conditions are carried by the option labels); otherwise that route answers no and the person must rely on being a child in the
   general sense -- the s 57(2) children are children anyway under the general law in many cases (adopted, born of the
   relationship), which the encoding asks separately.
 - **F3** s 58(2) "not later than 12 months after the date of the death" -- `By when must I apply`, `Can my application be
@@ -115,7 +130,7 @@ Each line: the provision, the function, the answer taken, the other reading.
   filing on it is in time -- the Interpretation Act 1987's counting rules (not deposited) might give another day.
 - **F4** s 58(2) -- `Can my application be made when I file it` -- a filing dated before the death answers `JUST FALSE` --
   `NOTHING`, the Act not contemplating it.
-- **F5** Sch 1 Pt 3 cl (1), (2) -- `Am I an eligible person`, `Can the Court make a family provision order for me` -- a
+- **F5** Sch 1 Pt 3 cl 11(1), (2) -- `Am I an eligible person`, `Can the Court make a family provision order for me` -- a
   death before Chapter 3 commenced answers `NOTHING` (the Family Provision Act 1982 applies; outside the sources); the
   commencement day (1 March 2009) is not in the deposited text and is asked as a yes/no fact -- compute it from the date
   of death once the commencement proclamation is deposited.
@@ -178,17 +193,20 @@ Each line: the provision, the function, the answer taken, the other reading.
    s 59(3)(b)(iii) is "the Court would not have made the previous family provision order", which does not fit a refusal.
    Fork F15; asserted on the reading taken. And after a refusal, a substantial detrimental change (s 59(3)(a)) does not
    open a new application; asserted.
-3. **Transactions on death need no intention.** ss 76(2)(a)-(e) and 77(2), (3) make a joint tenancy left unsevered, an
-   unexercised power, a life policy and a superannuation or fund benefit take effect "on" the death, so s 80(2)(c)
-   catches them whenever they were set up, with no three-year or one-year window and no finding of intention or moral
-   obligation; only ss 83, 87-90 stand in the way. Asserted.
+3. **Transactions ended by the death need no intention.** ss 76(2)(a)-(e) and 77(2), (3) make a joint tenancy left
+   unsevered, an unexercised power, a life policy and a superannuation or fund benefit take effect on the death where
+   it was the death that ended the power, the right to sever or the membership, so s 80(2)(c) catches them whenever they
+   were set up, with no three-year or one-year window and no finding of intention or moral obligation; only ss 83,
+   87-90 stand in the way. Where another event ended it, s 77(2), (3) put the effect on that event's day, and the s 80(2)
+   windows and findings apply as to a gift. Asserted both ways.
 4. **s 94(4) does not require a proper distribution,** unlike s 93(2), s 94(1) and s 94(3). Asserted as written.
 5. **"By reason only of".** s 59(1)(b) adds the "factors which warrant" finding only for a person eligible solely as a
    former spouse, dependant or close companion; a child who is also a former household dependant needs no such finding.
    Asserted.
 6. **s 57(1)(e)(ii) is wide.** "at that particular time or at any other time" means any household membership at any
    time, joined to any dependence at any time.
-7. **The commencement day of Chapter 3 is not in the text.** Sch 1 Pt 3 speaks of "the commencement of this clause";
+7. **The commencement day of Chapter 3 is not in the text.** Sch 1 Pt 3 cl 11 speaks of "the commencement of this
+   clause";
    the day (1 March 2009) has to come from the commencement proclamation. Fork F5.
 8. **s 63(3) protects only a s 93 distribution.** Distribution in breach of s 93 leaves the property's status to the
    general law and to s 79 (fork F7).
@@ -202,7 +220,7 @@ warranting my application` (s 59(1)(b)), `By when must I apply` (s 58(2)), `Can 
 (s 58(2), (3), with the MUST rule), `Can the Court make a family provision order for me` (ss 57-59, 95(1)), `Must my
 application go to mediation first` (s 98(2)), `Can an order for me be made out of this property` (ss 63, 64, 73(2)), `Is
 this a relevant property transaction` (ss 74-76), `Can this property be designated as notional estate for me` (ss 77-80,
-83, 88-90), `Can property passed on by the first recipient be designated as notional estate for me` (ss 81-83, 88-90),
+83, 88-90, with s 90(1)(a) from the filing day), `Can property passed on by the first recipient be designated as notional estate for me` (ss 81-83, 88-90),
 `What is the most that can be designated as notional estate` (s 89(2)), `Is the legal representative protected if they
 distribute before my claim` (ss 93, 94), `Does my release of my right to apply have effect` (s 95), `Can the approval
 of my release be revoked` (s 96), `Can an existing order be varied to provide for me` (s 70(2), (3)), `Can my costs be
