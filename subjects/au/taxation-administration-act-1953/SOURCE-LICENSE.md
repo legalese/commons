@@ -25,3 +25,11 @@ https://api.prod.legislation.gov.au/v1/Documents/Find(titleid='C1953A00001',asat
 (compilation register id: C2026C00393). sha256 of the download: `56ce7f235064b5514ff273ceecb3432efe54fcc50befd21226c1f9b59d38ccc6`.
 
 Formulas, symbols and pictures the text deposit lost are transcribed 2026-10-24 in `registers/source-bundle/C1953A00001.formulas.md`, from the Word rendering of the same compilation (C2026C00393) on the same Register and under the same licence (CC BY 4.0, as above): https://api.prod.legislation.gov.au/v1/Documents/Find(registerid='C2026C00393',type='Primary',format='Word',uniquetypenumber=0,volumenumber=1,rectificationspecification='Latest') (volumes 1 to 4).
+
+- **Reconverted, 7 November 2026**: the first converter (docx_text() in the workbench's harvest/fetch/fetch-source.py)
+  dropped characters Word writes in the Symbol font. The text was converted again from the same Word volumes (same download
+  sha256) with cth_convert_sym_v8.py (kept outside the repository); the only change is one em dash (—) restored as line 19506,
+  a cell of the endnotes' table of amending Acts (Financial Sector Reform (Amendments and Transitional Provisions) Act (No. 1) 1999)
+  that the first conversion had dropped with its paragraph. Now 1,945,281 characters, sha256
+  `f67e5caddf1be45b61eccd74f25da8368230669f13e584667ca35a1b8f37af03` (was
+  `536c759bb18509e0c957cdef12856b5c4290aedc08fe5a4f84de90b19ed9021d`); details in `registers/source-bundle/C1953A00001.meta.json`.
