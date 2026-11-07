@@ -54,12 +54,13 @@ read. Two deliberately wrong assertions were run once in a scratch copy of the c
 |---|---|---|---|---|
 | `clca-dates.l4` | 0 | 0 | 0 | 0 |
 | `clca-child-abuse.l4` | 0 | 0 | 0 | 0 |
-| `clca-cases.l4` | 0 | 0 | 105 | 105 |
+| `clca-cases.l4` | 0 | 0 | 107 | 107 |
 
 Every exported question has cases, with the edges: each kind of abuse, conduct justified or excused, abuse after 18;
-witnessing for s 21C; every limb of s 114BBA, s 114BBC, s 114BC and s 114B (2) alone; abuse on 15 and 16 May 2026 and on
+witnessing for s 21C; other sexual abuse under s 21C (NOTHING-kind); every limb of s 114BBA, s 114BBC, s 114BC and s 114B (2) alone; abuse on 15 and 16 May 2026 and on
 13 November 2025; precautions proved; abuse in 1990; the 28 days from 1 March 2027 (29 March), from 15 February 2028
-(14 March, a leap year) and from 20 December 2026 (17 January 2027), with notice on the last day and the day after; a
+(14 March, a leap year), from 20 December 2026 (17 January 2027) and from 1 February 2027 (1 March), with notice on the
+last day and the day after counted from 1 February 2027 and 15 February 2028, whose last days are ACT working days; a
 trustee's liability below, at and $1 over the trust property; settlements made the day before and the day of each
 commencement (25 and 26 August 2016, 9 and 10 December 2022, 12 and 13 November 2025); every s 114L category with the
 settlement set aside and not.
@@ -136,21 +137,28 @@ The 2026-10-18 defaults:
   Limitation Act's own encodings (`../../../limitation-act-1985/encodings/`) also answer it, as "no last day"; the two
   agree. It is here because the focus is the limitation removal and because s 114J (1) (a) is defined by it.
 - **D2** `ch 8A -- on what grounds can I hold the organisation liable` covers ground that `../baseline-2026-11/` covers in
-  two questions (s 114BBD, s 114BE). It is written again because the stable `l4` cannot import across folders, and it
-  answers differently for abuse from 13 November 2025 to 15 May 2026 (finding 1).
+  two questions (s 114BBD, s 114BE). It is written again because the stable `l4` cannot import across folders. When this
+  encoding was committed (02ca6271f) the other dated the duty from 13 November 2025 (finding 1); it was corrected to
+  16 May 2026 in c164ace4c, and the two now agree on the date. Both date abuse over a period by its last day (fork F8 here,
+  its fork F20).
 
 ## Fork register
 
 Each line: the provision, the function, the answer taken, the other reading.
 
 - **F1** s 114AA (2) "sexual abuse ... includes" -- `s 114A -- is my claim a child abuse claim` -- sexual abuse other than an
-  offence or misconduct of a sexual nature: NOTHING-kind; in `Limitation Act s 21C -- is there a time limit on my claim`
-  the same case is read as outside s 21C -- in both, within "sexual abuse" in its ordinary meaning.
+  offence or misconduct of a sexual nature: NOTHING-kind, in `Limitation Act s 21C -- is there a time limit on my claim`
+  too, since s 21C (4) takes "child abuse" from s 114AA (1) -- in both, within "sexual abuse" in its ordinary meaning
+  (and so, for s 21C, no time limit).
 - **F2** s 114BBA (2) -- `s 114BBA -- is the organisation responsible for me` -- an organisation that delegated all care is
   still responsible -- only an organisation that keeps some care is.
 - **F3** s 114E (3) "within 28 days of the application being made" -- `s 114E (3) -- the last day ...` -- the day of the
   application excluded, the last day the 28th day after it, not moved off a weekend or holiday -- the Legislation Act 2001
-  (not deposited) may count otherwise or move the day.
+  (not deposited) may count otherwise or move the day. Two of the cases show the difference: from 1 March 2027 the last
+  day is Easter Monday, 29 March 2027 (an ACT public holiday), and from 20 December 2026 it is Sunday 17 January 2027; if
+  the day moves to the next working day, notice on 30 March 2027 or 18 January 2027 would be in time. The in-time and late
+  cases are therefore counted from 1 February 2027 (last day Monday 1 March 2027) and 15 February 2028 (Tuesday
+  14 March 2028).
 - **F4** s 262 "applies to proceedings commenced but not finally decided before" 13 November 2025 -- `ch 8A -- on what
   grounds ...` -- s 114BE applies in every proceeding, pending or later (s 114BA) -- only in pending proceedings (as
   `../baseline-2026-11/` fork F14 and finding 10).
@@ -163,7 +171,9 @@ Each line: the provision, the function, the answer taken, the other reading.
   both part 8A.3 questions -- "employee" in the s 114BC sense (including akin), asked as one fact -- the ordinary meaning
   (finding 4).
 - **F8** s 114BBB "child abuse that happens ... on or after" 16 May 2026 -- `ch 8A -- on what grounds ...` -- abuse over a
-  period is dated by its first day -- the part on or after 16 May 2026 is caught.
+  period is dated by its last day, so abuse that went on past 16 May 2026 is within the division as to the part on or
+  after that day (the division "applies in relation to child abuse that happens ... on or after" it), as in
+  `../baseline-2026-11/` fork F20 -- dated by its first day, which would lose the duty route for the whole period.
 - **F9** s 114G (5) "liability ... includes" -- `s 114G -- the most I can recover from the trustee` -- the three listed
   amounts are added; nothing else is counted -- other amounts may be liability too.
 - **F10** s 114BBC (1) (b) -- `s 114BBC -- is the abuser associated ...` -- "personnel" of an organisation that is not
@@ -197,10 +207,10 @@ marked "NOTHING-kind" is the NOTHING answer, and the answers marked "the text's 
    ss 114BBB-114BBD and the division heading inserted by A2026-7 s 10, whose remainder commenced 16 May 2026; A2025-32
    (13 November 2025) inserted only part 8A.1A's heading and ss 114BB, 114BC, 114BD (now 114BBA) and 114BE. s 114BBB
    applies the division to abuse "on or after the day this division commences", so abuse from 13 November 2025 to 15 May
-   2026 gets vicarious liability but not the reversed onus. The encoding beside this one (`../baseline-2026-11/`, its
-   finding 13 and `s 114BBD -- is the organisation taken to have breached its duty`) uses 13 November 2025 and so says
-   "breach taken" for abuse in that window; it was left untouched, as layers are never edited, and is flagged here for its
-   reviewer. Asserted (13 November 2025 and 15 May 2026: no duty route; 16 May 2026: duty route).
+   2026 gets vicarious liability but not the reversed onus. When this encoding was committed (02ca6271f), the encoding
+   beside it (`../baseline-2026-11/`, its finding 13 and `s 114BBD -- is the organisation taken to have breached its
+   duty`) used 13 November 2025; it was corrected to 16 May 2026 in c164ace4c, and its finding 13 now says so. Asserted
+   (13 November 2025 and 15 May 2026: no duty route; 16 May 2026: duty route).
 2. **"Not just and reasonable" is a gate and a ground at once.** An agreement made before 10 December 2022 is an abuse
    settlement agreement only if it "is not just and reasonable in the circumstances" (s 114J (1) (b) (ii)), and the court
    may set it aside if, when the application is made, it is "not a just and reasonable agreement" (s 114K (3) (b)). On one
@@ -236,8 +246,7 @@ marked "NOTHING-kind" is the NOTHING answer, and the answers marked "the text's 
 - The Civil Law (Wrongs) Regulation 2003: any prescribed associated individuals, exclusions, precaution factors and
   "akin to an employee" circumstances (ss 114BBC, 114BBD (4) (f), 114BC (2) (b), (3)).
 - The Legislation Act 2001 (ACT) for counting the 28 days (fork F3), and for administrative unit and territory authority.
-- A lawyer's view on forks F2, F4, F6, F7, F8, F11 and on findings 1-4; a correction of the commencement date in
-  `../baseline-2026-11/` if finding 1 is right; an independent test pass and a human gate.
+- A lawyer's view on forks F2, F4, F6, F7, F8, F11 and on findings 1-4; an independent test pass and a human gate.
 - Read with: `../baseline-2026-11/` (notice of a child abuse claim, s 51 (5); the 120 days and the application for a
   related trust, ss 114D, 114E (1), (2)); the Limitation Act 1985 (ACT) encodings (the limitation periods themselves and
   s 21C as "no last day").
