@@ -23,3 +23,11 @@ terms.
 Statute text deposited 2026-10-13: `registers/source-bundle/C2004A01827.txt`, converted to plain text from
 https://api.prod.legislation.gov.au/v1/Documents/Find(titleid='C2004A01827',asatspecification='Current',type='Primary',format='Word',uniquetypenumber=0,volumenumber=0,rectificationspecification='Latest')
 (compilation register id: C2016C01109). sha256 of the download: `89b64320e81834d04bb9b1d4fa6427939350ce708eaf020591634f08c740e70f`.
+
+- **Reconverted, 7 November 2026**: the first converter (docx_text() in the workbench's harvest/fetch/fetch-source.py)
+  dropped characters Word writes in the Symbol font. The text was converted again from the same Word file (same
+  download sha256) with cth_convert_sym_v4.py (kept outside the repository); the only changes are three degree signs (°)
+  and two minute signs (′) in paragraphs (ac) and (ad) of the definition of Alligator Rivers Region in section 3
+  (lines 36-37, "latitude 13° 30′ south", "longitude 133° east").
+  Now 52,412 characters, sha256 `f1fa890431fc1d337014d27604b777d121641eacf53eb371ccf3548256c42f28` (was
+  `563fbeed6ca3e46d02c71e402c5be51c045a0096917f662f5cfa1bdf59250987`); details in `registers/source-bundle/C2004A01827.meta.json`.
