@@ -43,8 +43,8 @@ deliberately false assertion was seen to be reported as an error).
 | `ohsr-dates.l4` | 0 | 0 | 6 | 6 |
 | `ohsr-core.l4` | 0 | 0 | 0 | 0 |
 | `ohsr-seat.l4` | 0 | 0 | 0 | 0 |
-| `ohsr-cases-physical.l4` | 0 | 0 | 169 | 169 |
-| `ohsr-cases-substances.l4` | 0 | 0 | 196 | 196 |
+| `ohsr-cases-physical.l4` | 0 | 0 | 171 | 171 |
+| `ohsr-cases-substances.l4` | 0 | 0 | 202 | 202 |
 
 Five `#TRACE`s, each with an `-- expect:` line, each giving what it expects (r 195(1): fulfilled on day 7, breached
 after day 7; r 200(1): fulfilled on day 7; r 355(1): fulfilled when work begins on day 3, breached on day 2).
@@ -58,7 +58,8 @@ blood lead figure and the figure just under it, before and after 5 June 2020 (rr
 exactly 1 and 2 years since the last asbestos medical (rr 262, 282); 15 December + 30 days; 10 and 10.5 square metres and
 23, 24, 100, 120 hours (r 298); 0.9 and 1% silica (r 5); 30 June and 1 July 2024 (r 319Y); a 2 m and 2.5 m fall, a 1.5 m
 and 1.6 m trench (r 322); $349 999 and $350 000, $250 000 on 30 June and 1 July 2014 (rr 332, 558); the day 2 years after
-the last construction work and the day after (r 349); work beginning on the day of the notice, 2 days and 3 days after it,
+the last construction work and the day after (r 349); a 1, 1.5 and 1.6 m trench and a 2 and 2.1 m shaft (r 5 "construction
+excavation", rr 354, 355); work beginning on the day of the notice, 2 days and 3 days after it,
 and before it (r 355).
 
 ## Seat
@@ -114,8 +115,9 @@ The 2026-10-18 defaults:
 - **Part 4.3** -- rr 179, 184, 186, 193-196, 198-201, 204.
 - **Part 4.4** -- r 5 (asbestos exposure standard), rr 210, 216, 225, 237, 238, 262, 263, 282, 283, 298(1), 311, 313.
 - **Part 4.5** -- r 5 (engineered stone), rr 319C, 319J(4), 319L, 319S, 319V, 319Y, 319Z, 319ZA, 319ZB.
-- **Part 5.1** -- rr 321, 322, 325, 327, 332, 341, 342, 349, 354, 355, 558(1).
-- **Penalties** -- 68 provisions, with the Act's ss 21 and 22(1) for "Act compliance" provisions.
+- **Part 5.1** -- r 5 (construction excavation), rr 321, 322, 325, 327, 332, 341, 342, 349, 354, 355, 558(1).
+- **Penalties** -- 68 provisions, with the Act's ss 21 and 22(1) for "Act compliance" provisions; r 205 (the employee's
+  own offence) asked from the worker's seat, the rest as the employer's or other duty-holder's.
 
 **Regulative rules:** three. r 195(1) (the employer MUST notify the Authority in writing WITHIN 7 days after identifying
 lead-risk work, LEST breach); r 200(1) (the employer MUST provide a medical examination WITHIN 7 days after a removal under
@@ -191,6 +193,16 @@ Each line: the provision, the function, the answer taken, the other reading.
   activities: `NOTHING` (silence) -- `JUST FALSE`.
 - **F23** r 210 -- `r 210 was contravened` -- the standard and the duty to eliminate or reduce read together, so exposure
   at or under the standard can still be a contravention -- r 210(1) alone.
+- **F24** r 200(1) -- `Was my medical examination after removal in time` -- removal on a medical practitioner's opinion
+  (r 199(1)(b)), where r 200(1) "If an employee has been removed ... under 199(1)(a) or (c)" is unmet: `NOTHING` (the
+  duty does not arise, so there is no deadline to meet) -- `JUST FALSE`.
+- **F25** r 355(1) -- `Was WorkSafe notified of the excavation in time` -- Division 4 does not apply (r 354(2), (3), not
+  enterable and no risk, or not a construction excavation under r 5): `NOTHING` (no notice was due, so it cannot be in or
+  out of time), while `Must WorkSafe be notified of the excavation` answers `JUST FALSE` for the same facts -- `JUST TRUE`
+  (nothing was late).
+- **F26** r 205 -- `What is the most I can be fined` -- any provision other than r 205, which binds the employer or another
+  duty-holder and not the employee: `NOTHING` -- `JUST 0`; and `What is the most the employer can be fined` gives `NOTHING`
+  for r 205 (the employee's own offence) -- its 100 penalty units.
 
 ## Rulings on negatives (copied word for word from docs/ENCODING-GUIDE.md section 5)
 
@@ -214,11 +226,13 @@ deposit give `NOTHING`.
 
 ## What the Regulations turn out to say
 
-1. **The deposited text lost decimal points in the oxygen figures.** r 5 "safe oxygen level" reads "195% by volume
+1. **The deposited text lost decimal points in the oxygen figures and the trench depth.** r 5 "safe oxygen level" reads "195% by volume
    (equivalent to a partial pressure of oxygen of 198 kilopascals)" and "235% ... (239 kilopascals)"; r 178(n) reads "more
    than 01 square metres". They can only be 19.5%, 23.5%, 19.8 kPa, 23.9 kPa and 0.1 square metres; elsewhere the
-   conversion kept the register's raised point ("0·1 f/ml", "0·15 milligrams"). Encoded as 19.5% and 23.5%. Check against
-   the authorised PDF. Asserted at both edges.
+   conversion kept the register's raised point ("0·1 f/ml", "0·15 milligrams"). Encoded as 19.5% and 23.5%. The r 5
+   definition of "construction excavation" lost one too: "(a) a trench if the excavated depth is more than 15 metres"
+   can only be 1.5 metres, the figure r 322(g) gives ("more than 1·5 metres"); encoded as 1.5 metres in rr 354, 355.
+   Check against the authorised PDF. Asserted at both edges.
 2. **The two units of the lead figures disagree near each figure.** Every blood lead figure is given in umol/L and ug/dL,
    but they are not exact conversions (1 umol/L is about 20.7 ug/dL): 0.48 umol/L is 9.95 ug/dL, not 10; 0.24 is 4.97, not
    5; 0.97 is 20.1, not 20; 0.72 is 14.9, not 15; 2.41 is 49.9, not 50. A result of 9.97 ug/dL is under "10 micrograms/
