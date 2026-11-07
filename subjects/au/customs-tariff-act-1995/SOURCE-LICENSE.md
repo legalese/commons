@@ -33,3 +33,8 @@ Formulas, symbols and pictures the text deposit lost are transcribed 2026-10-24 
   Additional Note 2, lines 4940, 4943 and 4946; "between 15 °C and 30 °C" in Chapter 59 Note 2(a)(2), line 16715).
   Now 1,864,723 characters, sha256 `e7d0d57fb1a3de08d01b64cc43a12beb4c912c9adaf50b0ff1c0e87b7ab6716a` (was
   `731cd802878252870983673bc3abbb4bb0f0e1185cb4dabcb4d2083924d41681`); details in `C2004A04997.meta.json`.
+- **Reconverted again, 8 November 2026**: cth_convert_sym.py did not map the Symbol-font digits, so the subscript
+  digits of subheading 6902.20.00 (line 19051) were still missing. Converted again from the same seven Word volumes with
+  cth_convert_sym_v4.py (kept outside the repository), which maps Symbol F030-F039 to 0-9; the only change is that line,
+  now "alumina (Al2O3), of silica (SiO2)". Now 1,864,726 characters, sha256
+  `c2b58b9ad8d6d3ee626689f48f2fd10a528a54c5329d3c5901d0dca870a68c26` (was `e7d0d57fb1a3de08d01b64cc43a12beb4c912c9adaf50b0ff1c0e87b7ab6716a`).
