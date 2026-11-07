@@ -86,7 +86,7 @@ The 2026-10-18 defaults:
 **In:** s 5AA; s 5A; s 5B (with s 41(12)); s 9; s 10(2)-(4), (7), (8), (10), (13); s 11; s 12; s 14(1)-(3) except (2)(c);
 s 14A(1)-(3) except (2)(c); ss 15, 15A, 15B (as one question); s 33(2), (3); s 33B; s 33Z(1), (2), (4) (entitled person);
 s 34(2) (half blood, in the descriptions); s 34A; s 35(1), (1A), (2); s 36(1)(c), (3) (equal division between spouses);
-s 36A; s 37; s 39A(1)-(3); s 39B(1), (2), (4), (6); s 40 (child, dependant); s 40A; s 41(1), (1A), (2)(c), (8), (9), (12);
+s 36A; s 37; s 39A(1)-(3); s 39B(1), (2), (4), (6); s 40 (child, dependant); s 40A; s 41(1), (1A), (2)(c), (8), (9), (12) (with s 41(6) in the descriptions);
 s 44(1)-(4); s 65; s 66(1), (2)(a), (b), (d), (2A), (2B), (6), (9); schedule 2, parts 1 and 2.
 
 **Regulative rule:** one. The time limits ("may only be made within", s 33(2); "no application shall be heard ...
@@ -116,8 +116,14 @@ facts.
 - s 36(1)(a), (b), (4)-(12): agreements and court orders between spouses (a court's just and equitable division is
   not computable; only the equal division is).
 - ss 38, 39: partial intestacy trusts and construction of "heir".
-- s 41(2)(a), (b), (3)-(7), (10), (11), s 42: the form and incidence of orders, applications on behalf of a person
+- s 41(2)(a), (b), (3)-(5), (7), (10), (11), s 42: the form and incidence of orders, applications on behalf of a person
   under incapacity (in the descriptions only), variation of orders.
+- s 41(6): an application filed for one person is, "so far as regards the question of limitation", deemed an
+  application on behalf of all who might apply. It bears on the s 41(8) time limit but turns on another person's filing;
+  it is stated in the descriptions of the two s 41(8) questions (answer as of the day that application was filed), not
+  computed.
+- s 44(5): a saving clause (s 44(4) does not prevent a later application within any other period the Part allows); it
+  changes no answer here, since the s 41(8) questions already carry the court's direction to hear a late application.
 - s 43: computing duties as if the order were part of the will (Queensland levies no death duty).
 - Part 5 (administration, debts, insolvent estates) and Part 5A (testamentary guardians): the seat of the personal
   representative and of guardians.
@@ -219,7 +225,8 @@ after the death whose 30 days have not run.
    household chattels; it does not change the shares asked here.
 6. **The practical family-provision deadline is 6 months, not 9.** s 41(8) gives 9 months to start proceedings, but
    s 44(3)(a) protects a personal representative who distributes properly from 6 months after the death without signed
-   written notice of an intended application. A claimant who wants the estate kept intact must give that notice within 6
+   written notice of any application or intended application on the estate ("any": notice given by another claimant
+   counts as well as the asker's own). A claimant who wants the estate kept intact must give that notice within 6
    months, then start (or serve) within 9. Asserted (the 9 July / 10 July and 9 / 10 October cases).
 7. **s 39A(3)(b) has no outer limit if the notice is never given.** The spouse who is not a personal representative has 3
    months from the personal representative's notice; until it is given the time does not run, and s 39D(2)(a) stops a
