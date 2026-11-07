@@ -56,6 +56,11 @@ Text deposited 2026-11-06: `registers/source-bundle/A2008-35.txt` (155,516 chara
 sha256 `7f3e79d6731118cf5bbb04e92650eba469a2b8f3e17e3e079db3d8f9d390308a`), converted from https://www.legislation.act.gov.au/DownloadFile/a/2008-35/current/DOCX/2008-35.DOCX
 (236,130 bytes, sha256 `186f3433f000a23855c6c8e8e6e2f50aa2757c9456ddc34b142fdeaf8886a839`). Conversion: DOCX to UTF-8 plain text. Headings (chapter, part, division, section, schedule) kept with their numbers; Word automatic numbering written out; OMML equations linearised; tables as '| a | b |' rows; table of contents, running heads, footers and images dropped; required notice (unofficial version, CC BY 4.0 attribution, changes) placed at the top.
 
+Reconverted 2026-11-07 from the same DOCX with act_convert_sym.py (kept outside the repository), which maps Symbol-font
+characters the first converter dropped or kept as private-use code points: the only change is 25 bullets restored as "•"
+(s 22P (1), the s 48 (2) and (3) examples, the Dictionary note 2 list). Now 155,520 characters, sha256
+`2c304ed94b027468f099ff701ffd35a38ec51eb25de812ccb36d1e45d3f79cf5`; details in `A2008-35.meta.json`.
+
 ## Language
 
 English is the only language of ACT legislation.
