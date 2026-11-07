@@ -24,4 +24,12 @@ Text deposited 2026-10-23: `registers/source-bundle/F2016L01332.txt`, converted 
 https://api.prod.legislation.gov.au/v1/Documents/Find(titleid='F2016L01332',asatspecification='Current',type='Primary',format='Epub',uniquetypenumber=0,volumenumber=0,rectificationspecification='Latest')
 (the instrument as made, register id F2016L01332 (Instrument 2016 No. R43), made 19 August 2016 by the Repatriation Commission under s 29 of the Act; the Register has no Word rendering for the current version, so the EPUB was converted. The EPUB converter drops paragraphs inside table cells, so the rating tables are missing from the text; Table 23.1 is transcribed in F2016L01332.tables.md beside it). sha256 of the download: `1e84f86053fb64136b2824166f75402262fa6e52fe0e4ea2ecdab8fa1c8d9b43`.
 
+- **Symbol characters restored, 7 November 2026**: the EPUB carried characters typed in the Symbol font as private-use
+  code points (U+F0xx), which the converter kept and which display as empty boxes. They were mapped in place, by
+  pua_map_inplace.py (kept outside the repository), to the characters the Word rendering shows: 12 ≤ and 12 ≥ (the '≤15'
+  and '≥95' labels of hearing-loss Scales 7.1.3, 7.1.5, 7.1.6 and 7.1.7) and 5 × (the creatinine clearance formulae after
+  Table 9.1.1); no other character changed. Still 391,658 characters, sha256
+  `db4132c12f59b65ef26a182b4e15073d60e6a8760e3502d1384a6ff5f936c376` (was
+  `66596ce25ea71b75be5644f77c414b8a7bcb19ae77049a6bf1496b18fe8af071`); details in `registers/source-bundle/F2016L01332.meta.json`.
+
 The Approved Guide determined by the Repatriation Commission under section 29 of the Veterans' Entitlements Act 1986 (subject `subjects/au/veterans-entitlements-act-1986/`).
