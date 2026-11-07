@@ -1,0 +1,221 @@
+IMPORT prelude
+
+-- Coroners Act 2003 (Queensland) -- what the other modules share: the dates, the one regulative vocabulary, and the
+-- schedule 2 definition of "family member" (with "not reasonably available").
+--
+-- SEAT: a family member of the person who died, or another person with a sufficient interest in the death (for
+-- example a relative weighing a claim for compensation for the death). See NOTES.md.
+--
+-- Dates: the prelude's built-in date functions only (DATE_FROM_DMY, DATE_SERIAL, DATE_FROM_SERIAL, DATE_DAY,
+-- DATE_MONTH, DATE_YEAR), not the daydate library. READINGS (the Act does not say how to count; the Acts
+-- Interpretation Act 1954 (Qld) is not deposited and was not read): "within 14 days after" a day ends on that day plus
+-- 14; "n months after" a day is the same day number n months on, or the last day of a shorter month; "at least 2
+-- days notice" before an order lets the order be made on the notice day plus 2. No extension for a day the registry is
+-- closed. Fork register F5-F7 in NOTES.md.
+--
+-- Unofficial version. Based on content from the Queensland Legislation website at 6 November 2026. (c) The State of
+-- Queensland, CC BY 4.0. See SOURCE-LICENSE.md.
+-- BASELINE ENCODING. Not for public use as advice. See NOTES.md.
+
+§ `Coroners Act 2003: shared dates, rules and definitions`
+
+-- ===================================================================================================================
+§§ `Dates`
+-- ===================================================================================================================
+
+GIVEN `n` IS A NUMBER, `the day` IS A DATE
+GIVETH A DATE
+`n` `days after` `the day` MEANS DATE_FROM_SERIAL (DATE_SERIAL `the day` PLUS `n`)
+
+GIVEN `the start` IS A DATE, `the end` IS A DATE
+GIVETH A NUMBER
+`the number of days from` `the start` `until` `the end` MEANS DATE_SERIAL `the end` MINUS DATE_SERIAL `the start`
+
+GIVEN `first` IS A DATE, `second` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `first` `is on or before` `second` IF DATE_SERIAL `first` AT MOST DATE_SERIAL `second`
+
+-- The number of days in month m of year y.
+GIVEN `m` IS A NUMBER, `y` IS A NUMBER
+GIVETH A NUMBER
+`the last day of month` `m` `y` MEANS
+    IF `m` EQUALS 12
+    THEN 31
+    ELSE DATE_DAY (DATE_FROM_SERIAL (DATE_SERIAL (DATE_FROM_DMY 1 (`m` PLUS 1) `y`) MINUS 1))
+
+-- "n months after" a day (n a whole number, 0 or more): the same day number n months on, or the last day of that month
+-- where it is shorter (31 August plus 6 months is 28 or 29 February).
+GIVEN `n` IS A NUMBER, `the day` IS A DATE
+GIVETH A DATE
+`n` `months after` `the day` MEANS
+    DATE_FROM_DMY `the day number` `the new month` `the new year`
+    WHERE
+        `months from January` MEANS (DATE_MONTH `the day` MINUS 1) PLUS `n`
+        `the new month` MEANS (`months from January` MODULO 12) PLUS 1
+        `the new year` MEANS DATE_YEAR `the day` PLUS ((`months from January` MINUS (`months from January` MODULO 12)) DIVIDED BY 12)
+        `the day number` MEANS
+            IF DATE_DAY `the day` AT MOST `the last day of month` `the new month` `the new year`
+            THEN DATE_DAY `the day`
+            ELSE `the last day of month` `the new month` `the new year`
+
+-- The 14-day windows of ss 11A(4), 30(5) and 30(7): "within 14 days after the person receives the written reasons".
+GIVEN `the day the reasons were received` IS A DATE
+GIVETH A DATE
+`the last day of the 14 days after` `the day the reasons were received` MEANS 14 `days after` `the day the reasons were received`
+
+-- ===================================================================================================================
+§§ `The regulative vocabulary (ss 24(6), 30(3))`
+-- ===================================================================================================================
+
+-- The parties and acts of the two duties with deadlines encoded as regulative rules. Both duties are a coroner's; the
+-- seat meets them as "by when must this be done for me". The rules are in coq-body.l4 and coq-inquest.l4.
+DECLARE `Coronial party` IS ONE OF
+    `the coroner`
+
+DECLARE `Coronial act` IS ONE OF
+    `decide the application for an inquest and give written reasons`
+    `decide whether the prescribed tissue still needs to be kept`
+
+-- Runs a rule over "the act was done at this time" and answers whether it was done in time. On the stable l4 a
+-- CONSIDER on an EVALTRACE can match FULFILLED but not BREACH. It takes a DEONTIC value, so it is never exported.
+GIVEN `the act` IS A `Coronial act`
+      `the time` IS A NUMBER
+      `the rule` IS A DEONTIC `Coronial party` `Coronial act`
+GIVETH A BOOLEAN
+DECIDE `the act` `done at` `the time` `is in time under` `the rule` IF
+    CONSIDER EVALTRACE `the rule` 0 (LIST (WAITUNTIL `the time`), (EVENT `the coroner` `the act` `the time`))
+    WHEN FULFILLED THEN TRUE
+    OTHERWISE FALSE
+
+-- The four states of a coroner's duty with a deadline, as the seat sees it.
+DECLARE `Is the coroner's step in time` IS ONE OF
+    `yes: the coroner did it within the period the Act allows`
+    `no: the coroner did it, but after the period the Act allows had ended`
+    `not yet due: the coroner has not done it, but the period has not ended`
+    `overdue: the period the Act allows has ended and the coroner has not done it`
+
+GIVEN `the act` IS A `Coronial act`
+      `the rule` IS A DEONTIC `Coronial party` `Coronial act`
+      `the day the period starts` IS A DATE
+      `it has been done` IS A BOOLEAN
+      `the day it was done` IS A DATE
+      `today` IS A DATE
+GIVETH A `Is the coroner's step in time`
+`the state of` `the act` `under` `the rule` `from` `the day the period starts` `done` `it has been done` `on` `the day it was done` `as at` `today` MEANS
+    IF `it has been done`
+    THEN IF `the act` `done at` (`the number of days from` `the day the period starts` `until` `the day it was done`) `is in time under` `the rule`
+         THEN `yes: the coroner did it within the period the Act allows`
+         ELSE `no: the coroner did it, but after the period the Act allows had ended`
+    ELSE IF `the act` `done at` (`the number of days from` `the day the period starts` `until` `today`) `is in time under` `the rule`
+         THEN `not yet due: the coroner has not done it, but the period has not ended`
+         ELSE `overdue: the period the Act allows has ended and the coroner has not done it`
+
+-- ===================================================================================================================
+§§ `Schedule 2 -- family member`
+-- ===================================================================================================================
+
+-- Sch 2 "family member, of a deceased person, means-- (a) if the coroner investigating the death becomes aware of a
+-- document satisfying the coroner that the deceased person's wish would have been that a particular person be the
+-- deceased person's family member for this Act--the particular person; or (b) if paragraph (a) does not apply-- (i) a
+-- spouse ...; or (ii) if a spouse is not reasonably available--an adult child ...; or (iii) if a spouse or adult child is
+-- not reasonably available--a parent ...; or (iv) if a spouse, adult child or parent is not reasonably available--an
+-- adult sibling ...; or (v) if a spouse, adult child, parent or adult sibling is not reasonably available--an adult who,
+-- immediately before the deceased person's death, had a relationship with the deceased person that the coroner
+-- investigating the death considers is sufficient ...; or (vi) if the deceased person was an Aboriginal person or Torres
+-- Strait Islander and a spouse, adult child, parent or adult sibling is not reasonably available--an ATSI family member."
+-- "not reasonably available ... means-- (a) a family member of that particular type does not exist; or (b) the family
+-- member can not be reasonably contacted; or (c) the family member is unable or unwilling to act as a family member for
+-- this Act." A "means" definition: a person outside every limb is not a family member.
+-- "spouse" is borrowed (the deposited dictionary entry reads "spouse ..."; finding 1): asked as a fact.
+DECLARE `My relationship to the person who died` IS ONE OF
+    `spouse (including a de facto partner)`
+    `adult child`
+    `parent`
+    `adult brother or sister`
+    `another adult with a close relationship immediately before the death`
+    `an appropriate person under the tradition or custom of the deceased's Aboriginal or Torres Strait Islander community`
+    `none of these`
+
+DECLARE `Am I a family member` IS ONE OF
+    `yes: a document satisfied the coroner that the deceased wished you to be the family member (sch 2, family member, paragraph (a))`
+    `yes: as spouse (sch 2, family member, paragraph (b)(i))`
+    `yes: as an adult child, no spouse being reasonably available (paragraph (b)(ii))`
+    `yes: as a parent, no spouse or adult child being reasonably available (paragraph (b)(iii))`
+    `yes: as an adult sibling, no spouse, adult child or parent being reasonably available (paragraph (b)(iv))`
+    `yes: as an adult the coroner considers had a sufficient relationship, no spouse, adult child, parent or adult sibling being reasonably available (paragraph (b)(v))`
+    `yes: as an ATSI family member, no spouse, adult child, parent or adult sibling being reasonably available (paragraph (b)(vi))`
+    `no: the deceased's documented wish named someone else as the family member (paragraph (a))`
+    `no: someone ahead of you in paragraph (b) is reasonably available`
+    `no: the definition of family member does not include you`
+
+GIVEN `a document names me` IS A BOOLEAN
+      `a document names someone else` IS A BOOLEAN
+      `my relationship` IS A `My relationship to the person who died`
+      `a spouse is reasonably available` IS A BOOLEAN
+      `an adult child is reasonably available` IS A BOOLEAN
+      `a parent is reasonably available` IS A BOOLEAN
+      `an adult sibling is reasonably available` IS A BOOLEAN
+      `the coroner considers my relationship sufficient` IS A BOOLEAN
+      `the deceased was Aboriginal or Torres Strait Islander` IS A BOOLEAN
+GIVETH AN `Am I a family member`
+`sch 2 -- family member` `a document names me` `a document names someone else` `my relationship` `a spouse is reasonably available` `an adult child is reasonably available` `a parent is reasonably available` `an adult sibling is reasonably available` `the coroner considers my relationship sufficient` `the deceased was Aboriginal or Torres Strait Islander` MEANS
+    IF `a document names me`
+    THEN `yes: a document satisfied the coroner that the deceased wished you to be the family member (sch 2, family member, paragraph (a))`
+    ELSE IF `a document names someone else`
+         THEN `no: the deceased's documented wish named someone else as the family member (paragraph (a))`
+         ELSE CONSIDER `my relationship`
+              WHEN `spouse (including a de facto partner)` THEN `yes: as spouse (sch 2, family member, paragraph (b)(i))`
+              WHEN `adult child` THEN
+                 IF `a spouse is reasonably available`
+                 THEN `no: someone ahead of you in paragraph (b) is reasonably available`
+                 ELSE `yes: as an adult child, no spouse being reasonably available (paragraph (b)(ii))`
+              WHEN `parent` THEN
+                 IF `a spouse is reasonably available` OR `an adult child is reasonably available`
+                 THEN `no: someone ahead of you in paragraph (b) is reasonably available`
+                 ELSE `yes: as a parent, no spouse or adult child being reasonably available (paragraph (b)(iii))`
+              WHEN `adult brother or sister` THEN
+                 IF `a spouse is reasonably available` OR `an adult child is reasonably available` OR `a parent is reasonably available`
+                 THEN `no: someone ahead of you in paragraph (b) is reasonably available`
+                 ELSE `yes: as an adult sibling, no spouse, adult child or parent being reasonably available (paragraph (b)(iv))`
+              WHEN `another adult with a close relationship immediately before the death` THEN
+                 IF `the four ahead are not available`
+                 THEN IF `the coroner considers my relationship sufficient`
+                      THEN `yes: as an adult the coroner considers had a sufficient relationship, no spouse, adult child, parent or adult sibling being reasonably available (paragraph (b)(v))`
+                      ELSE `no: the definition of family member does not include you`
+                 ELSE `no: someone ahead of you in paragraph (b) is reasonably available`
+              WHEN `an appropriate person under the tradition or custom of the deceased's Aboriginal or Torres Strait Islander community` THEN
+                 IF `the four ahead are not available`
+                 THEN IF `the deceased was Aboriginal or Torres Strait Islander`
+                      THEN `yes: as an ATSI family member, no spouse, adult child, parent or adult sibling being reasonably available (paragraph (b)(vi))`
+                      ELSE `no: the definition of family member does not include you`
+                 ELSE `no: someone ahead of you in paragraph (b) is reasonably available`
+              WHEN `none of these` THEN `no: the definition of family member does not include you`
+    WHERE
+        `the four ahead are not available` MEANS
+                (NOT `a spouse is reasonably available`)
+            AND (NOT `an adult child is reasonably available`)
+            AND (NOT `a parent is reasonably available`)
+            AND (NOT `an adult sibling is reasonably available`)
+
+GIVEN `the answer` IS AN `Am I a family member`
+GIVETH A BOOLEAN
+DECIDE `the answer` `makes me a family member` IF
+    CONSIDER `the answer`
+    WHEN `no: the deceased's documented wish named someone else as the family member (paragraph (a))` THEN FALSE
+    WHEN `no: someone ahead of you in paragraph (b) is reasonably available` THEN FALSE
+    WHEN `no: the definition of family member does not include you` THEN FALSE
+    OTHERWISE TRUE
+
+@export Am I the "family member" of the person who died, for the Coroners Act 2003 (Qld)? The Act gives the family member rights to be consulted, told and given the findings.
+GIVEN `a document names me` IS A BOOLEAN @desc Has the coroner seen a document (for example an advance health directive) that satisfied the coroner that the person who died wished you to be their family member for the Coroners Act?
+      `a document names someone else` IS A BOOLEAN @desc Has the coroner seen such a document naming someone other than you?
+      `my relationship` IS A `My relationship to the person who died` @desc Your relationship to the person who died
+      `a spouse is reasonably available` IS A BOOLEAN @desc Is there a spouse of the person who died (other than you) who exists, can reasonably be contacted, and is able and willing to act as family member?
+      `an adult child is reasonably available` IS A BOOLEAN @desc Is there an adult child of the person who died (other than you) who exists, can reasonably be contacted, and is able and willing to act?
+      `a parent is reasonably available` IS A BOOLEAN @desc Is there a parent of the person who died (other than you) who exists, can reasonably be contacted, and is able and willing to act?
+      `an adult sibling is reasonably available` IS A BOOLEAN @desc Is there an adult brother or sister of the person who died (other than you) who exists, can reasonably be contacted, and is able and willing to act?
+      `the coroner considers my relationship sufficient` IS A BOOLEAN @desc If you are another adult who was close to the person who died: does the coroner consider your relationship immediately before the death sufficient for you to be the family member?
+      `the deceased was Aboriginal or Torres Strait Islander` IS A BOOLEAN @desc Was the person who died an Aboriginal person or Torres Strait Islander?
+GIVETH AN `Am I a family member`
+DECIDE `Am I the family member` IS
+    `sch 2 -- family member` `a document names me` `a document names someone else` `my relationship` `a spouse is reasonably available` `an adult child is reasonably available` `a parent is reasonably available` `an adult sibling is reasonably available` `the coroner considers my relationship sufficient` `the deceased was Aboriginal or Torres Strait Islander`
