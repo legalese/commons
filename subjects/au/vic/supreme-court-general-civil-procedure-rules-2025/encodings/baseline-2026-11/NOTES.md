@@ -29,8 +29,10 @@ another. The cases are one file per question module: `scr-cases-process.l4` (whi
 
 - **Rules:** Supreme Court (General Civil Procedure) Rules 2025, S.R. No. 85/2025, Version No. 003, incorporating
   amendments as at 1 January 2026, deposited at `../../registers/source-bundle/supreme-court-general-civil-procedure-rules-2025.txt`
-  (sha256 5a7e31c5...f549ed as committed), a plain-text conversion of the Word file the owner saved by hand on
-  7 November 2026 (see that file's `.meta.json`, the subject's `SOURCE-LICENSE.md` and `subjects/au/vic/README.md`). Not
+  (sha256 ee6404b9...ea2475 as committed), a plain-text conversion of the Word file the owner saved by hand on
+  7 November 2026, reconverted the same day to restore the bullets of the note to r 7A.01 and the tick boxes in Forms
+  42B, 42C and 42AA that the first conversion dropped (no provision encoded here changed; the first text's sha256 was
+  5a7e31c5...f549ed) (see that file's `.meta.json`, the subject's `SOURCE-LICENSE.md` and `subjects/au/vic/README.md`). Not
   checked against the authorised PDF, which was not saved.
 - **Commencement and the old Rules:** the Rules came into operation on 8 September 2025 (r 1.03(1)) and revoked the
   Supreme Court (General Civil Procedure) Rules 2015 (S.R. No. 103/2015) by r 1.03(2) and Schedule 1. r 1.05 applies them
