@@ -50,11 +50,17 @@ folder, at most two processes at a time. `l4 run` exits 0 even when an assertion
 | `loa-dates.l4` | 0 | 0 | 0 | 0 |
 | `loa-core.l4` | 0 | 0 | 0 | 0 |
 | `loa-seat.l4` | 0 | 0 | 0 | 0 |
-| `loa-cases.l4` | 0 | 0 | 138 | 138 |
+| `loa-cases.l4` | 0 | 0 | 147 | 147 |
 
 Negative control: with the s 45(3) cap changed from 360 to 361 months and the s 37(2) window from 55 to 54 days, the
 cases failed exactly 3 times, as predicted (the 30-year cap, the continuing incapacity's latest day, the first day of the
 concerns-notice window); the core was restored and rechecked.
+
+Fix after independent verification (2026-11-07): the s 45(3) cap no longer shortens a latent injury's s 36(1a) period
+(fork F7); s 45A is not applied to an incident before 1 May 2004 and s 36(1a) not to a latent injury already barred
+before 8 February 2006 (forks F14, F15); 9 assertions added (138 to 147). A second negative control, run in a scratch
+copy with the old s 45 cap and with the 1 May 2004 test disabled, failed exactly the 3 predicted assertions (the child's
+latent injury, the continuing incapacity past the 30-year day, the incident on 30 April 2004).
 
 Every expected value was worked by hand from the text, with day counts written beside the s 45 and s 46A cases. Edges:
 29 February (3 years, 6 months and 3 years from a leap day), 31 August plus 6 months, the 18th birthday and the day
@@ -96,7 +102,8 @@ The 2026-10-18 defaults:
   entity" (Corporations Act 2001 s 50AAA), "intentional tort", "motor accident", "specialty".
 - **One case:** one action, by one person, against one person liable (so s 40, joint debtors, is out).
 - **The Act's terms with plain glosses:** in the `@desc`s.
-- **Machinery out:** s 1, s 3(2), s 38A (choice of law), s 49 (saving), the Ipp transitional clause (a pointer only).
+- **Machinery out:** s 1, s 3(2), s 38A (choice of law), s 49 (saving). The Ipp transitional clause (Law Reform (Ipp
+  Recommendations) Act 2004 Sch 1 cl 1) is applied to s 45A and declared for the rest (fork F15).
 
 ## Scope
 
@@ -130,6 +137,11 @@ with (3a) and (4)); s 50 (dispensing with a notice before action).
 - Defamation Act 2005 Sch 1 cl 8(2)-(3) (multi-publication proceedings straddling 1 January 2006): publications before
   1 January 2006 answer "not covered".
 - s 38(1)(b) and s 38(2)(b) (causes and payments before 1993-1994): answer "not covered"; every such period has run.
+- A latent injury whose s 36(1) 3 years had run out before s 36(1a) commenced on 8 February 2006: answers "not covered"
+  (fork F14).
+- Events before 1 May 2004 under the Ipp transitional clause: s 45A answers "no" for them, but the earlier text of
+  s 45(2) and of s 48 (before (3a) and (3b)) is not deposited, so for such an event the s 45 extension and the s 48
+  judgments are given in their current form; a historical answer turning on the difference is not covered (fork F15).
 
 ## Forks (the text does not say; one reading taken)
 
@@ -150,7 +162,9 @@ with (3a) and (4)); s 50 (dispensing with a notice before action).
   counted once each, overlaps once; the extension is counted in days; the time at which "the right ... arose" is the
   accrual day (the s 39 return day where s 39 applies; the s 33(3) day for money charged on land), even where s 36(1a)
   starts a latent injury's period later. A still-continuing incapacity answers "extended while it continues", with the
-  30-year limit as the latest day.
+  30-year limit as the latest day. s 45(3) caps only the extension "by this section": the last day is the later of the
+  unextended last day and the extended day capped at 30 years, so a latent injury's s 36(1a) period that already ends
+  past 30 years stands (and a continuing incapacity then adds nothing). Asserted.
 - **F8** the order of the extensions: s 37(2), then s 45, then s 46A. s 46A needs the day of the grant (if none yet,
   the answer is only as good as the expected day given).
 - **F9** s 45A(1)(b) "extended by this Act to more than 6 years": worked out from s 36 and s 45 for childhood alone,
@@ -162,6 +176,17 @@ with (3a) and (4)); s 50 (dispensing with a notice before action).
   the amount paid less the part passed on and not paid back (never below 0).
 - **F12** s 45A for a child abuse action (no limitation period under s 3A): answered "the Act does not say" (finding 5).
 - **F13** s 48 is applied to the defamation period like any other period in this Act (finding 7).
+- **F14** s 36(1a) (inserted by 78/2005, in operation 8 February 2006) has no transitional provision in the deposit. It
+  is applied to a latent injury whose s 36(1) 3 years from accrual were still running on 8 February 2006; one whose
+  3 years had ended before then answers "not covered" (whether s 36(1a) revives a barred action is not said; the s 45
+  extension is not counted in that test). Asserted on 7 and 8 February 2003.
+- **F15** the Ipp transitional clause (2004 Act Sch 1 cl 1: the amendments "apply only prospectively", and a cause of
+  action based wholly or partly on an earlier event is "determined as if the amendments had not been enacted"): the
+  event is taken to be the incident, and s 45A (inserted by that Act) answers "no" for an incident before 1 May 2004.
+  The same Act amended s 45(2), inserted the s 3(1) "child" definition and s 48(3a)-(3b); their earlier text is not
+  deposited, so they are read in their current form whatever the date (declared under "Out"). The s 45A timing
+  questions (whether notice was in time, the s 45A(5) six months, s 45A(7)) presuppose that s 45A applies; the notice
+  question says whether it does. Asserted on 30 April and 1 May 2004.
 
 ## What the Act turns out to say (findings)
 
@@ -187,8 +212,14 @@ with (3a) and (4)); s 50 (dispensing with a notice before action).
    extend (to 3 years at most). Only s 38(3) bars extension in express words. s 47 cannot touch any of this Act's own
    periods (none is under twelve months).
 
+## Ledger
+
+No South Australian requirement ledger exists (there is no `subjects/au/sa/requirements.jsonl`), and no entry asked for
+this Act, so there is no ledger line to close; `encoding.json` records `"ledger": []`. When an SA ledger is opened,
+this encoding's entry would be a `no-row` line closed by its first commit.
+
 ## Before relying on it
 
 Check the text against the authorised PDF and the register's current version; have a lawyer review the forks
-(especially F4, F7, F9); encode Part 3 (trusts) for estate claims, the defendant's seat (s 45A(4), (5)), and Part 2 if
+(especially F4, F7, F9, F14, F15); find the pre-2004 text of s 45(2) and s 48; encode Part 3 (trusts) for estate claims, the defendant's seat (s 45A(4), (5)), and Part 2 if
 land claims are wanted; run an independent test pass.
