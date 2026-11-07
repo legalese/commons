@@ -24,6 +24,18 @@ both modules and asks the employer's questions, restating no rule (CLAUDE.md, ru
 written by hand (no generator); the employer's includes mirror cases. `fwa-employee.l4` and
 `fwa-cases-employee.l4` are unchanged.
 
+**General protections (7 November 2026).** A third employee module, `fwa-general-protections.l4`,
+adds what a dismissed employee needs to choose a route: adverse action and workplace rights
+(ss 340-342), discrimination (s 351), temporary absence for illness or injury (s 352 with reg
+3.01), multiple reasons and the presumed reason (ss 360, 361), the dismissal dispute at the FWC and
+in court (ss 365, 366, 368(3), 369(1), 370), costs (ss 570, 611), and the rules that let only one
+dismissal claim run at a time (ss 723, 725-733). It IMPORTs nothing from the other modules and
+restates none of their rules. Its case file, `fwa-cases-general-protections.l4`, written by hand,
+IMPORTs it with `fwa-employee.l4`, so it also shows that the two define no name twice. The facts
+are the first matter of the workbench route chooser (Lena Marsh, a fictional Victorian
+warehouse coordinator dismissed after disclosing multiple sclerosis), not a cradle-to-grave life.
+No ledger entry asked for it; it was asked for directly.
+
 This encoding replaces the first-pass encoding `naive-2026-10`. It covers everything that
 one covered and reuses its hand-checked values where they are still right (the k086 notice
 and redundancy figures, the 45-year-old pair, the jury service sum, the leave accruals).
@@ -58,10 +70,23 @@ With the stable `l4` of VS Code extension 1.6.98, `JL4_LIBRARY_PATH` unset (22 O
 - `l4 run fwa-cases-employer.l4`: **33 written, 33 satisfied**, 0 errors, 0 warnings; 11 are
   mirror cases asked from both seats. It imports all three modules, so it also shows that
   they define no name twice.
+- `l4 run fwa-cases-general-protections.l4` (7 November 2026, same `l4`): **77 written, 77
+  satisfied**, 0 errors, 0 warnings. A negative control (the s 725 bar on an unfair dismissal
+  application after Lena's AHRC complaint about the dismissal, asserted the other way) was
+  caught: 1 failed, 76 satisfied. The three earlier case files were run again and still pass.
+- `l4 run` on `fwa-general-protections.l4`: no errors, no warnings.
 - `l4 run` on `fwa-employee.l4`, `fwa-day-one.l4` and `fwa-seat-employer.l4`: no errors, no
   warnings.
 
 ## Seats
+
+**The dismissed employee** (`fwa-general-protections.l4`, 7 November 2026) is the employee's
+seat again, at the moment of choosing a route: "Was my dismissal unlawful adverse action? Am I
+in time? What do I risk in costs? Which of my claims does this one shut?" Every judgment the
+text hands to the FWC or a court ("if the FWC is satisfied ...", "if my employer proves ...",
+"if ... was among the reasons") is an input. Questions are grouped under three situations,
+marked in the `§§` headings where they arise only on dismissal. No employer seat is written
+for this module.
 
 **The employee** — and, for Jake's platform years, **the employee-like worker** (s 15P), a
 regulated worker under Part 3A-2. The question is the plan's: "What must my employer give
@@ -186,7 +211,12 @@ Left out:
 
 - enterprise agreements and bargaining;
 - industrial action;
-- the general protections;
+- the general protections other than those a dismissed employee meets (in
+  `fwa-general-protections.l4`: ss 340-342 item 1, 351, 352, 360, 361, 365-370, 570, 611, 723,
+  725-733); out are industrial activity, coercion, misrepresentation and sham contracting (ss
+  343-350, 353-359), prospective employees, contractors and platform workers (s 342 items 2-7),
+  non-dismissal disputes (s 372), the remedies and penalties (ss 539, 545), and unlawful
+  termination itself (Part 6-4);
 - right of entry;
 - casual conversion;
 - long service leave (State law here);
@@ -331,6 +361,66 @@ Left out:
     scenario's author (REQ-0058's note). If Daniel is himself an employee of his company,
     Jarrah's s 23 count is 4 rather than 3: under 15 either way.
 
+### The general protections, for a dismissed employee (`fwa-general-protections.l4`)
+
+33. **Only one dismissal claim at a time, across Commonwealth and State law.** s 725 bars a
+    claim of any kind in ss 726-732 while a claim of another of those kinds "applies", and s 732
+    reaches "an application or complaint under ... a law of the Commonwealth (other than this
+    Act) ... or a law of a State or Territory". So a complaint to the Australian Human Rights
+    Commission, or to a State equal opportunity body, about the dismissal shuts both the unfair
+    dismissal and the general protections routes, and either of those shuts the complaint,
+    until it is withdrawn or fails for want of jurisdiction. Lena's AHRC complaint about her
+    dismissal leaves only that complaint open. Asserted.
+34. **A complaint about earlier conduct does not count until it covers the dismissal.** s 732(3)
+    dates an AHRC Act complaint that "relates to a dismissal only as a result of an amendment"
+    from the amendment. Lena's complaint about her shifts alone bars nothing. A reading: s 732(3)
+    names only AHRC Act complaints; a State complaint is asked the same way, through the input
+    "it is about the dismissal". Asserted.
+35. **The certificate opens the court; agreeing to arbitration shuts it.** s 727(1)(b)(iii)
+    stops the general protections FWC application counting once the FWC certifies that the
+    dispute could not be resolved, so the court application (s 728) is then open, within 14
+    days (s 370(a)(ii)). If the parties instead notify agreement to arbitration, s 727(1A) makes
+    it count again and the court is shut (note 1 to s 370). Asserted.
+36. **Losing an unfair dismissal claim on genuine redundancy reopens the other routes**
+    (s 729(1)(b)(iii)); losing on any other ground on the merits does not. Asserted.
+37. **A second claim of the same kind is not reached by s 725.** It bars a claim "if any
+    other of those sections applies". Fork line: s 725, `May I make this dismissal claim`,
+    answer taken TRUE for a second claim of the same kind; the other reading is that the forum's
+    own rules (or abuse of process) bar it, which this encoding does not decide. Asserted.
+38. **Both Fair Work dismissal routes close on day 22.** ss 366(1) and 394(2) each allow 21 days
+    from when the dismissal took effect. Lena, first advised on day 25, needs "exceptional
+    circumstances" for either. The two extension tests differ: s 394(3)(b) lists whether the
+    person "first became aware of the dismissal after it had taken effect"; s 366(2) does not.
+    Both are asked as one input each. Asserted (the time limits; not the difference).
+39. **Each side pays its own costs at the FWC, and nearly always in court.** s 611 lets the
+    FWC order costs only for an application made vexatiously or without reasonable cause, or one
+    that should reasonably have been seen to have no prospect. s 570 lets a court order costs in
+    a Fair Work Act matter only for vexatious or unreasonable conduct, or an unreasonable refusal
+    to take part at the FWC on the same facts. That is the cost-risk contrast with a
+    discrimination claim taken from the AHRC to court, where costs are at the court's ordinary
+    discretion (not encoded here). Asserted for ss 570 and 611.
+40. **s 351 turns on other Acts.** s 351(2)(a) disapplies the protection for action "not
+    unlawful under any anti-discrimination law in force in the place where the action is taken",
+    and s 351(3) lists them: the four Commonwealth Acts and one Act for each State and Territory
+    (for Victoria, the Equal Opportunity Act 2010). Whether the dismissal is unlawful under one
+    of them is asked as a fact. The Disability Discrimination Act 1992 is deposited and not
+    encoded (REQ-0115); the Victorian Act is not deposited (REQ-0116). Asserted, with the input
+    set both ways.
+41. **The s 361 presumption does not help an interim injunction.** s 361(2). The reason alleged
+    is otherwise presumed unless the employer proves it was not among its reasons (s 360).
+    Asserted.
+42. **Illness: the protection runs out at three months unless the time is on paid personal
+    leave, and workers' compensation is not paid personal leave.** Reg 3.01(5) and (6). The
+    second rule is folded into the input's `@desc` ("not counting time on workers'
+    compensation"). Asserted (the three months; (6) only through the input).
+43. **Negatives.** The module keeps the baseline's plain BOOLEAN. Every FALSE it gives is a no
+    the text states in its own words: periods it fixes (ss 366, 370, 369(1)(c)), "only"
+    (ss 570, 611), "must not ... unless" and "must not ... if" (ss 370, 723, 725), conditions
+    introduced by "if" (s 342 table, s 369(1), reg 3.01), and the exceptions of s 351(2) and
+    reg 3.01(5). Fork line: s 351(1), `Protected attribute`; the attribute list has no "only",
+    so an attribute outside it would be NOTHING, not FALSE; the enum admits only listed
+    attributes, so no answer is given for one outside it.
+
 A drafting note, not a finding about the law: in this `l4`, `(NOT a AND b)` on one line
 parsed as `NOT (a AND b)`. Every negation in the module is now bracketed.
 
@@ -345,7 +435,14 @@ parsed as `NOT (a AND b)`. Every negation in the module is now bracketed.
 - Model continuous service from dates throughout, including the s 22(2) exclusions of
   unpaid leave for redundancy pay but not for notice.
 - Encode s 120, s 121(4), s 122, the s 87(3) shiftworker test, casual conversion (Division
-  4A), the general protections, and the reg 3.46(5A) exception for a new employee's fund.
+  4A), the rest of the general protections (above), and the reg 3.46(5A) exception for a new
+  employee's fund.
+- For the general protections: deposit the Equal Opportunity Act 2010 (Vic) and encode the
+  Disability Discrimination Act 1992's employment provisions, so that the s 351(2)(a) input
+  ("unlawful under an anti-discrimination law where it was taken") can be answered for Lena
+  rather than asked (REQ-0115, REQ-0116); encode s 545 (what a court may order) and s 539 (who
+  may apply, and the penalties); and encode the AHRC Act's Part IIB in full, so that the federal
+  discrimination route has its own costs and time rules beside these.
 - Take long service leave from the WA Long Service Leave Act 1958 for c056 and c072.
 - Ask the scenario authors to correct c063 (s 72) and c061 (s 83 → s 84), and to treat the
   resignation notice questions (c056, c072, d042) as contract or award matters.
