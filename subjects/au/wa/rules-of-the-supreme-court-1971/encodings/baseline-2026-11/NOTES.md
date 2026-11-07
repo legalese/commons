@@ -41,17 +41,18 @@ assertion was run once to confirm a failure is reported).
 | `rsc-dates.l4` | 0 | 0 | 0 | 0 |
 | `rsc-rules.l4` | 0 | 0 | 0 | 0 |
 | `rsc-seat.l4` | 0 | 0 | 0 | 0 |
-| `rsc-cases.l4` | 0 | 0 | 190 | 190 |
+| `rsc-cases.l4` | 0 | 0 | 195 | 195 |
 
 The cases file also runs three `#TRACE`s (the statement of claim served on day 14 of 14, the offer acknowledged on day
 3 of 3, the sum paid on day 28 of 28: each FULFILLED). Every exported question has cases, with the edges: a last day on
 a weekend, on Good Friday and over Easter, on Christmas Day; a pleading period straddling 24 December to 15 January and
 one ending on 23 December; 6 days against 7 days under O. 3 r. 2(2); 299/300 and 599/600 km from Perth; a writ issued on
-29 February; the extension application on the expiry day and the day after; the strike-out hearing on the last day of
-the 6 months and the day after; default judgment on the last day to appear and the day after; each kind of claim under
+29 February; the extension application on the expiry day and the day after; the strike-out direction on the last day of
+the 6 months and the day after, with the hearing 6 and 7 days after the direction; default judgment on the last day to appear and the day after; each kind of claim under
 O. 13; offers accepted on the 28th and 29th day, with a stated time below the 28-day floor; payment on day 28 and 29;
-a judgment equal to the offer, one dollar over, and with post-offer interest taken out; every costs outcome of r. 10;
-every security ground; every person under disability; inactivity periods across month ends and a leap year.
+a judgment equal to the offer, one dollar over, with post-offer interest taken out, and a claim lost (no judgment); every costs outcome of r. 10;
+service proved by indorsement and affidavit, by the solicitor accepting, and through foreign officials (O. 10
+Division 4, no indorsement needed); every security ground; every person under disability; inactivity periods across month ends and a leap year.
 
 ## Seat
 
@@ -136,6 +137,25 @@ dates.
   is in the Act, not here.
 - O. 75A-85 (admission of lawyers, notaries, other Acts' rules, sheriff, cross-vesting, federal jurisdiction).
 - O. 1 r. 4C (solicitors notify settlement): a solicitor's duty, not the plaintiff's.
+- Within the encoded Orders, also out (added after verification, 2026-11-07):
+  - O. 3 rr. 5, 6 (the Court extending or abridging time; the automatic extension while security is pending): the
+    Court's order or a pending application sets the new date, which is then an input; the computed deadlines assume no
+    extension.
+  - O. 4A rr. 22, 23, 25-27 (show cause before the Inactive Cases List, removal from it, and r. 26's limit on filing
+    while a case is on it): the Court's procedure on the list; only the r. 24 and r. 28 dates are computed.
+  - O. 13 rr. 10-14 (judgment for costs only after payment or satisfaction, the plaintiff serving a default judgment,
+    setting aside): steps after judgment is entered, and setting aside is the defendant's application.
+  - O. 20 r. 5(1)-(3) and r. 5(4)'s 14 days for a defence to counterclaim: the reply is computed; a counterclaim (where
+    the plaintiff is a defendant to it) is the defendant seat's layer.
+  - O. 23 rr. 1, 3, 5 (when leave is needed in other cases, judgment for costs not paid within 4 days after taxation,
+    withdrawal of an appearance): r. 3 runs from taxation under O. 66, which is out.
+  - O. 24A r. 3(1), (2), (6), (7) (who may offer, offers on part of a claim, an offer not withdrawable while open, the
+    effect of an offer on other proceedings): the plaintiff's questions take the offer's terms as given; r. 3(6) would
+    only confirm that an open offer can still be accepted.
+  - O. 28 r. 1(6): the Court's further orders on an examination.
+  - O. 70 r. 2(2), (3), (5), r. 10(2), (3), r. 10A, r. 12(2): the next friend's own steps and filings, the Court's
+    directions on approval and the investment of money recovered; the plaintiff's questions are whether a next friend
+    is needed, whether a settlement binds and where money is paid.
 
 ## Negatives (rulings of 2026-11-04 and 2026-11-05)
 
