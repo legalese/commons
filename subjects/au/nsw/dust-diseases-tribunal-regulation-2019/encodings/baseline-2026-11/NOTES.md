@@ -52,14 +52,14 @@ folder, at most two processes at a time. `l4 run` exits 0 even when an assertion
 | `ddtr-process.l4` | 0 | 0 | 0 | 0 |
 | `ddtr-fees.l4` | 0 | 0 | 0 | 0 |
 | `ddtr-offers.l4` | 0 | 0 | 0 | 0 |
-| `ddtr-cases.l4` | 0 | 0 | 238 | 238 |
+| `ddtr-cases.l4` | 0 | 0 | 243 | 243 |
 
 Every expected value was worked by hand from the text, counting business days on a calendar, with the edges: every
 base period in the timetable for malignant and non-malignant claims with one and several defendants; each extension
 (suspension, cross-claim extension, registrar and mediator deferrals, revoked mediators, objections to an Assessor) and
 both caps at the limit and one over; deadlines across 25 December to 9 January, ignored and (by agreement) counted;
 weekday public holidays moving a deadline; a notice on the last business day and the next; the further information on
-the latest day and the day after; a medical examination notified and held on the last day and a day late; the fee for
+the latest day and the day after; a medical examination notified and held on the last day and a day late, and with Easter falling after the notice limit; the fee for
 every flat Schedule 1 item at the 2022-23 unit and several at the 2023-24 and 2024-25 units, with the rounding of 50
 cents down; payment under an accepted offer on day 28 and day 29.
 
@@ -100,12 +100,14 @@ The 2026-10-18 defaults:
 
 **In:** Part 2: cl 4(1)(b), (1A), 4A, 6, 7, 9, 10(1), (2) (as an answer), Sch 1 Part 1 items 1-8, 13-15, 17, Sch 1 Part 2
 cl 2(1)(a), 3 (with the Editorial note). Part 3: cl 11 (definitions, the Christmas period), 13, 14, 16(1)-(3), (5), (6),
-17(3), (4), 18(1), (2), 20(1)-(5), 23(5), 25(2)-(5), (7), (8), 26(4), (5), (8), 28(2), 29(1)-(5), 30, 34(1), (2), (6),
-(7), 35(1), (3), (4), 36(7), 39(3), 41, 42(1), (4)-(6), (10), 46(2), 49(1), 51(2), 52(7), 52(9), 54(4), (5), 67(3)(g),
-100(4). Part 5: cl 87, 88(4)-(6), 89, 90, 91 (in the comparison the person states), 92(1), 93(1), 94(2).
+16(4) (as the suspended-days input; see fork F17), 17(3), (4), 18(1), (2), 20(1)-(5), 23(5), 25(2)-(5), (7), (8), 26(4),
+(5), (8), 28(1), (2), 29(1)-(5), 30, 34(1), (2), (6), (7), 35(1), (3), (4), 36(7), 39(3), 41, 42(1), (4)-(6), (10), 46(1)
+(as the reason for a NOTHING), 46(2), 49(1), (4), 51(2), 52(7), 52(9), 54(4), (5), 67(3)(g), 100(3)-(5). Part 5: cl 87, 88(4)-(6), 89, 90, 91 (in the comparison the person states), 92(1), 93(1), 94(2).
 
 **Out, and why:**
-- cl 1, 2, 3, 100(1)-(3), (5)-(7): name, commencement, repeal and spent transitional provisions (100(4) is in).
+- cl 1, 2, 3, 100(1), (2), (6), (7): name, commencement, repeal and savings (100(3)-(5) are in: (5) ended (4) on
+  1 March 2020, so a claim pending before 1 September 2019 is now in Part 3 unless a 2013 mediation or apportionment
+  begun before 1 March 2020 is still running).
 - cl 4(1)(a), (2), cl 5, cl 8: corporations' fees, the Crown, who pays generally: not the individual claimant's seat.
 - Sch 1 items 9-12 and 16 (per-page, per-request and registry-opening fees): left for a later pass; Sch 1 Part 2 cl 1, 4
   (publishing the indexed fees): machinery.
@@ -116,15 +118,26 @@ cl 2(1)(a), 3 (with the Editorial note). Part 3: cl 11 (definitions, the Christm
   machinery; the suspended days are an input to the timetable.
 - cl 22, 23(1)-(4), (6), (7), 24: the content and form of the statement of particulars (Form 1) and the timetable: no
   deadline or yes/no answer beyond those encoded. Schedule 2 (the forms) is out.
-- cl 25(1), (6), (9)-(13), 26(1)-(3), (6), (7), (9), (10), 28(1), 29(6), 31: the defendants' and cross-defendants' own
-  duties.
+- cl 25(1), (6), (9)-(13), 26(1)-(3), (6), (7), (9), (10), 29(6), 31: the defendants' and cross-defendants' own
+  duties. (cl 28(1), the plaintiff's power to request information, is in: it is the premise of
+  `By when must the defendant answer my request`.)
+- cl 42(2), (3), (7)-(9): the mediator's arrangements for the plaintiff's evidence, its timing, its admissibility and
+  hearsay, and the oath: the mediator's functions and the law of evidence; no yes/no or deadline for the claimant beyond
+  `Can I be made to give evidence to the mediator`.
+- cl 46(3): other agreements and arrangements stay enforceable: a saving, no question turns on it.
+- cl 49(2), (3): the single claims manager's payment of the defendants' share (defendants' machinery) and the Tribunal's
+  power over costs of mediation in a costs award (the Tribunal's discretion). cl 49(4) is in: its "costs of mediation"
+  include the costs of a failure to notify under cl 34(2), even the plaintiff's, and follow cl 49(1).
 - cl 32, 33, 34(3)-(5), (8), 35(2), 36(1)-(6), 37, 38, 39(1), (2), (4)-(6), 40, 43-45, 47, 48: the registrar's and
   mediator's functions, the nature of mediation, evidence by audio visual link and outside NSW, mediators' liability,
   privilege and secrecy.
 - Division 5 except cl 51(2), 52(7), (9), 54(4), (5); Divisions 6 and 7 (late cross-claims, the single claims manager):
   apportionment among defendants is not the claimant's business, beyond its deadlines and cl 52(9)(a).
-- cl 67(1), (2), (3)(a)-(f), (h), 68, 69: the Tribunal's procedure after the process; cl 69 appears only as the
-  consequence named in answers.
+- cl 67(1), (2)(a), (c), (3)(a)-(f), (h), 68, 69: the Tribunal's and registrar's procedure after the process; cl 69 appears
+  only as the consequence named in answers.
+- cl 67(2)(b): the plaintiff's duty to propose in writing the further steps and a timetable after the process. A duty
+  on the claimant, but with no time limit and no condition beyond cl 67(1), so no yes/no or deadline to compute; left
+  for a later pass (a candidate `Must I propose the further steps` question).
 - Part 4 (subpoenas): the issuing party's and the Tribunal's procedure; a candidate for a later pass.
 - cl 86, 88(1)-(3), (7)-(10), 92(2), (3), 93(2), 94(1), (3), 95, 96: the form of offers, the defendant's side, and
   disclosure to the Tribunal.
@@ -140,7 +153,9 @@ Each line: the provision, the function, the answer taken, the other reading.
 - **F2** cl 16(2), (3) -- `Is my claim in the claims resolution process` -- after the end point, an agreement to extend
   keeps the claim in: `JUST TRUE` -- the extension's own period (not stated in the text) decides.
 - **F3** cl 11(1) "public holiday throughout New South Wales" -- every business-day question -- asked as a count of
-  weekday public holidays in the period, added to the period -- a holiday calendar from the Public Holidays Act 2010.
+  weekday public holidays in the period, added to the period -- a holiday calendar from the Public Holidays Act 2010. Where
+  one question checks two limits (cl 29(1) notice and 29(2) examination) it asks two counts, each up to the day the
+  act was done, so a holiday after the notice does not extend the notice limit.
 - **F4** cl 25(7) "all subsequent time periods" -- `the period in business days for` -- the cross-claim period itself and
   every period ending later than it; not an original defendant's reply (counted from service of the claim) -- every
   period that ends at or after the cross-claim period, or only steps that follow cross-claims in the process.
@@ -170,6 +185,12 @@ Each line: the provision, the function, the answer taken, the other reading.
   (cl 46(1) is a power) -- `JUST TRUE`.
 - **F15** cl 29(3) -- `Is the medical examination requirement in time` -- once all parties vary the period, the
   examination date is not checked -- the varied period (not an input) is checked.
+- **F16** cl 100(5) -- `Is my claim in the claims resolution process` -- a claim pending before 1 September 2019 with a
+  2013 Regulation mediation or apportionment still running: `NOTHING` -- `JUST FALSE` (Part 4 of the 2013 Regulation
+  governs) or `JUST TRUE` (cl 100(3) extends Part 3 to everything but that one process).
+- **F17** cl 16(4) "a period of up to 10 business days for malignant claims or 20 business days for non-malignant claims"
+  -- every timetable question -- the suspended days are taken as one total, so a single agreed suspension longer than
+  its cap is not caught -- ask each suspension separately and answer `NOTHING` above the cap (as cl 25(4), 34(6) do).
 
 ## Rulings on negatives (recorded word for word, as the guide requires)
 
@@ -240,6 +261,12 @@ site is a fork line above.
     (cl 55(1)). Asserted.
 11. **The medical examination periods are a defendant's limits, not the plaintiff's duty.** cl 29 never says the plaintiff
     must attend; it limits when an original defendant may notify and hold one. The question is framed that way.
+12. **cl 100(4) is spent.** It kept Part 3 off claims pending on 1 September 2019, but cl 100(5) ended it on 1 March 2020;
+    from then cl 100(3) extends Part 3 to those claims, except that a mediation or apportionment begun under Part 4 of
+    the 2013 Regulation and still running on 1 March 2020 continues under that Part until it concludes. (The first
+    version of this encoding read cl 100(4) as still in force; corrected after verification.) Fork F16; asserted.
+13. **The cap on a medical-change suspension is per occasion.** cl 16(4) allows suspensions "on one or more occasions",
+    each up to 10 or 20 business days, so the total has no cap. Fork F17.
 
 ## Questions (exported)
 
@@ -264,7 +291,7 @@ costs order follows the offer`, `Can I withdraw my acceptance`, `What can I do i
 
 - Replace the corpus text with the current official text and re-check every quotation, period and fee.
 - Transcribe the Sch 1 Part 2 cl 2(1)(b) formula into a formulas sidecar and compute the fee unit for later years.
-- Decide forks F4, F9, F11 and F12 with a lawyer; settle how "within" and "before" periods are counted (Interpretation
+- Decide forks F4, F9, F11, F12 and F16 with a lawyer; settle how "within" and "before" periods are counted (Interpretation
   Act 1987 s 36) and replace the public-holiday count with a calendar.
 - Add a defendant seat (cross-claims, replies, apportionment, the single claims manager, Division 6, cl 55) and Part 4
   (subpoenas).
