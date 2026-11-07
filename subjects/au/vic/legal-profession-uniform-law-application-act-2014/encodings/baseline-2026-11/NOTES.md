@@ -26,8 +26,11 @@ and nothing was taken from them; this encoding is from the client's seat and fro
 
 - **Act:** Legal Profession Uniform Law Application Act 2014, Act No. 17/2014, Version No. 018, incorporating amendments
   as at 11 October 2023, with Schedule 1 (the Legal Profession Uniform Law), deposited at
-  `../../registers/source-bundle/legal-profession-uniform-law-application-act-2014.txt` (sha256 89f65e9d...1f0b5057 as
-  committed, per its `.meta.json`), a plain-text conversion of the Word file the owner saved by hand on 6 November 2026
+  `../../registers/source-bundle/legal-profession-uniform-law-application-act-2014.txt` (sha256 4487c989...ac2ef77f as
+  committed, per its `.meta.json`), a plain-text conversion of the Word file the owner saved by hand on 6 November 2026,
+  reconverted on 7 November 2026 to restore the decimal point in the s 79(1) formula ("0·7 (A + B)") and the bullets of
+  the Schedule 3 notes that the first conversion dropped (no provision encoded here changed; the first text's sha256 was
+  89f65e9d...1f0b5057)
   (see that file's `.meta.json` and `subjects/au/vic/README.md`). Version 018 was the current version on 2026-11-06. Not
   checked against the authorised PDF, which was not saved.
 - **Numbers set elsewhere:**
