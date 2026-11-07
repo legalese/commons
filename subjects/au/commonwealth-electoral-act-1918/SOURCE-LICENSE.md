@@ -25,3 +25,10 @@ https://api.prod.legislation.gov.au/v1/Documents/Find(titleid='C1918A00027',asat
 (compilation register id: C2026C00260). sha256 of the download: `a69049a11a7ba7f57d7854b2997b861381d41f3ade421b8d5ba33dbae03cce35`.
 
 Formulas, symbols and pictures the text deposit lost are transcribed 2026-10-24 in `registers/source-bundle/C1918A00027.formulas.md`, from the Word rendering of the same compilation (C2026C00260) on the same Register and under the same licence (CC BY 4.0, as above): https://api.prod.legislation.gov.au/v1/Documents/Find(registerid='C2026C00260',type='Primary',format='Word',uniquetypenumber=0,volumenumber=1,rectificationspecification='Latest') (volumes 1 to 2).
+
+- **Reconverted, 7 November 2026**: the first converter (docx_text() in the workbench's harvest/fetch/fetch-source.py)
+  dropped characters Word writes in the Symbol font. The text was converted again from the same Word files (same download
+  sha256) with cth_convert_sym_v8.py (kept outside the repository); the only change is five tick marks (√) in the
+  candidates' statements of the Schedule 1 nomination forms (lines 9509, 9535, 9554, 9590 and 9615, "Please tick [√]").
+  Now 1,207,540 characters, sha256 `7ed37f94d5a5018fddd498011afb2b523f1c5ab35dd581742514d1d7a9186380` (was
+  `3f0f15f731404be222d9a106942b6100a70bd13f92d42d7385cf9a4b53f066fd`); details in `registers/source-bundle/C1918A00027.meta.json`.
