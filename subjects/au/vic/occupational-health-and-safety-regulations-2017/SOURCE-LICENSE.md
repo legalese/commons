@@ -34,3 +34,8 @@ so the owner saved the Word file by hand, in a browser, on 2026-11-07, and it wa
 - **Formulas and images**: `registers/source-bundle/occupational-health-and-safety-regulations-2017.formulas.md` transcribes the 1 embedded equation the conversion cannot carry, from the Word file; not yet checked against the authorised PDF.
 - **Authorised version**: https://content.legislation.vic.gov.au/sites/default/files/2026-10/17-22sra018-authorised.pdf. It was not saved; it is the version to check the conversion against.
 - **Also in force**: the Subordinate Legislation (Occupational Health and Safety Regulations 2017) Extension Regulations 2026, which extend the life of these Regulations (listed on the register on 2026-11-06); not deposited.
+- **Reconverted, 7 November 2026**: the first converter dropped Word's Symbol-font characters, among them the register's raised
+  decimal point, so "1·5 metres" read "15 metres" and "19·5%" read "195%". The text was converted again from the same Word file
+  with the fixed converter; 9 decimal points on 7 lines came back (r 5 "construction excavation", "safe oxygen level",
+  "Schedule 10/11 carcinogenic substance"; r 178(n); Sch 14 Table 1 item 14) and nothing else changed. The new hash and the
+  record are in the `.meta.json` (`text.reconverted_2026_11_07`).

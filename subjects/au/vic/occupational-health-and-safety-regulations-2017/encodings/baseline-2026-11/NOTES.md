@@ -20,7 +20,7 @@ so what this encoding needs from the Act is restated narrowly, with the section:
 - **Regulations:** Occupational Health and Safety Regulations 2017, S.R. No. 22/2017, Version No. 018, incorporating
   amendments as at 20 October 2026 (the current version on 2026-11-07), deposited at
   `../../registers/source-bundle/occupational-health-and-safety-regulations-2017.txt` (committed text sha256
-  4141667af879fb2e0f3f9cfee9238b4781d3bdd0dd9d27a0b050db8ff604e72b, as in its meta.json), a plain-text conversion of the Word
+  c1d58bdebce4f125517c4f2907a86fcca5bda6a7c11c98be00eb0ae1f8d17e60, as in its meta.json; reconverted on 2026-11-07 to restore 9 raised decimal points the first conversion dropped, first deposit 4141667af879fb2e0f3f9cfee9238b4781d3bdd0dd9d27a0b050db8ff604e72b), a plain-text conversion of the Word
   file the owner saved by hand on 7 November 2026 (see that file's `.meta.json` and `subjects/au/vic/README.md`). Not
   checked against the authorised PDF, which was not saved.
 - **Formulas sidecar:** the one embedded equation (17-22sr018-F1, Sch 14 cl 3.1, the major hazard facility aggregation
@@ -226,13 +226,13 @@ deposit give `NOTHING`.
 
 ## What the Regulations turn out to say
 
-1. **The deposited text lost decimal points in the oxygen figures and the trench depth.** r 5 "safe oxygen level" reads "195% by volume
-   (equivalent to a partial pressure of oxygen of 198 kilopascals)" and "235% ... (239 kilopascals)"; r 178(n) reads "more
-   than 01 square metres". They can only be 19.5%, 23.5%, 19.8 kPa, 23.9 kPa and 0.1 square metres; elsewhere the
-   conversion kept the register's raised point ("0·1 f/ml", "0·15 milligrams"). Encoded as 19.5% and 23.5%. The r 5
-   definition of "construction excavation" lost one too: "(a) a trench if the excavated depth is more than 15 metres"
-   can only be 1.5 metres, the figure r 322(g) gives ("more than 1·5 metres"); encoded as 1.5 metres in rr 354, 355.
-   Check against the authorised PDF. Asserted at both edges.
+1. **Withdrawn 2026-11-07: not a finding about the Regulations.** The first deposit had lost raised decimal points in r 5
+   "safe oxygen level" ("195%", "235%", "198" and "239 kilopascals"), r 5 "construction excavation" ("15 metres") and
+   r 178(n) ("01 square metres"). That was the converter dropping Word's Symbol-font decimal point, not the register. The
+   deposit is now corrected and reads 19·5%, 23·5%, 19·8 and 23·9 kPa, 1·5 metres and 0·1 square metres (and 0·1% in the
+   Schedule 10 and 11 carcinogen definitions, 0·1 tonnes for arsenic trioxide in Sch 14). The encoding had already read
+   19.5%, 23.5% and 1.5 metres, so no value changed; the edges stay asserted. The number is kept so that the references
+   to findings 2-11 still hold.
 2. **The two units of the lead figures disagree near each figure.** Every blood lead figure is given in umol/L and ug/dL,
    but they are not exact conversions (1 umol/L is about 20.7 ug/dL): 0.48 umol/L is 9.95 ug/dL, not 10; 0.24 is 4.97, not
    5; 0.97 is 20.1, not 20; 0.72 is 14.9, not 15; 2.41 is 49.9, not 50. A result of 9.97 ug/dL is under "10 micrograms/
@@ -267,7 +267,7 @@ deposit give `NOTHING`.
 
 ## Before this is worth relying on
 
-- Check the conversion against the authorised PDF, above all finding 1.
+- Check the conversion against the authorised PDF.
 - Safe Work Australia's Workplace Exposure Standards (the figures r 165, r 166 and r 319C use) and the value of a penalty
   unit.
 - The employer's seat over the same core; the designers', manufacturers' and suppliers' duties; Part 3.5 rr 100-123 for
