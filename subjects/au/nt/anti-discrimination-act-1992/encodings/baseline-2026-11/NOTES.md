@@ -47,7 +47,7 @@ satisfied assertions counted by distinct source range.
 | `nad-dates.l4` | 0 | 0 | 0 | 0 |
 | `nad-rules.l4` | 0 | 0 | 0 | 0 |
 | `nad-seat.l4` | 0 | 0 | 0 | 0 |
-| `nad-cases.l4` | 0 | 0 | 211 | 211 |
+| `nad-cases.l4` | 0 | 0 | 217 | 217 |
 
 Every expected value was worked by hand from the text. Every exported question is asserted at least twice, with the
 edges: the day before and the day of each commencement (31 July / 1 August 1993; 2 / 3 July 2023; 30 / 31 October 2025;
@@ -86,7 +86,7 @@ The 2026-10-18 defaults:
 
 ## Scope
 
-**In:** s 4 (attribute, child, club; the attribute definitions as glosses), ss 19, 20, 20A, 20B, 21, 22, 23, 24, 26, 27,
+**In:** s 4 (attribute, child, club; the attribute definitions as glosses), ss 19, 20, 20A, 20B, 21, 22, 23, 24, 25, 26, 27,
 28 and the areas of Part 4 (ss 29, 31-34, 38, 41, 46, 48, 49A, as the person's choice of area: every one of those
 sections ends with less favourable treatment "in any way in connection with" the dealing, except s 48(1) and s 49A,
 whose dealings are as wide); the exemptions of Part 4 (ss 30, 35, 35A, 35B, 36, 37, 40, 42-45, 47, 49) and s 39; Part 5
@@ -109,8 +109,16 @@ or an EVENT.
 - Part 2 (the Commissioner's office), ss 1-3, 5, 5A, 117 and Parts 9-11 except as used: machinery.
 - Part 2A (ss 18A-18D, the positive duty): enforced by the Commissioner's own investigation and enforceable undertakings,
   not by a complaint; a report under s 18D may be referred to in a complaint (s 18D(6), s 102), which needs no rule.
-- s 25 (discriminatory advertising) and the offences of Part 8 (ss 107A-110A, 109, 109A): directed at publishers and at
-  people dealing with the Commissioner, not at the person aggrieved; s 112 (prosecution time limits) is the prosecutor's.
+- The offences of Part 8 (ss 107A-110A, 109, 109A): prosecuted, not complained of, and directed at people dealing with
+  the Commissioner, not at the person aggrieved; s 112 (prosecution time limits) is the prosecutor's.
+- s 4A (assistance animals): a definition, used only through s 21(5) and the s 50 exemption, where it is asked as a fact.
+- ss 62A and 62B (what a representative complaint is, and the Commissioner's guidelines): the person is asked whether
+  their complaint is a representative one; the definition and the guidelines are machinery (with ss 61-64 below).
+- ss 110B and 110C (enforceable undertakings and enforcement orders): the Commissioner's tools, used with Part 2A's
+  positive duty, not remedies a complainant seeks.
+- Part 9 (ss 118-120, the Justice Legislation Amendment Act 2015): complaints made before 2015, and offences, long spent
+  and in any case governed by the Act as it stood before 3 July 2023 (s 122), which the first question already says.
+- s 124 (offences before the 2022 amendments): offences, out with Part 8.
 - s 31(3) (religious activity in working hours): a narrow head left for a later pass.
 - The Commissioner's and the Tribunal's procedure: ss 61-64 (except in descriptions), 66B, 66C, 66E (except as a bar),
   67, 68, 73, 78, 82, 87A, 87B, 89A, 89B (investigation of representative complaints), 90, 94, 97, 98, 100, 101, 107,
@@ -119,6 +127,9 @@ or an EVENT.
 - s 59's procedure (application, conditions, revocation, 3-year terms): only "an exemption in force covers it" is asked.
 - Complaints made before 27 July 2026, and conduct before 3 July 2023, are governed by earlier texts not deposited: the
   first question says so and the rest do not answer for them.
+- A complaint made before 31 October 2025 about an act under the old s 20A is outside s 126, which reaches only "a
+  complaint made after the commencement" (s 126(1)(a)): the old s 20A governs it as the law then in force, and s 128
+  sends it to the old Part 6. The first question says so; neither is encoded.
 
 ## Fork register
 
@@ -155,6 +166,13 @@ Each line: the provision, the function, the answer taken, the other reading.
   the goods and services area instead) -- JUST FALSE.
 - **F14** s 49(1)(d)-(f) -- `s 49 -- the insurance exemption applies` -- where reasonable actuarial data exists but the
   insurer did not rely on it, (e) and (f) are not available -- (f) available whenever the discrimination is reasonable.
+
+- **F15** s 127 "any person who works for an educational institution at the time section 5 of the amending Act
+  commences" -- `ss 35-37 -- the work exemption applies` -- read as written: working for any educational institution on
+  31 October 2025 (the person is asked about any, not only this one) -- only staff of the institution relying on s 35B.
+- **F16** s 25 with s 28 -- `s 25 -- the advertisement was prohibited` -- s 25 names no area, so discriminatory
+  advertising is answered without one (as F3 for s 22) -- s 28 confining it to the advertisement of a dealing in one of
+  the seven areas.
 
 ## Rulings on negatives (copied word for word from docs/ENCODING-GUIDE.md section 5)
 
@@ -205,12 +223,25 @@ areas (F2), where s 20's "includes" is not met, for a body of fewer than 30 memb
 10. **The compensation cap is in regulations not deposited** (s 88(1)(b) "not more than that prescribed"). The question
     takes the maximum as an input. Asserted at, under and over an illustrative figure.
 11. **The religious school exemption excludes current staff.** s 127: s 35B "does not apply in respect of any person who
-    works for an educational institution at the time section 5 of the amending Act commences" (31 October 2025). Asserted.
+    works for an educational institution at the time section 5 of the amending Act commences" (31 October 2025). Read
+    as written, that is anyone then working for any educational institution, not only the one relying on s 35B (F15).
+    Asserted.
+
+## Verification fixes (2026-11-07)
+
+An independent verification found six minor issues; all were fixed:
+- the method text in `encoding.json` and the `nad-seat.l4` header now say four regulative rules (s 126(2) is the fourth);
+- `By when must I say I wish to continue` is now asserted twice (60 days across the end of February 2027);
+- s 4A, ss 62A-62B, ss 110B-110C, Part 9 and s 124 are now in the out list with their reasons;
+- the first question no longer cites s 126 for a complaint made before 31 October 2025 about an old s 20A act;
+- s 127 is read as written (any educational institution), with fork F15;
+- s 25 (discriminatory advertising) is now encoded, as prohibited conduct a person aggrieved may complain of (s 4(d)),
+  with fork F16 and a new question, `Was the advertisement prohibited`.
 
 ## Before this is worth relying on
 
 - Check the text against the authorised PDF of reprint REPA027 (retrieved 6 November 2026) and any later reprint.
 - Deposit the Anti-Discrimination Regulations (NT) for the s 88 maximum, and the Interpretation Act 1978 (NT) rule for
   reckoning periods (F1); deposit the pre-27 July 2026 Part 6 if pending complaints matter.
-- Encode s 25 and s 31(3), and a respondent's seat if wanted.
-- A lawyer's view on findings 1, 3, 5, 6, 8 and forks F2-F5, F10-F14; an independent test pass and a human gate.
+- Encode s 31(3), and a respondent's seat if wanted.
+- A lawyer's view on findings 1, 3, 5, 6, 8 and forks F2-F5, F10-F16; an independent test pass and a human gate.
