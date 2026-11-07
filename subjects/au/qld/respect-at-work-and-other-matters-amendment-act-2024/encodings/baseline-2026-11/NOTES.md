@@ -44,14 +44,14 @@ under `§§` headings in the Act's order); `rawq-cases-claimant.l4` (worked case
 
 Stable `l4` of VS Code extension 1.6.98 (`bin/win32-x64/l4.exe run <file>`), `JL4_LIBRARY_PATH` unset, run from this
 folder, at most two processes at a time. `l4 run` exits 0 even when an assertion fails, so the diagnostics were read:
-every diagnostic in the case file is `DiagnosticSeverity_Information` "assertion satisfied" (146 distinct ranges).
+every diagnostic in the case file is `DiagnosticSeverity_Information` "assertion satisfied" (157 distinct ranges).
 
 | File | Errors | Warnings | Assertions written | Satisfied |
 |---|---|---|---|---|
 | `rawq-dates.l4` | 0 | 0 | 0 | 0 |
 | `rawq-commencement.l4` | 0 | 0 | 0 | 0 |
 | `rawq-claimant.l4` | 0 | 0 | 0 | 0 |
-| `rawq-cases-claimant.l4` | 0 | 0 | 146 | 146 |
+| `rawq-cases-claimant.l4` | 0 | 0 | 157 | 157 |
 
 Every exported question has cases, with the edges: the day before and the day of 1 December 2024 and 1 July 2025;
 each s 2 group and the unnamed provisions; the 1 July 2025 group not commenced, commenced on 1 July 2025 (as passed),
@@ -59,7 +59,9 @@ and commenced on an invented later day (1 March 2027), with conduct the day befo
 the 1-year and 2-year complaint periods and the day after; a contravention exactly 1 year before the commencement and
 the day before that (s 283); 29 February; a complaint made before the commencement about a contravention the new
 period would cover; each s 120A to 120E relationship and each limb of s 120; each event in s 148(2) and (3), the
-complainant's own position, and the tribunal's opt-out date and the day before it; each costs role.
+complainant's own position, and the tribunal's opt-out date and the day before it; each costs role; race by its
+former and its added heads; a contravention exactly 1 year before the commencement, checked against both time-limit
+questions.
 
 ## Seat
 
@@ -103,7 +105,8 @@ The 2026-10-18 defaults:
 - s 2 -- every provision, by group (`When does this change commence under s 2`, `Had this change commenced on that day
   under s 2 as passed`), and its status against the deposited 1991 Act (`What is the commencement status of this
   change`);
-- s 7 (amending 1991 Act s 7: new and renamed attributes) with schedule 1 "attribute";
+- s 7 (amending 1991 Act s 7: new and renamed attributes) with schedule 1 "attribute", and s 52(1), (2) so far as
+  they widen "race" (caste; immigration or migration status);
 - s 18 (new ch 3 pt 3: s 120 and ss 120A to 120E, harassment on the basis of sex);
 - s 22 (new s 124E, with s 124F as the gloss of the asked judgment);
 - s 25 (new ch 5C: s 131I) with s 52(4) (schedule 1 "contravention") and the s 131H note;
@@ -128,6 +131,24 @@ The 2026-10-18 defaults:
   commissioner's and tribunal's powers over it; the complainant's position under them appears in the separate
   complaint and opt-out answers.
 - ss 286, 287 (existing investigations and directions): machinery.
+- ss 4, 5, 6, 14 to 16, 19, 23, 26, 27 (long title, preamble, purpose sections and headings): no rule a complaint
+  meets.
+- ss 8 to 11 (ss 19 to 22: the industrial relations exception re-pointed; "professional, trade or business
+  qualification or authorisation" in the qualifying-body areas) and s 12 (s 45A, "sexual orientation"): the areas and
+  exceptions of the 1991 Act, which belong with a 1991 Act encoding. Commencement in.
+- s 13 (new s 106: discrimination necessary to comply with an Act, a Commonwealth Act or a court or tribunal order):
+  an exemption the respondent relies on; for a respondent seat or a 1991 Act encoding. Commencement in.
+- s 17 (former s 120, relevant circumstances, relocated as s 117A): used only as the gloss of the asked judgment in
+  s 120(1)(c).
+- s 20 (s 124, unnecessary information) and s 24 (s 130: victimisation now covers an act or omission that would
+  contravene the positive duty): prohibitions defined in the 1991 Act, for a 1991 Act encoding. Commencement in.
+- s 28(1), (3) to (5) (a note; "registered organisation" defined; cross-references to ss 124C, 124D; "sexual
+  orientation" in "relevant entity"): read into s 134(2) and the agent question, not encoded apart.
+- s 45 (new s 176A, representation in the industrial relations commission only as the Industrial Relations Act 2016
+  s 529 allows): a rule of proceedings before that commission, whose Act is not deposited.
+- s 52 (schedule 1) beyond "race", "attribute", "contravention" and "class member": the other definitions are the
+  meanings of the attributes and wrongs (the attribute question takes the attribute as chosen, with the plain gloss);
+  the widened "trade union activity", "relation" and "parent" are noted at fork F17.
 - Parts 3 to 11 and schedule 2 (Corrective Services Act, Criminal Code, courts and judges, Penalties and Sentences Act,
   QCAT Act, Supreme Court Act, Youth Justice Act, Human Rights Act, Commonwealth tribunal references): amendments of
   other Acts; only their commencement is encoded.
@@ -180,6 +201,25 @@ Each line: the provision, the function, the answer taken, the other reading.
   NOTHING (the former s 146 governs and is not deposited) -- JUST FALSE.
 - **F15** s 284 "a complaint made before the commencement" -- `ss 134, 284 -- my agent` -- the day the complaint is
   made decides, whatever the day of the contravention -- the day the agent was appointed.
+- **F16** schedule 1 "race includes" (s 52(1), (2): adds "caste" to (b) and "(e) immigration or migration status") --
+  `s 7 -- is the attribute protected` -- race is split: colour, descent or ancestry, ethnicity or ethnic origin,
+  nationality or national origin are protected throughout; caste and immigration or migration status are "yes" once
+  the 1 July 2025 group is in force and "not covered" (NOTHING kind) before, because the former definition "includes"
+  without closing its list -- "no" before (the new heads are new), or "yes" throughout (caste within "descent", and
+  migration status within "national origin", on the ordinary meaning).
+- **F17** schedule 1 "trade union activity" (newly defined, adding "(ba) being represented, or seeking to be
+  represented, by a registered employee organisation"; the deposited 1991 Act leaves the term undefined), "relation"
+  (now including foster relationships, a person on whom one depends, and relatives under Aboriginal tradition or Island
+  custom) and "parent" (adding (e), (f), parents under Aboriginal tradition or Island custom) -- `s 7 -- is the
+  attribute protected` -- not split: the attribute is taken as protected throughout, because the former "trade union
+  activity" is undefined (ordinary meaning), the former "parent" "includes", and "association with, or relation to" a
+  person reaches the new relations by association anyway -- split each as race is, with "not covered" before the
+  commencement.
+- **F18** s 146(1) "a class of persons of which the person is a member" and s 146(2) "a registered employee
+  organisation may make" -- `s 146(1) -- I may make a representative complaint`, `s 146(2) -- my union may make a
+  representative complaint` -- limits in the grant's own wording, not "if" limbs: outside them NOTHING (2026-11-04
+  ruling); the "if" limbs (a), (b) (and (2)(a) to (c)) answer JUST FALSE -- JUST FALSE for a non-member and an
+  unregistered body too, reading the heading "Who may make representative complaint" as closing the list.
 
 ## Rulings on negatives (copied word for word from docs/ENCODING-GUIDE.md section 5)
 
@@ -198,7 +238,9 @@ This encoding follows the rulings; it carries no `NOTHING-kind` tags. The ruling
 Applied here: s 120 ("happens if"), s 124E(2) ("if") and schedule 1 "attribute" ("means") are definitions, so a failed
 limb is a "no" constructor; s 134(2) ("can not be") and s 148(1)(b) ("is not entitled ... unless") are flat
 negatives, "no"; s 131I(2) "only if" is "no"; s 2's fixed days are periods the text fixes, JUST FALSE before them;
-s 146 ("if") answers JUST FALSE when a limb fails; s 131I(1) is a scope limit, "not covered" (F7); a provision s 2 does
+s 146 ("if") answers JUST FALSE when an "if" limb fails, and NOTHING for a person outside the class or a body that is
+not a registered employee organisation (limits in the grant's own wording, F18); caste and immigration or migration
+status before the 1 July 2025 group answer "not covered", the former "race includes" not closing its list (F16); s 131I(1) is a scope limit, "not covered" (F7); a provision s 2 does
 not date, and s 146 before 1 December 2024, answer NOTHING (F2, F14); costs outside a representative complaint, and
 anything the former law governs under s 285, are "not covered".
 
