@@ -23,7 +23,8 @@ Not for public use as advice.
 
 **Regulative rules (3).** The three duties with a deadline are `DEONTIC` rules run inside a question with `EVALTRACE`,
 so no exported question takes a `DEONTIC` or an `EVENT`: s 35(2) with r 6 (the decision-maker MUST give the Tribunal
-its reasons and documents WITHIN 21 days of notice); s 70(2) (I MUST apply for internal review WITHIN 1 month);
+its reasons and documents WITHIN 21 days of notice, the 21 written once as `r 6 -- the days the decision-maker has` and
+used by the deadline question, the rule and the not-yet-given branch); s 70(2) (I MUST apply for internal review WITHIN 1 month);
 s 71(3) (I MUST institute the appeal WITHIN 1 month). Each `LEST BREACH ... BECAUSE` names the provision and who can
 excuse the lateness.
 
@@ -38,7 +39,8 @@ This is the first encoding of the Act; nothing existing was touched.
   Tribunal Regulations 2015, version 1.7.2020, deposited at
   `../../../south-australian-civil-and-administrative-tribunal-regulations-2015/registers/source-bundle/` (text sha256
   09dcf966...a158448). Used: r 4 (interlocutory steps that are not "decisions"), r 5 (reviewable decisions), r 6 (21
-  days), r 7 and r 11 (prescribed costs circumstances), r 9 (who may enforce), r 14 (fees). Not used: r 8 (service), r 10
+  days), r 7 and r 11 (prescribed costs circumstances), r 9 (who may enforce), r 14(1)-(8) (fees, including (4), who pays a
+referral fee). Not used: r 14(9) (the Registrar may require a deposit on account of fees: a Registrar's discretion),  r 8 (service), r 10
   (public access), rr 12, 13 (machinery).
 - **Not deposited, so inputs:** the SACAT Rules (withdrawal without leave, s 47(2); time for an absence review, s 85(3);
   extensions, s 66); the Magistrates Court Act 1991's jurisdictional limit for contract claims (s 89(3)); the Supreme
@@ -55,11 +57,17 @@ folder, one process at a time. `l4 run` exits 0 even when an assertion fails, so
 |---|---|---|---|---|
 | `sacat-dates.l4` | 0 | 0 | 0 | 0 |
 | `sacat-applicant.l4` | 0 | 0 | 0 | 0 |
-| `sacat-cases-applicant.l4` | 0 | 0 | 202 | 202 |
+| `sacat-cases-applicant.l4` | 0 | 0 | 221 | 221 |
 
 Negative control: with the r 6 rule's `WITHIN 21` made `WITHIN 20` and s 47(4) dropped from the r 11 list, exactly the
 3 predicted assertions failed (reasons given on the 21st day; the trace helper at day 21; a want-of-prosecution
 dismissal under r 11); the module was restored and rechecked (202 of 202).
+
+Fix of 2026-11-07, after an independent verification: r 14(4) (who pays a referral fee) and s 38I(1), (2) (purported
+orders) added, the r 6 days written once, the header scope and the s 34(2)(b) input's description corrected; 19
+assertions added (221 of 221). A second negative control, with the r 6 days made 20, failed exactly the 5 assertions
+that turn on the 21st day (the deadline date, the rule at day 21, reasons given on day 21, not yet given on day 21, the
+trace helper), showing all three uses read the one constant; it was restored and rechecked.
 
 Edges asserted: the 21st and 22nd days after notice (r 6), given and not yet given; the last day of the month and the
 day after for internal review and appeal, from 15 March, 31 January (in 2024 and 2025), 28 February, 31 October and 15
@@ -103,9 +111,8 @@ The 2026-10-18 defaults:
 
 **In:** s 3(1) (applicant, decision, monetary order, as used), s 4 (as "the relevant Act decides"), s 29, ss 32-34 with
 r 5, s 35(1), (2), (4)-(6) with r 6, s 36, s 37, s 38, s 38B(2), (5)-(7), s 38C(1), (2), s 40(4), s 41(3), ss 46-49,
-s 50(10), (13), s 51(11), (12), s 56(1), (2), (4), s 57 with r 7, s 58(1), s 60(1), (2)(e), (3), s 62(4), s 66, s 70 with
-r 4, s 71(1), (2), (2a), (2b), (3), s 73, s 84, s 85, s 89(1)-(3) with r 9, s 91 with r 11, s 93A, s 93B, r 14(1)-(3),
-(5)-(7).
+s 38I(1), (2), s 50(10), (13), s 51(11), (12), s 56(1), (2), (4), s 57 with r 7, s 58(1), s 60(1), (2)(e), (3), s 62(4), s 66, s 70 with
+r 4, s 71(1), (2), (2a), (2b), (3), s 73, s 84, s 85, s 89(1)-(3) with r 9, s 91 with r 11, s 93A, s 93B, r 14(1)-(8).
 
 **Out, and why:**
 
@@ -113,15 +120,21 @@ r 4, s 71(1), (2), (2a), (2b), (3), s 73, s 84, s 85, s 89(1)-(3) with r 9, s 91
   delegation: ss 5-28, 30), Part 6 (staff: ss 74-78), ss 92-96 (reports, rules, regulations, review): machinery. s 8
   (objectives) and s 39 (no rules of evidence, equity and good conscience) bind the Tribunal and give the person no
   answer of their own.
-- ss 38D-38I (how a transferred proceeding runs in the Magistrates Court; purported orders made before Part 3A): s 38D
-  repeats the Tribunal's representation and costs limits for the Court; s 38I concerns orders the Tribunal purportedly made,
-  before Part 3A commenced, in matters that needed federal jurisdiction.
+- ss 38D-38H, s 38I(3)-(5) (how a transferred proceeding runs in the Magistrates Court): s 38D repeats the Tribunal's
+  representation and costs limits for the Court, and ss 38E-38H give the Court its conference, bailiff and priority
+  rules. s 38I(3) says an application to vary or revoke a purported order must be transferred to the Magistrates
+  Court, a step the Tribunal must take that leaves the person nothing to decide; s 38I(4) is an immunity (see ss
+  79-81). s 38I(1) and (2) are in: a purported order is one the Tribunal purportedly made, "whether before or after the
+  commencement of this Part", that is invalid because the application involved federal jurisdiction (s 38I(5)); the
+  person in whose favour a purported monetary order was made can recover it as a debt in the s 89 court (asked in
+  `Where can I recover the money`), and not complying with any other purported order is an offence ($50 000 or 2
+  years, in the offence questions).
 - ss 40(1)-(3), (5), 41(1), (2), 42-45, 50 (other than (10), (13)), 51 (other than (11), (12)), 52-55, 58(2)-(4), 59,
   61, 63-65, 67-69, 72, 82, 83, 86-88, 89A, 90: the Tribunal's powers and procedure. They say what the Tribunal may do,
   at its discretion, and give the person nothing a question could decide from facts. Candidates for a later layer:
   s 53 (who is a party), s 54 (joinder), s 61 (preservation orders), s 69 (privilege), s 90 (public access, r 10).
 - ss 79-81 (immunities): a party has a Supreme Court party's immunity (s 79(4)); no question turns on it.
-- r 8 (service), r 10 (public access), rr 12, 13 (reports and register).
+- r 8 (service), r 10 (public access), rr 12, 13 (reports and register), r 14(9) (a deposit the Registrar may require).
 
 ## Forks (decided case by case, ruling of 2026-11-05)
 
@@ -180,6 +193,15 @@ Each is the provision, the function, the answer taken, and the other reading, fo
 8. **Stale references in r 5.** r 5(1)(c) still names the Retirement Villages Act 1987 beside the 2016 Act that, to the
    encoder's knowledge (not from a deposited source), replaced it; both are encoded as written.
 9. **s 36(2) lets the decision-maker stay its own decision**, not only the Tribunal; the stay question counts either.
+10. **No person or body is prescribed under s 34(2)(b).** The Act lets the regulations prescribe persons or bodies
+    whose decisions are reviewable, but r 5(2) prescribes classes of decision only. The choice `a person or body
+    prescribed by the regulations` is kept for a later regulation or a relevant Act, and its `@desc` says that on the
+    deposited Regulations it does not arise.
+11. **r 14(4) moves the referral fee off the tenant or resident.** A fee for referring a matter under the Residential
+    Parks Act 2007 s 29 or the Residential Tenancies Act 1995 s 63 or s 105M is paid by the park owner, landlord or
+    rooming house proprietor, or, under s 29(6a), s 63(7) or s 105M(8) where no notice of dispute was lodged, by the
+    third party those subsections name. Asserted, with the r 14(1) exemption (the Housing Trust as landlord) still
+    applying.
 
 ## Before relying on it
 
