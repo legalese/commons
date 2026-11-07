@@ -35,13 +35,13 @@ folder, at most two processes at a time. `l4 run` exits 0 even when an assertion
 | File | Errors | Warnings | Assertions written | Satisfied |
 |---|---|---|---|---|
 | `rta-restraints.l4` | 0 | 0 | 0 | 0 |
-| `rta-cases.l4` | 0 | 0 | 79 | 79 |
+| `rta-cases.l4` | 0 | 0 | 81 | 81 |
 
 Every expected value was worked by hand from the text, with the edges: the first and last day of a restraint read down
 from 12 months to six, the day before it begins and the day after it ends; the court's last day earlier than, equal to
 and one day after the written one; an order taking effect on the day it is made, later, and one day earlier (barred); a
 breach the day before an order takes effect and on that day (s 4(5)); an order that tries to leave more valid than
-s 4(1) allows (capped); each s 3(3) enactment; each failure in s 4(3), with the s 4(4) deeming and outside it.
+s 4(1) allows, in time (capped) and in activity or area (no breach, as without the order); each s 3(3) enactment; each failure in s 4(3), with the s 4(4) deeming and outside it.
 
 ## Seat
 
@@ -112,8 +112,27 @@ Each line: the provision, the function, the answer taken, the other reading.
   restraint`, `What may the Court order about my restraint` -- the answer is whether the power arises and its limit, not
   whether the Court will use it -- none (stated so the answer is not read as a promise).
 - **F8** s 4(3) with s 4(1) -- `Would doing it on this day break my restraint` -- an order "valid to such extent only"
-  that names a later day than s 4(1) allows is capped at the s 4(1) day ("not exceeding the extent to which the
-  restraint is not against public policy") -- the order, as made, governs until set aside.
+  that names a later day than s 4(1) allows is capped at the s 4(1) day, and one that leaves valid an activity or area
+  outside the part s 4(1) leaves valid does not make doing it a breach ("not exceeding the extent to which the restraint
+  is not against public policy"); the cap applies to time, activity and area alike, so obtaining an order never leaves
+  the applicant worse off than s 4(1) alone -- the order, as made, governs until set aside.
+
+### Rulings on negatives (copied word for word from docs/ENCODING-GUIDE.md section 5)
+
+This encoding carries NOTHING-kind tags (s 3(1) for a restraint created before assent; forks F3 and F4; s 4(5) beyond
+rights accrued before the order). The rulings it follows:
+
+> In short, a function answers `JUST FALSE` only where the text itself says no to the case in its own words: a "means" definition, a condition the text introduces with "if", "only if", "as long as" or "unless" (and plain variants such as "while", "until" and "except"), a list the text closes with "only", a flat negative ("does not", "shall not", "may not").
+
+> Everywhere else it answers `NOTHING`: where the text lists without closing the list, says "includes", leaves a term undefined, is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit.
+
+> - **N2** (bench `commons-negation-1030`; does a flat negative count as the text's no?): option A as printed: flat negatives count as a no, and where the text names the bearer the prohibition (`SHANT`) is derived from that answer; the Hohfeld kinds stay in each row's "Jural relations" table; option C's wording (the kind typed in the person-facing answer) comes only after a lawyer confirms the typing, decided together with the S/E choice for how "not covered" is said. Meng's lean, verbatim: "Why are we even trying to do this work? Some of these rules are metatextual and require more homoiconicity than we currently have in L4." Meng's note: none written. Marked 2026-11-03T23:22:49.971Z, ruled 2026-11-04. Bench: https://claude.ai/artifact/49q6k2H5xtuJqy5ttkwZ23
+
+> - **Periods, "where" and scope limits** (a question raised on 2026-11-05 while checking an encoding of the Retirement and Re-employment Act 1993, not a bench): (a) a period the text fixes in its own words ("within one month", "begins from ... until the employee attains the age", "on the last day of employment"): outside the period the answer is `JUST FALSE`; (b) a "where ..." condition: when it fails the answer is `JUST FALSE`; (c) a scope limit with no "only" (for example "below" the minimum age): outside the scope the answer is `NOTHING`. Meng's words, verbatim apart from the trigger word that ended the message: "i agree with your lean: no for a and b; nothing for c." Typed 2026-11-05T04:30:00.322Z, ruled 2026-11-05.
+
+> - **Delegated definitions, defences and "until" bars** (questions raised on 2026-11-05 while checking encodings of the Proceeds of Crime Act 2002, the Terrorism Act 2000 and the Singapore Sale of Goods Act 1979, not a bench): (a) a definition the text itself hands to a list ("Schedule 9 has effect for determining what is a business in the regulated sector"): when no head in the list holds, the answer is `JUST FALSE`; a bare list with no such hand-off still answers `NOTHING`; (b) "it is a defence ... to prove that X": when X is not proved, the answer is `JUST FALSE` for that provision's defence, worded "this section gives no defence on these facts" and never "no defence at all"; (c) "when", "upon" and "whenever" count as "where" under rule (b) of the periods ruling above; (d) "the property does not pass until X": encode the bar ("the property cannot yet pass": `JUST TRUE` before X, `JUST FALSE` after X) and never claim that the property has passed. Meng approved these four readings as put to him by the general-manager session, in the word NOTHINGBURGER; his note on (d), verbatim apart from the bracket and the trigger word that ended the message: "in the case of Q5 [the "until" bar] i hope we are using the deontic mechanisms to examine a trace." The note is a request about how (d) is modelled, not part of the ruling. Typed 2026-11-05T06:04:54.553Z, ruled 2026-11-05.
+
+> - **Questions with no convention: decide case by case (Meng, typed 2026-11-05T10:25:24Z).** Six questions the rulings above leave open are decided site by site, at encoding time, on the text's own words and the encoder's best judgment: an "unless" or "except" once it is met; a bare "must" not done; "listed in Schedule N"; a duty whose "if" or "where" is unmet; "(other than X)"; a missing event in the state ledger. Each such site gets one fork line (the provision, the function, the answer taken, the other reading) for the human reviewer to overrule, and the rulings above still govern whatever they cover. Meng's words, asked of the session "Encodings": "re Encoding Conventions I believe I had a short discussion with GM where I basically said I agreed with its \"lean\"s -- does that mean we can retire the bench card or should I go over it still? In short I feel like these decisions need to be made case-by-case at encoding time, and you should go with your gut most of the time; and if the encoding turns out to be wrong, well, that's where the human review comes in." The bench that carried the six questions ("Encoding Conventions", artifact Hpg2k9HqExJN5zdtBYiJ72, collection `encodings-conventions-1105`) was retired unmarked, so it holds no marks.
 
 ## Jural relations
 
