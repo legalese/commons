@@ -33,3 +33,8 @@ so the owner saved the Word file by hand, in a browser, on 2026-11-06, and it wa
   Printer's attribution and an unofficial-version notice; hashes, the page read and the conversion are in `accident-compensation-act-1985.meta.json`.
 - **Formulas and images**: `registers/source-bundle/accident-compensation-act-1985.formulas.md` transcribes the 12 embedded equations the conversion cannot carry, from the Word file; not yet checked against the authorised PDF.
 - **Authorised version**: https://content.legislation.vic.gov.au/sites/default/files/2026-10/85-10191aa237-authorised.pdf. It was not saved; it is the version to check the conversion against.
+- **Reconverted, 7 November 2026**: the first conversion dropped the characters the register sets in the Symbol font
+  (the raised decimal point, the multiplication sign and the minus sign), so "0·278" read "0278", "9·5%" read "95%" and
+  the s 98C formulas lost their × and − signs. The text was converted again from the same Word file with the fixed
+  converter; only those characters changed (17 lines), and the notice header is kept as deposited. Details and the new
+  hash are in `accident-compensation-act-1985.meta.json` (`reconverted_2026_11_07`).

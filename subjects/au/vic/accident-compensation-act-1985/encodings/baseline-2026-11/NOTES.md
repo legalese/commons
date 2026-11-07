@@ -12,7 +12,7 @@ This is the first encoding of the Act; nothing existing was touched.
 ## Edition
 
 - **Act:** Accident Compensation Act 1985, Act No. 10191/1985, Version No. 237, incorporating amendments as at 2 October 2026,
-  deposited at `../../registers/source-bundle/accident-compensation-act-1985.txt` (sha256 60b465c4...d32d6dc0 as committed),
+  deposited at `../../registers/source-bundle/accident-compensation-act-1985.txt` (sha256 3635e0cb...7a182fd1 as reconverted on 2026-11-07; first deposited as 60b465c4...d32d6dc0),
   a plain-text conversion of the Word file the owner saved by hand on 6 November 2026 (see that file's `.meta.json` and
   `subjects/au/vic/README.md`). Not checked against the authorised PDF, which was not saved.
 - **The numbers the Act uses:** the Accident Compensation Act 1985 notice in Victoria Government Gazette No. S 363 of
@@ -24,6 +24,12 @@ This is the first encoding of the Act; nothing existing was touched.
   `NOTHING`.
 - **Formulas sidecar:** none of the 12 embedded equations is in scope (they are in ss 5AD, 100-100C, 115B, 117B, 129B
   and 138); the s 98C formulas are linearised in the text itself and were read there.
+- **Deposit corrected, 2026-11-07.** The first conversion dropped the characters the register sets in the Symbol font,
+  so the s 98C(2) and (3) formulas this encoding reads were deposited without their multiplication signs ("$11 670 +
+  [(D – 10) $9940]", "{...} 1·1"). The encoding had read them as multiplications from the start, so no value changed;
+  the formulas quoted in `aca-amounts.l4` and `aca-weekly.l4` now carry the "x" the reconverted text restores. The other
+  restored characters (the minus signs and "0·278" of s 91(3)(c), (3A)(c), the "9·5%" and "8·4%" of the s 91(10)
+  example, the minus signs of s 98C(3A)) are in provisions this encoding leaves out. No finding depended on them.
 
 ## Checks
 
