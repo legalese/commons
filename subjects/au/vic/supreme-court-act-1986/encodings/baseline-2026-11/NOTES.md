@@ -13,7 +13,7 @@ seat asks its questions from its own module, importing the rules, so the two sea
 ## Edition
 
 - **Act:** Supreme Court Act 1986, Act No. 110/1986, Version No. 113, incorporating amendments as at 15 April 2026,
-  deposited at `../../registers/source-bundle/supreme-court-act-1986.txt` (sha256 d3cf698a...b88c7e as committed), a
+  deposited at `../../registers/source-bundle/supreme-court-act-1986.txt` (sha256 805d8413...4186880a since the 2026-11-07 reconversion; encoded from d3cf698a...b88c7e, which differs only in the decimal point noted in finding 10), a
   plain-text conversion of the Word file the owner saved by hand on 6 November 2026 (see that file's `.meta.json` and
   `subjects/au/vic/README.md`). Not checked against the authorised PDF, which was not saved.
 - **Numbers set elsewhere:** Part 4A fixes no amounts. The percentage of a group costs order is the Court's, the limitation
@@ -182,6 +182,11 @@ suspended by s 33ZE" (this section gives no suspension on these facts), in the m
    only with their consent (a person in s 33E(2)). Asked as one fact.
 9. **No step to be in the group.** Membership needs no consent or act (s 33E(1)), not even for a person under disability
    (s 33F(1)); the first thing a member must do is opt out, if they want out, by the date the Court fixes. Asserted.
+10. **Reconverted, 7 November 2026.** The converter that made the first deposit dropped the Word file's Symbol-font
+    characters, which here were only the raised decimal point of "0·10%" in s 113(21) (the Common Funds Guarantee and
+    Reserve Account), printed twice as "010%". The text was reconverted with the fixed converter and the decimal point is
+    restored; no multiplication or minus sign or bullet was lost. The encoding does not rely on s 113 (the
+    Common Funds, in Part 7, is out of scope), so no value, case or finding changed.
 
 ## Before this is worth relying on
 
