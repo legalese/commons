@@ -7,7 +7,7 @@ from the seat of the individual to whom the law is applied, with the design defa
 2026-11-04 and 2026-11-05 rulings on negatives (below). No REFUSE, no `#ASSERT REFUSED`, no BECAUSE except in `LEST BREACH`.
 No pipeline, no coverage table, no independent test pass, no human gate. Not for public use as advice.
 
-The focus asked for: the provisions a claimant meets. The Act is large (450,321 characters, with a whole defamation code
+The focus asked for: the provisions a claimant meets. The Act is large (450,337 characters as reconverted on 2026-11-07, with a whole defamation code
 and the professional standards scheme), so it is not encoded whole. Encoded: the personal injuries pre-court procedure
 (chapter 5, nearly whole as it touches the claimant) and, from the rest of the Act, the provisions that decide whether a
 claimant can sue, whom, for what, and how much is cut or capped: good samaritans and volunteers, apologies, survival of

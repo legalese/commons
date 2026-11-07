@@ -58,8 +58,14 @@ The same notice is at the top of the deposited text.
 ## Status of this deposit
 
 Text deposited 2026-11-06: `registers/source-bundle/A2002-40.txt` (450,321 characters,
-sha256 `ca323564492d9eff0a6c327ae0e40e2d2a4a1d4c3d12469cdefca37a02044123`), converted from https://www.legislation.act.gov.au/DownloadFile/a/2002-40/current/DOCX/2002-40.DOCX
+sha256 `ca323564492d9eff0a6c327ae0e40e2d2a4a1d4c3d12469cdefca37a02044123`; reconverted 2026-11-07, below), converted from https://www.legislation.act.gov.au/DownloadFile/a/2002-40/current/DOCX/2002-40.DOCX
 (453,181 bytes, sha256 `ee926b8ff239c59be8732067347ecda8e9400233feeff853adae9983f64c79ae`). Conversion: DOCX to UTF-8 plain text. Headings (chapter, part, division, section, schedule) kept with their numbers; Word automatic numbering written out; OMML equations linearised; tables as '| a | b |' rows; table of contents, running heads, footers and images dropped; required notice (unofficial version, CC BY 4.0 attribution, changes) placed at the top.
+
+- **Reconverted, 7 November 2026**: the first converter (act_convert.py) dropped characters the register sets in the Symbol font
+  (8 bullets lost) and kept 41 Symbol-font bullets as private-use code points that display as empty boxes. The text
+  was converted again from the same Word file with act_convert_sym.py (kept outside the repository), keeping the notice
+  header exactly; the only change is the bullets, restored as "•". Now 450,337 characters, sha256
+  `10b87f4b90d7cd8c74194fa04970e155994a7df38aefd52e8142999aabdf41f1`; details in `A2002-40.meta.json`.
 
 ## Language
 
