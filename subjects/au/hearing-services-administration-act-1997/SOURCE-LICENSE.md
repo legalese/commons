@@ -23,3 +23,11 @@ terms.
 Statute text deposited 2026-10-13: `registers/source-bundle/C2004A05178.txt`, converted to plain text from
 https://api.prod.legislation.gov.au/v1/Documents/Find(titleid='C2004A05178',asatspecification='Current',type='Primary',format='Word',uniquetypenumber=0,volumenumber=0,rectificationspecification='Latest')
 (compilation register id: C2024C00689). sha256 of the download: `6048a6789e9e6ea5f358962f943113a3346a9cc1c9dc72468f930a39bfe29073`.
+
+- **Reconverted, 7 November 2026**: the first converter (docx_text() in the workbench's harvest/fetch/fetch-source.py)
+  kept a list marker typed in the Symbol font as a private-use code point, which displays as an empty box. The text was
+  converted again from the same Word document (same download sha256) with cth_convert_sym_v10.py (kept outside the
+  repository); the only change is that marker, the bullet (•) on line 319 in the simplified outline of Part 6 (section 36).
+  Same 606 lines and 42,642 characters, sha256
+  `d67e1d7ad8d8438879b82fb111bd7393dbb5698cef61b6c0c94be9b631d64a33` (was
+  `89e91f8093428fcb9d023bb15d08a6b1a7c12a15486c16f37fb37f888a0f909f`); details in `registers/source-bundle/C2004A05178.meta.json`.
