@@ -58,10 +58,12 @@ The same notice is at the top of the deposited text.
 ## Status of this deposit
 
 Text deposited 2026-11-06: `registers/source-bundle/A1976-27.txt` (53,669 characters,
-sha256 `86b8cef49608c16d7abe890934fb8fb9a2383720709326fa290406f8ae381627`), converted from https://www.legislation.act.gov.au/DownloadFile/a/1976-27/current/DOCX/1976-27.DOCX
+sha256 `86b8cef49608c16d7abe890934fb8fb9a2383720709326fa290406f8ae381627` as first deposited), converted from https://www.legislation.act.gov.au/DownloadFile/a/1976-27/current/DOCX/1976-27.DOCX
 (2,533,116 bytes, sha256 `62c6c60bf6d71c32cae02b9370358ebab82341993f929770568693a8b6ab1afb`). Conversion: DOCX to UTF-8 plain text. Headings (chapter, part, division, section, schedule) kept with their numbers; Word automatic numbering written out; OMML equations linearised; tables as '| a | b |' rows; table of contents, running heads, footers and images dropped; required notice (unofficial version, CC BY 4.0 attribution, changes) placed at the top.
 
 The DOCX holds a formula only as an image. It was transcribed from the authorised PDF (https://www.legislation.act.gov.au/DownloadFile/a/1976-27/current/PDF/1976-27.PDF, retrieved 2026-11-06T12:29:42Z, sha256 `0873f2caf7d562b96167616e2e34d695b821ac6dc47b693702dadf2af0e04265`) and is marked in the text: s 2F (1) (b) formula (image).
+
+Symbol characters restored, 2026-11-07: the converter had kept 9 bullets typed in the Word Symbol font as private-use code points that display as empty boxes (the dictionary's note 2). The text was regenerated from the same DOCX with a copy of the converter fixed to map Symbol-font characters, keeping the header and the transcribed formula; the 9 bullets are restored as "•" and nothing else changed. New text sha256 `f03449655c8fe2307b7b46e3457c1fd56b3e48736d0b50da32bf72578b3fc59c`; details in `A1976-27.meta.json`.
 
 ## Language
 
