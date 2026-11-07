@@ -53,8 +53,15 @@ The same notice is at the top of the deposited text.
 ## Status of this deposit
 
 Text deposited 2026-11-06: `registers/source-bundle/A1997-57.txt` (137,894 characters,
-sha256 `813aef82869a6c57ffad143f31c5ac208146eaecbe3693b5c18cdb7ed3642225`), converted from https://www.legislation.act.gov.au/DownloadFile/a/1997-57/current/DOCX/1997-57.DOCX
+sha256 `813aef82869a6c57ffad143f31c5ac208146eaecbe3693b5c18cdb7ed3642225`; reconverted 2026-11-07, below), converted from https://www.legislation.act.gov.au/DownloadFile/a/1997-57/current/DOCX/1997-57.DOCX
 (218,280 bytes, sha256 `fac0fb5bad1e7948d68c6ee777d8ffb801f3c8f9431eac56d759037c117c1949`). Conversion: DOCX to UTF-8 plain text. Headings (chapter, part, division, section, schedule) kept with their numbers; Word automatic numbering written out; OMML equations linearised; tables as '| a | b |' rows; table of contents, running heads, footers and images dropped; required notice (unofficial version, CC BY 4.0 attribution, changes) placed at the top.
+
+- **Reconverted, 7 November 2026**: the first converter (act_convert.py) kept 51 Symbol-font bullets as private-use
+  code points that display as empty boxes (the s 49(1) list of Magistrates Court Act provisions, the dictionary's list
+  of Legislation Act terms and the examples of post-mortem examination); nothing had been dropped. The text was converted
+  again from the same Word file with act_convert_sym.py (kept outside the repository), keeping the notice header exactly;
+  the only change is the bullets, restored as "•". Still 137,894 characters, now sha256
+  `44f5fdba906f26229db6cfa612c8d0560c0769d29c0ff3646df0d6e27650c3d8`; details in `registers/source-bundle/A1997-57.meta.json`.
 
 ## Language
 
