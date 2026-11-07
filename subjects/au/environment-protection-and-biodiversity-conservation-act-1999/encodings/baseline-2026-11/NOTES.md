@@ -35,11 +35,18 @@ This is the first encoding of the Act in Commons. Only the Parts a claimant meet
 
 - Stable `l4` of VS Code extension 1.6.98, `JL4_LIBRARY_PATH` unset. Commands: `l4 run epbc-claims-dates.l4`,
   `l4 run epbc-claims.l4`, `l4 run epbc-claims-cases.l4`.
-- **73 assertions written, 73 satisfied, 0 errors, 0 warnings** in every file (2026-11-07).
+- **80 assertions written, 80 satisfied, 0 errors, 0 warnings** in every file (2026-11-07, after the fix below).
 - Every expected value was worked by hand from the text before the file was run; none was copied from the encoding's
-  output. All 73 passed on the first run of the cases file.
+  output. All 73 of the first version passed on the first run of the cases file.
 - In a scratch copy, the s 500 amount for the first case was changed from 14000 to 14001. The run reported one error, so
   the runner catches a wrong expectation.
+- **Fix after independent verification (2026-11-07).** The activity-day inputs of ss 475(6), 475(7), 487(2) and 487(3)
+  asked for "the most recent day" of activity, so a person or organisation still active after the conduct, application
+  or decision gave a later day and was wrongly turned away, though the text asks only for activity "at any time in the 2
+  years immediately before". Each input now asks for the latest activity day BEFORE that day ("if you are still active,
+  give the day before"). The case that built in the error (activity on 11 Mar 2026 for conduct on 10 Mar 2026) was
+  replaced, and continuing-activity cases were added for each test. Fork F1 was narrowed at the same time: the end day
+  itself is no longer counted, so the window is exactly 2 years.
 
 ## Seat
 
@@ -140,8 +147,9 @@ ruling of 2026-11-05 are applied site by site below.
 ## Forks
 
 - **F1. The 2 years "immediately before".** The window is read as running from the same day of the month 2 years
-  earlier, that day included, up to and including the day of the conduct, application or decision. An activity on the
-  day of the conduct counts; an activity after it does not. Another reading excludes the anniversary day, or the end day.
+  earlier, that day included, up to but excluding the day of the conduct, application or decision, so it is exactly 2
+  years. The person gives the latest activity day before that day. Another reading also counts activity earlier on the
+  end day itself (before the conduct or decision), or excludes the anniversary day.
 - **F2. 29 February.** Two years before 29 February 2028 is read as 28 February 2026.
 - **F3. Continuing conduct.** For conduct that continues, the person gives the day of it they rely on. Another reading
   ties the 2 years to the day the conduct began.
