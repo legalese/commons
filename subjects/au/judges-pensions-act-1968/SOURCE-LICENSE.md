@@ -25,3 +25,10 @@ https://api.prod.legislation.gov.au/v1/Documents/Find(titleid='C1968A00151',asat
 (compilation register id: C2026C00252). sha256 of the download: `1dc2bb8b46fa0fba46617850a9da6aaf35229e93d62534dd2a7be6593360728a`.
 
 Formulas, symbols and pictures the text deposit lost are transcribed 2026-10-24 in `registers/source-bundle/C1968A00151.formulas.md`, from the Word rendering of the same compilation (C2026C00252) on the same Register and under the same licence (CC BY 4.0, as above): https://api.prod.legislation.gov.au/v1/Documents/Find(registerid='C2026C00252',type='Primary',format='Word',uniquetypenumber=0,volumenumber=0,rectificationspecification='Latest').
+
+- **Reconverted, 7 November 2026**: the first converter (docx_text() in the workbench's harvest/fetch/fetch-source.py)
+  dropped characters Word writes in the Symbol font. The text was converted again from the same Word file (same download
+  sha256) with cth_convert_sym_v4.py (kept outside the repository); the only change is one multiplication sign (×) in
+  section 17AE(2) (line 560, "the component (APF × Transfer factor)").
+  Now 99,900 characters, sha256 `0d1a1aca061f2bbeae5fa81d307531e78b7454303534f605aaa9f897060e2e88` (was
+  `aac23b74602c78cbb34aa94fef5e395b6e09971eaa2744707c845be8cfc75ea2`); details in `registers/source-bundle/C1968A00151.meta.json`.
