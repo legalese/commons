@@ -23,3 +23,10 @@ terms.
 Statute text deposited 2026-10-13: `registers/source-bundle/C2004A03417.txt`, converted to plain text from
 https://api.prod.legislation.gov.au/v1/Documents/Find(titleid='C2004A03417',asatspecification='Current',type='Primary',format='Word',uniquetypenumber=0,volumenumber=0,rectificationspecification='Latest')
 (compilation register id: C2026C00177). sha256 of the download: `c9db436510d7777343980a1fbfe8a81a50e47cb02cd25817c4a4e8449e2d7433`.
+
+- **Reconverted, 7 November 2026**: the first converter (docx_text() in the workbench's harvest/fetch/fetch-source.py)
+  dropped characters Word writes in the Symbol font. The text was converted again from the same Word file (same download
+  sha256) with cth_convert_sym_v6.py (kept outside the repository); the only change is one square-root sign (√) in
+  Schedule 3, Article 81(b) (line 1575, "30×√E man-days of inspection per year").
+  Now 258,092 characters, sha256 `7f1dd0e2ad464a518a0946361c3ca83e461885306c7fe0cd401779e03c9e1251` (was
+  `9700fb43e53e3832b961f35bc12b92524b428e00a8704d8946363d5ae7f1f6cc`); details in `registers/source-bundle/C2004A03417.meta.json`.
