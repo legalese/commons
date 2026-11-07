@@ -1,0 +1,148 @@
+IMPORT prelude
+
+-- National Injury Insurance Scheme (Queensland) Act 2016 -- small date helpers for niis-core.l4 and niis-seat.l4.
+-- Built on the stable prelude's date primitives (DATE_FROM_DMY, DATE_SERIAL, DATE_FROM_SERIAL, DATE_DAY, DATE_MONTH,
+-- DATE_YEAR); the daydate library is not imported, and no YMD is defined.
+--
+-- READINGS (the Acts Interpretation Act 1954 (Qld) is not deposited, so these are the encoder's):
+-- * "within 28 days after" a day ends 28 days later; "within 14 days after" ends 14 days later. The day of the event
+--   is excluded and the last day of the count is the last day.
+-- * "within 6 months after" a day ends on the same day 6 months later; "within 1 year after" on the same day a year
+--   later. A period that starts on a day the end month does not have (31 August + 6 months, 29 February + 1 year)
+--   ends on the last day of the end month (28 or 29 February).
+-- * "the period of 2 years starting the day" a person is accepted includes that day, so it ends on the day before the
+--   same day 2 years later.
+-- * "at least 1 month before" a day: the last day is the same day a month earlier (or the last day of a shorter
+--   month). "at least 10 business days before" a day: the last day is the 10th business day counted back from it,
+--   the day itself not counted.
+-- * A business day is a day that is not a Saturday, a Sunday or a public holiday; the public holidays are given as a
+--   list, because no holiday calendar is deposited.
+-- * A person "turns 6" on the same day 6 years after birth (28 February for someone born on 29 February, in a common
+--   year: a READING).
+--
+-- BASELINE. Not for public use as advice. See NOTES.md.
+
+§ `Dates`
+
+GIVEN `x` IS A NUMBER
+      `y` IS A NUMBER
+GIVETH A NUMBER
+`the smaller of` `x` `and` `y` MEANS
+    IF `x` AT MOST `y` THEN `x` ELSE `y`
+
+GIVEN `x` IS A NUMBER
+      `y` IS A NUMBER
+GIVETH A NUMBER
+`the larger of` `x` `and` `y` MEANS
+    IF `x` AT LEAST `y` THEN `x` ELSE `y`
+
+GIVEN `y` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `is a leap year` `y` IF
+        (`y` MODULO 4 EQUALS 0 AND (NOT (`y` MODULO 100 EQUALS 0)))
+    OR  `y` MODULO 400 EQUALS 0
+
+GIVEN `m` IS A NUMBER
+      `y` IS A NUMBER
+GIVETH A NUMBER
+`the days in month` `m` `of` `y` MEANS
+    IF `m` EQUALS 2
+    THEN IF `is a leap year` `y` THEN 29 ELSE 28
+    ELSE IF `m` EQUALS 4 OR `m` EQUALS 6 OR `m` EQUALS 9 OR `m` EQUALS 11
+         THEN 30
+         ELSE 31
+
+-- The same day n months later (n may be negative), or the last day of that month where it is shorter.
+GIVEN `n`         IS A NUMBER
+      `the start` IS A DATE
+GIVETH A DATE
+`the day` `n` `months after` `the start` MEANS
+    DATE_FROM_DMY (`the smaller of` (DATE_DAY `the start`) `and` (`the days in month` `end month` `of` `end year`)) `end month` `end year`
+    WHERE
+        `months counted from year 0` MEANS ((DATE_YEAR `the start`) TIMES 12) PLUS ((DATE_MONTH `the start`) MINUS 1) PLUS `n`
+        `end year`  MEANS TRUNC (`months counted from year 0` DIVIDED BY 12) 0
+        `end month` MEANS `months counted from year 0` MINUS (`end year` TIMES 12) PLUS 1
+
+GIVEN `n`         IS A NUMBER
+      `the start` IS A DATE
+GIVETH A DATE
+`the day` `n` `years after` `the start` MEANS `the day` (`n` TIMES 12) `months after` `the start`
+
+GIVEN `n`         IS A NUMBER
+      `the start` IS A DATE
+GIVETH A DATE
+`the day` `n` `days after` `the start` MEANS DATE_FROM_SERIAL ((DATE_SERIAL `the start`) PLUS `n`)
+
+GIVEN `n`         IS A NUMBER
+      `the start` IS A DATE
+GIVETH A DATE
+`the day` `n` `days before` `the start` MEANS DATE_FROM_SERIAL ((DATE_SERIAL `the start`) MINUS `n`)
+
+GIVEN `a` IS A DATE
+      `b` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `a` `is no later than` `b` IF DATE_SERIAL `a` AT MOST DATE_SERIAL `b`
+
+GIVEN `a` IS A DATE
+      `b` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `a` `is after` `b` IF DATE_SERIAL `a` GREATER THAN DATE_SERIAL `b`
+
+GIVEN `a` IS A DATE
+      `b` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `a` `is the same day as` `b` IF DATE_SERIAL `a` EQUALS DATE_SERIAL `b`
+
+GIVEN `a` IS A DATE
+      `b` IS A DATE
+GIVETH A NUMBER
+`the days from` `a` `to` `b` MEANS DATE_SERIAL `b` MINUS DATE_SERIAL `a`
+
+GIVEN `a` IS A DATE
+      `b` IS A DATE
+GIVETH A DATE
+`the later of` `a` `and` `b` MEANS
+    IF `a` `is no later than` `b` THEN `b` ELSE `a`
+
+GIVEN `a` IS A DATE
+      `b` IS A DATE
+GIVETH A DATE
+`the earlier of` `a` `and` `b` MEANS
+    IF `a` `is no later than` `b` THEN `a` ELSE `b`
+
+-- The stable prelude's day serial: serial MODULO 7 is 1 on a Monday (2 November 2026 was checked), 6 on a Saturday
+-- and 0 on a Sunday.
+GIVEN `the day` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `is a weekend day` `the day` IF
+        (DATE_SERIAL `the day`) MODULO 7 EQUALS 6
+    OR  (DATE_SERIAL `the day`) MODULO 7 EQUALS 0
+
+GIVEN `the day`      IS A DATE
+      `the holidays` IS A LIST OF DATE
+GIVETH A BOOLEAN
+`is listed in` `the day` `the holidays` MEANS
+    CONSIDER `the holidays`
+    WHEN EMPTY THEN FALSE
+    WHEN `h` FOLLOWED BY `rest` THEN
+        IF `h` `is the same day as` `the day` THEN TRUE ELSE `is listed in` `the day` `rest`
+
+GIVEN `the day`      IS A DATE
+      `the holidays` IS A LIST OF DATE
+GIVETH A BOOLEAN
+DECIDE `is a business day` `the day` `the holidays` IF
+    NOT (`is a weekend day` `the day` OR `is listed in` `the day` `the holidays`)
+
+-- The n-th business day counted back from a day, that day not counted.
+GIVEN `n`            IS A NUMBER
+      `the end`      IS A DATE
+      `the holidays` IS A LIST OF DATE
+GIVETH A DATE
+`the business day` `n` `business days before` `the end` `the holidays` MEANS
+    IF `n` AT MOST 0
+    THEN `the end`
+    ELSE IF `is a business day` `the day before` `the holidays`
+         THEN `the business day` (`n` MINUS 1) `business days before` `the day before` `the holidays`
+         ELSE `the business day` `n` `business days before` `the day before` `the holidays`
+    WHERE
+        `the day before` MEANS `the day` 1 `days before` `the end`
