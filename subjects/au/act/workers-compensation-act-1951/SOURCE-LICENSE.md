@@ -64,10 +64,12 @@ The same notice is at the top of the deposited text.
 ## Status of this deposit
 
 Text deposited 2026-10-20: `registers/source-bundle/A1951-2.txt` (516,630 characters,
-sha256 `5de610239222ab200b06c87de9adb618e76437e55fce20033c15327061b6ee90`), converted from https://www.legislation.act.gov.au/DownloadFile/a/1951-2/current/DOCX/1951-2.DOCX
+sha256 `5de610239222ab200b06c87de9adb618e76437e55fce20033c15327061b6ee90` as first deposited), converted from https://www.legislation.act.gov.au/DownloadFile/a/1951-2/current/DOCX/1951-2.DOCX
 (570,843 bytes, sha256 `bb12882d5eea9c69d980debf24887d2f8042f75ddf50065a65f06eea89f73d98`). Conversion: DOCX to UTF-8 plain text. Headings (chapter, part, division, section, schedule) kept with their numbers; Word automatic numbering written out; OMML equations linearised; tables as '| a | b |' rows; table of contents, running heads, footers and images dropped; required notice (unofficial version, CC BY 4.0 attribution, changes) placed at the top.
 
 The DOCX holds some formulas only as images or embedded objects. They were transcribed from the authorised PDF (https://www.legislation.act.gov.au/DownloadFile/a/1951-2/current/PDF/1951-2.PDF, retrieved 2026-10-19T17:21:34Z, sha256 `c21f4f8ed60f6e3df12cc33c694b8127db32591daf72d19992edcce66d5a6fef`) and are marked in the text: chapter 3 note 1 chart of who is a worker (embedded object); s 179A (2) formula (image); s 185 (3) (a) formula (image).
+
+Symbol characters restored, 2026-11-07: the converter had turned 4 bullets set as Word Symbol-font characters into "?" (chapter 3 notes 2 and 3) and kept 52 Symbol-font bullets as private-use code points that display as empty boxes. All 56 were restored as "•" by hand, line by line from the same DOCX; nothing else changed. New text sha256 `b3349a4240ce7e449b42b1699f488b61358cf6a80ec48e4204416e502a9149a3`; details in `A1951-2.meta.json`.
 
 ## Language
 
