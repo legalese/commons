@@ -49,7 +49,7 @@ one deliberately wrong assertion was run once in a scratch file, since deleted, 
 | `ucpr-dates.l4` | 0 | 0 | 0 | 0 |
 | `ucpr-rules.l4` | 0 | 0 | 0 | 0 |
 | `ucpr-seat.l4` | 0 | 0 | 0 | 0 |
-| `ucpr-cases.l4` | 0 | 0 | 115 | 115 |
+| `ucpr-cases.l4` | 0 | 0 | 116 | 116 |
 
 The cases file also runs one `#TRACE` of the rr 547/550 chain (FULFILLED). Every exported question has cases, with the
 edges: a claim filed on 29 February; a renewal ending the day before the fifth anniversary, one crossing it and one
@@ -95,7 +95,7 @@ The 2026-10-18 defaults:
 
 **In:** rr 24 (all subrules except (5), the seal), 98(1), 137, 138 (as the effect of a late notice), 164(1)-(2), 169,
 189(2)-(3), 214(2)(a), (d), (e) and (3), 281(1), 282, 283(1)-(2) with 694 and Schedule 1 items 19-20 and Schedule 2
-Part 2 items 1 and 4, 284-288, 303(1), 304(1)-(3), 307, 309(1), 355(1)-(3), (6), 358(1)-(3), 359(2), 360, 361, 361A,
+Part 2 items 1 and 4 and Part 3 items 19-20, 284-288, 303(1), 304(1)-(3), 307, 309(1), 355(1)-(3), (6), 358(1)-(3), 359(2), 360, 361, 361A,
 362 (in the input's wording), 389, 514, Schedule 3 "minor claim", 545, 546, 547(1)-(2), 550(2), 557 (in the breach
 reason), 558(1), (2), (4), 681 (the default answer), 691(3)-(4) with Schedule 2's columns, 697, 748. 32 exported
 questions.
@@ -129,7 +129,12 @@ served in time?", which takes plain dates only; one `#TRACE` in the cases.
   of Chapter 14, is noted in the r 547 question), assessment of damages procedure, employment claims (Division 2A),
   settlement conferences.
 - Chapter 14 except Part 2: accounts, money in court, judicial review, habeas corpus, trans-Tasman. In Part 2, the
-  content of the statements (rr 547(3), 548, 551) and the conference (r 553) are lists without a computable answer.
+  content of the statements (rr 547(3), 548, 551) and the conference (r 553) are lists without a computable answer;
+  r 549 (the statement must be accurate; a supplement on a "significant change" before a trial date is set; further
+  documents "as soon as practicable" after) has no date or number to compute, only judgments of change and promptness.
+- Chapter 9 Part 1 Division 2, r 289 (judgment for costs alone where the defendant in default satisfies the claim):
+  a further request on the same entitlement as rr 281-283, with no date of its own; its costs are not fixed by
+  r 283(2)(b), so it adds no computable answer. r 290 (setting aside) is the court's.
 - Chapter 16 (orders), Chapter 17 (security for costs, the defendant's application), Chapter 17A except rr 681, 691,
   694, 697: costs assessment procedure, the Legal Profession Act assessments.
 - Chapter 18 except r 748: appeal procedure and powers.
@@ -150,8 +155,9 @@ How they fall here:
 - `JUST FALSE`: rr 98(1) "ineffective unless" and 359(2) "not binding ... unless" without approval; rr 355, 358 an
   acceptance after the period the offer fixes (period, rule (a)), or after leave to withdraw is given.
 - `NOTHING`: rr 98, 359 for a claimant not under a legal incapacity (scope limit, F8); r 214(2)(a) where an order sets
-  the times (points outside the sources, F9); the fixed default-judgment costs over $50 000 in a Magistrates Court
-  (Schedule 2 Part 3 leaves the amount to the registrar or a costs assessor).
+  the times (points outside the sources, F9). (The fixed default-judgment costs over $50 000 in a Magistrates Court
+  are not NOTHING: Schedule 2 Part 3 fixed cost items 19 and 20 set $1,698.00 and $446.40; corrected 2026-11-07 after
+  the independent verification.)
 - The date questions return a date and the enumerated questions a value of the text's own list; where a rule's
   conditions fail, the enumeration says so in words ("rule 697 does not reduce my costs", "the offer rules do not
   apply ...").
@@ -165,7 +171,7 @@ How they fall here:
 | F3 | r 389 "for 1 year from the time the last step was taken" | `r 389 -- ...` | A step on the anniversary is within the year; notice is needed from the day after | The year is complete on the anniversary itself |
 | F4 | r 389(1) "a month's notice" | `r 389(1) -- the first day ...` | The month ends on the corresponding day of the next month (or its last day); the step may be taken the day after | The step may be taken on the corresponding day |
 | F5 | r 558(4) "7 days before the date set" | `r 558(4) -- ...` | Read as a latest day, like (2) | Exactly on that day, or 7 clear days |
-| F6 | r 283(2)(b)(i) "costs for issuing the claim" | `r 283(2)(b) -- ...` | Schedule 2 Part 2 item 1 ("Instructions to sue--claim and statement of claim and service") and item 4; Schedule 1 items 19 and 20 | Item 1 covers more than issuing; the registrar fixes a lesser figure under r 694 |
+| F6 | r 283(2)(b)(i) "costs for issuing the claim" | `r 283(2)(b) -- ...` | Schedule 2 Part 2 item 1 ("Instructions to sue--claim and statement of claim and service") and item 4; over $50 000, Schedule 2 Part 3 items 19 (the same words) and 20; Schedule 1 items 19 and 20 | Item 1 covers more than issuing; the registrar fixes a lesser figure under r 694 |
 | F7 | rr 360, 361 "no less favourable" / "less favourable" | `rr 360-362 -- ...` | Money offers compared by amount, the judgment leaving out interest after the day of service (r 362) | Non-money terms and costs inclusions make the comparison a judgment for the court |
 | F8 | rr 98, 359 for a party with capacity | `rr 98, 359 -- ...` | NOTHING (scope limit) | JUST TRUE (binding in the ordinary way) |
 | F9 | r 214(2)(a) "the times stated in the order" | `r 214(2) -- ...` | NOTHING (outside the sources) | The 28 days of (e) apply where the order is silent |
@@ -199,13 +205,16 @@ How they fall here:
    before judgment, even if the defendant is in default", and r 281(1) applies only where the notice "has not" been
    filed. Asserted.
 9. **r 283(2) fixes the costs, the scale fixes the figures.** Default-judgment costs in a Magistrates Court depend on
-   the column of the amount; over $50 000 Schedule 2 Part 3 has no fixed figure (NOTHING). Asserted at each edge.
+   the column of the amount up to $50 000; over $50 000 Schedule 2 Part 3, though mostly discretionary (item 1, care
+   and conduct, is what the registrar or a costs assessor considers reasonable), still has fixed cost items 19 and 20
+   ($1,698.00 + $446.40). Asserted at each edge.
 
 ## Before relying on it
 
 - Deposit the Acts Interpretation Act 1954 (s 38) and apply its registry-closed rule (F1); answers on a weekend or
   public holiday can be a day or more early.
-- A lawyer to confirm the forks, especially F1, F3, F4, F6 and F11.
+- A lawyer to confirm the forks, especially F1 (including a claim filed on 29 February, taken to end on 27 February
+  the next year), F2 (r 558(2) "at least 21 days before", taken as not clear days), F3, F4, F6 and F11.
 - An independent test pass, and the human gates HG1 and HG2.
 - Further layers: deemed service (Chapter 4), r 214(2)(b)-(c), summary judgment, security for costs, the costs
   assessment rules, and a defendant's seat.
