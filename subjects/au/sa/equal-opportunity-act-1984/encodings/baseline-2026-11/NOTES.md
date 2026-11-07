@@ -49,7 +49,7 @@ as `DiagnosticSeverity_Error`, "assertion failed". Satisfied assertions were cou
 | `saeo-dates.l4` | 0 | 0 | 0 | 0 |
 | `saeo-rules.l4` | 0 | 0 | 0 | 0 |
 | `saeo-seat.l4` | 0 | 0 | 0 | 0 |
-| `saeo-cases.l4` | 0 | 0 | 220 | 220 |
+| `saeo-cases.l4` | 0 | 0 | 224 | 224 |
 
 Every expected value was worked by hand from the text, with the edges: every exported question at least twice; the
 s 93(2) last day and the day after (15 / 16 March 2026; 28 February / 1 March 2025 from 29 February 2024), a lodging
@@ -97,7 +97,7 @@ The 2026-10-18 defaults:
 (4); s 6(2)-(4); the criteria sections ss 29, 51, 66, 85A, 85T; the work Divisions in full: Part 3 Division 2 (ss 30-34),
 Part 4 Division 2 (ss 52-56), Part 5 Division 2 (ss 67-71), Part 5A Division 2 (ss 85B-85F, with s 85EA), Part 5B
 Division 2 (ss 85U-85Z); the general exemptions of each Part so far as they can reach work (ss 45, 47, 50, 64, 65,
-79, 79A, 80, 82, 85N, 85P, 85ZI-85ZM, 85ZN, 85ZO) and a s 92 exemption; s 86; s 87(1), (7), (9); ss 90, 91; Part 8:
+79, 79A, 80, 82, 84, 85N, 85P, 85ZI-85ZM, 85ZN, 85ZO) and a s 92 exemption; s 86; s 87(1), (7), (9); ss 90, 91; Part 8:
 s 93(1)-(2b), (4), s 95A, s 95B(1)-(3), s 96(1)-(3b), s 96B, s 98A(1)-(3)(b); s 100(2)-(5).
 
 **Regulative rules:** four, each run by EVALTRACE inside a question that takes only plain facts: the s 93(2) complaint
@@ -124,11 +124,15 @@ I barred from a discrimination claim about my dismissal`; `Am I barred from an u
   106: machinery.
 - Divisions 3 to 6 of Parts 3, 4, 5, 5A and 5B (associations, qualifying bodies, education, land, goods and services,
   accommodation, superannuation) and the exemptions that only reach them (ss 35(2)-(3), 37(3), 38(2), 39(2), 40(3)-(4),
-  48, 49, 63(2), 81, 84, 85, 85M, 85O, 85Q, 85R): the focus is the claimant at work. The criteria sections, which every
+  48, 49, 63(2), 81, 85, 85M, 85O, 85Q, 85R): the focus is the claimant at work. The criteria sections, which every
   area uses, are in; a later layer could add each area as a further "unlawful" question over them.
 - s 86A (conversion practices, defined by another Act), s 87(2)-(6g) and (8) (harassment in education, in goods,
   services and accommodation, by judicial officers, members of Parliament and councils, by qualifying bodies and
-  associations), ss 87A, 87B, 88, 88A, 89: outside work, or (s 88) an offence; s 88 is named in the forum question.
+  associations), ss 87A, 87B, 88A, 89: outside work. s 88: (a) is a civil "unlawful" rule that reaches work too (a
+  co-worker's contravention goes to SAET under s 95B(2)(b)), and (b) adds an offence; it is not a separate question
+  here because the work question already covers unfavourable treatment because of an assistance animal (s 66(e) through
+  the work Division), and s 88 is named in the forum question. A later layer could add "Was separating me from my
+  assistance animal unlawful" over s 88(a).
 - s 93(1a)-(1b) so far as binding a consenting person, (2c) (secondary students), (3), (5), (6), s 93AA (complaints
   against judicial officers and members of Parliament), ss 93A, 94, 95 (inquiries, investigation and conciliation
   powers, and the offences for not producing documents or attending), 95C, 95D, 96(6), 96A, 96C, 97, 98, 98A(3)(a), (c),
@@ -202,6 +206,10 @@ Each line: the provision, the function, the answer taken, the other reading.
   2009 (Cth): NOTHING (the subsection names only the 1994 Act) -- barred, reading the section as a whole.
 - **F20** s 85EA -- `s 85EA -- the provision is void` -- a provision of another instrument, or another kind of term:
   NOTHING -- JUST FALSE.
+- **F21** s 84 -- `the exemption` e `reaches` g, `Part 3-5B Division 2 -- the discrimination at work is unlawful` -- the
+  exemption reaches disability at work, and "in relation to the provision of access to or use of a place or facilities"
+  together with the unjustifiable hardship (weighed under s 84(2)) is folded into the one "conditions met" input --
+  confining it by the encoding to the s 66(ca) access limbs, or reading it as reaching only Divisions 3-6.
 
 ## Rulings on negatives (copied word for word from docs/ENCODING-GUIDE.md section 5)
 
