@@ -33,3 +33,4 @@ Formulas, symbols and pictures the text deposit lost are transcribed 2026-10-24 
   a unit a factor of 10^6 out); no word or number changed. Same 11,398 lines, now 1,061,632 characters, sha256
   `995ee3b994710f179e43690424381e8c6db8b03853446cee4cb5b6afb70685ed` (was
   `cf0263968747be67c2134e8eda0fa459944ec2776cf3f9d0209a6e3db0bec78d`); details in `registers/source-bundle/C2007A00137.meta.json`.
+- **Bullets restored, 8 November 2026**: nine bullets that Word draws from automatic numbering (Symbol F0B7 in numbering.xml) were also lost and the reconversion above missed them; they are restored at lines 9480-9482 and 9484-9489 (Notes 1 and 2 to clause 2(2) of Schedule H to the Murray-Darling Basin Agreement), and nothing else changed (new text sha256 d670a619...2b8f; see meta.json bullet_repair_2026_11_08).
