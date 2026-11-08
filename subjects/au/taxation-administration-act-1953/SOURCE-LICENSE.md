@@ -29,7 +29,8 @@ Formulas, symbols and pictures the text deposit lost are transcribed 2026-10-24 
 - **Reconverted, 7 November 2026**: the first converter (docx_text() in the workbench's harvest/fetch/fetch-source.py)
   dropped characters Word writes in the Symbol font. The text was converted again from the same Word volumes (same download
   sha256) with cth_convert_sym_v8.py (kept outside the repository); the only change is one em dash (—) restored as line 19506,
-  a cell of the endnotes' table of amending Acts (Financial Sector Reform (Amendments and Transitional Provisions) Act (No. 1) 1999)
+  a cell of the endnotes' table of amending Acts (Taxation Laws Amendment Act (No. 3) 1999; corrected 8 November 2026, the record
+  first named the next row, Financial Sector Reform (Amendments and Transitional Provisions) Act (No. 1) 1999)
   that the first conversion had dropped with its paragraph. Now 1,945,281 characters, sha256
   `f67e5caddf1be45b61eccd74f25da8368230669f13e584667ca35a1b8f37af03` (was
   `536c759bb18509e0c957cdef12856b5c4290aedc08fe5a4f84de90b19ed9021d`); details in `registers/source-bundle/C1953A00001.meta.json`.
