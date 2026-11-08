@@ -23,3 +23,11 @@ terms.
 Statute text deposited 2026-10-13: `registers/source-bundle/C2004A03506.txt`, converted to plain text from
 https://api.prod.legislation.gov.au/v1/Documents/Find(titleid='C2004A03506',asatspecification='Current',type='Primary',format='Word',uniquetypenumber=0,volumenumber=0,rectificationspecification='Latest')
 (compilation register id: C2025C00124). sha256 of the download: `d893f3979c2340544204126fcb1ec60c3a57e11d0630de8ed73f499f137dfcb8`.
+
+- **Reconverted, 8 November 2026**: the first converter (docx_text() in the workbench's harvest/fetch/fetch-source.py)
+  dropped characters Word writes in the Symbol font. The text was converted again from the same Word file (same download
+  sha256) with cth_convert_sym_v5n.py (kept outside the repository); the only change is one em dash (—) restored as line 281,
+  a cell of the endnotes' table of amending Acts (Taxation Laws Amendment Act (No. 3) 1999) that the first conversion had dropped with its
+  paragraph. Now 28,427 characters, sha256
+  `67287ee356da9f4b74c99e8356c92c8045c5bbaa24350f879747afb076ca1199` (was
+  `f616387181e616635456ebd2ec719d9ef457d6094943706c2fb6cdcf50e17b73`); details in `registers/source-bundle/C2004A03506.meta.json`.
