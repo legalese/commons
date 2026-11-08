@@ -23,3 +23,5 @@ terms.
 Statute text deposited 2026-10-13: `registers/source-bundle/C2023A00118.txt`, converted to plain text from
 https://api.prod.legislation.gov.au/v1/Documents/Find(titleid='C2023A00118',asatspecification='Current',type='Primary',format='Word',uniquetypenumber=0,volumenumber=0,rectificationspecification='Latest')
 (compilation register id: C2025C00521). sha256 of the download: `995f37392daccfd1094ad5e0cad95e64732d89585c5dde03989acbcf0f789bdb`.
+
+Symbol characters restored, 2026-11-07: in section 73(1), table item 5, column 2, the last example character, a smiling face (☺) written in the Wingdings font, had been dropped, leaving the list ending in a comma. The text was regenerated from the same Word file by a copy of the same converter that maps it (kept outside the repository); nothing else changed. The text's sha256 is now `c939973214fd039f507ccbd6b2acbe53e420f1defc6b715eca738132b4b4b134` (was `01dd748758bc5e5f64324096067843c0f36a39dea7238afe6da33ec7d1692586`); details in `registers/source-bundle/C2023A00118.meta.json`.
