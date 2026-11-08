@@ -25,3 +25,11 @@ https://api.prod.legislation.gov.au/v1/Documents/Find(titleid='C2007A00137',asat
 (compilation register id: C2026C00398). sha256 of the download: `cde5f1a751f7b6140b6460b52a0c82aa40f93d335c745b220104f80f7448c9e5`.
 
 Formulas, symbols and pictures the text deposit lost are transcribed 2026-10-24 in `registers/source-bundle/C2007A00137.formulas.md`, from the Word rendering of the same compilation (C2026C00398) on the same Register and under the same licence (CC BY 4.0, as above): https://api.prod.legislation.gov.au/v1/Documents/Find(registerid='C2026C00398',type='Primary',format='Word',uniquetypenumber=0,volumenumber=1,rectificationspecification='Latest') (volumes 1 to 2).
+
+- **Reconverted, 8 November 2026**: the first converter (docx_text() in the workbench's harvest/fetch/fetch-source.py)
+  dropped characters Word writes in the Symbol font. The text was converted again from the same Word files (same download
+  sha256) with cth_convert_sym_v15mu.py (kept outside the repository); the only change is one micro sign (μ) restored at line 7907, in the
+  note to clause 7(1) of Schedule B to the Murray-Darling Basin Agreement ("measured in μS/cm", was "measured in S/cm",
+  a unit a factor of 10^6 out); no word or number changed. Same 11,398 lines, now 1,061,632 characters, sha256
+  `995ee3b994710f179e43690424381e8c6db8b03853446cee4cb5b6afb70685ed` (was
+  `cf0263968747be67c2134e8eda0fa459944ec2776cf3f9d0209a6e3db0bec78d`); details in `registers/source-bundle/C2007A00137.meta.json`.
