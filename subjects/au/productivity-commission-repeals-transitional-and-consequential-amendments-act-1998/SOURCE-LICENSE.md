@@ -23,3 +23,9 @@ terms.
 Statute text deposited 2026-10-13: `registers/source-bundle/C2004A05327.txt`, converted to plain text from
 https://api.prod.legislation.gov.au/v1/Documents/Find(titleid='C2004A05327',asatspecification='Current',type='Primary',format='Word',uniquetypenumber=0,volumenumber=0,rectificationspecification='Latest')
 (compilation register id: C2004A05327). sha256 of the download: `f2bae124fc8bd68f607433cf132a3d3786b70822e04b298c5ad1030a8e097c70`.
+
+- **Reconverted, 7 November 2026**: the first converter (docx_text() in the workbench's harvest/fetch/fetch-source.py)
+  dropped characters Word writes as w:sym elements. The text was converted again from the same Word file (same download
+  sha256) with cth_convert_sym_v14.py (kept outside the repository); the only change is the em dash (—) at the end of
+  line 76, in the second-reading note; no word or number changed. Now 5,435 characters, sha256 `d2ec6e1e1ec3d34ba305c1c892ec3dbc6e57f8b60d9c4ae233d4e924de4aea8c` (was
+  `e85c7698933f1a7ff5aa6e4aba0f793afd711f5cff9b5ad9ff31ec146a98f2f0`); details in `registers/source-bundle/C2004A05327.meta.json`.
