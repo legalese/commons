@@ -23,3 +23,10 @@ terms.
 Statute text deposited 2026-10-13: `registers/source-bundle/C2004A04799.txt`, converted to plain text from
 https://api.prod.legislation.gov.au/v1/Documents/Find(titleid='C2004A04799',asatspecification='Current',type='Primary',format='Word',uniquetypenumber=0,volumenumber=0,rectificationspecification='Latest')
 (compilation register id: C2021C00298). sha256 of the download: `f74a6176020e1af896cd982bd31b1d8cbd489784fcefa41a3e391ae42f153cef`.
+
+- **Reconverted, 7 November 2026**: the first converter (docx_text() in the workbench's harvest/fetch/fetch-source.py)
+  dropped characters Word writes in the Symbol font. The text was converted again from the same Word file (same download
+  sha256) with cth_convert_sym_v12.py (kept outside the repository); the only change is one em dash restored in the heading
+  at line 727 ("Annexure A—Reservation by the Northern Territory"); no word or number changed. Now 107,671 characters,
+  sha256 `824767691e4dbd384175493597bb98ba969890d215ab6120b726788661f6d954` (was
+  `64a8686c0b9270c8db6c34e6b13320384df97895388459f98a4db5d87ada4aa5`); details in `registers/source-bundle/C2004A04799.meta.json`.
