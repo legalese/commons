@@ -75,6 +75,9 @@ Limb (a) asks whether the target is what the citing words say; limb (b) asks whe
 
 What limb (b) of the defect rests on, sorted by how strong it is.
 Read from the page images: that SH 2407 p. 227 wrote the sentence, and that SH 2504 p. 2 changed paragraphs (1) and (3) of s 1יג(ד) and not paragraph (2).
+Paragraph (3) of s 1יג(ד), as written by SH 2407 p. 227 s 3, kept the subsection in force from 1 January 2014 (or from the start of the first regulations under s 225ב of the National Insurance Law, whichever is later) to 31 December 2014.
+SH 2504 p. 2 s 6(2) deleted paragraph (3), and s 7(ג) of the same Act applies s 1יג(ד) as amended to a first application or a request to renew a suspended permit filed from the day that Act was published (15 October 2015).
+So in the official text read the subsection has no end date, and the reference in paragraph (2) is not inside a subsection that has lapsed; that no later instrument gave it a new end date is CONSOLIDATION-ONLY.
 Read from the page image together with the text layer of p. 600: that SH 2459 replaced word forms for "employer" in the Law, and that none of those word forms occurs in paragraph (2).
 CONSOLIDATION-ONLY: that no instrument after SH 2504 touched s 1יג(ד)(2); the consolidation's list of amending instruments for s 1יג ends with the Act of 5776.
 Six pages of the latest amending instruments of the Law since March 2018 were looked at in their text layers and none touches s 1יג; they are not in the source bundle, and the other instruments since March 2018 were not read.
