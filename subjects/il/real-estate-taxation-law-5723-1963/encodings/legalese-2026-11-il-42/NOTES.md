@@ -173,14 +173,20 @@ No domain expert has read any of this.
   The consolidation (deposit line 1174) prints "ט׳ בטבת התשצ״ג (31 בדצמבר 2033)", and the official text does the same: s 4(12) and s 6 of the Economic Efficiency Law, SH 3045 (31 May 2023) p. 159, print the same pair of words (READ, rendered at 300 dpi).
   9 Tevet 5793 is 11 December 2032, and 9 Tevet 5794 is 31 December 2033; the routine that computed them reproduced 1 Tishri 5786 = 23 September 2025, 25 Kislev 5785 = 26 December 2024 and 2 Sivan 5786 = 18 May 2026.
   The row does not encode s 49לו2 (out of scope, section 2), so no test depends on it; it is recorded because the two readings are a year apart.
-- O2, s 37(ב) (deposit line 489) refers to the day fixed under s 19 or s 20 as the day of sale, and s 20 was repealed.
+- O2, s 37(1)(א) (deposit line 489, in the definition of "יום הרכישה") refers to the day fixed under s 19 or s 20 as the day of sale, and s 20 was repealed.
   Amendment 70, SH 2281 (15 March 2011) p. 403, s 2, reads "section 20 of the principal Law – repealed" (READ).
-  Whether a later instrument touched the citing words of s 37(ב) was not read: the deposit's amendment tags for s 37 show none (CONSOLIDATION-ONLY).
+  Whether a later instrument touched the citing words of s 37(1)(א) was not read: the deposit's amendment tags for s 37 show none (CONSOLIDATION-ONLY).
   Effect found: none, because s 19 still fixes the day.
-- O3, ss 39(4) and 120(א) (deposit lines 519 and 1801) cite s 7(א) and s 7(4) and (5), and s 7 is one sentence.
+- O3, ss 39(4), 118 and 120(א) (deposit lines 519, 1792 and 1801) cite s 7(א), paragraphs (1) to (3) of s 7, and s 7(4) and (5), and s 7 is one sentence.
   Section 2 of the 1965 amendment, SH 442 (10 January 1965) p. 40, replaced s 7 by "the tax is imposed on an act in a land association", the sentence at deposit line 133 (READ).
-  Whether a later instrument reprinted the citing words in ss 39(4) and 120(א) was not read (CONSOLIDATION-ONLY).
+  Whether a later instrument reprinted the citing words in ss 39(4), 118 and 120(א) was not read (CONSOLIDATION-ONLY).
   Effect found: none; the cited paragraphs are of a 1963 text that no longer exists.
 - O4, s 48ב(ב)(4) (deposit line 695) refers to s 48א(ד1), and the consolidation's s 48א has no (ד1); the other subsection it names, s 48א1(א), is a closed temporary provision.
   A second reading searched seven staged instruments for a (ד1) and found none; no official text of s 48א as it stands was read (CONSOLIDATION-ONLY for both limbs).
   The row does not rely on s 48ב(ב)(4).
+- O5, four places in the Law still cite s 72ח, which went with the repeal of the sales-tax chapter.
+  Amendment 61, SH 2134 (18 February 2008) p. 203, s 5, reads "chapter 6-1 of the principal Law – repealed" (READ); the consolidation prints s 72ח as "(repealed)" (deposit line 1414), and ss 81, 89(ג), 95(א) and 98(א) still name it (deposit lines 1514, 1558, 1620 and 1661).
+  The same page shows the Knesset removing sales-tax words from other sections: s 4 (s 49יד(א)), s 6 (s 78(1)), s 7 (s 94(א), including the words that cite s 72ט) and s 8 (s 94א(א)(3)); none of those sections of the Amendment touches ss 81, 89, 95 or 98 (p. 202 was not viewed by the lead).
+  SH 2405 (5 August 2013) p. 161, s 43(18)(ב), deleted "לפי סעיף 72ח" from the definition of "גרעון" in s 95(ג) and left it in s 95(א) (READ); the consolidation still prints it in s 95(ג) (deposit line 1628), which is an error of the consolidation and not of the Law.
+  Effect found: none, because the sales-tax declaration can no longer be breached and the first limb of the offence in s 98(א) still covers the duties that remain.
+  The current text of the four sections is CONSOLIDATION-ONLY.
