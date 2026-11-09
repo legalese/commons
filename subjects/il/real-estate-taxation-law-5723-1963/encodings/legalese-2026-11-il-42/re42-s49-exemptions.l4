@@ -1,0 +1,246 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `re42-nouns`
+IMPORT `re42-published-figures`
+IMPORT `re42-s47-appreciation`
+IMPORT `re42-s9-purchase-tax`
+
+-- Row il-42. THE RESIDENTIAL EXEMPTIONS, FROM THE SELLER'S SEAT: ss 49 (definitions), 49A, 49B, 49C, 49D, 49E and 49F.
+-- The seller asks: "is the sale of my dwelling free of appreciation tax, and if not entirely, what part of the sale value is still taxed?"
+-- ANSWER SHAPE. `the sale value that is exempt` is a MAYBE NUMBER: the part of the sale value that no tax falls on. NOTHING means "a money figure the exemption turns on is not held for this day", never a guess.
+-- NOT ENCODED, with reasons (coverage table in NOTES.md): the exemption of an inherited dwelling sold by a public body (s 49B(5)(b)); the additional exemption for building rights (s 49G), whose five
+-- figures are held in re42-published-figures.l4 but which turns on the Director's opinion of what influenced the price; the sale of a dwelling jointly owned by spouses with different ages (s 49F(c)(2));
+-- the sale of a farm that includes the seller's dwelling (s 49G(b)); the equalisation payments of s 49G1.
+
+§ `Sections 49 to 49F: the residential exemptions`
+
+§§ `One seller, in the wording of section 49(b)`
+
+-- s 49(b): for this chapter the seller, the seller's spouse (except a spouse living permanently apart) and their children under 18 (except married children and children orphaned of one or both parents)
+-- are ONE seller.
+-- src:721 | (ב) לענין פרק זה יראו מוכר ובן זוגו, למעט בן זוג הגר דרך קבע בנפרד, וילדיהם שטרם מלאו להם 18 שנים למעט ילדים נשואים או ילדים יתומים מאחד או משני הוריהם – כמוכר אחד.
+GIVEN holder IS A `Who holds a dwelling`
+GIVETH A BOOLEAN
+`the holder is counted as one seller with you` MEANS
+    CONSIDER holder
+    WHEN `you` THEN TRUE
+    WHEN `your spouse, living with you` THEN TRUE
+    WHEN `your spouse, living permanently apart from you` THEN FALSE
+    WHEN `your unmarried child under 18, neither parent being dead` THEN TRUE
+    WHEN `your unmarried child under 18, orphaned of one or both parents` THEN FALSE
+    WHEN `your married child` THEN FALSE
+    WHEN `your child of 18 or more` THEN FALSE
+    WHEN `someone else` THEN FALSE
+
+§§ `A qualifying dwelling, in the wording of section 49(a)`
+
+-- s 49(a) "qualifying dwelling": a dwelling that served mainly as a dwelling for at least one of two periods: four fifths of the period for which the appreciation is computed (time before 1 January 1998
+-- not counted), or the four years before the sale. Months of no use, and months of education or religion as the Minister set, count as months of dwelling. The seller states the months already so counted
+-- (the field names say so). The seller's option to leave those months out of the four-year period is not modelled (fork F7).
+-- src:716 | ”דירת מגורים מזכה“ – דירת מגורים ששימשה בעיקרה למגורים לפחות באחת משתי התקופות שלהלן:
+-- src:717 | (1) ארבע חמישיות מהתקופה שבשלה מחושב השבח;
+-- src:718 | (2) ארבע השנים שקדמו למכירתה;
+-- src:719 | לענין הגדרה זו, יראו תקופה שבה לא נעשה בדירה שימוש כלשהו, או תקופה שבה שימשה הדירה לפעולות חינוך, לרבות פעוטון, או דת כפי שקבע שר האוצר, באישור ועדת הכספים של הכנסת, כתקופה שבה שימשה הדירה למגורים; לענין התקופה הקבועה בפסקה (1) – לא תובא בחשבון תקופה שקדמה ליום הקובע, ולענין התקופה הקבועה בפסקה (2) – לא תובא בחשבון תקופה כאמור, אם ביקש זאת המוכר.
+GIVEN a IS A `A sale of a dwelling`
+GIVETH A BOOLEAN
+`the dwelling is a qualifying dwelling` MEANS
+       ((a's `the months in that period that the dwelling served mainly as a dwelling, counting months of no use and months of education or religion`) TIMES 5
+           AT LEAST (a's `the months in the period for which the appreciation is computed, not counting any time before 1 January 1998`) TIMES 4)
+    OR a's `the dwelling served mainly as a dwelling through all four years before the sale`
+
+§§ `Another dwelling that stands against you: sections 49B(2), 49C and 49D`
+
+-- s 49C(1) asks whether the other dwelling was bought "as a replacement for the dwelling sold in the 24 months before the sale". Amendment 102 (SH 5783 p.161, s 10, read from the page image) reads
+-- "18 months" for the two years from 1 June 2023 in s 49C(1) as in s 9(c1c)(2)(b), for a dwelling bought on or after that day. The window is the one of re42-s9-purchase-tax.l4 (1 June 2023 to 31 May 2025,
+-- fork T2). "Within L months before the sale" is read as: the sale is on or before the day of the month of purchase, L months on (fork F9: no clamp for a short month).
+GIVEN d IS A `A dwelling that may stand against the seller`, saleDay IS A DATE
+GIVETH A BOOLEAN
+`the replacement was bought in time` MEANS
+    CONSIDER d's `the day you bought it, if you bought it as a replacement for the dwelling sold`
+    WHEN NOTHING THEN FALSE
+    WHEN JUST bought THEN
+        (months LESS THAN limit) OR (months EQUALS limit AND DATE_DAY saleDay AT MOST DATE_DAY bought)
+        WHERE
+            months MEANS ((DATE_YEAR saleDay) TIMES 12 PLUS DATE_MONTH saleDay) MINUS ((DATE_YEAR bought) TIMES 12 PLUS DATE_MONTH bought)
+            limit MEANS `the months within which the former only dwelling must be sold, for an ordinary purchase` bought
+
+-- s 49C: for s 49B(2) the sold dwelling still counts as your only dwelling if the other one (1) was bought as a replacement in the 24 months before the sale, (2) was let under a protected tenancy
+-- before 1 January 1997, (3) is a share of yours of at most a third (at most a half if inherited), or (4) was inherited on the conditions of s 49B(5)(a) and (b).
+-- src:749 | לענין סעיף 49ב(2), יראו את הדירה הנמכרת כדירת המגורים היחידה שבבעלות המוכר גם אם יש לו, בנוסף על הדירה הנמכרת, דירת מגורים שנתקיים לגביה אחד מאלה:
+-- src:750 | (1) היא נרכשה כתחליף לדירה הנמכרת ב־24 החודשים שקדמו למכירה;
+-- src:751 | (2) היא הושכרה למגורים בשכירות מוגנת לפני יום כ״ב בטבת התשנ״ז (1 בינואר 1997);
+-- src:752 | (3) חלקו של המוכר בבעלותה הוא אינו עולה על שליש, ולגבי דירה שהתקבלה בירושה – אינו עולה על מחצית;
+-- src:753 | (4) היא דירה שהתקבלה בירושה והתקיימו בה תנאי סעיף 49ב(5)(א) ו־(ב).
+-- s 49D: a dwelling owned by an association (other than as its stock in trade) is "another dwelling" if your rights in the association give you more than a third of it (more than a half if you inherited
+-- the rights) and it was not let under a protected tenancy before 1 January 1997.
+-- src:756 | לענין סעיף 49ב(2) יראו כדירת מגורים נוספת גם דירה המשמשת למגורים או מיועדת למגורים לפי טיבה שהיא בבעלותו של איגוד, למעט דירה המהווה מלאי עסקי לענין מס הכנסה, אך למוכר יש באמצעות זכויותיו באיגוד, במישרין או בעקיפין, חלק העולה על שליש בבעלות בה, ולגבי מוכר שירש את זכויותיו באיגוד – חלק העולה על מחצית בבעלות בה, והיא לא הושכרה בשכירות מוגנת לפני יום כ״ב בטבת התשנ״ז (1 בינואר 1997); לענין זה, ”זכויות“ – כל אחת מאלה: הזכות לקבלת נכסי האיגוד בעת פירוקו, הזכות לקבל רווחים והזכות למנות מנהלים.
+-- s 49B(2) speaks of the seller's only dwelling "in Israel and in the Area": a dwelling elsewhere does not stand against you. Only a dwelling held by a person counted as one seller with you can stand against you.
+-- Fork F6 in NOTES.md: s 49D's own conditions are applied to an association dwelling and the presumptions of s 49C are not (the text of s 49D does not refer to them; reading taken).
+GIVEN d IS A `A dwelling that may stand against the seller`, saleDay IS A DATE
+GIVETH A BOOLEAN
+`the other dwelling stands against you` MEANS
+    BRANCH
+        IF NOT (d's `it lies in Israel or in the Area`) THEN FALSE
+        IF NOT (`the holder is counted as one seller with you` (d's `held by`)) THEN FALSE
+        IF d's `it is owned through an association, and is not the association's stock in trade`
+        THEN (d's `the share of it that you and those treated as one seller with you hold together, as a fraction of the whole` GREATER THAN limit)
+             AND NOT (d's `it was let under a protected tenancy before 1 January 1997`)
+        OTHERWISE NOT (   `the replacement was bought in time` d saleDay
+                       OR d's `it was let under a protected tenancy before 1 January 1997`
+                       OR d's `the share of it that you and those treated as one seller with you hold together, as a fraction of the whole` AT MOST limit
+                       OR (d's `it came to the holder by inheritance`
+                           AND d's `it was inherited from someone who owned only one dwelling, and you are their spouse, a descendant, or the spouse of a descendant`))
+    WHERE
+        limit MEANS IF d's `it came to the holder by inheritance` THEN 0.5 ELSE 1 DIVIDED BY 3
+
+§§ `The only-dwelling exemption of section 49B(2)`
+
+-- s 49B(2): the sold dwelling is your only dwelling in Israel and the Area; you were its owner for at least 18 months from the day it became a dwelling; and in the 18 months before the sale you did not sell
+-- another dwelling free of tax under this paragraph. The paragraph does not apply to the sale of a share within s 49C(3), or of a dwelling let under a protected tenancy before 1 January 1997, if that share
+-- or dwelling was disregarded under s 49C when you sold another dwelling free of tax under the paragraph.
+-- Boundary (fork F5 in NOTES.md, reading taken): a sale of the other dwelling EXACTLY 18 months back does not fall within "the 18 months preceding"; one 17 months back does.
+-- src:731 | (2) הדירה הנמכרת היא דירתו היחידה של המוכר בישראל ובאזור כהגדרתו בסעיף 16א, והמוכר הוא בעל הזכות בה במשך 18 חודשים לפחות מיום שהיתה לדירת מגורים, ולא מכר, במשך שמונה עשר החודשים שקדמו למכירה האמורה, דירת מגורים אחרת כאמור, בפטור ממס לפי פסקה זו; הוראה זו לא תחול על מכירת חלק בדירה כאמור בסעיף 49ג(3) ועל מכירת דירה שהושכרה למגורים בשכירות מוגנת לפני יום כ״ב בטבת התשנ״ז (1 בינואר 1997) אם בשל החלק או הדירה האמורים הוחלה החזקה שבסעיף 49ג במכירת דירת מגורים אחרת בפטור ממס לפי פסקה זו;
+GIVEN a IS A `A sale of a dwelling`
+GIVETH A BOOLEAN
+`the sold dwelling is your only dwelling under section 49B(2)` MEANS
+        NOT (any (GIVEN d YIELD `the other dwelling stands against you` d (a's `the day of the sale`)) (a's `your other dwellings at the sale`))
+    AND a's `the months you have been the owner since it became a dwelling` AT LEAST 18
+    AND earlier
+    AND NOT (a's `what you sold is a share of a dwelling within the limit of section 49C(3), or a dwelling let under a protected tenancy before 1 January 1997`
+             AND a's `that share or dwelling was disregarded under section 49C when you sold another dwelling free of tax under the only-dwelling exemption`)
+    WHERE
+        earlier MEANS
+            CONSIDER a's `the number of months back from this sale in which you sold another dwelling free of tax under the only-dwelling exemption`
+            WHEN JUST m THEN m AT LEAST 18
+            WHEN NOTHING THEN TRUE
+
+-- s 49B(5)(a) to (c): a qualifying dwelling you inherited, if you are the deceased's spouse, descendant or a descendant's spouse; the deceased owned only one dwelling when they died; and the deceased
+-- would have been exempt had they sold it. (The sale by a public body, s 49B(5)(b), is not encoded: the seller here is an individual.)
+-- src:734 | (5) המכירה היא של דירת מגורים מזכה שקיבל המוכר בירושה, ובלבד שהתקיימו כל אלה:
+-- src:735 | (א) המוכר הוא בן זוגו של המוריש, או צאצא של המוריש, או בן זוגו של צאצא של המוריש;
+-- src:736 | (ב) לפני פטירתו היה המוריש בעלה של דירת מגורים אחת בלבד;
+-- src:737 | (ג) אילו היה המוריש עדיין בחיים ומוכר את דירת המגורים, היה פטור ממס בשל המכירה;
+GIVEN a IS A `A sale of a dwelling`
+GIVETH A BOOLEAN
+`the sold dwelling is an inherited dwelling under section 49B(5)` MEANS
+        a's `you received the dwelling by inheritance`
+    AND a's `you are the spouse or a descendant of the deceased, or the spouse of a descendant`
+    AND a's `the deceased owned only one dwelling when they died`
+    AND a's `the deceased would have been exempt had they sold it`
+
+§§ `What stands in the way of every exemption: section 49A(a) and section 49F`
+
+-- s 49A(a): a resident of Israel, or a non-resident with no dwelling in the country where they are resident, who sells ALL their rights in a qualifying dwelling is entitled, on request filed with the
+-- declaration under section 73, to the exemption. A non-resident counts as having a dwelling there until the tax authority of that country certifies otherwise (the seller's field says the certificate exists).
+-- src:724 | (א) תושב ישראל או תושב חוץ שאין לו דירת מגורים במדינה שבה הוא תושב, המוכר את כל הזכויות במקרקעין שיש לו בדירת מגורים מזכה, שלגביה נתקיימו התנאים האמורים בפרק זה, יהיה זכאי, על פי בקשתו שתוגש במועד הגשת ההצהרה לפי סעיף 73, לפטור ממס במכירתה; לעניין סעיף קטן זה, יראו תושב חוץ כמי שיש לו דירת מגורים במדינה שבה הוא תושב, כל עוד לא המציא אישור משלטונות המס באותה מדינה כי אין לו דירה כאמור.
+GIVEN a IS A `A sale of a dwelling`
+GIVETH A BOOLEAN
+`you are within section 49A(a)` MEANS
+        (a's `you are an Israeli resident` OR a's `you are a non-resident with no dwelling in the country where you are resident`)
+    AND a's `you sold all your rights in the dwelling`
+    AND a's `you asked for the exemption when you filed the declaration under section 73`
+    AND `the dwelling is a qualifying dwelling` a
+
+-- s 49F: no exemption in this chapter on a dwelling you received as a gift (or at least half of whose price you received as a gift in the three years before you bought it) until four years have passed from
+-- the day you became its owner; or, if it served as your regular home, three years from the day you began to live in it as its owner. If you were under 18, the years run from your 18th birthday.
+-- src:769 | (א) על אף האמור בהוראות הקודמות של פרק זה לא יינתן פטור במכירת דירת מגורים שהמוכר קיבל אותה במתנה –
+-- src:770 | (1) אם הדירה לא שימשה דרך קבע למגוריו של המוכר – עד שיחלפו ארבע שנים מיום שנעשה בעלה;
+-- src:771 | (2) אם הדירה שימשה דרך קבע למגוריו של המוכר – עד שיחלפו, מיום שהחל לגור בה דרך קבע בהיותו בעלה – שלוש שנים.
+-- src:772 | (ב) מוכר כאמור בסעיף קטן (א) שקיבל את הדירה לפני שמלאו לו 18 שנים, יתחיל לגביו מנין השנים האמורות מיום שמלאו לו 18 שנים.
+-- src:774 | (1) יראו קבלת 50% לפחות ממחיר הדירה במתנה, בתוך שלוש שנים שקדמו לרכישתה, כקבלתה במתנה;
+-- Not modelled: s 49F(c)(2), the older spouse's age for a dwelling jointly owned by spouses.
+GIVEN a IS A `A sale of a dwelling`
+GIVETH A BOOLEAN
+`the gift bar of section 49F does not stop you` MEANS
+    IF NOT (a's `you received the dwelling as a gift` OR a's `you received at least half the price of the dwelling as a gift in the three years before you bought it`)
+    THEN TRUE
+    ELSE CONSIDER a's `the months since you began to live in the dwelling as its owner, counted from your 18th birthday if you were under 18 then; nothing if it was never your regular home`
+         WHEN JUST m THEN m AT LEAST 36
+         WHEN NOTHING THEN a's `the months since you became the owner of the dwelling, counted from your 18th birthday if you were under 18 when you became the owner` AT LEAST 48
+
+§§ `The one-off exemption of section 49E`
+
+-- s 49E(a): you sell a qualifying dwelling (the first dwelling) while holding exactly one other dwelling; you sell that other one free of tax within 12 months after the first; the two together are worth no more
+-- than 2,252,000 shekels (adjusted to 2025); and you bought another dwelling in the year before the sale of the other dwelling, or will in the year after, for at least three quarters of their value together.
+-- s 49E(a1): where the first, second and fourth conditions hold and the two together are worth no more than 3,746,000, the exemption is on the value up to the DIFFERENCE between 2,252,000 and the value of
+-- the other dwelling; the rest of the sale value is a taxable sale of another right. s 49E(b): once only.
+-- src:759 | (א) על אף הוראות סעיף 49ב, המוכר דירת מגורים מזכה (בסעיף זה – הדירה הראשונה), יהיה זכאי לפטור ממס במכירתה, אם התקיימו כל אלה:
+-- src:760 | (1) במועד המכירה של הדירה הראשונה יש בבעלותו, דירת מגורים נוספת אחת בלבד (בסעיף זה – הדירה הנוספת);
+-- src:761 | (2) המוכר מכר את הדירה הנוספת בפטור ממס, בתוך 12 חודשים מיום מכירת הדירה הראשונה;
+-- src:762 | (3) סכום השווי של הדירה הראשונה ושל הדירה הנוספת, יחד, לא עלה על 2,252,000 שקלים חדשים [note: (מתואם לשנת 2025)];
+-- src:763 | (4) המוכר רכש בשנה שלפני מכירת הדירה הנוספת או ירכוש בשנה שלאחר מכירתה, דירת מגורים אחרת כהגדרתה בסעיף 9(ג), בישראל או באזור כהגדרתו בסעיף 16א (בסעיף זה – הדירה החלופית), בסכום השווה לשלושה רבעים לפחות משווי הדירות כאמור בפסקה (3); הדירה החלופית לא תבוא במניין הדירות כאמור בפסקה (1).
+-- src:764 | (א1) על אף הוראות סעיף 49ב, התקיימו במוכר דירה ראשונה הוראות סעיף קטן (א)(1), (2) ו־(4), וסכום השווי של הדירה הראשונה והדירה הנוספת, יחד, לא עלה על 3,746,000 שקלים חדשים [note: (מתואם לשנת 2025)], יהיה המוכר זכאי לפטור ממס במכירה של הדירה הראשונה, על סכום השווי להפרש שבין 2,252,000 שקלים חדשים [note: (מתואם לשנת 2025)] לבין סכום השווי של הדירה הנוספת; את יתרת סכום השווי של הדירה הראשונה יראו כדמי מכר של זכות אחרת במקרקעין אשר שווי רכישתה הוא חלק יחסי מהשווי של הזכות כולה, כיחס שבין חלק שווי המכירה המתייחס לזכות זו לבין מלוא שווי המכירה, ובהתאם לכך ייוחסו גם הניכויים והתוספות.
+-- src:765 | (א2) הסכומים הנקובים בסעיף זה יתואמו בתחילת כל שנת מס, למעט בשנות המס 2025 עד 2027, לפי שיעור עליית המדד, לעומת המדד שפורסם לאחרונה לפני יום כ״ב בטבת התשפ״ז (1 בינואר 2027) ויעוגלו ל־1,000 השקלים החדשים הקרובים.
+-- src:766 | (ב) פטור לפי סעיף זה לא יינתן למוכר אחד יותר מפעם אחת.
+GIVEN a IS A `A sale of a dwelling`
+GIVETH A BOOLEAN
+`the first, second and fourth conditions of section 49E(a) are met` MEANS
+        a's `you hold exactly one other dwelling`
+    AND a's `you sold that other dwelling free of tax within 12 months after this sale`
+    AND a's `you bought another dwelling in the year before the sale of the other dwelling or will buy one in the year after, for at least three quarters of the combined value`
+    AND NOT (a's `you have used the one-off exemption before`)
+
+GIVEN a IS A `A sale of a dwelling`
+GIVETH A MAYBE NUMBER
+`the exempt value under section 49E(a)` MEANS
+    IF `you are within section 49A(a)` a AND `the gift bar of section 49F does not stop you` a AND `the first, second and fourth conditions of section 49E(a) are met` a
+    THEN CONSIDER `the exemption figure on` (`the combined-value limit of section 49E(a)(3)`) (a's `the day of the sale`)
+         WHEN JUST f THEN JUST (IF a's `the combined value of the sold dwelling and the one other dwelling you hold` AT MOST f's `its amount` THEN `the sale value` a ELSE 0)
+         WHEN NOTHING THEN NOTHING
+    ELSE JUST 0
+
+GIVEN a IS A `A sale of a dwelling`
+GIVETH A MAYBE NUMBER
+`the exempt value under section 49E(a1)` MEANS
+    IF `you are within section 49A(a)` a AND `the gift bar of section 49F does not stop you` a AND `the first, second and fourth conditions of section 49E(a) are met` a
+    THEN CONSIDER `the exemption figure on` (`the larger combined-value limit of section 49E(a1)`) (a's `the day of the sale`)
+         WHEN NOTHING THEN NOTHING
+         WHEN JUST larger THEN
+             CONSIDER `the exemption figure on` (`the combined-value limit of section 49E(a)(3)`) (a's `the day of the sale`)
+             WHEN NOTHING THEN NOTHING
+             WHEN JUST smaller THEN
+                 JUST (IF a's `the combined value of the sold dwelling and the one other dwelling you hold` AT MOST larger's `its amount`
+                       THEN min (`the sale value` a) (max 0 ((smaller's `its amount`) MINUS (a's `the value of the one other dwelling you hold, if you hold exactly one`)))
+                       ELSE 0)
+    ELSE JUST 0
+
+§§ `The ceiling of section 49A(a1), and the exemption that applies to the sale`
+
+-- s 49A(a1): notwithstanding s 49B, where the sale value exceeds 5,008,000 shekels (the ceiling, adjusted to 2025), the exemption is on the part of the value up to the ceiling.
+-- src:725 | (א1) על אף האמור בסעיף 49ב, עלה סכום שווי המכירה על 5,008,000 שקלים חדשים [note: (מתואם לשנת 2025)] (בסעיף קטן זה – סכום התקרה), יהיה המוכר זכאי לפטור ממס על חלק השווי שעד סכום התקרה, ויראו את סכום ההפרש שבין שווי המכירה לסכום התקרה כדמי מכר של זכות אחרת בדירת מגורים מזכה החייבת במס אשר שווי רכישתה הוא חלק יחסי משווי הרכישה של הזכות כולה, כיחס חלק שווי המכירה המתייחס לזכות זו למלוא שווי המכירה, ובהתאם לכך ייוחסו גם הניכויים והתוספות; הסכום הנקוב בסעיף קטן זה יתואם בתחילת כל שנת מס, למעט בשנות המס 2025 עד 2027, לפי שיעור עליית המדד, לעומת המדד שפורסם לאחרונה לפני יום כ״ב בטבת התשפ״ז (1 בינואר 2027), ויעוגל ל־1,000 השקלים החדשים הקרובים.
+GIVEN a IS A `A sale of a dwelling`
+GIVETH A MAYBE NUMBER
+`the exempt value under section 49B` MEANS
+    IF `you are within section 49A(a)` a AND `the gift bar of section 49F does not stop you` a
+       AND (`the sold dwelling is your only dwelling under section 49B(2)` a OR `the sold dwelling is an inherited dwelling under section 49B(5)` a)
+    THEN CONSIDER `the exemption figure on` (`the ceiling of section 49A(a1)`) (a's `the day of the sale`)
+         WHEN JUST f THEN JUST (min (`the sale value` a) (f's `its amount`))
+         WHEN NOTHING THEN NOTHING
+    ELSE JUST 0
+
+-- The larger of two answers, where either may be missing: a missing answer makes the whole answer missing.
+GIVEN x IS A MAYBE NUMBER, y IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+`the larger of two answers` MEANS
+    CONSIDER x
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST p THEN
+        CONSIDER y
+        WHEN NOTHING THEN NOTHING
+        WHEN JUST q THEN JUST (max p q)
+
+-- The seller picks whichever route gives the largest exemption: the parts of the exemptions do not add (each speaks of the sale value, and s 49E(b) and s 49B(2) are alternatives).
+GIVEN a IS A `A sale of a dwelling`
+GIVETH A MAYBE NUMBER
+`the sale value that is exempt` MEANS
+    `the larger of two answers` (`the exempt value under section 49B` a) (`the larger of two answers` (`the exempt value under section 49E(a)` a) (`the exempt value under section 49E(a1)` a))
+
+-- The fraction of the sale that stays taxable. s 49A(a1) and s 49E(a1) treat the sale value above the exemption as the sale of another right whose acquisition value, deductions and additions are the same
+-- fraction of the whole; every quantity of s 47 is linear in those, so the appreciation, the inflationary amount and the real appreciation of the taxable part are that fraction of the whole.
+GIVEN a IS A `A sale of a dwelling`
+GIVETH A MAYBE NUMBER
+`the fraction of the sale that stays taxable` MEANS
+    CONSIDER `the sale value that is exempt` a
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST e THEN
+        JUST (IF `the sale value` a AT MOST 0 THEN 0 ELSE ((`the sale value` a) MINUS e) DIVIDED BY (`the sale value` a))

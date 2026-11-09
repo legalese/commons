@@ -1,0 +1,332 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `re42-nouns`
+IMPORT `re42-published-figures`
+
+-- Row il-42. SECTION 9: THE PURCHASE TAX ON A DWELLING, FROM THE BUYER'S SEAT.
+-- Target compiler: main. The buyer asks: "which period and which ladder of section 9 apply to my purchase, and how much purchase tax must I pay?"
+--
+-- WHAT IS ANSWERED. A purchase of a dwelling (s 9(ג)) on or after 6 May 2013 by anyone, and the ladder of s 9(ג1ג)(2)/(3) for an Israeli-resident individual who meets one of its routes.
+-- Subsection (ג1א)(2) (the individual's ladder of 2007 to 5 May 2013) and the ladders of (ג), (ג1), (ג1א)(1) are encoded as printed, for the arithmetic, but NO DAY is answered from them: s 9(ג2)
+-- updates their amounts every year and the consolidation prints one year's figures without saying which (NOTES.md, fork V2). A day for which the sources give no figure answers NOTHING.
+-- WHAT IS NOT. Purchases that are not of a dwelling, group purchases of other property, the temporary reductions of ss 9B and 9C (7 November 2001 to 31 December 2003), and the exemptions the
+-- Minister has made under s 9(ד) (the Purchase Tax Regulations of 5735-1974: reliefs for new immigrants, disabled persons and so on: NOT deposited, so no relief is invented here).
+
+§ `Section 9: the purchase tax on a dwelling`
+
+§§ `The arithmetic of a ladder`
+
+GIVEN value IS A NUMBER, step IS A `A step of a purchase-tax ladder`
+GIVETH A NUMBER
+`the part of the value that falls in the step` MEANS
+    CONSIDER step's `the step ends at`
+    WHEN JUST top THEN max 0 ((min value top) MINUS (step's `the step begins above`))
+    WHEN NOTHING THEN max 0 (value MINUS (step's `the step begins above`))
+
+-- s 9(ג1ג)(1): "on the part of the value up to X – r%; on the part above X and up to Y – r%": each step taxes only the part of the value that falls in it.
+GIVEN value IS A NUMBER, steps IS A LIST OF `A step of a purchase-tax ladder`
+GIVETH A NUMBER
+`the tax on a value under a ladder` MEANS
+    sum (map (GIVEN step YIELD (`the part of the value that falls in the step` value step) TIMES (step's `the rate on the part of the value in the step`)) steps)
+
+§§ `Who counts as the same buyer, in each wording`
+
+-- s 9(ג1א)(2)(ב)(2), for purchases up to 5 May 2013 (and s 9(ג1ב)(2)(ב), which applies it): the buyer, the spouse (except one living permanently apart) and children under 18 (except a married child)
+-- are one buyer. An orphaned child is therefore counted in this wording.
+-- src:182 | (2) יראו רוכש ובן זוגו, למעט בן זוג הגר בדרך קבע בנפרד, וילדיהם שטרם מלאו להם 18 שנים, למעט ילד נשוי – כרוכש אחד;
+GIVEN holder IS A `Who holds a dwelling`
+GIVETH A BOOLEAN
+`the holder is counted with you, in the wording of (ג1א)(2)(ב)(2)` MEANS
+    CONSIDER holder
+    WHEN `you` THEN TRUE
+    WHEN `your spouse, living with you` THEN TRUE
+    WHEN `your spouse, living permanently apart from you` THEN FALSE
+    WHEN `your unmarried child under 18, neither parent being dead` THEN TRUE
+    WHEN `your unmarried child under 18, orphaned of one or both parents` THEN TRUE
+    WHEN `your married child` THEN FALSE
+    WHEN `your child of 18 or more` THEN FALSE
+    WHEN `someone else` THEN FALSE
+
+-- s 9(ג1ג)(4)(ג): the same, from 1 August 2013 as first made; and since Amendment 103 (SH 5783 p. 542, 13.7.2023, read from the page image) "except a married child or a child orphaned of one or both
+-- parents". Amendment 103 s 3: the amended words apply "to a purchase or sale of a right in land made on the day of commencement of this Law or after". The Amendment has no commencement section of its own,
+-- so its day is taken as the day of its publication, 13 July 2023 (fork I1: the Interpretation Law s 10, not read).
+-- src:230 | (ג) יראו רוכש ובן זוגו, למעט בן הזוג הגר בדרך קבע בנפרד, וילדיהם שטרם מלאו להם 18 שנים, למעט ילד נשוי או ילד יתום מאחד או משני הוריו – כרוכש אחד;
+`the day Amendment 103 began to apply` MEANS Date 13 7 2023
+
+GIVEN day IS A DATE, holder IS A `Who holds a dwelling`
+GIVETH A BOOLEAN
+`the holder is counted with you, in the wording of (ג1ג)(4)(ג) on the day of the purchase` MEANS
+    CONSIDER holder
+    WHEN `you` THEN TRUE
+    WHEN `your spouse, living with you` THEN TRUE
+    WHEN `your spouse, living permanently apart from you` THEN FALSE
+    WHEN `your unmarried child under 18, neither parent being dead` THEN TRUE
+    WHEN `your unmarried child under 18, orphaned of one or both parents` THEN day LESS THAN (`the day Amendment 103 began to apply`)
+    WHEN `your married child` THEN FALSE
+    WHEN `your child of 18 or more` THEN FALSE
+    WHEN `someone else` THEN FALSE
+
+§§ `Whether another dwelling stops this one being your only dwelling`
+
+-- s 49ג(3), cited by s 9(ג1ג)(4)(א): a share that "does not exceed a third, and for a dwelling received by inheritance, does not exceed a half".
+-- src:752 | (3) חלקו של המוכר בבעלותה הוא אינו עולה על שליש, ולגבי דירה שהתקבלה בירושה – אינו עולה על מחצית;
+GIVEN d IS A `A dwelling held by someone`
+GIVETH A BOOLEAN
+`the share is within the limit of 49ג(3)` MEANS
+    IF d's `it came to the holder by inheritance`
+    THEN (d's `the share of it that you and those treated as one buyer with you hold together, as a fraction of the whole`) TIMES 2 AT MOST 1
+    ELSE (d's `the share of it that you and those treated as one buyer with you hold together, as a fraction of the whole`) TIMES 3 AT MOST 1
+
+-- s 9(ג1ג)(4)(א): "only dwelling" is a dwelling that is the buyer's only dwelling in Israel and the Area; a dwelling let under a protected tenancy before 1 January 1997, or
+-- a share "as stated in s 49ג(3)", does not count against it.
+-- src:228 | (א) ”דירה יחידה“ – דירת מגורים שהיא דירתו היחידה של הרוכש בישראל ובאזור כהגדרתו בסעיף 16א; לעניין הגדרה זו יראו דירת מגורים כדירה יחידה גם אם יש לרוכש, נוסף עליה, דירת מגורים שהושכרה למגורים בשכירות מוגנת לפני יום כ״ב בטבת התשנ״ז (1 בינואר 1997), או דירת מגורים שחלקו של הרוכש בה הוא כאמור בסעיף 49ג(3);
+GIVEN day IS A DATE, d IS A `A dwelling held by someone`
+GIVETH A BOOLEAN
+`the dwelling counts against you, in the wording of (ג1ג)(4)(א)` MEANS
+        d's `it lies in Israel or in the Area`
+    AND `the holder is counted with you, in the wording of (ג1ג)(4)(ג) on the day of the purchase` day (d's `held by`)
+    AND (NOT d's `it was let under a protected tenancy before 1 January 1997`)
+    AND (NOT `the share is within the limit of 49ג(3)` d)
+
+-- s 9(ג1א)(2)(ב)(1): the same, except that the share which does not count is "less than 25%".
+-- src:181 | ”דירה יחידה“ – דירת מגורים שהיא דירתו היחידה של הרוכש בישראל ובאזור כהגדרתו בסעיף 16א; לענין הגדרה זו יראו דירת מגורים כדירה יחידה גם אם יש לרוכש, נוסף עליה, דירת מגורים שהושכרה למגורים בשכירות מוגנת לפני יום כ״ב בטבת התשנ״ז (1 בינואר 1997), או דירת מגורים שחלקו של הרוכש בה הוא פחות מ־25%;
+GIVEN d IS A `A dwelling held by someone`
+GIVETH A BOOLEAN
+`the dwelling counts against you, in the wording of (ג1א)(2)(ב)(1)` MEANS
+        d's `it lies in Israel or in the Area`
+    AND `the holder is counted with you, in the wording of (ג1א)(2)(ב)(2)` (d's `held by`)
+    AND (NOT d's `it was let under a protected tenancy before 1 January 1997`)
+    AND (NOT ((d's `the share of it that you and those treated as one buyer with you hold together, as a fraction of the whole`) TIMES 4 LESS THAN 1))
+
+GIVEN p IS A `A purchase of a dwelling`
+GIVETH A BOOLEAN
+`the dwelling is your only dwelling, in the wording of (ג1ג)(4)(א)` MEANS
+    NOT (any (GIVEN d YIELD `the dwelling counts against you, in the wording of (ג1ג)(4)(א)` (p's `the day of the purchase`) d) (p's `your other dwellings`))
+
+GIVEN p IS A `A purchase of a dwelling`
+GIVETH A BOOLEAN
+`the dwelling is your only dwelling, in the wording of (ג1א)(2)(ב)(1)` MEANS
+    NOT (any (GIVEN d YIELD `the dwelling counts against you, in the wording of (ג1א)(2)(ב)(1)` d) (p's `your other dwellings`))
+
+§§ `Whether you sold your former only dwelling in time`
+
+-- s 9(ג1ג)(2)(ב) (and (ג1א)(2)(א)(2), the same shape): within 24 months after the purchase; from a contractor, within 12 months of the day possession was due under the contract;
+-- and if possession was late for reasons outside the buyer's control, within 12 months of the day possession was actually given.
+-- src:201 | (ב) ב־24 החודשים שלאחר רכישת הדירה, מכר דירת מגורים אחרת שהיתה דירתו היחידה עד למועד רכישת הדירה; ואולם אם רכישת הדירה היתה מקבלן – ב־12 החודשים מהמועד שבו היתה החזקה בדירה שרכש אמורה להימסר לידיו על פי ההסכם עם הקבלן, מכר דירת מגורים אחרת שהיתה דירתו היחידה עד למועד רכישת הדירה, ואם חל עיכוב במסירת החזקה בשל נסיבות שאינן בשליטתו של הרוכש – ב־12 החודשים מהמועד שבו נמסרה לידיו החזקה בדירה בפועל, מכר את דירת המגורים שהיתה דירתו היחידה עד למועד רכישת הדירה;
+GIVEN months IS A MAYBE NUMBER, limit IS A NUMBER
+GIVETH A BOOLEAN
+`the sale was within the limit` MEANS
+    CONSIDER months
+    WHEN JUST m THEN m AT MOST limit
+    WHEN NOTHING THEN FALSE
+
+-- Amendment 102 (SH 5783 p. 161, s 10(a)(1) and (b), read from the page image): "during a period of two years from 12 Sivan 5783 (1 June 2023)" s 9(ג1ג)(2)(ב) reads "18 months" for "24 months",
+-- for a dwelling bought on or after the commencement day. Section 10(a) itself starts the two years on 12 Sivan 5783, 1 June 2023; the commencement day of that Law, which s 10(b) uses, is taken as 1 June 2023 (that Law's commencement section was not read).
+-- "Two years from 1 June 2023" ends on 31 May 2025 (fork T2). No instrument extending it was found in the two later amendments of this Law that were searched, SH 5785 p. 394 and SH 5786 p. 361 (searched in their text layers, not read page by page).
+`the first day of the 18-month reading` MEANS Date 1 6 2023
+`the last day of the 18-month reading` MEANS Date 31 5 2025
+
+GIVEN day IS A DATE
+GIVETH A NUMBER
+`the months within which the former only dwelling must be sold, for an ordinary purchase` MEANS
+    IF day AT LEAST (`the first day of the 18-month reading`) AND day AT MOST (`the last day of the 18-month reading`)
+    THEN 18
+    ELSE 24
+
+GIVEN p IS A `A purchase of a dwelling`
+GIVETH A BOOLEAN
+`you sold your former only dwelling in time` MEANS
+    BRANCH
+        IF p's `you bought from a contractor` AND p's `possession was late for reasons outside your control`
+        THEN `the sale was within the limit` (p's `the months from the day possession was actually given to that sale, if you sold`) 12
+        IF p's `you bought from a contractor`
+        THEN `the sale was within the limit` (p's `the months from the day possession was due under the contract to that sale, if you sold`) 12
+        OTHERWISE
+            CONSIDER p's `the months from the purchase to the day you sold the dwelling that was your only dwelling until the purchase, if you did`
+            WHEN JUST m THEN m AT LEAST 0 AND m AT MOST (`the months within which the former only dwelling must be sold, for an ordinary purchase` (p's `the day of the purchase`))
+            WHEN NOTHING THEN FALSE
+
+§§ `The group-dwelling route of (ג1ג)(2)(ב1)`
+
+-- src:202 | (ב1)(1) רכש את הדירה בחלוף אחת התקופות המפורטות להלן לאחר שרכש דירת מגורים אחרת במסגרת קבוצת רכישה (בפסקת משנה זו – הדירה בקבוצת הרכישה), ובעת שרכש את הדירה בקבוצת הרכישה היתה היא דירתו היחידה:
+-- src:203 | (א) ארבע שנים ממועד רכישת הדירה בקבוצת הרכישה – אם בנייתה של הדירה בקבוצת הרכישה לא החלה בתוך אותה תקופה, או אם שוכנע המנהל כי חל באותה תקופה עיכוב מהותי אחר בהשלמת בנייתה של הדירה בקבוצת הרכישה;
+-- src:204 | (ב) 6.5 שנים ממועד רכישת הדירה בקבוצת הרכישה – אם החזקה בדירה בקבוצת הרכישה לא נמסרה בפועל לידי הרוכש באותה תקופה;
+-- src:205 | (2) הוראות פסקת משנה (1) יחולו בהתקיים כל אלה:
+-- src:206 | (א) העיכוב בהתחלת הבנייה או בהשלמתה, לפי העניין, חל בנסיבות שאינן בשליטתו של הרוכש ולא היו ידועות במועד רכישת הדירה בקבוצת הרכישה;
+-- src:207 | (ב) הרוכש מכר את הדירה בקבוצת הרכישה בתוך 18 חודשים ממועד השלמת בנייתה;
+-- src:208 | (ג) אלמלא רכש את הדירה בקבוצת הרכישה, היתה הדירה דירתו היחידה;
+GIVEN g IS A `An earlier purchase in a purchase group`
+GIVETH A BOOLEAN
+`the group-dwelling route of (ג1ג)(2)(ב1) is met` MEANS
+        g's `that group dwelling was your only dwelling when you bought it`
+    AND (   (g's `the years from that purchase to this one` AT LEAST 4
+             AND g's `building of the group dwelling had not begun in that time, or the Director is satisfied that another material delay occurred`)
+         OR (g's `the years from that purchase to this one` AT LEAST 6.5
+             AND g's `possession of the group dwelling had not been given to you in that time`))
+    AND g's `the delay was outside your control and not known when you bought the group dwelling`
+    AND g's `you sold the group dwelling within 18 months of the completion of its building`
+    AND g's `but for the group dwelling the dwelling you now buy would be your only dwelling`
+
+§§ `Who may use the single-dwelling ladder`
+
+-- s 9(ג1ג)(4)(ב): "Israeli resident" includes one who, within two years of the purchase, became an Israeli resident for the first time or a returning long-term resident.
+-- src:229 | (ב) ”תושב ישראל“ – לרבות מי שבתוך שנתיים מיום רכישת הדירה היה לתושב ישראל לראשונה או לתושב חוזר ותיק, כמשמעותם בסעיף 14(א) לפקודה;
+GIVEN p IS A `A purchase of a dwelling`
+GIVETH A BOOLEAN
+`you are an Israeli resident for (ג1ג)(2)` MEANS
+    p's `you are an Israeli resident`
+    OR p's `within two years of the purchase you became an Israeli resident for the first time or a returning long-term resident`
+
+-- s 9(ג1ג)(2): an individual who is an Israeli resident and meets ONE of (א) the dwelling is the only dwelling, (ב) the former only dwelling was sold in time, (ב1) the group-dwelling route,
+-- (ג) the dwelling is an alternative dwelling in the sense of s 49ה(א).
+-- src:199 | (2) על אף הוראות פסקה (1), יחיד תושב ישראל שרכש דירת מגורים ביום כ״ה באב התשע״ג (1 באוגוסט 2013) או לאחריו (בפסקת משנה זו – הדירה), והתקיים בו אחד מאלה:
+-- src:200 | (א) הדירה שרכש היא דירתו היחידה;
+-- src:201 | (ב) ב־24 החודשים שלאחר רכישת הדירה, מכר דירת מגורים אחרת שהיתה דירתו היחידה עד למועד רכישת הדירה; ואולם אם רכישת הדירה היתה מקבלן – ב־12 החודשים מהמועד שבו היתה החזקה בדירה שרכש אמורה להימסר לידיו על פי ההסכם עם הקבלן, מכר דירת מגורים אחרת שהיתה דירתו היחידה עד למועד רכישת הדירה, ואם חל עיכוב במסירת החזקה בשל נסיבות שאינן בשליטתו של הרוכש – ב־12 החודשים מהמועד שבו נמסרה לידיו החזקה בדירה בפועל, מכר את דירת המגורים שהיתה דירתו היחידה עד למועד רכישת הדירה;
+-- src:202 | (ב1)(1) רכש את הדירה בחלוף אחת התקופות המפורטות להלן לאחר שרכש דירת מגורים אחרת במסגרת קבוצת רכישה (בפסקת משנה זו – הדירה בקבוצת הרכישה), ובעת שרכש את הדירה בקבוצת הרכישה היתה היא דירתו היחידה:
+-- src:203 | (א) ארבע שנים ממועד רכישת הדירה בקבוצת הרכישה – אם בנייתה של הדירה בקבוצת הרכישה לא החלה בתוך אותה תקופה, או אם שוכנע המנהל כי חל באותה תקופה עיכוב מהותי אחר בהשלמת בנייתה של הדירה בקבוצת הרכישה;
+-- src:204 | (ב) 6.5 שנים ממועד רכישת הדירה בקבוצת הרכישה – אם החזקה בדירה בקבוצת הרכישה לא נמסרה בפועל לידי הרוכש באותה תקופה;
+-- src:205 | (2) הוראות פסקת משנה (1) יחולו בהתקיים כל אלה:
+-- src:206 | (א) העיכוב בהתחלת הבנייה או בהשלמתה, לפי העניין, חל בנסיבות שאינן בשליטתו של הרוכש ולא היו ידועות במועד רכישת הדירה בקבוצת הרכישה;
+-- src:207 | (ב) הרוכש מכר את הדירה בקבוצת הרכישה בתוך 18 חודשים ממועד השלמת בנייתה;
+-- src:208 | (ג) אלמלא רכש את הדירה בקבוצת הרכישה, היתה הדירה דירתו היחידה;
+-- src:209 | (3) בפסקת משנה זו –
+-- src:210 | ”התחלת בנייה“ – עבודות להקמת הבניין, למעט עבודות תשתית או עבודות להכשרת הקרקע;
+-- src:211 | ”עיכוב מהותי“ – עיכוב בהמשך הבנייה או כל האטה בקצב התקדמות הבנייה שאינה מקובלת ברכישת דירה במסגרת קבוצת רכישה;
+-- src:212 | (ג) הדירה שרכש היא דירה חלופית כמשמעותה בסעיף 49ה(א);
+GIVEN p IS A `A purchase of a dwelling`
+GIVETH A BOOLEAN
+`the single-dwelling ladder of (ג1ג)(3) is yours` MEANS
+        p's `you are an individual`
+    AND `you are an Israeli resident for (ג1ג)(2)` p
+    AND (   `the dwelling is your only dwelling, in the wording of (ג1ג)(4)(א)` p
+         OR `you sold your former only dwelling in time` p
+         OR (CONSIDER p's `your earlier purchase in a purchase group, if you made one`
+             WHEN JUST g THEN `the group-dwelling route of (ג1ג)(2)(ב1) is met` g
+             WHEN NOTHING THEN FALSE)
+         OR p's `the dwelling is an alternative dwelling under the one-off exemption`)
+
+-- s 9(ג1ב)(2): an individual who bought from 6 May to 31 July 2013 and met ONE of (ג1א)(2)(א)(1) (the only dwelling) or (2) (sold the former one in time), the definitions of (ג1א)(2)(ב) applying.
+-- src:188 | (2)(א) יחיד שרכש דירת מגורים בתקופה שמיום כ״ו באייר התשע״ג (6 במאי 2013) עד יום כ״ד באב התשע״ג (31 ביולי 2013) והתקיים בו אחד התנאים כאמור בפסקאות (1) או (2) של סעיף קטן (ג1א)(2)(א), ישלם מס רכישה בשיעור משווי הזכות הנמכרת כקבוע להלן:
+-- src:189 | (1) על חלק השווי שעד 1,470,560 שקלים חדשים – לא ישולם מס;
+-- src:190 | (2) על חלק השווי העולה על 1,470,560 שקלים חדשים ועד 1,744,270 שקלים חדשים – 3.5%;
+-- src:191 | (3) על חלק השווי העולה על 1,744,270 שקלים חדשים – 5%.
+-- src:192 | (ב) לעניין פסקה זו יחולו הוראות סעיף קטן (ג1א)(2)(ב) ו־(3).
+GIVEN p IS A `A purchase of a dwelling`
+GIVETH A BOOLEAN
+`the transitional single-dwelling ladder of (ג1ב)(2) is yours` MEANS
+        p's `you are an individual`
+    AND (   `the dwelling is your only dwelling, in the wording of (ג1א)(2)(ב)(1)` p
+         OR `you sold your former only dwelling in time` p)
+
+§§ `The period of section 9 that a day falls in`
+
+DECLARE `A period of section 9` IS ONE OF
+    `a day before 16 January 1995`
+    `the period of (ג)`
+    `the period of (ג1)`
+    `the period of (ג1א)`
+    `the period of (ג1ב)`
+    `the period of (ג1ג)`
+
+-- src:155 | (ג) במכירת זכות במקרקעין שהם בנין או חלק ממנו, שהוא דירת מגורים, שנעשתה בתקופה שמיום ט״ו בשבט התשנ״ה (16 בינואר 1995) ועד יום כ״ג בטבת התשנ״ו (15 בינואר 1996), ישולם מס רכישה בשיעור משווי הזכות הנמכרת כקבוע להלן:
+-- src:165 | (ג1) במכירת זכות במקרקעין, שהם בנין או חלק ממנו, שהוא דירת מגורים, שנעשתה בתקופה שמיום כ״ד בטבת התשנ״ו (16 בינואר 1996) עד יום כ״ב בטבת התש״ס (31 בדצמבר 1999), ישולם מס רכישה בשיעור משווי הזכות הנמכרת כקבוע להלן:
+-- src:169 | (ג1א)(1) במכירת זכות במקרקעין, שהם בנין או חלק ממנו שהוא דירת מגורים, שנעשתה מיום כ״ג בטבת התש״ס (1 בינואר 2000) עד יום כ״ה באייר התשע״ג (5 במאי 2013), ישולם מס רכישה בשיעור משווי הזכות הנמכרת כקבוע להלן:
+-- src:184 | (ג1ב)(1) במכירת זכות במקרקעין, שהם בניין או חלק ממנו שהוא דירת מגורים, שלא חלות לגביה הוראות פסקה (2), שנעשתה בתקופה שמיום כ״ו באייר התשע״ג (6 במאי 2013) עד יום כ״ד באב התשע״ג (31 ביולי 2013), ישולם מס רכישה בשיעור משווי הזכות הנמכרת כקבוע להלן:
+-- src:193 | (ג1ג)(1) במכירת זכות במקרקעין, שהם בניין או חלק ממנו שהוא דירת מגורים, שנעשתה ביום כ״ה באב התשע״ג (1 באוגוסט 2013) או לאחריו, ישולם מס רכישה בשיעור משווי הזכות הנמכרת כקבוע להלן:
+GIVEN day IS A DATE
+GIVETH A `A period of section 9`
+`the period of section 9 that a day falls in` MEANS
+    BRANCH
+        IF day LESS THAN (Date 16 1 1995) THEN `a day before 16 January 1995`
+        IF day AT MOST (Date 15 1 1996) THEN `the period of (ג)`
+        IF day AT MOST (Date 31 12 1999) THEN `the period of (ג1)`
+        IF day AT MOST (Date 5 5 2013) THEN `the period of (ג1א)`
+        IF day AT MOST (Date 31 7 2013) THEN `the period of (ג1ב)`
+        OTHERWISE `the period of (ג1ג)`
+
+§§ `The end of the temporary period of (ג1ו)`
+
+-- s 9(ג1ו)(1) ran from the commencement of Amendment 98 (28 November 2021) to 31 December 2024 (SH 5782 p. 460, read from the page image). Paragraph (2) lets the Minister of Finance extend it
+-- by order for two years. The consolidation's note says it was extended to 31 December 2026 (Kovetz HaTakanot 5785 p. 626). What was READ (as text, not as a page image: the Knesset's record of
+-- Finance Committee meeting no. 511 of 9 December 2024, deposited at `../../registers/source-bundle/official/knesset-finance-committee-protocol-511-2024-12-09.doc`): the Committee approved a draft order that extends the period to 21 Tevet 5787, 31 December 2026, and a vote to revise that approval lost. NOT READ: the
+-- signed order and the Kovetz HaTakanot page, so the date of the extension's publication is CONSOLIDATION-ONLY. A fourth reading carries the end to 10 February 2027 through section 38 of Basic Law:
+-- The Knesset, on the strength of a law firm's guide quoting a Tax Authority notice that was NOT READ (the guide is at https://www.siboni-law.com/PurchaseTaxGuide2026; it is a third party's page and is not deposited). Fork T1: the reading is a named input.
+-- src:234 | (ג1ו)(1) על אף האמור בפסקה (1) של סעיף קטן (ג1ג), במכירת זכות במקרקעין, שהם בניין או חלק ממנו שהוא דירת מגורים, שלא חלות לגביה הוראות פסקה (2) של הסעיף הקטן האמור, שנעשתה בתקופה שמיום תחילתו של חוק מיסוי מקרקעין (שבח ורכישה) (תיקון מס׳ 98), התשפ״ב–2021 [note: (ביום 28.11.2021)], עד יום ל׳ בכסלו התשפ״ה (31 בדצמבר 2024), ישולם מס רכישה בשיעור משווי הזכות הנמכרת כקבוע להלן:
+-- src:237 | [note: התקופה הוראכה עד יום 31.12.2026 (ק״ת תשפ״ה, 626).]
+-- src:238 | (2) שר האוצר רשאי, בצו, באישור ועדת הכספים של הכנסת, להאריך את התקופה הקבועה בפסקה (1) לתקופה נוספת של שנתיים.
+DECLARE `A reading of the end of the (ג1ו) period` IS ONE OF
+    `the end printed in the Law, 31 December 2024`
+    `the end extended to 31 December 2026, as a note in the consolidation says`
+    `the end carried to 10 February 2027 by section 38 of Basic Law: The Knesset, on a notice that was not read`
+    `the end declined: answer only where the readings agree`
+
+GIVEN reading IS A `A reading of the end of the (ג1ו) period`, day IS A DATE
+GIVETH A MAYBE BOOLEAN
+`the temporary rule of (ג1ו) applies on` MEANS
+    BRANCH
+        IF day LESS THAN (Date 28 11 2021) THEN JUST FALSE
+        IF day AT MOST (Date 31 12 2024) THEN JUST TRUE
+        OTHERWISE
+            CONSIDER reading
+            WHEN `the end printed in the Law, 31 December 2024` THEN JUST FALSE
+            WHEN `the end extended to 31 December 2026, as a note in the consolidation says` THEN JUST (day AT MOST (Date 31 12 2026))
+            WHEN `the end carried to 10 February 2027 by section 38 of Basic Law: The Knesset, on a notice that was not read` THEN JUST (day AT MOST (Date 10 2 2027))
+            WHEN `the end declined: answer only where the readings agree` THEN
+                IF day AT MOST (Date 10 2 2027) THEN NOTHING ELSE JUST FALSE
+
+§§ `Which ladder applies to your purchase, and the tax`
+
+GIVEN p IS A `A purchase of a dwelling`, reading IS A `A reading of the end of the (ג1ו) period`
+GIVETH A MAYBE `Which ladder of section 9`
+`the ladder that applies to your purchase, on a reading` MEANS
+    CONSIDER `the period of section 9 that a day falls in` (p's `the day of the purchase`)
+    WHEN `the period of (ג1ג)` THEN
+        IF `the single-dwelling ladder of (ג1ג)(3) is yours` p
+        THEN JUST `the single-dwelling ladder of (ג1ג)(3)`
+        ELSE
+            CONSIDER `the temporary rule of (ג1ו) applies on` reading (p's `the day of the purchase`)
+            WHEN JUST t THEN
+                BRANCH
+                    IF t THEN JUST `the temporary ladder of (ג1ו)(1)`
+                    -- 24 June 2015 to 31 December 2020: the investors' rule of (ג1ה) (Amendment 81, SH 5775 p. 190; the instrument that repealed it was not read). Not encoded: NOTHING.
+                    IF (p's `the day of the purchase`) AT LEAST (Date 24 6 2015) AND (p's `the day of the purchase`) AT MOST (Date 31 12 2020) THEN NOTHING
+                    OTHERWISE JUST `the general ladder of (ג1ג)(1)`
+            WHEN NOTHING THEN NOTHING
+    WHEN `the period of (ג1ב)` THEN
+        IF `the transitional single-dwelling ladder of (ג1ב)(2) is yours` p
+        THEN JUST `the transitional single-dwelling ladder of (ג1ב)(2)`
+        ELSE JUST `the transitional general ladder of (ג1ב)(1)`
+    WHEN `a day before 16 January 1995` THEN NOTHING
+    WHEN `the period of (ג)` THEN NOTHING
+    WHEN `the period of (ג1)` THEN NOTHING
+    WHEN `the period of (ג1א)` THEN NOTHING
+
+-- s 9(ג1ג)(4)(ד) and (ג1א)(2)(ב)(3): a member of a purchase group is taxed on the sale value of the BUILT dwelling.
+-- src:231 | (ד) שווי הזכות הנמכרת במכירת זכות במקרקעין לרוכש הנמנה עם קבוצת רכישה יהיה שווי המכירה של הנכס הבנוי שהוא דירה המיועדת לשמש למגורים; לעניין זה, ”קבוצת רכישה“ – כמשמעותה בפסקה (2) בהגדרה ”דירת מגורים“ שבסעיף קטן (ג).
+GIVEN p IS A `A purchase of a dwelling`
+GIVETH A NUMBER
+`the value your tax is charged on` MEANS
+    IF p's `you are a member of a purchase group for the dwelling`
+    THEN p's `the sale value of the built dwelling`
+    ELSE p's `the value of the right you bought`
+
+GIVEN p IS A `A purchase of a dwelling`, reading IS A `A reading of the end of the (ג1ו) period`
+GIVETH A MAYBE NUMBER
+`the purchase tax on your purchase, on a reading` MEANS
+    CONSIDER `the ladder that applies to your purchase, on a reading` p reading
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST which THEN
+        CONSIDER `the ladder in force on` which (p's `the day of the purchase`)
+        WHEN NOTHING THEN NOTHING
+        WHEN JUST lad THEN JUST (`the tax on a value under a ladder` (`the value your tax is charged on` p) (lad's `its steps`))
+
+-- Where the amounts of the ladder that applies were read, for the same purchase.
+GIVEN p IS A `A purchase of a dwelling`, reading IS A `A reading of the end of the (ג1ו) period`
+GIVETH A MAYBE `Where a figure was read`
+`where the amounts behind your tax were read, on a reading` MEANS
+    CONSIDER `the ladder that applies to your purchase, on a reading` p reading
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST which THEN
+        CONSIDER `the ladder in force on` which (p's `the day of the purchase`)
+        WHEN NOTHING THEN NOTHING
+        WHEN JUST lad THEN JUST (lad's `where its amounts were read`)
