@@ -70,6 +70,8 @@ The six outside references and what was read:
 
 Section 16 amends the State as Litigant Law by an instruction in these words: in s 4, "at its end shall come" the words "subject to the provisions of the Attorney General Law (Opinions, Representation and Supervision), 5786-2026".
 `il41-amendment.l4` types the record: the law amended, the section, the words of s 4 as published in 1958, the instruction, and the words it adds.
+Section 4 as published in 1958 ends with a full stop (Sefer HaChukim 251 p. 119, page image), and the instruction names no change to that punctuation.
+The Hebrew Wikisource consolidation of the State as Litigant Law prints a comma where the full stop was (CONSOLIDATION-ONLY).
 The publications are typed with their years and pages: 5718 p. 118, 5759 p. 34 (1998), 5777 p. 920.
 Footnote 2 of the Law cites 5718 p. 118 and 5777 p. 920.
 
