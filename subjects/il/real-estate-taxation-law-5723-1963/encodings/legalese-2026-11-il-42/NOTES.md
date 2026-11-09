@@ -162,3 +162,25 @@ An earlier control on the s 9 tests, six wrong expected values, each failed; it 
 - What is the commencement of the present wording of s 48A (fork F8)?
 - What does the signed order extending the temporary ladder say, and does section 38 of Basic Law: The Knesset carry its end to 10 February 2027 (fork T1)?
 - Is the chargeable inflationary amount of a right acquired after 1993 zero (fork F3)?
+
+## 13. Observations on the text (public tier)
+
+Each point is about a date or a citation, not about an amount of tax in force.
+READ means the lead of the session read the page image of the instrument named, on 2026-11-10; CONSOLIDATION-ONLY means only the Wikisource text was read.
+No domain expert has read any of this.
+
+- O1, the end date of s 49לו2 pairs a Hebrew year with a Gregorian date that do not match.
+  The consolidation (deposit line 1174) prints "ט׳ בטבת התשצ״ג (31 בדצמבר 2033)", and the official text does the same: s 4(12) and s 6 of the Economic Efficiency Law, SH 3045 (31 May 2023) p. 159, print the same pair of words (READ, rendered at 300 dpi).
+  9 Tevet 5793 is 11 December 2032, and 9 Tevet 5794 is 31 December 2033; the routine that computed them reproduced 1 Tishri 5786 = 23 September 2025, 25 Kislev 5785 = 26 December 2024 and 2 Sivan 5786 = 18 May 2026.
+  The row does not encode s 49לו2 (out of scope, section 2), so no test depends on it; it is recorded because the two readings are a year apart.
+- O2, s 37(ב) (deposit line 489) refers to the day fixed under s 19 or s 20 as the day of sale, and s 20 was repealed.
+  Amendment 70, SH 2281 (15 March 2011) p. 403, s 2, reads "section 20 of the principal Law – repealed" (READ).
+  Whether a later instrument touched the citing words of s 37(ב) was not read: the deposit's amendment tags for s 37 show none (CONSOLIDATION-ONLY).
+  Effect found: none, because s 19 still fixes the day.
+- O3, ss 39(4) and 120(א) (deposit lines 519 and 1801) cite s 7(א) and s 7(4) and (5), and s 7 is one sentence.
+  Section 2 of the 1965 amendment, SH 442 (10 January 1965) p. 40, replaced s 7 by "the tax is imposed on an act in a land association", the sentence at deposit line 133 (READ).
+  Whether a later instrument reprinted the citing words in ss 39(4) and 120(א) was not read (CONSOLIDATION-ONLY).
+  Effect found: none; the cited paragraphs are of a 1963 text that no longer exists.
+- O4, s 48ב(ב)(4) (deposit line 695) refers to s 48א(ד1), and the consolidation's s 48א has no (ד1); the other subsection it names, s 48א1(א), is a closed temporary provision.
+  A second reading searched seven staged instruments for a (ד1) and found none; no official text of s 48א as it stands was read (CONSOLIDATION-ONLY for both limbs).
+  The row does not rely on s 48ב(ב)(4).
