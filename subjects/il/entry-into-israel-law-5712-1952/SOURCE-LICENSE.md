@@ -22,4 +22,6 @@ Hebrew is authoritative; English translations are unofficial. The English titles
 
 ## Status of this deposit
 
-No statute text has been deposited yet.
+The Hebrew working text was deposited on 2026-11-10 at `registers/source-bundle/entry-into-israel-law-5712-1952.he.wiki.txt`, as the raw MediaWiki source of the Wikisource page.
+It is an unofficial consolidation (page revision 3037272, last edited 2026-07-31T08:30:21Z), not a historical vintage; its sha256 and retrieval URL are in `registers/source-bundle/SOURCES.json` and in the `.meta.json` beside it.
+The official instruments quoted by row il-44, the two Criminal Procedure consolidations it reads, and the page images are listed in the same `SOURCES.json`.
