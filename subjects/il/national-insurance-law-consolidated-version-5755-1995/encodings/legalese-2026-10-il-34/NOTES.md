@@ -488,7 +488,8 @@ Schedule J as enacted: Sefer HaChukim 1522, 15.5.1995, p. 302 (`amending-laws/13
 | reg 1 "full rate" (the column letter and the threshold) | Kovetz HaTakanot 5835 p. 864, page image | **read**; the words are the consolidation's |
 | reg 2 as made (the threshold; "as stated in s 342(e)(3) of the Law") | Kovetz HaTakanot 5835 p. 864, page image | **read**; as made it did not name the "recognised employer" |
 | reg 1, "coordinated contributions" cites "s 432(d)(1)" as made | Kovetz HaTakanot 5848 p. 1112, the corrigendum, page image | **read**: it corrects "432" to "342"; it does not touch the column or the threshold |
-| the 1998 and 1999 amendments of the regulations | Kovetz HaTakanot 5905 pp. 892-893 and 5956 pp. 440-441, page images, the first pages of each | **read** where they amend reg 2 (the "recognised employer" and reg 7(2), 2A, 3A, 3B): none changes the column letter or the threshold; their later pages (regs 4 to 7) were not read |
+| the 1999 amendment of the regulations | Kovetz HaTakanot 5956 pp. 440-441, page images (both pages, whole) | **read**, by the lead, 2026-11-09: made under ss 342(e) and 400 (the cited power unchanged); amends reg 2, adds regs 2A and 3A to 3C, replaces reg 4 (the annual account, by reference to item 1 of Schedule י״א, the maximum income), amends reg 6(a); in force 13 Tevet 5759 (1.1.1999); it does not change the column letter or the threshold of reg 1 or reg 2; **it carries the 3B/3C slip below** |
+| the 1998 amendment of the regulations | Kovetz HaTakanot 5905 pp. 892-893, first pages | **read** by the correction pass where it amends reg 2 and adds regs 2A and 3A (as that pass reported); its later pages and regs 4 to 7 as amended were not read; the amendment does not change the column letter or the threshold of reg 1 or reg 2 on the pages read |
 | the regulations after 1999 | the Kovetz HaTakanot indexes | **not checked**; the consolidation's own amendment list (its header, line 5) ends at the amendment of 5759 (1999), Kovetz HaTakanot 5956 p. 440, and no later amendment was found; a later amendment of reg 1 or reg 2 would void the finding |
 | regs 2A, 3, 3A, 3B, 3C, 4 to 9 as now worded | the consolidation | **consolidation only**; not compared with the instruments |
 | s 342(e)(3)-(4) of the Law: 1997 text, 2005 replacement, 2025 threshold words, commencement | Sefer HaChukim 1607, 2023, 3384, page images | **read** |
@@ -496,12 +497,31 @@ Schedule J as enacted: Sefer HaChukim 1522, 15.5.1995, p. 302 (`amending-laws/13
 
 (The consolidation's header lists, after the regulations as made (Kovetz HaTakanot 5835 p. 864): the corrigendum at p. 1112, the amendment of 5758 at p. 892 and the amendment of 5759 at p. 440; the pages read are `takanot-5848-corrigendum-5757-p1112.pdf`, `takanot-5905-amend-5758-p892.pdf` (15.6.1998) and `takanot-5956-amend-5759-p440.pdf` (25.2.1999).)
 
+### The second finding: the 1999 amendment cites "regulation 3B" where the request for a refund is regulation 3C
+
+Status: **read** from the page images of Kovetz HaTakanot 5956 pp. 440-441 (25.2.1999) by the lead, 2026-11-09, and confirmed by the lead's own render of the same PDF.
+Reg 4(b) as the amendment replaces it names "תקנה 3ב" twice for a request for a refund; reg 5 of the amendment inserts into reg 6(a) the words "או בקשה להחזר דמי ביטוח לפי סעיף 3ב" (a regulation called a section).
+Regulation 3B, as the same page prints it, says that reg 3A applies to a worker of a recognised employer; regulation 3C is the request for a refund of contributions deducted in excess.
+The consolidation of the regulations marks all three "[צ״ל: 3ג]" or "[צ״ל: תקנה 3ג]" (reg lines 48 and 54), so the consolidation is faithful to the print, and the error is in the instrument.
+Read literally, the Institute's duty to refund in reg 6(a) attaches to a request under 3B, and not to the request under 3C; a court would read 3C.
+Tier: public; severity low; the fix is one word in three places (3ב becomes 3ג).
+Typed in `nii-il34-tests-expected-red.l4` as failures 5 to 7.
+Not checked: whether a later amendment of the regulations corrected it (the Kovetz HaTakanot indexes after 1999 were not searched).
+
+### The corrigendum of Kovetz HaTakanot 5848 p. 1112 (26.8.1997)
+
+Read from the page image: a correction of a printing error in the regulations as published in Kovetz HaTakanot 5835 p. 864: in reg 1, in the definition "דמי ביטוח מתואמים", "בסעיף 432(ד)(1)" is to read "בסעיף 342(ד)(1)".
+It does not touch "שיעור מלא", the column or the threshold.
+The consolidation of the regulations has the corrected citation (reg line 16), and this row takes the coordinated contributions as an input that row IL-05 computes from s 342(d)(1), so no rule changed.
+The correction is typed in `nii-il34-tests-expected-red.l4` as three passing assertions, so that a reader can see which of the two citations is the one in force.
+The last page of each of the four Kovetz HaTakanot PDFs in the bundle carries a Ministry of Justice certification (institutional signature, 21 May 2014) that the scan is a true copy of the document in the file; `registers/source-bundle/regulations/SOURCES.json` says so beside "private archive".
+
 ### What changed in this row
 
 - `nii-s342e-several-employers.l4`: comments only (the header, the note on "full rate", a note after source line 3671); no rule, no test and no count changed.
-- `nii-il34-tests-expected-red.l4` (new): 9 assertions; the 4 that fail are the regulation's column and its two thresholds against the Law's (reg 1's column against column D; reg 1's threshold against the Law's 60% of 2006 to 2025 and against the reduced collection threshold of 2026; reg 2's threshold against the reduced collection threshold); the 5 that pass show the regulation matched the Law and Schedule J as made in 1997.
-  Declared in `check.sh` (`expected_failed` 4) and in `encoding.json` `expected_red` (failed 4 of 9).
-- `check.sh`, same binary before and after, 2026-11-09: 26 modules, 5 errors, 878 satisfied, 5 failed, 1 refused before; 27 modules, 9 errors, 883 satisfied, 9 failed, 1 refused after; every other module printed the same numbers.
+- `nii-il34-tests-expected-red.l4` (new): first 9 assertions, then 10 more the same day (19 in all, 7 failing, 12 passing). The first 4 failures are the regulation's column and its two thresholds against the Law's (reg 1's column against column D; reg 1's threshold against the Law's 60% of 2006 to 2025 and against the reduced collection threshold of 2026; reg 2's threshold against the reduced collection threshold); the 5 that pass show the regulation matched the Law and Schedule J as made. Failures 5 to 7 are the second finding (above); 7 more assertions pass: three show the citations name regulation 3B (which exists and is not a request), one that 3B and 3C differ, and three type the corrigendum of Kovetz HaTakanot 5848 p. 1112 (reg 1 "coordinated contributions": s 432(d)(1) as first printed, s 342(d)(1) as corrected and as the consolidation has it).
+  Declared in `check.sh` (`expected_failed` 7) and in `encoding.json` `expected_red` (failed 7 of 19).
+- `check.sh`, same binary before and after, 2026-11-09: 26 modules, 5 errors, 878 satisfied, 5 failed, 1 refused before; 27 modules, 9 errors, 883 satisfied, 9 failed, 1 refused after the first pass; 27 modules, 12 errors, 890 satisfied, 12 failed, 1 refused after the second pass (the 3B/3C finding and the corrigendum checks); every other module printed the same numbers.
 - `DECIDED-ANSWERS.md` and `INDEPENDENT-FINDINGS.md` (fid-il-34's, frozen): dated correction notes appended; their original lines stand.
   `tests-independent.l4` was not touched: it asserts no column letter (its C060 and C061 comment says only that the full rate is an input).
 - Not done: this row takes no rule from the column or the threshold, so none was changed; a rule that read "the full rate" from Schedule J would need the column D reading, and the module says so.
