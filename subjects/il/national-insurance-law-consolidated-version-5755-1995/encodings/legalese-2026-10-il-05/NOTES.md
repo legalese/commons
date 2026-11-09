@@ -7,6 +7,73 @@ Version 0.4.0 (2026-10-08): repairs from the inventory of 2026-10-08 (BACKLOG IL
 Version 0.3.0 (2026-10-07): row IL-04's Schedule J switch reaches s 342(c); see "Version 0.3.0" below.
 No domain expert has read it against the source; HG1 has not been sought.
 The row depends on row IL-04 (s 1, s 334, s 337, Schedule J), whose modules it could not import (section 8).
+Correction of 2026-11-09 (no version bump): the claim in this file that the Law's s 342(e)(3)-(4) say "column E" of Schedule J was wrong; the official text says column D, and it is the deposited consolidation that prints column E; see "Correction 2026-11-09" below.
+
+## Correction 2026-11-09: s 342(e)(3)-(4) say column D in the official text; the consolidation prints column E
+
+Status: **resolved 2026-11-09**, by a correction pass (`ringe-defects-2026-11`) that read the pages named below as images of the Knesset's PDFs in `registers/source-bundle/amending-laws/`, and composed the official text of the passage from them by script.
+What each source line below rests on is marked: **read** means this pass looked at the page image; **reported** means the lead read it and this pass did not re-read it.
+
+Until this date this file (section 0, fork F22, section 9, section 10 item 6, the Axiom comparison), `encoding.json`, `check.sh` and `nii-il05-tests-expected-red.l4` said that the LAW prints "טור ה׳" (column E) in s 342(e)(3)-(4) where the deduction is column D, and recorded that as an inconsistency of the Law.
+That was wrong.
+The deposited text is Hebrew Wikisource's unofficial consolidation, and it prints "טור ה׳" in source lines 3669 and 3670.
+The official text has said column D since 1 January 2006.
+
+### What the official instruments say (read)
+
+Amendment 147 to the Income Tax Ordinance, Sefer HaChukim 2023, 10.8.2005, p. 809 (`16_lsr_299994.pdf`, PDF page 45), s 66(3), transcribed from the page image:
+
+```
+-- ext:[SH2023-p809-s66(3)] | (3) בסעיף 342 – (א) בסעיף קטן (ה) – (1) במקום פסקה (3) יבוא: ״(3) חובת מעביד לנכות דמי ביטוח בשיעור החל, לפי טור ד׳ בלוח י׳, על הכנסת עובד העולה על 60% מהשכר הממוצע, גם מהכנסת העובד שאינה עולה על 60% מהשכר הממוצע, אם העובד מועסק אצל מעביד נוסף;״; (2) בפסקה (4), במקום ״בטור ה׳״ יבוא ״בטור ד׳״;
+```
+
+Commencement, same Law (`16_lsr_299994.pdf`, PDF pages 55 and 60, transcribed from the page images):
+
+```
+-- ext:[SH2023-p819-s80(a)] | תחילתו של חוק זה ביום א׳ בטבת התשס״ו (1 בינואר 2006) (להלן – יום התחילה), אלא אם כן נאמר לעניין מסוים במפורש אחרת.
+-- ext:[SH2023-p824-s80(k)] | תחילתם של סעיפים 340, 341, 342 ו־345ב לחוק הביטוח הלאומי, כנוסחם בסעיף 66(1), (3) ו־(4) לחוק זה, ביום התחילה, והם יחולו על דמי ביטוח המשתלמים בעד יום התחילה ואילך.
+```
+
+The 2025 Budget-year Law, Sefer HaChukim 3384, 27.3.2025, pp. 395-396 (`25_lsr_6133485.pdf`, PDF pages 11-12), s 19(4), transcribed from the page image, replaces the threshold words in s 342 and does not touch the column letter:
+
+```
+-- ext:[SH3384-p396-s19(4)] | בסעיף 342, בכל מקום, במקום ״60% מהשכר הממוצע״ יבוא ״מדרגת הגבייה המופחתת״, ובמקום ״מ־60% מהשכר הממוצע״ יבוא ״ממדרגת הגבייה המופחתת״;
+```
+
+(The substitutions in s 342, s 345ב(ה) and Schedule J are items (4), (5) and (6) of s 19, whose heading is on p. 395; s 20, which begins on p. 396 after item (6), amends Amendment 252.
+This file and `encoding.json` already cited "s 19(4)" and "s 19(6)", which is right.)
+
+The composition check: take the text of s 342(e)(3)-(4) as added in 1997 (Sefer HaChukim 1607, 7.1.1997, pp. 36-37, PDF pages 21-22 of `14_lsr_211373.pdf`, read), apply the 2005 replacements and then the 2025 ones, and compare the result with source lines 3669 and 3670 of the consolidation.
+They are the same except for one letter in each: the official text says `ד׳`, the consolidation `ה׳`.
+
+### Why the consolidation has the old letter
+
+The history of Schedule J's column (reported, except where marked read): the Law as enacted (Sefer HaChukim 1522, 15.5.1995, p. 302) had the employee's deduction in column ה׳; the 1997 Arrangements Law added s 342(ד) and (ה) with "טור ה׳" in (ה)(3)-(4) (then correct; **read**, pp. 36-37); the 2000 Arrangements Law (Sefer HaChukim 1724, 10.1.2000, p. 68, s 2(7)) put "טור ה׳" into s 337(א)(1)-(2) (**read**); the Emergency Economic Plan Law 5762-2002 (Sefer HaChukim 1850, 16.6.2002, pp. 430-435) replaced Schedule J so that the deduction is column ד׳ and the Treasury allocation under s 32(ג1) column ה׳, and changed "בטור ה׳" to "בטור ד׳" in s 337(א)(1)-(2), but did not amend s 342, so for 1.7.2002 to 31.12.2005 s 342(ה)(3)-(4) cited a column that no longer carried the deduction; Amendment 147 (above) cured it with effect from 1.1.2006.
+The Wikisource page history, as the lead reports it (not re-checked here; the quoted words are the lead's, not read from the history by this pass):
+
+```
+-- ext:[wikisource-history, reported] | revision 14181 (2006-03-11T06:33:46Z): לפי טור ד' בלוח י'
+-- ext:[wikisource-history, reported] | revision 270123 (2009-03-25T20:51:57Z, edit comment "מעוצב, ללא הלוחות", a re-import): לפי טור ה' בלוח י', על הכנסת עובד העולה על מחצית השכר הממוצע
+```
+
+The second is the pre-2005 wording.
+So the consolidation's "טור ה׳" is a regression in the consolidation, and the two lines carry the 2025 threshold words on a column letter that is the pre-2006 one.
+
+### What this changes in this row
+
+- Fork F22 is **resolved**: column D, since 1 January 2006; the consolidation's column E is an error of the consolidation.
+  (e)(3)-(4) are a power and decide nothing in this row, as before.
+- No rule and no answer of the encoding changed: no rule reads the column letter (the one rule that touches (e)(3)-(4) declines, because the regulations under (e)(3) are not encoded in this row; row IL-34 encodes them).
+- `nii-il05-tests-expected-red.l4` was recast: its two failing assertions now compare the column the consolidation prints with the column the official text names (they still fail, which is the finding, and it is now a finding about the consolidation); two passing assertions were added (the official column is the deduction column, in (e)(3) and in (e)(4)).
+  The module held 5 assertions (3 failed, 2 satisfied) and holds 7 (3 failed, 4 satisfied); the failures are at lines 71, 72 and 91 (the first two were lines 44 and 45 at 0.1.0).
+  `check.sh` still expects 3 failures for it, and `encoding.json` `expected_red` says so with `of` raised from 5 to 7.
+- `check.sh`, same binary before and after, 2026-11-09: `nii-il05-tests-expected-red.l4` 3 errors, 2 satisfied, 3 failed before and 3 errors, 4 satisfied, 3 failed after; row total 9 errors, 404 satisfied, 9 failed, 2 refused before and 9, 406, 9, 2 after; `nii-il05-tests.l4` 271 of 271 both times.
+- `tests-independent.l4` is the independent tester's record: nothing in it was changed, and a dated note was appended at its end where it asserts the column E claim (line 426).
+- `DECIDED-ANSWERS.md` (J1, K4) and `INDEPENDENT-FINDINGS.md` carry a dated correction note; their original sentences stand as the record of what was decided then.
+- **The live defect is elsewhere.** The 1997 regulations that s 342(ה) and s 400 empower still say "טור ה׳" in their reg 1 and were never conformed; see row IL-34, `NOTES.md`.
+- Not checked: whether the other finding recorded here (fork F10, s 342(ג)(2) "subject to s 245(ב2)", where s 245(ב2) is marked repealed) is a defect of the Law or of the consolidation.
+  This pass did not read an official instrument for it.
+- `hebcheck.py` as row IL-04 ships it (the one section 0 cites) flags the `ext:` lines above, because it skips only `src:` lines; row IL-34's copy of the tool skips `ext:` lines too.
 
 ## Version 0.6.0 (2026-10-08): SHRUG on the remaining ambiguities (BACKLOG IL-50)
 
@@ -439,7 +506,8 @@ TOTAL (7 modules)                              3       172       3        0
 The 3 errors are the 3 failed assertions of `nii-il05-tests-expected-red.l4`, which `check.sh`'s `expected_failed` table and `encoding.json`'s `expected_red` both name with that count; there is no other error, and no warning in any module.
 They were predicted before that module was first run, and the run failed exactly those three, read from the diagnostics by line (44, 45, 60; none "could not be evaluated"):
 
-- **2: s 342(e)(3) and (e)(4) name "column E of Schedule J" for the rates of the employer's deduction** (lines 3669-3670), where Schedule J's column E is "the State Treasury's allocation under s 32(c1)" and the deduction is column D, "the deduction from the employee's wage for s 342(c)" (line 4717). Fork F22.
+- **2: the consolidation prints "column E of Schedule J" in s 342(e)(3) and (e)(4) for the rates of the employer's deduction** (lines 3669-3670), where Schedule J's column E is "the State Treasury's allocation under s 32(c1)" and the deduction is column D, "the deduction from the employee's wage for s 342(c)" (line 4717). Fork F22.
+  **(Corrected 2026-11-09: at 2026-10-06 this item called the column E a defect of the Law; the official text has said column D since 1 January 2006, so the failure is a finding about the consolidation. See "Correction 2026-11-09".)**
 - **1: s 342(c)(2) is made "subject to s 245(b2)"** (line 3662), and s 245(b2) reads "(בוטל)", repealed (line 2474). Fork F10.
 
 Neither changes an answer the rules give: (e) is a power whose regulations are not in the sources, and a repealed provision qualifies nothing.
@@ -636,7 +704,7 @@ Neither s 342 nor s 348 nor Schedule K says to round; the Institute publishes wh
 | F19 | s 342(c)(2) | The day a person "reaches" an age | — | the date of birth plus the age in months, keeping the day of the month or the month's last day when it is shorter (`add months`). **(0.4.0)** The shorter month is fork DATE ("Version 0.4.0" above), which waits on Meng (BACKLOG IL-24); this reading is kept until then. **(0.5.0)** Ruled (SHRUG): declined by default; this reading is kept by name, `the last day of that month`. |
 | F20 | Schedule K "for a year" | A person in a category for part of a year | — | **not modelled**: the yearly figures are for the whole tax year. |
 | F21 | s 342(c)(2) "the deduction in item 6 of Schedule J" | — | — | item 6 is unemployment (line 4725); only that branch's column D amount is left out for a police or prison officer. |
-| F22 | s 342(e)(3)-(4) (3669-3670) | "column E of Schedule J" for deduction rates | (i) column D intended; (ii) as written | **not resolved**: (e) is a power and decides nothing here; checked red. |
+| F22 | s 342(e)(3)-(4) (3669-3670) | the consolidation prints "column E of Schedule J" for deduction rates | (i) column D intended; (ii) as written | **resolved 2026-11-09**: the official text says column D since 1 January 2006 (Sefer HaChukim 2023 p. 809, s 66(3)(a); s 80(a) and (k)); the consolidation's column E is its own error; checked red (the consolidation's column against the official one). (e) is a power and decides nothing here. Until 2026-11-09 this row read "not resolved". |
 | F23, F24 | (0.3.0) | see "Version 0.3.0" above | — | — |
 | F25, DATE | (0.4.0) | see "Version 0.4.0" above | — | — |
 
@@ -743,7 +811,7 @@ Section 6 lists what to delete or join at IL-07.
 
 ## 9. Observations about the source, for whoever maintains it
 
-- **s 342(e)(3)-(4) say "column E" of Schedule J for deduction rates**; the deduction is column D (F22; red).
+- **The consolidation prints "column E" of Schedule J in s 342(e)(3)-(4) for deduction rates**; the deduction is column D, and the official text says column D since 1 January 2006 (F22; red; corrected 2026-11-09, it was recorded here as a defect of the Law).
 - **s 342(c)(2) is subject to s 245(b2)**, which is repealed (F10; red).
 - **Schedule J's temporary table, column D (row IL-04's fork F3).** The consolidation prints the temporary table's column D upper heading as "above 60% of the average wage" and the lower one as "not above the reduced collection threshold" (line 4718). The enacted texts, as read here: Amendment 252 s 7(a)(3)(b) replaces only column D's lower sub-column, under its own heading "not exceeding 60% of the average wage"; the upper sub-column is the main Law's, whose "60% of the average wage" the 2025 budget-year Law s 19(6) replaced "everywhere" in Schedule J with "the reduced collection threshold" from 1 January 2026, and s 20 of that Law amended s 7's figures but not its headings. On that reading the 2026 upper heading is "above the reduced collection threshold", as in the permanent table, and the "60%" survives in the enacted text only in s 7's lower heading. This is this row's reading of three texts, offered as evidence on IL-04's F3; nothing in this row turns on it, because its s 342(c) takes the column D amounts as inputs.
 - **The editors' note dates s 348(e)'s temporary text to 31.8.2026**, which matches Amendment 9; the National-Civic Service Law's expiry was moved three times in 2025-2026, the second time (Amendment 8, passed 18.11.2025) after the date it replaced (15.11.2025), with commencement on 16.11.2025.
@@ -759,6 +827,7 @@ Section 6 lists what to delete or join at IL-07.
    **(0.6.0)** Until answered, both forks are switches declined by default where their readings differ (SHRUG).
 5. F9: how does the Institute apportion a month in which an employee reaches 70 (or her Part D age), or in which a pension begins?
 6. F22: is "column E" in s 342(e)(3)-(4) a remnant of an earlier numbering of Schedule J's columns?
+   **(Answered 2026-11-09: yes, in the consolidation. The official text says column D since 1 January 2006; the column E is the numbering before the Emergency Economic Plan Law 5762-2002, and, as the Wikisource page history is reported to show (not re-checked here), what a 2009 re-import of the consolidation printed. See "Correction 2026-11-09".)**
 7. Was the National-Civic Service Law's expiry moved again after 31.8.2026, and if not, does s 348(e)'s temporary text now reach only those who began before?
 8. **(0.4.0)** Fork DATE: from what day is a man born on 29 February 70 in a year without one, for s 342(c)(2)?
    One ruling for rows IL-05, IL-06 and IL-08: BACKLOG IL-24.
@@ -834,7 +903,7 @@ Lines are lines of the deposited consolidation unless marked.
 | X1 | s 348(a1), how much non-work income is disregarded | a deduction: the part up to 25% of the average wage (F3 (ii)); the all-or-nothing reading is encoded beside it, unused | all or nothing: `if nonwork_income… <= nonwork_income_exclusion_threshold: max(0, nonwork_income…) else: 0`; its test `nonwork_income_above_threshold_receives_no_partial_exclusion` asserts 0 on 3,000 against a sum of 2,500 | 3764; 3763 for the comparison F3 relies on | genuine ambiguity: see below | none to the answer; restate F3's reason (P1) |
 | X2 | Schedule K, a monthly minimum for items 2-4 | a third of the quarter's (F2): 3,442.25, 688.45, 2,065.35 a month in 2026 | `employee_monthly_minimum_insurable_income` is `if insured_item == 1: applicable_minimum_wage_first_month_of_quarter else: 0`; its test asserts 0 for item 3 | 4761-4766 print no monthly cell for items 2-4 | theirs wrong: 0 has no source, and Axiom's own gap entry says so ("The text sets no monthly minimum for those items, which is not the same as a minimum of zero", `docs/ENCODING-GAPS.md` lines 641-643). Between ours and a refusal (the independent tester's E8), F2 stays a genuine ambiguity, already recorded | none |
 | X3 | s 342(c)(2), "subject to s 245(b2)" | repealed, so no effect; checked red (F10) | a live dependency: (c)(1) and (c)(2) are deferred for want of "the operative qualification in section 245(b2)", and the deferral says a "repeal assertion" cannot replace "the required legal dependencies" | 3662 (בכפוף להוראות סעיף 245(ב2)); 2474, where (b2) reads בוטל | theirs wrong on the deposited text. Not checked against Axiom's own copy of s 245, which is out of row. No Axiom output turns on it, because the limbs it blocks are deferred | none |
-| X4 | s 342(e)(3)-(4), "column E" for deduction rates | flagged red: the deduction is column D (F22) | not noticed: (e) is deferred as "upper-band withholding and Institute approvals", with no mention of a column | 3669-3670 (טור ה׳); 4717 | representational: neither computes (e); only ours tests the source against itself | none |
+| X4 | s 342(e)(3)-(4), "column E" for deduction rates (corrected 2026-11-09: the column E is the consolidation's, the official text says column D) | flagged red: the deduction is column D (F22) | not noticed: (e) is deferred as "upper-band withholding and Institute approvals", with no mention of a column | 3669-3670 (טור ה׳); 4717 | representational: neither computes (e); only ours tests the source against itself | none |
 | X5 | s 342(a)-(b), an employee who is also self-employed | one column per call, so such a person takes two calls (the independent tester's A7) | one call, two booleans: `person_is_self_employed or not person_is_employee`, so a dual-status person is liable for himself | 3659; 3673 names the dual case | representational, with the interface gap on our side | optional (P3) |
 | X6 | s 342(a), "an insured person" | presupposed: the record has no "not insured" | `person_is_insured` is an input, and false gives not liable | 3659 (מבוטח) | scope difference | optional (P4) |
 | X7 | s 348(a) and (a1), "for contributions payable under s 335" | presupposed: every s 348 rule is for such contributions; the limb is not an input and not in the coverage table | `contributions_payable_under_section_335` gates both rules; false passes the wage through uncapped and excludes nothing | 3763-3764 | scope difference | state the presupposition (P2) |
@@ -888,11 +957,13 @@ This row's own tests show the readings part exactly where Axiom's case does (`ni
 | F19 the day an age is reached | `add months` | deferred; the man's age 70 is a parameter | silent |
 | F20 part of a year in a category | not modelled | one `insured_item` per call | agrees in effect |
 | F21 item 6 of Schedule J | unemployment | names "the Schedule J item 6 deduction for police and prison officers" without the branch | silent, consistent |
-| F22 "column E" | not resolved; red | not mentioned | silent |
+| F22 "column E" | resolved 2026-11-09 (the consolidation's error; the official text says column D); red | not mentioned | silent |
 
 Agree 4 (F4, F8's date, F11, F20); disagree 3 (F2, F3, F10); silent 15.
 
 ### The three places the source contradicts itself
+
+(Corrected 2026-11-09: the first two rows below are the consolidation's error, not a contradiction in the Law; see "Correction 2026-11-09".)
 
 | expected-red check | ours | Axiom |
 | --- | --- | --- |
@@ -989,7 +1060,7 @@ It defers the rest, each with a written reason.
 Where both compute, they agree, except on two points.
 One is s 348(a1) (X1), where the words lean to Axiom's all-or-nothing reading and the regulator's published practice supports ours; the text does not decide it.
 The other is the monthly minimum of items 2-4 (X2), where Axiom returns 0 and its own gap file says that is wrong.
-Axiom's deferral treats the repealed s 245(b2) as live (X3), and it does not notice the "column E" slips in s 342(e)(3)-(4).
+Axiom's deferral treats the repealed s 245(b2) as live (X3), and it does not notice the "column E" slips in s 342(e)(3)-(4) (which are the consolidation's, corrected 2026-11-09: the official text says column D).
 Nothing in the comparison shows an answer of ours wrong.
 One reason in our fork register (F3) is overstated, and two presuppositions should be stated.
 Of Axiom's 38 expected outputs, 31 match through our encoding, 2 diverge, and 5 cannot be put to our interface.

@@ -75,3 +75,11 @@ The Institute's charge on yeshiva students: no text; the encoding refuses it by 
 ## Counts
 
 370 cases decided; 149 independent assertions satisfied (of which 6 are `REFUSED ... BECAUSE` assertions satisfied); 5 failed (TESTER-WRONG); 2 refused (1 OURS-WRONG minor, 1 AMBIGUITY).
+
+
+## Correction note, 2026-11-09 (added by a correction pass; the findings above are the tester's record and are not rewritten)
+
+Finding S4 says that s 342(e)(3), (4) and reg 1 all say "טור ה׳" for the deduction rate.
+That is true of reg 1 and of the deposited Wikisource consolidation of the Law (source lines 3669-3670); the Law's official s 342(e)(3)-(4) have said column D since 1 January 2006 (Sefer HaChukim 2023, 10.8.2005, p. 809, s 66(3)(a); s 80(a) and (k)).
+The defect that remains is in the regulation: reg 1 still says column E, and "half the average wage".
+See `NOTES.md`, section 14, and `nii-il34-tests-expected-red.l4`.

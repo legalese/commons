@@ -433,3 +433,14 @@ s 28(a) crediting: only the pro-rata arithmetic for a payment wholly above the t
 s 346 and the Institute's yeshiva-student charge: no text; refusal expected.
 The recognized-employer status (reg 2) and the s 245(b2) age rule depend on texts outside the sources.
 Heavily covered: the 2026 employee deduction, several employers and regs 2 to 9, s 32 percentages, s 340A, s 348(e) with the civic expiry, the s 369 / Schedule K11-1 ceilings.
+
+
+## Correction note, 2026-11-09 (added by a correction pass; the entries above are the tester's record and are not rewritten)
+
+N4 and C060 above say that s 342(e)(3), (4) AND reg 1 "still say col E".
+That is true of reg 1 and of the deposited Wikisource consolidation of the Law (source lines 3669-3670), and it is not true of the Law's official text.
+The official s 342(e)(3) and (e)(4) have said column D, the employee's deduction column, since 1 January 2006 (Amendment 147 to the Income Tax Ordinance, Sefer HaChukim 2023, 10.8.2005, p. 809, s 66(3)(a); s 80(a) and (k)); the consolidation's column E is its own error.
+So the "stale cross-reference" in C060 is the regulation's alone: reg 1, made in 1997, names column E, which was then the employee's deduction column, and was not conformed when Schedule J was later replaced (NOTES.md section 14 gives the history and says which parts were read from the page images).
+C061 stands: the statute's threshold is the one to take (60% of the average wage from 1 January 2006, the reduced collection threshold from 1 January 2026), and the regulation's "half the average wage" is the regulation's stale wording.
+The decisions (the full rate is the above-threshold deduction rate, an input) stand.
+See `NOTES.md`, section 14, and `nii-il34-tests-expected-red.l4`.

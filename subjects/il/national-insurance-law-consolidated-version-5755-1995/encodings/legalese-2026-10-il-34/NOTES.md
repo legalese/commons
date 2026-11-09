@@ -1,6 +1,7 @@
 # Notes: National Insurance Law, the contributions surroundings (row IL-34)
 
 Version 0.1.1, draft (0.1.0 plus the repairs of section 13).
+Correction of 2026-11-09 (no version bump): the "column E" of s 342(e)(3)-(4) is the deposited consolidation's error, not the Law's; the defect that is live is in reg 1 of the regulations of 5757-1997; a new expected-red module types it; see section 14.
 Run `IL-34-20261008`, encoder `enc-il-34`, 2026-10-09 (SGT); the check run below is 2026-10-09T00:00Z.
 Read BRIEF.md first for the scope and the rules.
 Every Markdown sentence here is on its own line, so a grep hit is a whole sentence.
@@ -63,7 +64,7 @@ No row is `deferred`.
 
 | provision | line | disposition | where |
 | --- | --- | --- | --- |
-| reg 1, definitions | reg 14-20 | inert | "coordinated contributions", "full rate", "total income" are inputs; "half the average wage" is not gating (section 3) |
+| reg 1, definitions | reg 14-20 | inert | "coordinated contributions", "full rate", "total income" are inputs; "half the average wage" is not gating (section 3); the column E and half the average wage of "full rate" are stale against the Law (typed and failed in `nii-il34-tests-expected-red.l4`, section 14) |
 | reg 2, the full rate on the whole wage | reg 22-23 | encoded | `Regulations of 5757-1997 reg 2 — where…, the deduction from a wage of…` |
 | reg 2A, the form | reg 25-26 | encoded | `…reg 2A — the employee is bound…`, `…the form was handed over in time` |
 | reg 3(a), the collection clerk's certificate | reg 29 | encoded | `…reg 3(a) — the clerk may give the employee a certificate` |
@@ -191,8 +192,10 @@ Each switch has a public rule that answers at the switch, and a form with the re
   The tests show all twelve months of 2026 at 7,703.
 - **"Half the average wage" in the regulations (regs 1, 2).** The Law now says "the reduced collection threshold" (s 334(a); the 2025 Budget-year Law s 19(4) changed the Law's own wording, not the regulations').
   The regulations' amounts do not turn on which: reg 2 puts the full rate on the whole wage, and the full rate is the rate of the band above the threshold, wherever the threshold is.
-- **"Column E" in reg 1 and s 342(e)(3).** Both name column E where Schedule J's deduction rates are column D (IL-05's fork F22).
-  The rate is an input here, so this row takes no side; two instruments naming column E is a small fact for whoever rules F22.
+- **"Column E" in reg 1 and in the consolidation's s 342(e)(3).** Reg 1 names column E where Schedule J's deduction rates are column D.
+  The consolidation of the Law prints column E in s 342(e)(3) too, but the Law's official text says column D since 1 January 2006, so it is the consolidation that is wrong there and the regulation that is stale (corrected 2026-11-09; section 14; IL-05's fork F22, resolved).
+  The rate is an input here, so this row takes no side on the answers; the stale regulation is typed and failed on purpose in `nii-il34-tests-expected-red.l4`.
+  (Until 2026-11-09 this bullet read: "Both name column E where Schedule J's deduction rates are column D ...; two instruments naming column E is a small fact for whoever rules F22.")
 - **Reg 3A(c), "the second half after 1 June".** Every day of the second half is after 1 June, so the clause adds nothing; the reference day of the first half is 1 January.
 - **Reg 4(b)** cites "reg 3B" and the text's own note corrects it to 3C.
 - **ss 340(d), (e), 340A:** the consolidation prints the base figures in the text and the 2025 and 2026 figures in editors' notes.
@@ -439,7 +442,8 @@ Whether 13,566 already includes s 2(b)'s changes is not stated; the two labels i
 - S1. Schedule J, 2025-2026, employee column C above the tier: the cells add to 14.39 (14.49) against the printed 14.50 (14.60): fork R1 above.
 - S2. Column D (employee deduction) above the tier: the cells add to 4.67 against the printed 7.00; the rates are inputs here and nothing is affected (IL-04's fork).
 - S3. The consolidation keeps "60% of the average wage" in column D's heading in the 2025-2026 table, though the 2025 Budget-year Law s 19(6) replaces it by the reduced collection threshold from 1.1.2026.
-- S4. s 342(e)(3), (4) and reg 1 say column E for the deduction rate, which is column D (IL-05 fork F22).
+- S4. reg 1, and the deposited consolidation's s 342(e)(3), (4), say column E for the deduction rate, which is column D (IL-05 fork F22).
+  (Corrected 2026-11-09: the official s 342(e)(3), (4) say column D since 1 January 2006; the stale instrument is the regulation; section 14.)
 - S5. s 369(d) says "(ג)" where (a) is evidently meant; out of scope (this row stops at s 369(a)).
 - S6. The two average wages above.
 
@@ -447,3 +451,77 @@ Whether 13,566 already includes s 2(b)'s changes is not stated; the two labels i
 The tests are light on s 32(b) to (h) beyond (e) (they are repealed or by agreement), on (c1) and (c2) (one formula and an identity), on the kibbutz formula of s 344(a)(1) (two readings at two basic amounts, no case with other member counts), and on s 369 beyond (a), which is not encoded.
 
 **Mutation checks of 0.1.1:** not repeated; the tests added are for rules whose changes are one line each.
+
+## 14. Correction 2026-11-09: the stale instrument is the regulation, not the Law
+
+Status: **resolved 2026-11-09**, by a correction pass (`ringe-defects-2026-11`) that read the pages named below as images, and typed the result in `nii-il34-tests-expected-red.l4`.
+What each claim rests on is marked: **read** means that pass looked at the page image; **reported** means the lead read it and that pass did not re-read it; **consolidation only** means only the Wikisource text was read.
+
+Until this date this row (section 3, S4, `DECIDED-ANSWERS.md` N4 and C060, `INDEPENDENT-FINDINGS.md` S4) said that s 342(e)(3)-(4) and reg 1 "both name column E" where the deduction is column D, as two instruments with one defect.
+The official text of s 342(e)(3)-(4) has said column D since 1 January 2006, and the Law's official threshold words are "60% of the average wage" from that day and "the reduced collection threshold" from 1 January 2026.
+The consolidation prints column E in s 342(e)(3)-(4); that is the consolidation's error (row IL-05, `NOTES.md`, "Correction 2026-11-09", has the evidence).
+Reg 1 of the regulations of 5757-1997 still says column E and "half the average wage", and was never conformed.
+That is the live defect: a reference to a column that moved, and a threshold that the Law has twice moved from.
+In practice a court would read reg 1's "column E" as the employee-deduction column; the tier is PUBLIC and the severity low.
+
+### What the instruments say (read)
+
+```
+-- ext:[KT5835-p864] | ״שיעור מלא״ – שיעור הניכוי משכר העובד הקבוע בטור ה׳ בלוח י׳ לחוק, על חלק השכר העולה על מחצית השכר הממוצע;
+-- ext:[KT5835-p864] | מעביד שתקנות 5(א) ו־(ה)(1) לתקנות הניכוי חלות לגביו, ינכה דמי ביטוח בשיעור מלא גם מחלק השכר של העובד, שאינו עולה על מחצית השכר הממוצע, כאמור בסעיף 342(ה)(3) לחוק.
+-- ext:[SH1607-p36] | (3) חובת מעביד לנכות דמי ביטוח בשיעור החל, לפי טור ה׳ בלוח י׳, על הכנסת עובד העולה על מחצית השכר הממוצע, גם מהכנסת העובד שאינה עולה על מחצית השכר הממוצע, אם העובד מועסק אצל מעביד נוסף;
+-- ext:[SH2023-p809] | ״(3) חובת מעביד לנכות דמי ביטוח בשיעור החל, לפי טור ד׳ בלוח י׳, על הכנסת עובד העולה על 60% מהשכר הממוצע, גם מהכנסת העובד שאינה עולה על 60% מהשכר הממוצע, אם העובד מועסק אצל מעביד נוסף;״
+-- ext:[SH3384-p396] | בסעיף 342, בכל מקום, במקום ״60% מהשכר הממוצע״ יבוא ״מדרגת הגבייה המופחתת״, ובמקום ״מ־60% מהשכר הממוצע״ יבוא ״ממדרגת הגבייה המופחתת״;
+```
+
+Reg 1 and reg 2 as made: Kovetz HaTakanot 5835, 17.6.1997, p. 864 (`registers/source-bundle/regulations/takanot-5835-orig-5757-p864.pdf`, PDF page 8).
+That PDF is a scan of the Reshumot issue hosted by olaw.org.il, which `SOURCES.json` calls a private archive of the Reshumot issues and not the Government Printer's own copy.
+s 342(e)(3) as added: Sefer HaChukim 1607, 7.1.1997, pp. 36-37 (`amending-laws/14_lsr_211373.pdf`, PDF pages 21-22).
+As replaced: Sefer HaChukim 2023, 10.8.2005, p. 809, s 66(3)(a) (PDF page 45), in force from 1 January 2006 by s 80(a) and (k) (pp. 819 and 824).
+The threshold words as replaced: Sefer HaChukim 3384, 27.3.2025, pp. 395-396, s 19(4), in force from 1 January 2026 by s 21 (PDF pages 11-12).
+Schedule J as enacted: Sefer HaChukim 1522, 15.5.1995, p. 302 (`amending-laws/13_lsr_203774.pdf`, PDF page 93, a rotated page, read at 110 dpi): column E is headed "the deduction from the employee's wage for s 342(c)".
+
+### Which parts were checked against Reshumot, and which only against the consolidation
+
+| part | checked against | state |
+| --- | --- | --- |
+| reg 1 "full rate" (the column letter and the threshold) | Kovetz HaTakanot 5835 p. 864, page image | **read**; the words are the consolidation's |
+| reg 2 as made (the threshold; "as stated in s 342(e)(3) of the Law") | Kovetz HaTakanot 5835 p. 864, page image | **read**; as made it did not name the "recognised employer" |
+| reg 1, "coordinated contributions" cites "s 432(d)(1)" as made | Kovetz HaTakanot 5848 p. 1112, the corrigendum, page image | **read**: it corrects "432" to "342"; it does not touch the column or the threshold |
+| the 1999 amendment of the regulations | Kovetz HaTakanot 5956 pp. 440-441, page images (both pages, whole) | **read**, by the lead, 2026-11-09: made under ss 342(e) and 400 (the cited power unchanged); amends reg 2, adds regs 2A and 3A to 3C, replaces reg 4 (the annual account, by reference to item 1 of Schedule י״א, the maximum income), amends reg 6(a); in force 13 Tevet 5759 (1.1.1999); it does not change the column letter or the threshold of reg 1 or reg 2; **it carries the 3B/3C slip below** |
+| the 1998 amendment of the regulations | Kovetz HaTakanot 5905 pp. 892-893, first pages | **read** by the correction pass where it amends reg 2 and adds regs 2A and 3A (as that pass reported); its later pages and regs 4 to 7 as amended were not read; the amendment does not change the column letter or the threshold of reg 1 or reg 2 on the pages read |
+| the regulations after 1999 | the Kovetz HaTakanot indexes | **not checked**; the consolidation's own amendment list (its header, line 5) ends at the amendment of 5759 (1999), Kovetz HaTakanot 5956 p. 440, and no later amendment was found; a later amendment of reg 1 or reg 2 would void the finding |
+| regs 2A, 3, 3A, 3B, 3C, 4 to 9 as now worded | the consolidation | **consolidation only**; not compared with the instruments |
+| s 342(e)(3)-(4) of the Law: 1997 text, 2005 replacement, 2025 threshold words, commencement | Sefer HaChukim 1607, 2023, 3384, page images | **read** |
+| the rest of this row (ss 2, 28, 32, 336, 340, 341, 343-351, 369, Schedules A, K1, the Order and the Civic Service Law) | the consolidations | **consolidation only**; the regression described in IL-05's `NOTES.md` was found in two lines of s 342, and this row did not re-check its other passages |
+
+(The consolidation's header lists, after the regulations as made (Kovetz HaTakanot 5835 p. 864): the corrigendum at p. 1112, the amendment of 5758 at p. 892 and the amendment of 5759 at p. 440; the pages read are `takanot-5848-corrigendum-5757-p1112.pdf`, `takanot-5905-amend-5758-p892.pdf` (15.6.1998) and `takanot-5956-amend-5759-p440.pdf` (25.2.1999).)
+
+### The second finding: the 1999 amendment cites "regulation 3B" where the request for a refund is regulation 3C
+
+Status: **read** from the page images of Kovetz HaTakanot 5956 pp. 440-441 (25.2.1999) by the lead, 2026-11-09, and confirmed by the lead's own render of the same PDF.
+Reg 4(b) as the amendment replaces it names "תקנה 3ב" twice for a request for a refund; reg 5 of the amendment inserts into reg 6(a) the words "או בקשה להחזר דמי ביטוח לפי סעיף 3ב" (a regulation called a section).
+Regulation 3B, as the same page prints it, says that reg 3A applies to a worker of a recognised employer; regulation 3C is the request for a refund of contributions deducted in excess.
+The consolidation of the regulations marks all three "[צ״ל: 3ג]" or "[צ״ל: תקנה 3ג]" (reg lines 48 and 54), so the consolidation is faithful to the print, and the error is in the instrument.
+Read literally, the Institute's duty to refund in reg 6(a) attaches to a request under 3B, and not to the request under 3C; a court would read 3C.
+Tier: public; severity low; the fix is one word in three places (3ב becomes 3ג).
+Typed in `nii-il34-tests-expected-red.l4` as failures 5 to 7.
+Not checked: whether a later amendment of the regulations corrected it (the Kovetz HaTakanot indexes after 1999 were not searched).
+
+### The corrigendum of Kovetz HaTakanot 5848 p. 1112 (26.8.1997)
+
+Read from the page image: a correction of a printing error in the regulations as published in Kovetz HaTakanot 5835 p. 864: in reg 1, in the definition "דמי ביטוח מתואמים", "בסעיף 432(ד)(1)" is to read "בסעיף 342(ד)(1)".
+It does not touch "שיעור מלא", the column or the threshold.
+The consolidation of the regulations has the corrected citation (reg line 16), and this row takes the coordinated contributions as an input that row IL-05 computes from s 342(d)(1), so no rule changed.
+The correction is typed in `nii-il34-tests-expected-red.l4` as three passing assertions, so that a reader can see which of the two citations is the one in force.
+The last page of each of the four Kovetz HaTakanot PDFs in the bundle carries a Ministry of Justice certification (institutional signature, 21 May 2014) that the scan is a true copy of the document in the file; `registers/source-bundle/regulations/SOURCES.json` says so beside "private archive".
+
+### What changed in this row
+
+- `nii-s342e-several-employers.l4`: comments only (the header, the note on "full rate", a note after source line 3671); no rule, no test and no count changed.
+- `nii-il34-tests-expected-red.l4` (new): first 9 assertions, then 10 more the same day (19 in all, 7 failing, 12 passing). The first 4 failures are the regulation's column and its two thresholds against the Law's (reg 1's column against column D; reg 1's threshold against the Law's 60% of 2006 to 2025 and against the reduced collection threshold of 2026; reg 2's threshold against the reduced collection threshold); the 5 that pass show the regulation matched the Law and Schedule J as made. Failures 5 to 7 are the second finding (above); 7 more assertions pass: three show the citations name regulation 3B (which exists and is not a request), one that 3B and 3C differ, and three type the corrigendum of Kovetz HaTakanot 5848 p. 1112 (reg 1 "coordinated contributions": s 432(d)(1) as first printed, s 342(d)(1) as corrected and as the consolidation has it).
+  Declared in `check.sh` (`expected_failed` 7) and in `encoding.json` `expected_red` (failed 7 of 19).
+- `check.sh`, same binary before and after, 2026-11-09: 26 modules, 5 errors, 878 satisfied, 5 failed, 1 refused before; 27 modules, 9 errors, 883 satisfied, 9 failed, 1 refused after the first pass; 27 modules, 12 errors, 890 satisfied, 12 failed, 1 refused after the second pass (the 3B/3C finding and the corrigendum checks); every other module printed the same numbers.
+- `DECIDED-ANSWERS.md` and `INDEPENDENT-FINDINGS.md` (fid-il-34's, frozen): dated correction notes appended; their original lines stand.
+  `tests-independent.l4` was not touched: it asserts no column letter (its C060 and C061 comment says only that the full rate is an input).
+- Not done: this row takes no rule from the column or the threshold, so none was changed; a rule that read "the full rate" from Schedule J would need the column D reading, and the module says so.
