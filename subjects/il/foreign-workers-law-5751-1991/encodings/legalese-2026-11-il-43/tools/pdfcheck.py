@@ -20,12 +20,12 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 SB = os.path.normpath(os.path.join(HERE, "..", "..", "..", "registers", "source-bundle", "amending-laws"))
 MAP = {
-    "SH 2407 p.227": ("sh2407-5773-pp224-228-nii-amendment-147.pdf", 4),
-    "SH 2459 p.600": ("sh2459-5774-law-replacing-the-term-employer.pdf", 2),
-    "SH 2459 p.604": ("sh2459-5774-law-replacing-the-term-employer.pdf", 6),
-    "SH 2504 p.2": ("sh2504-5776-pp1-2-nii-amendment-162.pdf", 2),
-    "SH 2713 p.524": ("sh2713-5778-economic-efficiency-law-2019.pdf", 18),
-    "SH 2713 p.527": ("sh2713-5778-economic-efficiency-law-2019.pdf", 21),
+    "SH 2407 p.227": ("sh2407-5773-p227-extract.pdf", 1),
+    "SH 2459 p.600": ("sh2459-5774-p600-p604-extract.pdf", 1),
+    "SH 2459 p.604": ("sh2459-5774-p600-p604-extract.pdf", 2),
+    "SH 2504 p.2": ("sh2504-5776-p2-extract.pdf", 1),
+    "SH 2713 p.524": ("sh2713-5778-p510-p524-p527-extract.pdf", 2),
+    "SH 2713 p.527": ("sh2713-5778-p510-p524-p527-extract.pdf", 3),
 }
 LINE = re.compile(r"^\s*--\s*ext:\[(SH \d+ p\.\d+)[^\]]*\] \|\s*(.*)$")
 CACHE = {}

@@ -2,7 +2,7 @@
 
 Author: fid-il-36, independent test author, run id IL-56-36-20261008.
 Written from the Hebrew text alone, before opening any encoding.
-Source of authority: Sefer HaChukim 3511 pp. 416-418 (PDF pp. 4-6 of 25_lsr_12235101.pdf), read from page images at 150 and 260 dpi; ITO definitions read from the deposited new-version ITO .he.wiki.txt (s 1, s 14, s 62A(d), s 88).
+Source of authority: Sefer HaChukim 3511 pp. 416-418 (PDF pp. 4-6 of 25_lsr_12235101.pdf as downloaded, which are pages 1-3 of the deposited extract 25_lsr_12235101-pp416-418-extract.pdf), read from page images at 150 and 260 dpi; ITO definitions read from the deposited new-version ITO .he.wiki.txt (s 1, s 14, s 62A(d), s 88).
 Confidence: H = the text decides; M = the text decides on its better reading, or an input I treat as given; L = a real gap, my reading is a guess.
 Section numbers are those of chapter D section 9 of the amending law (the Law's own sections 1-6).
 

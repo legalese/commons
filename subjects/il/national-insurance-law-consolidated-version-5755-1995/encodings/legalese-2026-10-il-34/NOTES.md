@@ -481,12 +481,13 @@ In practice a court would read reg 1's "column E" as the employee-deduction colu
 -- ext:[SH3384-p396] | בסעיף 342, בכל מקום, במקום ״60% מהשכר הממוצע״ יבוא ״מדרגת הגבייה המופחתת״, ובמקום ״מ־60% מהשכר הממוצע״ יבוא ״ממדרגת הגבייה המופחתת״;
 ```
 
-Reg 1 and reg 2 as made: Kovetz HaTakanot 5835, 17.6.1997, p. 864 (`registers/source-bundle/regulations/takanot-5835-orig-5757-p864.pdf`, PDF page 8).
-That PDF is a scan of the Reshumot issue hosted by olaw.org.il, which `SOURCES.json` calls a private archive of the Reshumot issues and not the Government Printer's own copy.
-s 342(e)(3) as added: Sefer HaChukim 1607, 7.1.1997, pp. 36-37 (`amending-laws/14_lsr_211373.pdf`, PDF pages 21-22).
-As replaced: Sefer HaChukim 2023, 10.8.2005, p. 809, s 66(3)(a) (PDF page 45), in force from 1 January 2006 by s 80(a) and (k) (pp. 819 and 824).
-The threshold words as replaced: Sefer HaChukim 3384, 27.3.2025, pp. 395-396, s 19(4), in force from 1 January 2026 by s 21 (PDF pages 11-12).
-Schedule J as enacted: Sefer HaChukim 1522, 15.5.1995, p. 302 (`amending-laws/13_lsr_203774.pdf`, PDF page 93, a rotated page, read at 110 dpi): column E is headed "the deduction from the employee's wage for s 342(c)".
+Reg 1 and reg 2 as made: Kovetz HaTakanot 5835, 17.6.1997, p. 864 (`registers/source-bundle/regulations/takanot-5835-orig-5757-p864-extract.pdf`, PDF page 1).
+That PDF is an extract of a scan of the Reshumot issue hosted by olaw.org.il, which `SOURCES.json` calls a private archive of the Reshumot issues and not the Government Printer's own copy.
+s 342(e)(3) as added: Sefer HaChukim 1607, 7.1.1997, pp. 36-37 (`amending-laws/14_lsr_211373-pp36-37-extract.pdf`, PDF pages 1-2).
+As replaced: Sefer HaChukim 2023, 10.8.2005, p. 809, s 66(3)(a) (PDF page 1 of `amending-laws/16_lsr_299994-pp809-814-819-824-extract.pdf`), in force from 1 January 2006 by s 80(a) and (k) (pp. 819 and 824).
+The threshold words as replaced: Sefer HaChukim 3384, 27.3.2025, pp. 395-396, s 19(4), in force from 1 January 2026 by s 21 (PDF pages 1-2 of `amending-laws/25_lsr_6133485-pp395-396-extract.pdf`).
+Schedule J as enacted: Sefer HaChukim 1522, 15.5.1995, p. 302 (`amending-laws/13_lsr_203774-pp282-283-302-extract.pdf`, PDF page 3, a rotated page, read at 110 dpi): column E is headed "the deduction from the employee's wage for s 342(c)".
+Only the pages the row cites are deposited as PDFs; `SOURCES.json` keeps the whole file's URL, sha256 and size as downloaded for provenance.
 
 ### Which parts were checked against Reshumot, and which only against the consolidation
 
@@ -502,7 +503,7 @@ Schedule J as enacted: Sefer HaChukim 1522, 15.5.1995, p. 302 (`amending-laws/13
 | s 342(e)(3)-(4) of the Law: 1997 text, 2005 replacement, 2025 threshold words, commencement | Sefer HaChukim 1607, 2023, 3384, page images | **read** |
 | the rest of this row (ss 2, 28, 32, 336, 340, 341, 343-351, 369, Schedules A, K1, the Order and the Civic Service Law) | the consolidations | **consolidation only**; the regression described in IL-05's `NOTES.md` was found in two lines of s 342, and this row did not re-check its other passages |
 
-(The consolidation's header lists, after the regulations as made (Kovetz HaTakanot 5835 p. 864): the corrigendum at p. 1112, the amendment of 5758 at p. 892 and the amendment of 5759 at p. 440; the pages read are `takanot-5848-corrigendum-5757-p1112.pdf`, `takanot-5905-amend-5758-p892.pdf` (15.6.1998) and `takanot-5956-amend-5759-p440.pdf` (25.2.1999).)
+(The consolidation's header lists, after the regulations as made (Kovetz HaTakanot 5835 p. 864): the corrigendum at p. 1112, the amendment of 5758 at p. 892 and the amendment of 5759 at p. 440; the pages read are in `takanot-5848-corrigendum-5757-p1112-extract.pdf`, `takanot-5905-amend-5758-pp892-893-extract.pdf` (15.6.1998) and `takanot-5956-amend-5759-pp440-441-extract.pdf` (25.2.1999).)
 
 ### The second finding: the 1999 amendment cites "regulation 3B" where the request for a refund is regulation 3C
 

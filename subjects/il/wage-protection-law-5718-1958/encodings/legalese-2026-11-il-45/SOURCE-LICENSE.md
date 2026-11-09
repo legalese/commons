@@ -26,6 +26,6 @@ Deposited for row il-45 in `registers/source-bundle/` (every file, with its URL,
 
 - The Hebrew Wikisource consolidation of the Law as `wage-protection-law-5718-1958.he.wiki.txt`: raw wikitext of the page, revision 2966245, last edited 2025-12-04T07:30:26Z, sha256 7ad076309a2b4f0cdf84e8d1e9ae08921ebd082d5c6f3fe1186874ab2813eb09. It is an unofficial consolidation as maintained at retrieval, not a historical vintage.
 - Seven other Hebrew Wikisource consolidations in `other-laws/` (six fetched for this row, one copied from another subject of this repository), each unofficial and deposited only so that the lines quoted from it can be checked; the revision ids of these seven were not recorded.
-- Eleven Sefer HaChukim PDFs from the Knesset's site in `amending-laws/`, and the page images rendered from them in `amending-laws/pages/`; these are the official instruments, and the Hebrew read from them is on the `ext:` lines of the modules.
+- Page extracts of eleven Sefer HaChukim PDFs from the Knesset's site in `amending-laws/`, and the page images rendered from the whole files in `amending-laws/pages/`; these are the official instruments, and the Hebrew read from them is on the `ext:` lines of the modules.
 
 The metadata file `86-Sefer-HaChukim-5718-p-86-Knesset-Isra.meta.json` records `text_deposited: true` since the row was added.

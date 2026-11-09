@@ -9,13 +9,13 @@ It was pinned from the row and the lead's message; it was written down after the
 **חוק הביטוח הלאומי [נוסח משולב], התשנ״ה–1995**, the National Insurance Law [Consolidated Version], 5755-1995, as consolidated on Hebrew Wikisource (unofficial; the Hebrew is authoritative), deposited at `../../registers/source-bundle/national-insurance-law-consolidated-version-5755-1995.he.wiki.txt`, sha256 `78bf47ee29a300d51c5c7646cf85992d7de78aa1380bd8460a4a18265f552a97`.
 Read with it, each deposited:
 
-| instrument | file | sha256 |
+| instrument | file | sha256 (a PDF's is of the whole file as downloaded) |
 | --- | --- | --- |
 | National-Civic Service Law, 5774-2014 (Wikisource revision 3002360, 2026-04-01) | `../../../national-civic-service-law-5774-2014/registers/source-bundle/national-civic-service-law-5774-2014.he.wiki.txt` | `ed0a31aeae4474a9cd97d4f940e6406070cff5f72a0db1f1c88257605a06546f` |
 | National Insurance (Reduced Rates of Insurance Contributions) Order, 5759-1999 | `../../registers/source-bundle/regulations/national-insurance-reduced-rates-of-insurance-contributions-order-5759-1999.he.wiki.txt` | `f91c3b20909bdd67e3c6135554449a0f9f393e4db732470ece542c2a72f0f007` |
 | National Insurance (Payment and Deduction of Contributions from an Insured Person Working for Different Employers) Regulations, 5757-1997 | `../../registers/source-bundle/regulations/national-insurance-payment-and-deduction-from-employee-of-several-employers-regulations-5757-1997.he.wiki.txt` | `8c25330765dc4e7c58476dd77440f5d62e5163a8b69f3e68bb2f171580b77103` |
-| National Insurance Law (Amendment No. 252 and temporary provision), Sefer HaChukim 3347 p. 176 | `../../registers/source-bundle/amending-laws/25_lsr_5482787.pdf` | `d6c450ca0b869d1edb036b0f96bffbd79be6670336d9b5aa888da6cf2ecc8904` |
-| 2025 Budget-year Law, Sefer HaChukim 3384 p. 386 ff. (ss 19 to 21: National Insurance) | `../../registers/source-bundle/amending-laws/25_lsr_6133485.pdf` | `eba7e1fa570a3ece265d87f379543024da038ee51af3f959d4c74162f5edecfa` |
+| National Insurance Law (Amendment No. 252 and temporary provision), Sefer HaChukim 3347 p. 176 | `../../registers/source-bundle/amending-laws/25_lsr_5482787-pp176-178-extract.pdf` | `d6c450ca0b869d1edb036b0f96bffbd79be6670336d9b5aa888da6cf2ecc8904` |
+| 2025 Budget-year Law, Sefer HaChukim 3384 p. 386 ff. (ss 19 to 21: National Insurance) | `../../registers/source-bundle/amending-laws/25_lsr_6133485-pp395-396-extract.pdf` | `eba7e1fa570a3ece265d87f379543024da038ee51af3f959d4c74162f5edecfa` |
 
 ## Why this row exists
 

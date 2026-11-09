@@ -21,6 +21,7 @@ Both are unofficial aids; the revision of each was identified on 2026-11-10 by m
 Every statement that rests only on one of them says CONSOLIDATION-ONLY.
 
 The official instruments are in `../../registers/source-bundle/amending-laws/`, each with a page image of the page read from it; `../../registers/source-bundle/SOURCES.json` gives the URL, retrieval date, sha256 and size of every file, and the sha256 values were recomputed with `shasum -a 256` on 2026-11-10.
+Only the pages the row cites are deposited as PDFs; `SOURCES.json` keeps the whole file's URL, sha256 and size as downloaded for provenance.
 
 | instrument | pages read from the page image | what the page shows |
 | --- | --- | --- |

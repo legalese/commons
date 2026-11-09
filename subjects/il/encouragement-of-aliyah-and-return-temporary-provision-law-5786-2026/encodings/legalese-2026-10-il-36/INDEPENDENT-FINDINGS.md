@@ -5,7 +5,7 @@ Date: 2026-10-09.
 
 ## 1. Order of work (for the lead to verify from the transcript)
 
-1. The PDF pages 4-6 were rendered and read as images (150 dpi, and crops at 260 dpi for s 1); the deposited ITO was read for ss 1, 14, 62A(d), 88.
+1. The PDF pages 4-6 of the file as downloaded (pages 1-3 of the deposited extract) were rendered and read as images (150 dpi, and crops at 260 dpi for s 1); the deposited ITO was read for ss 1, 14, 62A(d), 88.
 2. DECIDED-ANSWERS.md was written in the scratch directory and then copied into the encoding directory, then made read-only; it has 130 cases (ids A01-I04).
 3. sha256 of DECIDED-ANSWERS.md: `b057647897854ef1a86cb4ef54c7be531d8f9209a7e66853bf1bd37c2d520298` (recomputed after all work, unchanged).
 4. The only look at the encoding directory before that was the `ls` that listed file names in the same command as the copy; no file content was opened.

@@ -7,8 +7,8 @@ The text of the **Encouragement of Aliyah and Return (Temporary Provision) Law, 
 - **Official version**: the publication in Reshumot, Sefer HaChukim 3511 (31 March 2026), pp. 416-418, where the Law is
   chapter D of the Economic Efficiency Law (Legislative Amendments for Achieving the Budget Targets for Budget Year 2026),
   5786-2026, enacted by its section 9. The Law has no separate publication: its sections are quoted in that section.
-- **Working text**: the Knesset's own PDF of that issue, `25_lsr_12235101.pdf`, held (with its sha256) in the neighbouring subject
-  `../income-tax-ordinance-new-version/registers/source-bundle/amending-laws/`; this subject deposits a transcription of PDF pp. 4-6
+- **Working text**: the Knesset's own PDF of that issue, `25_lsr_12235101.pdf`, of which pages 4 to 6 are held as the extract `25_lsr_12235101-pp416-418-extract.pdf` (the whole file's sha256 is in `SOURCES.json` there) in the neighbouring subject
+  `../income-tax-ordinance-new-version/registers/source-bundle/amending-laws/`; this subject deposits a transcription of those pages (PDF pp. 4-6 of the file as downloaded)
   and the raw pdftotext extraction (`registers/source-bundle/`). The transcription is a working text checked against the PDF, **not an official copy**.
 - **Attribution**: none required for the statute text.
 

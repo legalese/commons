@@ -171,8 +171,9 @@ w("-- entered the consolidation together, in Hebrew Wikisource revision 2763716 
 w("-- updated the table from the expired 2014 and 2009 texts and left cells behind. The official text of")
 w("-- each cell is below, transcribed by hand from the page image of the instrument (not checked")
 w("-- mechanically against any file). The instruments are deposited in ../../registers/source-bundle/")
-w("-- amending-laws/: 18_lsr_301505.pdf is Sefer HaChukim 2382, 16_lsr_299994.pdf is 2023,")
-w("-- 18_lsr_301061.pdf is 2203, 19_lsr_301628.pdf is 2429 (each with a SOURCES.json entry):")
+w("-- amending-laws/: 18_lsr_301505-pp755-756-extract.pdf is Sefer HaChukim 2382,")
+w("-- 16_lsr_299994-pp809-814-819-824-extract.pdf is 2023, 18_lsr_301061-pp250-257-259-extract.pdf is 2203,")
+w("-- 19_lsr_301628-p266-extract.pdf is 2429 (each with a SOURCES.json entry):")
 for ln in EXT_BLOCK:
     w(ln)
 w("-- Where the consolidation's figures come from: the interim text of 1 August 2009 to 31 March 2011 and the")

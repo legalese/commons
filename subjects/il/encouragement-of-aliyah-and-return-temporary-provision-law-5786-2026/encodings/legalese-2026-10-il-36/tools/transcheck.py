@@ -3,12 +3,13 @@
 
 The PDF's pdftotext extraction has Hebrew words in logical order but scrambles digits,
 hyphens and the parentheses around numerals (bidi reordering), so the Law's text was
-transcribed by reading the page images (PDF pp. 4-6) and is checked here: the multiset of
+transcribed by reading the page images (PDF pp. 4-6 of the file as downloaded, pages 1-3 of the deposited extract) and is checked here: the multiset of
 Hebrew words and the multiset of digit runs of the transcription must equal those of the
 extraction's chapter D region (from the heading of chapter D to the heading of chapter E),
 page furniture removed.  It does not check word order or the order of digits.
 
-Usage: transcheck.py PDF TRANSCRIPTION      (needs pdftotext)
+Usage: transcheck.py PDF TRANSCRIPTION      (needs pdftotext and pdfinfo)
+PDF is the deposited 3-page extract (its pages 1-3), or the file as downloaded (its pages 4-6).
 Exit 1 if the multisets differ; each difference is printed."""
 import re
 import subprocess
@@ -16,7 +17,9 @@ import sys
 from collections import Counter
 
 pdf, trans = sys.argv[1], sys.argv[2]
-raw = subprocess.run(["pdftotext", "-layout", "-f", "4", "-l", "6", pdf, "-"],
+npages = int(re.search(r"^Pages:\s+(\d+)", subprocess.run(["pdfinfo", pdf], capture_output=True, text=True, check=True).stdout, re.M).group(1))
+first, last = (1, 3) if npages == 3 else (4, 6)
+raw = subprocess.run(["pdftotext", "-layout", "-f", str(first), "-l", str(last), pdf, "-"],
                      capture_output=True, text=True, check=True).stdout
 raw = re.sub("[‪-‮‎‏⁦-⁩]", "", raw)
 lines = raw.split("\n")

@@ -1095,11 +1095,12 @@ The `#ASSERT` directive counts in those five files are 113, 314, 182, 21 and 12,
 **Checked independently.**
 A separate Python implementation of s. 10(a), (b) and (c), reading A of fork F3 (the end moves to the first day that is not a rest day), reproduces all 21 cells of section 4's answer table, three rest-day calendars by seven cases, and the weekdays named in it.
 That oracle was written by the launching session and shares reading A with the encoder; it does not test F3.
-s. 10 of the Law as enacted (`source/official/9_lsr_209361.pdf`, text layer) matches the Wikisource text this row quotes, word for word, including the enacted spelling "בחדשה האחרון" in (b).
+s. 10 of the Law as enacted (`source/official/9_lsr_209361-pdf-pages-1-and-3-extract.pdf`, text layer) matches the Wikisource text this row quotes, word for word, including the enacted spelling "בחדשה האחרון" in (b).
 
 **Correction to statements above.**
 Where this row's `README.md`, `subject.json`, `SOURCE-LICENSE.md` and section 0 of this file say that the official PDFs could not be fetched and that nothing is verified against the gazette, that was true when the encoder ran.
 The PDFs were fetched afterwards and are in `source/official/`.
+Only the pages the row cites are deposited as PDFs; `source/official/OFFICIAL-SOURCES.md` keeps the whole file's URL, sha256 and size as downloaded for provenance.
 The only comparison made since is s. 10 of the Law, above; every other section of both texts, and the Ordinance in particular, is still read from Wikisource alone.
 
 **Independence, and one departure from the brief.**

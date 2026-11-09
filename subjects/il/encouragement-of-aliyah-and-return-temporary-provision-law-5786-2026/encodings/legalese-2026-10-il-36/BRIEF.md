@@ -16,7 +16,7 @@ The Ordinance is **not** a source to encode here; each such definition is an inp
 
 | vintage | source | where |
 | --- | --- | --- |
-| AS ENACTED, 31 March 2026 | Sefer HaChukim 3511, pp. 416-418 (Knesset PDF `25_lsr_12235101.pdf`, PDF pp. 4-6, sha256 `72244dba261c44d2818f80708fa2dece5d8b99f75e788f48e290942ff4734155`) | `../../registers/source-bundle/encouragement-of-aliyah-and-return-law-5786-2026.he.txt` (a transcription from the page images, checked against the PDF's text layer; see NOTES.md section 0) |
+| AS ENACTED, 31 March 2026 | Sefer HaChukim 3511, pp. 416-418 (Knesset PDF `25_lsr_12235101.pdf` as downloaded, PDF pp. 4-6, sha256 `72244dba261c44d2818f80708fa2dece5d8b99f75e788f48e290942ff4734155`; deposited as `../../../income-tax-ordinance-new-version/registers/source-bundle/amending-laws/25_lsr_12235101-pp416-418-extract.pdf`, pages 1-3) | `../../registers/source-bundle/encouragement-of-aliyah-and-return-law-5786-2026.he.txt` (a transcription from the page images, checked against the PDF's text layer; see NOTES.md section 0) |
 
 Hebrew is authoritative.
 No amendment of the Law is in the sources, so there is one vintage.

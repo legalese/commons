@@ -9,9 +9,9 @@ Sources read:
 
 - `SRC` = `registers/source-bundle/national-insurance-law-consolidated-version-5755-1995.he.wiki.txt` (Wikisource consolidation, sha256 `78bf47ee…2a97`); line numbers below are into it.
   Read: s 1 (120-228), s 2 (230-239), s 334 (3601-3608), s 335-337 (3610-3629, for context), s 342 (3658-3675), s 344-345 (3684-3734, context), s 348 (3762-3769), Schedule J (4709-4749), Schedule K (4751-4773).
-- `A252` = Amendment No. 252 and temporary provision, Sefer HaChukim 5785 p 176 (`25_lsr_5482787.pdf`), read as page images.
-- `B2025` = 2025 Budget-year Law, Sefer HaChukim 3384 p 386ff (`25_lsr_6133485.pdf`), Part E (פרק ה׳) s 19-21 on PDF pages 11-12 (printed pp 395-396), read as page images.
-  Note: `SOURCES.json` says this PDF has 5 pages; `pdfinfo` reports 40, and Part E is on PDF pages 11-12.
+- `A252` = Amendment No. 252 and temporary provision, Sefer HaChukim 5785 p 176 (`25_lsr_5482787-pp176-178-extract.pdf`), read as page images.
+- `B2025` = 2025 Budget-year Law, Sefer HaChukim 3384 p 386ff (`25_lsr_6133485-pp395-396-extract.pdf`), Part E (פרק ה׳) s 19-21 on PDF pages 1-2 (printed pp 395-396), read as page images.
+  Note: `SOURCES.json` says this PDF has 5 pages; `pdfinfo` reports 40, and Part E is on PDF pages 11-12 of the whole file as downloaded (pages 1-2 of the extract).
 - `BTL` = National Insurance Institute pages, fetched 2026-10-06 21:41-21:43 UTC through the Israeli proxy (saved under this scratch directory, `btl-dl/`):
   - average wage: `https://www.btl.gov.il/Mediniyut/GeneralData/Pages/%d7%a9%d7%9b%d7%a8%20%d7%9e%d7%9e%d7%95%d7%a6%d7%a2.aspx` (sha256 `9d993deb…bb9d82`): "השכר הממוצע החל מ- 01.01.2026: לפי סעיף 1 בחוק - קצבאות: 13,566 ש"ח לפי סעיף 1 בחוק - דמי ביטוח: 13,566 ש"ח / לפי סעיף 2 בחוק - קצבאות: 13,769 ש"ח / לפי סעיף 2 בחוק - דמי ביטוח: 13,769 ש"ח"; row 1.01.2025: §1 13,153 / 12,379, §2 13,316 / 12,536; row 1.01.2024: §1 12,379 / 12,379, §2 12,536 / 12,536.
   - salaried rates: `https://www.btl.gov.il/Insurance/Rates/Pages/%D7%9C%D7%A2%D7%95%D7%91%D7%93%D7%99%D7%9D%20%D7%A9%D7%9B%D7%99%D7%A8%D7%99%D7%9D.aspx`: "מדרגת גביה מופחתת … 7,703 ש"ח (החל ב- 01.01.2026) … ההכנסה המרבית … 51,910 ש"ח (החל ב- 01.01.2026)"; employee NI 1.04% below.
