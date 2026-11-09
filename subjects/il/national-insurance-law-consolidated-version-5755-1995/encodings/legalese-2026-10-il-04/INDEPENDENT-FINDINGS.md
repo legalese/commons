@@ -58,3 +58,15 @@ Expressible only in part (4):
 - Two of my decisions follow the BRIEF's stated rules rather than my own reading of the source: the 2025 refusal and "a dash is not a zero". My agreement with the encoding there is not independent.
 - After DECIDED-ANSWERS was stamped, I read the `.l4` modules, `check.sh`, the first 60 lines of `nii-il04-tests.l4` (its branch-list fixtures, to see how inputs are supplied; no expected values were taken), and then `NOTES.md`. No expected value in DECIDED-ANSWERS or `tests-independent.l4` was changed after any run; the only edits after the first run added one boundary I had decided but not asserted (D3 at 7,703.01, satisfied) and corrected a section heading's count.
 - Semi-cleanroom: I opened nothing from the Axiom Foundation or any RuleSpec source, and searched for none.
+
+## Note of 2026-11-09 (Schedule J's seven cells; not the tester's words; no assertion or expected value was changed)
+
+The table "What `check.sh` prints" and the statement "No other assertion fails" are as of 0.1.0 and are overtaken.
+At IL-04 0.7.0 `tests-independent.l4` has 646 assertions: 581 satisfied, 65 failed, 0 refused.
+The 65 are the five of 0.4.1 (lines 755, 923, 928, 929, 930; class TESTER-WRONG, the stale column D heading) and 60 new ones, all of one cause and one class: the assertion rests on a cell of Schedule J that the Hebrew Wikisource consolidation prints wrongly (seven cells; `NOTES.md`, "Correction 2026-11-09"), which the tester, deciding from the same consolidation, typed from it.
+TESTER-WRONG, with the consolidation as the cause; no finding against the encoding.
+They are: 18 `the cell of` lookups, 19 per-branch percentages, 8 column sums, 5 combined percentages at the items, 9 s 337(a)(1) amounts at the items and 1 deduction at the items.
+The lines, the asserted values and the official values are listed in the note at the end of `tests-independent.l4`.
+Each of the 60 asserted values was recomputed from the consolidation's cells (equal) and from the official cells (not equal).
+"Passing, but worth a second look" item 1 (the totals) and item 4 (K16): on the official cells the rows add to the printed totals, so there is no cost to the rows reading, and the 0.05 of item 4 is explained (0.37 + 0.06 against 0.33 + 0.04): a controlling shareholder's rate above the threshold is 14.17 on the rows, as the Institute prints.
+

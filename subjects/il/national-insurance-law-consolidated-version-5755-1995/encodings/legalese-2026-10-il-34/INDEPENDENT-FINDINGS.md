@@ -83,3 +83,13 @@ Finding S4 says that s 342(e)(3), (4) and reg 1 all say "טור ה׳" for the de
 That is true of reg 1 and of the deposited Wikisource consolidation of the Law (source lines 3669-3670); the Law's official s 342(e)(3)-(4) have said column D since 1 January 2006 (Sefer HaChukim 2023, 10.8.2005, p. 809, s 66(3)(a); s 80(a) and (k)).
 The defect that remains is in the regulation: reg 1 still says column E, and "half the average wage".
 See `NOTES.md`, section 14, and `nii-il34-tests-expected-red.l4`.
+
+## Note of 2026-11-09 (Schedule J's cells; not the tester's words)
+
+Findings S1 and S2 say that Schedule J's employee column above the tier does not add to its printed total (14.39 or 14.49 against 14.50 or 14.60) and that column D's upper part adds to 4.67 against 7.00.
+That is the Hebrew Wikisource consolidation's error: three of its cells in the first column (unemployment, insolvency, long-term care) and one in the second (senior citizens and survivors) are not what the official instruments print, and with the official cells both columns add up (14.50 or 14.60; 7.00).
+See `NOTES.md`, section 15, and row IL-04's `NOTES.md`, "Correction 2026-11-09".
+The five failing assertions (C143 to C147) are unchanged and still five.
+The explanation in the table above ("the encoding divides by the sum of the cells it is given (14.49)") is not right for the fixture as written: the fixture lists seven of the nine cells, so the divisor is 14.12, and none of the five divides by the figure the encoding uses.
+With the nine official cells in the fixture lines 219 to 222 would pass and line 224 (which divides by 14.49) would not; the file is frozen, so nothing was changed.
+

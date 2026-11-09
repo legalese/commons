@@ -1,8 +1,15 @@
 #!/usr/bin/env python3
 """Generate nii-schedule-j-tables.l4 from the two tables of Schedule J in the deposited source.
 
-Every figure in the generated module is read from a cell of the source table; nothing is typed by
-hand. A cell "–" becomes NOTHING. A cell "X {{ח:הערה|(הוראת שעה בשנים 2024 עד 2027: Y)}}" gives the
+Every figure in the generated module is read from a cell of the source table, with ONE exception
+(CORRECTIONS below, added 2026-11-09): seven cells of the permanent table, four of them also in the
+temporary table, that the Hebrew Wikisource consolidation prints wrongly. For those the generator
+checks that the source still prints the consolidation's wrong figure, writes the OFFICIAL figure
+(read by hand from the page image of the amending instrument, which is not in the
+Wikisource consolidation; the instruments' PDFs are in registers/source-bundle/amending-laws/) and writes the instrument's own words as `ext:` comment lines (transcribed from the page
+images by hand, so not checked mechanically against any file; tools/hebcheck.py skips them). If
+the source ever prints the official figure, the generator says so and still writes it, so the
+correction can then be deleted from CORRECTIONS. A cell "–" becomes NOTHING. A cell "X {{ח:הערה|(הוראת שעה בשנים 2024 עד 2027: Y)}}" gives the
 printed figure X, and Y for the separate row or totals row the generator emits for 2024-2027.
 Any cell of another shape stops the generator, so a change in the source cannot slip through.
 
@@ -36,6 +43,49 @@ BRANCH = {
     "סיעוד": "`long-term care`",
     "אזרחים ותיקים ושאירים": "`senior citizens and survivors`",
 }
+
+# The consolidation's seven wrong cells (CORRECTED 2026-11-09; NOTES.md, "Correction 2026-11-09").
+# Columns are indexes into the nine figure columns of RULER: 0 C above the threshold, employee;
+# 3 C not above the threshold, employee; 6 D upper part. Each entry: column index, the figure the
+# consolidation prints, the figure the official text prints, the ext: tag of the instrument.
+CORRECTIONS = {
+    ("permanent", "1"):  [(3, "0.16", "0.15", "SH2023-p813")],
+    ("permanent", "3"):  [(3, "1.47", "1.32", "SH2023-p813")],
+    ("permanent", "6"):  [(0, "0.33", "0.37", "SH2382-p756")],
+    ("permanent", "7"):  [(0, "0.04", "0.06", "SH2382-p756")],
+    ("permanent", "9"):  [(0, "0.28", "0.33", "SH2382-p756")],
+    ("permanent", "10"): [(3, "1.67", "1.52", "SH2023-p813"), (6, "1.52", "3.85", "SH2023-p813")],
+    ("temporary", "6"):  [(0, "0.33", "0.37", "SH2382-p756")],
+    ("temporary", "7"):  [(0, "0.04", "0.06", "SH2382-p756")],
+    ("temporary", "9"):  [(0, "0.28", "0.33", "SH2382-p756")],
+    ("temporary", "10"): [(6, "1.52", "3.85", "SH2023-p813")],
+}
+COLNAME = {
+    0: "column C, above the threshold, employee",
+    3: "column C, not above the threshold, employee",
+    6: "column D, upper part of the wage",
+}
+
+# The instruments' own words, transcribed BY HAND from the page images (Sefer HaChukim pages read
+# as images, 2026-11-09), not copied from a file and not checked mechanically. Rows are written in
+# the order of the consolidation's table (item, branch, the six figures of column C, the two of
+# column D, column E); the page prints them right to left. "–" is a dash on the page.
+EXT_BLOCK = [
+    "-- ext:[SH2382-p755] | (2) בלוח י׳, בטור ג׳ שכותרתו ״אחוזים מההכנסה או מהשכר לפי סעיפים 337(א) ו־340(א)״, בכותרת המשנה ״על חלק העולה על 60% מהשכר הממוצע״, בטור המשנה ״לעובד״, במקום האחוזים המפורטים בו יבוא:",
+    "-- ext:[SH2382-p755] | items 1 to 5 of the column: 1.40 | – | 2.08 | 1.96 | 0.13",
+    "-- ext:[SH2382-p756] | items 6 to 10 of the column, then the total: 0.37 | 0.06 | 2.28 | 0.33 | 5.89 | 14.50",
+    "-- ext:[SH2023-p813] | שיעור דמי ביטוח בעד שנת 2009 ואילך",
+    "-- ext:[SH2023-p813] | 1 | אימהות | 1.03 | 0.82 | – | 0.15 | 0.56 | – | 0.87 | 0.04 | 0.09",
+    "-- ext:[SH2023-p813] | 3 | ילדים | 2.08 | 2.40 | 2.64 | 1.32 | 1.39 | 1.10 | – | – | 0.10",
+    "-- ext:[SH2023-p813] | 10 | זקנה ושאירים | 5.89 | 5.21 | 5.76 | 1.52 | 3.09 | 2.40 | 3.85 | 0.22 | 0.25",
+    "-- ext:[SH2023-p813] | סך הכל | 12.43 | 11.23 | 11.05 | 3.85 | 6.72 | 4.61 | 7.00 | 0.40 | 0.69",
+]
+EXT_BLOCK_WRONG = [
+    "-- ext:[SH2203-p259] | (א) בתקופה שמיום י״א באב התשס״ט (1 באוגוסט 2009) ועד יום כ״ה באדר ב׳ התשע״א (31 במרץ 2011) ייקרא לוח י׳ בחוק הביטוח הלאומי כך: [...] בטור ג׳, [...] בכותרת המשנה ״על החלק שאינו עולה על 60% מהשכר הממוצע״, בטור המשנה ״לעובד״, במקום האחוזים המפורטים בו, יקראו:",
+    "-- ext:[SH2203-p259] | the ten figures and the total: 0.16 | – | 1.47 | 0.41 | 0.02 | 0.04 | 0.01 | 0.41 | 0.06 | 1.67 | 4.25",
+    "-- ext:[SH2429-p266] | במקום האחוזים המפורטים בו יקראו:",
+    "-- ext:[SH2429-p266] | the ten figures and the total: 1.27 | – | 2.08 | 1.47 | 0.11 | 0.33 | 0.04 | 2.28 | 0.28 | 5.89 | 13.75",
+]
 
 NOTE = re.compile(r"^([0-9]+\.[0-9]+) \{\{ח:הערה\|\(הוראת שעה בשנים 2024 עד 2027: ([0-9]+\.[0-9]+)\)\}\}$")
 NUM = re.compile(r"^[0-9]+\.[0-9]+$")
@@ -99,7 +149,12 @@ w("--")
 w("-- GENERATED by tools/schedule_j.py from the deposited source; do not edit by hand. Edit the")
 w("-- generator and run it again (python3 -I tools/schedule_j.py SOURCE nii-schedule-j-tables.l4),")
 w("-- then tools/srcquote.py over the result. Each row's `src:` line is the source row it was read")
-w("-- from; a reviewer checks a row by reading the two lines one above the other.")
+w("-- from; a reviewer checks a row by reading the two lines one above the other, EXCEPT the ten rows")
+w("-- marked CORRECTED 2026-11-09 (six in the permanent table, four in the temporary one): in those")
+w("-- the consolidation prints a wrong figure in the cells named in the comment, and the figure the")
+w("-- row encodes is the OFFICIAL one, read from the amending instrument's page (the `ext:` lines")
+w("-- under the first heading). Those rows carry no `src:` line: the consolidation's line is quoted as a plain")
+w("-- comment that begins \"consolidation prints (its error, revision 2763716):\".")
 w("--")
 w("-- Figures are percentages as printed (1.40 means 1.40%). A cell printed \"–\" is NOTHING.")
 w("-- Item 4 and the totals row carry the editors' note \"(הוראת שעה בשנים 2024 עד 2027: …)\" in some")
@@ -109,6 +164,21 @@ w("-- is decided in nii-schedule-j.l4, not here.")
 w("")
 w("§ `Schedule J — the two tables, as printed`")
 w("--@SRC 4709-4711")
+w("")
+w("-- CORRECTED 2026-11-09: SEVEN cells of the consolidation's permanent table, four of them also in its")
+w("-- temporary table, are not what the official text prints (NOTES.md, \"Correction 2026-11-09\"). They")
+w("-- entered the consolidation together, in Hebrew Wikisource revision 2763716 (2023-05-31), which")
+w("-- updated the table from the expired 2014 and 2009 texts and left cells behind. The official text of")
+w("-- each cell is below, transcribed by hand from the page image of the instrument (not checked")
+w("-- mechanically against any file). The instruments are deposited in ../../registers/source-bundle/")
+w("-- amending-laws/: 18_lsr_301505.pdf is Sefer HaChukim 2382, 16_lsr_299994.pdf is 2023,")
+w("-- 18_lsr_301061.pdf is 2203, 19_lsr_301628.pdf is 2429 (each with a SOURCES.json entry):")
+for ln in EXT_BLOCK:
+    w(ln)
+w("-- Where the consolidation's figures come from: the interim text of 1 August 2009 to 31 March 2011 and the")
+w("-- temporary text for 2014, both expired:")
+for ln in EXT_BLOCK_WRONG:
+    w(ln)
 w("")
 for key, title, label, head, first, total, _ in TABLES:
     w(f"§§ `Schedule J, {title}`")
@@ -125,6 +195,13 @@ for key, title, label, head, first, total, _ in TABLES:
         if branch is None:
             sys.exit(f"schedule_j.py: unknown branch at source line {n}: {cs[1]!r}")
         pr, rd = zip(*(parse_cell(c, n) for c in cs[2:]))
+        pr, rd = list(pr), list(rd)
+        for idx, wrong, right, tag in CORRECTIONS.get((key, item), []):
+            if pr[idx] == f"JUST {right}":
+                print(f"schedule_j.py: source line {n}: the consolidation already prints {right}; the correction for item {item} can be deleted from CORRECTIONS")
+            elif pr[idx] != f"JUST {wrong}":
+                sys.exit(f"schedule_j.py: source line {n}, item {item}: expected the consolidation's {wrong} (or the official {right}), found {pr[idx]!r}")
+            pr[idx] = rd[idx] = f"JUST {right}"
         printed_rows.append((n, item, [item, branch] + list(pr)))
         if pr != rd:
             read_rows.append((n, item, [item, branch] + list(rd)))
@@ -135,7 +212,11 @@ for key, title, label, head, first, total, _ in TABLES:
         nm = name(key, f"item {item}")
         names.append(nm)
         w(f"@ref National Insurance Law, Schedule J ({title}), item {item} (source line {n})")
-        w(f"--@SRC {n}")
+        fixes = CORRECTIONS.get((key, item), [])
+        for idx, wrong, right, tag in fixes:
+            w(f"-- CORRECTED 2026-11-09: the consolidation prints {wrong} in {COLNAME[idx]} (quoted next, as a plain comment, not as a source line); that is its error.")
+            w(f"-- The official text prints {right} there (ext:[{tag}] above), and {right} is what this row encodes.")
+        w(f"--@CONS {n}" if fixes else f"--@SRC {n}")
         w(f"{nm} MEANS `A row of Schedule J` OF {body[k]}")
         k += 1
         w("")

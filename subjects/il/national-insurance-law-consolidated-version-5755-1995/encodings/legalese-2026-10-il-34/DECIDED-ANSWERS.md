@@ -444,3 +444,11 @@ So the "stale cross-reference" in C060 is the regulation's alone: reg 1, made in
 C061 stands: the statute's threshold is the one to take (60% of the average wage from 1 January 2006, the reduced collection threshold from 1 January 2026), and the regulation's "half the average wage" is the regulation's stale wording.
 The decisions (the full rate is the above-threshold deduction rate, an input) stand.
 See `NOTES.md`, section 14, and `nii-il34-tests-expected-red.l4`.
+
+## Note of 2026-11-09 (Schedule J's cells; not the tester's words)
+
+N3 above (column D's printed branch cells above the tier add to 4.67, not the printed total 7.00) rests on the Hebrew Wikisource consolidation's cell for senior citizens and survivors (1.52); the official cell is 3.85, and the six cells add to 7.00.
+The answers that use the printed totals (N2, C029 to C033, C056) are unaffected.
+C143 to C147 divide by the printed total 14.60: on the official table the nine cells add to 14.60, so the printed total is the sum of the cells, and the answers stand (C147's 47.95 = 500 x 1.40 / 14.60).
+See `NOTES.md`, section 15.
+
