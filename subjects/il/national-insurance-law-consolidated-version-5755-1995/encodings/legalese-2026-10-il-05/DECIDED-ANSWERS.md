@@ -251,3 +251,12 @@ This is a **genuine ambiguity**: "ההכנסה … אשר … אינה עולה 
 2. **Monthly figures for items 2-4 (E8, H1/J3/K1/K2).** Item 2 builds its quarterly figure as "חמש פעמים הסכום הבסיסי, כפול 3", and items 3-4 as "5% / 15% מהשכר הממוצע … כפול 3", so a monthly amount can be read off the text.
    On reflection I find the encoder's reading (a third of the quarter, its fork F2) better than my refusal. I leave the assertions as decided, and they fail.
 3. No other expectation is revised.
+
+
+## Correction note, 2026-11-09 (added by a correction pass; the entries above are the tester's record and are not rewritten)
+
+Rows J1 and K4 above, and the sentence in the tester's findings that s 342(e)(3)-(4) "refer to" column E, describe what the deposited Wikisource consolidation prints (source lines 3669-3670).
+They are not a statement about the Law: the official text of s 342(e)(3)-(4) has said column D, the deduction column, since 1 January 2006 (Amendment 147 to the Income Tax Ordinance, Sefer HaChukim 2023, 10.8.2005, p. 809, s 66(3)(a); s 80(a) and (k)).
+The consolidation's column E is an error of the consolidation.
+The expectation in J1 and K4, that a deduction governed by those regulations is refused, stands for another reason: the regulations under s 342(e)(3) and the Institute's approvals under (e)(4) are not encoded in this row (row IL-34 encodes the regulations).
+See `NOTES.md`, "Correction 2026-11-09".

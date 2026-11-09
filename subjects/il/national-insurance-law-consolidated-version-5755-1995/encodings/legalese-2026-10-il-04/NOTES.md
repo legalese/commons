@@ -3,6 +3,7 @@
 National Insurance Law [Consolidated Version], 5755-1995: **s 334** (interpretation for Chapter 15, insurance contributions), **s 337** (the rate of insurance contributions), **Schedule J** (לוח י׳, the rates), and the **s 1** definitions they use, encoded in L4 by one agent in one session (run `IL-04-20261006`, 2026-10-06), from the brief in `BRIEF.md`.
 Status: **draft**. Version **0.6.1** (2026-10-08): SHRUG on the remaining ambiguities, no answer changed: none of this row's six items is a gating choice in its code (BACKLOG IL-49); see "Version 0.6.1" below. Version 0.6.0 (2026-10-08): a third set joins fork F21 (DESSERT), a woman between her retirement age and 67 without an old-age pension (BACKLOG IL-45); see "Version 0.6.0" below. Version 0.5.0: fork F21 ruled (TAKEAWAY), column D at the printed totals for the two branch sets whose rate the Institute publishes, every other set of fewer branches declined (BACKLOG IL-37). Version 0.4.1: wording and records only, no answer changed (BACKLOG IL-21). Version 0.4.0: fork F6 ruled, a fall in the index or the average wage declined by default. Version 0.3.1: the independent tests re-pointed to the items' reading. Version 0.3.0: the Schedule J switch, fork F4 ruled.
 No domain expert has read it against the source; HG1 has not been sought.
+Correction of 2026-11-09 (no version bump, no code or count changed): the bullet in section 7 saying that the Law's s 342(e)(3)-(4) name column E for the deduction rates was wrong; the consolidation prints column E and the official text says column D (see section 7 and row IL-05's `NOTES.md`).
 
 ## Version 0.6.1 (2026-10-08): SHRUG on the remaining ambiguities (BACKLOG IL-49)
 
@@ -1017,7 +1018,11 @@ So the consumer price index is an input, and the commencement of Amendment 252's
 
 - Ten cells of Schedule J's totals rows differ from the sums of their items (section 0). The gaps are the same in all four readings of the schedule: 2.33 in column D's upper part, 0.11 in column C above the threshold for an employee, and (permanent version only) 0.31 the other way in column C not above the threshold for an employee. Which cell, if any, is wrong cannot be told from the table.
 - The temporary version's column D heading ("above 60% of the average wage") does not meet its other heading ("not above the reduced collection threshold") in 2026 (F3). **(revised 2026-10-07)** On the enacted Laws the upper heading is stale: s 19(6) of the 2025 budget-year Law made it "the reduced collection threshold" from 1 January 2026, and the temporary provision never replaced it.
-- s 342(e)(3)-(4) (lines 3669-3670) refer to "טור ה׳ בלוח י׳" (column E) for the employee's deduction rates, where the schedule's column E is the Treasury allocation and column D is the deduction (row IL-05's provision; noted for it).
+- The consolidation prints s 342(e)(3)-(4) (lines 3669-3670) with "טור ה׳ בלוח י׳" (column E) for the employee's deduction rates, where the schedule's column E is the Treasury allocation and column D is the deduction (row IL-05's provision; noted for it).
+  **Corrected 2026-11-09:** this bullet called that a defect of the Law, and it is not.
+  The official text of s 342(e)(3)-(4) has said column D since 1 January 2006 (Amendment 147 to the Income Tax Ordinance, Sefer HaChukim 2023, 10.8.2005, p. 809, s 66(3)(a), in force by s 80(a) and (k) of the same Law; the 2025 budget-year Law s 19(4) changed the threshold words only).
+  The column E in the consolidation is the consolidation's error.
+  The evidence, the quotations and the page references are in row IL-05's `NOTES.md`, "Correction 2026-11-09"; this row's encoding reads no such column letter and no answer of this row changed.
 - Line 3605's editorial note calls 7,522 "nominal for 2025"; the text is in force only from 1 January 2026 (A1), so the note dates the base, not a year the text governed.
 
 ## 8. Open questions for a domain expert

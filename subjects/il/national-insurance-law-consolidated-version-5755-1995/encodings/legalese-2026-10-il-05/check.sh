@@ -30,7 +30,7 @@ L4="${L4:-l4}"
 expected_failed() {
   case "$1" in
     # tests-red.l4) echo 3 ;;
-    nii-il05-tests-expected-red.l4) echo 3 ;;   # NOTES.md section 0: s 342(e)(3)-(4) name column E (2); s 342(c)(2) is subject to the repealed s 245(b2) (1)
+    nii-il05-tests-expected-red.l4) echo 3 ;;   # NOTES.md section 0 and "Correction 2026-11-09": the consolidation file's column E in s 342(e)(3)-(4) is not the official text's column D (2, the consolidation is in error, not the Law); s 342(c)(2) is subject to the repealed s 245(b2) (1)
     # tests-independent.l4, the independent tester's. Version 0.4.0 (BACKLOG IL-17): 15 became 6, the lead
     # having re-pointed nine assertions to the printed totals the tester decided (05-RC1; NOTES.md, Version 0.4.0).
     # The six that remain, each an inventory item of findings/il-2026-10-08/inventory.tsv:

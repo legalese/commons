@@ -29,9 +29,11 @@ set -u
 DIR="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
 L4="${L4:-l4}"
 
-# A module that is MEANT to fail is listed here with its exact count. Row IL-34 has none.
+# A module that is MEANT to fail is listed here with its exact count (and named in encoding.json `expected_red`).
 expected_failed() {
   case "$1" in
+    # 2026-11-09: a finding about the REGULATION of 5757-1997: reg 1 names column E and half the average wage, where s 342(e)(3) of the Law has named column D and 60% of the average wage since 1.1.2006, and the reduced collection threshold since 1.1.2026. The 4 failures are the regulation's drift; the 5 passing assertions show it was right when made (NOTES.md section 14).
+    nii-il34-tests-expected-red.l4) echo 4 ;;
     # fid-il-34: C143 to C147 (lines 219-222 and 224 of tests-independent.l4) divide by the PRINTED total 14.60; the list form of s 28(a) divides by the sum of the cells given
     # (14.49). Version 0.1.1 makes that a named switch (fork R1) for a caller that gives the printed total; the plain list form stays at the cells, so these 5 still fail by design.
     tests-independent.l4) echo 5 ;;

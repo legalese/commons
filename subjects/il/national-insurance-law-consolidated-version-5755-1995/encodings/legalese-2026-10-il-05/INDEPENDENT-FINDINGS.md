@@ -127,3 +127,11 @@ One artefact: the quarterly yeshiva-student cases (H5, H6) put the student's inc
 Nothing under the Axiom Foundation, any `rulespec-*` path, `.axiom/`, `docs/ENCODING-GAPS.md`, `tax-benefit-source-map.json`, or `l4-ide/specs/research/AXIOM-*` was read, searched or fetched.
 No sibling row's `NOTES.md` was opened.
 The encoder's tests module was opened (lines 1-80 only) after `DECIDED-ANSWERS.md` was fixed, as the instructions allow; its header quotes some Institute figures.
+
+
+## Correction note, 2026-11-09 (added by a correction pass; the findings above are the tester's record and are not rewritten)
+
+The finding that s 342(e)(3)-(4) "טור ה׳" is not the deduction column (J1; F22) is a finding about the deposited Wikisource consolidation, not about the Law.
+The official text has said column D, the deduction column, since 1 January 2006 (Amendment 147 to the Income Tax Ordinance, Sefer HaChukim 2023, 10.8.2005, p. 809, s 66(3)(a); s 80(a) and (k)).
+The refusal of a deduction governed by those regulations stands, because they are not encoded in this row.
+See `NOTES.md`, "Correction 2026-11-09".
