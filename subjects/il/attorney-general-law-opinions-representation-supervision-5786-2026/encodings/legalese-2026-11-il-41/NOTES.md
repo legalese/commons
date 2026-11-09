@@ -62,7 +62,7 @@ The six outside references and what was read:
 - **s 20, the Civil Service (Appointments) Law 5719-1959, s 5.**
   Read from the page image of Sefer HaChukim 279 p. 86 (15 April 1959): the Government may fix the ways and conditions for the appointment of the Attorney General, and to the extent it has not, the Law's provisions apply.
 - **s 15(c)(3)(b), the Commissioner for Complaints against State Representatives in the Courts.**
-  The office has the same title in s 2(a) of the Complaints Commissioner Law 5776-2016 (CONSOLIDATION-ONLY: Sefer HaChukim 5776 p. 1162 was not read).
+  The office has the same title in s 2(a) of the Complaints Commissioner Law 5776-2016, read from the page image of Sefer HaChukim 2574 p. 1162 (11 August 2016); the rest of that Law, and any amendment after 2016, was not read for this row.
 - **s 5(b), two committees of the Knesset.**
   Both are main committees of the 25th Knesset in the Knesset's database (Ids 4191 and 4190; deposited).
 
@@ -152,7 +152,7 @@ No wider mutation check was run.
 ## 10. Not reached
 
 - `main.knesset.gov.il` (bot challenge, not circumvented).
-- The official Sefer HaChukim 5776 p. 1162 (the Complaints Commissioner Law).
+- Sefer HaChukim 2574 pp. 1163-1172 as page images (the Complaints Commissioner Law as made: only p. 1162, s 1 and s 2(a), was read for this row), and any amendment of that Law after 2016.
 - The notice in Yalkut HaPirsumim 5760 p. 4894 that the Wikisource consolidation of the Appointments Law records.
 - The explanatory notes of the bills and the committee's protocols.
 - The stage dates of the second and third reading document were read from its text layer, not from a page image.
