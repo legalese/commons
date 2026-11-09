@@ -2,6 +2,7 @@
 
 Version 0.1.1, draft (0.1.0 plus the repairs of section 13).
 Correction of 2026-11-09 (no version bump): the "column E" of s 342(e)(3)-(4) is the deposited consolidation's error, not the Law's; the defect that is live is in reg 1 of the regulations of 5757-1997; a new expected-red module types it; see section 14.
+Second correction of 2026-11-09 (no version bump; Schedule J's cells): three cells of the employee column above the tier that this row's section 28(a) tests used (unemployment 0.33, insolvency 0.04, long-term care 0.28) are the Hebrew Wikisource consolidation's error; the official text prints 0.37, 0.06 and 0.33, and then the column adds up to its printed total; fork R1's switch is kept; see section 15.
 Run `IL-34-20261008`, encoder `enc-il-34`, 2026-10-09 (SGT); the check run below is 2026-10-09T00:00Z.
 Read BRIEF.md first for the scope and the rules.
 Every Markdown sentence here is on its own line, so a grep hit is a whole sentence.
@@ -179,7 +180,7 @@ The refusal message is the fork's own sentence, quoted in the tests.
 | D1 | s 344(a)(1) (3686-3693) | whether the kibbutz figures are the year's (the monthly income a twelfth of their sum) or the month's | year; month; declined | declined |
 | D2 | s 344A(h) (3709) | a negative surplus of a renewed kibbutz | nil; taken as it is; declined | declined |
 | L1 | s 350(a)(7) (3793) | do the two exceptions (early pension; income the Minister of Finance determines) follow the last kind only, or all three kinds | last kind only; all three; declined | declined, and only where the Minister of Finance determined a rental income to be income |
-| R1 | s 28(a) (449) with Schedule J (4720-4730) | whether the ratio of the rates is to the SUM of the rates given or to the column's PRINTED TOTAL (the cells of a column need not add to its printed total) | to the sum; to the printed total; declined | declined, for a caller that gives the printed total and where the two amounts differ; the plain list form is at the sum |
+| R1 | s 28(a) (449) with Schedule J (4720-4730) | whether the ratio of the rates is to the SUM of the rates given or to the column's PRINTED TOTAL (the cells of a column need not add to its printed total; CORRECTED 2026-11-09: they do add to it in the official text, see section 15) | to the sum; to the printed total; declined | declined, for a caller that gives the printed total and where the two amounts differ; the plain list form is at the sum |
 | L2 | s 350A(a) (3803) | whether five years "have not yet passed" on the fifth anniversary of the visa day | passed on the day; not passed until the day after; declined | declined, and only on the anniversary itself |
 
 Each switch has a public rule that answers at the switch, and a form with the reading as an argument that takes any named reading; the old and new names are listed in the tests.
@@ -205,6 +206,7 @@ Each switch has a public rule that answers at the switch, and a form with the re
 - **s 32(a):** the percentages for 2025 to 2029 come from Amendment 252 s 2 (2025: 47.07%) and the 2025 Budget-year Law s 19(1) (2026: 44.57%, 2027: 55.40%, 2028: 56.47%, 2029 on: 56.52%, from 1.1.2026 by its s 21), checked against the deposited PDFs.
   If the Minister of Finance extended Amendment 252's temporary period for 2027 or 2028, the percentage is 44.26% or 45.39% (that Act's s 7(b), as the Budget-year Law s 20(2) changed it from 47.74% and 49.27%).
 - **s 351(b)'s "subject to s 245(b2)"** is repealed (IL-05's fork F10 notes the same for s 342(c)(2)).
+  CONSOLIDATION-ONLY (2026-11-09): s 351(b) carries "subject to s 245(b2)" (consolidation line 3811), and the consolidation marks s 245(b2) repealed, "(בוטל)" (line 2474); I have not read an amending instrument for either, and it is the same defect as fork F10 for s 342(c)(2) in row IL-05.
 - **Order s 4** (the temporary reach to employees until 31.3.2000) and the amended s 1 (which names employees outright) agree for every day after 1.1.1999.
 
 **Assumed, not ruled (each is in a place a revert would touch only that rule).**
@@ -424,6 +426,7 @@ Its three disagreements and what I did:
 3. **C143 to C147, s 28(a).**
    The tester divides each branch rate by the PRINTED total 14.60; the list form divides by the sum of the cells given (14.49).
    The consolidation's own cells do not add to its printed total (the 2025-2026 employee column above the tier: 14.39, or 14.49 with the 2024-2027 work-injury 2.06, against 14.50 or 14.60).
+   (CORRECTED 2026-11-09: that is the consolidation's error, not the Law's, and the divisor the list form used for the tester's fixture was 14.12, not 14.49; section 15 has both.)
    Section 28(a) says "by the ratio of the rates", which both readings serve, so under SHRUG this is a named switch: **fork R1**.
    `s 28(a) — the sum credited to the account of the branch… , the rates being… and the printed total…` takes the printed total and the reading; at the switch it is declined where the amounts differ and answered where they agree (printed total equal to the sum, or a branch with no rate).
    The plain list form is unchanged and is the "sum of the cells" reading; it is what the tester's five assertions call, so they still fail, as declared in `check.sh` with a comment.
@@ -439,8 +442,12 @@ Whether 13,566 already includes s 2(b)'s changes is not stated; the two labels i
 
 **Source anomalies the tester listed (not encoding errors).**
 
-- S1. Schedule J, 2025-2026, employee column C above the tier: the cells add to 14.39 (14.49) against the printed 14.50 (14.60): fork R1 above.
-- S2. Column D (employee deduction) above the tier: the cells add to 4.67 against the printed 7.00; the rates are inputs here and nothing is affected (IL-04's fork).
+- S1.
+  Schedule J, 2025-2026, employee column C above the tier: the cells add to 14.39 (14.49) against the printed 14.50 (14.60): fork R1 above.
+  CORRECTED 2026-11-09: the consolidation's error; the official cells add to 14.50 (14.60); section 15.
+- S2.
+  Column D (employee deduction) above the tier: the cells add to 4.67 against the printed 7.00; the rates are inputs here and nothing is affected (IL-04's fork).
+  CORRECTED 2026-11-09: the consolidation's error (D item 10 is 3.85, not 1.52); the official cells add to 7.00; section 15.
 - S3. The consolidation keeps "60% of the average wage" in column D's heading in the 2025-2026 table, though the 2025 Budget-year Law s 19(6) replaces it by the reduced collection threshold from 1.1.2026.
 - S4. reg 1, and the deposited consolidation's s 342(e)(3), (4), say column E for the deduction rate, which is column D (IL-05 fork F22).
   (Corrected 2026-11-09: the official s 342(e)(3), (4) say column D since 1 January 2006; the stale instrument is the regulation; section 14.)
@@ -525,3 +532,36 @@ The last page of each of the four Kovetz HaTakanot PDFs in the bundle carries a 
 - `DECIDED-ANSWERS.md` and `INDEPENDENT-FINDINGS.md` (fid-il-34's, frozen): dated correction notes appended; their original lines stand.
   `tests-independent.l4` was not touched: it asserts no column letter (its C060 and C061 comment says only that the full rate is an input).
 - Not done: this row takes no rule from the column or the threshold, so none was changed; a rule that read "the full rate" from Schedule J would need the column D reading, and the module says so.
+
+## 15.
+Correction 2026-11-09 (second): Schedule J's cells, the consolidation's error
+
+What changed in the world.
+The Hebrew Wikisource consolidation of the Law prints seven cells of Schedule J that the official instruments do not (row IL-04's `NOTES.md`, "Correction 2026-11-09", has the table, the instruments and the pages).
+Three of them are in the employee column above the tier, the column this row's section 28(a) tests used: unemployment (item 6) 0.33, insolvency (item 7) 0.04 and long-term care (item 9) 0.28, where the official text prints 0.37, 0.06 and 0.33 (Sefer HaChukim 2382, p. 756, 13.8.2012, s 5(2), read from the page image).
+With the official cells the nine cells add to 14.50, or 14.60 with the 2024-2027 work-injury figure 2.06: the column adds up to its printed total, and so does every other column of both tables.
+Section 2's S1 and S2 (and the "14.49 against 14.60" of section 13, item 3) were the consolidation's error, not the Law's.
+
+What this row needed.
+The rules of this row do not read Schedule J: the rates are the caller's.
+Only tests did.
+Fork R1 and its switch (the ratio to the sum of the rates given, to the printed total, or declined where the two differ) are kept as made: the switch is for a column whose cells do not add up to its total, and no column of Schedule J is one any longer, so on the official table the three readings agree.
+
+Files changed.
+- `nii-il34-tests-s28-s32.l4`: the old fixture (the consolidation's column, cells 14.49) is kept, renamed `the rates for an employee above the tier, work injury 2.06, as the consolidation prints them`, with its four assertions unchanged, so the switch is still tested on a column that does not add up; a new fixture under the old name holds the official nine cells (sum 14.60), with eight new assertions: 14,600 gives maternity 1,400 under each reading and at the default, the three corrected cells give 370, 60 and 330, and children 2,080 and senior citizens 5,890; the nine shares add to the payment (1,400 + 2,080 + 2,060 + 130 + 370 + 60 + 2,280 + 330 + 5,890 = 14,600).
+  The module goes from 82 to 90 satisfied.
+- `nii-il34-nouns.l4`: the comment on fork R1 says the gap was the consolidation's.
+- `nii-il04-nouns.l4`: copied again, byte for byte, from row IL-04 (a comment changed there); `VENDORED.sha256` updated; the other three vendored modules are unchanged and still equal their originals (checked with `cmp` against the IL-04 working tree and `shasum -a 256 -c`).
+- `check.sh`, `encoding.json`, `DECIDED-ANSWERS.md`, `INDEPENDENT-FINDINGS.md`: dated notes; no count changed (the five failures of `tests-independent.l4` are still five, for the reasons below).
+
+The five failures of `tests-independent.l4` (C143 to C147, lines 219 to 222 and 224), decided again from the source.
+The tester's fixture `fid: employee rates above the tier, as printed cells (2024 to 2027 work-injury 2.06)` lists SEVEN cells, not nine: unemployment and insolvency are left out, and long-term care carries the consolidation's 0.28.
+The list form of section 28(a) divides by the sum of the cells it is given, so for that fixture the divisor is 14.12 (a probe asserting 1,000 x 1.40 / 14.12 and 500 x 1.40 / 14.12 is satisfied), not 14.49 as sections 13 and 14 and `INDEPENDENT-FINDINGS.md` said; with the official 0.33 for care it would be 14.17.
+Neither is the printed total 14.60 (lines 219-222) nor the consolidation's nine-cell sum 14.49 (line 224), so all five still fail as written.
+Probe, in a scratch copy outside the repository: with the fixture given the nine official cells (unemployment 0.37 and insolvency 0.06 added, care 0.33), lines 219 to 222 pass, because the cells then add to 14.60, the tester's divisor, and line 224 still fails, because it divides by 14.49, the consolidation's sum of nine cells; on the official table the right divisor is 14.60 and `DECIDED-ANSWERS.md` C147's own figure (maternity 47.95 = 500 x 1.40 / 14.60) is the one that would pass.
+So: C143 to C146 fail only because the fixture is incomplete (TESTER-WRONG, a different cause from the one recorded); C147 fails for the same reason and also rests on the consolidation's 14.49.
+The file is frozen and was not touched; `check.sh` still declares 5.
+
+Not decided here.
+Whether the independent tester's fixture was meant to be a controlling shareholder's seven branches (unemployment and insolvency are excused to such a person by s 335(e)-(f)) is not recoverable from the file, which names it "employee rates above the tier".
+

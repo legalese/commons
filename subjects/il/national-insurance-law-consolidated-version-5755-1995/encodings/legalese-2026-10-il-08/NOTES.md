@@ -565,6 +565,11 @@ Ours, for a resident employee insured in every Chapter s 335 reads: all nine bra
 | B6 | s 67A | no such section | none either | 817; 5326; 1162-1163 | agreement | — |
 | B7 | s 65 | row IL-06's | applied in the composition without a module | 799-809 | scope difference (row IL-06's comparison, not this one) | — |
 
+Correction of 2026-11-09 to the row B5 above (no rule, test or count of this row changed).
+Its arithmetic (14.39 against the printed 14.50, and 14.49 against 14.60) rests on the Hebrew Wikisource consolidation, which prints three cells of the employee column above the reduced bracket that the official instruments do not: unemployment 0.33, insolvency 0.04 and long-term care 0.28, where the official text prints 0.37, 0.06 and 0.33 (Sefer HaChukim 2382, p. 756, 13.8.2012, s 5(2), read from the page image by the encoder of row IL-04).
+With the official cells the nine rows add to 14.50, and to 14.60 at the 2024-2027 work-injury rate, which are the printed totals.
+So a rate built by summing the rows of our branch list does reproduce the printed total for a full employee, and the caution in B5 does not apply.
+Row IL-04's `NOTES.md`, "Correction 2026-11-09", has the cells, the instruments and the pages.
 No divergence shows a rule of this half wrong on the text.
 
 ### Our independent pass's findings, and Axiom

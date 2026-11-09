@@ -36,6 +36,7 @@ expected_failed() {
     nii-il34-tests-expected-red.l4) echo 7 ;;
     # fid-il-34: C143 to C147 (lines 219-222 and 224 of tests-independent.l4) divide by the PRINTED total 14.60; the list form of s 28(a) divides by the sum of the cells given
     # (14.49). Version 0.1.1 makes that a named switch (fork R1) for a caller that gives the printed total; the plain list form stays at the cells, so these 5 still fail by design.
+    # 2026-11-09 (NOTES.md section 15): still 5, for a different reason. The consolidation's cells did not add to 14.60; the official ones do. The tester's fixture lists seven of the nine cells (divisor 14.12), so none of the five divides by the figure the encoding uses; with the nine official cells lines 219-222 would pass and line 224 (14.49) would not.
     tests-independent.l4) echo 5 ;;
     *) echo 0 ;;
   esac

@@ -1,9 +1,225 @@
 # NOTES — il/national-insurance-law-consolidated-version-5755-1995, encoding row `legalese-2026-10-il-04`
 
 National Insurance Law [Consolidated Version], 5755-1995: **s 334** (interpretation for Chapter 15, insurance contributions), **s 337** (the rate of insurance contributions), **Schedule J** (לוח י׳, the rates), and the **s 1** definitions they use, encoded in L4 by one agent in one session (run `IL-04-20261006`, 2026-10-06), from the brief in `BRIEF.md`.
-Status: **draft**. Version **0.6.1** (2026-10-08): SHRUG on the remaining ambiguities, no answer changed: none of this row's six items is a gating choice in its code (BACKLOG IL-49); see "Version 0.6.1" below. Version 0.6.0 (2026-10-08): a third set joins fork F21 (DESSERT), a woman between her retirement age and 67 without an old-age pension (BACKLOG IL-45); see "Version 0.6.0" below. Version 0.5.0: fork F21 ruled (TAKEAWAY), column D at the printed totals for the two branch sets whose rate the Institute publishes, every other set of fewer branches declined (BACKLOG IL-37). Version 0.4.1: wording and records only, no answer changed (BACKLOG IL-21). Version 0.4.0: fork F6 ruled, a fall in the index or the average wage declined by default. Version 0.3.1: the independent tests re-pointed to the items' reading. Version 0.3.0: the Schedule J switch, fork F4 ruled.
+Status: **draft**. Version **0.7.0** (2026-11-09): seven cells of Schedule J corrected to the official text, because the Hebrew Wikisource consolidation the row was built from prints them wrongly; the premise of fork F4 (that Schedule J's printed totals differ from the sums of its items) was that error; answers in the items' reading and under the fewer-branches readings changed, five default answers that were declined as "fewer branches" are now answered, and no default answer that was given before changed in value; see "Correction 2026-11-09" below. Version **0.6.1** (2026-10-08): SHRUG on the remaining ambiguities, no answer changed: none of this row's six items is a gating choice in its code (BACKLOG IL-49); see "Version 0.6.1" below. Version 0.6.0 (2026-10-08): a third set joins fork F21 (DESSERT), a woman between her retirement age and 67 without an old-age pension (BACKLOG IL-45); see "Version 0.6.0" below. Version 0.5.0: fork F21 ruled (TAKEAWAY), column D at the printed totals for the two branch sets whose rate the Institute publishes, every other set of fewer branches declined (BACKLOG IL-37). Version 0.4.1: wording and records only, no answer changed (BACKLOG IL-21). Version 0.4.0: fork F6 ruled, a fall in the index or the average wage declined by default. Version 0.3.1: the independent tests re-pointed to the items' reading. Version 0.3.0: the Schedule J switch, fork F4 ruled.
 No domain expert has read it against the source; HG1 has not been sought.
 Correction of 2026-11-09 (no version bump, no code or count changed): the bullet in section 7 saying that the Law's s 342(e)(3)-(4) name column E for the deduction rates was wrong; the consolidation prints column E and the official text says column D (see section 7 and row IL-05's `NOTES.md`).
+
+## Correction 2026-11-09 (version 0.7.0): seven cells of Schedule J are the consolidation's error
+
+Task SJFIX of the session "israel" (encoder: Sonnet 5.5, one session; the lead commits), on the finding of the lead and a separate tracing pass that Schedule J as this row encoded it was not Schedule J as the instruments print it.
+Public tier: a consolidation error, with no sanction, charge or deadline in it; nothing here is a finding against the Law.
+Nothing below was deleted: the older sections stand as the history of 0.1.0 to 0.6.1, and the places that state the gap as fact carry a "CORRECTED 2026-11-09" mark.
+
+### What happened
+
+This row took Schedule J's cells from the deposited Hebrew Wikisource consolidation, an unofficial text.
+That text prints seven cells of the permanent table that the official instruments do not, and four of the seven are also in its temporary 2025-2026 table.
+The lead's brief says they entered in one edit, Hebrew Wikisource revision 2763716 (2023-05-31T15:30:24Z, OpenLawBot; its edit comment, in translation, names amendments 234 to 237), which updated the table from the expired temporary text of 2014 and the expired interim text of 2009 and left some cells behind.
+I did not re-fetch the revisions; I read the saved comparison of the cells of revisions 2763697 and 2763716 that the tracer left in the session's scratchpad (outside the repository): the edit changed the employee column above the threshold at items 1, 4 and 5 and its total, the employee column below the threshold at items 4, 8 and 9 and its total, and column D's upper part at item 10, and left the cells in the table below.
+
+### The seven cells
+
+Columns are named as in `nii-il04-nouns.l4`: C above is column C above the reduced collection threshold, employee; C below is column C not above it, employee; D upper is the employee's deduction above the threshold.
+"Read" means a page image I opened with the Read tool; I did not make the images.
+
+| column | item | official | consolidation | the instrument whose page prints the cell (read from the page image) | where the consolidation's figure comes from (read) |
+|---|---|---|---|---|---|
+| C above | 6 unemployment | 0.37 | 0.33 | Sefer HaChukim 2382, p. 756, 13.8.2012, s 5(2) of Amendment 143 (items 1-5 are on p. 755) | the temporary text for 2014, SH 2429 p. 266, s 3(1), expired 31.12.2014 |
+| C above | 7 insolvency | 0.06 | 0.04 | the same | the same |
+| C above | 9 long-term care | 0.33 | 0.28 | the same | the same |
+| C below, permanent table | 1 maternity | 0.15 | 0.16 | Sefer HaChukim 2023, p. 813, 10.8.2005 (the table "for 2009 onward") | the interim text for 1.8.2009 to 31.3.2011, SH 2203 p. 259, s 145(a) |
+| C below, permanent table | 3 children | 1.32 | 1.47 | the same | the same |
+| C below, permanent table | 10 senior citizens and survivors | 1.52 | 1.67 | the same | the same |
+| D upper | 10 senior citizens and survivors | 3.85 | 1.52 | the same | not established: 1.52 is the official figure for C below, item 10, in the same 2005 table |
+
+The temporary 2025-2026 table is wrong in four of them (C above items 6, 7, 9 and D upper item 10).
+Its C below column is Amendment 252's, Sefer HaChukim 3347, p. 177 (14.1.2025), and is right in the consolidation.
+The 2024-2027 notes (C above item 4 2.06 and C below item 4 0.47, totals 14.60 and 3.95) are Sefer HaChukim 3045, p. 169, s 24 (31.5.2023), read from the page image, and are right.
+That page also shows the Law as it stood in May 2023: it replaces "1.96", "0.37", "14.50" and "3.85", so C below item 4 was 0.37 and the C below total 3.85, as in the 2005 column and not as in the 2009 interim column.
+Per the tracer's chain of instruments, Amendment 252 (Sefer HaChukim 3347) replaces only the lower sub-columns of columns C and D in the temporary table, and the 2025 Budget Law (3384) changes one cell of that table (column C below, those who are neither, item 2); neither changes a permanent cell, and neither touches the seven.
+
+### What was read, and what was not
+
+Page images I opened myself with the Read tool on 2026-11-09 (the images were rendered from the PDFs by the tracer; I afterwards matched each to its printed page number with `pdftotext` on the same PDF page):
+- Sefer HaChukim (SH) 2382 pp. 755 and 756, in `18_lsr_301505.pdf` (PDF pages 2 and 3);
+- SH 2023 p. 813, in `16_lsr_299994.pdf` (PDF page 49);
+- SH 2203 p. 259, in `18_lsr_301061.pdf` (PDF page 105);
+- SH 2429 p. 266, in `19_lsr_301628.pdf` (PDF page 1);
+- SH 3045 p. 169, in `25_lsr_2572039.pdf` (PDF page 23);
+- SH 3347 p. 177, in `25_lsr_5482787.pdf` (PDF page 3);
+- SH 3384 p. 396, in `25_lsr_6133485.pdf` (PDF page 12).
+
+All seven PDFs are in `registers/source-bundle/amending-laws/`, each with an entry in its `SOURCES.json` (url, sha256, bytes); SH 2382, 2203, 2429 and 2126 were deposited with this correction, the other four were there already.
+The images are not in the repository.
+The `ext:` lines of `nii-schedule-j-tables.l4` quote SH 2382, 2023, 2203 and 2429 from those images, by hand; with the PDFs deposited a script could now check them, and none has.
+
+Not viewed by me, and marked so:
+- SH 2126 pp. 136-138 (National Insurance Amendment 103, 7.1.2008), `17_lsr_300860.pdf`, now deposited.
+  The tracer reports that it replaced the columns for those who are neither and the Treasury allocation, so that the 2005 table is stale for those two and the consolidation's cells there are right.
+  I did not view a page of it.
+  I looked at the numbers in its text layer for pp. 137-138 (0.16, 1.67, 0.07, 1.31, 0.14, 3.65 and 0.09, 0.08, 0.03, 0.02, 0.06, 0.02) and they are the consolidation's cells in those two columns; that was a comparison by eye of a text layer, not a reading of the page.
+- SH 2429 p. 267, SH 2382 pp. 754 and 757, SH 3347 p. 178 and SH 3384 p. 395: in the PDFs I did not open them as images.
+- SH 2203 p. 250 (the retitling of the schedule) and s 141 on p. 257 (the end of the interim text on 31.3.2011): the tracer read p. 250 from a text layer and p. 257 from an image; I viewed neither, and nothing here relies on them beyond the interim text's dates, which I took from the tracer.
+- The chain of column D from 2006 to 2024.
+  The claim that column D's upper part, item 10, is 3.85 in the 2026 text rests on SH 2023 p. 813 (viewed) and on the tracer's statement that no instrument it read changes column D after 2005 (SH 3347 p. 177 is viewed and does not print column D's upper part; its p. 178 is not).
+  The Knesset-17 amendments of 2006 to 2009 and the Orders under s 337(b) after 2002 were not searched by the tracer, and I did not search them; an unseen change between 2005 and 2009 is not excluded, though nothing in the reconstruction needs one.
+  SH 3045 p. 169, which I viewed, prints C items only and does not speak for column D.
+- The other cells of both tables are the consolidation's, corroborated by the tracer's cell-by-cell reconstruction from the instruments, a separate pass ("reconstructed from the instruments by a separate pass; the seven cells read from page images").
+  The instruments behind the reconstruction that are not among the pages listed above (for example SH 2271 for column C in 2011, and SH 2592 for columns C2 and C5 in 2016) I did not view, and they are not deposited.
+  The reconstruction itself is a working file outside the repository.
+- I compared all cells and totals of the four versions of `nii-schedule-j-tables.l4` (temporary and permanent, as printed and as read in 2024-2027) with that reconstruction by a script outside the repository: no mismatch, and every column of all four versions adds up to its printed total.
+  That agrees with the reconstruction; it is not a second reading of the instruments.
+
+### Corroboration that does not use the instruments
+
+The National Insurance Institute's rate pages, fetched on 2026-10-06 and 2026-10-08 (provenance in `nii-il04-published-figures.l4`; I did not fetch them again), print composite rates for 2026 above the threshold: employee 14.6%, deduction 7%, and for a controlling shareholder 19.34% and 11.96% with health insurance at 5.17%, so 14.17% and 6.79%.
+The official items give exactly these: 1.40 + 2.08 + 2.06 + 0.13 + 0.37 + 0.06 + 2.28 + 0.33 + 5.89 = 14.60; 0.87 + 0.07 + 0.21 + 1.86 + 0.14 + 3.85 = 7.00; 14.60 - 0.37 - 0.06 = 14.17; 7.00 - 0.21 = 6.79.
+The consolidation's items gave 14.49, 4.67, 14.12 and 4.46, which is why the four assertions of family 2 of `nii-il04-tests-expected-red.l4` failed until 0.6.1 and now pass.
+One comment of `nii-schedule-j.l4` quotes the page's column C figures for two branch sets that are not an employee's full nine: 14.17 (a controlling shareholder) and 11.82 (aged 67 to 70, the page's 16.99 less 5.17).
+The official items reach them (14.17 as above; 14.60 - 0.13 - 2.28 - 0.37 = 11.82), where the consolidation's gave 14.23 and 11.86.
+The page's figures are as that comment quotes them; they are not re-read here.
+
+### What the generator and the tools now do
+
+- `tools/schedule_j.py` carries a table `CORRECTIONS` of ten entries (six rows of the permanent table, four of the temporary one).
+  For each it checks that the source still prints the consolidation's wrong figure, writes the official figure, and writes `-- CORRECTED 2026-11-09` comments above the row; if the consolidation is ever repaired it says so and still writes the official figure, so the entry can then be deleted.
+  Any other difference stops it, as before.
+- It also writes the instruments' own words as `-- ext:[tag] | ...` comment lines at the head of `nii-schedule-j-tables.l4` (tags `SH2382-p755`, `SH2382-p756`, `SH2023-p813`, and, for where the wrong figures come from, `SH2203-p259` and `SH2429-p266`).
+  The Hebrew on them is transcribed by hand from the page images, and is not checked mechanically against any file; the figures on them are read from the images as well.
+- The ten corrected rows carry no `src:` line, because a `src:` line reads as the source of the value the row encodes, and here it is not.
+  The consolidation's own line stays above each corrected row as a plain comment that begins `consolidation prints (its error, revision 2763716):` and ends `[source line N]`.
+  The generator writes the marker `--@CONS N` and `tools/srcquote.py` (which gained that marker) expands it from the deposited text with the same reducer as a `src:` line, so the quotation is still produced mechanically and re-checked on every run; the `CORRECTED` comment above it says which cell is the consolidation's error.
+  Nothing reads that comment as the source of a value.
+  The rows that are not corrected still carry `src:` lines, as before.
+- `tools/hebcheck.py` now skips `ext:` lines, as row IL-34's copy always has, because their Hebrew is not in the consolidation.
+- After the change, `tools/schedule_j.py` followed by `tools/srcquote.py` reproduces `nii-schedule-j-tables.l4` byte for byte, `tools/srcquote.py` leaves every module unchanged, and `tools/hebcheck.py` exits 1 on `NOTES.md` only, on five Hebrew runs in this file's comparison section (the quotations of Amendment 252 and of the 2025 Budget Law from their PDFs), the same five as before the change.
+  Run over the other `.l4` modules, `BRIEF.md`, `SOURCE-LICENSE.md`, `encoding.json` and `check.sh` it passes.
+
+### Fork F4 and the switch
+
+Fork F4 (RULED by Meng on 2026-10-07) and fork F21 (RULED 2026-10-08, TAKEAWAY and DESSERT) both start from a premise: where Schedule J's printed totals differ from the sums of its items.
+That premise was the consolidation's error.
+The gaps between a total and its items first appear in Hebrew Wikisource revision 2763716 (2023-05-31): in the saved comparison with revision 2763697, every column adds up in the earlier revision, and the script that made the comparison flags exactly three columns in the later one (C above, employee, 14.39 against 14.50; C below, employee, 4.16 against 3.85; D upper 4.67 against 7.00).
+With the official cells every column of every version adds up to its printed total (36 of 36 checks in family 1 of the red module, all satisfied; Amendment 252's slip below is the one exception, in the 2025 text, which no answer reads).
+So F4 and F21 are moot on this table; neither is re-ruled.
+F4's own text says that where a printed total and its items agree the reading changes nothing (this file, "Version 0.3.0", item 1), and that is now the case in every version.
+The switch and its default (the printed totals) are unchanged.
+- At the printed totals (the default) and at the items' reading the answers are now the same everywhere, because the first test in `the combined percentage in ... reading Schedule J as` finds the items equal to the total.
+- Fork F21's three readings coincide: "the printed total less the items of the branches not paid" is the items of the branches paid, for any set, because 7.00 - 0.21 = 6.79 = 0.87 + 0.07 + 1.86 + 0.14 + 3.85.
+  That is why the default answers for the Institute's sets did not move, and why nothing is declined for the reason "these are fewer branches" any more.
+- What remains of the switch is the machinery, kept by name, for a table whose items fall short of its totals.
+  It is still tested on such a table: the last section of `nii-il04-tests.l4` builds the consolidation's own 2026 table as data (labelled, four cells wrong, not the Law's) and asserts the 25 answers of versions 0.3.0 to 0.6.1 that this correction moved, with their original expected values, including the refusals.
+- The reading `fewer branches are declined` and the refusal text are unchanged.
+  Column C's decline for fewer branches, which F21 kept "assumed, not ruled" because the formula did not reach the Institute's column C totals, has no case left: the formula reaches them.
+
+### Default answers that changed
+
+Defaults, by the reading this row takes (the printed totals, and for column D the Institute's three sets); each is a case that was declined and is now answered, because the items reach the total:
+
+| case (2026, threshold 7,703) | before (0.6.1) | after (0.7.0) | arithmetic, official cells |
+|---|---|---|---|
+| s 337(a)(1), one branch (senior citizens and survivors), income 10,000 | refused: "... these are fewer branches" | 306.2999 | 7,703 x 2.22% + 2,297 x 5.89% = 171.0066 + 135.2933 |
+| column C above, employee, a controlling shareholder's seven branches, combined | refused | 14.17 | 1.40 + 2.08 + 2.06 + 0.13 + 2.28 + 0.33 + 5.89 |
+| column C above, employee, a woman between her retirement age and 67, her seven branches, combined | refused | 12.19 | 1.40 + 2.08 + 2.06 + 0.37 + 0.06 + 0.33 + 5.89 |
+| column D upper, a non-resident employee (maternity only), combined | refused | 0.87 | item 1 |
+| column D deduction, a non-resident employee, wage 10,000 | refused | 27.6869 | 7,703 x 0.10% + 2,297 x 0.87% = 7.703 + 19.9839 |
+
+Every other default answer of the row, asserted in `nii-il04-tests.l4` or `tests-independent.l4`, is the same before and after: the all-branch totals (762.8785 and the rest), the Institute's three sets in column D (6.79, 4.86, 5.07 and their deductions), and everything in the self-employed and neither columns.
+A case outside the tests that reads one of the seven cells directly changes with the cell: any answer for a single branch that reads C above at items 6, 7 or 9 or D upper at item 10 (both tables, so from 2026), or C below at items 1, 3 or 10 (the permanent table only: 2027 without an order under Amendment 252 s 7(b), 2028 and 2029 on).
+
+Under the readings kept by name:
+
+| case | reading | before | after | arithmetic |
+|---|---|---|---|---|
+| composites, 2026 above the threshold, all nine branches | items | 14.49 | 14.6 | 14.60 |
+| deduction composite, all deduction branches | items | 4.67 | 7 | 7.00 |
+| the same, a controlling shareholder (column D) | items | 4.46 | 6.79 | 0.87 + 0.07 + 1.86 + 0.14 + 3.85 |
+| the same, aged 67 to 70 without an old-age pension | items | 2.53 | 4.86 | 0.87 + 0.14 + 3.85 |
+| the same, a woman between her retirement age and 67 | items | 2.74 | 5.07 | 0.87 + 0.21 + 0.14 + 3.85 |
+| the same, a non-resident employee | printed total less the items not paid | 3.2 | 0.87 | 7.00 - (0.07 + 0.21 + 1.86 + 0.14 + 3.85) = 7.00 - 6.13 (it was 7.00 - 3.80, with 1.52) |
+| the same, three sets of fewer branches (a controlling shareholder; aged 67 to 70; a woman between her retirement age and 67) | fewer branches are declined | refused | 6.79, 4.86, 5.07 | as above |
+| deduction, 2026, a controlling shareholder at 10,000; a woman between her retirement age and 67 at 7,800 and at 20,000 | fewer branches are declined | refused | 234.5369; 60.3795 and 678.9195 | as above |
+| deduction, a non-resident employee, 10,000 | printed total less the items not paid | 81.207 | 27.6869 | 7,703 x 0.10% + 2,297 x 0.87% |
+| deduction, 2026, wage 7,704 | items | 80.1579 | 80.1812 | 7,703 x 1.04% + 1 x 7% |
+| deduction, 2026, wage 20,000 | items | 654.3811 | 940.9012 | 80.1112 + 12,297 x 7% |
+| deduction, 2026, wage 10,000 | items | 187.3811 | 240.9012 | 80.1112 + 2,297 x 7% |
+| deduction, controlling shareholder, 10,000 | items | 181.0168 | 234.5369 | 78.5706 + 2,297 x 6.79% |
+| deduction, aged 67 to 70, 12,000 | items | 162.6351 | 262.7552 | 53.921 + 4,297 x 4.86% |
+| deduction, a woman between her retirement age and 67, 7,800 and 20,000 | items | 58.1194 and 392.3994 | 60.3795 and 678.9195 | 55.4616 + 97 x 5.07% and 55.4616 + 12,297 x 5.07% |
+| s 337(a)(1), all nine, 10,000 | items | 760.3518 | 762.8785 | 427.5165 + 2,297 x 14.60% |
+| s 337(a)(1), all nine, 2027, 6,000 under the threshold | items | 255.6 | 237 | 6,000 x 3.95% |
+| deduction, 2027, threshold 8,000, wage 10,000 | items | 125.4 | 172 | 8,000 x 0.40% + 2,000 x 7% |
+| column C above, a woman between her retirement age and 67 | items | 12.08 | 12.19 | 14.60 - 0.13 - 2.28 |
+| the figure for senior citizens, C below, 2028 | cell | 1.67 | 1.52 | the cell |
+
+### Tests changed
+
+- `nii-il04-tests.l4`: 30 assertions of the 237 had an expected value that rested on the consolidation's cells (lines of the 0.6.1 file: 96, 326, 341, 342, 503, 548, 551, 556, 561, 563, 564, 627, 629, 639, 640, 644, 645, 652, 658, 660, 669, 672, 673, 700, 707, 708, 715, 716, 728, 729).
+  Each was recomputed by hand from the official cells, checked with a Decimal script that does not use the encoding, and carries a "CORRECTED 2026-11-09" comment with the old value and the arithmetic.
+  Eleven were refusals ("... these are fewer branches") and now have the value, for the reason in the previous section; nineteen changed value.
+  The expected values were never edited to make a run pass: each was decided from the cells first, and the run then agreed.
+  The count is still 237 and all 237 are satisfied; 29 more were added in the last section (the switch's machinery on the consolidation's table: 25 old assertions, 4 about its sums), so 266 satisfied.
+- `nii-il04-tests-expected-red.l4`: rewritten as described in its header.
+  Family 1 (36 totals checks) and family 2 (4 composites) are all satisfied; family 3 (the 2025 text) still fails once and gains two satisfied assertions that pin the slip (the column's items sum to 6.93, its printed total is 6.92); family 4 is new: the consolidation's seven cells against the official ones, 11 assertions (7 permanent, 4 temporary), all failing by design.
+  12 failing of 54 (15 of 41 before); declared in `check.sh` and `encoding.json`.
+- `tests-independent.l4` (frozen): 60 more assertions fail, all of them resting on the consolidation's cells, which the independent tester, deciding from the same consolidation, typed from it: 18 cell lookups, 19 per-branch percentages, 8 column sums, 5 combined percentages, 9 s 337(a)(1) amounts at the items, 1 deduction at the items.
+  I recomputed each from the consolidation's cells (equal to the asserted value) and from the official cells (not equal); 45 of the 60 are direct reads or sums of the cells and 15 are arithmetic, and the 15 asserted values are exactly what the consolidation's cells give.
+  The assertions, their values and their lines are untouched; a dated note at the end of the file lists the 60 with the official values; `check.sh` declares 65 (5 + 60), `encoding.json` the same.
+  The five failures of 0.4.1 (lines 755, 923, 928, 929, 930) do not read a cell and are unchanged.
+  The tester's one open question about the controlling shareholder (14.17 against 14.12, "the 0.05 is unexplained", `INDEPENDENT-FINDINGS.md`) is explained: 0.37 + 0.06 against 0.33 + 0.04.
+
+### The 2025 slip of Amendment 252, and which value applies when
+
+Column C not above the threshold, those who are neither, item 2 (maternity): Amendment 252 s 7(a)(3)(a) prints 0.17 and a total of 6.92; the items sum to 6.93 (Sefer HaChukim 3347, p. 177, 14.1.2025, read from the page image).
+The 2025 budget-year Law s 20(1) (Sefer HaChukim 3384, p. 396, 27.3.2025, read from the page image) replaces "0.17" with "0.16", and its s 21 commences that chapter on 1 January 2026.
+So the cell is 0.17 in calendar 2025 and 0.16 from 1 January 2026.
+The encoding answers 2026 on, with 0.16 (the column adds up to 6.92); 2025 is declined, and the 2025 text is kept as data with 0.17.
+The slip is typed in family 3 of the red module: the items sum to 6.93 and the printed total is 6.92 (both satisfied), and the assertion that they are equal fails by design.
+It is the only place where the official text does not add up; no answer reads the 2025 text.
+The Knesset's own cure changed the item (0.17 to 0.16) and kept the printed total (6.92), which is consistent with fork F4's default of letting the printed totals govern.
+
+### Rows that depend on Schedule J's cells
+
+- Row IL-34: its `nii-il34-tests-s28-s32.l4` used the consolidation's column (fork R1's example); corrected, and its notes updated; the vendored `nii-il04-nouns.l4` copied again.
+  The row's five frozen failures stay five.
+  See that row's `NOTES.md`, section 15.
+- Row IL-08: its `NOTES.md` comparison row B5 states the gap as a fact; a dated correction is added.
+  No rule, test or count changed.
+- Row IL-05: not touched, by the lead's instruction.
+  It carries its own fixtures of column D (`nii-il05-tests.l4`, the lines that list the upper figures with 1.52 for senior citizens, and the comments quoting 4.67 in `nii-s342-liability-and-deduction.l4` and `nii-il05-tests.l4`); they are self-contained and unaffected by this change, but they use the consolidation's 1.52 where the official figure is 3.85.
+- Rows IL-06, IL-33 and IL-35: no dependence (no import of an IL-04 module that carries Schedule J, and no mention of Schedule J's cells or of the sums).
+  No other row imports `nii-schedule-j-tables.l4`, `nii-schedule-j.l4` or `nii-s337-rates.l4`.
+
+### What `check.sh` prints at 0.7.0
+
+Run on 2026-11-09 from 15:12:29Z to 15:13:43Z with `L4=/Users/mengwong/.local/bin/l4`, `JL4_LIBRARY_PATH` unset, after the same command had printed the "before" numbers on the same binary (cabal store `jl4-0.1-177906e7`, sha256 `2e47661700d89bf98abc2af3fd91fee5f6dee000c20704246c9369a54b53f302`).
+
+```
+module                                    errors satisfied  failed  refused  expected
+nii-il04-nouns.l4                              0         0       0        0         0
+nii-il04-published-figures.l4                  0         0       0        0         0
+nii-il04-tests-expected-red.l4                12        42      12        0        12
+nii-il04-tests.l4                              0       266       0        0         0
+nii-s1-definitions.l4                          0         0       0        0         0
+nii-s334-interpretation.l4                     0         0       0        0         0
+nii-s337-rates.l4                              0         0       0        0         0
+nii-schedule-j-tables.l4                       0         0       0        0         0
+nii-schedule-j.l4                              0         0       0        0         0
+tests-independent.l4                          65       581      65        0        65
+TOTAL (10 modules)                            77       889      77        0
+```
+
+`check.sh` exit 0.
+Before any edit the same command printed: nii-il04-tests-expected-red.l4 15 errors, 26 satisfied, 15 failed; nii-il04-tests.l4 237 satisfied; tests-independent.l4 5 errors, 641 satisfied, 5 failed; total 20 errors, 904 satisfied, 20 failed, 0 refused.
+Every other module printed the same numbers before and after; so did the other six National Insurance rows except row IL-34's `nii-il34-tests-s28-s32.l4` (82 to 90 satisfied), and the raw `l4 run` output of 99 of the 103 modules of the seven rows is byte-identical (the four that differ are the three modules above that changed and that one).
+The 77 errors are the 77 failed assertions: 12 in the red module (11 + 1, listed in its header) and 65 in the independent tests (5 + 60, above); none is "could not be evaluated"; no assertion is refused.
+
+### What was not decided
+
+- Why D upper item 10 reads 1.52 in the consolidation (the same figure as C below item 10 in the 2005 table) is not established.
+- Whether any instrument between 2005 and 2009 that the tracer did not read changed a cell of columns C, D or E: nothing in the reconstruction needs one, and none is excluded.
+- The Hebrew on the `ext:` lines was transcribed by me from the page images and not checked against any file.
 
 ## Version 0.6.1 (2026-10-08): SHRUG on the remaining ambiguities (BACKLOG IL-49)
 
@@ -606,7 +822,7 @@ The section "Comparison with Axiom's RuleSpec" at the end, `tests-independent.l4
 | --- | --- | --- | --- | --- |
 | National Insurance Law (Amendment No. 252 and temporary provision), 5785-2025 | 3347, pp. 176-178 (14 January 2025) | deposited: `../../registers/source-bundle/amending-laws/25_lsr_5482787.pdf` (from `https://fs.knesset.gov.il/25/law/25_lsr_5482787.pdf`) | `d6c450ca0b869d1edb036b0f96bffbd79be6670336d9b5aa888da6cf2ecc8904` | s 6: commencement 1 January 2025; s 7(a): the Law is read, "for national insurance contributions collected in respect of the years 2025 and 2026", until 31 December 2026, with s 7(a)(3) replacing the lower sub-columns of columns C and D of Schedule J only; s 7(a)(3)(a): item 2's lower figure for those who are neither printed as 0.17, the column's total as 6.92; s 7(b): the Minister of Finance may extend that period by order to 2027 and then 2028, one year at a time |
 | Law for Achieving the Budget Targets and Implementing the Economic Policy for Budget Year 2025 (Legislative Amendments), 5785-2025 | 3384, pp. 395-396 | deposited: `../../registers/source-bundle/amending-laws/25_lsr_6133485.pdf` (from `https://fs.knesset.gov.il/25/law/25_lsr_6133485.pdf`) | `eba7e1fa570a3ece265d87f379543024da038ee51af3f959d4c74162f5edecfa` | s 19 (Amendment No. 256): (2) inserts the definition of the reduced collection threshold into s 334(a); (6) "in Schedule J, everywhere", for "60% of the average wage" substitutes "the reduced collection threshold as defined in s 334(a)"; s 20(1): in Amendment 252 s 7(a)(3)(a), 0.17 becomes 0.16; s 21: the chapter commences on 1 January 2026 |
-| Economic Efficiency Law (Legislative Amendments for Achieving the Budget Targets for Budget Years 2023 and 2024), 5783-2023, s 24 (National Insurance, Amendment No. 234, temporary provision) | 3045, p. 169 | fetched 2026-10-06 21:39:39 UTC through the lead's Israeli-IP SOCKS proxy (an `ssh -D` tunnel to an EC2 instance in il-central-1) from `https://fs.knesset.gov.il/25/law/25_lsr_2572039.pdf`, 414,996 bytes, 32 pages; **not deposited** (outside this directory's lane; the bytes are kept in the encoder's scratchpad for the lead) | `6d90d3c4393a55874bca61b2cf7d3a57cba60ec900df57560563d1d2cc7474af` | from 1 January 2024 to 31 December 2027, Schedule J is read with item 4 for an employee at 2.06 above the split (for 1.96) and 0.47 below it (for 0.37), and the totals at 14.60 (for 14.50) and 3.95 (for 3.85): the enacted source of the editors' "2024 to 2027" notes (the comparison's N3) |
+| Economic Efficiency Law (Legislative Amendments for Achieving the Budget Targets for Budget Years 2023 and 2024), 5783-2023, s 24 (National Insurance, Amendment No. 234, temporary provision) | 3045, p. 169 | fetched 2026-10-06 21:39:39 UTC through the lead's Israeli-IP SOCKS proxy (an `ssh -D` tunnel to an EC2 instance in il-central-1) from `https://fs.knesset.gov.il/25/law/25_lsr_2572039.pdf`, 414,996 bytes, 32 pages; not deposited when this row was written (0.1.0); it is now `registers/source-bundle/amending-laws/25_lsr_2572039.pdf`, with the same sha256 as below | `6d90d3c4393a55874bca61b2cf7d3a57cba60ec900df57560563d1d2cc7474af` | from 1 January 2024 to 31 December 2027, Schedule J is read with item 4 for an employee at 2.06 above the split (for 1.96) and 0.47 below it (for 0.37), and the totals at 14.60 (for 14.50) and 3.95 (for 3.85): the enacted source of the editors' "2024 to 2027" notes (the comparison's N3) |
 
 Text was read with `pdftotext -raw` (visual order, word order reversed per line) and, for Amendment 252 p. 177, by rendering the page to an image; the 0.17 was read off the image.
 No Hebrew from these PDFs is quoted in the modules (the Hebrew check is against the consolidation only); they are cited in English.
@@ -668,6 +884,8 @@ TOTAL (10 modules)                            21       809      21        0
 The consumer price index: the Central Bureau of Statistics API returned an empty reply through the Israeli proxy too (2026-10-06 21:40 UTC), so the index stays an input and the 2026 threshold stays the Institute's published 7,703 (not checked against s 334(a)(1)'s formula). The threshold for 2027 on, and any order under Amendment 252 s 7(b), were not published at retrieval.
 
 ## 0. What `check.sh` prints
+
+**CORRECTED 2026-11-09 (0.7.0):** this section records the first run of 0.1.0; its 14 expected failures were the consolidation's error and are gone (the red module now fails 12 times, for other reasons); the numbers at 0.7.0 are in "Correction 2026-11-09" at the top of this file.
 
 (As run on 2026-10-06, before the repair; the numbers after it are in "Repair 2026-10-07" above.)
 
@@ -925,6 +1143,8 @@ The rules that take only a year assume the temporary provision was not extended 
 
 ## 4. Fork register
 
+**CORRECTED 2026-11-09 (0.7.0):** the figures in this section that depend on the consolidation's seven wrong cells (4.67, 14.49, 14.39, 4.16, 4.26, 4.46, 2.53, 2.74, 3.80, and every statement that Schedule J's printed totals differ from the sums of its items) are the consolidation's, not the Law's; see "Correction 2026-11-09" at the top of this file, which also lists the answers that changed.
+
 | # | where | the question | readings | taken, and why |
 | --- | --- | --- | --- | --- |
 | F1 | Schedule J sub-heading (4711), label (4714) | "For the years 2025-2026": years of what? | (i) the calendar year of the month for which contributions are paid; (ii) the year of payment; (iii) the tax year of the income | **(i)**: the sub-heading dates the rates by the month contributions are "for" ("בעד אפריל"). (i) and (iii) coincide for an employee's monthly contributions. |
@@ -952,6 +1172,8 @@ The rules that take only a year assume the temporary provision was not extended 
 **Where I looked for others and found none:** s 334(a)'s two carrier definitions; s 337(b)'s conditions (each a fact the order records); Schedule J's column E (data only).
 
 ## 5. Answer table
+
+**CORRECTED 2026-11-09 (0.7.0):** the figures in this section that depend on the consolidation's seven wrong cells (4.67, 14.49, 14.39, 4.16, 4.26, 4.46, 2.53, 2.74, 3.80, and every statement that Schedule J's printed totals differ from the sums of its items) are the consolidation's, not the Law's; see "Correction 2026-11-09" at the top of this file, which also lists the answers that changed.
 
 Composite percentages are sums of the items of the version in force, for the branch lists the tests state (all nine branches for an employee; seven for the self-employed; six for one who is neither; six deduction branches for column D).
 **(0.3.0)** From version 0.3.0 the rules read the printed totals by default (the figures in brackets below, "printed"), and the items by name; the worked figures below are the items'.
@@ -1108,6 +1330,9 @@ Two consequences for this row that the encoder's NOTES do not yet record:
 - NOTES section 7 still records the Amendment 252 fetch as failed.
 
 ### Divergence table
+
+**CORRECTED 2026-11-09 (0.7.0):** rows D5, D11 and D15 and the row "337-1" in the cases below set our items against the printed totals using the consolidation's cells; with the official cells our items give the printed totals (14.60, 7.00) and the gap the comparison describes does not exist.
+See "Correction 2026-11-09" at the top of this file.
 
 Lines are lines of the deposited source.
 "SH" is Sefer HaChukim.

@@ -6,6 +6,13 @@ or a previously expanded line `<indent>-- src:3605 | ...`
 becomes one comment line per source line:
          `<indent>-- src:3605 | "מדרגת גבייה מופחתת" – ...`
 
+Added 2026-11-09 (the Schedule J correction): a line `<indent>--@CONS 4725` (or its previously
+expanded form) becomes ONE comment line that is NOT a `src:` line, because the row beneath it does
+not encode what that source line says:
+         `<indent>-- consolidation prints (its error, revision 2763716): <the reduced line> [source line 4725]`
+It is reduced by the same function, so the quotation is still produced from the deposited text and
+re-checked on every run, but nothing reads it as the source of a value.
+
 Templates are reduced mechanically: subsection labels kept, link templates reduced to their
 visible text, editorial notes kept and marked [note: ...], table cells separated by " |".
 Nothing is typed by hand. The convention (and most of this reducer) follows the tools of row
@@ -60,6 +67,8 @@ def clean(line):
 
 
 MARK = re.compile(r"^(\s*)--(?:@SRC |\s*src:)(\d+)(?:-(\d+))?(?:\s*\|.*)?$")
+CONS_PREFIX = "consolidation prints (its error, revision 2763716): "
+CONS = re.compile(r"^(\s*)--(?:@CONS (\d+)| " + re.escape(CONS_PREFIX) + r".* \[source line (\d+)\])$")
 
 
 def main():
@@ -71,6 +80,11 @@ def main():
             lines = fh.read().split("\n")
         out = []
         for ln in lines:
+            c = CONS.match(ln)
+            if c:
+                n = int(c.group(2) or c.group(3))
+                out.append(f"{c.group(1)}-- {CONS_PREFIX}{clean(src[n - 1])} [source line {n}]")
+                continue
             m = MARK.match(ln)
             if not m:
                 out.append(ln)

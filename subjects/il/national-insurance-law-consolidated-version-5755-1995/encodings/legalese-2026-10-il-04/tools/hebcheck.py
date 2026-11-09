@@ -3,6 +3,11 @@
 verbatim in the source file (raw, or as srcquote.py reduces it). Prints each run that does not,
 with file:line. Exit 1 if any.
 
+Changed 2026-11-09 (the Schedule J correction): a line carrying `-- ext:[TAG] |` quotes an
+instrument OTHER than the deposited consolidation (here: Sefer HaChukim pages read as images, and
+transcribed by hand), so it is skipped like a `src:` line, exactly as row IL-34's copy of this tool
+does. Such a line is NOT checked against any file; NOTES.md says which ones they are.
+
 A run starts and ends on a Hebrew letter (or geresh/gershayim) and may contain spaces, digits,
 Hebrew punctuation, the maqaf and the en dash in between. ASCII quotes and brackets end a run,
 so a run is never padded with the encoder's own punctuation. The convention follows row
@@ -66,7 +71,7 @@ def main():
     for path in sys.argv[2:]:
         with open(path, encoding="utf-8") as fh:
             for n, line in enumerate(fh, 1):
-                if re.search(r"--\s*src:\d+ \|", line):
+                if re.search(r"--\s*src:\d+ \|", line) or re.search(r"--\s*ext:\[[^\]]+\] (\d+ )?\|", line):
                     continue
                 for m in heb.finditer(line):
                     run = m.group(0).strip()
