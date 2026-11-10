@@ -13,7 +13,7 @@ That followed the consolidation, which prints 24 months in both places and carri
 
 Which instrument.
 Amendment 85, Sefer HaChukim 2544 (6 April 2016) p. 694, read from the page image rendered at 250 dpi on 2026-11-10.
-The page is deposited as `../../registers/source-bundle/amending-laws/sh2544-5776-p694-extract.pdf`, with a crop of each of ss 3, 5 and 6 and of the footer (`sh2544-5776-p694-crop-*.png`), all in `SOURCES.json`.
+The page is not deposited whole, because it also carries the opening of an unrelated Act; the lines read are deposited as four cropped images in `../../registers/source-bundle/amending-laws/`: one each of ss 3, 5 and 6 and one of the footer (`sh2544-5776-p694-crop-s3.png`, `-crop-s5.png`, `-crop-s6.png`, `-crop-footer.png`), all in `SOURCES.json` with the sha256 of the whole file as downloaded.
 - Section 3(1) changes "18 months" to "24 months" in s 49C(1), and only there (section 3(2) adds the inherited share of a half to s 49C(3)).
 - Section 5 is a temporary provision: for five years from 23 Nisan 5776 (1 May 2016) s 9(ג1ג)(2)(ב) is read with "18 months" in place of "24 months", and that reading applies to a right in land bought in that period.
 - Section 6 starts s 49C(1) as changed by s 3(1) at the end of that period, and applies it to a dwelling bought at the end of the period or later as a replacement for the dwelling sold.
@@ -54,7 +54,7 @@ The 18-month reading (SH 5783 p. 161, s 10, Amendment 102) and the orphan date (
 The page of Amendment 85 (SH 2544, 6 April 2016, p. 694: the 24 months of s 49C(1) and the temporary 18 months of s 9(ג1ג)(2)(ב)) was read from the page image at 250 dpi on 2026-11-10, in the correction recorded above; SH 2405 p. 155, already deposited, was read for the 24 months of s 9(ג1ג)(2)(ב) as created.
 A second reading of the sources, whose notes are not in this repository, supplied the instrument and page for the later amendments of s 9 (SH 5783 pp. 160-161, SH 5785 pp. 150-152) and for the Finance Committee's approval of the extension order of the temporary ladder, which is the Knesset's record of its meeting no. 511 of 9 December 2024, read as text and not as a page image.
 Every instrument named here is deposited in `../../registers/source-bundle/` with its URL and sha256 in `SOURCES.json`: the Sefer HaChukim PDFs in `amending-laws/`, and the Committee's record in `official/`; the law firm's guide on the end date of the temporary ladder (https://www.siboni-law.com/PurchaseTaxGuide2026) is a third party's page and is not deposited.
-Only the pages the row cites are deposited as PDFs; `SOURCES.json` keeps the whole file's URL, sha256 and size as downloaded for provenance.
+Only the pages the row cites are deposited as PDFs, except SH 2544 p. 694 (Amendment 85), which is deposited as four cropped images of the lines read; `SOURCES.json` keeps the whole file's URL, sha256 and size as downloaded for provenance.
 Every quotation of Hebrew in the modules is expanded mechanically from the deposit by `tools/srcquote.py`, and `tools/hebcheck.py` finds every run of Hebrew in the `.l4` files and in this file in the deposit (it exits 0 when run over `*.l4` and `NOTES.md`).
 
 ## 2. Scope
