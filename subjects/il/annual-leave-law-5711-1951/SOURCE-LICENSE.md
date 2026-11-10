@@ -22,4 +22,9 @@ Hebrew is authoritative; English translations are unofficial. The English titles
 
 ## Status of this deposit
 
-No statute text has been deposited yet.
+Deposited for row il-72 in `registers/source-bundle/` (every file, with its URL, retrieval date and sha256, is in `SOURCES.json` there):
+
+- An excerpt of the Hebrew Wikisource consolidation as `annual-leave-law-5711-1951.he.wiki.excerpt.txt`: 3 whole lines of the raw wikitext, revision 3037796, last edited 2026-08-03T07:30:19Z; the header gives the whole page's size and sha256. It is an unofficial consolidation, and the whole page is not deposited.
+- Thirteen cropped images of printed pages in `pages/`: pages of Sefer HaChukim issues 81, 164, 444 and 1030 and of the Palestine Gazette, no. 1250, Supplement no. 1, from the Knesset's site; the official instruments, only the lines the row reads, and no full page.
+
+The metadata file `234-Sefer-HaChukim-5711-p-234-Knesset-Is.meta.json` is the stub's and is unchanged; its `text_deposited: false` was written before this deposit, and only the excerpt and the page crops above are deposited.
