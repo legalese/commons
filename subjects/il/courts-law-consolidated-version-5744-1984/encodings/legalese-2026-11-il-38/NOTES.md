@@ -122,7 +122,7 @@ The 11 are split by where the target was read from:
 | target | count | where the target was read |
 | --- | --- | --- |
 | this Basic Law's s 4, s 4(b)(1)(b) to (d), s 4(d), s 4(f) (twice) | 5 | the instrument SH 3388 p. 434 (row IL-37) |
-| this Basic Law's s 4(a), s 7(4) | 2 | the consolidation (the text is unamended); CONSOLIDATION-ONLY |
+| this Basic Law's s 4(a), s 7(4) | 2 | the consolidation, CONSOLIDATION-ONLY, except that s 7(4) was amended by Basic Law: The Judiciary (Amendment No. 2), Sefer HaChukim 1864, 5 August 2002, p. 598, s 1, which replaces "the chairman of the committee" by "the chairman of the committee, the Judges' Ombudsman" (read from the page image), so only the words that instruction does not change are the consolidation's; the instructions on SH 3388 p. 434 (Amendment No. 4) open with s 4(b) and do not mention s 4(a) (page image, p. 434 only; the following page was not read) |
 | the Knesset Law ss 6, 61 | 2 | the Wikisource consolidation of the Knesset Law, an aid; CONSOLIDATION-ONLY |
 | the Courts Law's own s 2, s 2(1) | 2 | the consolidation (the text is unamended); CONSOLIDATION-ONLY |
 
@@ -160,7 +160,9 @@ This shows the tests can fail; it does not show that every rule is tested.
 - The regulations s 2(2)(b), (c) refer to (the services and the schools that count), and the Knesset's Rules that s 6B(d) and s 6C(c) refer to: not read.
 - The Judicature Rules on the committee's procedure, and the Interpretation Law, 5741-1981: not read.
 - The Knesset Law, apart from the headings of ss 6 and 61 as targets of cross-references, read in a Wikisource consolidation (an aid): not read as a source of rules.
-- Any amending instrument after Sefer HaChukim 3389: the consolidation's header lists none, but the Knesset's database was not searched for a later one.
+- Any amending instrument after Sefer HaChukim 3389: the consolidation's header lists three: Amendment No. 106 (Sefer HaChukim 3464, 3 December 2025, p. 32: s 70(b), a new s 70(b1), s 70D(a)(2)), Amendment No. 107 (Sefer HaChukim 3535, 10 June 2026, p. 622: a new s 24A, in force from 1 September 2026) and the law at Sefer HaChukim 3578, 29 July 2026, p. 1055 (s 5 there: ss 68(b)(4) and 70(d)).
+  The page images of the first two instruments (each of them the whole of the instrument) and of s 5 of the third (p. 1055, the only section of that law that the hunter found to amend the Courts Law; its other pages were not read) were read: none of the pages read touches ss 2, 2A, 6, 6B, 6C, 7, 8, 14 or 25, the sections this row encodes.
+  The Knesset's database was not searched for an instrument later than the header's last entry.
 - The Knesset's committee protocols and the explanatory notes to the bill that became Amendment No. 105: not read.
 
 ## 7. Re-running
