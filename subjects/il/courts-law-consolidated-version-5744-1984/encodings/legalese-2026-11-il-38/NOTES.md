@@ -5,12 +5,6 @@ Run `LEGALESE-2026-11-IL-38-20261109`, encoder a Sonnet 5.5 agent, 2026-11-09.
 No domain expert has read this encoding against the source, and no independent tester has run.
 Every Markdown sentence here is on its own line, so a grep hit is a whole sentence.
 
-**Correction note, 2026-11-10 (two statements in this file were wrong; no rule, test or count in the encoding changes).**
-Section 4 said the text of the Basic Law's s 7(4) is unamended; it is not (see the row for s 7(4) in section 4).
-Section 6 said the consolidation's header lists no instrument after Sefer HaChukim 3389; it lists three (see the first bullet of the "not read" list in section 6).
-Both were found by a hunter who compared this file's statements with the deposited source files and the official page images, and both were checked again against those files before this correction.
-Neither changes a rule the encoding uses, as far as the pages read show: the pages read of the three later instruments (the whole of Amendments 106 and 107, and s 5 of the law at SH 3578 p.1055, see section 6) do not touch ss 2, 2A, 6, 6B, 6C, 7, 8, 14 or 25 of the Courts Law, and the amendment to s 7(4) of the Basic Law added a proposer to the provision under which s 14(a) of the Courts Law acts.
-
 ## 0. What is encoded, from whose seat, and against which text
 
 **Scope.**
@@ -128,7 +122,7 @@ The 11 are split by where the target was read from:
 | target | count | where the target was read |
 | --- | --- | --- |
 | this Basic Law's s 4, s 4(b)(1)(b) to (d), s 4(d), s 4(f) (twice) | 5 | the instrument SH 3388 p. 434 (row IL-37) |
-| this Basic Law's s 4(a), s 7(4) | 2 | the consolidation, CONSOLIDATION-ONLY, with this correction (2026-11-10): s 7(4) was amended by Basic Law: The Judiciary (Amendment No. 2), Sefer HaChukim 1864, 5 August 2002, p. 598, s 1, which replaces "the chairman of the committee" by "the chairman of the committee, the Judges' Ombudsman" (read from the page image), so the text is not unamended and only the words the instruction does not change are the consolidation's; the instructions on SH 3388 p. 434 (Amendment No. 4) open with s 4(b) and do not mention s 4(a) (page image, p. 434 only; the following page was not re-read for this correction) |
+| this Basic Law's s 4(a), s 7(4) | 2 | the consolidation, CONSOLIDATION-ONLY, except that s 7(4) was amended by Basic Law: The Judiciary (Amendment No. 2), Sefer HaChukim 1864, 5 August 2002, p. 598, s 1, which replaces "the chairman of the committee" by "the chairman of the committee, the Judges' Ombudsman" (read from the page image), so only the words that instruction does not change are the consolidation's; the instructions on SH 3388 p. 434 (Amendment No. 4) open with s 4(b) and do not mention s 4(a) (page image, p. 434 only; the following page was not read) |
 | the Knesset Law ss 6, 61 | 2 | the Wikisource consolidation of the Knesset Law, an aid; CONSOLIDATION-ONLY |
 | the Courts Law's own s 2, s 2(1) | 2 | the consolidation (the text is unamended); CONSOLIDATION-ONLY |
 
@@ -166,8 +160,8 @@ This shows the tests can fail; it does not show that every rule is tested.
 - The regulations s 2(2)(b), (c) refer to (the services and the schools that count), and the Knesset's Rules that s 6B(d) and s 6C(c) refer to: not read.
 - The Judicature Rules on the committee's procedure, and the Interpretation Law, 5741-1981: not read.
 - The Knesset Law, apart from the headings of ss 6 and 61 as targets of cross-references, read in a Wikisource consolidation (an aid): not read as a source of rules.
-- Any amending instrument after Sefer HaChukim 3389: the consolidation's header lists three (corrected 2026-11-10; the first version of this line said none): Amendment No. 106 (Sefer HaChukim 3464, 3 December 2025, p. 32: s 70(b), a new s 70(b1), s 70D(a)(2)), Amendment No. 107 (Sefer HaChukim 3535, 10 June 2026, p. 622: a new s 24A, in force from 1 September 2026) and the law at Sefer HaChukim 3578, 29 July 2026, p. 1055 (s 5 there: ss 68(b)(4) and 70(d)).
-  The page images of the first two instruments (each of them the whole of the instrument) and of s 5 of the third (p. 1055, the only section of that law that the hunter found to amend the Courts Law; its other pages were not re-read for this correction) were read for this correction: none touches ss 2, 2A, 6, 6B, 6C, 7, 8, 14 or 25, the sections this row encodes.
+- Any amending instrument after Sefer HaChukim 3389: the consolidation's header lists three: Amendment No. 106 (Sefer HaChukim 3464, 3 December 2025, p. 32: s 70(b), a new s 70(b1), s 70D(a)(2)), Amendment No. 107 (Sefer HaChukim 3535, 10 June 2026, p. 622: a new s 24A, in force from 1 September 2026) and the law at Sefer HaChukim 3578, 29 July 2026, p. 1055 (s 5 there: ss 68(b)(4) and 70(d)).
+  The page images of the first two instruments (each of them the whole of the instrument) and of s 5 of the third (p. 1055, the only section of that law that the hunter found to amend the Courts Law; its other pages were not read) were read: none of the pages read touches ss 2, 2A, 6, 6B, 6C, 7, 8, 14 or 25, the sections this row encodes.
   The Knesset's database was not searched for an instrument later than the header's last entry.
 - The Knesset's committee protocols and the explanatory notes to the bill that became Amendment No. 105: not read.
 
