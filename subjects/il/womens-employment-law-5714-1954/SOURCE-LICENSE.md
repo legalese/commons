@@ -22,4 +22,7 @@ Hebrew is authoritative; English translations are unofficial. The English titles
 
 ## Status of this deposit
 
-No statute text has been deposited yet.
+Only excerpts of the Hebrew working text are deposited, in `registers/source-bundle/`: the lines the row quotes, each with its line number in the whole page, and the whole page's sha256 and size in the first lines.
+The Law's excerpt is an unofficial consolidation as maintained at retrieval (page revision 3084933, last edited 2026-09-27T06:30:08Z), not a historical vintage.
+The National Insurance Law's excerpt is copied from the deposit already held under the National Insurance Law's subject.
+`registers/source-bundle/SOURCES.json` gives the retrieval URL, sha256 and size of every file.
