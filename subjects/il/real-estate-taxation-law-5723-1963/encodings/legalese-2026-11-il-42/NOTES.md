@@ -11,9 +11,10 @@ Its sha256 is aa4217b3b917a48356d8069b9e9510694b456506ec77c9b4527a99c6c16dd1ca.
 The consolidation is unofficial, so every figure is labelled CONSOLIDATION-ONLY unless this encoder read it on a page image of the Knesset's Sefer HaChukim PDF.
 Pages read from the image (listed with their instruments in the header of `re42-published-figures.l4`): SH 5773 pp. 154-156 (the 2013 ladders), SH 5782 p. 460 (the first temporary ladder), SH 5785 pp. 150-152 (the 2025 freeze, with the exemption ceilings).
 The 18-month reading (SH 5783 p. 161, s 10, Amendment 102) and the orphan date (SH 5783 p. 542, Amendment 103) were read from the page images by the lead of the session on 2026-11-10; the encoder looked at the Amendment 102 page and not at the Amendment 103 page.
+The page of Amendment 85 (SH 2544, 6 April 2016, p. 694: the 24 months of s 49C(1) and the temporary 18 months of s 9(ג1ג)(2)(ב)) was read from the page image at 250 dpi on 2026-11-10; SH 2405 p. 155, already deposited, was read for the 24 months of s 9(ג1ג)(2)(ב) as created.
 A second reading of the sources, whose notes are not in this repository, supplied the instrument and page for the later amendments of s 9 (SH 5783 pp. 160-161, SH 5785 pp. 150-152) and for the Finance Committee's approval of the extension order of the temporary ladder, which is the Knesset's record of its meeting no. 511 of 9 December 2024, read as text and not as a page image.
 Every instrument named here is deposited in `../../registers/source-bundle/` with its URL and sha256 in `SOURCES.json`: the Sefer HaChukim PDFs in `amending-laws/`, and the Committee's record in `official/`; the law firm's guide on the end date of the temporary ladder (https://www.siboni-law.com/PurchaseTaxGuide2026) is a third party's page and is not deposited.
-Only the pages the row cites are deposited as PDFs; `SOURCES.json` keeps the whole file's URL, sha256 and size as downloaded for provenance.
+Only the pages the row cites are deposited as PDFs, except SH 2544 p. 694 (Amendment 85), which is deposited as four cropped images of the lines read; `SOURCES.json` keeps the whole file's URL, sha256 and size as downloaded for provenance.
 Every quotation of Hebrew in the modules is expanded mechanically from the deposit by `tools/srcquote.py`, and `tools/hebcheck.py` finds every run of Hebrew in the `.l4` files and in this file in the deposit (it exits 0 when run over `*.l4` and `NOTES.md`).
 
 ## 2. Scope
@@ -94,6 +95,27 @@ The rows below are read from the assertions in `re42-tests-s9.l4`, not typed fro
 | company | 5,000,000 | 16 January 2014 on (to 27 November 2021) | NOTHING | no figure held |
 | company | 7,000,000 | 11 February 2027 | 440,817.5 | amounts official, percentages consolidation only |
 
+For a single-dwelling purchase from 1 May 2016 to 30 April 2021 the time allowed to sell the former dwelling is 18 months (fork T3), but the table answers NOTHING for those days, so the window changes no amount here.
+
+The two replacement windows are read from Amendment 85 (SH 2544, 6 April 2016, p. 694; the lines read are deposited as cropped images, see section 1) and from Amendment 102 (SH 5783 p. 161, s 10):
+- Section 3(1) of Amendment 85 changes "18 months" to "24 months" in s 49C(1), and only there (section 3(2) adds the inherited share of a half to s 49C(3)).
+- Section 5 of Amendment 85 is a temporary provision: for five years from 23 Nisan 5776 (1 May 2016) s 9(ג1ג)(2)(ב) is read with "18 months" in place of "24 months", and that reading applies to a right in land bought in that period.
+- Section 6 of Amendment 85 starts s 49C(1) as changed by section 3(1) at the end of that period, for a dwelling bought at the end of the period or later as a replacement for the dwelling sold.
+- Section 9(ג1ג)(2)(ב) printed 24 months when it was created (SH 2405, 5 August 2013, p. 155, read from the page image).
+
+Each section has a function of its own: `the months within which the former only dwelling must be sold, for an ordinary purchase` (`re42-s9-purchase-tax.l4`) and `the months within which the replacement must have been bought, under section 49C(1)` (`re42-s49-exemptions.l4`).
+Each takes the day of the purchase (for s 49C(1), the day the replacement was bought).
+
+| day of the purchase | s 9(ג1ג)(2)(ב): months to sell the former only dwelling | s 49C(1): months within which the replacement must have been bought | from |
+| --- | --- | --- | --- |
+| before 1 May 2016 | 24 | 18 | SH 2405 p. 155; SH 2544 s 3(1) (the words it replaces); days before 6 April 2016 are limited as fork T3 says |
+| 1 May 2016 to 30 April 2021 | 18 | 18 | SH 2544 s 5 for s 9; s 6 for s 49C(1); the last day is fork T3 |
+| 1 May 2021 to 31 May 2023 | 24 | 24 | SH 2405 p. 155 and SH 2544 s 3(1) with s 6 |
+| 1 June 2023 to 31 May 2025 | 18 | 18 | SH 5783 p. 161 s 10 (fork T2) |
+| from 1 June 2025 | 24 | 24 | the end of that window (fork T2) |
+
+A replacement bought on 1 January 2020 and a sale on 1 September 2021, 20 months later: the other dwelling stands against the seller, and the sold dwelling is not the seller's only dwelling under s 49B(2) (`re42-tests-seller.l4`).
+
 For 1 January to 10 February 2027 the answer depends on the reading of the end of the temporary ladder (fork T1): 440,817.5 on the general ladder if it ended on 31 December 2024 or 31 December 2026, and 578,898.6 on the temporary ladder if it was carried to 10 February 2027; the declined reading answers NOTHING there.
 
 ## 8. Fork register
@@ -106,8 +128,15 @@ Each fork gives the reading taken, the reading rejected, and where it is.
   The fourth reading was added late, after a second reading of the sources; the tests for 1 January 2027 were revised then (disclosed in section 11).
 - T2, the end of the 18-month reading (Amendment 102, s 10).
   Two years from 1 June 2023 is taken to end on 31 May 2025; no instrument extending it was found.
-  The same window drives s 9(ג1ג)(2)(ב) and s 49C(1).
+  The row reads the same 18 months into s 9(ג1ג)(2)(ב) and into s 49C(1) (the page of Amendment 102 names both; see `re42-published-figures.l4`); each has its own function (section 7).
   The rejected reading is a window of 24 months throughout; the deposit prints 24 and mentions no reading.
+- T3, the end of the temporary period of Amendment 85 and the first day of the 24-month window of s 49C(1).
+  Section 5 of Amendment 85 runs for "five years from 23 Nisan 5776 (1 May 2016)"; section 6 starts the 24 months of s 49C(1) "at the end of" that period, for a dwelling bought "at the end of the period or later".
+  Taken: the five years are counted as fork T2 counts two years from 1 June 2023, with the first day counted, so the period is 1 May 2016 to 30 April 2021; s 9(ג1ג)(2)(ב) reads 18 months for a purchase on any of those days, and s 49C(1) reads 24 months for a replacement bought from 1 May 2021, the day after the last day.
+  Rejected, each moving only the purchase days 30 April 2021 and 1 May 2021: the Interpretation Law's rule for counting a period that runs "from" a day, if it leaves the first day out and ends the period on 1 May 2021 (the rule was not read, as for T2 and I1); "at the end of the period" read as the last day itself, so that a replacement bought on 30 April 2021 already has 24 months.
+  The tests pair 30 April 2021 with 1 May 2021 for both sections and say that the pair depends on T3 (`re42-tests-s9.l4`, `re42-tests-seller.l4`); every other day tested is clear of the boundary.
+  Limits: whether s 49C(1) read 18 months on every day before 6 April 2016 is not established; section 3(1) shows 18 months as the words it replaces at that date (official), and the consolidation's amendment tags for s 49C show none between 5773 and 5776 (CONSOLIDATION-ONLY); the row answers 18 for every replacement bought before 1 May 2016.
+  Amendment 102's reach to s 49C(1) rests on the row's reading of SH 5783 p. 161 (fork T2); the Amendment 85 page does not speak to it.
 - V1, V2, V3, the windows of the figures.
   V1: the frozen amounts of s 9 and s 49G hold to 15 January 2028, the 49A(a1) and 49E amounts to 31 December 2027, because the sections update on different days.
   V2: the closed-period ladders print one year's figures out of annually updated amounts, so they are encoded as printed for arithmetic and answer NOTHING by date.
@@ -137,18 +166,19 @@ The same block is the paragraph (2) that s 9(ג1א)(2)(ב)(3) and (ג1ג)(4)(ד)
 
 Run as `L4=~/.local/bin/l4 L4_MAIN=~/.cache/l4-main/109/l4 ./check.sh`; main is build 1.6.109 (4c887e0, 2026-11-04).
 Both binaries give the same four counts for every one of the 14 files.
-The totals are 355 assertions satisfied, 0 failed, 0 refused and 0 errors.
+The totals are 405 assertions satisfied, 0 failed, 0 refused and 0 errors (`~/.local/bin/l4` is a working-tree build that prints "dev"; main is 1.6.109).
 
 | file | satisfied |
 | --- | --- |
-| `re42-tests-s9.l4` | 159 |
+| `re42-tests-s9.l4` | 181 |
 | `re42-tests-s15.l4` | 28 |
-| `re42-tests-seller.l4` | 152 |
+| `re42-tests-seller.l4` | 180 |
 | `re42-tests-xrefs.l4` | 16 |
 
 The check does not see a different trace outcome, or any difference that no assertion exercises.
 Mutation control on the seller tests: four deliberate faults in copies of the modules (the 25% cap made 26%, the 18-month bound made 17, the day before the change day no longer subtracted, the 49A(a1) ceiling made 5,009,000) made 42 assertions fail, so those tests can fail.
 An earlier control on the s 9 tests, six wrong expected values, each failed; it was run before the last context window of this session and is not repeated here.
+A control on the two windows: the 50 assertions on them (22 in `re42-tests-s9.l4`, 28 in `re42-tests-seller.l4`) fail against modules that give both sections one window, 18 months for 1 June 2023 to 31 May 2025 and 24 months on every other day: 16 of the 50 fail (7 and 9) and 34 hold, the 34 being the sale days inside an 18-month window (which a 24-month window also contains) and the purchase days on which both give the same window. Their expected values come from Amendment 85, Amendment 102 and the 2013 text, not from the code.
 
 ## 11. Departures and revisions
 
@@ -160,6 +190,7 @@ An earlier control on the s 9 tests, six wrong expected values, each failed; it 
 
 - Is a seller who sold another dwelling free of tax exactly 18 months earlier barred (fork F5)?
 - Does the 18-month reading of Amendment 102 reach s 49C(1) as it reaches s 9, and does a purchase on the last day of the window count (fork T2)?
+- Does "five years from 1 May 2016" end on 30 April 2021, and does a dwelling bought on that last day have the 24 months of s 49C(1) or the 18 (fork T3)?
 - What is the commencement of the present wording of s 48A (fork F8)?
 - What does the signed order extending the temporary ladder say, and does section 38 of Basic Law: The Knesset carry its end to 10 February 2027 (fork T1)?
 - Is the chargeable inflationary amount of a right acquired after 1993 zero (fork F3)?
