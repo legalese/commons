@@ -22,4 +22,9 @@ Hebrew is authoritative; English translations are unofficial. The English titles
 
 ## Status of this deposit
 
-No statute text has been deposited yet.
+Deposited for row il-67 in `registers/source-bundle/` (every file, with its URL, retrieval date and sha256, is in `SOURCES.json` there):
+
+- An excerpt of the Hebrew Wikisource consolidation as `tenants-protection-law-5732-1972.he.wiki.excerpt.txt`: 23 whole lines of the raw wikitext, revision 2970726, last edited 2025-12-28T09:30:14Z; the header gives the whole page's size and sha256. It is an unofficial consolidation, and the whole page is not deposited.
+- Four cropped images of printed pages of three Sefer HaChukim issues (668, 978 and 1070) in `pages/`: the official instruments, only the lines the row reads, and no full page.
+
+The metadata file `Sefer-HaChukim-5732-p-176-the-consolidat.meta.json` is the stub's and is unchanged; its `text_deposited: false` was written before this deposit, and only the excerpt and the page crops above are deposited.
