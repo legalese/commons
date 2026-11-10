@@ -2,10 +2,10 @@
 
 Method: a single Sonnet 5.5 agent working alone from the brief (BRIEF.md in this folder).
 Target compiler: `main` (stable). Binary: l4 1.6.98 (main, 7689b0d, 2026-10-19), sha256 82ea44addf093ea4dd84c4e4416184920857ca9c762c5b31feed20541c20263e; second stable build for the `check.sh` comparison: L4_MAIN (see "What check.sh prints").
-Status: draft. No domain expert has read this against the text.
+Status: draft. No domain expert has read this against the text. Correction note of 2026-11-10: s 15(a) was corrected to the text as amended; see "Correction note, 2026-11-10: s 15(a)" at the end of this file.
 
-**The source is not the official text.** It is a consolidated working text from Hebrew Wikisource (page revision 3073779, last edited 2026-08-14T06:30:18Z), as raw MediaWiki source, deposited 2026-10-08. Israel publishes no free official consolidated text; the official version is the Reshumot publication plus each amending Act. `inputs/SOURCES.md` and the `.meta.json` record the hashes. Nothing here is "verified against the official text".
-**The English is a gloss, not a translation of the Law.** Identifiers, `@desc` strings and this file are in English; the Hebrew term of art sits in a comment beside the first use; the `-- src:` lines quote the Hebrew exactly as the file prints it, including the wiki markup, so that `srcrefs.py` can check them.
+**The source is not the official text.** It is a consolidated working text from Hebrew Wikisource (page revision 3073779, last edited 2026-08-14T06:30:18Z), as raw MediaWiki source, deposited 2026-10-08. Israel publishes no free official consolidated text; the official version is the Reshumot publication plus each amending Act. `inputs/SOURCES.md` and the `.meta.json` record the hashes. Nothing here is "verified against the official text", with one exception: s 15(a) was compared on 2026-11-10 with four official instruments (see the correction note).
+**The English is a gloss, not a translation of the Law.** Identifiers, `@desc` strings and this file are in English; the Hebrew term of art sits in a comment beside the first use; the `-- src:` lines quote the Hebrew exactly as the file prints it, including the wiki markup, so that `srcrefs.py` can check them. The two `-- src:299` quotations for s 15(a) end in `…`, before the words the consolidation prints after "הסכום הבסיסי" (CONSOLIDATION-ONLY; see the correction note).
 
 ## Seat
 
@@ -15,9 +15,9 @@ Status: draft. No domain expert has read this against the text.
 The person on the other side is the one with a question that needs an answer, and the Law gives that person a claim, duties and exposures that can each be asked as a plain question with plain facts.
 The seat never speaks for an official: there is no question for the Institute's clerk (who decides, how a claim is examined, who appoints whom), and those sections are `inert` in the coverage table (reason 2, machinery).
 **Five questions, under four sections, are asked from the position of someone other than the claimant or the claimant's family.** They are not officials, so the rule against an official's seat is not broken, but they are not the seat either: s 17(a) and s 17(c) are asked by a person who owes maintenance to someone the Institute paid (s 17(a), src:306, addresses a person liable by law or agreement for the maintenance of someone the Institute paid; s 17(c), src:308, names the court that hears the Institute's claim against that person), s 21(c) (src:340) by a person who holds information about a claimant's income or property, and s 22 (src:350) by a member of the management, a manager or an official of a body that committed an offence.
-They are kept so that layer 2 touches those sections; a stricter seat would drop them, which would take the questions from 99 to 94 and the cases from 404 to 388 (the five questions carry 16 cases).
+They are kept so that layer 2 touches those sections; a stricter seat would drop them, which would take the questions from 98 to 93 and the cases from 401 to 385 (the five questions carry 16 cases).
 
-**Layer 2 in numbers.** `isl-seat.l4` has 99 questions under 14 `§§` groups, every one with `@export` and, on every input, `@desc`; `isl-cases-seat.l4` has 404 cases, every question has at least one, and each expected value was written by hand from the text before the run (the only generated parts of the cases file are the function names and the Hebrew Part C warning, copied from the layer-1 test, which quotes the source line).
+**Layer 2 in numbers.** `isl-seat.l4` has 98 questions under 14 `§§` groups, every one with `@export` and, on every input, `@desc`; `isl-cases-seat.l4` has 401 cases, every question has at least one, and each expected value was written by hand from the text before the run (the only generated parts of the cases file are the function names and the Hebrew Part C warning, copied from the layer-1 test, which quotes the source line).
 Each question takes plain inputs and builds the records the rules need (`Household`, `Figures`) in its own `WHERE`; the seat restates no rule, and no layer-1 module was changed to suit it. Three layer-1 changes made in review fix defects the questions exposed (F19, the join of s 2(a)(2A) and s 2(d)(2); F17, the Third Schedule answering NOTHING where two rows fit; F4, `Household` carrying a widow and an independent parent as two fields), and with F4 the questions for s 5(a) and s 30A(b) ask "I am a widow" and "I am an independent parent" as two inputs.
 Where a figure is held by the Institute or the Minister (the basic amount, the average wage, the vehicle limits, the determining amount) it is an input, asked with a description of where to find it.
 
@@ -29,7 +29,7 @@ Where a figure is held by the Institute or the Minister (the basic amount, the a
 | How much of my income counts? (ss 9 to 12B) | 14 |
 | From when am I paid? (s 14) | 3 |
 | If I leave Israel (s 14A) | 6 |
-| Other payments | 5 |
+| Other payments | 4 |
 | If I was paid more in the past (s 30A, s 30) | 4 |
 | What must I do to get and keep the allowance? (ss 13, 17(b), 19 to 21, Fifth Schedule) | 12 |
 | Can an official come in, and who sees my information? (ss 21, 21A) | 4 |
@@ -88,7 +88,7 @@ A provision that creates no relation is listed as `none`.
 | s 14A(d) | claimant who was entitled and needs treatment abroad, or accompanies a sick relative: immunity from those bars | Institute: disability | `s 14A(d) ...`, `s 14A(d)(3) ...` |
 | s 14A(e), (f) | spouse in Israel: claim-right to the individual rate; Institute: power to treat the person as outside Israel after 183 days | Institute: duty; person abroad: liability | `s 14A(e) ...`, `s 14A(f)(1) ...`, `s 14A(f)(2) ...` |
 | s 14B | claimant (entitled for Oct, Nov or Dec and at retirement age): claim-right to the heating grant of 6.4% | Institute: duty | `s 14B the heating grant` |
-| s 15 | surviving spouse, or one child: claim-right to the grant on death | Institute: duty; (b) no claim to both grants | `s 15(a) ...` (3 rules), `s 15(b) ...` |
+| s 15 | surviving spouse, or one child: claim-right to the grant on death | Institute: duty; (b) no claim to both grants | `s 15(a) ...` (2 rules), `s 15(b) ...` |
 | s 17(a), (c) | Institute: claim-right against the person liable for the recipient's maintenance, and power to sue in the District Court (a religious court may also hear) | the liable person: duty; liability to suit | `s 17(a) ...`, `s 17(c) ...` (2 rules) |
 | s 17(b) | Institute: right that the recipient helps it, and does not harm its right | recipient: duty to help; duty not to harm | regulative `s 17(b) the recipient must help the Institute`, `s 17(b) the recipient shall not harm the Institute's right`; twin `s 17(b) the recipient is in breach of the duty` |
 | s 18 | Institute: power to reduce, suspend or revoke | recipient: liability | `s 18 the Institute may reduce, suspend or revoke the benefit` |
@@ -119,7 +119,7 @@ A provision that creates no relation is listed as `none`.
 
 ## What is encoded and what is not
 
-**Encoded (layer 1), 225 functions and values (decision functions, three three-valued helpers, the list of items in s 2(a)(2A) and the string constants) and 6 regulative rules in nine modules, 1,130 hand-checked assertions in eight test files (plus 404 seat cases):**
+**Encoded (layer 1), 224 functions and values (decision functions, three three-valued helpers, the list of items in s 2(a)(2A) and the string constants) and 6 regulative rules in nine modules, 1,125 hand-checked assertions in eight test files (plus 401 seat cases):**
 
 | module | text | contents |
 |---|---|---|
@@ -161,7 +161,7 @@ The `{{ח:הערה}}` notes (for example "2026: 10,382") are the Wikisource edit
 ## Coverage table
 
 <!-- COVERAGE:BEGIN -->
-Units (rows): 456. Non-blank lines of the text: 509, every one in exactly one row (0 uncovered, 0 in two rows). Dispositions: encoded 307, fork 46, inert (1: not operative) 69, inert (2: machinery) 20, repealed or blank in this text 14.
+Units (rows): 456. Non-blank lines of the text: 509, every one in exactly one row (0 uncovered, 0 in two rows). Dispositions: encoded 306, fork 47, inert (1: not operative) 69, inert (2: machinery) 20, repealed or blank in this text 14.
 
 | row | lines | text (Hebrew, markup stripped) | disposition | encoded as / reason |
 |---|---|---|---|---|
@@ -408,7 +408,7 @@ Units (rows): 456. Non-blank lines of the text: 509, every one in exactly one ro
 | s14B.head | 295-295 |  | inert (1: not operative) | a heading or section title: not operative |
 | s14B | 296-296 | הזכאי לגמלה בעד אחד מהחודשים אוקטובר, נובמבר או דצ... | fork | s 14B the heating grant -- F15 heating-grant-once-a-year |
 | s15.head | 298-298 |  | inert (1: not operative) | a heading or section title: not operative |
-| s15(a) | 299-299 | נפטר זכאי שהיתה משתלמת לו גימלה, ישלם המוסד לביטוח... | encoded | s 15(a) who is paid the death grant;  s 15(a) the 1 April before the day of death;  s 15(a) the amount of the death grant |
+| s15(a) | 299-299 | נפטר זכאי שהיתה משתלמת לו גימלה, ישלם המוסד לביטוח... | fork | s 15(a) who is paid the death grant;  s 15(a) the amount of the death grant; the consolidation's words after "הסכום הבסיסי" are not encoded (correction note of 2026-11-10) -- F20 death-grant-basic-amount-day, F21 death-grant-compensation-sentence |
 | s15(b) | 300-300 | הזכאי למענק פטירה לפי סעיף זה וכן למענק פטירה לפי ... | encoded | s 15(b) how many of the two grants the person may receive |
 | s16.head | 302-302 |  | inert (1: not operative) | a heading or section title: not operative |
 | s16 | 303-303 | לענין מי שמצוי בהכשרה מקצועית רשאי השר לקבוע בתקנו... | inert (2: machinery) | the Minister's power to make regulations on payment through another body |
@@ -657,6 +657,8 @@ The readings taken are mine and unreviewed; none is a ruling.
 | F17 | `schedule-3-overlap-is-nothing` | Third Schedule, `sch 3 which row of the table applies to the household`, `sch 3 the rate of deduction for the household` | src:530-533: the rows overlap (a widow or independent parent with a child who is an individual under s 30A fits rows 1 and 3, since "יחיד" is one with no spouse, src:55; a couple with two or more children who are both under s 30A fits rows 2 and 3) and the table says nothing about which governs | (i) a household that fits two rows gets NOTHING; (ii) the first row that fits, in the order printed (the earlier encoding); (iii) the most favourable; (iv) the most specific. Also read: row 3's "ילד" is exactly one child (otherwise every couple with two or more children would fit rows 2 and 3 and row 2 could never apply) | (i), and exactly one child for row 3. Asserted: the which-row table, the rate table and two seat cases (couple with two children: row 2 gives 2,687.5, both under s 30A gives NOTHING; widow with a child: row 1 gives 2,580, an individual under s 30A gives NOTHING) |
 | F18 | `sch5-threshold-on-the-change` | Fifth Schedule Part A items 1, 3, 4 | src:561, 567, 570: "קיומה או אי־קיומה ... או שינוי שחל בה, אם השינוי כאמור עולה על 9% (13%) מהסכום הבסיסי" | (i) the existence is a detail with no threshold and the threshold qualifies the change only; (ii) the threshold qualifies both | (i). Asserted: reporting the existence needs no change; a change must exceed 90 (130) of a basic amount of 1,000 |
 | F19 | `2a2a-and-d2-either-route` | s 2(a)(2A) and s 2(d)(2), `s 2(a)(2A) or (d)(2) the resident is entitled under an item of the First Schedule` | src:86: a resident to whom items (7) to (10), (14), (16), (18), (19), (23), (24) or (26) of the First Schedule apply is entitled "אף אם טרם מלאו לו 25 שנים"; src:99: a resident to whom items from (2) on apply "ושאילו מלאו לו 25 שנים היה זכאי" is entitled though under 25 | (i) either route is enough: (2A) for the listed items with no 25 test, (d)(2) with it; (ii) (d)(2) governs every item from 2 on, so the 25 test applies to the listed items too (the earlier encoding); (iii) (2A) governs the listed items and (d)(2) the rest | (i). Asserted: item 7, resident, aged 22, week 14, would not be entitled at 25 gives JUST TRUE; a listed item and each unlisted neighbour (6, 11, 15, 25) on both sides of the 25 test (`isl-tests-p2-eligibility.l4`; seat) |
+| F20 | `death-grant-basic-amount-day` | s 15(a), `s 15(a) the amount of the death grant`; seat question `How much is the grant on death` | src:299 up to "מענק בסכום השווה לסכום הבסיסי"; SH 1892 p.474 s 67(4) ends the sentence there ("השווה לסכום הבסיסי."), so the text as amended names no day for the basic amount; src:41-45: the basic amount is the figure of 6,964 "כשהוא מעודכן" on 1 January 2006 and on each 1 January from 2007, so it changes from year to year | (i) the basic amount in force on the day of death; (ii) the basic amount in force on the day the grant is paid; (iii) the basic amount in force on the 1 April before the day of death, as the text read before SH 1892 p.474 s 67(4) took effect on 1 January 2006 (not available on the amended text) | (i), ASSUMED: it is an assumption of the encoding, not the reading of any words. The function takes the figure as an input and so cannot separate (i) from (ii); the input is named for (i). Asserted: 1,000 gives 1,000 and 6,964 gives 6,964 (`isl-tests-p5-claims-payment.l4`; seat cases) |
+| F21 | `death-grant-compensation-sentence` | s 15(a), `s 15(a) the amount of the death grant` | SH 1145 p.112 s 17 adds at the end of s 15 the sentence "חל פיצוי לאחר מכן, יוגדל המענק בשיעור הפיצוי." (1 April 1985); SH 1892 p.474 s 67(4) replaces, in s 15(א), "הסיפה המתחילה במילים ״השווה לשכר הממוצע״" by "השווה לסכום הבסיסי." (1 January 2006); src:299 prints the sentence after a semicolon (CONSOLIDATION-ONLY) | AMBIG. (i) the replaced tail runs to the end of subsection (א), so the compensation sentence is gone; (i') the tail runs to the end of the first sentence, so the compensation sentence stays, with the 1 April words that "לאחר מכן" followed gone; (ii) only the words "השווה לשכר הממוצע" change and the 1 April and compensation words stay: not available on the text, because the instruction names a tail ("הסיפה") and the same page uses the word-level form where it means word-level (s 67(2): "במקום ״מהשכר הממוצע״ יבוא ״מהסכום הבסיסי״") | (i), the default of this correction: the grant carries no compensation increase. On (i') a grant would be increased by the compensation rate, which the encoding no longer takes as an input. Asserted: 1,000 gives 1,000 (the same tests). No lawyer has decided it |
 
 Smaller choices not worth a fork: a percentage is a fraction (42.14% is 0.4214); an age is in completed years; a "month" in `s 14(c)(1)` and `s 14A` is a calendar month; "within N days" is inclusive of day N (the same trace result as `WITHIN N`); where the text says "by the Minister's regulations" the result is an input or `NOTHING`.
 
@@ -758,6 +760,10 @@ Each finding ends "Asserted." where a case asserts it; the file is named.
 20. **The student bar of s 3(4) has exits and a clock.** A student paid as a person of retirement age is outside it; an independent parent is outside it if paid for 16 of the 20 months before the studies began (15 is not enough) and not studying for a second or third degree; the exit lasts while at most 36 months have been paid (35 paid still leaves it open, 36 closes it unless the Minister set a longer period). Asserted (`isl-tests-p2-eligibility.l4`).
 21. **Item 7 (a pregnant woman) is reached by two routes, and the first needs no "would be entitled at 25" test.** Section 2(a)(2A) lists items 7 to 10, 14, 16, 18, 19, 23, 24 and 26 of the First Schedule as entitling a resident "אף אם טרם מלאו לו 25 שנים"; s 2(d)(2) reaches the same items but adds "had they been 25 they would have been entitled". The earlier seat question took only the (d)(2) route, so a resident aged 22 in week 14 who would not be entitled at 25 got `NOTHING`; she is now `JUST TRUE`. F19. Asserted (`isl-tests-p2-eligibility.l4`, `s 2(a)(2A) or (d)(2) ...`; `isl-cases-seat.l4`, the pregnancy group).
 22. **A household can fit two rows of the Third Schedule and the table does not choose.** A widow or independent parent with a child who is an individual under s 30A fits rows 1 (40%) and 3 (32.5%); a couple with two or more children who are both under s 30A fits rows 2 (37.5%) and 3. The earlier encoding silently took the first row printed (and so gave 37.5% to the couple); the row function now answers `NOTHING` and so does the rate. F17. Asserted (`isl-tests-p4-income.l4`; two seat cases).
+23. **The grant on death equals the basic amount, with no 1 April date and no compensation increase.**
+   That is s 15(a) as SH 1892 p.474 s 67(4) amended it, in force 1 January 2006, on reading (i) of the correction note; the 1 April function and the compensation rate of the earlier encoding came from the consolidation and are removed.
+   The day of the basic amount is assumed (F20) and the survival of the compensation sentence is AMBIG (F21).
+   Asserted (`isl-tests-p5-claims-payment.l4`; `isl-cases-seat.l4`).
 
 ## What the stable binary does not accept
 
@@ -784,14 +790,15 @@ Each of these was met while building this encoding, and the binary governs over 
 
 ## What check.sh prints
 
-Target `main`. Command: `L4=<stable 1.6.98> L4_MAIN=<main 1.6.108> ./check.sh` (`JL4_LIBRARY_PATH` unset), run in this folder on 2026-11-04. A fresh encoding: no earlier run to replace.
-Your l4: 1.6.98 (main, 7689b0d, 2026-10-19). The main build it compared with: 1.6.108 (main, 2ae7c9b, 2026-11-02).
+Target `main`. Command: `L4=<stable 1.6.98> ./check.sh` (`JL4_LIBRARY_PATH` unset; `L4_MAIN` unset, so the script fetched the newest main build), run in this folder on 2026-11-10, after the correction of s 15(a).
+This table replaces the one of 2026-11-04, which listed 19 modules (1,534 assertions satisfied, no `tests-independent.l4`); `encoding.json` records the independent file's run of the same day, 20 modules and 2,144.
+Your l4: 1.6.98 (main, 7689b0d, 2026-10-19). The main build it compared with: 1.6.109 (main, 4c887e0, 2026-11-04).
 
 ```
 target: main. Each module is run with your l4 and with the main build below; the main columns must match.
-main build: 1.6.108 (main, 2ae7c9b, 2026-11-02)
+main build: 1.6.109 (main, 4c887e0, 2026-11-04)
 module                                    errors satisfied  failed  refused  expected | errors satisfied  failed  refused  main
-isl-cases-seat.l4                              0       404       0        0         0 |      0       404       0        0  same
+isl-cases-seat.l4                              0       401       0        0         0 |      0       401       0        0  same
 isl-nouns.l4                                   0         0       0        0         0 |      0         0       0        0  same
 isl-p2-eligibility.l4                          0         0       0        0         0 |      0         0       0        0  same
 isl-p3-rates.l4                                0         0       0        0         0 |      0         0       0        0  same
@@ -805,41 +812,42 @@ isl-seat.l4                                    0         0       0        0     
 isl-tests-p2-eligibility.l4                    0       188       0        0         0 |      0       188       0        0  same
 isl-tests-p3-rates.l4                          0       217       0        0         0 |      0       217       0        0  same
 isl-tests-p4-income.l4                         0       238       0        0         0 |      0       238       0        0  same
-isl-tests-p5-claims-payment.l4                 0       116       0        0         0 |      0       116       0        0  same
+isl-tests-p5-claims-payment.l4                 0       111       0        0         0 |      0       111       0        0  same
 isl-tests-p5-duties.l4                         0       115       0        0         0 |      0       115       0        0  same
 isl-tests-p5-misc.l4                           0        48       0        0         0 |      0        48       0        0  same
 isl-tests-s01.l4                               0        63       0        0         0 |      0        63       0        0  same
 isl-tests-sch1-young.l4                        0       145       0        0         0 |      0       145       0        0  same
-TOTAL (19 modules)                             0      1534       0        0           |      0      1534       0        0
+tests-independent.l4                           0       605       0        0         0 |      0       605       0        0  same
+TOTAL (20 modules)                             0      2131       0        0           |      0      2131       0        0
 (a failed assertion is also an error; any other error, or any refused assertion, makes the run red)
 (target main: every module has the same four counts on the main build. That rules out a module main rejects and a difference an assertion shows; it does not see a different TRACE outcome, or any difference no assertion exercises)
 ```
 
-Read: no error on any of the nineteen modules, 1,534 assertions satisfied, none failed, none refused, and every module has the same four counts on the main build.
-Seat cases: 404 satisfied of 404 written (`grep -c '^#ASSERT' isl-cases-seat.l4` is 404).
-The tests are written equal to satisfied for every file: 63 + 188 + 217 + 238 + 116 + 115 + 48 + 145 = 1,130 in the eight layer-1 test files, 404 in the seat cases. `expected_failed` in `check.sh` is zero for every file: no assertion is meant to fail.
-A positive control: a copy of three seat cases with two expected values altered fails two and satisfies one (so an assertion that does not match does fail on this binary); the copy was deleted. In the second pass a copy of three new assertions with wrong expected values (the pregnancy case at 22, the couple under s 30A, the 30-day stay) failed all three and satisfied none; the copy was deleted. In the third pass a copy of three Second Schedule expectations written the old way (a widow alone in row 7, an independent parent not covered, the widow's benefit 4,050) failed all three and satisfied none; the copy was deleted.
+Read: no error on any of the twenty modules, 2,131 assertions satisfied (1,526 in the nineteen modules the earlier table listed, 605 in `tests-independent.l4`), none failed, none refused, and every module has the same four counts on the main build.
+Seat cases: 401 satisfied of 401 written (`grep -c '^#ASSERT' isl-cases-seat.l4` is 401).
+The tests are written equal to satisfied for every file: 63 + 188 + 217 + 238 + 111 + 115 + 48 + 145 = 1,125 in the eight layer-1 test files, 401 in the seat cases. `expected_failed` in `check.sh` is zero for every file: no assertion is meant to fail.
+A positive control: a copy of three seat cases with two expected values altered fails two and satisfies one (so an assertion that does not match does fail on this binary); the copy was deleted. In the second pass a copy of three new assertions with wrong expected values (the pregnancy case at 22, the couple under s 30A, the 30-day stay) failed all three and satisfied none; the copy was deleted. In the third pass a copy of three Second Schedule expectations written the old way (a widow alone in row 7, an independent parent not covered, the widow's benefit 4,050) failed all three and satisfied none; the copy was deleted. In the correction of 2026-11-10 a copy of the folder with wrong expected values for the four new `s 15(a)` assertions (1,050 for 1,000 and 7,000 for 6,964, in `isl-tests-p5-claims-payment.l4` and in `isl-cases-seat.l4`) failed all four and satisfied the rest (109 of 111 and 399 of 401); the copy was deleted.
 `check.sh` does not see a `#TRACE` outcome; the ten traces were compared by hand (the two builds' outputs for `isl-tests-p5-duties.l4` are equal except for the diagnostic `Code:` label).
 
 Other checks:
-- `python3 -I srcrefs.py check --refs <raw text> isl-*.l4`: srcrefs check: 365 src: lines, 212 runs, 226 locators, 0 problems
-- `python3 -I srcrefs.py check --strict <raw text> isl-*.l4`: srcrefs check: 365 src: lines, 212 runs, 226 locators, 0 problems
-- `python3 -I isl-coverage.py <raw text> check`: units (rows): 456 / non-blank lines: 509; covered: 509; in more than one row: 0 / dispositions: encoded=307, fork=46, inert1=69, inert2=20, repealed=14 / 0 problems
+- `python3 -I srcrefs.py check --refs <raw text> isl-*.l4`: srcrefs check: 364 src: lines, 211 runs, 225 locators, 0 problems
+- `python3 -I srcrefs.py check --strict <raw text> isl-*.l4`: srcrefs check: 364 src: lines, 211 runs, 225 locators, 0 problems
+- `python3 -I isl-coverage.py <raw text> check`: units (rows): 456 / non-blank lines: 509; covered: 509; in more than one row: 0 / dispositions: encoded=307, fork=46, inert1=69, inert2=20, repealed=14 / 0 problems (run on 2026-11-04; `isl-coverage.py` is not shipped and was not re-run on 2026-11-10: the table above says encoded 306 and fork 47 because row `s15(a)` was changed from encoded to fork by hand)
 
 ## What would need doing before the encoding is worth relying on
 
 1. **A domain expert** (an Israeli social-security lawyer, or an adviser at the Institute) has to read this against the Hebrew; nobody has. The English is a gloss and may mistranslate a term of art.
-2. **The official text.** The source is an unofficial consolidation (Hebrew Wikisource, revision 3073779). The official version is the Reshumot publication plus each amending Act; a point-in-time question needs the commencement and amendment history. Compare section by section before any reliance.
+2. **The official text.** The source is an unofficial consolidation (Hebrew Wikisource, revision 3073779). The official version is the Reshumot publication plus each amending Act; a point-in-time question needs the commencement and amendment history. Compare section by section before any reliance. Only s 15(a) has been compared (correction note of 2026-11-10).
 3. **The regulations and the Insurance Law are not in the sources.** Every rule that points to them returns `NOTHING` or takes an input: the Minister's regulations, the determining amount, the vehicle deduction, the Ministers' tests for ages 20 to 25, the Supervision, Arrests, Penal, Minimum Wage and Single-Parent Families Assistance Laws, and the Insurance Law (including s 327, ss 303(a) and 326). The repayment question cannot be answered until s 327 is encoded.
-4. **A lawyer's decision on the marginal readings** (a) and (b) and the nineteen forks (F1 to F19), above all F4, F9 to F12, F13, F17 and F19, which change money amounts, whether a month is paid or whether a person is entitled.
+4. **A lawyer's decision on the marginal readings** (a) and (b) and the twenty-one forks (F1 to F21), above all F4, F9 to F12, F13, F17, F19, F20 and F21, which change money amounts, whether a month is paid or whether a person is entitled.
 5. **Current figures.** The basic amount, the average wage, the child basic amount, the pension point and the updated vehicle limits change each year; they are inputs, and the seat asks for them with a pointer to where the Institute publishes them. No figure in this encoding is from memory.
 6. **A test with real users** of the seat's wording: the inputs a person cannot answer unaided (`I would be entitled if I were 25`, `one of the grounds in s 2(a) applies to me`) should be replaced by questions the person can answer, which needs the earlier grounds to be asked in the same flow.
-7. **The Hebrew quotes** are checked against the file by `srcrefs.py` (`--refs` and `--strict`, 0 problems each), not against the Knesset's database; a wiki edit after revision 3073779 would not show.
+7. **The Hebrew quotes** are checked against the file by `srcrefs.py` (`--refs` and `--strict`, 0 problems each), not against the Knesset's database; a wiki edit after revision 3073779 would not show. The Hebrew in the correction note of 2026-11-10 was read from page images of the Reshumot pages whose extracts or cropped lines are deposited in `registers/source-bundle/official/`, and `srcrefs.py` does not check it.
 8. **A comparison of the traces and the cases on a future main build.** `check.sh` does not see a different `#TRACE` outcome.
 
 ## Source not official
 
-Nothing here is "verified against the official text". The quoted Hebrew is the Wikisource consolidation as the file prints it, including its wiki markup; `SOURCE-LICENSE.md` records the terms (no copyright in Israeli statutes; the working text is not an official version).
+Nothing here is "verified against the official text", with one exception: s 15(a), compared on 2026-11-10 with four instruments (correction note at the end of this file). The quoted Hebrew is the Wikisource consolidation as the file prints it, including its wiki markup; `SOURCE-LICENSE.md` records the terms (no copyright in Israeli statutes; the working text is not an official version).
 
 ## Generators and checkers used and not shipped
 
@@ -854,6 +862,7 @@ The lead keeps the scripts outside this repository.
 
 A separate agent that had not seen this encoding's `NOTES.md`, `PROGRESS.md`, brief or tests wrote `ANSWERS.md` from the Hebrew text alone before it opened any `.l4` file: 365 numbered scenarios and 99 seat questions.
 It then wrote `tests-independent.l4`: 610 assertions, covering 319 of the 365 numbered scenarios and 96 of the 99 seat questions, and ran it with the stable binary.
+After the correction of 2026-11-10 the file has 605 assertions, covering 317 of the 365 numbered scenarios and 95 of the 98 seat questions that now exist (see "Changed after the pass" below).
 `ANSWERS.md` is not kept in this folder; the numbers in square brackets in the comments of `tests-independent.l4` refer to it.
 The author's rule for "no" and "not covered" is at the head of its `ANSWERS.md`: it counts an "if", "only if", "as long as" or "provided that" condition, a "means" definition, a closed list and an express prohibition as the text's no, and in practice it also wrote `JUST FALSE` for a case outside a stated "more than", "at least", period or age (the groups A and B below), which is wider than the family's rule (see "Reading a result: FALSE and NOTHING" above).
 
@@ -862,6 +871,7 @@ The author's rule for "no" and "not covered" is at the head of its `ANSWERS.md`:
 | first run, against the modules as first deposited | 610 | 517 | 93 | 0 |
 | after the encoder's repairs below, with the author's calls adapted to the repaired signatures, before the reconciliation | 610 | 518 | 92 | 0 |
 | after the reconciliation below | 610 | 610 | 0 | 0 |
+| after the correction of 2026-11-10 (s 15(a)), see "Changed after the pass" below | 605 | 605 | 0 | 0 |
 
 **What the 93 first-run failures turned out to be.**
 
@@ -903,8 +913,15 @@ The author's first file calls three things the repairs changed: the `Household` 
 The lead changed 45 lines so that the file type-checks: nine `Household` fixtures (the author's "widow" fixtures are its independent-parent cases and became "independent parent" with "widow" false), five `which row` assertions (`EQUALS n` to `EQUALS JUST n`), two assertions on the rate (they now call `sch 3 the rate of deduction for the household`), and two seat calls (S23 and S63, one more `FALSE`).
 Before this change the file produced 27 type errors and evaluated nothing.
 
+**Changed after the pass (2026-11-10).**
+The correction note at the end of this file removed the 1 April function and the compensation input, and seven assertions of this file could no longer be asked as written.
+[251a] and [S59] were rewritten to the one-input call and expect 10000, each with a `-- RECONCILED 2026-11-10` comment that quotes what the author wrote.
+[251b], [252], [253a], [253b] and [S60] were removed, because each asked the removed function or the removed seat question.
+[252] and [253] are kept as `-- GAP` lines and [251b] and [S60] as `-- REMOVED` lines at the end of the file.
+The independent author did not make these changes.
+
 **The gaps.**
-46 of the 365 numbered scenarios have no assertion, and so have 3 of the 99 seat questions; each is kept as a `-- GAP` line at the end of the file with the author's reason, and one more (186, the figure of 9,691) is kept as a partial gap.
+48 of the 365 numbered scenarios have no assertion (46 when the file was written; [252] and [253] joined them on 2026-11-10), and so have 3 of the 98 seat questions; each is kept as a `-- GAP` line at the end of the file with the author's reason, and one more (186, the figure of 9,691) is kept as a partial gap.
 By the author's grouping: the encoding takes counts of months or days and not dates, so it has no anniversary-day, last-day or rest-day function (74, 265, 266, 267, 287, 335); no input for "A is not entitled for another reason" (144); a duty that is a `DEONTIC`, so there is no boolean to assert on (263); content in other statutes or index data, taken as input by design (17, 18, 31, 34, 35); repealed provisions, regulation powers, commencement and savings, which the encoding marks inert (100, 198, 222, 293, 298, 299, 302 to 310); silences with no section to call (311 to 314); and string-valued answers where no literal can be asserted without copying the encoding's own (8, 9, 221, 364, 365 and the seat questions about where to submit a claim, the warning a notice about the Fifth Schedule must carry, and who pays).
 Seven scenarios are covered by another assertion (97, 130, 137, 162, 179, 360, 361), 88 has the same inputs as 87, and 16 was dropped by the author as contradictory.
 
@@ -927,3 +944,58 @@ This was noticed and not asserted (finding 5 above).
 The author did not open `NOTES.md` or `PROGRESS.md`, any other encoding, anything under `~/.claude/`, or any other run's directory.
 It read the modules' signatures and bodies, and ran probes and `#EVAL` sweeps, only after `ANSWERS.md` was written; it edited `ANSWERS.md` once afterwards, in the wording of scenario 231, and the expected value in the assertion is the one in `ANSWERS.md` today.
 The encoder was given the author's findings 154b and S15b and the three pairs of identical wording (and not the convention disagreement or the other failures), repaired or answered them, and reran everything.
+
+## Correction note, 2026-11-10: s 15(a)
+
+This is a correction note, dated 2026-11-10.
+The earlier text of this encoding followed the Wikisource consolidation for s 15(a): `isl-p5-claims-payment.l4` encoded the sentence as consolidation line 299 prints it, with both the 1 April words and the compensation sentence.
+This note says what four instruments of Sefer HaChukim (SH) print for s 15, what the encoding does now, and what stays open.
+Three pages are deposited as page extracts in `registers/source-bundle/official/` (SH 991 p.34, SH 1145 p.112 and SH 1882 p.169), and the lines read from SH 1892 p.474 are deposited as four cropped images there (item (4), item (2), the commencement section and the footer line); the rest of SH 1892 p.474 is not deposited.
+`registers/source-bundle/SOURCES.json` gives, for each file, the address, hash and size of the whole issue as downloaded and the hash and size of the extract or crop (only the pages or lines read are deposited).
+Each Hebrew quotation in the table below was read from the page image of its extract, or for SH 1892 p.474 from the page image the crops were cut from (PDF page 89 of the whole file).
+The instruments' names are those of the consolidation's header list.
+
+| instrument | printed page | what it prints for s 15 | commencement |
+|---|---|---|---|
+| SH 991, 1.12.1980 (the Law as enacted) | p.34, s 15 | the grant is "מענק בסכום השווה למחצית השכר הממוצע כפי שהיה ב־1 באפריל שלפני יום הפטירה." The section has no subsection letters. | not read for this note |
+| SH 1145, 30.5.1985, National Insurance Law (Amendment 54), s 17 | p.112 | "בסעיף 15 לחוק הבטחת הכנסה, התשמ״א–1980, בסופו יבוא: ״חל פיצוי לאחר מכן, יוגדל המענק בשיעור הפיצוי.״" | 1 April 1985 (s 18(ג) of the same Act, same page) |
+| SH 1882, 29.12.2002, Arrangements Law for the 2003 financial year, s 17(9) | p.169 | "בסעיף 15, האמור בו יסומן ״(א)״ ובו, במקום ״למחצית השכר הממוצע״ יבוא ״לשכר הממוצע״ ואחריו יבוא: ״(ב) …״", where (ב) is the choice between this grant and the grant of s 310 of the Insurance Law, which `s 15(b)` encodes | not read from a deposited page |
+| SH 1892, 1.6.2003, Law for the Plan to Recover Israel's Economy ("Recovery Law"), s 67(4) | p.474 | "בסעיף 15(א), במקום הסיפה המתחילה במילים ״השווה לשכר הממוצע״ יבוא ״השווה לסכום הבסיסי.״" | 1 January 2006 (the commencement section of the same Law, same page) |
+
+**What the consolidation prints.**
+Consolidation line 299 prints s 15(א) ending "…מענק בסכום השווה לסכום הבסיסי כפי שהיה ב־1 באפריל שלפני יום הפטירה; חל פיצוי לאחר מכן, יוגדל המענק בשיעור הפיצוי." (CONSOLIDATION-ONLY).
+That text joins the 1980 words and the 1985 sentence with a semicolon, and keeps both after the instruction of 2003.
+The Wikisource text matches no instrument.
+SH 1145 prints its sentence as a new sentence at the end of s 15, and the words it quotes contain no semicolon.
+Under SH 1892 p.474 s 67(4) the 1 April words are gone on either reading below.
+The consolidation's tag list on s 15 (line 298) names three amending instruments, תשמ״ה, תשס״ג and תשס״ג־3; they are SH 1145, SH 1882 and SH 1892 above.
+A text-layer search for the words of s 15, over the instruments on the consolidation's header list (re-run on 2026-11-10), found the same three and no other instrument that amends s 15.
+That search used text layers and not page images, and covers only instruments on that list.
+
+**Two readings of SH 1892 p.474 s 67(4).**
+Reading (i), taken: the replaced tail ("הסיפה") runs to the end of subsection (א), so the 1 April words and the compensation sentence both go, and (א) ends "…מענק בסכום השווה לסכום הבסיסי."
+Reading (i'): the tail runs to the end of the first sentence, so the 1 April words go and the compensation sentence stays, with the 1 April words that "לאחר מכן" followed gone.
+Why (i) is preferred: the instruction names the unit "15(א)"; "סיפה" is a tail and not the words themselves, and the same page uses the word-level form where it means word-level (s 67(2): "במקום ״מהשכר הממוצע״ יבוא ״מהסכום הבסיסי״"); and the replacement ends with a full stop that closes the subsection.
+A reading under which only the words "השווה לשכר הממוצע" change, and the 1 April and compensation words stay, is not available on the text.
+Which of (i) and (i') is right is open (AMBIG, F21), and no lawyer has decided it.
+
+**What the encoding does now.**
+- `s 15(a) who is paid the death grant` and `s 15(b) how many of the two grants the person may receive` are unchanged.
+- `s 15(a) the amount of the death grant` has one input, `the basic amount in force on the day of death`, and returns it: the grant equals the basic amount, with no 1 April date and no compensation increase.
+- The assumption, stated here and in the code: the basic amount is the one in force on the day of death (F20).
+  The text as amended names no day, and nothing on the four pages read says which.
+- Removed: `s 15(a) the 1 April before the day of death`; the seat question `Which 1 April's basic amount counts for the grant on death (s 15(a))?` and its cases; the compensation rate, the second input of the amount function and of `How much is the grant on death (s 15(a))?`.
+- The two `-- src:299` quotations end in `…`, before the consolidation's words that follow "הסכום הבסיסי", and a comment above each says so.
+- The `@ref` lines still point at `src:299`, the line that carries the words that remain.
+
+**What changed in the counts.**
+`check.sh` against the main build, before and after: every column of every module is the same except three, and each change is named here.
+- `isl-tests-p5-claims-payment.l4`: 116 to 111. Five assertions on the removed 1 April function and two on the two-input amount were removed, and two on the one-input amount were added.
+- `isl-cases-seat.l4`: 404 to 401. Three assertions on the removed seat question were removed, and the two on the amount were rewritten to one input.
+- `tests-independent.l4`: 610 to 605. [251a] and [S59] were rewritten to one input; [251b], [252], [253a], [253b] and [S60] were removed (see "Changed after the pass" in the independent test pass).
+- `isl-seat.l4` and `isl-p5-claims-payment.l4` have no assertions; the seat now has 98 questions, and layer 1 has 224 functions and values.
+- The total is 2,131 satisfied, from 2,144, with 0 errors, 0 failed and 0 refused both times.
+
+**What stays open.**
+F20 (which day's basic amount) and F21 (whether the compensation sentence survives) are open for a lawyer.
+This encoding follows the text as amended; it does not say what applies to a death before the amendment's commencement.
