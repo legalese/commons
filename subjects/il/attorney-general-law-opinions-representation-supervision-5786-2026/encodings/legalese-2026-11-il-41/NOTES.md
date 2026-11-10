@@ -20,6 +20,7 @@ Where the text does not decide a case, the rule returns `NOTHING`, following the
 
 The official text is Sefer HaChukim 5786 no. 3550, 5 Av 5786 (19 July 2026), pp. 802 to 804, the Knesset's PDF `fs.knesset.gov.il/25/law/25_lsr_14184818.pdf` (sha256 in `registers/source-bundle/SOURCES.json`).
 It was read from the page images (`official/sefer-hachukim-5786-no-3550-*.page-image.png`).
+Only the pages the row cites are deposited as PDFs; `SOURCES.json` keeps the whole file's URL, sha256 and size as downloaded for provenance.
 The PDF's text layer is in visual order, and the text layer of page 3 (p. 803) carries every word twice (953 words on that page against 429 and 410 on the other two text pages); the page image shows each word once.
 The footnote on p. 802 (read from the text layer) says the Law was passed in the Knesset on 1 Av 5786 (15 July 2026), in a sitting that began on 28 Tammuz 5786 (13 July 2026), and that the bill and its explanatory notes were published in Hatza'ot Chok HaKnesset 1192 of 9 Sivan 5786 (25 May 2026), p. 217.
 The Law has twenty sections in three chapters and one indirect amendment (s 16).

@@ -41,12 +41,28 @@ Their revision ids were not recorded when they were fetched.
 The National Insurance file was fetched on 2026-10-06 for another subject of this repository and copied here byte for byte.
 The Ordinance's consolidation is not deposited, so the Ordinance's present words are not quoted.
 
-The official instruments are eleven Sefer HaChukim PDFs from the Knesset's site, deposited in `../../registers/source-bundle/amending-laws/` with the page images the encoder viewed in `amending-laws/pages/` (100 dpi): SH 1212 (9.4.1987), SH 2024 (10.8.2005), SH 2208 (10.8.2009), SH 2214 (11.11.2009), SH 2326 (19.12.2011), SH 2373 (31.7.2012), SH 2459 (15.7.2014), SH 2708 (15.3.2018), SH 2710 (18.3.2018), SH 2969 (16.3.2022), SH 3046 (6.6.2023).
+The official instruments are eleven Sefer HaChukim PDFs from the Knesset's site, deposited in `../../registers/source-bundle/amending-laws/` as page extracts, with the page images the encoder viewed in `amending-laws/pages/` (100 dpi): SH 1212 (9.4.1987), SH 2024 (10.8.2005), SH 2208 (10.8.2009), SH 2214 (11.11.2009), SH 2326 (19.12.2011), SH 2373 (31.7.2012), SH 2459 (15.7.2014), SH 2708 (15.3.2018), SH 2710 (18.3.2018), SH 2969 (16.3.2022), SH 3046 (6.6.2023).
 `SOURCES.json` there gives the URL, retrieval date, sha256 and byte count of every file, recomputed with `shasum -a 256` on 2026-11-10.
+Only the pages the row cites are deposited as PDFs; `SOURCES.json` keeps the whole file's URL, sha256 and size as downloaded for provenance.
+
+| extract | printed pages held | page of the extract: its page image (file name numbered by the page of the whole file as downloaded) |
+| --- | --- | --- |
+| `sh1212-5747-penal-law-amendment-21-pp81-and-83-extract.pdf` | 81, 83 | 1: `sh1212-pdf-page-02.png`; 2: `sh1212-pdf-page-04.png` |
+| `sh2024-5765-provident-funds-law-pp910-and-912-913-extract.pdf` | 910, 912, 913 | 1: none; 2: `sh2024-pdf-page-24.png`; 3: `sh2024-pdf-page-25.png` |
+| `sh2208-5769-wage-protection-monetary-sanction-law-p315-extract.pdf` | 315 | 1: `sh2208-pdf-page-06.png` |
+| `sh2214-5770-penal-law-amendment-102-pp240-and-242-extract.pdf` | 240, 242 | 1: `sh2214-pdf-page-01.png`; 2: `sh2214-pdf-page-03.png` |
+| `sh2326-5772-enforcement-of-labour-laws-law-p75-extract.pdf` | 75 | 1: `sh2326-pdf-page-15.png` |
+| `sh2373-5772-postal-law-amendment-11-pp582-584-extract.pdf` | 582, 583, 584 | 1: `sh2373-pdf-page-17.png`; 2: `sh2373-pdf-page-18.png`; 3: `sh2373-pdf-page-19.png` |
+| `sh2459-5774-employer-term-addendum-p603-extract.pdf` | 603 | 1: `sh2459-pdf-page-05.png` |
+| `sh2708-5778-insolvency-and-economic-rehabilitation-law-p409-extract.pdf` | 409 | 1: `sh2708-pdf-page-113.png` |
+| `sh2710-5778-cash-reduction-law-pp430-and-438-extract.pdf` | 430, 438 | 1: `sh2710-pdf-page-04.png`; 2: none |
+| `sh2969-5782-postal-law-amendment-13-p833-extract.pdf` | 833 | 1: `sh2969-pdf-page-19.png` |
+| `sh3046-5783-economic-plan-law-p370-extract.pdf` | 370 | 1: `sh3046-pdf-page-192.png` |
+
 The Hebrew in a quotation line is never typed from memory.
 A `src:N` line is expanded by `tools/srcquote.py` from the Law's deposit.
 An `ext:[tag] N` line is expanded by `tools/extquote.py` from another consolidation.
-An `ext:[shNNNN] pP:L` line is expanded by the same tool from line L of the text layer of PDF page P of the instrument (not the printed page); the text layer of these PDFs is partly out of order, so only lines that read in order are quoted, and brackets and numerals in them can look reversed.
+An `ext:[shNNNN] pP:L` line is expanded by the same tool from line L of the text layer of page P of the deposited extract of the instrument (not the printed page); the text layer of these PDFs is partly out of order, so only lines that read in order are quoted, and brackets and numerals in them can look reversed.
 Where the text layer is out of order (SH 2208 printed page 315, SH 2326 printed page 75, SH 2708 printed page 409) the page is not quoted from the layer: the encoder viewed the image on 2026-11-10 and compared its words with the consolidation's lines (`src:254` for SH 2208, `ext:[enforcement] 368` for SH 2326, `src:129` for SH 2708), and they are the same words; the one difference is that SH 2208 prints the older word for employer where the consolidation prints the newer one.
 `python3 -I tools/hebcheck.py <the Law's deposit> *.l4 NOTES.md` exits 0 (it finds every run of Hebrew outside the quotation lines in the deposit), and `python3 -I tools/extquote.py --check *.l4` exits 0.
 
@@ -82,7 +98,7 @@ Where the text layer is out of order (SH 2208 printed page 315, SH 2326 printed 
 ## 6. Answer tables
 
 "Official" means read from the Sefer HaChukim page image or, for lines marked in section 3, from the quotable text layer; "CO" means CONSOLIDATION-ONLY.
-Pages are printed pages, with the PDF page of the image in brackets.
+Pages are printed pages, with the number in the file name of the page image in brackets (`amending-laws/pages/shNNNN-pdf-page-NN.png`).
 
 | item | the citing words say | the target is | does the target exist | limb (a) | limb (b) | read |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -94,7 +110,7 @@ Pages are printed pages, with the PDF page of the image in brackets.
 
 | control | the citing words say | the target is | does the target exist | limb (a) | limb (b) |
 | --- | --- | --- | --- | --- | --- |
-| C1, s 2(b) to ss 2 and 4 of the Cash Law | the limits on paying in cash, and by cheque | the same | yes | does not hold, CO | holds; added by SH 2710 s 34 (pdf-page 12), the present wording CO |
+| C1, s 2(b) to ss 2 and 4 of the Cash Law | the limits on paying in cash, and by cheque | the same | yes | does not hold, CO | holds; added by SH 2710 s 34 (p. 438, page 2 of the extract), the present wording CO |
 | C2, s 1 (postal bank) to s 88YA of the Postal Law | the definition of the subsidiary company of the postal company | the same | yes | does not hold, CO | holds, CO |
 | C3, s 25B(a) and (b) to s 61(a)(2) and (3) of the Penal Law | the fine levels by length of imprisonment | the same | yes | does not hold, CO | holds, CO |
 | C4, s 19(a) to s 182 of the 1995 version | the entitlement to a benefit on an insolvency order against the employer | the same | yes | does not hold, CO | holds; SH 2708 p. 409 [113], the present wording CO |
@@ -102,7 +118,7 @@ Pages are printed pages, with the PDF page of the image in brackets.
 | C5, the operative day of Amendment 11 | 21 Tevet 5787 | 31 December 2026 | the pair agrees | not a citation | not a citation |
 
 C5 uses a Hebrew-calendar routine kept outside this repository: it gave 21 Tevet 5787 = 31 December 2026 on 2026-11-10, and its control date, 30 Kislev 5785, gave 31 December 2024.
-The same pair is printed in the Postal Law consolidation (`ext:[postal] 14`, CO) and in SH 2969 (`ext:[sh2969] p19:23-24`).
+The same pair is printed in the Postal Law consolidation (`ext:[postal] 14`, CO) and in SH 2969 (`ext:[sh2969] p1:23-24`).
 
 ## 7. The day function
 
@@ -167,7 +183,7 @@ Mutation control: four deliberate faults in a scratch copy (a control's target c
 - The instrument that wrote s 19A(f) was not read, so limb (b) of P4 is CONSOLIDATION-ONLY.
 - The pre-2023 text of item 8(3), and the day section 73 of the Economic Plan Law began to apply, were not read.
 - That no instrument after SH 2969 moved the day of Amendment 11 again rests on the Postal Law consolidation.
-- The heading of s 61 of the Provident Funds Law was read from the text layer of PDF page 22 and not viewed as an image.
+- The heading of s 61 of the Provident Funds Law was read from the text layer of page 1 of the SH 2024 extract (printed page 910) and not viewed as an image.
 - The Ordinance's present text is not deposited, and the instrument that wrote the present words of the provident-fund definition in s 1 of the Law was not read; that is why limb (b) of P6 is CONSOLIDATION-ONLY while limb (b) of P1 is official for the enacted words.
 - The Postal Law consolidation marks the definition of the subsidiary company in s 88YA(a) as to be deleted on the operative day (`ext:[postal] 813`, CO); C2 records only what the citation reaches today, and what it reaches after that day was not examined.
 - The three page images whose text layer is out of order (SH 2208, SH 2326, SH 2708) were compared with the consolidation by eye, not by a tool.

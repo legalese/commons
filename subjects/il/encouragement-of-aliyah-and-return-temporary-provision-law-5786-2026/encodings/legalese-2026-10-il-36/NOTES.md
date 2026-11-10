@@ -8,7 +8,7 @@ Every expected value in `il36-tests.l4` was worked by hand from the Hebrew text 
 
 The Law is chapter D of the 5786 Economic Efficiency Law, enacted by that Law's section 9 (Sefer HaChukim 3511, pp. 416-418).
 It has six sections of its own, which section 9 prints inside quotation marks, and sections 8 and 9 of the enacting chapter name it and enact it.
-The deposited PDF is `income-tax-ordinance-new-version/registers/source-bundle/amending-laws/25_lsr_12235101.pdf` (sha256 `72244dba261c44d2818f80708fa2dece5d8b99f75e788f48e290942ff4734155`, recomputed on 2026-10-08), PDF pp. 4-6.
+The deposited PDF is `income-tax-ordinance-new-version/registers/source-bundle/amending-laws/25_lsr_12235101-pp416-418-extract.pdf`, which holds PDF pp. 4-6 of the file as downloaded as its pages 1-3 (sha256 of the file as downloaded `72244dba261c44d2818f80708fa2dece5d8b99f75e788f48e290942ff4734155`, recomputed on 2026-10-08; the extract's own sha256 is in `SOURCES.json` there).
 
 **The PDF's text layer does not extract cleanly.**
 `pdftotext -layout` returns the Hebrew words in logical order, one visual line at a time, with the margin notes (the section numbers and headings) interleaved on the same line.
@@ -19,6 +19,7 @@ So no quotation of the raw extraction could be trusted for paragraph numbers or 
 The three pages were rendered with `pdftoppm -r 110` and read as images, and the Law was transcribed from the images: `registers/source-bundle/encouragement-of-aliyah-and-return-law-5786-2026.he.txt` (sha256 `06d620400050687865427cd4c96813312f91d764fc48e4da16ff8ef772cec69c`), one printed clause per line, gershayim and geresh as ״ and ׳, superscript footnote marks omitted.
 `tools/transcheck.py` checks that the multiset of Hebrew words and the multiset of digit runs of the transcription equal those of the PDF's own text layer for chapter D (it does not check order; order was checked by reading the images).
 It prints `transcheck: OK` (run 2026-10-08).
+Run it on the deposited extract, `python3 -I tools/transcheck.py <extract> <transcription>`; it reads the extract's pages 1-3, or pages 4-6 of the file as downloaded.
 The raw extraction is deposited beside it (`...pdftotext-layout.txt`, sha256 `749d94946e6a9b5a8aaf25198fc67ac6b45fb6a101e5ec66393cca7e3f5e64e9`) as provenance.
 Every `-- src:N |` comment in the modules is generated from line N of the transcription by `tools/srcquote.py`; `tools/hebcheck.py` checks that every other run of Hebrew in the modules occurs verbatim in it (`hebcheck: OK`).
 Every figure in this encoding was read off the page image: 600,000; one million; 350,000; 150,000; 140,000; 75; 5 November 2025; 31 December 2026 (end of tax year 2026); 1 January 2026.

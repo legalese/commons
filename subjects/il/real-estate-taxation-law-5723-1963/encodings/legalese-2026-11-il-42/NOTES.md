@@ -13,6 +13,7 @@ Pages read from the image (listed with their instruments in the header of `re42-
 The 18-month reading (SH 5783 p. 161, s 10, Amendment 102) and the orphan date (SH 5783 p. 542, Amendment 103) were read from the page images by the lead of the session on 2026-11-10; the encoder looked at the Amendment 102 page and not at the Amendment 103 page.
 A second reading of the sources, whose notes are not in this repository, supplied the instrument and page for the later amendments of s 9 (SH 5783 pp. 160-161, SH 5785 pp. 150-152) and for the Finance Committee's approval of the extension order of the temporary ladder, which is the Knesset's record of its meeting no. 511 of 9 December 2024, read as text and not as a page image.
 Every instrument named here is deposited in `../../registers/source-bundle/` with its URL and sha256 in `SOURCES.json`: the Sefer HaChukim PDFs in `amending-laws/`, and the Committee's record in `official/`; the law firm's guide on the end date of the temporary ladder (https://www.siboni-law.com/PurchaseTaxGuide2026) is a third party's page and is not deposited.
+Only the pages the row cites are deposited as PDFs; `SOURCES.json` keeps the whole file's URL, sha256 and size as downloaded for provenance.
 Every quotation of Hebrew in the modules is expanded mechanically from the deposit by `tools/srcquote.py`, and `tools/hebcheck.py` finds every run of Hebrew in the `.l4` files and in this file in the deposit (it exits 0 when run over `*.l4` and `NOTES.md`).
 
 ## 2. Scope

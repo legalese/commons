@@ -20,6 +20,8 @@ Its footnote reads (read from the page image) that the Law was passed in the Kne
 The Wikisource consolidation is an aid.
 The vote on 19 July 2018 (62 for, 55 against, 2 abstaining) is from press reports, not from a Knesset record: the Knesset's legislation database answered with a script-based bot challenge and was not read (section 9).
 Every other instrument is labelled in `SOURCES.json` as official (read from an image) or an aid.
+Only the pages the row cites are deposited as PDFs; `SOURCES.json` keeps the whole file's URL, sha256 and size as downloaded for provenance.
+The deposited extracts are printed p. 2759 of Laws of Palestine vol. 3 (the Order in Council, an image-only PDF) and p. 3 of Iton Rishmi no. 2, Supplement A (the Ordinance).
 A finding that rests only on an aid is labelled CONSOLIDATION-ONLY wherever it is written.
 
 ## 3. Wikisource against the official page

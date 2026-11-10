@@ -12,6 +12,7 @@ Correction of 2026-11-09 (no version bump): the claim in this file that the Law'
 ## Correction 2026-11-09: s 342(e)(3)-(4) say column D in the official text; the consolidation prints column E
 
 Status: **resolved 2026-11-09**, by a correction pass (`ringe-defects-2026-11`) that read the pages named below as images of the Knesset's PDFs in `registers/source-bundle/amending-laws/`, and composed the official text of the passage from them by script.
+Only the pages the row cites are deposited as PDFs; `SOURCES.json` keeps the whole file's URL, sha256 and size as downloaded for provenance.
 What each source line below rests on is marked: **read** means this pass looked at the page image; **reported** means the lead read it and this pass did not re-read it.
 
 Until this date this file (section 0, fork F22, section 9, section 10 item 6, the Axiom comparison), `encoding.json`, `check.sh` and `nii-il05-tests-expected-red.l4` said that the LAW prints "טור ה׳" (column E) in s 342(e)(3)-(4) where the deduction is column D, and recorded that as an inconsistency of the Law.
@@ -21,20 +22,20 @@ The official text has said column D since 1 January 2006.
 
 ### What the official instruments say (read)
 
-Amendment 147 to the Income Tax Ordinance, Sefer HaChukim 2023, 10.8.2005, p. 809 (`16_lsr_299994.pdf`, PDF page 45), s 66(3), transcribed from the page image:
+Amendment 147 to the Income Tax Ordinance, Sefer HaChukim 2023, 10.8.2005, p. 809 (`16_lsr_299994-pp809-814-819-824-extract.pdf`, PDF page 1), s 66(3), transcribed from the page image:
 
 ```
 -- ext:[SH2023-p809-s66(3)] | (3) בסעיף 342 – (א) בסעיף קטן (ה) – (1) במקום פסקה (3) יבוא: ״(3) חובת מעביד לנכות דמי ביטוח בשיעור החל, לפי טור ד׳ בלוח י׳, על הכנסת עובד העולה על 60% מהשכר הממוצע, גם מהכנסת העובד שאינה עולה על 60% מהשכר הממוצע, אם העובד מועסק אצל מעביד נוסף;״; (2) בפסקה (4), במקום ״בטור ה׳״ יבוא ״בטור ד׳״;
 ```
 
-Commencement, same Law (`16_lsr_299994.pdf`, PDF pages 55 and 60, transcribed from the page images):
+Commencement, same Law (`16_lsr_299994-pp809-814-819-824-extract.pdf`, PDF pages 7 and 8, transcribed from the page images):
 
 ```
 -- ext:[SH2023-p819-s80(a)] | תחילתו של חוק זה ביום א׳ בטבת התשס״ו (1 בינואר 2006) (להלן – יום התחילה), אלא אם כן נאמר לעניין מסוים במפורש אחרת.
 -- ext:[SH2023-p824-s80(k)] | תחילתם של סעיפים 340, 341, 342 ו־345ב לחוק הביטוח הלאומי, כנוסחם בסעיף 66(1), (3) ו־(4) לחוק זה, ביום התחילה, והם יחולו על דמי ביטוח המשתלמים בעד יום התחילה ואילך.
 ```
 
-The 2025 Budget-year Law, Sefer HaChukim 3384, 27.3.2025, pp. 395-396 (`25_lsr_6133485.pdf`, PDF pages 11-12), s 19(4), transcribed from the page image, replaces the threshold words in s 342 and does not touch the column letter:
+The 2025 Budget-year Law, Sefer HaChukim 3384, 27.3.2025, pp. 395-396 (`25_lsr_6133485-pp395-396-extract.pdf`, PDF pages 1-2), s 19(4), transcribed from the page image, replaces the threshold words in s 342 and does not touch the column letter:
 
 ```
 -- ext:[SH3384-p396-s19(4)] | בסעיף 342, בכל מקום, במקום ״60% מהשכר הממוצע״ יבוא ״מדרגת הגבייה המופחתת״, ובמקום ״מ־60% מהשכר הממוצע״ יבוא ״ממדרגת הגבייה המופחתת״;
@@ -43,7 +44,7 @@ The 2025 Budget-year Law, Sefer HaChukim 3384, 27.3.2025, pp. 395-396 (`25_lsr_6
 (The substitutions in s 342, s 345ב(ה) and Schedule J are items (4), (5) and (6) of s 19, whose heading is on p. 395; s 20, which begins on p. 396 after item (6), amends Amendment 252.
 This file and `encoding.json` already cited "s 19(4)" and "s 19(6)", which is right.)
 
-The composition check: take the text of s 342(e)(3)-(4) as added in 1997 (Sefer HaChukim 1607, 7.1.1997, pp. 36-37, PDF pages 21-22 of `14_lsr_211373.pdf`, read), apply the 2005 replacements and then the 2025 ones, and compare the result with source lines 3669 and 3670 of the consolidation.
+The composition check: take the text of s 342(e)(3)-(4) as added in 1997 (Sefer HaChukim 1607, 7.1.1997, pp. 36-37, PDF pages 1-2 of `14_lsr_211373-pp36-37-extract.pdf`, read), apply the 2005 replacements and then the 2025 ones, and compare the result with source lines 3669 and 3670 of the consolidation.
 They are the same except for one letter in each: the official text says `ד׳`, the consolidation `ה׳`.
 
 ### Why the consolidation has the old letter
@@ -334,7 +335,7 @@ The version is minor, not a patch, because the row now answers questions it coul
   Each status is put to the one-column rule, which is unchanged, so one call answers as the two calls did (the tester's A7; the Axiom comparison's X5 and P3).
 - **05-RC5: Amendment 252 s 7(b) (WORDING).**
   Recorded here, as the inventory asks; this row's notes had not mentioned it.
-  Amendment 252 s 7(b) (the deposited `amending-laws/25_lsr_5482787.pdf`, PDF page 4, read with `pdftotext -raw`) lets the Minister of Finance, after consulting the Minister of Labour and with the approval of the Knesset Labour and Welfare Committee, extend by order the temporary provision for contributions collected for 2027 and 2028, one year at a time; s 7(c) has the order brought to the Committee at least two months before the year.
+  Amendment 252 s 7(b) (the deposited `amending-laws/25_lsr_5482787-pp176-178-extract.pdf`, PDF page 3, read with `pdftotext -raw`) lets the Minister of Finance, after consulting the Minister of Labour and with the approval of the Knesset Labour and Welfare Committee, extend by order the temporary provision for contributions collected for 2027 and 2028, one year at a time; s 7(c) has the order brought to the Committee at least two months before the year.
   Row IL-04 takes no order by default (its assumption A8) and has entry points that take one.
   This row takes column D from its caller, so whether the temporary or the permanent table applies in 2027 is the caller's: this row's own 2027 scenario (`nii-il05-tests.l4`, section "Section 342(d)") uses the permanent table, which is IL-04's A8 default, not a finding that no order was made.
   The tester's I3 (`tests-independent.l4` line 420) expects a refusal for February 2027; the rules that take amounts answer on what they are given (187.3811), and it stays failing, declared in `check.sh`.
@@ -870,7 +871,7 @@ What else was seen, outside that list, is set out at the end of this section.
 Row IL-04's `NOTES.md` "Repair 2026-10-07" section only (its lines 1-80), as background.
 
 **Sources.** The consolidation (sha256 `78bf47ee…2a97`, verified): s 1 (lines 186-228), s 2 (230-239), s 245 (2464-2477), s 342 (3658-3675), s 348 (3762-3769), Schedule A1 Part D's last rows (4450-4453), Schedule J (4709-4749), Schedule K (4751-4773).
-The deposited amending Laws (`registers/source-bundle/amending-laws/`, sha256 of all three verified against `SOURCES.json`), text by `pdftotext -raw`: Amendment 252 (all four pages) and the 2025 Budget-year Law's Part E, ss 19-21 (PDF pages 11-12).
+The deposited amending Laws (`registers/source-bundle/amending-laws/`, sha256 of all three verified against `SOURCES.json`), text by `pdftotext -raw`: Amendment 252 (its pages 176-178) and the 2025 Budget-year Law's Part E, ss 19-21 (pp. 395-396).
 Neither amends s 348 or Schedule K; the Budget-year Law s 19(4) amends s 342 ("60% of the average wage" becomes the reduced collection threshold, "everywhere"), from 1 January 2026 (s 21); Amendment 252 s 7(a)(3) replaces only the lower sub-columns of Schedule J's columns C and D.
 The 2023 Economic Efficiency Law was not opened: nothing in this comparison turns on Schedule J's item 4.
 The National Insurance Institute's figures are taken from this row's `NOTES.md` section 7 (the encoder's fetch, 14:49-14:53 UTC on 2026-10-06) and `DECIDED-ANSWERS.md` section 1 (the independent tester's fetch through the Israeli proxy, 21:41-21:43 UTC); they agree, and nothing was re-fetched.

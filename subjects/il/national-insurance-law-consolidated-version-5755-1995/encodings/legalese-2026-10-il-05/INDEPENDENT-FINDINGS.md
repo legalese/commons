@@ -118,7 +118,7 @@ One artefact: the quarterly yeshiva-student cases (H5, H6) put the student's inc
 
 ## Other observations
 
-- `registers/source-bundle/amending-laws/SOURCES.json` says `25_lsr_6133485.pdf` has 5 pages; `pdfinfo` reports 40, and the National Insurance part (Part E, ss 19-21) is on PDF pages 11-12 (printed pp 395-396). A reader who trusts the manifest and reads five pages will not find s 19.
+- `registers/source-bundle/amending-laws/SOURCES.json` says `25_lsr_6133485.pdf` has 5 pages; `pdfinfo` reports 40, and the National Insurance part (Part E, ss 19-21) is on PDF pages 11-12 of the whole file as downloaded (printed pp 395-396; PDF pages 1-2 of `25_lsr_6133485-pp395-396-extract.pdf`). A reader who trusts the manifest and reads five pages will not find s 19.
 - NOTES section 11 says the independent test pass "was not run". This file is that pass.
 - `nii-il05-tests.l4:590-595` asserts coordinated contributions of 218.8 for a 2027 scenario, with the working "8,000 × 0.40% + 4,000 × 4.67%" (NOTES line 257 repeats it). So the encoder's own suite carries the column D row sum (root cause 1) as an expected value, unflagged.
 

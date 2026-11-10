@@ -232,8 +232,9 @@ The tester's file names the type on lines 166 and 171, adapted as the lead autho
 ### 03-F7: fork F7, read against the enacted 5786 Law; assumption A3 re-based
 
 Recorded at lines 131 (F7), 217 (question 3) and 373-374 (comparison, follow-up 2) of this file as it stood at 0.1.0, and at the capstone's `RECONCILE.md` lines 79-81; class WORDING.
-The Economic Efficiency Law (Legislative Amendments for Achieving the Budget Targets for Budget Year 2026), 5786-2026, Sefer HaChukim 3511 of 31 March 2026, is deposited at `../../registers/source-bundle/amending-laws/25_lsr_12235101.pdf` (commons a862cb5; sha256 `72244dba…4734155`, re-checked 2026-10-08).
-Its chapter C, "ריווח מדרגות מס הכנסה", is on PDF p. 4 (printed Sefer HaChukim p. 416), read with `pdftotext` on 2026-10-08:
+The Economic Efficiency Law (Legislative Amendments for Achieving the Budget Targets for Budget Year 2026), 5786-2026, Sefer HaChukim 3511 of 31 March 2026, is deposited at `../../registers/source-bundle/amending-laws/25_lsr_12235101-pp416-418-extract.pdf`, which holds PDF pages 4 to 6 of the file as downloaded (printed pages 416 to 418; commons a862cb5; sha256 of the file as downloaded `72244dba…4734155`, re-checked 2026-10-08).
+Only the pages the row cites are deposited as PDFs; `SOURCES.json` keeps the whole file's URL, sha256 and size as downloaded for provenance.
+Its chapter C, "ריווח מדרגות מס הכנסה", is on PDF p. 4 of the file as downloaded (printed Sefer HaChukim p. 416; page 1 of the extract), read with `pdftotext` on 2026-10-08:
 
 - **s 5** (amendment no. 288 of the Ordinance) amends s 121: in (a)(1) the figure becomes "301,200"; (a)(2) is replaced, "על כל שקל חדש מ־301,201 שקלים חדשים עד 560,280 שקלים חדשים - 35%"; in (b)(1)(c) the top becomes 228,000; (b)(1)(d) is replaced, "מ־228,001 … עד 301,200 … 31%". It leaves (b)(1)(a) (84,120), (b)(1)(b) (120,720) and every rate alone.
 - **s 6**: "תחילתו של פרק זה ביום י"ב בטבת התשפ"ו (1 בינואר 2026) והוא יחול על הכנסה שהופקה או נצמחה ביום האמור או לאחריו" (in force on 1 January 2026, for income produced or accrued on or after that day). Chapter C is not marked a temporary provision (chapter D, on the same page, is), and s 6 gives no end date.
@@ -340,7 +341,7 @@ TOTAL (7 modules)                              6       221       6        2
 `check.sh` exit 0.
 The six errors are exactly the six declared failures of the tester's file; its two refusals are declared.
 `tools/srcquote.py` regenerates every `src:N` line of every module unchanged, and `tools/hebcheck.py` passes on every changed module, `check.sh` and `encoding.json` against the source.
-Against the source alone it flags, in `ito-il03-published-figures.l4` and this file, only Hebrew quoted from the booklet and the 5786 Law; against a file of the source with the cleaned `pdftotext` of the Law's p. 4 and the booklet's pp. 1 and 8 appended, it passes.
+Against the source alone it flags, in `ito-il03-published-figures.l4` and this file, only Hebrew quoted from the booklet and the 5786 Law; against a file of the source with the cleaned `pdftotext` of the Law's p. 416 (PDF p. 4 of the file as downloaded) and the booklet's pp. 1 and 8 appended, it passes.
 
 ### For job IL-22 (the capstone), names this version adds or renames
 
@@ -565,9 +566,9 @@ Nothing was kept from those responses.
 The amending Laws were identified only by their position and title in the file's own list of amending Laws (line 5): tag 5785-2 is the Economic Efficiency Law for the 2025 budget year ("freezing of tax updates and surtax", Sefer HaChukim 5785 p. 150); tag 5786-6 falls in the Economic Efficiency Law for the 2026 budget year (5786 pp. 415-416).
 That identification is by counting entries and was not checked against the Laws.
 
-**(0.2.0)** The 5786 Law has since been deposited, from an Internet Archive capture of the Knesset's PDF (commons a862cb5, `../../registers/source-bundle/amending-laws/25_lsr_12235101.pdf`, sha256 `72244dba…4734155`, re-checked on 2026-10-08).
-Its chapter C ("ריווח מדרגות מס הכנסה", widening of the income-tax brackets), ss 5-7, is on PDF p. 4, which is printed as Sefer HaChukim p. 416; that agrees with the 5786 pp. 415-416 placed above by list position.
-`SOURCES.json` says "PDF p. 4, Sefer HaChukim p. 415"; the page's own number is 416 (checked 2026-10-08 with `pdftotext`: PDF pp. 2-5 are printed 414-417).
+**(0.2.0)** The 5786 Law has since been deposited, from an Internet Archive capture of the Knesset's PDF (commons a862cb5, sha256 of the file as downloaded `72244dba…4734155`, re-checked on 2026-10-08; now deposited as `../../registers/source-bundle/amending-laws/25_lsr_12235101-pp416-418-extract.pdf`).
+Its chapter C ("ריווח מדרגות מס הכנסה", widening of the income-tax brackets), ss 5-7, is on PDF p. 4 of the file as downloaded, which is printed as Sefer HaChukim p. 416; that agrees with the 5786 pp. 415-416 placed above by list position.
+`SOURCES.json` says "PDF p. 4, Sefer HaChukim p. 415"; the page's own number is 416 (checked 2026-10-08 with `pdftotext`: PDF pp. 2-5 of the file as downloaded are printed 414-417).
 It is read for fork F7 and assumption A3 in "Version 0.2.0".
 The 2026 Tax Authority booklet is recorded beside it by link and hash only (`SOURCES.json`, "pointers_only"), and is carried for one figure in `ito-il03-published-figures.l4`.
 The 5785 Law (amendment 276, Sefer HaChukim 3342) is still not deposited.
