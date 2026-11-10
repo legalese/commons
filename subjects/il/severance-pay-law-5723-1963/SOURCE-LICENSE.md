@@ -22,4 +22,10 @@ Hebrew is authoritative; English translations are unofficial. The English titles
 
 ## Status of this deposit
 
-No statute text has been deposited yet.
+Deposited for row il-71 in `registers/source-bundle/` (every file, with its URL, retrieval date and sha256, is in `SOURCES.json` there):
+
+- An excerpt of the Hebrew Wikisource consolidation of the Law as `severance-pay-law-5723-1963.he.wiki.excerpt.txt`: 7 whole lines of the raw wikitext, revision 3008085, last edited 2026-04-26T21:00:58Z; the header gives the whole page's size and sha256. It is an unofficial consolidation as maintained at retrieval, not a historical vintage, and the whole page is not deposited.
+- Nineteen cropped images of printed pages of nine Sefer HaChukim issues from the Knesset's site (404, 856, 1919, 2024, 2190, 2338, 2459, 2632 and 3363), in `pages/`: the official instruments, only the lines the row reads, and no full page. The Hebrew read from them is on the `ext:` lines of the row's modules.
+- `SOURCES.json` also lists, without depositing them, the whole files of eleven further issues named in the row's NOTES.md.
+
+The metadata file `136-Sefer-HaChukim-5723-p-136-Knesset-Is.meta.json` is the stub's and is unchanged; its `text_deposited: false` was written before this deposit, and only the excerpt and the page crops above are deposited.
