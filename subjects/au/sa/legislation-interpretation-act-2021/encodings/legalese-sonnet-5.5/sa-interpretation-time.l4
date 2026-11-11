@@ -1,0 +1,546 @@
+IMPORT prelude
+IMPORT daydate
+
+-- Legislation Interpretation Act 2021 (South Australia): the rules about time.
+-- Version of the text encoded: 20.11.2025, as deposited (unofficial plain-text rendering).
+--
+-- This module stands alone: it imports only prelude and daydate, and is meant to be copied
+-- unchanged into other work.
+-- It computes, from the Act's own words:
+--   * when a provision comes into operation and until when it has effect (ss 27, 28, 30);
+--   * what a day, a month, a year, a calendar month, a calendar year and a financial year are (s 4);
+--   * which days a period counts, and which day is its last (s 4 "month" and "year", s 44(1));
+--   * what happens when the last day is not a business day (s 44(2), s 4 "business day", s 46);
+--   * when a thing that must be done with no period fixed is to be done (s 44(3));
+--   * when a person attains an age (s 49);
+--   * the day a document posted is taken to be served (s 51(5)).
+-- Every answer that the Act does not give is NOTHING.
+-- Public holidays come from the Public Holidays Act 2023, which is not among the sources,
+-- so a list of them is an input wherever one matters.
+
+§ `Time rules of the Legislation Interpretation Act 2021 (South Australia)`
+
+§§ `Days and moments (s 4 "day", s 28, s 30)`
+
+-- A moment is a day together with the number of seconds since the beginning of that day.
+-- The end of a day is the stroke of midnight that ends it, 24 hours after it began.
+DECLARE Moment HAS
+    `calendar day`        IS A DATE
+    `seconds into the day` IS A NUMBER
+
+-- src:148 | day means a period of 24 hours ending at the stroke of midnight;
+@ref s 4 "day" (src:148)
+`s 4: seconds in a day` MEANS 24 TIMES 60 TIMES 60
+
+-- src:148 | day means a period of 24 hours ending at the stroke of midnight;
+@ref s 4 "day" (src:148)
+GIVEN `the day` IS A DATE
+GIVETH A Moment
+`s 4: the beginning of a day` MEANS
+    Moment WITH `calendar day` IS `the day`, `seconds into the day` IS 0
+
+-- src:148 | day means a period of 24 hours ending at the stroke of midnight;
+@ref s 4 "day" (src:148)
+GIVEN `the day` IS A DATE
+GIVETH A Moment
+`s 4: the end of a day` MEANS
+    Moment WITH `calendar day` IS `the day`, `seconds into the day` IS `s 4: seconds in a day`
+
+-- Two moments are compared by their position on a single scale of seconds.
+-- src:148 | day means a period of 24 hours ending at the stroke of midnight;
+@ref s 4 "day" (src:148)
+GIVEN `the moment` IS A Moment
+GIVETH A NUMBER
+`s 4: the position of a moment in seconds` MEANS
+    (Day (`the moment`'s `calendar day`) TIMES `s 4: seconds in a day`) PLUS (`the moment`'s `seconds into the day`)
+
+-- src:391 | If an Act or a legislative instrument, or a provision of an Act or a legislative instrument, comes into operation on a particular day, the Act or instrument, or the provision, comes into operation at the beginning of that day.
+@ref s 28 (src:391)
+GIVEN `the particular day` IS A DATE
+GIVETH A Moment
+`s 28: the moment an Act or provision comes into operation on a particular day` MEANS
+    `s 4: the beginning of a day` `the particular day`
+
+-- src:395 | If an Act or a legislative instrument, or a provision of an Act or a legislative instrument, is expressed to expire, lapse or otherwise cease to have effect on a particular day, or to remain or continue in force or otherwise have effect until a particular day, the Act or instrument, or the provision, continues to have effect until the end of the specified day.
+@ref s 30 (src:395)
+GIVEN `the specified day` IS A DATE
+GIVETH A Moment
+`s 30: the moment up to which an expiring provision continues to have effect` MEANS
+    `s 4: the end of a day` `the specified day`
+
+-- A provision is in operation from the moment it comes into operation (s 28) until the end
+-- of the day on which it is expressed to expire (s 30).
+-- The end of that day is the beginning of the next, so the moment of midnight itself is outside.
+-- src:391 | If an Act or a legislative instrument, or a provision of an Act or a legislative instrument, comes into operation on a particular day, the Act or instrument, or the provision, comes into operation at the beginning of that day.
+-- src:395 | If an Act or a legislative instrument, or a provision of an Act or a legislative instrument, is expressed to expire, lapse or otherwise cease to have effect on a particular day, or to remain or continue in force or otherwise have effect until a particular day, the Act or instrument, or the provision, continues to have effect until the end of the specified day.
+@ref s 28 and s 30 (src:391-395)
+GIVEN `the moment it comes into operation` IS A Moment
+      `the day it is expressed to expire on, if any` IS A MAYBE DATE
+      `the moment asked about` IS A Moment
+GIVETH A BOOLEAN
+`ss 28 and 30: a provision is in operation at a moment` MEANS
+        `s 4: the position of a moment in seconds` `the moment asked about`
+            AT LEAST `s 4: the position of a moment in seconds` `the moment it comes into operation`
+    AND CONSIDER `the day it is expressed to expire on, if any`
+            WHEN NOTHING THEN TRUE
+            WHEN JUST `the expiry day` THEN
+                `s 4: the position of a moment in seconds` `the moment asked about`
+                    LESS THAN `s 4: the position of a moment in seconds` (`s 30: the moment up to which an expiring provision continues to have effect` `the expiry day`)
+
+§§ `Months, years and the other units the Act defines (s 4)`
+
+-- src:134 | calendar month means one of the 12 months of the calendar year;
+@ref s 4 "calendar month" (src:134)
+GIVEN `the number of the month` IS A NUMBER
+GIVETH A BOOLEAN
+`s 4: is one of the 12 months of the calendar year` MEANS
+    `the number of the month` AT LEAST 1 AND `the number of the month` AT MOST 12
+
+-- What the text says a "week" is: nothing.
+-- The text does not say what a week is, and no rule counts a period of weeks.
+-- src:101 | 4—Standard definitions
+-- src:102 | In every Act and legislative instrument—
+@ref s 4 (src:101-102)
+GIVETH A MAYBE NUMBER
+`s 4: the number of days in a week the Act states` MEANS NOTHING
+
+-- The first day of the calendar month that falls a given number of months after a day's month.
+-- src:201 | month means a period starting at the beginning of any day of one of the calendar months and ending—
+-- src:202 | (a) immediately before the beginning of the numerically corresponding day of the next calendar month; or
+-- src:203 | (b) if there is no such corresponding day occurring in the next calendar month, at the end of that next calendar month;
+@ref s 4 "month" (src:201-203)
+GIVEN `the day` IS A DATE, `the number of months` IS A NUMBER
+GIVETH A DATE
+`s 4: the first day of the month a number of months after the month of a day` MEANS
+    Date 1 (`the month position` MODULO 12 PLUS 1) (FLOOR (`the month position` DIVIDED BY 12))
+    WHERE
+        `the month position` MEANS (DATE_YEAR `the day` TIMES 12) PLUS (DATE_MONTH `the day` MINUS 1) PLUS `the number of months`
+
+-- A period of months, starting at the beginning of a day, ends immediately before the beginning of the
+-- numerically corresponding day of the calendar month that number of months on, or, if there is no
+-- such day, at the end of that month.
+-- Section 4 "month" gives this for one month; s 44(1) item 8 gives it for 2 or more.
+-- src:201 | month means a period starting at the beginning of any day of one of the calendar months and ending—
+-- src:202 | (a) immediately before the beginning of the numerically corresponding day of the next calendar month; or
+-- src:203 | (b) if there is no such corresponding day occurring in the next calendar month, at the end of that next calendar month;
+-- src:531 | | 8 | is a period of 2 or more months expressed to begin at, on or with a specified day in a calendar month (the starting month) | ends immediately before the corresponding day of the calendar month (the ending month) that is the relevant number of calendar months after the starting month or, if there is no corresponding day, at the end of the ending month |
+@ref s 4 "month" and s 44(1) item 8 (src:201-531)
+GIVEN `the first day` IS A DATE, `the number of months` IS A NUMBER
+GIVETH A DATE
+`s 4 and s 44(1) item 8: the last day of a period of months beginning on a day` MEANS
+    IF `the corresponding day number` AT MOST `the days in the ending month`
+    THEN (Date `the corresponding day number` (DATE_MONTH `the ending month's first day`) (DATE_YEAR `the ending month's first day`)) MINUS 1
+    ELSE Date `the days in the ending month` (DATE_MONTH `the ending month's first day`) (DATE_YEAR `the ending month's first day`)
+    WHERE
+        `the ending month's first day` MEANS `s 4: the first day of the month a number of months after the month of a day` `the first day` `the number of months`
+        `the corresponding day number` MEANS DATE_DAY `the first day`
+        `the days in the ending month` MEANS `Days in month` (DATE_MONTH `the ending month's first day`) (DATE_YEAR `the ending month's first day`)
+
+-- A year, starting at the beginning of a day, ends immediately before the beginning of the
+-- corresponding day of the next calendar year; a year starting on 29 February ends at the end of
+-- 28 February in the next calendar year.
+-- src:245 | year means a period starting at the beginning of any day of a calendar year and ending—
+-- src:246 | (a) immediately before the beginning of the corresponding day of the next calendar year; or
+-- src:247 | (b) in the case of a period starting at the beginning of 29 February in a leap year—at the end of 28 February occurring in the next calendar year;
+@ref s 4 "year" (src:245-247)
+GIVEN `the first day` IS A DATE
+GIVETH A DATE
+`s 4: the last day of a year beginning on a day` MEANS
+    IF DATE_DAY `the first day` EQUALS 29 AND DATE_MONTH `the first day` EQUALS 2
+    THEN Date 28 2 (DATE_YEAR `the first day` PLUS 1)
+    ELSE (Date (DATE_DAY `the first day`) (DATE_MONTH `the first day`) (DATE_YEAR `the first day` PLUS 1)) MINUS 1
+
+-- A period of several years: the Act defines a single year and says nothing more, so a period of
+-- N years is taken to be N successive years, each starting the day after the one before ends.
+-- src:245 | year means a period starting at the beginning of any day of a calendar year and ending—
+-- src:246 | (a) immediately before the beginning of the corresponding day of the next calendar year; or
+-- src:247 | (b) in the case of a period starting at the beginning of 29 February in a leap year—at the end of 28 February occurring in the next calendar year;
+@ref s 4 "year" (src:245-247)
+GIVEN `the first day` IS A DATE, `the number of years` IS A NUMBER
+GIVETH A DATE
+`s 4: the last day of a period of years beginning on a day` MEANS
+    IF `the number of years` AT MOST 1
+    THEN `s 4: the last day of a year beginning on a day` `the first day`
+    ELSE `s 4: the last day of a period of years beginning on a day` ((`s 4: the last day of a year beginning on a day` `the first day`) PLUS 1) (`the number of years` MINUS 1)
+
+-- src:135 | calendar year means a period of 12 months beginning on 1 January;
+@ref s 4 "calendar year" (src:135)
+GIVEN `the year` IS A NUMBER
+GIVETH A DATE
+`s 4: the last day of the calendar year` MEANS
+    `s 4 and s 44(1) item 8: the last day of a period of months beginning on a day` (Date 1 1 `the year`) 12
+
+-- src:161 | financial year means a period of 12 months starting on 1 July;
+@ref s 4 "financial year" (src:161)
+GIVEN `the year it starts in` IS A NUMBER
+GIVETH A DATE
+`s 4: the last day of the financial year starting on 1 July` MEANS
+    `s 4 and s 44(1) item 8: the last day of a period of months beginning on a day` (Date 1 7 `the year it starts in`) 12
+
+§§ `Business days and public holidays (s 4, s 46, s 44(2))`
+
+-- A public holiday is a day, or only a part of a day, under the Public Holidays Act 2023.
+-- The Act is not among the sources, so the list of public holidays is always an input.
+-- src:217 | public holiday means—
+-- src:218 | (a) a day that is, under the Public Holidays Act 2023, a public holiday; or
+-- src:219 | (b) subject to section 46—a part‑day public holiday;
+@ref s 4 "public holiday" (src:217-219)
+DECLARE `Public holiday` HAS
+    `the day`              IS A DATE
+    `only part of the day` IS A BOOLEAN
+
+-- src:131 | business day means a day that is not—
+-- src:132 | (a) a Saturday or Sunday; or
+-- src:133 | (b) a public holiday (other than a part‑day public holiday—see section 46);
+@ref s 4 "business day" (src:131-133)
+GIVEN `the day` IS A DATE, `the public holidays` IS A LIST OF `Public holiday`
+GIVETH A BOOLEAN
+DECIDE `s 4: is a business day` IF
+        NOT (`is weekend` `the day`)
+    AND NOT (any (`is a public holiday that is not part-day`) `the public holidays`)
+    WHERE
+        `is a public holiday that is not part-day` holiday MEANS
+            holiday's `the day` EQUALS `the day` AND NOT (holiday's `only part of the day`)
+
+-- A period expressed as excluding public holidays does not exclude a part-day public holiday
+-- unless the Act or instrument expressly provides to the contrary.
+-- src:537 | If, for the purposes of an Act or a legislative instrument, a business day, working day or other period is expressed as excluding a public holiday, the exclusion does not extend to a part‑day public holiday unless the Act or legislative instrument expressly provides to the contrary.
+@ref s 46 (src:537)
+GIVEN `the holiday` IS A `Public holiday`, `the Act expressly provides the contrary` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 46: an exclusion of public holidays extends to a holiday` MEANS
+    IF `the holiday`'s `only part of the day`
+    THEN (IF `the Act expressly provides the contrary` THEN JUST TRUE ELSE JUST FALSE)
+    ELSE JUST TRUE
+
+-- src:532 | (2) If an Act or a legislative instrument requires or allows a thing to be done but the last day for doing it is a day that is not a business day, then the thing may be done on the next day that is a business day.
+@ref s 44(2) (src:532)
+GIVEN `the day` IS A DATE, `the public holidays` IS A LIST OF `Public holiday`
+GIVETH A DATE
+`s 44(2): the next day that is a business day` MEANS
+    IF `s 4: is a business day` (`the day` PLUS 1) `the public holidays`
+    THEN `the day` PLUS 1
+    ELSE `s 44(2): the next day that is a business day` (`the day` PLUS 1) `the public holidays`
+
+-- src:532 | (2) If an Act or a legislative instrument requires or allows a thing to be done but the last day for doing it is a day that is not a business day, then the thing may be done on the next day that is a business day.
+@ref s 44(2) (src:532)
+GIVEN `the last day for doing it` IS A DATE, `the public holidays` IS A LIST OF `Public holiday`
+GIVETH A DATE
+`s 44(2): the last day on which a thing may be done` MEANS
+    IF `s 4: is a business day` `the last day for doing it` `the public holidays`
+    THEN `the last day for doing it`
+    ELSE `s 44(2): the next day that is a business day` `the last day for doing it` `the public holidays`
+
+§§ `Counting a period (s 44(1))`
+
+-- The table in s 44(1) says how a period that is expressed to begin in a given way is counted.
+-- Item 2 covers "at, on or with a specified day"; item 3 covers "on, from or after the happening of an
+-- act or event"; item 6 covers "after a specified day".
+-- A period expressed to begin "from a specified day": the text does not say how it is counted.
+-- src:522 | (1) A period of time referred to in an Act or a legislative instrument that is of a kind mentioned in column 2 of an item in the table below is to be calculated as set out in column 3 of that item.
+-- src:525 | | 2 | is expressed to begin at, on or with a specified day | includes that specified day |
+-- src:526 | | 3 | is expressed to begin on, from or after the happening of an act or event | does not include the day on which the act or event occurs |
+-- src:529 | | 6 | is expressed to begin after a specified day | does not include that specified day |
+@ref s 44(1) items 2, 3 and 6 (src:522-529)
+DECLARE `How a period is expressed to begin` IS ONE OF
+    `begins at, on or with a specified day`
+    `begins on, from or after the happening of an act or event`
+    `begins after a specified day`
+    `begins from a specified day`
+
+-- Periods are counted in the units the Act defines.
+-- A week is not one of them.
+-- src:148 | day means a period of 24 hours ending at the stroke of midnight;
+-- src:201 | month means a period starting at the beginning of any day of one of the calendar months and ending—
+-- src:202 | (a) immediately before the beginning of the numerically corresponding day of the next calendar month; or
+-- src:203 | (b) if there is no such corresponding day occurring in the next calendar month, at the end of that next calendar month;
+-- src:245 | year means a period starting at the beginning of any day of a calendar year and ending—
+-- src:246 | (a) immediately before the beginning of the corresponding day of the next calendar year; or
+-- src:247 | (b) in the case of a period starting at the beginning of 29 February in a leap year—at the end of 28 February occurring in the next calendar year;
+@ref s 4 "day", "month" and "year" (src:148-247)
+DECLARE `The length of a period` IS ONE OF
+    `a number of days`   HAS `how many days`   IS A NUMBER
+    `a number of weeks`  HAS `how many weeks`  IS A NUMBER
+    `a number of months` HAS `how many months` IS A NUMBER
+    `a number of years`  HAS `how many years`  IS A NUMBER
+
+-- src:525 | | 2 | is expressed to begin at, on or with a specified day | includes that specified day |
+-- src:526 | | 3 | is expressed to begin on, from or after the happening of an act or event | does not include the day on which the act or event occurs |
+-- src:529 | | 6 | is expressed to begin after a specified day | does not include that specified day |
+@ref s 44(1) items 2, 3 and 6 (src:525-529)
+GIVEN `how the period is expressed to begin` IS A `How a period is expressed to begin`
+      `the specified day or the day of the act or event` IS A DATE
+GIVETH A MAYBE DATE
+`s 44(1): the first day counted in a period` MEANS
+    CONSIDER `how the period is expressed to begin`
+        WHEN `begins at, on or with a specified day` THEN JUST `the specified day or the day of the act or event`
+        WHEN `begins on, from or after the happening of an act or event` THEN JUST (`the specified day or the day of the act or event` PLUS 1)
+        WHEN `begins after a specified day` THEN JUST (`the specified day or the day of the act or event` PLUS 1)
+        WHEN `begins from a specified day` THEN NOTHING
+
+-- The last day of a period of a stated length, counted from its first day.
+-- A period of N days counts N days starting with the first day counted.
+-- A period of months is counted by s 4 "month" and s 44(1) item 8, which name a period "expressed to
+-- begin at, on or with a specified day"; a period that begins the day after an act or event or a
+-- specified day is counted from that first day in the same way.
+-- A period of years is counted by s 4 "year", repeated.
+-- A period of weeks is not counted: the text does not say what a week is.
+-- src:523 | | Column 1 Item | Column 2 If the period of time— | Column 3 then the period— |
+-- src:524 | | 1 | is expressed to occur between 2 days | includes both days |
+-- src:525 | | 2 | is expressed to begin at, on or with a specified day | includes that specified day |
+-- src:526 | | 3 | is expressed to begin on, from or after the happening of an act or event | does not include the day on which the act or event occurs |
+-- src:527 | | 4 | is expressed to continue until a specified day | includes that specified day |
+-- src:528 | | 5 | is expressed to end at, on or with a specified day | includes that specified day |
+-- src:529 | | 6 | is expressed to begin after a specified day | does not include that specified day |
+-- src:530 | | 7 | is expressed to end before a specified day | does not include that specified day |
+-- src:531 | | 8 | is a period of 2 or more months expressed to begin at, on or with a specified day in a calendar month (the starting month) | ends immediately before the corresponding day of the calendar month (the ending month) that is the relevant number of calendar months after the starting month or, if there is no corresponding day, at the end of the ending month |
+@ref s 44(1) (src:523-531)
+GIVEN `how the period is expressed to begin` IS A `How a period is expressed to begin`
+      `the specified day or the day of the act or event` IS A DATE
+      `the length of the period` IS A `The length of a period`
+GIVETH A MAYBE DATE
+`s 44(1): the last day of a period` MEANS
+    CONSIDER `s 44(1): the first day counted in a period` `how the period is expressed to begin` `the specified day or the day of the act or event`
+        WHEN NOTHING THEN NOTHING
+        WHEN JUST `the first day` THEN
+            CONSIDER `the length of the period`
+                WHEN `a number of days` `how many days` THEN
+                    IF `how many days` AT LEAST 1 THEN JUST (`the first day` PLUS (`how many days` MINUS 1)) ELSE NOTHING
+                WHEN `a number of weeks` `how many weeks` THEN NOTHING
+                WHEN `a number of months` `how many months` THEN
+                    IF `how many months` AT LEAST 1
+                    THEN JUST (`s 4 and s 44(1) item 8: the last day of a period of months beginning on a day` `the first day` `how many months`)
+                    ELSE NOTHING
+                WHEN `a number of years` `how many years` THEN
+                    IF `how many years` AT LEAST 1
+                    THEN JUST (`s 4: the last day of a period of years beginning on a day` `the first day` `how many years`)
+                    ELSE NOTHING
+
+-- The last day on which the thing may be done: the last day of the period, moved on to the next business
+-- day if it is not one (s 44(2)).
+-- Section 44(2) speaks of "the last day for doing it", so it applies to a period counted in days, months
+-- or years alike.
+-- src:523 | | Column 1 Item | Column 2 If the period of time— | Column 3 then the period— |
+-- src:524 | | 1 | is expressed to occur between 2 days | includes both days |
+-- src:525 | | 2 | is expressed to begin at, on or with a specified day | includes that specified day |
+-- src:526 | | 3 | is expressed to begin on, from or after the happening of an act or event | does not include the day on which the act or event occurs |
+-- src:527 | | 4 | is expressed to continue until a specified day | includes that specified day |
+-- src:528 | | 5 | is expressed to end at, on or with a specified day | includes that specified day |
+-- src:529 | | 6 | is expressed to begin after a specified day | does not include that specified day |
+-- src:530 | | 7 | is expressed to end before a specified day | does not include that specified day |
+-- src:531 | | 8 | is a period of 2 or more months expressed to begin at, on or with a specified day in a calendar month (the starting month) | ends immediately before the corresponding day of the calendar month (the ending month) that is the relevant number of calendar months after the starting month or, if there is no corresponding day, at the end of the ending month |
+-- src:532 | (2) If an Act or a legislative instrument requires or allows a thing to be done but the last day for doing it is a day that is not a business day, then the thing may be done on the next day that is a business day.
+@ref s 44(1) and s 44(2) (src:523-532)
+GIVEN `how the period is expressed to begin` IS A `How a period is expressed to begin`
+      `the specified day or the day of the act or event` IS A DATE
+      `the length of the period` IS A `The length of a period`
+      `the public holidays` IS A LIST OF `Public holiday`
+GIVETH A MAYBE DATE
+`s 44(1) and (2): the last day on which a thing may be done within a period` MEANS
+    CONSIDER `s 44(1): the last day of a period` `how the period is expressed to begin` `the specified day or the day of the act or event` `the length of the period`
+        WHEN NOTHING THEN NOTHING
+        WHEN JUST `the last day` THEN JUST (`s 44(2): the last day on which a thing may be done` `the last day` `the public holidays`)
+
+-- Items 1, 4, 5 and 7 say whether a period includes the day by which it is expressed to end.
+-- src:524 | | 1 | is expressed to occur between 2 days | includes both days |
+-- src:527 | | 4 | is expressed to continue until a specified day | includes that specified day |
+-- src:528 | | 5 | is expressed to end at, on or with a specified day | includes that specified day |
+-- src:530 | | 7 | is expressed to end before a specified day | does not include that specified day |
+@ref s 44(1) items 1, 4, 5 and 7 (src:524-530)
+DECLARE `How a period is expressed to end` IS ONE OF
+    `continues until a specified day`
+    `ends at, on or with a specified day`
+    `ends before a specified day`
+
+-- src:527 | | 4 | is expressed to continue until a specified day | includes that specified day |
+-- src:528 | | 5 | is expressed to end at, on or with a specified day | includes that specified day |
+-- src:530 | | 7 | is expressed to end before a specified day | does not include that specified day |
+@ref s 44(1) items 4, 5 and 7 (src:527-530)
+GIVEN `how the period is expressed to end` IS A `How a period is expressed to end`, `the specified day` IS A DATE
+GIVETH A DATE
+`s 44(1) items 4, 5 and 7: the last day of a period that ends by reference to a specified day` MEANS
+    CONSIDER `how the period is expressed to end`
+        WHEN `continues until a specified day` THEN `the specified day`
+        WHEN `ends at, on or with a specified day` THEN `the specified day`
+        WHEN `ends before a specified day` THEN `the specified day` MINUS 1
+
+-- A period expressed to occur between 2 days includes both days.
+DECLARE `Stretch of days` HAS
+    `first day` IS A DATE
+    `last day`  IS A DATE
+
+-- src:524 | | 1 | is expressed to occur between 2 days | includes both days |
+@ref s 44(1) item 1 (src:524)
+GIVEN `the earlier day` IS A DATE, `the later day` IS A DATE
+GIVETH A `Stretch of days`
+`s 44(1) item 1: the days of a period expressed to occur between 2 days` MEANS
+    `Stretch of days` WITH `first day` IS `the earlier day`, `last day` IS `the later day`
+
+-- A day is among the days of such a period if it is the earlier day, the later day or a day between them.
+-- src:524 | | 1 | is expressed to occur between 2 days | includes both days |
+@ref s 44(1) item 1 (src:524)
+GIVEN `the earlier day` IS A DATE, `the later day` IS A DATE, `the day asked about` IS A DATE
+GIVETH A BOOLEAN
+`s 44(1) item 1: a day is one of the days of a period expressed to occur between 2 days` MEANS
+        (Day `the day asked about`) AT LEAST (Day `the first day of that period`)
+    AND (Day `the day asked about`) AT MOST (Day `the last day of that period`)
+    WHERE
+        `the first day of that period` MEANS (`s 44(1) item 1: the days of a period expressed to occur between 2 days` `the earlier day` `the later day`)'s `first day`
+        `the last day of that period` MEANS (`s 44(1) item 1: the days of a period expressed to occur between 2 days` `the earlier day` `the later day`)'s `last day`
+
+-- The two readings not taken.
+-- (1) For periods of 2 or more months that begin the day after an act or event, count by repeating the single
+--     month of s 4 "month" instead of by item 8.
+-- (2) For a period of several years, count in one step to the corresponding day instead of by repeating the year.
+-- src:201 | month means a period starting at the beginning of any day of one of the calendar months and ending—
+-- src:202 | (a) immediately before the beginning of the numerically corresponding day of the next calendar month; or
+-- src:203 | (b) if there is no such corresponding day occurring in the next calendar month, at the end of that next calendar month;
+-- src:531 | | 8 | is a period of 2 or more months expressed to begin at, on or with a specified day in a calendar month (the starting month) | ends immediately before the corresponding day of the calendar month (the ending month) that is the relevant number of calendar months after the starting month or, if there is no corresponding day, at the end of the ending month |
+@ref alternative reading of s 4 "month" and s 44(1) item 8 (src:201-531)
+GIVEN `the first day` IS A DATE, `the number of months` IS A NUMBER
+GIVETH A DATE
+`s 4 and s 44(1) item 8, alternative reading: the last day of a period of months counted one month at a time` MEANS
+    IF `the number of months` AT MOST 1
+    THEN `s 4 and s 44(1) item 8: the last day of a period of months beginning on a day` `the first day` 1
+    ELSE `s 4 and s 44(1) item 8, alternative reading: the last day of a period of months counted one month at a time`
+            ((`s 4 and s 44(1) item 8: the last day of a period of months beginning on a day` `the first day` 1) PLUS 1) (`the number of months` MINUS 1)
+
+-- src:245 | year means a period starting at the beginning of any day of a calendar year and ending—
+-- src:246 | (a) immediately before the beginning of the corresponding day of the next calendar year; or
+-- src:247 | (b) in the case of a period starting at the beginning of 29 February in a leap year—at the end of 28 February occurring in the next calendar year;
+@ref alternative reading of s 4 "year" (src:245-247)
+GIVEN `the first day` IS A DATE, `the number of years` IS A NUMBER
+GIVETH A DATE
+`s 4, alternative reading: the last day of a period of years counted in one step` MEANS
+    IF DATE_DAY `the first day` EQUALS 29 AND DATE_MONTH `the first day` EQUALS 2
+    THEN Date 28 2 (DATE_YEAR `the first day` PLUS `the number of years`)
+    ELSE (Date (DATE_DAY `the first day`) (DATE_MONTH `the first day`) (DATE_YEAR `the first day` PLUS `the number of years`)) MINUS 1
+
+§§ `A thing required to be done with no period fixed (s 44(3))`
+
+-- src:533 | (3) If no period of time is provided or allowed for doing a thing that is required to be done, the thing must be done as soon as is reasonably practicable.
+@ref s 44(3) (src:533)
+GIVEN `the thing is required to be done` IS A BOOLEAN
+      `a period is provided or allowed for doing it` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 44(3): the thing must be done as soon as is reasonably practicable` MEANS
+    IF `the thing is required to be done`
+    THEN (IF `a period is provided or allowed for doing it` THEN JUST FALSE ELSE JUST TRUE)
+    ELSE JUST FALSE
+
+§§ `Commencement fixed by the day of assent or by proclamation (s 27)`
+
+-- An anniversary of a day.
+-- Section 49(2) says what a 29 February birthday does, for the purpose of attaining an age only.
+-- The text does not say what the second anniversary of a 29 February is, so that case is NOTHING.
+-- src:386 | that is to be brought into operation by proclamation will be taken to come into operation on the second anniversary of the date on which the Act was assented to by, or on behalf of, the Crown unless brought into operation before that second anniversary.
+@ref s 27(6) (src:386)
+GIVEN `the day` IS A DATE, `the number of years later` IS A NUMBER
+GIVETH A MAYBE DATE
+`s 27(6): the anniversary of a day in a later year` MEANS
+    IF DATE_DAY `the day` EQUALS 29 AND DATE_MONTH `the day` EQUALS 2 AND NOT (`is leap year` (DATE_YEAR `the day` PLUS `the number of years later`))
+    THEN NOTHING
+    ELSE JUST (Date (DATE_DAY `the day`) (DATE_MONTH `the day`) (DATE_YEAR `the day` PLUS `the number of years later`))
+
+-- src:373 | (1) An Act that contains no provision fixing the date of its commencement, or providing for the fixing of that date, comes into operation on the day on which it is assented to by, or on behalf of, the Crown.
+@ref s 27(1) (src:373)
+GIVEN `the day the Act was assented to` IS A DATE
+GIVETH A DATE
+`s 27(1): the day an Act with no commencement provision comes into operation` MEANS `the day the Act was assented to`
+
+-- src:374 | (2) If a Bill is reserved for the signification of Her Majesty's assent, the Bill will be taken, for the purposes of subsection (1), to have been assented to on the day on which the assent is notified by proclamation in the State.
+@ref s 27(2) (src:374)
+GIVEN `the Bill was reserved for the signification of Her Majesty's assent` IS A BOOLEAN
+      `the day the assent was given` IS A DATE
+      `the day the assent was notified by proclamation in the State` IS A DATE
+GIVETH A DATE
+`s 27(2): the day a Bill is taken to have been assented to` MEANS
+    IF `the Bill was reserved for the signification of Her Majesty's assent`
+    THEN `the day the assent was notified by proclamation in the State`
+    ELSE `the day the assent was given`
+
+-- A proclamation made under s 27(3), and the day it fixes.
+-- A proclamation that suspends the operation of provisions fixes no day yet.
+DECLARE Proclamation HAS
+    `made on`               IS A DATE
+    `the day or time fixed` IS A MAYBE DATE
+
+-- The day fixed by the proclamations made so far, taken in the order made: a later proclamation takes the
+-- place of an earlier one if it is made before the day the earlier one fixed (s 27(5)); one made on or after
+-- that day does not change the day.
+-- src:375 | (3) If an Act provides that the Act comes into operation on a day to be fixed by proclamation, or that any provisions of the Act come into operation on a day to be fixed by proclamation, then, unless the contrary intention appears, the Governor may by proclamation—
+-- src:376 | (a) fix a day or time for the Act or provisions to come into operation; or
+-- src:377 | (b) fix different days or times for different provisions of the Act to come into operation; or
+-- src:378 | (c) suspend the operation of specified provisions of the Act until a day or time or days or times to be fixed by subsequent proclamation or proclamations.
+-- src:382 | (5) The Governor may, by subsequent proclamation made before the day or time fixed by proclamation under subsection (3) for an Act or provision to come into operation, amend the proclamation to fix a different day or time for the Act or provision to come into operation.
+@ref s 27(3) and s 27(5) (src:375-382)
+GIVEN `the proclamations in the order made` IS A LIST OF Proclamation
+GIVETH A MAYBE DATE
+`s 27(3) and (5): the day fixed by the proclamations made so far` MEANS
+    CONSIDER `the proclamations in the order made`
+        WHEN EMPTY THEN NOTHING
+        WHEN `the first` FOLLOWED BY `the rest` THEN
+            `the day fixed after applying the proclamations` (`the first`'s `the day or time fixed`) `the rest`
+    WHERE
+        `the day fixed after applying the proclamations` `the day fixed so far` proclamations MEANS
+            CONSIDER proclamations
+                WHEN EMPTY THEN `the day fixed so far`
+                WHEN `next` FOLLOWED BY `others` THEN
+                    `the day fixed after applying the proclamations`
+                        (CONSIDER `the day fixed so far`
+                            WHEN NOTHING THEN `next`'s `the day or time fixed`
+                            WHEN JUST `fixed` THEN
+                                IF `next`'s `made on` LESS THAN `fixed` THEN `next`'s `the day or time fixed` ELSE `the day fixed so far`)
+                        `others`
+
+-- An Act, or provision, to be brought into operation by proclamation is taken to come into operation on the second
+-- anniversary of assent unless brought into operation before it (s 27(6)); s 27(7) disapplies this where the Act says so.
+-- src:383 | (6) Subject to subsection (7), an Act or a provision of an Act passed—
+-- src:384 | (a) after the commencement of this subsection; or
+-- src:385 | (b) within the period of 2 years before the commencement of this subsection,
+-- src:386 | that is to be brought into operation by proclamation will be taken to come into operation on the second anniversary of the date on which the Act was assented to by, or on behalf of, the Crown unless brought into operation before that second anniversary.
+-- src:387 | (7) Subsection (6) does not apply to an Act or a provision of an Act if the Act or provision provides that that subsection does not apply (or, if the Act or provision was enacted before the commencement of that subsection, that section 7(5) of the Acts Interpretation Act 1915 does not apply).
+@ref s 27(6) and s 27(7) (src:383-387)
+GIVEN `s 27(6) covers the Act or provision` IS A BOOLEAN
+      `the Act or provision says that s 27(6) does not apply` IS A BOOLEAN
+      `the day the Act was assented to` IS A DATE
+      `the day it was brought into operation by proclamation, if it was` IS A MAYBE DATE
+GIVETH A MAYBE DATE
+`s 27(6) and (7): the day an Act or provision to be brought into operation by proclamation comes into operation` MEANS
+    IF (NOT `s 27(6) covers the Act or provision`) OR `the Act or provision says that s 27(6) does not apply`
+    THEN `the day it was brought into operation by proclamation, if it was`
+    ELSE CONSIDER `s 27(6): the anniversary of a day in a later year` `the day the Act was assented to` 2
+        WHEN NOTHING THEN NOTHING
+        WHEN JUST `the second anniversary` THEN
+            CONSIDER `the day it was brought into operation by proclamation, if it was`
+                WHEN NOTHING THEN JUST `the second anniversary`
+                WHEN JUST `the proclaimed day` THEN
+                    IF `the proclaimed day` LESS THAN `the second anniversary` THEN JUST `the proclaimed day` ELSE JUST `the second anniversary`
+
+§§ `Attaining an age (s 49)`
+
+-- src:543 | (1) A person attains a particular age expressed in years at the beginning of the relevant anniversary of the date of the person's birth.
+-- src:544 | (2) If a person was born on 29 February, subsection (1) will apply in relation to the person in each leap year and, in any year that is not a leap year, the person will attain a particular age expressed in years at the beginning of 1 March.
+@ref s 49 (src:543-544)
+GIVEN `the date of birth` IS A DATE, `the age in years` IS A NUMBER
+GIVETH A Moment
+`s 49: the moment a person attains an age in years` MEANS
+    IF DATE_DAY `the date of birth` EQUALS 29 AND DATE_MONTH `the date of birth` EQUALS 2
+            AND NOT (`is leap year` (DATE_YEAR `the date of birth` PLUS `the age in years`))
+    THEN `s 4: the beginning of a day` (Date 1 3 (DATE_YEAR `the date of birth` PLUS `the age in years`))
+    ELSE `s 4: the beginning of a day` (Date (DATE_DAY `the date of birth`) (DATE_MONTH `the date of birth`) (DATE_YEAR `the date of birth` PLUS `the age in years`))
+
+§§ `Service of a document by post (s 51(5))`
+
+-- Unless the contrary is proved, service by post is taken to be effected when the document would be delivered
+-- in the ordinary course of post for the postal service used.
+-- src:563 | (5) Unless the contrary is proved, service of a document by posting it to an individual or a body corporate is taken to be effected at the time at which the document would be delivered in the ordinary course of post for the postal service used.
+@ref s 51(5) (src:563)
+GIVEN `the moment the document would be delivered in the ordinary course of post` IS A Moment
+      `the contrary is proved` IS A BOOLEAN
+      `the moment of service proved, if the contrary is proved` IS A MAYBE Moment
+GIVETH A MAYBE Moment
+`s 51(5): the moment service by post is taken to be effected` MEANS
+    IF `the contrary is proved`
+    THEN `the moment of service proved, if the contrary is proved`
+    ELSE JUST `the moment the document would be delivered in the ordinary course of post`
