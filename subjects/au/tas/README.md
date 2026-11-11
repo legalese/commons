@@ -182,7 +182,7 @@ Total: 15 texts, 2,074,781 characters (each count includes the notice block at t
 - **Regulations not sourced.** The list named no regulations or rules under these Acts, so none were deposited. Among those an encoding may need: the Supreme Court Rules 2000, the Legal Profession Regulations (the costs disclosure thresholds), the Work Health and Safety Regulations, and the Coroners Rules.
 - **Amounts outside the text.** The Civil Liability Act's Amount A and Amount B for non-economic loss are varied each year by notice in the Gazette (s 27(6)), so the current figures are not in the text.
 
-## Sourced 2026-11-12: how Acts and regulations are read
+## Sourced 2026-11-11: how Acts and regulations are read
 
 One Act, text deposited: the Tasmanian Act that supplies the default rules for reading Tasmanian Acts and the regulations made under them, including the definitions of common terms, commencement and expiry, and the way periods of time are counted.
 
