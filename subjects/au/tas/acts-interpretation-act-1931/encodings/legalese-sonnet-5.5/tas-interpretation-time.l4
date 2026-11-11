@@ -1,0 +1,632 @@
+IMPORT prelude
+IMPORT daydate
+
+-- Acts Interpretation Act 1931 (Tasmania): THE RULES FOR COUNTING TIME, in one self-contained module.
+--
+-- This module imports only `prelude` and `daydate`, so that it can be copied unchanged, by itself, into other work.
+-- Its tests are in tas-tests-time.l4.
+-- Every function names what it computes and the section it implements, and carries an @ref to that section.
+--
+-- WHAT THE ACT SAYS ABOUT "DAY", "WEEK", "MONTH" AND "YEAR".
+--   * month: s 46 says "month shall mean calendar month".
+--   * day: the Act does not define it. A day is taken as a calendar date (a DATE), counted from the first moment to the last moment of that date (ss 9(5), 14(2), 16(4)).
+--   * week, year: the Act does not define them (only "financial year", s 45(1)). The functions for periods of weeks and of years return NOTHING.
+--
+-- RETURN VALUES. A function that can fail to answer returns a MAYBE: NOTHING means "the text does not say".
+-- A day of the calendar that does not exist (a 31st in a month of 30 days, 29 February in a common year) is a case the text does not say;
+-- the library's own `add months` clamps to the end of the month, which the text does not provide, so it is not used.
+--
+-- EXCLUDED DAYS (s 29(3)). The caller supplies the dates that are statutory holidays (Statutory Holidays Act 2000) or public holidays throughout the State or in the part of the State where the act is to be done.
+-- A Sunday is an excluded day by the text and is not listed. A Saturday is not an excluded day unless it is one of the listed dates.
+
+-- ---------------------------------------------------------------------------------------------------------------------
+§ `Moments within a day (ss 9(5), 14(2), 16(4))`
+
+DECLARE `Part of a day` IS ONE OF
+    `the first moment of the day`
+    `the last moment of the day`
+
+DECLARE `Moment in a day` HAS
+    `day of the moment`  IS A DATE
+    `part of that day`   IS A `Part of a day`
+
+GIVEN p IS A `Part of a day`
+GIVETH A NUMBER
+`the offset of a part of a day` p MEANS
+    CONSIDER p
+    WHEN `the first moment of the day` THEN 0
+    WHEN `the last moment of the day` THEN 1
+
+GIVEN m IS A `Moment in a day`
+GIVETH A NUMBER
+`the position on the timeline of a moment` m MEANS
+    ((Day (m's `day of the moment`)) TIMES 2) PLUS (`the offset of a part of a day` (m's `part of that day`))
+
+-- src:177 | (5) Where an Act, or a regulation or other instrument or document made, issued, or granted under an Act, is expressed to commence, come into operation, or take effect on a particular day, it shall commence, come into operation, or take effect immediately on the expiration of the last preceding day.
+@ref s 9(5) (src:177)
+GIVEN d IS A DATE
+GIVETH A `Moment in a day`
+`s 9(5): the moment at which an Act or instrument expressed to commence on a day takes effect` d MEANS
+    `Moment in a day` OF d, `the first moment of the day`
+
+@ref s 9(5) (src:177)
+GIVEN d IS A DATE
+GIVETH A `Moment in a day`
+`s 9(5): the moment immediately before an Act or instrument expressed to commence on a day takes effect` d MEANS
+    `Moment in a day` OF (d MINUS 1), `the last moment of the day`
+
+-- src:289 | (2) Where an enactment is expressed to expire, or to cease to operate, on a specified day, or to remain in force until a specified day, the operation thereof shall continue until the last moment of the day so specified.
+@ref s 14(2) (src:289)
+GIVEN d IS A DATE
+GIVETH A `Moment in a day`
+`s 14(2): the last moment of operation of an enactment expressed to expire or remain in force until a specified day` d MEANS
+    `Moment in a day` OF d, `the last moment of the day`
+
+-- src:337 | (4) Where an Act, or a regulation or other instrument or document made, issued, or granted under an Act, is expressed to expire or cease to have effect on a particular day, it shall expire or cease to have effect at the end of that day.
+@ref s 16(4) (src:337)
+GIVEN d IS A DATE
+GIVETH A `Moment in a day`
+`s 16(4): the moment at which an Act or instrument expressed to expire or cease to have effect on a particular day expires` d MEANS
+    `Moment in a day` OF d, `the last moment of the day`
+
+-- src:177 | (5) Where an Act, or a regulation or other instrument or document made, issued, or granted under an Act, is expressed to commence, come into operation, or take effect on a particular day, it shall commence, come into operation, or take effect immediately on the expiration of the last preceding day.
+-- src:289 | (2) Where an enactment is expressed to expire, or to cease to operate, on a specified day, or to remain in force until a specified day, the operation thereof shall continue until the last moment of the day so specified.
+@ref s 9(5) and s 14(2) (src:177) (src:289)
+GIVEN first IS A DATE
+      last IS A DATE
+      m IS A `Moment in a day`
+GIVETH A BOOLEAN
+`s 9(5) and s 14(2): an enactment commencing on a day and expiring on a day is in operation at a moment` first last m MEANS
+        `the position on the timeline of a moment` (`s 9(5): the moment at which an Act or instrument expressed to commence on a day takes effect` first)
+            AT MOST `the position on the timeline of a moment` m
+    AND `the position on the timeline of a moment` m
+            AT MOST `the position on the timeline of a moment` (`s 14(2): the last moment of operation of an enactment expressed to expire or remain in force until a specified day` last)
+
+-- ---------------------------------------------------------------------------------------------------------------------
+§ `Reckoning a period of days (s 29(1), (2))`
+
+-- src:593 | (1) Where by or under any Act any period of time, dated or reckoned from a given day, act, or event, is prescribed or allowed for any purpose that period of time shall be reckoned exclusively of that day, or of the day of that act or event, as the case may be.
+@ref s 29(1) (src:593)
+GIVEN `the given day` IS A DATE
+      days IS A NUMBER
+GIVETH A DATE
+`s 29(1): the last day of a period of days reckoned forwards from` `the given day` `for` days MEANS
+    `the given day` PLUS days
+
+@ref s 29(1) (src:593)
+GIVEN `the given day` IS A DATE
+      days IS A NUMBER
+GIVETH A DATE
+`s 29(1): the first day of a period of days reckoned backwards from` `the given day` `for` days MEANS
+    `the given day` MINUS days
+
+@ref s 29(1) (src:593)
+GIVEN `the given day` IS A DATE
+      days IS A NUMBER
+      d IS A DATE
+GIVETH A BOOLEAN
+`s 29(1): a day is counted in a period of days reckoned forwards from` `the given day` `for` days `namely` d MEANS
+        d GREATER THAN `the given day`
+    AND d AT MOST `the given day` PLUS days
+
+-- src:595 | (2) Where by or under an Act a period is expressed to be a specified number of clear days or a specified number of days at least, that period shall be reckoned exclusively both of the given day or of the day of the specified act or event and also of the day on which the purpose is to be fulfilled.
+@ref s 29(2) (src:595)
+GIVEN `the given day` IS A DATE
+      days IS A NUMBER
+GIVETH A DATE
+`s 29(2): the earliest day on which the purpose may be fulfilled after a number of clear days from` `the given day` `for` days MEANS
+    (`the given day` PLUS days) PLUS 1
+
+@ref s 29(2) (src:595)
+GIVEN `the given day` IS A DATE
+      days IS A NUMBER
+GIVETH A DATE
+`s 29(2): the latest day on which the purpose may be fulfilled before a number of clear days from` `the given day` `for` days MEANS
+    (`the given day` MINUS days) MINUS 1
+
+-- ---------------------------------------------------------------------------------------------------------------------
+§ `Sundays and the other excluded days (s 29(3), (5))`
+
+-- src:597 | (3) Where any time, or the first or last day (according as it is reckoned backwards or forwards) of any period of time, prescribed or allowed for the doing of any act or thing falls on a Sunday or on any day which is a statutory holiday as defined in the Statutory Holidays Act 2000 or a public holiday throughout the State or in that part of the State where the act or thing is to be, or may be, done (which days are in this section referred to as excluded days) the act or thing –
+-- src:599 | (a) if the time or period of time is reckoned forwards, shall be considered as done in due time if it is done on the next day afterwards, not being an excluded day; and
+-- src:601 | (b) if the time or period of time is reckoned backwards, shall not be considered as done in due time unless it is done on the next day before, not being an excluded day.
+@ref s 29(3) (src:597-601)
+GIVEN d IS A DATE
+GIVETH A BOOLEAN
+`s 29(3): a day is a Sunday` d MEANS
+    ((Day d) MODULO 7) EQUALS 0
+
+@ref s 29(3) (src:597-601)
+GIVEN d IS A DATE
+      holidays IS A LIST OF DATE
+GIVETH A BOOLEAN
+`s 29(3): a day is an excluded day` d holidays MEANS
+        `s 29(3): a day is a Sunday` d
+    OR elem d holidays
+
+@ref s 29(3) (src:597-601)
+GIVEN d IS A DATE
+      holidays IS A LIST OF DATE
+GIVETH A DATE
+`s 29(3): the next day afterwards not being an excluded day` d holidays MEANS
+    IF `s 29(3): a day is an excluded day` (d PLUS 1) holidays
+    THEN `s 29(3): the next day afterwards not being an excluded day` (d PLUS 1) holidays
+    ELSE d PLUS 1
+
+@ref s 29(3) (src:597-601)
+GIVEN d IS A DATE
+      holidays IS A LIST OF DATE
+GIVETH A DATE
+`s 29(3): the next day before not being an excluded day` d holidays MEANS
+    IF `s 29(3): a day is an excluded day` (d MINUS 1) holidays
+    THEN `s 29(3): the next day before not being an excluded day` (d MINUS 1) holidays
+    ELSE d MINUS 1
+
+-- src:599 | (a) if the time or period of time is reckoned forwards, shall be considered as done in due time if it is done on the next day afterwards, not being an excluded day; and
+@ref s 29(3)(a) (src:599)
+GIVEN `the last day` IS A DATE
+      holidays IS A LIST OF DATE
+GIVETH A DATE
+`s 29(3)(a): the last day on which an act is in due time, a time reckoned forwards ending on` `the last day` holidays MEANS
+    IF `s 29(3): a day is an excluded day` `the last day` holidays
+    THEN `s 29(3): the next day afterwards not being an excluded day` `the last day` holidays
+    ELSE `the last day`
+
+-- src:601 | (b) if the time or period of time is reckoned backwards, shall not be considered as done in due time unless it is done on the next day before, not being an excluded day.
+@ref s 29(3)(b) (src:601)
+GIVEN `the first day` IS A DATE
+      holidays IS A LIST OF DATE
+GIVETH A DATE
+`s 29(3)(b): the day on or before which an act is in due time, a time reckoned backwards ending on` `the first day` holidays MEANS
+    IF `s 29(3): a day is an excluded day` `the first day` holidays
+    THEN `s 29(3): the next day before not being an excluded day` `the first day` holidays
+    ELSE `the first day`
+
+-- src:605 | (5) Where any act or proceeding is directed or allowed to be done on a particular day so fixed or prescribed that subsection (3) is not applicable, then if that day happens to be an excluded day, the act or proceeding shall be considered as done or taken in due time if it is done or taken on the next day afterwards, not being an excluded day.
+@ref s 29(5) (src:605)
+GIVEN `the particular day` IS A DATE
+      `subsection (3) is applicable` IS A BOOLEAN
+      holidays IS A LIST OF DATE
+GIVETH A MAYBE DATE
+`s 29(5): the day on which an act directed or allowed to be done on a particular day is in due time` `the particular day` `where` `subsection (3) is applicable` holidays MEANS
+    IF `subsection (3) is applicable`
+    THEN NOTHING
+    ELSE JUST (`s 29(3)(a): the last day on which an act is in due time, a time reckoned forwards ending on` `the particular day` holidays)
+
+-- ---------------------------------------------------------------------------------------------------------------------
+§ `Filing and registration when the office is not open (s 29(4))`
+
+-- src:603 | (4) Where the last day of the period prescribed or allowed for the filing or registration of a document or instrument falls on a day on which the office in which the filing or registration is to be effected is not open, the document or instrument may be filed or registered on the next ensuing day on which the office is open.
+@ref s 29(4) (src:603)
+GIVEN `the last day` IS A DATE
+      `the office is open on the last day` IS A BOOLEAN
+      `the next ensuing day on which the office is open` IS A DATE
+GIVETH A MAYBE DATE
+`s 29(4): the last day on which a document may be filed or registered` `the last day` `when` `the office is open on the last day` `and next open on` `the next ensuing day on which the office is open` MEANS
+    IF `the office is open on the last day`
+    THEN JUST `the last day`
+    ELSE IF `the next ensuing day on which the office is open` GREATER THAN `the last day`
+         THEN JUST `the next ensuing day on which the office is open`
+         ELSE NOTHING
+
+-- ---------------------------------------------------------------------------------------------------------------------
+§ `A time not exceeding 6 days (s 29(6))`
+
+GIVEN start IS A DATE
+      remaining IS A NUMBER
+      holidays IS A LIST OF DATE
+GIVETH A DATE
+`s 29(6): the day reached by counting days forwards from a day, excluded days not reckoned` start remaining holidays MEANS
+    IF remaining AT MOST 0
+    THEN start
+    ELSE IF `s 29(3): a day is an excluded day` (start PLUS 1) holidays
+         THEN `s 29(6): the day reached by counting days forwards from a day, excluded days not reckoned` (start PLUS 1) remaining holidays
+         ELSE `s 29(6): the day reached by counting days forwards from a day, excluded days not reckoned` (start PLUS 1) (remaining MINUS 1) holidays
+
+GIVEN start IS A DATE
+      remaining IS A NUMBER
+      holidays IS A LIST OF DATE
+GIVETH A DATE
+`s 29(6): the day reached by counting days backwards from a day, excluded days not reckoned` start remaining holidays MEANS
+    IF remaining AT MOST 0
+    THEN start
+    ELSE IF `s 29(3): a day is an excluded day` (start MINUS 1) holidays
+         THEN `s 29(6): the day reached by counting days backwards from a day, excluded days not reckoned` (start MINUS 1) remaining holidays
+         ELSE `s 29(6): the day reached by counting days backwards from a day, excluded days not reckoned` (start MINUS 1) (remaining MINUS 1) holidays
+
+-- src:607 | (6) When an act or proceeding is directed or allowed to be done or taken within any time not exceeding 6 days, excluded days shall not be reckoned in the computation of time.
+@ref s 29(6) (src:607)
+GIVEN `the given day` IS A DATE
+      days IS A NUMBER
+      holidays IS A LIST OF DATE
+GIVETH A MAYBE DATE
+`s 29(6): the last day of a time not exceeding 6 days reckoned forwards from` `the given day` `for` days `excluding the excluded days` holidays MEANS
+    IF days AT LEAST 1 AND days AT MOST 6
+    THEN JUST (`s 29(6): the day reached by counting days forwards from a day, excluded days not reckoned` `the given day` days holidays)
+    ELSE NOTHING
+
+@ref s 29(6) (src:607)
+GIVEN `the given day` IS A DATE
+      days IS A NUMBER
+      holidays IS A LIST OF DATE
+GIVETH A MAYBE DATE
+`s 29(6): the first day of a time not exceeding 6 days reckoned backwards from` `the given day` `for` days `excluding the excluded days` holidays MEANS
+    IF days AT LEAST 1 AND days AT MOST 6
+    THEN JUST (`s 29(6): the day reached by counting days backwards from a day, excluded days not reckoned` `the given day` days holidays)
+    ELSE NOTHING
+
+-- src:593 | (1) Where by or under any Act any period of time, dated or reckoned from a given day, act, or event, is prescribed or allowed for any purpose that period of time shall be reckoned exclusively of that day, or of the day of that act or event, as the case may be.
+-- src:599 | (a) if the time or period of time is reckoned forwards, shall be considered as done in due time if it is done on the next day afterwards, not being an excluded day; and
+-- src:607 | (6) When an act or proceeding is directed or allowed to be done or taken within any time not exceeding 6 days, excluded days shall not be reckoned in the computation of time.
+@ref s 29(1), (3)(a) and (6) (src:593) (src:599) (src:607)
+GIVEN `the given day` IS A DATE
+      days IS A NUMBER
+      holidays IS A LIST OF DATE
+GIVETH A DATE
+`s 29: the last day for doing an act within a number of days reckoned forwards from` `the given day` `for` days `with the excluded days` holidays MEANS
+    IF days AT LEAST 1 AND days AT MOST 6
+    THEN `s 29(6): the day reached by counting days forwards from a day, excluded days not reckoned` `the given day` days holidays
+    ELSE `s 29(3)(a): the last day on which an act is in due time, a time reckoned forwards ending on` (`s 29(1): the last day of a period of days reckoned forwards from` `the given day` `for` days) holidays
+
+-- ---------------------------------------------------------------------------------------------------------------------
+§ `Calendar months, years and weeks (ss 29(1), 46)`
+
+GIVEN start IS A DATE
+      months IS A NUMBER
+GIVETH A MAYBE DATE
+`s 46: the day of the same number in the month reached by counting calendar months from` start `by` months MEANS
+    IF DATE_DAY start AT MOST `Days in month` targetMonth targetYear
+    THEN JUST (Date (DATE_DAY start) targetMonth targetYear)
+    ELSE NOTHING
+    WHERE
+        monthIndex MEANS ((DATE_YEAR start) TIMES 12) PLUS ((DATE_MONTH start) MINUS 1) PLUS months
+        targetYear MEANS FLOOR (monthIndex DIVIDED BY 12)
+        targetMonth MEANS (monthIndex MODULO 12) PLUS 1
+
+-- src:593 | (1) Where by or under any Act any period of time, dated or reckoned from a given day, act, or event, is prescribed or allowed for any purpose that period of time shall be reckoned exclusively of that day, or of the day of that act or event, as the case may be.
+-- src:1047 | month shall mean calendar month;
+@ref s 29(1) and s 46 (src:593) (src:1047)
+GIVEN `the given day` IS A DATE
+      months IS A NUMBER
+GIVETH A MAYBE DATE
+`s 29(1) and s 46: the last day of a period of calendar months reckoned forwards from` `the given day` `for` months MEANS
+    `s 46: the day of the same number in the month reached by counting calendar months from` `the given day` `by` months
+
+@ref s 29(1) and s 46 (src:593) (src:1047)
+GIVEN `the given day` IS A DATE
+      months IS A NUMBER
+GIVETH A MAYBE DATE
+`s 29(1) and s 46: the first day of a period of calendar months reckoned backwards from` `the given day` `for` months MEANS
+    `s 46: the day of the same number in the month reached by counting calendar months from` `the given day` `by` (0 MINUS months)
+
+@ref s 29(1) and s 46 (src:593) (src:1047)
+GIVEN `the given day` IS A DATE
+      months IS A NUMBER
+      holidays IS A LIST OF DATE
+GIVETH A MAYBE DATE
+`s 29(3)(a) and s 46: the last day on which an act is in due time, a period of calendar months reckoned forwards from` `the given day` `for` months `with the excluded days` holidays MEANS
+    CONSIDER `s 29(1) and s 46: the last day of a period of calendar months reckoned forwards from` `the given day` `for` months
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST last THEN JUST (`s 29(3)(a): the last day on which an act is in due time, a time reckoned forwards ending on` last holidays)
+
+-- The Act defines no "year" and no "week" (only "financial year", s 45(1)), so these two answer NOTHING for every start day and every count.
+-- src:593 | (1) Where by or under any Act any period of time, dated or reckoned from a given day, act, or event, is prescribed or allowed for any purpose that period of time shall be reckoned exclusively of that day, or of the day of that act or event, as the case may be.
+-- src:1047 | month shall mean calendar month;
+@ref s 29(1) and s 46 (src:593) (src:1047)
+GIVEN `the given day` IS A DATE
+      years IS A NUMBER
+GIVETH A MAYBE DATE
+`s 29(1): the last day of a period of years reckoned forwards from` `the given day` `for` years MEANS
+    NOTHING
+
+@ref s 29(1) and s 46 (src:593) (src:1047)
+GIVEN `the given day` IS A DATE
+      weeks IS A NUMBER
+GIVETH A MAYBE DATE
+`s 29(1): the last day of a period of weeks reckoned forwards from` `the given day` `for` weeks MEANS
+    NOTHING
+
+-- ---------------------------------------------------------------------------------------------------------------------
+§ `The financial year (s 45(1))`
+
+-- src:939 | financial year, in respect of any matter relating to the Public Account, or to money provided by Parliament, or to the Treasury, or to taxes or finance, or to accounting or reporting to the Treasurer as to public money, shall mean the period of 12 months terminating on the last day of June;
+@ref s 45(1) financial year (src:939)
+GIVEN year IS A NUMBER
+GIVETH A DATE
+`s 45(1): the last day of the financial year ending in the year` year MEANS
+    Date 30 6 year
+
+@ref s 45(1) financial year (src:939)
+GIVEN year IS A NUMBER
+GIVETH A DATE
+`s 45(1): the first day of the financial year ending in the year` year MEANS
+    Date 1 7 (year MINUS 1)
+
+@ref s 45(1) financial year (src:939)
+GIVEN d IS A DATE
+GIVETH A NUMBER
+`s 45(1): the year in which the financial year containing a day ends` d MEANS
+    IF DATE_MONTH d AT LEAST 7 THEN (DATE_YEAR d) PLUS 1 ELSE DATE_YEAR d
+
+-- ---------------------------------------------------------------------------------------------------------------------
+§ `When an Act commences (s 9)`
+
+-- The commencement of section 8 of the Acts Interpretation Amendment Act 1981 is not among the deposited sources, so the caller supplies it.
+-- src:169 | (2) Every Act to which the Royal Assent has been given by the Governor for or on behalf of the Sovereign before the commencement of section 8 of the Acts Interpretation Amendment Act 1981 shall, unless the contrary intention appears in the first-mentioned Act, be deemed to have come into operation on the day on which that Act received the Royal Assent.
+@ref s 9(2) (src:169)
+GIVEN `the day of Royal Assent` IS A DATE
+      `the day section 8 of the 1981 Amendment Act commenced` IS A DATE
+      `the Act shows a contrary intention` IS A BOOLEAN
+GIVETH A MAYBE DATE
+`s 9(2): the day an Act assented to before the commencement of section 8 of the 1981 Amendment Act is deemed to have come into operation` `the day of Royal Assent` `with` `the day section 8 of the 1981 Amendment Act commenced` `and` `the Act shows a contrary intention` MEANS
+    IF `the Act shows a contrary intention` OR `the day of Royal Assent` AT LEAST `the day section 8 of the 1981 Amendment Act commenced`
+    THEN NOTHING
+    ELSE JUST `the day of Royal Assent`
+
+-- src:171 | (3) Every Act to which the Royal Assent is given by the Governor for and on behalf of the Sovereign on or after the date of commencement of section 8 of the Acts Interpretation Amendment Act 1981 shall, unless the contrary intention appears in the first-mentioned Act, come into operation on the fourteenth day after the day on which that Act receives the Royal Assent.
+@ref s 9(3) (src:171)
+GIVEN `the day of Royal Assent` IS A DATE
+      `the day section 8 of the 1981 Amendment Act commenced` IS A DATE
+      `the Act shows a contrary intention` IS A BOOLEAN
+GIVETH A MAYBE DATE
+`s 9(3): the day an Act assented to on or after the commencement of section 8 of the 1981 Amendment Act comes into operation` `the day of Royal Assent` `with` `the day section 8 of the 1981 Amendment Act commenced` `and` `the Act shows a contrary intention` MEANS
+    IF `the Act shows a contrary intention` OR `the day of Royal Assent` BELOW `the day section 8 of the 1981 Amendment Act commenced`
+    THEN NOTHING
+    ELSE JUST (`s 29(1): the last day of a period of days reckoned forwards from` `the day of Royal Assent` `for` 14)
+
+-- src:173 | (3A) Despite subsection (3), if a provision of an Act provides that the Act or a portion of the Act commences on a day, or a day or days, to be proclaimed, that provision and the provision providing for the short title of the Act come into operation on the day on which the Act receives the Royal Assent unless the Act expressly provides otherwise.
+@ref s 9(3A) (src:173)
+GIVEN `the day of Royal Assent` IS A DATE
+      `the Act provides for commencement on a day or days to be proclaimed` IS A BOOLEAN
+      `the Act expressly provides otherwise` IS A BOOLEAN
+GIVETH A MAYBE DATE
+`s 9(3A): the day the provision for commencement by proclamation and the short title provision come into operation` `the day of Royal Assent` `where` `the Act provides for commencement on a day or days to be proclaimed` `and` `the Act expressly provides otherwise` MEANS
+    IF `the Act provides for commencement on a day or days to be proclaimed` AND NOT (`the Act expressly provides otherwise`)
+    THEN JUST `the day of Royal Assent`
+    ELSE NOTHING
+
+-- src:175 | (4) Every Act reserved for the signification of the Sovereign's pleasure after the commencement of section 8 of the Acts Interpretation Amendment Act 1981 shall, unless the contrary intention appears in that Act, come into operation on the day after the day on which a proclamation of the Governor signifying the Sovereign's assent is published or notified in the Gazette.
+@ref s 9(4) (src:175)
+GIVEN `the day the proclamation signifying the Sovereign's assent was published or notified in the Gazette` IS A DATE
+      `the day the Act was reserved` IS A DATE
+      `the day section 8 of the 1981 Amendment Act commenced` IS A DATE
+      `the Act shows a contrary intention` IS A BOOLEAN
+GIVETH A MAYBE DATE
+`s 9(4): the day an Act reserved for the signification of the Sovereign's pleasure comes into operation` `the day the proclamation signifying the Sovereign's assent was published or notified in the Gazette` `after reservation on` `the day the Act was reserved` `with` `the day section 8 of the 1981 Amendment Act commenced` `and` `the Act shows a contrary intention` MEANS
+    IF `the Act shows a contrary intention` OR `the day the Act was reserved` BELOW `the day section 8 of the 1981 Amendment Act commenced`
+    THEN NOTHING
+    ELSE JUST (`s 29(1): the last day of a period of days reckoned forwards from` `the day the proclamation signifying the Sovereign's assent was published or notified in the Gazette` `for` 1)
+
+-- ---------------------------------------------------------------------------------------------------------------------
+§ `Dates the Act names (ss 6(7), 14(1), 44, 46)`
+
+-- src:91 | (7) Every Act passed after 5th August 1853 shall be a public Act and shall be judicially noticed as such unless the contrary is expressly provided by that Act.
+@ref s 6(7) (src:91)
+GIVEN `the day an Act was passed` IS A DATE
+GIVETH A BOOLEAN
+`s 6(7): an Act was passed after 5th August 1853` `the day an Act was passed` MEANS
+    `the day an Act was passed` GREATER THAN Date 5 8 1853
+
+-- src:287 | (1) Where an Act, passed after 5th August 1853, repeals an enactment by which any former enactment was repealed, it shall not have the effect of reviving such former enactment unless express words for that purpose are included in such repealing Act.
+@ref s 14(1) (src:287)
+GIVEN `the day an Act was passed` IS A DATE
+GIVETH A BOOLEAN
+`s 14(1): a repealing Act was passed after 5th August 1853` `the day an Act was passed` MEANS
+    `the day an Act was passed` GREATER THAN Date 5 8 1853
+
+-- src:915 | Imperial Parliament shall mean the Parliament of the United Kingdom of Great Britain and Ireland or the Parliament of the United Kingdom of Great Britain and Northern Ireland, according as it relates to a matter before or since 12th April 1927;
+@ref s 44 Imperial Parliament (src:915)
+GIVEN `the day of the matter` IS A DATE
+GIVETH A MAYBE BOOLEAN
+`s 44: a matter is before 12th April 1927` `the day of the matter` MEANS
+    IF `the day of the matter` BELOW Date 12 4 1927
+    THEN JUST TRUE
+    ELSE IF `the day of the matter` GREATER THAN Date 12 4 1927
+         THEN JUST FALSE
+         ELSE NOTHING
+
+-- src:1089 | Supreme Court shall mean the Supreme Court of Tasmania, and shall include the Supreme Court as first constituted under letters patent under the Great Seal of the United Kingdom, dated 13th October 1823;
+@ref s 46 Supreme Court (src:1089)
+GIVETH A DATE
+`s 46: the date of the letters patent under the Great Seal that first constituted the Supreme Court` MEANS
+    Date 13 10 1823
+
+-- ---------------------------------------------------------------------------------------------------------------------
+§ `Instruments that take effect from publication or notification (ss 38A(2), 47(3))`
+
+-- src:765 | (c) in the case of –
+-- src:767 | (i) a proclamation made under an Act that fixes the day of the commencement of that Act or a provision of that Act;
+-- src:769 | (ii) an order-in-council made under an Act that fixes the day of the commencement of a provision of that Act; or
+-- src:771 | (iii) a prescribed instrument that fixes the day of the commencement of a provision of an Act –
+-- src:773 | the day so fixed shall be a day on or after the date of publication of the proclamation, order-in-council, or prescribed instrument in the Gazette or, as the case may be, a day on or after the date of notification in the Gazette of the making of the proclamation, order-in-council, or prescribed instrument;
+@ref s 38A(2)(c) (src:765-773)
+GIVEN `the day fixed` IS A DATE
+      `the day of publication or notification in the Gazette` IS A DATE
+GIVETH A BOOLEAN
+`s 38A(2)(c): the day fixed for commencement is a day on or after publication or notification in the Gazette` `the day fixed` `after` `the day of publication or notification in the Gazette` MEANS
+    `the day fixed` AT LEAST `the day of publication or notification in the Gazette`
+
+-- src:775 | (d) except in the case of any proclamation, order-in-council, or prescribed instrument to which paragraph (c) applies, the proclamation, order-in-council, or prescribed instrument shall take effect –
+-- src:777 | (i) on or from a day or date that is specified for the purpose in the proclamation, order-in-council, or prescribed instrument or that is ascertainable by reference to a period of time reckoned prospectively or retrospectively from the date of publication of the proclamation, order-in-council, or prescribed instrument in the Gazette or, as the case may be, the date of notification in the Gazette of the making of the proclamation, order-in-council, or prescribed instrument; or
+-- src:779 | (ii) if no such day or date is so specified or ascertainable, on the date of publication of the proclamation, order-in-council, or prescribed instrument in the Gazette or, as the case may be, on the date of notification in the Gazette of the making of the proclamation, order-in-council, or prescribed instrument –
+-- src:781 | but the proclamation, order-in-council, or prescribed instrument shall not be expressed to take effect on or from a day or date preceding that date of publication or notification in the Gazette where, if the proclamation, order-in-council, or prescribed instrument were so to take effect –
+-- src:783 | (iii) the rights or privileges of a person (other than the Crown in right of the State, or any department, instrumentality, authority, or agency of the State) existing at the date of that publication or notification would be prejudiced; or
+-- src:785 | (iv) liabilities or obligations would be imposed on any person (other than the Crown in right of the State, or any department, instrumentality, authority, or agency of the State) in respect of anything done or omitted to be done on or before that date of publication or notification.
+@ref s 38A(2)(d) (src:775-785)
+GIVEN `the day specified or ascertainable` IS A MAYBE DATE
+      `the day of publication or notification in the Gazette` IS A DATE
+GIVETH A DATE
+`s 38A(2)(d): the day an instrument other than one fixing a commencement day takes effect` `the day specified or ascertainable` `after` `the day of publication or notification in the Gazette` MEANS
+    CONSIDER `the day specified or ascertainable`
+    WHEN NOTHING THEN `the day of publication or notification in the Gazette`
+    WHEN JUST d THEN d
+
+@ref s 38A(2)(d) (src:775-785)
+GIVEN `the day it is expressed to take effect` IS A DATE
+      `the day of publication or notification in the Gazette` IS A DATE
+      `rights or privileges of a person other than the Crown would be prejudiced` IS A BOOLEAN
+      `liabilities or obligations would be imposed on a person other than the Crown` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 38A(2)(d): an instrument may not be expressed to take effect on a day before publication or notification` `the day it is expressed to take effect` `after` `the day of publication or notification in the Gazette` `with` `rights or privileges of a person other than the Crown would be prejudiced` `and` `liabilities or obligations would be imposed on a person other than the Crown` MEANS
+    IF `the day it is expressed to take effect` AT LEAST `the day of publication or notification in the Gazette`
+    THEN NOTHING   -- a scope limit with no "only": the bar speaks of a day preceding the date of publication or notification
+    ELSE IF `rights or privileges of a person other than the Crown would be prejudiced` OR `liabilities or obligations would be imposed on a person other than the Crown`
+         THEN JUST TRUE   -- the text's "shall not be expressed"
+         ELSE JUST FALSE   -- a failed "where"
+
+-- src:1195 | (a) if the regulations are not statutory rules within the meaning of the Rules Publication Act 1953 or are exempted from the operation of that Act, the regulations shall be published in the Gazette within 21 days after the day on which they are made;
+@ref s 47(3)(a) (src:1195)
+GIVEN `the day the regulations are made` IS A DATE
+GIVETH A DATE
+`s 47(3)(a) and (b): the last day for publication or notification of regulations in the Gazette` `the day the regulations are made` MEANS
+    `s 29(1): the last day of a period of days reckoned forwards from` `the day the regulations are made` `for` 21
+
+-- src:1197 | (b) if the regulations are statutory rules within that meaning, the making of the regulations shall be notified in the Gazette within 21 days after the day on which they are made;
+@ref s 47(3)(b) (src:1197)
+GIVEN `the day the regulations are made` IS A DATE
+      `the day of publication or notification in the Gazette` IS A DATE
+GIVETH A BOOLEAN
+`s 47(3)(a) and (b): the regulations were published or notified in the Gazette within 21 days after the day they were made` `the day the regulations are made` `and` `the day of publication or notification in the Gazette` MEANS
+        `the day of publication or notification in the Gazette` AT LEAST `the day the regulations are made`
+    AND `the day of publication or notification in the Gazette` AT MOST `s 47(3)(a) and (b): the last day for publication or notification of regulations in the Gazette` `the day the regulations are made`
+
+-- The sitting days of a House are supplied by the caller (s 44: days on which the House actually sits).
+GIVEN n IS A NUMBER
+      `the given day` IS A DATE
+      `sitting days` IS A LIST OF DATE
+GIVETH A MAYBE DATE
+`s 44: the sitting day of a House that is the number given after a day` n `after` `the given day` `among` `sitting days` MEANS
+    IF count later AT LEAST n AND n AT LEAST 1
+    THEN JUST (at later (n MINUS 1))
+    ELSE NOTHING
+    WHERE
+        later MEANS filter (GIVEN s YIELD s GREATER THAN `the given day`) `sitting days`
+
+-- src:1199 | (c) the regulations shall be laid before each House of Parliament within the first 10 sitting days of the House after the regulations are so published or, as the case may be, the making of the regulations is so notified;
+@ref s 47(3)(c) (src:1199)
+GIVEN `the day of publication or notification in the Gazette` IS A DATE
+      `sitting days` IS A LIST OF DATE
+GIVETH A MAYBE DATE
+`s 47(3)(c): the last of the first 10 sitting days of the House after publication or notification` `the day of publication or notification in the Gazette` `among` `sitting days` MEANS
+    `s 44: the sitting day of a House that is the number given after a day` 10 `after` `the day of publication or notification in the Gazette` `among` `sitting days`
+
+-- src:1223 | (4) If either House of Parliament passes a resolution, of which notice has been given within the first 15 sitting days of such House after any regulation is laid before it, that such regulation be disallowed, such regulation thereupon shall be void and thenceforth shall cease to have effect except as regards anything done thereunder prior to the passing of such resolution.
+@ref s 47(4) (src:1223)
+GIVEN `the day the regulation is laid before the House` IS A DATE
+      `sitting days` IS A LIST OF DATE
+GIVETH A MAYBE DATE
+`s 47(4): the last of the first 15 sitting days of the House after a regulation is laid before it` `the day the regulation is laid before the House` `among` `sitting days` MEANS
+    `s 44: the sitting day of a House that is the number given after a day` 15 `after` `the day the regulation is laid before the House` `among` `sitting days`
+
+-- src:1229 | (7) Where a regulation, or any part thereof, has been disallowed as aforesaid by either House of Parliament, no regulation to the same, or substantially the same, effect made within 12 months after such disallowance shall take effect until the same has been laid upon the table of such House and 30 sitting days of such House have elapsed after the same was so laid, unless such House shall have sooner passed a resolution allowing the same.
+@ref s 47(7) (src:1229)
+GIVEN `the day of disallowance` IS A DATE
+GIVETH A MAYBE DATE
+`s 47(7): the last day of the 12 months after the disallowance of a regulation` `the day of disallowance` MEANS
+    `s 29(1) and s 46: the last day of a period of calendar months reckoned forwards from` `the day of disallowance` `for` 12
+
+@ref s 47(7) (src:1229)
+GIVEN `the day the regulation is laid upon the table` IS A DATE
+      `sitting days` IS A LIST OF DATE
+GIVETH A MAYBE DATE
+`s 47(7): the 30th sitting day of the House after the regulation is laid upon the table` `the day the regulation is laid upon the table` `among` `sitting days` MEANS
+    `s 44: the sitting day of a House that is the number given after a day` 30 `after` `the day the regulation is laid upon the table` `among` `sitting days`
+
+-- ---------------------------------------------------------------------------------------------------------------------
+§ `Service by post (s 30)`
+
+-- src:639 | (1) Where any Act, including this Act, authorizes or requires any notice or other document to be given, sent, served, or delivered by post, such giving, sending, serving, or delivery shall be deemed to be effected by properly addressing and posting the document as a letter and paying for that postage (whether before or after the letter is posted) and, unless the contrary is proved, shall be deemed to have been effected at the time when the letter would be delivered in the ordinary course of post.
+@ref s 30(1) (src:639)
+GIVEN `properly addressed and posted as a letter, postage paid` IS A BOOLEAN
+      `the day the letter would be delivered in the ordinary course of post` IS A DATE
+      `the contrary is proved` IS A BOOLEAN
+GIVETH A MAYBE DATE
+`s 30(1): the day service by post is deemed to have been effected` `properly addressed and posted as a letter, postage paid` `and` `the day the letter would be delivered in the ordinary course of post` `where` `the contrary is proved` MEANS
+    IF `properly addressed and posted as a letter, postage paid` AND NOT (`the contrary is proved`)
+    THEN JUST `the day the letter would be delivered in the ordinary course of post`
+    ELSE NOTHING
+
+-- src:641 | (2) When an Act authorizes or requires any notice or other document to be given, sent, served, or delivered by registered post, the giving, sending, serving, or delivery thereof shall be deemed to be effected by properly addressing and posting the notice or document as a letter and paying for that postage (whether before or after the letter is posted) –
+-- src:643 | (a) duly registered; or
+-- src:645 | (b) unless the contrary intention appears in that Act, sent by means of the certified mail service –
+-- src:647 | as provided by the postal regulations as in force for the time being, and, unless the contrary is proved, shall be deemed to have been effected at the time when the letter would be delivered in the ordinary course of post.
+@ref s 30(2) (src:641-647)
+GIVEN `properly addressed and posted as a letter, postage paid` IS A BOOLEAN
+      `duly registered` IS A BOOLEAN
+      `sent by means of the certified mail service` IS A BOOLEAN
+      `the contrary intention appears in that Act` IS A BOOLEAN
+      `the day the letter would be delivered in the ordinary course of post` IS A DATE
+      `the contrary is proved` IS A BOOLEAN
+GIVETH A MAYBE DATE
+`s 30(2): the day service by registered post is deemed to have been effected` `properly addressed and posted as a letter, postage paid` `and` `duly registered` `or` `sent by means of the certified mail service` `unless` `the contrary intention appears in that Act` `with` `the day the letter would be delivered in the ordinary course of post` `where` `the contrary is proved` MEANS
+    IF `properly addressed and posted as a letter, postage paid` AND (`duly registered` OR (`sent by means of the certified mail service` AND NOT (`the contrary intention appears in that Act`))) AND NOT (`the contrary is proved`)
+    THEN JUST `the day the letter would be delivered in the ordinary course of post`
+    ELSE NOTHING
+
+-- ---------------------------------------------------------------------------------------------------------------------
+§ `Other periods the Act states (ss 10A(2), 21(3)(b), 38(2)(c), 46C(2), 47(10), (11))`
+
+GIVEN a IS A DATE
+      b IS A DATE
+GIVETH A DATE
+`the earlier of two days` a b MEANS
+    IF a AT MOST b THEN a ELSE b
+
+-- src:403 | (b) if he is not so reappointed and no other person is appointed in his stead, the first-mentioned person may, until –
+-- src:405 | (i) the date on which some other person is appointed in his stead; or
+-- src:407 | (ii) a date not later than 6 months after the expiration of that term –
+-- src:409 | whichever is the earlier date, continue to exercise and perform all the powers, authorities, functions, and duties conferred or imposed upon, or appertaining to, the holder of that office or place as validly and effectually for all purposes as if he had been duly reappointed thereto.
+@ref s 21(3)(b) (src:403-409)
+GIVEN `the day the term expired` IS A DATE
+      `the day some other person is appointed in his stead` IS A MAYBE DATE
+GIVETH A MAYBE DATE
+`s 21(3)(b): the last day on which the holder may continue to exercise the powers after a fixed term` `the day the term expired` `with` `the day some other person is appointed in his stead` MEANS
+    CONSIDER `s 29(1) and s 46: the last day of a period of calendar months reckoned forwards from` `the day the term expired` `for` 6
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST limit THEN
+        CONSIDER `the day some other person is appointed in his stead`
+        WHEN NOTHING THEN JUST limit
+        WHEN JUST appointed THEN JUST (`the earlier of two days` appointed limit)
+
+-- src:193 | (2) Subsection (1) applies only in respect of a provision of an Act if that provision is passed after the commencement of the Justice Legislation (Miscellaneous Amendments) Act 2000.
+@ref s 10A(2) (src:193)
+GIVEN `the day the provision was passed` IS A DATE
+      `the day the 2000 Amendment Act commenced` IS A DATE
+GIVETH A BOOLEAN
+`s 10A(2): a provision was passed after the commencement of the Justice Legislation (Miscellaneous Amendments) Act 2000` `the day the provision was passed` `with` `the day the 2000 Amendment Act commenced` MEANS
+    `the day the provision was passed` AT LEAST `the day the 2000 Amendment Act commenced`
+
+-- src:735 | (c) makes an offence punishable by imprisonment for a term exceeding 3 years without specifying or indicating that the offence is to be dealt with summarily –
+-- src:737 | proceedings in respect of the crime or offence shall be by indictment in accordance with the provisions of the Criminal Code.
+@ref s 38(2)(c) (src:735-737)
+GIVEN `the term of imprisonment in years` IS A NUMBER
+GIVETH A BOOLEAN
+`s 38(2)(c): a term of imprisonment exceeds 3 years` `the term of imprisonment in years` MEANS
+    `the term of imprisonment in years` GREATER THAN 3
+
+-- src:1235 | (10) Every regulation made after the passing of this Act and before the commencement of the Legislation Publication Act 1996 shall be filed and recorded in the office of the Attorney-General, but no regulation shall be challenged, or the validity thereof impugned, on the ground of the non-observance of this provision, nor shall it be necessary to prove compliance therewith in any proceedings under or in relation to such regulation.
+@ref s 47(10) (src:1235)
+GIVEN `the day the regulation was made` IS A DATE
+      `the day the Legislation Publication Act 1996 commenced` IS A DATE
+GIVETH A BOOLEAN
+`s 47(10): a regulation was made before the commencement of the Legislation Publication Act 1996` `the day the regulation was made` `with` `the day the Legislation Publication Act 1996 commenced` MEANS
+    `the day the regulation was made` BELOW `the day the Legislation Publication Act 1996 commenced`
+
+-- src:1237 | (11) Every regulation made on or after the commencement of the Legislation Publication Act 1996 is to be filed and recorded by the Chief Parliamentary Counsel in the responsible Department in relation to the Legislation Publication Act 1996.
+@ref s 47(11) (src:1237)
+GIVEN `the day the regulation was made` IS A DATE
+      `the day the Legislation Publication Act 1996 commenced` IS A DATE
+GIVETH A BOOLEAN
+`s 47(11): a regulation was made on or after the commencement of the Legislation Publication Act 1996` `the day the regulation was made` `with` `the day the Legislation Publication Act 1996 commenced` MEANS
+    `the day the regulation was made` AT LEAST `the day the Legislation Publication Act 1996 commenced`
+
+-- src:1165 | (2) Each provision of a written law enacted or made or purporting to have been enacted or made before the commencement of the Australia Acts –
+-- src:1167 | (a) has the same effect as it would have had; and
+-- src:1169 | (b) is as valid as it would have been –
+-- src:1171 | if the Australia Acts had been in force at the time of its enactment or making or purported enactment or making.
+@ref s 46C(2) (src:1165-1171)
+GIVEN `the day the written law was enacted or made` IS A DATE
+      `the day the Australia Acts commenced` IS A DATE
+GIVETH A BOOLEAN
+`s 46C(2): a written law was enacted or made before the commencement of the Australia Acts` `the day the written law was enacted or made` `with` `the day the Australia Acts commenced` MEANS
+    `the day the written law was enacted or made` BELOW `the day the Australia Acts commenced`
