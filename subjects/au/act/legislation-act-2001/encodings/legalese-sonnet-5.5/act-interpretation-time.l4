@@ -1,0 +1,976 @@
+IMPORT prelude
+IMPORT daydate
+
+-- Legislation Act 2001 (Australian Capital Territory): how periods of time are worked out, when laws begin
+-- and end, how old a person is, and when a document is taken to be served.
+--
+-- This module stands alone.
+-- It imports only `prelude` and `daydate`, it imports no other module of this encoding, and its tests are in `act-tests-time.l4`.
+-- It can be copied, unchanged, into other work.
+--
+-- Every function is named for what it computes and for the section it implements.
+-- Where the text does not answer, a function returns NOTHING (a MAYBE with no value) and a test asserts it.
+-- The text is the unofficial plain-text rendering deposited with this encoding, not the authorised republication.
+--
+-- What `daydate` does, measured on the stable binary 1.6.98:
+--   * `Date 29 2 2023` is 1 March 2023 (the constructor rolls an impossible day forward).
+--   * `add months` (Date 31 1 2024) 1 is 29 February 2024, and `add years` (Date 29 2 2024) 1 is 28 February 2025 (both clamp to the last day of the month).
+--   * `Days in month`, `is weekday`, DATE_DAY, DATE_MONTH, DATE_YEAR, `Day` and the arithmetic DATE PLUS n and DATE MINUS n work as their names say.
+-- The dictionary definition of "month" is not the same rule as `add months`, so this module does not use `add months` or `add years`;
+-- it writes the month rule from the text and uses only `Date`, `Days in month` and the accessors.
+
+§ `Legislation Act 2001 (ACT): time`
+
+§§ `Types`
+
+-- table 151: the five ways the Act says a period may be described, each with its rule about the stated day.
+DECLARE `How a period is described` IS ONE OF
+    `beginning at, on or with a stated day`
+    `beginning from or after a stated day`
+    `ending at, by, on or with, or continuing to or until, a stated day`
+    `ending before a stated day`
+    `occurring between 2 events`
+
+-- The units a period can be counted in.
+-- The text defines "month" and "year"; it defines no "week" and no "day" as a unit, so `weeks` is here only to be answered with NOTHING.
+DECLARE `Unit of time` IS ONE OF days, weeks, months, years
+
+-- s 74, dictionary: "midnight, in relation to a particular day, means the time when the day ends".
+DECLARE `Time of day` IS ONE OF
+    `beginning of the day`
+    `stated time` HAS hour IS A NUMBER, minute IS A NUMBER
+    `midnight at the end of the day`
+
+DECLARE `Point in time` HAS
+    `day` IS A DATE
+    `time of day` IS A `Time of day`
+
+-- Facts about the calendar that the Act points to and does not contain:
+-- the Holidays Act 1958 is not among the sources, so public holidays and bank holidays are supplied as dated lists.
+DECLARE `Calendar facts` HAS
+    `public holidays` IS A LIST OF DATE
+    `bank holidays` IS A LIST OF DATE
+    `days when the office is not open` IS A LIST OF DATE
+
+-- s 151A (4): what the thing is that has to be done, because that decides which days are working days.
+DECLARE `What is to be done` IS ONE OF
+    `something at an office of a public entity`
+    `anything else`
+    `anything else, by or in relation to an authorised deposit-taking institution`
+
+§§ `s 151: table 151, which days a described period includes`
+
+-- src:1902 | (2) A period of time mentioned in an Act or statutory instrument that is of a kind mentioned in an item in the following table is to be worked out according to the rule mentioned in column 3 of the item:
+-- src:1903 | Table 151 Working out periods of time
+-- src:1905 | | column 1 item | column 2 If the period of time— | column 3 then the period— |
+-- src:1906 | | 1 | is described as beginning at, on or with a stated day, act or event | includes the stated day or the day of the stated act or event |
+-- src:1907 | | 2 | is described as beginning from or after a stated day, act or event | does not include the stated day or the day of the stated act or event |
+-- src:1908 | | 3 | is described as ending at, by, on or with, or as continuing to or until, a stated day, act or event | includes the stated day or the day of the stated act or event |
+-- src:1909 | | 4 | is described as ending before a stated day, act or event | does not include the stated day or the day of the stated act or event |
+-- src:1910 | | 5 | is described as occurring between 2 events | does not include the days when the events happen |
+@ref s 151 (2), table 151 (src:1902-1910)
+GIVEN described IS A `How a period is described`
+GIVETH A BOOLEAN
+`s 151 (2), table 151: the period includes the stated day` MEANS
+    CONSIDER described
+    WHEN `beginning at, on or with a stated day` THEN TRUE
+    WHEN `beginning from or after a stated day` THEN FALSE
+    WHEN `ending at, by, on or with, or continuing to or until, a stated day` THEN TRUE
+    WHEN `ending before a stated day` THEN FALSE
+    WHEN `occurring between 2 events` THEN FALSE
+
+-- src:1921 | (3) Despite table 151, item 2, if, under an Act or statutory instrument, something must or may be done within a particular period of time after a stated day, the thing may be done on the stated day.
+@ref s 151 (3) (src:1921-1921)
+GIVEN described IS A `How a period is described`
+      `the thing must or may be done within a period of time after the stated day` IS A BOOLEAN
+GIVETH A BOOLEAN
+`s 151 (3): the thing may be done on the stated day` MEANS
+    IF   described EQUALS `beginning from or after a stated day`
+     AND `the thing must or may be done within a period of time after the stated day`
+    THEN TRUE
+    ELSE `s 151 (2), table 151: the period includes the stated day` described
+
+§§ `s 151: periods of days`
+
+-- s 151 (1): the section applies to "periods of 1 day or longer", so a period of fewer than 1 day is not covered.
+-- src:1906 | | 1 | is described as beginning at, on or with a stated day, act or event | includes the stated day or the day of the stated act or event |
+-- src:1907 | | 2 | is described as beginning from or after a stated day, act or event | does not include the stated day or the day of the stated act or event |
+@ref s 151 (2), table 151 items 1 and 2 (src:1906-1907)
+GIVEN described IS A `How a period is described`
+      `stated day` IS A DATE
+GIVETH A MAYBE DATE
+`s 151 (2), table 151: the first day of a period that begins at, on, with or from a stated day` MEANS
+    CONSIDER described
+    WHEN `beginning at, on or with a stated day` THEN JUST `stated day`
+    WHEN `beginning from or after a stated day` THEN JUST (`stated day` PLUS 1)
+    OTHERWISE NOTHING
+
+-- src:1906 | | 1 | is described as beginning at, on or with a stated day, act or event | includes the stated day or the day of the stated act or event |
+-- src:1907 | | 2 | is described as beginning from or after a stated day, act or event | does not include the stated day or the day of the stated act or event |
+@ref s 151 (1), (2), table 151 items 1 and 2 (src:1906-1907)
+GIVEN `number of days` IS A NUMBER
+      described IS A `How a period is described`
+      `stated day` IS A DATE
+GIVETH A MAYBE DATE
+`s 151: the last day of a period of days that begins on or from a stated day` MEANS
+    IF `number of days` LESS THAN 1
+    THEN NOTHING
+    ELSE CONSIDER `s 151 (2), table 151: the first day of a period that begins at, on, with or from a stated day` described `stated day`
+         WHEN NOTHING THEN NOTHING
+         WHEN JUST first THEN JUST (first PLUS (`number of days` MINUS 1))
+
+-- src:1908 | | 3 | is described as ending at, by, on or with, or as continuing to or until, a stated day, act or event | includes the stated day or the day of the stated act or event |
+-- src:1909 | | 4 | is described as ending before a stated day, act or event | does not include the stated day or the day of the stated act or event |
+@ref s 151 (2), table 151 items 3 and 4 (src:1908-1909)
+GIVEN `number of days` IS A NUMBER
+      described IS A `How a period is described`
+      `stated day` IS A DATE
+GIVETH A MAYBE DATE
+`s 151: the first day of a period of days that ends at, by, on or with, or before, a stated day` MEANS
+    IF `number of days` LESS THAN 1
+    THEN NOTHING
+    ELSE CONSIDER described
+         WHEN `ending at, by, on or with, or continuing to or until, a stated day` THEN JUST (`stated day` MINUS (`number of days` MINUS 1))
+         WHEN `ending before a stated day` THEN JUST (`stated day` MINUS `number of days`)
+         OTHERWISE NOTHING
+
+-- item 5: "does not include the days when the events happen".
+-- Example for item 5: a notice of motion to be served 2 days before the return date; the return date is a Friday; service must be on or before the Tuesday.
+-- src:1910 | | 5 | is described as occurring between 2 events | does not include the days when the events happen |
+@ref s 151 (2), table 151 item 5 (src:1910-1910)
+GIVEN `number of days between` IS A NUMBER
+      `later event day` IS A DATE
+GIVETH A DATE
+`s 151 (2), table 151 item 5: the latest day for the earlier event, so that the given number of days lie between the 2 events` MEANS
+    `later event day` MINUS (`number of days between` PLUS 1)
+
+-- src:1910 | | 5 | is described as occurring between 2 events | does not include the days when the events happen |
+@ref s 151 (2), table 151 item 5 (src:1910-1910)
+GIVEN `earlier event day` IS A DATE
+      `later event day` IS A DATE
+GIVETH A NUMBER
+`s 151 (2), table 151 item 5: the number of days between 2 events` MEANS
+    (`later event day` MINUS `earlier event day`) MINUS 1
+
+§§ `Dictionary: month, and periods of months`
+
+-- dictionary, month: a month begins at the start of any day of a calendar month and ends
+--   (a) immediately before the start of the corresponding day of the next calendar month; or
+--   (b) if there is no such corresponding day, at the end of the next calendar month.
+-- The function returns the LAST DAY of the month, that is, the day at whose midnight the month ends.
+-- src:3079 | month means a period beginning at the start of any day of one of the calendar months and ending—
+-- src:3080 | (a) immediately before the start of the corresponding day of the next calendar month; or
+-- src:3081 | (b) if there is no such corresponding day—at the end of the next calendar month.
+-- src:3082 | Examples
+-- src:3083 | 1 The period beginning at the start of 8 May 2014 and ending at midnight on 7 June 2014 is a month.
+-- src:3084 | 2 The period beginning at the start of 30 January 2014 and ending at midnight on 28 February 2014 is a month. The month ends on the last day of February because in that year, February does not have a day corresponding to 29 January (because 2014 is not a leap year). If the period began at the start of 30 January 2016 (ie a leap year), the month would end at midnight on 29 February 2016.
+@ref dictionary, month (src:3079-3084)
+GIVEN start IS A DATE
+GIVETH A DATE
+`dictionary, month: the last day of the month that begins at the start of a day` MEANS
+    IF   DATE_DAY start AT MOST `Days in month` nextMonth nextYear
+    THEN (Date (DATE_DAY start) nextMonth nextYear) MINUS 1
+    ELSE Date (`Days in month` nextMonth nextYear) nextMonth nextYear
+    WHERE
+        nextMonth MEANS IF DATE_MONTH start EQUALS 12 THEN 1 ELSE DATE_MONTH start PLUS 1
+        nextYear MEANS IF DATE_MONTH start EQUALS 12 THEN DATE_YEAR start PLUS 1 ELSE DATE_YEAR start
+
+-- N successive months: each month begins at the start of the day after the previous month ended (fork: the other reading is below).
+-- src:3079 | month means a period beginning at the start of any day of one of the calendar months and ending—
+-- src:3080 | (a) immediately before the start of the corresponding day of the next calendar month; or
+-- src:3081 | (b) if there is no such corresponding day—at the end of the next calendar month.
+-- src:3082 | Examples
+-- src:3083 | 1 The period beginning at the start of 8 May 2014 and ending at midnight on 7 June 2014 is a month.
+-- src:3084 | 2 The period beginning at the start of 30 January 2014 and ending at midnight on 28 February 2014 is a month. The month ends on the last day of February because in that year, February does not have a day corresponding to 29 January (because 2014 is not a leap year). If the period began at the start of 30 January 2016 (ie a leap year), the month would end at midnight on 29 February 2016.
+@ref dictionary, month (src:3079-3084)
+GIVEN start IS A DATE
+      months IS A NUMBER
+GIVETH A DATE
+`dictionary, month: the last day of a run of successive months, the first beginning at the start of a day` MEANS
+    IF   months AT MOST 1
+    THEN `dictionary, month: the last day of the month that begins at the start of a day` start
+    ELSE `dictionary, month: the last day of a run of successive months, the first beginning at the start of a day`
+             (`dictionary, month: the last day of the month that begins at the start of a day` start PLUS 1)
+             (months MINUS 1)
+
+-- The other reading of "N months": the corresponding day of the Nth following calendar month.
+-- It agrees with the successive reading whenever the starting day is the 1st to the 28th.
+-- src:3079 | month means a period beginning at the start of any day of one of the calendar months and ending—
+-- src:3080 | (a) immediately before the start of the corresponding day of the next calendar month; or
+-- src:3081 | (b) if there is no such corresponding day—at the end of the next calendar month.
+-- src:3082 | Examples
+-- src:3083 | 1 The period beginning at the start of 8 May 2014 and ending at midnight on 7 June 2014 is a month.
+-- src:3084 | 2 The period beginning at the start of 30 January 2014 and ending at midnight on 28 February 2014 is a month. The month ends on the last day of February because in that year, February does not have a day corresponding to 29 January (because 2014 is not a leap year). If the period began at the start of 30 January 2016 (ie a leap year), the month would end at midnight on 29 February 2016.
+@ref dictionary, month (src:3079-3084)
+GIVEN start IS A DATE
+      months IS A NUMBER
+GIVETH A DATE
+`dictionary, month, other reading: the last day of N months counted to the corresponding day of the Nth following calendar month` MEANS
+    IF   DATE_DAY start AT MOST `Days in month` targetMonth targetYear
+    THEN (Date (DATE_DAY start) targetMonth targetYear) MINUS 1
+    ELSE Date (`Days in month` targetMonth targetYear) targetMonth targetYear
+    WHERE
+        monthIndex MEANS (DATE_YEAR start TIMES 12) PLUS (DATE_MONTH start MINUS 1) PLUS months
+        targetMonth MEANS (monthIndex MODULO 12) PLUS 1
+        targetYear MEANS (monthIndex MINUS (monthIndex MODULO 12)) DIVIDED BY 12
+
+-- A month counted backwards from the day at whose midnight it ends (for a period "ending on" or "ending before" a stated day).
+-- The text says nothing about counting backwards; this finds the day a month must begin on to end where required, and says NOTHING where no month does.
+-- src:3079 | month means a period beginning at the start of any day of one of the calendar months and ending—
+-- src:3080 | (a) immediately before the start of the corresponding day of the next calendar month; or
+-- src:3081 | (b) if there is no such corresponding day—at the end of the next calendar month.
+-- src:3082 | Examples
+-- src:3083 | 1 The period beginning at the start of 8 May 2014 and ending at midnight on 7 June 2014 is a month.
+-- src:3084 | 2 The period beginning at the start of 30 January 2014 and ending at midnight on 28 February 2014 is a month. The month ends on the last day of February because in that year, February does not have a day corresponding to 29 January (because 2014 is not a leap year). If the period began at the start of 30 January 2016 (ie a leap year), the month would end at midnight on 29 February 2016.
+@ref dictionary, month (src:3079-3084)
+GIVEN `last day` IS A DATE
+GIVETH A MAYBE DATE
+`dictionary, month: the first day of the month that ends at the end of a stated day` MEANS
+    IF   DATE_DAY candidate AT MOST `Days in month` previousMonth previousYear
+    THEN IF   `dictionary, month: the last day of the month that begins at the start of a day` (Date (DATE_DAY candidate) previousMonth previousYear) EQUALS `last day`
+         THEN JUST (Date (DATE_DAY candidate) previousMonth previousYear)
+         ELSE NOTHING
+    ELSE NOTHING
+    WHERE
+        candidate MEANS `last day` PLUS 1
+        previousMonth MEANS IF DATE_MONTH candidate EQUALS 1 THEN 12 ELSE DATE_MONTH candidate MINUS 1
+        previousYear MEANS IF DATE_MONTH candidate EQUALS 1 THEN DATE_YEAR candidate MINUS 1 ELSE DATE_YEAR candidate
+
+-- src:3079 | month means a period beginning at the start of any day of one of the calendar months and ending—
+-- src:3080 | (a) immediately before the start of the corresponding day of the next calendar month; or
+-- src:3081 | (b) if there is no such corresponding day—at the end of the next calendar month.
+-- src:3082 | Examples
+-- src:3083 | 1 The period beginning at the start of 8 May 2014 and ending at midnight on 7 June 2014 is a month.
+-- src:3084 | 2 The period beginning at the start of 30 January 2014 and ending at midnight on 28 February 2014 is a month. The month ends on the last day of February because in that year, February does not have a day corresponding to 29 January (because 2014 is not a leap year). If the period began at the start of 30 January 2016 (ie a leap year), the month would end at midnight on 29 February 2016.
+@ref dictionary, month (src:3079-3084)
+GIVEN `last day` IS A DATE
+      months IS A NUMBER
+GIVETH A MAYBE DATE
+`dictionary, month: the first day of a run of successive months that ends at the end of a stated day` MEANS
+    IF   months LESS THAN 1
+    THEN NOTHING
+    ELSE CONSIDER `dictionary, month: the first day of the month that ends at the end of a stated day` `last day`
+         WHEN NOTHING THEN NOTHING
+         WHEN JUST first THEN
+             IF months EQUALS 1
+             THEN JUST first
+             ELSE `dictionary, month: the first day of a run of successive months that ends at the end of a stated day` (first MINUS 1) (months MINUS 1)
+
+§§ `Dictionary: year, calendar year, and periods of years`
+
+-- dictionary: "calendar year means a period of 12 months beginning on 1 January."; "year, without specifying the kind of year, means calendar year."
+-- The text names the year as a period that begins on 1 January and says nothing about a period of years that begins on another day.
+-- So a period of N years is worked out here only when it begins at the start of 1 January;
+-- from any other starting day the answer is NOTHING, and the other reading is a separate function below.
+-- src:2872 | calendar year means a period of 12 months beginning on 1 January.
+@ref dictionary, calendar year (src:2872-2872)
+-- src:3286 | year, without specifying the kind of year, means calendar year.
+@ref dictionary, year (src:3286-3286)
+GIVEN start IS A DATE
+      years IS A NUMBER
+GIVETH A MAYBE DATE
+`dictionary, calendar year and year: the last day of a run of calendar years beginning at the start of a day` MEANS
+    IF   years LESS THAN 1
+    THEN NOTHING
+    ELSE IF   DATE_MONTH start EQUALS 1 AND DATE_DAY start EQUALS 1
+         THEN JUST (`dictionary, month: the last day of a run of successive months, the first beginning at the start of a day` start (years TIMES 12))
+         ELSE NOTHING
+
+-- src:2872 | calendar year means a period of 12 months beginning on 1 January.
+@ref dictionary, calendar year (src:2872-2872)
+GIVEN start IS A DATE
+      years IS A NUMBER
+GIVETH A MAYBE DATE
+`dictionary, year, other reading: the last day of N years counted as 12 months each from any starting day` MEANS
+    IF   years LESS THAN 1
+    THEN NOTHING
+    ELSE JUST (`dictionary, month: the last day of a run of successive months, the first beginning at the start of a day` start (years TIMES 12))
+
+§§ `s 151: a period of any unit that begins on or from a stated day`
+
+-- src:1906 | | 1 | is described as beginning at, on or with a stated day, act or event | includes the stated day or the day of the stated act or event |
+-- src:1907 | | 2 | is described as beginning from or after a stated day, act or event | does not include the stated day or the day of the stated act or event |
+@ref s 151 (2), table 151 items 1 and 2 (src:1906-1907)
+-- src:3079 | month means a period beginning at the start of any day of one of the calendar months and ending—
+-- src:3080 | (a) immediately before the start of the corresponding day of the next calendar month; or
+-- src:3081 | (b) if there is no such corresponding day—at the end of the next calendar month.
+-- src:3082 | Examples
+-- src:3083 | 1 The period beginning at the start of 8 May 2014 and ending at midnight on 7 June 2014 is a month.
+-- src:3084 | 2 The period beginning at the start of 30 January 2014 and ending at midnight on 28 February 2014 is a month. The month ends on the last day of February because in that year, February does not have a day corresponding to 29 January (because 2014 is not a leap year). If the period began at the start of 30 January 2016 (ie a leap year), the month would end at midnight on 29 February 2016.
+@ref dictionary, month (src:3079-3084)
+GIVEN count IS A NUMBER
+      unit IS A `Unit of time`
+      described IS A `How a period is described`
+      `stated day` IS A DATE
+GIVETH A MAYBE DATE
+`s 151: the last day of a period of days, months or years that begins on or from a stated day` MEANS
+    CONSIDER unit
+    WHEN days THEN `s 151: the last day of a period of days that begins on or from a stated day` count described `stated day`
+    WHEN weeks THEN NOTHING
+    WHEN months THEN
+        IF   count LESS THAN 1
+        THEN NOTHING
+        ELSE CONSIDER `s 151 (2), table 151: the first day of a period that begins at, on, with or from a stated day` described `stated day`
+             WHEN NOTHING THEN NOTHING
+             WHEN JUST first THEN JUST (`dictionary, month: the last day of a run of successive months, the first beginning at the start of a day` first count)
+    WHEN years THEN
+        CONSIDER `s 151 (2), table 151: the first day of a period that begins at, on, with or from a stated day` described `stated day`
+        WHEN NOTHING THEN NOTHING
+        WHEN JUST first THEN `dictionary, calendar year and year: the last day of a run of calendar years beginning at the start of a day` first count
+
+-- src:1906 | | 1 | is described as beginning at, on or with a stated day, act or event | includes the stated day or the day of the stated act or event |
+-- src:1907 | | 2 | is described as beginning from or after a stated day, act or event | does not include the stated day or the day of the stated act or event |
+@ref s 151 (2), table 151 items 1 and 2 (src:1906-1907)
+-- src:3079 | month means a period beginning at the start of any day of one of the calendar months and ending—
+-- src:3080 | (a) immediately before the start of the corresponding day of the next calendar month; or
+-- src:3081 | (b) if there is no such corresponding day—at the end of the next calendar month.
+-- src:3082 | Examples
+-- src:3083 | 1 The period beginning at the start of 8 May 2014 and ending at midnight on 7 June 2014 is a month.
+-- src:3084 | 2 The period beginning at the start of 30 January 2014 and ending at midnight on 28 February 2014 is a month. The month ends on the last day of February because in that year, February does not have a day corresponding to 29 January (because 2014 is not a leap year). If the period began at the start of 30 January 2016 (ie a leap year), the month would end at midnight on 29 February 2016.
+@ref dictionary, month (src:3079-3084)
+GIVEN count IS A NUMBER
+      unit IS A `Unit of time`
+      described IS A `How a period is described`
+      `stated day` IS A DATE
+GIVETH A MAYBE DATE
+`s 151, other reading of years: the last day of a period of days, months or years that begins on or from a stated day` MEANS
+    CONSIDER unit
+    WHEN years THEN
+        CONSIDER `s 151 (2), table 151: the first day of a period that begins at, on, with or from a stated day` described `stated day`
+        WHEN NOTHING THEN NOTHING
+        WHEN JUST first THEN `dictionary, year, other reading: the last day of N years counted as 12 months each from any starting day` first count
+    OTHERWISE `s 151: the last day of a period of days, months or years that begins on or from a stated day` count unit described `stated day`
+
+§§ `Dictionary: working day, business day, and s 151A (4)`
+
+-- src:3280 | working day means a day that is not—
+-- src:3281 | (a) a Saturday or Sunday; or
+-- src:3282 | (b) a public holiday in the ACT.
+@ref dictionary, working day (src:3280-3282)
+GIVEN day IS A DATE
+      calendar IS A `Calendar facts`
+GIVETH A BOOLEAN
+`dictionary, working day: the day is a working day` MEANS
+        `is weekday` day
+    AND NOT (elem day (calendar's `public holidays`))
+
+-- src:2866 | business day means a day that is not—
+-- src:2867 | (a) a Saturday or Sunday; or
+-- src:2868 | (b) a public holiday or bank holiday in the ACT.
+@ref dictionary, business day (src:2866-2868)
+GIVEN day IS A DATE
+      calendar IS A `Calendar facts`
+GIVETH A BOOLEAN
+`dictionary, business day: the day is a business day` MEANS
+        `is weekday` day
+    AND NOT (elem day (calendar's `public holidays`))
+    AND NOT (elem day (calendar's `bank holidays`))
+
+-- src:1945 | working day means—
+-- src:1946 | (a) for doing something at an office (however described) of a public entity where the thing must or may be done—a day when the office is open; and
+-- src:1947 | (b) for doing anything else—a day that is not—
+-- src:1948 | (i) a Saturday or Sunday; or
+-- src:1949 | (ii) a public holiday at the place where the thing must or may be done; or
+-- src:1950 | (iii) if the thing is to be done by or in relation to an authorised deposit-taking institution—a day observed by the institution as a bank holiday at the place where the thing must or may be done.
+@ref s 151A (4), working day (src:1945-1950)
+GIVEN day IS A DATE
+      thing IS A `What is to be done`
+      calendar IS A `Calendar facts`
+GIVETH A BOOLEAN
+`s 151A (4): the day is a working day for doing the thing` MEANS
+    CONSIDER thing
+    WHEN `something at an office of a public entity` THEN NOT (elem day (calendar's `days when the office is not open`))
+    WHEN `anything else` THEN
+            `is weekday` day
+        AND NOT (elem day (calendar's `public holidays`))
+    WHEN `anything else, by or in relation to an authorised deposit-taking institution` THEN
+            `is weekday` day
+        AND NOT (elem day (calendar's `public holidays`))
+        AND NOT (elem day (calendar's `bank holidays`))
+
+-- Search forward for the next working day, giving up after 400 days (so that a calendar that never has one cannot loop for ever).
+-- src:1933 | (2) The thing must or may be done on the next day that is a working day.
+@ref s 151A (2) (src:1933-1933)
+GIVEN day IS A DATE
+      thing IS A `What is to be done`
+      calendar IS A `Calendar facts`
+      `days left to search` IS A NUMBER
+GIVETH A MAYBE DATE
+`s 151A (2): the first working day on or after a day, searching a limited number of days` MEANS
+    IF   `s 151A (4): the day is a working day for doing the thing` day thing calendar
+    THEN JUST day
+    ELSE IF   `days left to search` AT MOST 0
+         THEN NOTHING
+         ELSE `s 151A (2): the first working day on or after a day, searching a limited number of days` (day PLUS 1) thing calendar (`days left to search` MINUS 1)
+
+-- src:1930 | (1) This section applies if—
+-- src:1931 | (a) under an Act or statutory instrument, something must or may be done on a particular day or within a particular period of time; and
+-- src:1932 | (b) the day, or the last day of the period, is not a working day.
+-- src:1933 | (2) The thing must or may be done on the next day that is a working day.
+@ref s 151A (1), (2) (src:1930-1933)
+GIVEN day IS A DATE
+      thing IS A `What is to be done`
+      calendar IS A `Calendar facts`
+GIVETH A MAYBE DATE
+`s 151A (2): the day on which the thing must or may be done, where the particular day or the last day of the period is that day` MEANS
+    `s 151A (2): the first working day on or after a day, searching a limited number of days` day thing calendar 400
+
+-- src:1933 | (2) The thing must or may be done on the next day that is a working day.
+@ref s 151A (2) (src:1933-1933)
+GIVEN count IS A NUMBER
+      unit IS A `Unit of time`
+      described IS A `How a period is described`
+      `stated day` IS A DATE
+      thing IS A `What is to be done`
+      calendar IS A `Calendar facts`
+GIVETH A MAYBE DATE
+`s 151 and s 151A: the last day on which the thing may be done within a period that begins on or from a stated day` MEANS
+    CONSIDER `s 151: the last day of a period of days, months or years that begins on or from a stated day` count unit described `stated day`
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST last THEN `s 151A (2): the day on which the thing must or may be done, where the particular day or the last day of the period is that day` last thing calendar
+
+§§ `s 74 and the dictionary: points in time within a day`
+
+-- src:1013 | 74 Time of commencement
+-- src:1014 | (1) If an Act commences on a day, it commences at the beginning of the day unless a different time of commencement is provided by the Act, another Act, or a commencement notice providing for the commencement of the Act.
+-- src:1015 | (2) If a statutory instrument commences on a day, it commences at the beginning of the day unless a different time of commencement is provided by the instrument, an Act, or a commencement notice providing for the commencement of the instrument.
+@ref s 74 (1), (2) (src:1013-1015)
+-- src:3073 | midnight, in relation to a particular day, means the time when the day ends.
+@ref dictionary, midnight (src:3073-3073)
+GIVEN time IS A `Time of day`
+GIVETH A NUMBER
+`s 74 and dictionary, midnight: the number of minutes from the start of the day to a time of day` MEANS
+    CONSIDER time
+    WHEN `beginning of the day` THEN 0
+    WHEN `stated time` h m THEN (h TIMES 60) PLUS m
+    WHEN `midnight at the end of the day` THEN 1440
+
+-- src:1013 | 74 Time of commencement
+-- src:1014 | (1) If an Act commences on a day, it commences at the beginning of the day unless a different time of commencement is provided by the Act, another Act, or a commencement notice providing for the commencement of the Act.
+-- src:1015 | (2) If a statutory instrument commences on a day, it commences at the beginning of the day unless a different time of commencement is provided by the instrument, an Act, or a commencement notice providing for the commencement of the instrument.
+@ref s 74 (src:1013-1015)
+GIVEN point IS A `Point in time`
+GIVETH A NUMBER
+`s 74: a single number that orders points in time` MEANS
+    (Day (point's `day`) TIMES 1440) PLUS `s 74 and dictionary, midnight: the number of minutes from the start of the day to a time of day` (point's `time of day`)
+
+-- src:1013 | 74 Time of commencement
+-- src:1014 | (1) If an Act commences on a day, it commences at the beginning of the day unless a different time of commencement is provided by the Act, another Act, or a commencement notice providing for the commencement of the Act.
+-- src:1015 | (2) If a statutory instrument commences on a day, it commences at the beginning of the day unless a different time of commencement is provided by the instrument, an Act, or a commencement notice providing for the commencement of the instrument.
+@ref s 74 (src:1013-1015)
+GIVEN first IS A `Point in time`
+      second IS A `Point in time`
+GIVETH A BOOLEAN
+`s 74: the first point is earlier than the second` MEANS
+    `s 74: a single number that orders points in time` first LESS THAN `s 74: a single number that orders points in time` second
+
+-- src:1013 | 74 Time of commencement
+-- src:1014 | (1) If an Act commences on a day, it commences at the beginning of the day unless a different time of commencement is provided by the Act, another Act, or a commencement notice providing for the commencement of the Act.
+-- src:1015 | (2) If a statutory instrument commences on a day, it commences at the beginning of the day unless a different time of commencement is provided by the instrument, an Act, or a commencement notice providing for the commencement of the instrument.
+@ref s 74 (src:1013-1015)
+GIVEN day IS A DATE
+GIVETH A `Point in time`
+`s 74 (1), (2): the beginning of a day` MEANS
+    `Point in time` WITH
+        `day` IS day
+        `time of day` IS `beginning of the day`
+
+-- src:1013 | 74 Time of commencement
+-- src:1014 | (1) If an Act commences on a day, it commences at the beginning of the day unless a different time of commencement is provided by the Act, another Act, or a commencement notice providing for the commencement of the Act.
+-- src:1015 | (2) If a statutory instrument commences on a day, it commences at the beginning of the day unless a different time of commencement is provided by the instrument, an Act, or a commencement notice providing for the commencement of the instrument.
+@ref s 74 (src:1013-1015)
+GIVEN points IS A LIST OF `Point in time`
+GIVETH A MAYBE `Point in time`
+`s 74: the earliest of some points in time` MEANS
+    CONSIDER points
+    WHEN EMPTY THEN NOTHING
+    WHEN first FOLLOWED BY rest THEN
+        CONSIDER `s 74: the earliest of some points in time` rest
+        WHEN NOTHING THEN JUST first
+        WHEN JUST other THEN IF `s 74: the first point is earlier than the second` first other THEN JUST first ELSE JUST other
+
+-- src:1013 | 74 Time of commencement
+-- src:1014 | (1) If an Act commences on a day, it commences at the beginning of the day unless a different time of commencement is provided by the Act, another Act, or a commencement notice providing for the commencement of the Act.
+-- src:1015 | (2) If a statutory instrument commences on a day, it commences at the beginning of the day unless a different time of commencement is provided by the instrument, an Act, or a commencement notice providing for the commencement of the instrument.
+@ref s 74 (src:1013-1015)
+GIVEN points IS A LIST OF `Point in time`
+GIVETH A MAYBE `Point in time`
+`s 74: the latest of some points in time` MEANS
+    CONSIDER points
+    WHEN EMPTY THEN NOTHING
+    WHEN first FOLLOWED BY rest THEN
+        CONSIDER `s 74: the latest of some points in time` rest
+        WHEN NOTHING THEN JUST first
+        WHEN JUST other THEN IF `s 74: the first point is earlier than the second` first other THEN JUST other ELSE JUST first
+
+§§ `Chapter 8: commencement`
+
+DECLARE `Who provides a commencement` IS ONE OF
+    `an Act`
+    `the instrument, without authority given by an Act`
+    `the instrument, under authority given by an Act`
+
+-- src:988 | (1) An Act commences—
+-- src:989 | (a) on the day after its notification day; or
+-- src:990 | (b) if the Act or another Act provides for a different date or time of commencement—on that date or at that time.
+@ref s 73 (1) (src:988-990)
+-- src:1014 | (1) If an Act commences on a day, it commences at the beginning of the day unless a different time of commencement is provided by the Act, another Act, or a commencement notice providing for the commencement of the Act.
+@ref s 74 (1) (src:1014-1014)
+GIVEN `notification day` IS A DATE
+      `commencement provided by the Act or another Act` IS A MAYBE `Point in time`
+GIVETH A `Point in time`
+`s 73 (1) and s 74 (1): when an Act commences` MEANS
+    CONSIDER `commencement provided by the Act or another Act`
+    WHEN JUST provided THEN provided
+    WHEN NOTHING THEN `s 74 (1), (2): the beginning of a day` (`notification day` PLUS 1)
+
+-- (2) (b), (c), (d) and (3), for a legislative instrument; (4) (b), (c), (d) for another statutory instrument.
+-- "Later" and "earlier" are compared with the commencement under paragraph (a): the beginning of the day after the notification day.
+-- src:991 | (2) A legislative instrument commences—
+-- src:992 | (a) on the day after its notification day; or
+-- src:993 | (b) if an Act or the instrument provides for a later date or time of commencement—on that date or at that time; or
+-- src:994 | (c) if an Act provides for an earlier date or time of commencement—on that date or at that time; or
+-- src:995 | (d) if the instrument, under authority given by an Act, provides for an earlier date or time—on that date or at that time.
+-- src:996 | (3) Without limiting subsection (2), if a legislative instrument is notified on a day after the day or time provided by the instrument for its commencement, and subsection (2) (c) or (d) does not apply to the instrument—
+-- src:997 | (a) the instrument is valid; but
+-- src:998 | (b) the instrument commences on the day after its notification day.
+@ref s 73 (2), (3) (src:991-998)
+GIVEN `the commencement under paragraph (a)` IS A `Point in time`
+      `commencement provided` IS A MAYBE `Point in time`
+      `provided by` IS A `Who provides a commencement`
+GIVETH A `Point in time`
+`s 73 (2), (3), (4): the commencement chosen from the default and the commencement provided` MEANS
+    CONSIDER `commencement provided`
+    WHEN NOTHING THEN `the commencement under paragraph (a)`
+    WHEN JUST provided THEN
+        IF   `s 74: the first point is earlier than the second` `the commencement under paragraph (a)` provided
+        THEN provided
+        ELSE IF   `s 74: the first point is earlier than the second` provided `the commencement under paragraph (a)`
+             THEN CONSIDER `provided by`
+                  WHEN `an Act` THEN provided
+                  WHEN `the instrument, under authority given by an Act` THEN provided
+                  WHEN `the instrument, without authority given by an Act` THEN `the commencement under paragraph (a)`
+             ELSE `the commencement under paragraph (a)`
+
+-- src:991 | (2) A legislative instrument commences—
+-- src:992 | (a) on the day after its notification day; or
+-- src:993 | (b) if an Act or the instrument provides for a later date or time of commencement—on that date or at that time; or
+-- src:994 | (c) if an Act provides for an earlier date or time of commencement—on that date or at that time; or
+-- src:995 | (d) if the instrument, under authority given by an Act, provides for an earlier date or time—on that date or at that time.
+@ref s 73 (2) (src:991-995)
+GIVEN `notification day` IS A DATE
+      `commencement provided` IS A MAYBE `Point in time`
+      `provided by` IS A `Who provides a commencement`
+GIVETH A `Point in time`
+`s 73 (2) and (3): when a legislative instrument commences` MEANS
+    `s 73 (2), (3), (4): the commencement chosen from the default and the commencement provided`
+        (`s 74 (1), (2): the beginning of a day` (`notification day` PLUS 1))
+        `commencement provided`
+        `provided by`
+
+-- (4) (a): "the day after the day it is made or, if it is required ... to be approved ..., the day after the day it is approved".
+-- src:999 | (4) A statutory instrument that is not a legislative instrument commences—
+-- src:1000 | (a) on the day after the day it is made or, if it is required under an Act or statutory instrument to be approved (however described) by the Executive, a Minister or any other entity, the day after the day it is approved; or
+-- src:1001 | (b) if an Act or the instrument provides for a later date or time of commencement—on that date or at that time; or
+-- src:1002 | (c) if an Act provides for an earlier date or time of commencement—on that date or at that time; or
+-- src:1003 | (d) if the instrument, under authority given by an Act, provides for an earlier date or time—on that date or at that time.
+@ref s 73 (4) (src:999-1003)
+GIVEN `day made` IS A DATE
+      `day approved, if approval is required` IS A MAYBE DATE
+GIVETH A DATE
+`s 73 (4) (a): the day a statutory instrument that is not a legislative instrument is made or approved` MEANS
+    CONSIDER `day approved, if approval is required`
+    WHEN JUST approved THEN approved
+    WHEN NOTHING THEN `day made`
+
+@ref s 73 (4) (src:999-1003)
+GIVEN `day made` IS A DATE
+      `day approved, if approval is required` IS A MAYBE DATE
+      `commencement provided` IS A MAYBE `Point in time`
+      `provided by` IS A `Who provides a commencement`
+GIVETH A `Point in time`
+`s 73 (4): when a statutory instrument that is not a legislative instrument commences` MEANS
+    `s 73 (2), (3), (4): the commencement chosen from the default and the commencement provided`
+        (`s 74 (1), (2): the beginning of a day` (`s 73 (4) (a): the day a statutory instrument that is not a legislative instrument is made or approved` `day made` `day approved, if approval is required` PLUS 1))
+        `commencement provided`
+        `provided by`
+
+-- s 75 (1), (2): the provisions providing for a law's name and commencement.
+-- src:1018 | (1) The provisions of a law providing for its name and commencement automatically commence on its notification day.
+-- src:1019 | (2) However, if a provision of the law commences before the law’s notification day, the naming and commencement provisions are taken to have automatically commenced—
+-- src:1020 | (a) on that commencement; or
+-- src:1021 | (b) if 2 or more provisions of the law commence at different times before the notification day—on the earlier or earliest of the commencements.
+@ref s 75 (1), (2) (src:1018-1021)
+GIVEN `notification day` IS A DATE
+      `commencements of the other provisions of the law` IS A LIST OF `Point in time`
+GIVETH A `Point in time`
+`s 75 (1), (2): when the provisions providing for a law's name and commencement commence` MEANS
+    CONSIDER `s 74: the earliest of some points in time` (filter (GIVEN p YIELD p's `day` LESS THAN `notification day`) `commencements of the other provisions of the law`)
+    WHEN JUST earliest THEN earliest
+    WHEN NOTHING THEN `s 74 (1), (2): the beginning of a day` `notification day`
+
+-- src:1022 | (3) In the application of this section to a statutory instrument that is not a legislative instrument, a reference to the instrument’s notification day is a reference to the day after the day it is made or, if it is required under an Act or statutory instrument to be approved (however described) by the Executive, a Minister or any other entity, the day after the day it is approved.
+@ref s 75 (3) (src:1022-1022)
+GIVEN `day made` IS A DATE
+      `day approved, if approval is required` IS A MAYBE DATE
+GIVETH A DATE
+`s 75 (3): the notification day of a statutory instrument that is not a legislative instrument` MEANS
+    `s 73 (4) (a): the day a statutory instrument that is not a legislative instrument is made or approved` `day made` `day approved, if approval is required` PLUS 1
+
+-- src:1028 | (2) The legislation amended provision automatically commences (or is taken to have automatically commenced)—
+-- src:1029 | (a) on the commencement of the amendments; or
+-- src:1030 | (b) if the amendments commence at different times—on the commencement of the earlier or earliest of the amendments.
+@ref s 75AA (2) (src:1028-1030)
+GIVEN `commencements of the amendments` IS A LIST OF `Point in time`
+GIVETH A MAYBE `Point in time`
+`s 75AA (2): when a provision identifying the amended law commences` MEANS
+    `s 74: the earliest of some points in time` `commencements of the amendments`
+
+-- src:1035 | (1) An Act or legislative instrument commences retrospectively if it commences on a day or at a time earlier than the day after its notification day.
+@ref s 75A (1) (src:1035-1035)
+GIVEN `notification day` IS A DATE
+      commencement IS A `Point in time`
+GIVETH A BOOLEAN
+`s 75A (1): an Act or legislative instrument commences retrospectively` MEANS
+    `s 74: the first point is earlier than the second` commencement (`s 74 (1), (2): the beginning of a day` (`notification day` PLUS 1))
+
+-- src:1037 | (2) A statutory instrument that is not a legislative instrument commences retrospectively if it commences on a day or at a time earlier than the day after the day it is made or, if it is required under an Act or statutory instrument to be approved (however described) by the Executive, a Minister or any other entity, the day after the day it is approved.
+@ref s 75A (2) (src:1037-1037)
+GIVEN `day made` IS A DATE
+      `day approved, if approval is required` IS A MAYBE DATE
+      commencement IS A `Point in time`
+GIVETH A BOOLEAN
+`s 75A (2): a statutory instrument that is not a legislative instrument commences retrospectively` MEANS
+    `s 74: the first point is earlier than the second` commencement
+        (`s 74 (1), (2): the beginning of a day` (`s 73 (4) (a): the day a statutory instrument that is not a legislative instrument is made or approved` `day made` `day approved, if approval is required` PLUS 1))
+
+-- s 77 (3), (4): a commencement notice that fixes a day or time on or before its own notification day.
+-- src:1068 | (3) If the day or time fixed or otherwise determined by a commencement notice for a law happens on or before the notice’s notification day, the law commences on the day after the notice’s notification day.
+-- src:1069 | (4) However, subsection (3) does not apply to the commencement notice if—
+-- src:1070 | (a) the notice clearly indicates that the law is to commence at an earlier date or time; and
+-- src:1071 | (b) the notice provides for the earlier date or time under authority given by an Act.
+@ref s 77 (3), (4) (src:1068-1071)
+GIVEN `point fixed by the notice` IS A `Point in time`
+      `notification day of the notice` IS A DATE
+      `the notice clearly indicates an earlier commencement and provides for it under authority given by an Act` IS A BOOLEAN
+GIVETH A `Point in time`
+`s 77 (3), (4): when a law commences under a commencement notice` MEANS
+    IF   `point fixed by the notice`'s `day` AT MOST `notification day of the notice`
+     AND NOT `the notice clearly indicates an earlier commencement and provides for it under authority given by an Act`
+    THEN `s 74 (1), (2): the beginning of a day` (`notification day of the notice` PLUS 1)
+    ELSE `point fixed by the notice`
+
+-- s 79 (1): "6 months beginning on its notification day"; item 1 of table 151 includes the notification day.
+-- src:1084 | (1) If a postponed law has not commenced within 6 months beginning on its notification day, it automatically commences on the first day after that period.
+@ref s 79 (1) (src:1084-1084)
+GIVEN `notification day` IS A DATE
+      `the postponed law has commenced within those 6 months` IS A BOOLEAN
+GIVETH A MAYBE `Point in time`
+`s 79 (1): when a postponed law automatically commences` MEANS
+    IF   `the postponed law has commenced within those 6 months`
+    THEN NOTHING
+    ELSE JUST (`s 74 (1), (2): the beginning of a day` (`dictionary, month: the last day of a run of successive months, the first beginning at the start of a day` `notification day` 6 PLUS 1))
+
+-- s 81 (6) and (7): an appointment or statutory instrument made before the authorising law commences.
+-- src:1128 | (6) If an appointment or statutory instrument made under this section declares that this subsection applies to it, then, unless the appointment or instrument commences on a different date or at a different time under another provision of this chapter, the appointment or instrument commences on—
+-- src:1129 | (a) for an appointment or statutory instrument that is a legislative instrument—the day after its notification day; or
+-- src:1130 | (b) for any other appointment or statutory instrument—the day after the day it is made or, if it is required under an Act or statutory instrument to be approved (however described) by the Executive, a Minister or any other entity, the day after the day it is approved.
+@ref s 81 (6) (src:1128-1130)
+GIVEN `legislative instrument` IS A BOOLEAN
+      `notification day` IS A DATE
+      `day made` IS A DATE
+      `day approved, if approval is required` IS A MAYBE DATE
+GIVETH A `Point in time`
+`s 81 (6): when an appointment or instrument that declares subsection (6) applies commences` MEANS
+    IF   `legislative instrument`
+    THEN `s 74 (1), (2): the beginning of a day` (`notification day` PLUS 1)
+    ELSE `s 74 (1), (2): the beginning of a day` (`s 73 (4) (a): the day a statutory instrument that is not a legislative instrument is made or approved` `day made` `day approved, if approval is required` PLUS 1)
+
+-- src:1131 | (7) In any other case, an appointment or statutory instrument made under this section commences on the latest of the following:
+-- src:1132 | (a) the commencement of the authorising law or, if subsection (1) (b) applies and the amending law commences after the authorising law, the commencement of the amending law;
+-- src:1133 | (b) on the day or at the time the appointment or instrument would have commenced if it had not been made under this section.
+@ref s 81 (7) (src:1131-1133)
+GIVEN `commencement of the authorising law` IS A `Point in time`
+      `commencement of the amending law, where s 81 (1) (b) applies` IS A MAYBE `Point in time`
+      `when the appointment or instrument would have commenced if not made under s 81` IS A `Point in time`
+GIVETH A `Point in time`
+`s 81 (7): when an appointment or instrument made under s 81 commences` MEANS
+    `the commencement chosen`
+    WHERE
+        `the commencement chosen` MEANS CONSIDER `s 74: the latest of some points in time` (LIST `the later of the authorising law and the amending law`, `when the appointment or instrument would have commenced if not made under s 81`)
+                          WHEN JUST latest THEN latest
+                          WHEN NOTHING THEN `when the appointment or instrument would have commenced if not made under s 81`
+        `the later of the authorising law and the amending law` MEANS CONSIDER `commencement of the amending law, where s 81 (1) (b) applies`
+                      WHEN NOTHING THEN `commencement of the authorising law`
+                      WHEN JUST amending THEN IF `s 74: the first point is earlier than the second` `commencement of the authorising law` amending THEN amending ELSE `commencement of the authorising law`
+
+§§ `Chapter 9: repeal`
+
+-- src:1185 | (1) This section applies if a law is repealed on a day.
+-- src:1186 | (2) If the law is remade on that day (with or without changes), the repeal takes effect when the remade law commences.
+-- src:1187 | Note Under s 74, if a law commences on a day, it commences at the beginning of the day unless otherwise provided.
+-- src:1188 | (3) If the law is not remade on that day (with or without changes), the law continues in force until the end of the day and the repeal takes effect at midnight on the day.
+@ref s 85 (2), (3) (src:1185-1188)
+GIVEN `day of repeal` IS A DATE
+      `the law is remade on that day` IS A BOOLEAN
+      `commencement of the remade law` IS A MAYBE `Point in time`
+GIVETH A MAYBE `Point in time`
+`s 85: when the repeal of a law takes effect` MEANS
+    IF   `the law is remade on that day`
+    THEN `commencement of the remade law`
+    ELSE JUST (`Point in time` WITH
+                   `day` IS `day of repeal`
+                   `time of day` IS `midnight at the end of the day`)
+
+-- src:1240 | (1) An amending law is automatically repealed on the day after—
+-- src:1241 | (a) all of its provisions have commenced; or
+-- src:1242 | (b) the last of its provisions that have not commenced are omitted or cannot commence.
+@ref s 89 (1) (src:1240-1242)
+GIVEN `day on which all its provisions had commenced` IS A MAYBE DATE
+      `day on which the last uncommenced provisions were omitted or could not commence` IS A MAYBE DATE
+GIVETH A MAYBE DATE
+`s 89 (1): the day an amending law is automatically repealed` MEANS
+    CONSIDER `day on which all its provisions had commenced`
+    WHEN NOTHING THEN
+        CONSIDER `day on which the last uncommenced provisions were omitted or could not commence`
+        WHEN NOTHING THEN NOTHING
+        WHEN JUST second THEN JUST (second PLUS 1)
+    WHEN JUST first THEN
+        CONSIDER `day on which the last uncommenced provisions were omitted or could not commence`
+        WHEN NOTHING THEN JUST (first PLUS 1)
+        WHEN JUST second THEN JUST ((IF first LESS THAN second THEN first ELSE second) PLUS 1)
+
+-- src:1245 | (2) An appropriation Act is automatically repealed on the last day of the financial year for which it makes appropriations.
+@ref s 89 (2) (src:1245-1245)
+-- src:2984 | financial year means a period of 12 months beginning on 1 July.
+@ref dictionary, financial year (src:2984-2984)
+GIVEN `calendar year in which the financial year begins` IS A NUMBER
+GIVETH A DATE
+`s 89 (2): the day an appropriation Act is automatically repealed` MEANS
+    `dictionary, month: the last day of a run of successive months, the first beginning at the start of a day` (Date 1 7 `calendar year in which the financial year begins`) 12
+
+-- src:1246 | (3) An amending provision of a law is automatically repealed immediately after all of the amendments and repeals made by it (or to which it relates) have commenced.
+-- src:1247 | (4) A commencement provision of a law is automatically repealed immediately after all of the provisions of the law have commenced.
+@ref s 89 (3), (4) (src:1246-1247)
+GIVEN `commencements of the amendments and repeals, or of the provisions of the law` IS A LIST OF `Point in time`
+GIVETH A MAYBE `Point in time`
+`s 89 (3), (4): the point in time immediately after which the provision is automatically repealed` MEANS
+    `s 74: the latest of some points in time` `commencements of the amendments and repeals, or of the provisions of the law`
+
+-- src:1248 | (5) A commencement notice is automatically repealed on the day after the day, or the last of the days, fixed or otherwise determined by the notice for the commencement of a law.
+@ref s 89 (5) (src:1248-1248)
+-- src:1249 | (6) If an instrument making, or evidencing, an appointment (including an acting appointment) is a legislative instrument, the instrument is automatically repealed—
+-- src:1250 | (a) on the day the appointment ends; or
+-- src:1251 | (b) if the instrument makes 2 or more appointments that end on different days—on the day the last-ending appointment ends.
+@ref s 89 (6) (src:1249-1251)
+GIVEN days IS A LIST OF DATE
+GIVETH A MAYBE DATE
+`s 89 (5), (6): the latest of some days` MEANS
+    CONSIDER days
+    WHEN EMPTY THEN NOTHING
+    WHEN first FOLLOWED BY rest THEN
+        CONSIDER `s 89 (5), (6): the latest of some days` rest
+        WHEN NOTHING THEN JUST first
+        WHEN JUST other THEN IF first LESS THAN other THEN JUST other ELSE JUST first
+
+-- src:1248 | (5) A commencement notice is automatically repealed on the day after the day, or the last of the days, fixed or otherwise determined by the notice for the commencement of a law.
+@ref s 89 (5) (src:1248-1248)
+GIVEN `days fixed or determined by the notice` IS A LIST OF DATE
+GIVETH A MAYBE DATE
+`s 89 (5): the day a commencement notice is automatically repealed` MEANS
+    CONSIDER `s 89 (5), (6): the latest of some days` `days fixed or determined by the notice`
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST latest THEN JUST (latest PLUS 1)
+
+-- src:1249 | (6) If an instrument making, or evidencing, an appointment (including an acting appointment) is a legislative instrument, the instrument is automatically repealed—
+-- src:1250 | (a) on the day the appointment ends; or
+-- src:1251 | (b) if the instrument makes 2 or more appointments that end on different days—on the day the last-ending appointment ends.
+@ref s 89 (6) (src:1249-1251)
+GIVEN `days on which the appointments end` IS A LIST OF DATE
+GIVETH A MAYBE DATE
+`s 89 (6): the day an instrument making or evidencing appointments is automatically repealed` MEANS
+    `s 89 (5), (6): the latest of some days` `days on which the appointments end`
+
+-- src:1253 | (8) If apart from this subsection a law would be automatically repealed on a day that is earlier than its notification day, the law is instead automatically repealed on the day after its notification day.
+@ref s 89 (8) (src:1253-1253)
+GIVEN `day on which the law would otherwise be repealed` IS A DATE
+      `notification day` IS A DATE
+GIVETH A DATE
+`s 89 (8): the day a law is automatically repealed, if the day would be earlier than its notification day` MEANS
+    IF   `day on which the law would otherwise be repealed` LESS THAN `notification day`
+    THEN `notification day` PLUS 1
+    ELSE `day on which the law would otherwise be repealed`
+
+§§ `Chapter 15: age, and the dates after which some rules are determinative`
+
+-- s 149: "a person is an age in years at the beginning of the person's birthday for the age".
+-- A person born on 29 February has no 29 February in most years, and the text does not say which day is the birthday then.
+-- src:1884 | For an Act or statutory instrument, a person is an age in years at the beginning of the person’s birthday for the age.
+@ref s 149 (src:1884-1884)
+GIVEN born IS A DATE
+      year IS A NUMBER
+GIVETH A BOOLEAN
+`s 149: the birthday falls in the year` MEANS
+    DATE_DAY born AT MOST `Days in month` (DATE_MONTH born) year
+
+-- src:1884 | For an Act or statutory instrument, a person is an age in years at the beginning of the person’s birthday for the age.
+@ref s 149 (src:1884-1884)
+GIVEN born IS A DATE
+      day IS A DATE
+GIVETH A MAYBE NUMBER
+`s 149: the age in years of a person on a day` MEANS
+    IF   day LESS THAN born
+    THEN NOTHING
+    ELSE IF   `s 149: the birthday falls in the year` born (DATE_YEAR day)
+         THEN JUST (yearsApart MINUS (IF day LESS THAN Date (DATE_DAY born) (DATE_MONTH born) (DATE_YEAR day) THEN 1 ELSE 0))
+         ELSE IF   day LESS THAN Date 28 2 (DATE_YEAR day)
+              THEN JUST (yearsApart MINUS 1)
+              ELSE IF   day AT LEAST Date 1 3 (DATE_YEAR day)
+                   THEN JUST yearsApart
+                   ELSE NOTHING
+    WHERE
+        yearsApart MEANS DATE_YEAR day MINUS DATE_YEAR born
+
+-- src:1884 | For an Act or statutory instrument, a person is an age in years at the beginning of the person’s birthday for the age.
+@ref s 149 (src:1884-1884)
+GIVEN born IS A DATE
+      age IS A NUMBER
+GIVETH A MAYBE DATE
+`s 149: the day a person attains an age in years` MEANS
+    IF   age LESS THAN 0
+    THEN NOTHING
+    ELSE IF   `s 149: the birthday falls in the year` born (DATE_YEAR born PLUS age)
+         THEN JUST (Date (DATE_DAY born) (DATE_MONTH born) (DATE_YEAR born PLUS age))
+         ELSE NOTHING
+
+DECLARE `Kind of law for s 146` IS ONE OF
+    `an Act, subordinate law or disallowable instrument`
+    `any other statutory instrument`
+
+-- src:1863 | application date means—
+-- src:1864 | (a) for an Act, subordinate law or disallowable instrument—1 January 2000; and
+-- src:1865 | (b) for any other statutory instrument—1 January 2006.
+@ref s 146 (4) (src:1863-1865)
+GIVEN kind IS A `Kind of law for s 146`
+GIVETH A DATE
+`s 146 (4): the application date` MEANS
+    CONSIDER kind
+    WHEN `an Act, subordinate law or disallowable instrument` THEN Date 1 1 2000
+    WHEN `any other statutory instrument` THEN Date 1 1 2006
+
+-- src:1861 | applicable law means an Act enacted, or statutory instrument made, after the application date.
+-- src:1862 | applicable provision means a provision inserted after the application date into an Act or statutory instrument that is not an applicable law.
+@ref s 146 (4) (src:1861-1862)
+GIVEN kind IS A `Kind of law for s 146`
+      `day the law was enacted or made` IS A DATE
+      `day a provision was inserted into it, if it was inserted after the law was enacted or made` IS A MAYBE DATE
+GIVETH A BOOLEAN
+`s 146 (4): the law or the provision is an applicable law or applicable provision` MEANS
+        `day the law was enacted or made` GREATER THAN `s 146 (4): the application date` kind
+     OR CONSIDER `day a provision was inserted into it, if it was inserted after the law was enacted or made`
+        WHEN NOTHING THEN FALSE
+        WHEN JUST inserted THEN inserted GREATER THAN `s 146 (4): the application date` kind
+
+-- src:1925 | applicable law means an Act enacted, or statutory instrument made, after 1 January 2006.
+-- src:1926 | applicable provision means a provision inserted after 1 January 2006 into an Act or statutory instrument that is not an applicable law.
+-- src:1927 | inserted, for a provision, includes inserted in substitution for another provision.
+@ref s 151 (5) (src:1925-1927)
+-- src:1937 | applicable law means an Act enacted, or statutory instrument made, after 1 January 2006.
+-- src:1938 | applicable provision means a provision inserted after 1 January 2006 into an Act or statutory instrument that is not an applicable law.
+-- src:1939 | inserted, for a provision, includes inserted in substitution for another provision.
+@ref s 151A (4) (src:1937-1939)
+-- src:1970 | applicable law means an Act enacted, or statutory instrument made, after 1 January 2006.
+-- src:1971 | applicable provision means a provision inserted after 1 January 2006 into an Act or statutory instrument that is not an applicable law.
+-- src:1972 | inserted, for a provision, includes inserted in substitution for another provision.
+@ref s 151C (6) (src:1970-1972)
+GIVEN `day the law was enacted or made` IS A DATE
+      `day a provision was inserted into it, if it was inserted after the law was enacted or made` IS A MAYBE DATE
+GIVETH A BOOLEAN
+`s 151 (5), s 151A (4), s 151C (6): the law or the provision is an applicable law or applicable provision` MEANS
+        `day the law was enacted or made` GREATER THAN Date 1 1 2006
+     OR CONSIDER `day a provision was inserted into it, if it was inserted after the law was enacted or made`
+        WHEN NOTHING THEN FALSE
+        WHEN JUST inserted THEN inserted GREATER THAN Date 1 1 2006
+
+-- src:1617 | (2) A heading to a section or subsection of an Act or statutory instrument is part of the Act or instrument if—
+-- src:1618 | (a) the Act was enacted, or the instrument was made, after 1 January 2000; or
+-- src:1619 | (b) the heading was amended or inserted into the Act or instrument after 1 January 2000.
+@ref s 126 (2) (src:1617-1619)
+GIVEN `day the Act was enacted or the instrument was made` IS A DATE
+      `day the heading was amended or inserted, if it was` IS A MAYBE DATE
+GIVETH A BOOLEAN
+`s 126 (2): the heading to a section or subsection is part of the Act or instrument` MEANS
+        `day the Act was enacted or the instrument was made` GREATER THAN Date 1 1 2000
+     OR CONSIDER `day the heading was amended or inserted, if it was`
+        WHEN NOTHING THEN FALSE
+        WHEN JUST amended THEN amended GREATER THAN Date 1 1 2000
+
+§§ `Part 19.5: when a document is taken to be served`
+
+DECLARE `How a document is served` IS ONE OF
+    `by giving it to the person, or to an executive officer`
+    `by sending it by prepaid post`
+    `by fax`
+    `by email`
+    `by leaving it at an address with someone there`
+
+-- s 250 (4): "only if, on the day the document was sent or on the next working day, the equipment ... indicated ..." a failure.
+-- src:2649 | (4) For subsection (3), the sender has reason to suspect that a document served by fax or email under this part was not received by the recipient when sent only if, on the day the document was sent or on the next working day, the equipment the sender used to send the document indicated by way of a signal or other message that—
+-- src:2650 | (a) the equipment did not send the document when the equipment was used to send the document; or
+-- src:2651 | (b) for a fax—the number to which the fax was sent to the recipient was not a fax number of the recipient; or
+-- src:2652 | (c) for an email—the address to which the email was sent was not an email address of the recipient.
+@ref s 250 (4) (src:2649-2652)
+GIVEN `the equipment indicated one of the failures on the day sent or on the next working day` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 250 (4): the sender has reason to suspect the document was not received` MEANS
+    IF   `the equipment indicated one of the failures on the day sent or on the next working day`
+    THEN NOTHING
+    ELSE JUST FALSE
+
+-- dictionary, working day: the next working day after a day (the dictionary's meaning, not s 151A (4)'s).
+-- src:3280 | working day means a day that is not—
+-- src:3281 | (a) a Saturday or Sunday; or
+-- src:3282 | (b) a public holiday in the ACT.
+@ref dictionary, working day (src:3280-3282)
+GIVEN day IS A DATE
+      calendar IS A `Calendar facts`
+      `days left to search` IS A NUMBER
+GIVETH A MAYBE DATE
+`dictionary, working day: the first working day after a day, searching a limited number of days` MEANS
+    IF   `dictionary, working day: the day is a working day` (day PLUS 1) calendar
+    THEN JUST (day PLUS 1)
+    ELSE IF   `days left to search` AT MOST 0
+         THEN NOTHING
+         ELSE `dictionary, working day: the first working day after a day, searching a limited number of days` (day PLUS 1) calendar (`days left to search` MINUS 1)
+
+-- src:2645 | (1) A document served by post under this part is taken to be served when the document would have been delivered in the ordinary course of post.
+-- src:2646 | (2) However, subsection (1) does not affect the operation of the Evidence Act 2011, section 160 (Postal articles).
+-- src:2647 | Note The Evidence Act 2011, s 160 provides a rebuttable presumption that a postal article sent by prepaid post addressed to a person at an address in Australia or an external territory was received on the 7th working day after posting.
+-- src:2648 | (3) If the sender has no reason to suspect that a document served by fax or email under this part was not received by the recipient when sent, the document is presumed to be served when sent unless evidence sufficient to raise doubt about the presumption is given.
+-- src:2649 | (4) For subsection (3), the sender has reason to suspect that a document served by fax or email under this part was not received by the recipient when sent only if, on the day the document was sent or on the next working day, the equipment the sender used to send the document indicated by way of a signal or other message that—
+-- src:2650 | (a) the equipment did not send the document when the equipment was used to send the document; or
+-- src:2651 | (b) for a fax—the number to which the fax was sent to the recipient was not a fax number of the recipient; or
+-- src:2652 | (c) for an email—the address to which the email was sent was not an email address of the recipient.
+-- src:2653 | (5) A document addressed to the recipient, and left for the recipient as mentioned in section 247 (e), section 248 (e) or section 249 (e), is taken to be served when it was left.
+@ref s 250 (1), (3), (5) (src:2645-2653)
+GIVEN how IS A `How a document is served`
+      `day it was posted, sent, or left` IS A DATE
+      `day it would have been delivered in the ordinary course of post` IS A MAYBE DATE
+      `the sender has reason to suspect it was not received` IS A MAYBE BOOLEAN
+      `evidence sufficient to raise doubt about the presumption is given` IS A BOOLEAN
+GIVETH A MAYBE DATE
+`s 250: the day a document is taken to be served` MEANS
+    CONSIDER how
+    WHEN `by sending it by prepaid post` THEN `day it would have been delivered in the ordinary course of post`
+    WHEN `by fax` THEN faxOrEmail
+    WHEN `by email` THEN faxOrEmail
+    WHEN `by leaving it at an address with someone there` THEN JUST `day it was posted, sent, or left`
+    WHEN `by giving it to the person, or to an executive officer` THEN NOTHING
+    WHERE
+        faxOrEmail MEANS
+            CONSIDER `the sender has reason to suspect it was not received`
+            WHEN JUST suspects THEN
+                IF   suspects OR `evidence sufficient to raise doubt about the presumption is given`
+                THEN NOTHING
+                ELSE JUST `day it was posted, sent, or left`
+            WHEN NOTHING THEN NOTHING
