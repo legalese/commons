@@ -1,0 +1,657 @@
+IMPORT prelude
+IMPORT daydate
+
+-- The time rules of the Interpretation Act 1978 (Northern Territory), reprint as in force at 21 April 2023.
+--
+-- This module is self-contained: it imports only prelude and daydate, and it has its own tests in nt-tests-time.l4.
+-- It may be copied, unchanged and by itself, into other work.
+--
+-- What it answers, each from the text alone:
+--   when an Act or a provision commences, and the moment within the day (sections 5, 6, 6A, 6B);
+--   when subordinate legislation commences (section 63B);
+--   how a period of days, months or years dating from a day, act or event is counted, and which day is its last (sections 17 and 28);
+--   what happens when the last day is a Saturday, a Sunday or a public holiday (section 28(2));
+--   which days are business days, calendar months, years, calendar years and financial years (section 17);
+--   the day on which a person attains an age (section 30) and the time after midnight for four digits (section 29);
+--   the day on which a document is taken to be served (section 25(2) to (4));
+--   the nth sitting day after a day (sections 17, 63, 63A, 63C);
+--   what a repeal or an expiry does (sections 11 to 16).
+--
+-- Where the text is silent the function answers NOTHING.
+-- The text does not define "day" or "week": a period of weeks is not covered (NOTHING), and so is a period of no days.
+-- Public holidays are a fact of the place where the thing is done (the Public Holidays Act 1981 is not among the sources), so they are an input.
+-- Months are counted one calendar month at a time: see the fork register in NOTES.md.
+
+§ `Nouns of the time module`
+
+DECLARE `Unit of time` IS ONE OF
+    `days`
+    `weeks`
+    `months`
+    `years`
+
+DECLARE `How a period of time is expressed` IS ONE OF
+    `dating from a given day, act or event`
+    `ending at, with or on a given day, act or event`
+    `expressed in some other way`
+
+-- A day that is a public holiday in the place where a thing is to or may be done.
+DECLARE `Public holiday` HAS
+    `the day of the public holiday`            IS A DATE
+    `the public holiday is part of a day only` IS A BOOLEAN
+
+DECLARE `Time of day` HAS
+    `whole hours after midnight` IS A NUMBER
+    `minutes after the hour`     IS A NUMBER
+
+DECLARE `Moment` HAS
+    `the day of the moment`         IS A DATE
+    `the time of day of the moment` IS A `Time of day`
+
+DECLARE `How commencement is specified` IS ONE OF
+    `on a particular day`
+        HAS `the particular day` IS A DATE
+    `on a day fixed by Gazette notice`
+        HAS `the day fixed by the notice, if one has been fixed` IS A MAYBE DATE
+    `on the happening of an event`
+        HAS `the day on which the event happens, if it has happened` IS A MAYBE DATE
+    `commencement is not specified or provided for`
+
+DECLARE `Method of serving a document` IS ONE OF
+    `by giving it to the recipient, an executive officer of the body or a person authorised to receive it`
+    `by sending it by prepaid post`
+    `by sending it by fax`
+    `by leaving it at the recipient's address with someone who appears to be at least 16 years old and to live or be employed there`
+
+DECLARE `Time expression in an Act` IS ONE OF
+    `from time to time`
+    `for the time being`
+
+DECLARE `A reading of a time reference` IS ONE OF
+    `the thing existing or having effect at any time`
+    `the thing existing or having effect at that time`
+
+DECLARE `What a repeal or expiry does to a thing` IS ONE OF
+    `a thing not in force or existing at the time at which the repeal takes effect`
+    `the previous operation of the repealed Act or part`
+    `anything duly done or suffered under the repealed Act or part`
+    `a right, privilege, obligation or liability acquired, accrued or incurred under the repealed Act or part`
+    `an investigation, legal proceeding or remedy in respect of such a right, privilege, obligation or liability`
+    `a penalty, forfeiture or punishment incurred in respect of an offence against the repealed Act or part`
+    `an investigation, legal proceeding or remedy in respect of such a penalty, forfeiture or punishment`
+
+DECLARE `Kind of law that repeals and re-enacts` IS ONE OF
+    `an Act`
+    `a Commonwealth Act or legislative instrument`
+    `a State, Territory or New Zealand Act or subordinate legislation`
+
+§ `Counting days: sections 17 and 28`
+
+-- The start of a calendar month and the day after.
+-- "month" means a calendar month, and "calendar month" means a period commencing at the beginning of any day of a named month and ending
+-- (a) at the end of the day before the corresponding day of the next named month, or
+-- (b) if there is no such corresponding day, at the end of the next named month.
+-- src:263 | calendar month means a period commencing at the beginning of any day of a named month and ending:
+-- src:264 | (a) at the end of the day before the corresponding day of the next named month; or
+-- src:265 | (b) if there is no such corresponding day – at the end of the next named month.
+@ref s 17 "calendar month" (src:263-265)
+GIVEN commencing IS A DATE
+GIVETH A DATE
+`s 17 "calendar month": the last day of the calendar month commencing at the beginning of` MEANS
+    IF   DATE_DAY commencing AT MOST `Days in month` `the next named month` `the year of the next named month`
+    THEN `the day before` (Date (DATE_DAY commencing) `the next named month` `the year of the next named month`)
+    ELSE Date (`Days in month` `the next named month` `the year of the next named month`) `the next named month` `the year of the next named month`
+    WHERE
+        `the next named month` MEANS IF DATE_MONTH commencing EQUALS 12 THEN 1 ELSE DATE_MONTH commencing PLUS 1
+        `the year of the next named month` MEANS IF DATE_MONTH commencing EQUALS 12 THEN DATE_YEAR commencing PLUS 1 ELSE DATE_YEAR commencing
+
+-- "month" means a calendar month: a period of several months is that many calendar months, one after another.
+-- src:354 | month means a calendar month.
+@ref s 17 "month" (src:354)
+GIVEN commencing IS A DATE
+      `the number of months` IS A NUMBER
+GIVETH A DATE
+`s 17 "month": the last day of consecutive calendar months, the first commencing at the beginning of` MEANS
+    IF   `the number of months` AT MOST 1
+    THEN `s 17 "calendar month": the last day of the calendar month commencing at the beginning of` commencing
+    ELSE `s 17 "month": the last day of consecutive calendar months, the first commencing at the beginning of`
+             (`the day after` (`s 17 "calendar month": the last day of the calendar month commencing at the beginning of` commencing))
+             (`the number of months` MINUS 1)
+
+-- "year" means a period of 12 months.
+-- src:415 | year means a period of 12 months.
+@ref s 17 "year" (src:415)
+GIVEN commencing IS A DATE
+      `the number of years` IS A NUMBER
+GIVETH A DATE
+`s 17 "year": the last day of consecutive years, the first commencing at the beginning of` MEANS
+    `s 17 "month": the last day of consecutive calendar months, the first commencing at the beginning of` commencing (12 TIMES `the number of years`)
+
+-- A period of time dating from a given day, act or event is reckoned exclusive of that day, so its first day is the next day.
+-- A period of days ends N days after the given day; a period of months or years is counted in calendar months from the next day.
+-- The Act says nothing about a period of weeks or hours, and nothing about a period of no days or of part of a day.
+-- src:507 | (1) If in an Act a period of time dating from a given day, act or event is prescribed, allowed or limited for any purpose, the time must be reckoned exclusive of such day or of the day of such act or event.
+@ref s 28(1); s 17 "month"; s 17 "year" (src:507)
+GIVEN `the given day, or the day of the given act or event` IS A DATE
+      `the length of the period` IS A NUMBER
+      `the unit` IS A `Unit of time`
+GIVETH A MAYBE DATE
+`s 28(1): the last day of a period dating from` MEANS
+    IF   `the length of the period` LESS THAN 1 OR (NOT (FLOOR `the length of the period` EQUALS `the length of the period`))
+    THEN NOTHING
+    ELSE CONSIDER `the unit`
+         WHEN `days`   THEN JUST (`the given day, or the day of the given act or event` PLUS `the length of the period`)
+         WHEN `weeks`  THEN NOTHING
+         WHEN `months` THEN JUST (`s 17 "month": the last day of consecutive calendar months, the first commencing at the beginning of` (`the day after` `the given day, or the day of the given act or event`) `the length of the period`)
+         WHEN `years`  THEN JUST (`s 17 "year": the last day of consecutive years, the first commencing at the beginning of` (`the day after` `the given day, or the day of the given act or event`) `the length of the period`)
+
+@ref s 28(1) (src:507)
+GIVEN `the given day, or the day of the given act or event` IS A DATE
+GIVETH A DATE
+`s 28(1): the first day counted in a period dating from` MEANS
+    `the day after` `the given day, or the day of the given act or event`
+
+-- Whether the given day itself is part of the time: no where the period dates from it (section 28(1)), yes where the period ends at, with or on it (section 28(1A)).
+-- src:507 | (1) If in an Act a period of time dating from a given day, act or event is prescribed, allowed or limited for any purpose, the time must be reckoned exclusive of such day or of the day of such act or event.
+-- src:508 | (1A) If an Act provides that a period of time ends at, with or on a given day, act or event, the time is reckoned to include that day or the day of that act or event.
+@ref s 28(1), (1A) (src:507-508)
+GIVEN `how the period is expressed` IS A `How a period of time is expressed`
+GIVETH A MAYBE BOOLEAN
+`s 28(1), (1A): the given day, act or event is counted in the period` MEANS
+    CONSIDER `how the period is expressed`
+    WHEN `dating from a given day, act or event` THEN JUST FALSE
+    WHEN `ending at, with or on a given day, act or event` THEN JUST TRUE
+    WHEN `expressed in some other way` THEN NOTHING
+
+-- A period of days that ends at, with or on a given day includes that day, so its first day is N minus 1 days before the given day.
+-- A calendar month is defined by the day it commences on, not by the day it ends on, so the Act does not give the first day of a period of months or years that ends on a given day.
+@ref s 28(1A) (src:508)
+GIVEN `the day on which the period ends` IS A DATE
+      `the length of the period` IS A NUMBER
+      `the unit` IS A `Unit of time`
+GIVETH A MAYBE DATE
+`s 28(1A): the first day of a period ending on` MEANS
+    IF   `the length of the period` LESS THAN 1 OR (NOT (FLOOR `the length of the period` EQUALS `the length of the period`))
+    THEN NOTHING
+    ELSE CONSIDER `the unit`
+         WHEN `days`   THEN JUST (`the day on which the period ends` PLUS (1 MINUS `the length of the period`))
+         WHEN `weeks`  THEN NOTHING
+         WHEN `months` THEN NOTHING
+         WHEN `years`  THEN NOTHING
+
+§ `Rest days: section 28(2) and the definitions of business day and public holiday`
+
+-- The day is a Saturday, a Sunday or a public holiday in the place where the thing is to or may be done,
+-- other than a public holiday that is part of a day.
+-- src:509 | (2) If the last day of any period prescribed, allowed or limited by an Act for the doing of any thing falls on a Saturday, on a Sunday or on a public holiday in the place in which the thing is to or may be done (other than a public holiday that is part of a day), the thing may be done on the first day following which is not a Saturday, a Sunday or a public holiday in that place.
+@ref s 28(2) (src:509)
+GIVEN day IS A DATE
+      `the public holidays in the place where the thing is to or may be done` IS A LIST OF `Public holiday`
+GIVETH A BOOLEAN
+`s 28(2): the day is a Saturday, a Sunday or a public holiday` MEANS
+        `is weekend` day
+     OR any (GIVEN holiday YIELD holiday's `the day of the public holiday` EQUALS day AND (NOT holiday's `the public holiday is part of a day only`))
+            `the public holidays in the place where the thing is to or may be done`
+
+@ref s 28(2) (src:509)
+GIVEN day IS A DATE
+      `the public holidays in the place where the thing is to or may be done` IS A LIST OF `Public holiday`
+GIVETH A DATE
+`s 28(2): the first day, on or after the day, that is not a Saturday, a Sunday or a public holiday` MEANS
+    IF   `s 28(2): the day is a Saturday, a Sunday or a public holiday` day `the public holidays in the place where the thing is to or may be done`
+    THEN `s 28(2): the first day, on or after the day, that is not a Saturday, a Sunday or a public holiday` (`the day after` day) `the public holidays in the place where the thing is to or may be done`
+    ELSE day
+
+-- If the last day of a period allowed for the doing of a thing falls on a Saturday, a Sunday or a public holiday,
+-- the thing may be done on the first following day that is not one.
+-- The rule speaks of "any period" and does not limit itself to periods of days.
+@ref s 28(2) (src:509)
+GIVEN `the last day of the period` IS A DATE
+      `the public holidays in the place where the thing is to or may be done` IS A LIST OF `Public holiday`
+GIVETH A DATE
+`s 28(2): the last day on which the thing may be done, for a period whose last day is` MEANS
+    `s 28(2): the first day, on or after the day, that is not a Saturday, a Sunday or a public holiday` `the last day of the period` `the public holidays in the place where the thing is to or may be done`
+
+-- The two steps together: a period allowed for the doing of a thing, dating from a day, act or event.
+-- src:507 | (1) If in an Act a period of time dating from a given day, act or event is prescribed, allowed or limited for any purpose, the time must be reckoned exclusive of such day or of the day of such act or event.
+-- src:508 | (1A) If an Act provides that a period of time ends at, with or on a given day, act or event, the time is reckoned to include that day or the day of that act or event.
+-- src:509 | (2) If the last day of any period prescribed, allowed or limited by an Act for the doing of any thing falls on a Saturday, on a Sunday or on a public holiday in the place in which the thing is to or may be done (other than a public holiday that is part of a day), the thing may be done on the first day following which is not a Saturday, a Sunday or a public holiday in that place.
+@ref s 28(1), (2) (src:507-509)
+GIVEN `the given day, or the day of the given act or event` IS A DATE
+      `the length of the period` IS A NUMBER
+      `the unit` IS A `Unit of time`
+      `the public holidays in the place where the thing is to or may be done` IS A LIST OF `Public holiday`
+GIVETH A MAYBE DATE
+`s 28(1), (2): the last day on which a thing may be done within a period dating from` MEANS
+    CONSIDER `s 28(1): the last day of a period dating from` `the given day, or the day of the given act or event` `the length of the period` `the unit`
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST last THEN JUST (`s 28(2): the last day on which the thing may be done, for a period whose last day is` last `the public holidays in the place where the thing is to or may be done`)
+
+-- "business day" means a day other than a Saturday or Sunday, or a public holiday in the place in which any relevant act is to be done or may be done,
+-- other than a public holiday that is part of a day.
+-- src:260 | business day means a day other than:
+-- src:261 | (a) a Saturday or Sunday; or
+-- src:262 | (b) a day that is a public holiday in the place in which any relevant act is to be done or may be done (other than a public holiday that is part of a day).
+@ref s 17 "business day" (src:260-262)
+GIVEN day IS A DATE
+      `the public holidays in the place where the relevant act is to be done or may be done` IS A LIST OF `Public holiday`
+GIVETH A BOOLEAN
+`s 17 "business day": the day is a business day` MEANS
+    (NOT (`s 28(2): the day is a Saturday, a Sunday or a public holiday` day `the public holidays in the place where the relevant act is to be done or may be done`))
+
+-- "calendar year" means the year commencing on 1 January; a year is a period of 12 months, so it ends on 31 December.
+-- src:266 | calendar year means the year commencing on 1 January.
+@ref s 17 "calendar year" (src:266)
+GIVEN year IS A NUMBER
+GIVETH A DATE
+`s 17 "calendar year": the last day of the calendar year of` MEANS
+    `s 17 "year": the last day of consecutive years, the first commencing at the beginning of` (Date 1 1 year) 1
+
+-- "financial year" means the year ending on 30 June; a year is a period of 12 months, so it commences on 1 July of the year before.
+-- src:307 | financial year means the year ending on 30 June.
+@ref s 17 "financial year" (src:307)
+GIVEN `the year in which the financial year ends` IS A NUMBER
+GIVETH A DATE
+`s 17 "financial year": the first day of the financial year ending on 30 June of` MEANS
+    Date 1 7 (`the year in which the financial year ends` MINUS 1)
+
+§ `Age: section 30`
+
+-- If a person was born on 29 February, the anniversary of the birth in any subsequent year that is not a leap year is taken to be 28 February.
+-- In any other case the anniversary is the day of the same name in the year.
+-- src:518 | (2) Subject to subsection (3), if an Act refers to the anniversary of the birth of a person, that reference must be read as a reference to the day on which the anniversary occurs.
+-- src:519 | (3) If a person was born on 29 February in any year, then, in any subsequent year that is not a leap year, the anniversary of the birth of that person is taken to be 28 February in that subsequent year.
+@ref s 30(2), (3) (src:518-519)
+GIVEN `the date of birth` IS A DATE
+      `the year` IS A NUMBER
+GIVETH A MAYBE DATE
+`s 30(2), (3): the day on which the anniversary of the birth occurs in` MEANS
+    IF   `the year` AT MOST DATE_YEAR `the date of birth`
+    THEN NOTHING
+    ELSE IF   DATE_DAY `the date of birth` EQUALS 29 AND DATE_MONTH `the date of birth` EQUALS 2 AND (NOT (`is leap year` `the year`))
+         THEN JUST (Date 28 2 `the year`)
+         ELSE JUST (Date (DATE_DAY `the date of birth`) (DATE_MONTH `the date of birth`) `the year`)
+
+-- A person is taken to have attained a particular age on the relevant anniversary of the person's birth.
+-- src:517 | (1) In the reckoning of age of a person for the purposes of any Act, the person must be taken to have attained a particular age on the relevant anniversary of the person's birth.
+@ref s 30(1) (src:517)
+GIVEN `the date of birth` IS A DATE
+      `the age in whole years` IS A NUMBER
+GIVETH A MAYBE DATE
+`s 30(1): the day on which a person attains the age` MEANS
+    IF   `the age in whole years` LESS THAN 1 OR (NOT (FLOOR `the age in whole years` EQUALS `the age in whole years`))
+    THEN NOTHING
+    ELSE `s 30(2), (3): the day on which the anniversary of the birth occurs in` `the date of birth` (DATE_YEAR `the date of birth` PLUS `the age in whole years`)
+
+@ref s 30(1) (src:517)
+GIVEN `the date of birth` IS A DATE
+      `the age in whole years` IS A NUMBER
+      `the day asked about` IS A DATE
+GIVETH A MAYBE BOOLEAN
+`s 30(1): the person has attained the age on` MEANS
+    CONSIDER `s 30(1): the day on which a person attains the age` `the date of birth` `the age in whole years`
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST attained THEN JUST (`the day asked about` AT LEAST attained)
+
+§ `The 24 hour clock: section 29`
+
+-- A time of day expressed as 4 digits is the time after midnight of the hours given by the first and second digits
+-- and the minutes, less than an hour, given by the third and fourth.
+-- Where the first of two digits that make a number of hours or of minutes is 0, the number is the second digit (section 29(2)).
+-- The text speaks of a time of day, so hours of 24 or more, and minutes of 60 or more, are not covered.
+-- src:514 | (1) A reference in an Act to a time of day expressed as 4 digits in hours is a reference to the time after midnight that is the number of hours (if any) equal to the number constituted by the first and second of those digits and the number of minutes (if any) less than an hour equal to the number constituted by the third and fourth of those digits.
+-- src:515 | (2) For the purposes of subsection (1), where the first of 2 digits constituting a number of hours or a number of minutes is 0, that number of hours or number of minutes, as the case may be, shall be taken to be the number constituted by the second of those 2 digits.
+@ref s 29(1), (2) (src:514-515)
+GIVEN `the first digit` IS A NUMBER
+      `the second digit` IS A NUMBER
+      `the third digit` IS A NUMBER
+      `the fourth digit` IS A NUMBER
+GIVETH A MAYBE `Time of day`
+`s 29: the time after midnight for four digits` MEANS
+    IF   `every figure is a digit`
+    THEN IF   hours AT MOST 23 AND minutes AT MOST 59
+         THEN JUST (`Time of day` WITH `whole hours after midnight` IS hours
+                                      , `minutes after the hour` IS minutes)
+         ELSE NOTHING
+    ELSE NOTHING
+    WHERE
+        `every figure is a digit` MEANS
+            all (GIVEN figure YIELD figure AT LEAST 0 AND figure AT MOST 9 AND FLOOR figure EQUALS figure)
+                (LIST `the first digit`, `the second digit`, `the third digit`, `the fourth digit`)
+        hours MEANS 10 TIMES `the first digit` PLUS `the second digit`
+        minutes MEANS 10 TIMES `the third digit` PLUS `the fourth digit`
+
+§ `Standard time and time expressions: section 28(3) to (5)`
+
+-- In an Act, a reference to time is a reference to standard time declared by section 4 of the Standard Time Act 2005.
+-- That Act is not among the sources, so the module names the standard time and does not compute an offset from it.
+-- src:510 | (3) In an Act, a reference to time must be read as a reference to standard time declared by section 4 of the Standard Time Act 2005.
+@ref s 28(3) (src:510)
+`s 28(3): a reference to time is read as a reference to` MEANS "standard time declared by section 4 of the Standard Time Act 2005"
+
+-- "from time to time" is a reference to the thing existing or having effect at any time;
+-- "for the time being" is a reference to the thing existing or having effect at that time.
+-- src:511 | (4) A reference in an Act to a thing existing or having effect from time to time is a reference to the thing existing or having effect at any time.
+-- src:512 | (5) A reference in an Act to a thing existing or having effect for the time being is a reference to the thing existing or having effect at that time.
+@ref s 28(4), (5) (src:511-512)
+GIVEN `the expression` IS A `Time expression in an Act`
+GIVETH A `A reading of a time reference`
+`s 28(4), (5): a time expression is read as` MEANS
+    CONSIDER `the expression`
+    WHEN `from time to time` THEN `the thing existing or having effect at any time`
+    WHEN `for the time being` THEN `the thing existing or having effect at that time`
+
+§ `Part II -- Commencement of Acts: sections 5, 6, 6A and 6B`
+
+-- An Act commences on the day specified or provided for in it.
+-- It may be specified to commence on a particular day, on a day fixed by Gazette notice, or on the happening of an event.
+-- If it does not specify or provide for its commencement, it commences on the day after the day on which assent is declared.
+-- Different provisions may commence on different days: each provision then has its own day.
+-- src:169 | (1) An Act commences on the day specified or provided for in the Act.
+-- src:170 | (2) An Act may be specified to commence:
+-- src:171 | (a) on a particular day or on a number of different days; or
+-- src:172 | (b) on a day to be fixed by Gazette notice; or
+-- src:173 | (c) on the happening of a particular event or events.
+-- src:174 | Example for subsection (2)(c)
+-- src:175 | On the commencement of another Act.
+-- src:176 | (3) If an Act is specified to commence as specified in subsection (2)(b):
+-- src:177 | (a) a single day or time may be fixed; or
+-- src:178 | (b) different days or times may be fixed for different provisions of the Act.
+-- src:179 | (4) If an Act does not specify or provide for its commencement, or the commencement of any provision, the Act or the provision of the Act commences on the day after the day on which assent to the Act is declared.
+@ref s 5 (src:169-179)
+GIVEN `how commencement is specified` IS A `How commencement is specified`
+      `the day on which assent to the Act is declared` IS A DATE
+GIVETH A MAYBE DATE
+`s 5: the day on which an Act or a provision commences` MEANS
+    CONSIDER `how commencement is specified`
+    WHEN `on a particular day` day THEN JUST day
+    WHEN `on a day fixed by Gazette notice` day THEN day
+    WHEN `on the happening of an event` day THEN day
+    WHEN `commencement is not specified or provided for` THEN JUST (`the day after` `the day on which assent to the Act is declared`)
+
+-- A proposed law reserved for the signification of the pleasure of the Governor-General does not have effect before the day on which notification
+-- of the Governor-General's assent is published in the Gazette, despite anything to the contrary in section 5 or in the proposed law.
+-- src:181 | A proposed law or part of a proposed law reserved for the signification of the pleasure of the Governor-General does not have effect before the day on which notification of the Governor‑General's assent is published in the Gazette, despite anything to the contrary in section 5 or in the proposed law.
+@ref s 6 (src:181)
+GIVEN `the day on which the law would commence under section 5 or the proposed law` IS A DATE
+      `the day on which notification of the Governor-General's assent is published in the Gazette, if it has been` IS A MAYBE DATE
+GIVETH A MAYBE DATE
+`s 6: the first day on which a proposed law reserved for the Governor-General has effect` MEANS
+    CONSIDER `the day on which notification of the Governor-General's assent is published in the Gazette, if it has been`
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST notified THEN
+        JUST (IF   `the day on which the law would commence under section 5 or the proposed law` AT LEAST notified
+              THEN `the day on which the law would commence under section 5 or the proposed law`
+              ELSE notified)
+
+-- An Act or a provision commences at the beginning of the day on which it commences, unless otherwise provided in the Act.
+-- A time provided in the Act is written as four digits (section 29).
+-- src:185 | An Act or a provision of an Act commences at the beginning of the day on which it commences, unless otherwise provided in the Act.
+@ref s 6A (src:185)
+GIVEN `the day on which the Act or provision commences` IS A DATE
+      `a time of day provided in the Act` IS A MAYBE `Time of day`
+GIVETH A `Moment`
+`s 6A: the moment at which an Act or a provision commences` MEANS
+    `Moment` WITH `the day of the moment` IS `the day on which the Act or provision commences`
+                , `the time of day of the moment` IS `the time of day at which it commences`
+    WHERE
+        `the time of day at which it commences` MEANS
+            CONSIDER `a time of day provided in the Act`
+            WHEN NOTHING THEN `Time of day` WITH `whole hours after midnight` IS 0
+                                               , `minutes after the hour` IS 0
+            WHEN JUST provided THEN provided
+
+@ref s 6A (src:185)
+GIVEN moment IS A `Moment`
+GIVETH A NUMBER
+`the number of minutes from day zero of the day count to the moment` MEANS
+    (Day (moment's `the day of the moment`) TIMES 1440)
+    PLUS (moment's `the time of day of the moment`'s `whole hours after midnight` TIMES 60)
+    PLUS moment's `the time of day of the moment`'s `minutes after the hour`
+
+-- At the moment of commencement the Act or provision has commenced, and not before.
+@ref s 6A (src:185)
+GIVEN `the moment of commencement` IS A `Moment`
+      `the moment asked about` IS A `Moment`
+GIVETH A BOOLEAN
+`s 6A: the Act or provision has commenced at` MEANS
+    `the number of minutes from day zero of the day count to the moment` `the moment asked about`
+        AT LEAST `the number of minutes from day zero of the day count to the moment` `the moment of commencement`
+
+-- A reference to the commencement or the day or time of commencement of provisions is a reference to the single day or time on which they commence,
+-- or, if different parts commence on different days or at different times, to the last of those days or times.
+-- src:187 | A reference in an Act to the commencement or the day or time of commencement of the Act or part of the Act, or another Act or part of another Act, (the provisions concerned) is a reference to:
+-- src:188 | (a) if the provisions concerned commence on a single day or at a particular time – that day or time; or
+-- src:189 | (b) if different parts of the provisions concerned commence on different days or at different times – the last of those days or times.
+@ref s 6B (src:187-189)
+GIVEN `the moments at which the provisions concerned commence` IS A LIST OF `Moment`
+GIVETH A MAYBE `Moment`
+`s 6B: the commencement of the provisions concerned` MEANS
+    CONSIDER `the moments at which the provisions concerned commence`
+    WHEN EMPTY THEN NOTHING
+    WHEN first FOLLOWED BY rest THEN
+        CONSIDER `s 6B: the commencement of the provisions concerned` rest
+        WHEN NOTHING THEN JUST first
+        WHEN JUST last THEN
+            JUST (IF   `the number of minutes from day zero of the day count to the moment` last AT LEAST `the number of minutes from day zero of the day count to the moment` first
+                  THEN last
+                  ELSE first)
+
+§ `Section 63B -- commencement of subordinate legislation`
+
+-- Subordinate legislation commences on the day specified or provided for in it.
+-- It may be specified to commence on a particular day or on the happening of an event.
+-- If it does not specify or provide for its commencement it commences on the day after the day on which it is made,
+-- but a rule or by-law that is not published or to be published on the legislation website commences on the day on which it is notified in the Gazette.
+-- A day fixed by Gazette notice is not among the ways listed in subsection (2).
+-- src:793 | (1) Subordinate legislation commences on the day specified or provided for in the subordinate legislation.
+-- src:794 | (2) Subordinate legislation may be specified to commence:
+-- src:795 | (a) subject to subsection (3), on a particular day or on a number of different days; or
+-- src:796 | (b) on the happening of a particular event or events.
+-- src:797 | Examples for subsection (2)(b)
+-- src:798 | 1 On the commencement of a section of an Act.
+-- src:799 | 2 On the day after the day on which it is notified in the Gazette under section 63A(2)(a)(ii).
+-- src:800 | (3) Subordinate legislation must not be specified to commence or to take effect on a day that is before the day it is made, unless the Act under which it is made expressly provides for commencement or taking effect on a day before it is made.
+-- src:801 | (4) A provision of subordinate legislation made in contravention of subsection (3) is of no effect.
+-- src:802 | (5) If subordinate legislation does not specify or provide for its commencement, or the commencement of any provision, the subordinate legislation or the provision of the subordinate legislation commences on the day after the day on which it is made.
+-- src:803 | (6) Despite subsection (5), a rule or by-law that does not specify or provide for its commencement and that is not published or to be published on the legislation website commences on the day on which it is notified in the Gazette.
+@ref s 63B(1), (2), (5), (6) (src:793-803)
+GIVEN `how commencement is specified` IS A `How commencement is specified`
+      `the day on which the subordinate legislation is made` IS A DATE
+      `the subordinate legislation is a rule or by-law` IS A BOOLEAN
+      `the rule or by-law is published or to be published on the legislation website` IS A BOOLEAN
+      `the day on which the rule or by-law is notified in the Gazette, if it has been` IS A MAYBE DATE
+GIVETH A MAYBE DATE
+`s 63B: the day on which subordinate legislation commences` MEANS
+    CONSIDER `how commencement is specified`
+    WHEN `on a particular day` day THEN JUST day
+    WHEN `on a day fixed by Gazette notice` day THEN NOTHING
+    WHEN `on the happening of an event` day THEN day
+    WHEN `commencement is not specified or provided for` THEN
+        IF   `the subordinate legislation is a rule or by-law` AND (NOT `the rule or by-law is published or to be published on the legislation website`)
+        THEN `the day on which the rule or by-law is notified in the Gazette, if it has been`
+        ELSE JUST (`the day after` `the day on which the subordinate legislation is made`)
+
+-- Subordinate legislation must not be specified to commence or take effect before the day it is made, unless the Act under which it is made expressly provides for that.
+-- A provision made in contravention of that is of no effect.
+@ref s 63B(3), (4) (src:800-801)
+GIVEN `the day specified for commencement or for taking effect` IS A DATE
+      `the day on which the subordinate legislation is made` IS A DATE
+      `the Act expressly provides for commencement or effect before the day it is made` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 63B(3), (4): the provision of subordinate legislation is of no effect` MEANS
+    IF   (NOT (`the day specified for commencement or for taking effect` AT LEAST `the day on which the subordinate legislation is made`))
+         AND (NOT `the Act expressly provides for commencement or effect before the day it is made`)
+    THEN JUST TRUE
+    ELSE NOTHING
+
+§ `Section 25(2) to (4) -- the day on which a document is taken to be served`
+
+-- A document served by prepaid post is taken to be served when it would have been delivered in the ordinary course of post.
+-- Subject to evidence to the contrary, a document served by fax is taken to be served when it was sent to a current fax number of the recipient.
+-- A document left at the recipient's address is taken to be served when it was left with the person.
+-- Subsections (2) to (4) say nothing about a document served by giving it to a person, so the text does not say on which day that is taken to be served: not covered.
+-- The ordinary course of post is a fact of the post, so the day is an input.
+-- src:491 | (2) A document served under subsection (1)(b) is taken to be served when it would have been delivered in the ordinary course of post.
+-- src:492 | (3) Subject to evidence to the contrary, a document served under subsection (1)(c) is taken to be served when it was sent to a current fax number of the recipient.
+-- src:493 | (4) A document served under subsection (1)(d) is taken to be served when it was left with the person mentioned in the subsection.
+@ref s 25(2), (3), (4) (src:491-493)
+GIVEN `the method of service` IS A `Method of serving a document`
+      `the day on which it was given, sent or left` IS A DATE
+      `the day on which it would have been delivered in the ordinary course of post, if known` IS A MAYBE DATE
+      `it was sent to a current fax number of the recipient` IS A BOOLEAN
+      `there is evidence to the contrary of the day of service by fax` IS A BOOLEAN
+GIVETH A MAYBE DATE
+`s 25(2), (3), (4): the day on which a document is taken to be served` MEANS
+    CONSIDER `the method of service`
+    WHEN `by giving it to the recipient, an executive officer of the body or a person authorised to receive it` THEN NOTHING
+    WHEN `by sending it by prepaid post` THEN `the day on which it would have been delivered in the ordinary course of post, if known`
+    WHEN `by sending it by fax` THEN
+        IF   `it was sent to a current fax number of the recipient` AND (NOT `there is evidence to the contrary of the day of service by fax`)
+        THEN JUST `the day on which it was given, sent or left`
+        ELSE NOTHING
+    WHEN `by leaving it at the recipient's address with someone who appears to be at least 16 years old and to live or be employed there` THEN JUST `the day on which it was given, sent or left`
+
+§ `Sitting days: section 17 "sitting day" and the periods counted in them`
+
+-- A sitting day of the Legislative Assembly is a day on which the Assembly meets.
+-- The nth sitting day after a day is the nth day, after that day, on which the Assembly meets (section 28(1) leaves out the given day).
+-- The days on which the Assembly meets are a fact of its calendar, so they are an input; where fewer than n are known the answer is not covered.
+-- src:386 | sitting day, of the Legislative Assembly, means a day on which the Assembly meets.
+@ref s 17 "sitting day" (src:386)
+GIVEN day IS A DATE
+      n IS A NUMBER
+      `the days on which the Legislative Assembly meets` IS A LIST OF DATE
+GIVETH A MAYBE DATE
+`s 17 "sitting day": the nth sitting day after` MEANS
+    IF   n LESS THAN 1 OR (NOT (FLOOR n EQUALS n)) OR count `the sitting days after the day` LESS THAN n
+    THEN NOTHING
+    ELSE JUST (Date (at `the sitting days after the day` (n MINUS 1)))
+    WHERE
+        `the sitting days after the day` MEANS
+            sort (nub (filter (GIVEN number YIELD number GREATER THAN Day day)
+                              (map (GIVEN meeting YIELD Day meeting) `the days on which the Legislative Assembly meets`)))
+
+§ `Part III -- Repeal and expiration of Acts: sections 11 to 16`
+
+-- The repeal of an Act or part by which a previous Act or part was repealed does not, without express words, have the effect of reviving the previous one.
+-- The rule is subject to section 63C(5), which revives a provision of subordinate legislation when a repealing provision is disallowed; there it is silent.
+-- Where there are express words, the section does not say whether the previous Act or part is revived.
+-- src:214 | Subject to section 63C(5), the repeal of an Act or part of an Act by which a previous Act or part of an Act was repealed, does not without express words have the effect of reviving that last-mentioned Act or part.
+@ref s 11 (src:214)
+GIVEN `the repeal is of an Act or part of an Act by which a previous Act or part was repealed` IS A BOOLEAN
+      `the repeal has express words reviving the previous Act or part` IS A BOOLEAN
+      `section 63C(5) applies` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 11: the repeal has the effect of reviving the previous Act or part` MEANS
+    IF   `section 63C(5) applies` OR (NOT `the repeal is of an Act or part of an Act by which a previous Act or part was repealed`)
+    THEN NOTHING
+    ELSE IF   `the repeal has express words reviving the previous Act or part`
+         THEN NOTHING
+         ELSE JUST FALSE
+
+-- Whether a thing was in force or existing at the time at which the repeal takes effect: from its first day to its last day, if it has one.
+-- src:217 | (a) revive anything not in force or existing at the time at which the repeal takes effect;
+@ref s 12(a) (src:217)
+GIVEN `the first day on which the thing is in force or exists` IS A DATE
+      `the last day on which the thing is in force or exists, if it has one` IS A MAYBE DATE
+      `the day on which the repeal takes effect` IS A DATE
+GIVETH A BOOLEAN
+`s 12(a): the thing was in force or existing at the time at which the repeal takes effect` MEANS
+        `the day on which the repeal takes effect` AT LEAST `the first day on which the thing is in force or exists`
+    AND CONSIDER `the last day on which the thing is in force or exists, if it has one`
+        WHEN NOTHING THEN TRUE
+        WHEN JUST last THEN last AT LEAST `the day on which the repeal takes effect`
+
+-- The repeal does not revive anything not in force or existing at the time at which the repeal takes effect.
+-- src:216 | The repeal of an Act or part of an Act does not:
+-- src:217 | (a) revive anything not in force or existing at the time at which the repeal takes effect;
+@ref s 12(a) (src:216-217)
+GIVEN thing IS A `What a repeal or expiry does to a thing`
+GIVETH A MAYBE BOOLEAN
+`s 12(a): the repeal revives the thing` MEANS
+    CONSIDER thing
+    WHEN `a thing not in force or existing at the time at which the repeal takes effect` THEN JUST FALSE
+    OTHERWISE NOTHING
+
+-- The repeal does not affect the previous operation of the Act or part, anything duly done or suffered under it,
+-- a right, privilege, obligation or liability acquired, accrued or incurred under it, or an investigation, legal proceeding or remedy in respect of such a right,
+-- or a penalty, forfeiture or punishment incurred in respect of an offence against it, or an investigation, legal proceeding or remedy in respect of such a penalty.
+-- src:218 | (b) affect the previous operation of the Act or the part of the Act so repealed, or anything duly done or suffered under the Act or the part of the Act so repealed;
+-- src:219 | (c) affect a right, privilege, obligation or liability acquired, accrued or incurred under an Act or the part of the Act so repealed, or an investigation, legal proceeding or remedy in respect of that right, privilege, obligation or liability; or
+-- src:220 | (d) affect a penalty, forfeiture or punishment incurred in respect of an offence against the Act or part of the Act so repealed, or an investigation, legal proceeding or remedy in respect of that penalty, forfeiture or punishment,
+@ref s 12(b), (c), (d) (src:218-220)
+GIVEN thing IS A `What a repeal or expiry does to a thing`
+GIVETH A MAYBE BOOLEAN
+`s 12(b), (c), (d): the repeal affects the thing` MEANS
+    CONSIDER thing
+    WHEN `the previous operation of the repealed Act or part` THEN JUST FALSE
+    WHEN `anything duly done or suffered under the repealed Act or part` THEN JUST FALSE
+    WHEN `a right, privilege, obligation or liability acquired, accrued or incurred under the repealed Act or part` THEN JUST FALSE
+    WHEN `an investigation, legal proceeding or remedy in respect of such a right, privilege, obligation or liability` THEN JUST FALSE
+    WHEN `a penalty, forfeiture or punishment incurred in respect of an offence against the repealed Act or part` THEN JUST FALSE
+    WHEN `an investigation, legal proceeding or remedy in respect of such a penalty, forfeiture or punishment` THEN JUST FALSE
+    OTHERWISE NOTHING
+
+-- The investigation, legal proceeding or remedy may be instituted, continued or enforced, and a penalty, forfeiture or punishment may be imposed,
+-- as if the repealing Act had not been made.
+-- src:221 | and the investigation, legal proceeding or remedy may be instituted, continued or enforced, and a penalty, forfeiture or punishment may be imposed, as if the repealing Act had not been made.
+@ref s 12 (closing words) (src:221)
+GIVEN thing IS A `What a repeal or expiry does to a thing`
+GIVETH A MAYBE BOOLEAN
+`s 12: the thing may be instituted, continued, enforced or imposed as if the repealing Act had not been made` MEANS
+    CONSIDER thing
+    WHEN `an investigation, legal proceeding or remedy in respect of such a right, privilege, obligation or liability` THEN JUST TRUE
+    WHEN `a penalty, forfeiture or punishment incurred in respect of an offence against the repealed Act or part` THEN JUST TRUE
+    WHEN `an investigation, legal proceeding or remedy in respect of such a penalty, forfeiture or punishment` THEN JUST TRUE
+    OTHERWISE NOTHING
+
+-- Where an Act repeals in whole or in part a law of the State of South Australia in its application to the Territory,
+-- or provides that such a law or part of it ceases to apply to the Territory, sections 11, 12, 14 and 15 apply as if the law were an Act or part repealed.
+-- src:223 | Where an Act repeals in whole or in part a law of the State of South Australia in its application to the Territory or provides that such a law or any part of such a law shall cease to apply to the Territory sections 11, 12, 14 and 15 apply as if the law of the State were an Act or a part of an Act which had been repealed.
+@ref s 13 (src:223)
+GIVEN `an Act repeals a law of the State of South Australia in its application to the Territory, or provides that it ceases to apply` IS A BOOLEAN
+GIVETH A MAYBE (LIST OF STRING)
+`s 13: the sections that apply as if the law of the State were an Act or part repealed` MEANS
+    IF   `an Act repeals a law of the State of South Australia in its application to the Territory, or provides that it ceases to apply`
+    THEN JUST (LIST "11", "12", "14", "15")
+    ELSE NOTHING
+
+-- Where an Act expires in whole or in part, sections 11, 12, 14 and 15 apply as though the Act or part had been repealed.
+-- src:231 | Where an Act or part of an Act expires, sections 11, 12, 14 and 15 apply in respect of that expiration as though the Act or part had been repealed.
+@ref s 16 (src:231)
+GIVEN `an Act or part of an Act expires` IS A BOOLEAN
+GIVETH A MAYBE (LIST OF STRING)
+`s 16: the sections that apply as though the Act or part had been repealed` MEANS
+    IF   `an Act or part of an Act expires`
+    THEN JUST (LIST "11", "12", "14", "15")
+    ELSE NOTHING
+
+-- Where an Act repeals in whole or in part a former Act and substitutes provisions, the repealed provisions continue in force until the substituted provisions commence.
+-- The substituted provisions commence at the beginning of their day (section 6A), so the repealed provisions are in force up to the end of the day before.
+-- src:225 | Where an Act repeals in whole or in part a former Act and substitutes provisions in lieu thereof, the repealed provisions continue in force until the substituted provisions commence.
+@ref s 14 (src:225)
+GIVEN `the Act repeals a former Act in whole or in part and substitutes provisions` IS A BOOLEAN
+      `the day on which the substituted provisions commence` IS A DATE
+      `the day asked about` IS A DATE
+GIVETH A MAYBE BOOLEAN
+`s 14: the repealed provisions continue in force on` MEANS
+    IF   (NOT `the Act repeals a former Act in whole or in part and substitutes provisions`)
+    THEN NOTHING
+    ELSE JUST (NOT (`the day asked about` AT LEAST `the day on which the substituted provisions commence`))
+
+-- If an Act repeals and re-enacts, with or without modification, a provision of a former law, a reference in an Act to the provision repealed is taken to be a reference to the provision re-enacted.
+-- The three limbs differ in the kind of law that repeals and re-enacts: an Act; a Commonwealth Act or legislative instrument; a State, Territory or New Zealand Act or subordinate legislation.
+-- src:227 | (1) If an Act repeals and re-enacts, with or without modification, any provision of a former Act, a reference in any other Act to the provision so repealed is taken to be a reference to the provision so re-enacted.
+-- src:228 | (2) If a Commonwealth Act or legislative instrument repeals and re‑enacts, with or without modification, any provision of a former Commonwealth Act or legislative instrument, a reference in an Act to the provision so repealed is taken to be reference to the provision so re-enacted.
+-- src:229 | (3) If a State, Territory or New Zealand Act or subordinate legislation repeals and re-enacts, with or without modification, any provision of a former State, Territory or New Zealand Act or subordinate legislation, a reference in an Act to the provision so repealed is taken to be a reference to the provision so re-enacted.
+@ref s 15(1), (2), (3) (src:227-229)
+GIVEN `the kind of law that repeals and re-enacts` IS A `Kind of law that repeals and re-enacts`
+      `the law repeals and re-enacts the provision, with or without modification` IS A BOOLEAN
+      `the reference is in an Act` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 15: a reference to the provision repealed is taken to be a reference to the provision re-enacted` MEANS
+    CONSIDER `the kind of law that repeals and re-enacts`
+    WHEN `an Act` THEN JUST (`the law repeals and re-enacts the provision, with or without modification` AND `the reference is in an Act`)
+    WHEN `a Commonwealth Act or legislative instrument` THEN JUST (`the law repeals and re-enacts the provision, with or without modification` AND `the reference is in an Act`)
+    WHEN `a State, Territory or New Zealand Act or subordinate legislation` THEN JUST (`the law repeals and re-enacts the provision, with or without modification` AND `the reference is in an Act`)
