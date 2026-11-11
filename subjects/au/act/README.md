@@ -173,3 +173,17 @@ The texts have the same shape as the 2026-10-20 sample: the notices at the top, 
 - **Personal tax/withholding**: Commonwealth matter: Income Tax Assessment Acts and Taxation Administration Act 1953 (Cth), which include PAYG withholding. The ACT has no personal income tax.
 - **Passenger compensation**: Commonwealth matter: aviation passenger rights, the Civil Aviation (Carriers' Liability) Act 1959 (Cth), and the Australian Consumer Law.
 - **Work permits/immigration**: Commonwealth matter: Migration Act 1958 (Cth).
+
+## Sourced 2026-11-11: how legislation is read
+
+One Act, text deposited: the Australian Capital Territory's general interpretation Act, which is also its Act on how legislation is notified, commences, is amended and is read, and on how periods of time are counted.
+
+| Subject | Source id | Version | Characters | Why |
+|---|---|---|---|---|
+| [`legislation-act-2001`](legislation-act-2001/) | A2001-14 | Republication No 126, effective 2026-02-23 | 401,682 | The rules for reading an ACT Act or subordinate law, including definitions, commencement, the computation of time and the Dictionary; the rest of the Act is also deposited. |
+
+The text is converted from the register's Word file for the current version, retrieved at 2026-11-11T14:11:55Z, and checked against the authorised PDF, which is not copied here.
+It is an unofficial version.
+The terms are those recorded in the deposit's `SOURCE-LICENSE.md`: CC BY 4.0 through the register's copyright page and the Justice and Community Safety Directorate's copyright policy.
+The register lists uncommenced amendments to the Act, and they are not in the text.
+The count includes the notice block at the head of the file.
