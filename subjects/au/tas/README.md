@@ -181,3 +181,18 @@ Total: 15 texts, 2,074,781 characters (each count includes the notice block at t
 - **Health complaints and health records.** The Health Complaints Act 1995 is deposited. Tasmania has no health records Act, so the Personal Information Protection Act 2004 is deposited in its place: it governs personal information, health information included, held by public sector bodies.
 - **Regulations not sourced.** The list named no regulations or rules under these Acts, so none were deposited. Among those an encoding may need: the Supreme Court Rules 2000, the Legal Profession Regulations (the costs disclosure thresholds), the Work Health and Safety Regulations, and the Coroners Rules.
 - **Amounts outside the text.** The Civil Liability Act's Amount A and Amount B for non-economic loss are varied each year by notice in the Gazette (s 27(6)), so the current figures are not in the text.
+
+## Sourced 2026-11-12: how Acts and regulations are read
+
+One Act, text deposited: the Tasmanian Act that supplies the default rules for reading Tasmanian Acts and the regulations made under them, including the definitions of common terms, commencement and expiry, and the way periods of time are counted.
+
+| Subject | Source id | Version published | Characters | Why |
+|---|---|---|---|---|
+| [`acts-interpretation-act-1931`](acts-interpretation-act-1931/) | act-1931-059 | 2022-10-26 | 96,862 | The default rules for reading a Tasmanian Act or regulation: common definitions, commencement and expiry, the computation of time, extrinsic material. |
+
+The count includes the notice block at the head of the file.
+The terms were read on 2026-11-11 (UTC) at the copyright and disclaimer page: CC BY 4.0, State of Tasmania, with the page's own "Last updated" line reading Thursday, September 01, 2022 11:06 AM.
+robots.txt (read 2026-11-11T14:11:02Z) is `Disallow: /admin/` only, with no Crawl-delay.
+The text is the consolidation the site served as current, taken from `/view/whole/html/inforce/current/act-1931-059` in one request at 2026-11-11T14:11:22Z.
+The site's editorial history notes are removed from the text, and twelve provisions that the site shows only as a row of dots are left as dots; the deposit's `.meta.json` lists them.
+The Act contains no table, image or formula.
