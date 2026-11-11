@@ -209,3 +209,16 @@ On 2026-11-06, with the same User-Agent and at least 10 seconds between requests
 - `https://www.legislation.sa.gov.au/copyright` (12:02:38Z): HTTP 200: "the SA Content of this Website is licensed under the Creative Commons Attribution 4.0 International Licence (CC BY 4.0)", allowing sharing and adapting, including for commercial purposes.
 - So the claims, injury and compensation texts above came from the register itself. The twenty corpus texts of 2026-10-24 have not yet been replaced.
 - `https://www.courts.sa.gov.au/robots.txt` (12:26:56Z): `Crawl-delay: 10`, with `/rules-forms-fees/` (where the Uniform Civil Rules 2020 are published) disallowed. One request to `https://www.courts.sa.gov.au/rules-forms-fees/ucr2020/` was sent in the same command, before the robots file had been read; its content was discarded unread, and no further request was made there.
+
+## Sourced 2026-11-11: how legislation is read
+
+One Act, text deposited: the South Australian Act that supplies the default rules for reading South Australian Acts and statutory instruments.
+Unlike the texts above, it is taken from the official register and not from the Open Australian Legal Corpus.
+
+| Subject | Source id | Version | Characters | Why |
+|---|---|---|---|---|
+| [`legislation-interpretation-act-2021`](legislation-interpretation-act-2021/) | legislation-interpretation-act-2021 | 20.11.2025 | 71,267 | The default rules for reading a South Australian Act or statutory instrument: definitions, commencement, the computation of time, statutory functions. |
+
+The text is the unofficial RTF file of the version the register labelled current on 2026-11-11, retrieved at 2026-11-11T14:11:34Z and converted to plain text; its legislative-history endnotes are not in the text.
+The terms are those recorded in the deposit's `SOURCE-LICENSE.md`: CC BY 4.0, State of South Australia.
+The count includes the notice block at the head of the file.

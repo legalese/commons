@@ -161,3 +161,16 @@ Cross-folder IMPORT does not work, so each link is recorded in the encoding's `N
 | Victims of Crime Assistance Act | [Social Security Act 1991](../social-security-act-1991/encodings/baseline-2026-10/): s 17(2B) says a payment under a Territory law for a criminal injury is not compensation, so an award here triggers no compensation recovery or preclusion period. |
 
 The Territory encodings also answer each other's inputs: the Stamp Duty Act's grant entitlement comes from the First Home Owner Grant Act encoding; the Motor Accidents s 10A input (covered by workers compensation) comes from the Return to Work encoding; and the Victims of Crime ss 17-18 inputs come from the Motor Accidents and Return to Work encodings.
+
+## Sourced 2026-11-11: how Acts and subordinate legislation are read
+
+One Act, text deposited: the Northern Territory Act that supplies the default rules for reading Territory Acts and subordinate legislation, including definitions, commencement, the computation of time, and the citation of laws.
+
+| Subject | Source id | Version | Characters | Why |
+|---|---|---|---|---|
+| [`interpretation-act-1978`](interpretation-act-1978/) | 11865 | as in force at 21 April 2023 (reprint REPI005) | 112,437 | The default rules for reading a Northern Territory Act or subordinate legislation: definitions, commencement, amendment and repeal, construction, the computation of time, statutory functions. |
+
+The text is the reprint the register offered as current on 2026-11-11, converted from the register's document download retrieved at 2026-11-11T14:11:15Z.
+The reprint's table of provisions and endnotes are kept in the text.
+It is an unofficial version, published under the Territory's conditional permission recorded in the deposit's `SOURCE-LICENSE.md`.
+The count includes the notice block at the head of the file.

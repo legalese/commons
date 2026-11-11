@@ -209,3 +209,15 @@ Thirty-two texts, 6,411,539 characters in all (including the notice header on ea
 - **Size.** The Jurisdiction of Courts (Cross-vesting) Act 1987 text is exactly 32,767 characters in the corpus, a number that can mark a cut-off; it ends cleanly at s 16 with no sign of truncation, but check it against the register.
 - **Tables.** As with the October sample, tables are as the corpus flattened them.
 - **To replace**: as above, when legislation.nsw.gov.au can be fetched, replace all 32 texts with current official ones.
+
+## Sourced 2026-11-11: how Acts and statutory rules are read
+
+One Act, text deposited: the New South Wales Act that supplies the default rules for reading Acts and instruments, including definitions, commencement, amendment and repeal, and the way periods of time are counted.
+
+| Subject | Source id | Version | Characters | Why |
+|---|---|---|---|---|
+| [`interpretation-act-1987`](interpretation-act-1987/) | act-1987-015 | 2024-11-21 | 110,651 | The default rules for reading a New South Wales Act or instrument: definitions, commencement, amendment and repeal, construction, statutory rules, statutory functions, the citation of laws. |
+
+The text is taken from the Open Australian Legal Corpus (version 7.1.0, CC BY 4.0), where the New South Wales content was collected on 2025-03-10, because the official register returned a bot challenge to the fetcher on 2026-11-11.
+It is not the current official text and may be out of date; the same warning as for the other New South Wales texts applies.
+The count includes the notice block at the head of the file.
