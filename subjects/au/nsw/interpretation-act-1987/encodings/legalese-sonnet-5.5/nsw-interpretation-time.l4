@@ -1,0 +1,448 @@
+IMPORT prelude
+IMPORT daydate
+
+-- Interpretation Act 1987 (New South Wales): the rules of time.
+--
+-- This module stands alone: it imports only prelude and daydate, so it can be
+-- copied by itself into other work.
+-- Its tests are in nsw-tests-time.l4.
+-- Every function says in its name what it computes and which provision it implements.
+--
+-- Public holidays and bank holidays are not computed here.
+-- Section 36(2), section 76(2) and the Dictionary's "business day" all turn on
+-- them, and the Act borrows them from the Public Holidays Act 2010 and "another Act".
+-- Each function that needs them takes the dates as a LIST OF DATE,
+-- and the caller says in which place and for which years.
+--
+-- Where the Act does not say, a function answers NOTHING.
+-- The Dictionary has no entry for "day", "week" or "year" (it has "calendar year", "calendar month",
+-- "month" and "named month"), so a period of weeks or of years is not covered;
+-- a period of calendar years is covered when it starts on 1 January.
+--
+-- A day is the unit of the instant: BeginningOfDay d is the first instant of d,
+-- EndOfDay d is its midnight (Dictionary, "midnight"), and EndOfDay d is the
+-- same instant as BeginningOfDay of the next day.
+
+§ `Types for the time rules`
+
+-- What kind of text a rule speaks of: section 24 speaks of "an Act or statutory rule" only.
+DECLARE TimeTextKind IS ONE OF
+    AnAct
+    AStatutoryRule
+    AnotherInstrument
+
+-- The unit of a period: "day", "week", "month", "year" and "calendar year".
+DECLARE PeriodUnit IS ONE OF
+    PeriodOfDays
+    PeriodOfWeeks
+    PeriodOfMonths
+    PeriodOfYears
+    PeriodOfCalendarYears
+
+-- A point of time within a day.
+DECLARE DayPoint IS ONE OF
+    BeginningOfDay HAS onDay IS A DATE
+    EndOfDay HAS onDay IS A DATE
+
+-- How an Act's commencement is fixed, for section 23.
+DECLARE ActCommencementBasis IS ONE OF
+    NothingProvided
+    ProvidedFixedDay HAS fixedDay IS A DATE
+    ProvidedProclamation HAS providedAppointed IS A DATE, providedPublished IS A DATE
+    AppointedUnderSubsection2 HAS appointedDay IS A DATE, publishedDay IS A DATE
+
+§ `Counting days`
+
+-- src:391 | (2) If the last day of a period of time prescribed or allowed by an Act or instrument for the doing of any thing falls—
+-- src:392 | (a) on a Saturday or Sunday, or
+-- src:393 | (b) on a day that is a public holiday or bank holiday in the place in which the thing is to be or may be done,
+-- src:394 | the thing may be done on the first day following that is not a Saturday or Sunday, or a public holiday or bank holiday in that place, as the case may be.
+@ref s 36(2) (src:391-394)
+GIVEN d IS A DATE
+      `public and bank holidays in the place` IS A LIST OF DATE
+GIVETH A BOOLEAN
+`s 36(2) the day is a Saturday, a Sunday, or a public holiday or bank holiday in the place` MEANS
+        `is weekend` d
+     OR elem d `public and bank holidays in the place`
+
+-- src:390 | (1) If in any Act or instrument a period of time, dating from a given day, act or event, is prescribed or allowed for any purpose, the time shall be reckoned exclusive of that day or of the day of that act or event.
+@ref s 36(1) (src:390)
+GIVEN given IS A DATE
+GIVETH A DATE
+`s 36(1) the first day counted in a period dating from a given day` MEANS
+    Date (Day given PLUS 1)
+
+-- src:390 | (1) If in any Act or instrument a period of time, dating from a given day, act or event, is prescribed or allowed for any purpose, the time shall be reckoned exclusive of that day or of the day of that act or event.
+@ref s 36(1) (src:390)
+GIVEN given IS A DATE
+      n IS A NUMBER
+GIVETH A MAYBE DATE
+`s 36(1) the last day of a period of n days dating from a given day` MEANS
+    IF n AT LEAST 1 AND FLOOR n EQUALS n
+    THEN JUST (Date (Day given PLUS n))
+    ELSE NOTHING
+
+-- src:390 | (1) If in any Act or instrument a period of time, dating from a given day, act or event, is prescribed or allowed for any purpose, the time shall be reckoned exclusive of that day or of the day of that act or event.
+@ref s 36(1) (src:390)
+GIVEN given IS A DATE
+      d IS A DATE
+      n IS A NUMBER
+GIVETH A MAYBE BOOLEAN
+`s 36(1) the day falls within a period of n days dating from a given day` MEANS
+    IF n AT LEAST 1 AND FLOOR n EQUALS n
+    THEN JUST (    Day d AT LEAST Day given PLUS 1
+               AND Day d AT MOST  Day given PLUS n)
+    ELSE NOTHING
+
+§ `Calendar months and calendar years`
+
+-- src:970 | calendar month means a period commencing at the beginning of a day of one of the 12 named months and ending—
+-- src:971 | (a) immediately before the beginning of the corresponding day of the next named month, or
+-- src:972 | (b) if there is no such corresponding day, at the end of the next named month.
+@ref Schedule 4, calendar month (src:970-972)
+GIVEN start IS A DATE
+GIVETH A DATE
+`Schedule 4 the last day of the calendar month commencing at the beginning of a day` MEANS
+    IF DATE_DAY start AT MOST `days in the next named month`
+    THEN Date (Day firstOfNext PLUS (DATE_DAY start MINUS 2))
+    ELSE Date (Day firstOfNext PLUS (`days in the next named month` MINUS 1))
+    WHERE
+        firstOfNext MEANS
+            Date 1 (IF DATE_MONTH start EQUALS 12 THEN 1 ELSE DATE_MONTH start PLUS 1)
+                   (IF DATE_MONTH start EQUALS 12 THEN DATE_YEAR start PLUS 1 ELSE DATE_YEAR start)
+        `days in the next named month` MEANS
+            `Days in month` (DATE_MONTH firstOfNext) (DATE_YEAR firstOfNext)
+
+-- src:970 | calendar month means a period commencing at the beginning of a day of one of the 12 named months and ending—
+-- src:971 | (a) immediately before the beginning of the corresponding day of the next named month, or
+-- src:972 | (b) if there is no such corresponding day, at the end of the next named month.
+@ref Schedule 4, calendar month (src:970-972)
+GIVEN start IS A DATE
+      n IS A NUMBER
+GIVETH A DATE
+`Schedule 4 the last day of n successive calendar months, the first commencing at the beginning of a day` MEANS
+    IF n AT MOST 1
+    THEN `Schedule 4 the last day of the calendar month commencing at the beginning of a day` start
+    ELSE `Schedule 4 the last day of n successive calendar months, the first commencing at the beginning of a day`
+             (Date (Day (`Schedule 4 the last day of the calendar month commencing at the beginning of a day` start) PLUS 1))
+             (n MINUS 1)
+
+-- src:970 | calendar month means a period commencing at the beginning of a day of one of the 12 named months and ending—
+-- src:971 | (a) immediately before the beginning of the corresponding day of the next named month, or
+-- src:972 | (b) if there is no such corresponding day, at the end of the next named month.
+-- src:973 | calendar year means a period of 12 months commencing on 1 January.
+@ref Schedule 4, calendar month and calendar year; s 36(1) (src:970-973)
+GIVEN given IS A DATE
+      n IS A NUMBER
+GIVETH A MAYBE DATE
+`s 36(1) and Schedule 4 the last day of a period of n calendar months dating from a given day` MEANS
+    IF n AT LEAST 1 AND FLOOR n EQUALS n
+    THEN JUST (`Schedule 4 the last day of n successive calendar months, the first commencing at the beginning of a day`
+                  (`s 36(1) the first day counted in a period dating from a given day` given) n)
+    ELSE NOTHING
+
+-- src:973 | calendar year means a period of 12 months commencing on 1 January.
+@ref Schedule 4, calendar year; s 36(1) (src:973)
+GIVEN given IS A DATE
+      n IS A NUMBER
+GIVETH A MAYBE DATE
+`s 36(1) and Schedule 4 the last day of a period of n calendar years dating from a given day` MEANS
+    IF     n AT LEAST 1 AND FLOOR n EQUALS n
+       AND DATE_DAY first EQUALS 1 AND DATE_MONTH first EQUALS 1
+    THEN JUST (`Schedule 4 the last day of n successive calendar months, the first commencing at the beginning of a day`
+                  first (12 TIMES n))
+    ELSE NOTHING
+    WHERE
+        first MEANS `s 36(1) the first day counted in a period dating from a given day` given
+
+§ `The last day of a period, and the latest day for doing the thing`
+
+-- src:389 | 36 Reckoning of time
+-- src:390 | (1) If in any Act or instrument a period of time, dating from a given day, act or event, is prescribed or allowed for any purpose, the time shall be reckoned exclusive of that day or of the day of that act or event.
+-- src:391 | (2) If the last day of a period of time prescribed or allowed by an Act or instrument for the doing of any thing falls—
+-- src:392 | (a) on a Saturday or Sunday, or
+-- src:393 | (b) on a day that is a public holiday or bank holiday in the place in which the thing is to be or may be done,
+-- src:394 | the thing may be done on the first day following that is not a Saturday or Sunday, or a public holiday or bank holiday in that place, as the case may be.
+@ref s 36; Schedule 4, month and calendar month and calendar year (src:389-394)
+GIVEN given IS A DATE
+      unit IS A PeriodUnit
+      n IS A NUMBER
+GIVETH A MAYBE DATE
+`s 36 the last day of a period of n units dating from a given day` MEANS
+    CONSIDER unit
+    WHEN PeriodOfDays THEN `s 36(1) the last day of a period of n days dating from a given day` given n
+    WHEN PeriodOfMonths THEN `s 36(1) and Schedule 4 the last day of a period of n calendar months dating from a given day` given n
+    WHEN PeriodOfCalendarYears THEN `s 36(1) and Schedule 4 the last day of a period of n calendar years dating from a given day` given n
+    WHEN PeriodOfWeeks THEN NOTHING
+    WHEN PeriodOfYears THEN NOTHING
+
+-- src:391 | (2) If the last day of a period of time prescribed or allowed by an Act or instrument for the doing of any thing falls—
+-- src:392 | (a) on a Saturday or Sunday, or
+-- src:393 | (b) on a day that is a public holiday or bank holiday in the place in which the thing is to be or may be done,
+-- src:394 | the thing may be done on the first day following that is not a Saturday or Sunday, or a public holiday or bank holiday in that place, as the case may be.
+@ref s 36(2) (src:391-394)
+GIVEN d IS A DATE
+      `public and bank holidays in the place` IS A LIST OF DATE
+GIVETH A DATE
+`s 36(2) the first day, on or after a day, that is not a Saturday, a Sunday, or a public holiday or bank holiday in the place` MEANS
+    IF `s 36(2) the day is a Saturday, a Sunday, or a public holiday or bank holiday in the place` d `public and bank holidays in the place`
+    THEN `s 36(2) the first day, on or after a day, that is not a Saturday, a Sunday, or a public holiday or bank holiday in the place`
+             (Date (Day d PLUS 1)) `public and bank holidays in the place`
+    ELSE d
+
+-- src:391 | (2) If the last day of a period of time prescribed or allowed by an Act or instrument for the doing of any thing falls—
+-- src:392 | (a) on a Saturday or Sunday, or
+-- src:393 | (b) on a day that is a public holiday or bank holiday in the place in which the thing is to be or may be done,
+-- src:394 | the thing may be done on the first day following that is not a Saturday or Sunday, or a public holiday or bank holiday in that place, as the case may be.
+@ref s 36(2) (src:391-394)
+GIVEN `last day` IS A DATE
+      `public and bank holidays in the place` IS A LIST OF DATE
+GIVETH A DATE
+`s 36(2) the latest day on which the thing may be done when the period ends on a day` MEANS
+    IF `s 36(2) the day is a Saturday, a Sunday, or a public holiday or bank holiday in the place` `last day` `public and bank holidays in the place`
+    THEN `s 36(2) the first day, on or after a day, that is not a Saturday, a Sunday, or a public holiday or bank holiday in the place`
+             (Date (Day `last day` PLUS 1)) `public and bank holidays in the place`
+    ELSE `last day`
+
+-- src:389 | 36 Reckoning of time
+-- src:390 | (1) If in any Act or instrument a period of time, dating from a given day, act or event, is prescribed or allowed for any purpose, the time shall be reckoned exclusive of that day or of the day of that act or event.
+-- src:391 | (2) If the last day of a period of time prescribed or allowed by an Act or instrument for the doing of any thing falls—
+-- src:392 | (a) on a Saturday or Sunday, or
+-- src:393 | (b) on a day that is a public holiday or bank holiday in the place in which the thing is to be or may be done,
+-- src:394 | the thing may be done on the first day following that is not a Saturday or Sunday, or a public holiday or bank holiday in that place, as the case may be.
+@ref s 36(1) and (2) (src:389-394)
+GIVEN given IS A DATE
+      unit IS A PeriodUnit
+      n IS A NUMBER
+      `public and bank holidays in the place` IS A LIST OF DATE
+GIVETH A MAYBE DATE
+`s 36 the latest day on which a thing may be done within a period of n units dating from a given day` MEANS
+    CONSIDER `s 36 the last day of a period of n units dating from a given day` given unit n
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST lastDay THEN
+        JUST (`s 36(2) the latest day on which the thing may be done when the period ends on a day` lastDay `public and bank holidays in the place`)
+
+§ `The moment within a day`
+
+-- src:1042 | midnight, in relation to a particular day, means the point of time at which that day ends.
+@ref Schedule 4, midnight (src:1042)
+GIVEN d IS A DATE
+GIVETH A DayPoint
+`Schedule 4 midnight in relation to a particular day` MEANS EndOfDay d
+
+-- src:238 | 24 Time of commencement of Acts and statutory rules
+-- src:239 | If an Act or statutory rule provides that it shall commence, or be deemed to have commenced, on a particular day, it shall commence, or be deemed to have commenced, at the beginning of that day.
+@ref s 24 (src:238-239)
+GIVEN kind IS A TimeTextKind
+      d IS A DATE
+GIVETH A MAYBE DayPoint
+`s 24 the moment an Act or statutory rule commences on a particular day` MEANS
+    CONSIDER kind
+    WHEN AnAct THEN JUST (BeginningOfDay d)
+    WHEN AStatutoryRule THEN JUST (BeginningOfDay d)
+    WHEN AnotherInstrument THEN NOTHING
+
+-- src:325 | 30D Time of repeal of Acts and instruments
+-- src:326 | If an Act or instrument, or a provision of an Act or instrument, is repealed on a day, the Act or instrument, or provision, is repealed at the beginning of the day.
+@ref s 30D (src:325-326)
+GIVEN d IS A DATE
+GIVETH A DayPoint
+`s 30D the moment a repeal on a day takes effect` MEANS BeginningOfDay d
+
+-- src:753 | 71 Time of expiry of temporary Acts and instruments
+-- src:754 | If an Act or instrument is expressed to expire, lapse or otherwise cease to have effect on a particular day, or to remain in force until a particular day, the Act or instrument shall continue in operation until the end of that day.
+@ref s 71 (src:753-754)
+GIVEN d IS A DATE
+GIVETH A DayPoint
+`s 71 the moment an Act or instrument expressed to expire or remain in force until a day stops operating` MEANS EndOfDay d
+
+-- src:1042 | midnight, in relation to a particular day, means the point of time at which that day ends.
+@ref Schedule 4, midnight; s 24; s 30D; s 71 (src:1042)
+GIVEN p IS A DayPoint
+GIVETH A NUMBER
+`the instant a day point denotes, counted in half days` MEANS
+    CONSIDER p
+    WHEN BeginningOfDay d THEN 2 TIMES (Day d)
+    WHEN EndOfDay d THEN 2 TIMES (Day d PLUS 1)
+
+-- src:1042 | midnight, in relation to a particular day, means the point of time at which that day ends.
+@ref Schedule 4, midnight; s 24; s 30D; s 71 (src:1042)
+GIVEN p IS A DayPoint
+      q IS A DayPoint
+GIVETH A BOOLEAN
+`day point is no later than day point` MEANS
+    `the instant a day point denotes, counted in half days` p AT MOST `the instant a day point denotes, counted in half days` q
+
+§ `Commencement of Acts and statutory rules`
+
+-- src:215 | (1) An Act shall commence, or shall be deemed to have commenced—
+-- src:216 | (a) except as provided by paragraphs (b) and (c)—on the day occurring 28 days after the date of assent to the Act,
+-- src:217 | (b) if the Act provides for its commencement, whether by proclamation under the Act or otherwise—on the day or days specified in, or ascertained in accordance with, that provision, or
+-- src:218 | (c) if a day is appointed for its commencement by a proclamation under subsection (2)—on the day so appointed.
+@ref s 23(1)(a) (src:215-218)
+GIVEN assent IS A DATE
+GIVETH A DATE
+`s 23(1)(a) the day an Act commences when nothing else provides` MEANS
+    Date (Day assent PLUS 28)
+
+-- src:219 | (2) The Governor may, by proclamation, appoint a day for the commencement of an Act that does not provide for its commencement, being a day that occurs—
+-- src:220 | (a) no earlier than the date of assent to the Act, and
+-- src:221 | (b) no later than the day occurring 28 days after the date of assent to the Act.
+@ref s 23(2) (src:219-221)
+GIVEN assent IS A DATE
+      appointed IS A DATE
+GIVETH A BOOLEAN
+`s 23(2) the day appointed is no earlier than the date of assent and no later than the day occurring 28 days after` MEANS
+        Day appointed AT LEAST Day assent
+    AND Day appointed AT MOST Day assent PLUS 28
+
+-- src:225 | (5) A proclamation appointing a day on which an Act shall commence does not fail merely because the proclamation is not published until after that day but, in that event, the Act shall not commence on that day but shall commence—
+-- src:226 | (a) except as provided by paragraph (b)—on the day on which the proclamation is published, or
+-- src:227 | (b) in the case of a proclamation under subsection (2)—
+-- src:228 | (i) on the day on which the proclamation is published, or
+-- src:229 | (ii) on the day on which the Act would have commenced had the proclamation not been made,
+-- src:230 | whichever is the earlier.
+@ref s 23(5) (src:225-230)
+GIVEN assent IS A DATE
+      basis IS A ActCommencementBasis
+GIVETH A MAYBE DATE
+`s 23(1) and (5) the day an Act commences` MEANS
+    CONSIDER basis
+    WHEN NothingProvided THEN JUST (`s 23(1)(a) the day an Act commences when nothing else provides` assent)
+    WHEN ProvidedFixedDay d THEN JUST d
+    WHEN ProvidedProclamation a p THEN
+        IF Day p AT MOST Day a THEN JUST a ELSE JUST p
+    WHEN AppointedUnderSubsection2 a p THEN
+        IF NOT (`s 23(2) the day appointed is no earlier than the date of assent and no later than the day occurring 28 days after` assent a)
+        THEN NOTHING
+        ELSE IF Day p AT MOST Day a
+             THEN JUST a
+             ELSE IF Day p AT MOST Day (`s 23(1)(a) the day an Act commences when nothing else provides` assent)
+                  THEN JUST p
+                  ELSE JUST (`s 23(1)(a) the day an Act commences when nothing else provides` assent)
+
+-- src:411 | (1) A statutory rule—
+-- src:412 | (a) shall be published on the NSW legislation website, and
+-- src:413 | (b) commences on the day on which it is so published or, if a later day is specified in the rule for that purpose, on the later day so specified.
+-- src:414 | (2) Subsection (1) does not prevent a statutory rule from specifying different days for the commencement of different portions of the rule.
+-- src:415 | (2A) Neither the whole nor any part of a statutory rule is invalid merely because (without statutory authority) the statutory rule is published on the NSW legislation website after the day on which one or more of its provisions is or are expressed to commence. In that case, that or those provisions commence on the day the statutory rule is published on the NSW legislation website, instead of on the earlier day.
+@ref s 39(1)(b) and (2A) (src:411-415)
+GIVEN published IS A DATE
+      specified IS A MAYBE DATE
+GIVETH A DATE
+`s 39(1)(b) and (2A) the day a statutory rule commences` MEANS
+    CONSIDER specified
+    WHEN NOTHING THEN published
+    WHEN JUST s THEN
+        IF Day s AT LEAST Day published THEN s ELSE published
+
+§ `Repeal of amending Acts`
+
+-- src:319 | (2) An amending Act is repealed on the day after all of its provisions have commenced (except as provided by subsection (3)).
+-- src:320 | (3) If an amending Act commences before the date of assent, the amending Act is repealed on the day after the date of assent.
+@ref s 30C(2) and (3) (src:319-320)
+GIVEN assent IS A DATE
+      `last day on which a provision of the amending Act commences` IS A DATE
+GIVETH A DATE
+`s 30C(2) and (3) the day an amending Act is repealed` MEANS
+    IF Day `last day on which a provision of the amending Act commences` LESS THAN Day assent
+    THEN Date (Day assent PLUS 1)
+    ELSE Date (Day `last day on which a provision of the amending Act commences` PLUS 1)
+
+-- src:323 | (6) This section applies only to an amending Act enacted after 1 January 2009.
+@ref s 30C(6) (src:323)
+GIVEN assent IS A DATE
+GIVETH A BOOLEAN
+`s 30C(6) the amending Act was enacted after 1 January 2009` MEANS
+    Day assent GREATER THAN Day (Date 1 1 2009)
+
+§ `Age`
+
+-- src:400 | 37 Age
+-- src:401 | For the purposes of any Act or instrument, a person attains an age in years at the beginning of the person's birthday for that age.
+@ref s 37 (src:400-401)
+GIVEN birth IS A DATE
+      years IS A NUMBER
+GIVETH A MAYBE DayPoint
+`s 37 the moment a person attains an age in years` MEANS
+    IF years AT LEAST 0 AND FLOOR years EQUALS years
+    THEN IF DATE_DAY birth EQUALS 29 AND DATE_MONTH birth EQUALS 2 AND NOT (`is leap year` (DATE_YEAR birth PLUS years))
+         THEN NOTHING
+         ELSE JUST (BeginningOfDay (Date (DATE_DAY birth) (DATE_MONTH birth) (DATE_YEAR birth PLUS years)))
+    ELSE NOTHING
+
+-- src:400 | 37 Age
+-- src:401 | For the purposes of any Act or instrument, a person attains an age in years at the beginning of the person's birthday for that age.
+@ref s 37; Schedule 4, minor (src:400-401)
+GIVEN birth IS A DATE
+      years IS A NUMBER
+      `the moment asked about` IS A DayPoint
+GIVETH A MAYBE BOOLEAN
+`s 37 the person is under the age of n years at a moment` MEANS
+    CONSIDER `s 37 the moment a person attains an age in years` birth years
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST attained THEN
+        JUST (NOT (`day point is no later than day point` attained `the moment asked about`))
+
+§ `Working days, business days and sitting days`
+
+-- src:786 | working day means a day that is not—
+-- src:787 | (a) a Saturday or Sunday, or
+-- src:788 | (b) a public holiday or a bank holiday in the place to which the letter was addressed.
+@ref s 76(2) (src:786-788)
+GIVEN d IS A DATE
+      `public and bank holidays in the place to which the letter was addressed` IS A LIST OF DATE
+GIVETH A BOOLEAN
+`s 76(2) the day is a working day` MEANS
+    NOT (`s 36(2) the day is a Saturday, a Sunday, or a public holiday or bank holiday in the place`
+            d `public and bank holidays in the place to which the letter was addressed`)
+
+-- src:783 | (b) in Australia or in an external Territory—is, unless evidence sufficient to raise doubt is adduced to the contrary, taken to have been effected on the seventh working day after the letter was posted, and
+@ref s 76(1)(b) (src:783)
+GIVEN d IS A DATE
+      n IS A NUMBER
+      holidays IS A LIST OF DATE
+GIVETH A DATE
+`s 76 the nth working day after a day` MEANS
+    IF n AT MOST 0
+    THEN d
+    ELSE IF `s 76(2) the day is a working day` next holidays
+         THEN `s 76 the nth working day after a day` next (n MINUS 1) holidays
+         ELSE `s 76 the nth working day after a day` next n holidays
+    WHERE
+        next MEANS Date (Day d PLUS 1)
+
+-- src:783 | (b) in Australia or in an external Territory—is, unless evidence sufficient to raise doubt is adduced to the contrary, taken to have been effected on the seventh working day after the letter was posted, and
+@ref s 76(1)(b) (src:783)
+GIVEN posted IS A DATE
+      holidays IS A LIST OF DATE
+GIVETH A DATE
+`s 76(1)(b) the day service by post in Australia or an external Territory is taken to be effected` MEANS
+    `s 76 the nth working day after a day` posted 7 holidays
+
+-- src:967 | business day means a day that is not—
+-- src:968 | (a) a Saturday or Sunday, or
+-- src:969 | (b) a public holiday or bank holiday throughout the State.
+@ref Schedule 4, business day (src:967-969)
+GIVEN d IS A DATE
+      `public and bank holidays throughout the State` IS A LIST OF DATE
+GIVETH A BOOLEAN
+`Schedule 4 the day is a business day` MEANS
+    NOT (`s 36(2) the day is a Saturday, a Sunday, or a public holiday or bank holiday in the place`
+            d `public and bank holidays throughout the State`)
+
+-- src:144 | 18 Sitting days
+-- src:145 | In any Act or statutory rule—
+-- src:146 | (a) a reference to a sitting day, in relation to a House of Parliament, is a reference to a day on which the House actually sits, and
+-- src:147 | (b) a reference to a number of sitting days, in relation to a House of Parliament, is a reference to that number of sitting days, regardless of whether those days occur within the same or within different sessions of Parliament.
+@ref s 18; s 40(1); s 41(1)(b) (src:144-147)
+GIVEN `days the House sat` IS A LIST OF DATE
+      after IS A DATE
+      n IS A NUMBER
+GIVETH A MAYBE DATE
+`s 18 the nth sitting day of a House after a day` MEANS
+    IF n AT LEAST 1 AND FLOOR n EQUALS n AND count later AT LEAST n
+    THEN JUST (Date (at (sort (map (GIVEN x YIELD Day x) later)) (n MINUS 1)))
+    ELSE NOTHING
+    WHERE
+        later MEANS filter (GIVEN x YIELD Day x GREATER THAN Day after) `days the House sat`
