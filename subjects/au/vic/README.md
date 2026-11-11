@@ -274,3 +274,16 @@ The stable `l4` cannot IMPORT across encoding folders, so the links are recorded
 - **[Income Tax Assessment Act 1997](../income-tax-assessment-act-1997/encodings/baseline-2026-10/)**: weekly payments replace earnings and are ordinary income (*Is this ordinary income part of my assessable income (s 6-5)?*). Whether a lump sum here is income or capital is answered by neither encoding.
 
 Within Victoria, an encoding of the 2013 Act, once it is deposited, would take its figures from this encoding's tables.
+
+## Sourced 2026-11-11: how Acts and statutory rules are read
+
+One Act, text deposited: the Victorian Act that supplies the default rules for reading Victorian Acts and subordinate instruments, including definitions, commencement, and the way periods of time are counted.
+
+| Subject | Source id | Version | Characters | Why |
+|---|---|---|---|---|
+| [`interpretation-of-legislation-act-1984`](interpretation-of-legislation-act-1984/) | interpretation-of-legislation-act-1984 | Version No. 134, 1 May 2026 | 171,573 | The default rules for reading a Victorian Act or statutory rule: definitions, commencement, the computation of time. |
+
+The text is converted from the register's Word file for the in-force version, and the conversion is checked against the authorised PDF, which is not copied here.
+The register's robots.txt keeps crawlers off those file types, so the commons fetcher did not request them: the two files were downloaded through an interactive browser session on 2026-11-11 and handed over.
+The Act is not openly licensed; the deposit rests on the owner's ruling of 24 October 2026 recorded in its `SOURCE-LICENSE.md`.
+The count includes the notice block at the head of the file, and the margin notes of the Word file are kept as `[Side note: ...]` lines.
