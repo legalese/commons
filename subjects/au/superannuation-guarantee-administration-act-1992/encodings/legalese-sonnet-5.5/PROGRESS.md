@@ -26,6 +26,7 @@ Those scripts live outside the deposit.
 - The individual final shortfall is one amount for the employee and the QE day (fork F-4).
 - Where a rule with an "if" condition fails, a duty stated with "must" or "is required to" answers `JUST FALSE` and the other kinds answer `NOTHING`, as fork F-21 sets out (s 63B(1) answers `JUST FALSE`).
 - The extent to which an employer qualifies for the amnesty under s 74(2) is never below nil (fork F-24).
+- The liability in s 49(1) answers `JUST FALSE` where nothing remains unpaid after the due time, a case-by-case choice with `NOTHING` as the other reading (fork F-25).
 - The forks are listed in `NOTES.md` with the readings seen and the text that licenses each.
 
 ## Next
