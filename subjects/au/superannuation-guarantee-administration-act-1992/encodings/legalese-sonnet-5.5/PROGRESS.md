@@ -2,7 +2,7 @@
 
 Current state of the encoding of the Superannuation Guarantee (Administration) Act 1992 (Commonwealth), sections 1 to 80.
 Text: `../../registers/source-bundle/C2004A04402.txt` (Federal Register compilation C2026C00272, Compilation No. 78; plain-text conversion, not the authorised text).
-Status: draft; every part of the scope is written, and the gate is green (23 modules, 0 errors, 1770 assertions satisfied, the main build reads every module the same way).
+Status: draft; every part of the scope is written, and the gate is green (23 modules, 0 errors, 1776 assertions satisfied, the main build reads every module the same way).
 
 ## Method
 
@@ -15,7 +15,7 @@ Those scripts live outside the deposit.
 - `sga-provisions.l4` (1,085 provisions), `sga-xrefs.l4` (317 internal rows, 121 other-instrument rows) and `sga-defs.l4` (103 defined terms), generated.
 - `sga-time.l4` and `sga-tests-time.l4` (260 assertions).
 - Part 1 (`sga-part1.l4`), Part 2 (`sga-part2.l4`), Part 3 (`sga-part3a.l4`, `sga-part3b.l4`), Part 3A (`sga-choice-of-fund.l4`), Parts 4 to 6 (`sga-part4-6.l4`), Part 7 (`sga-part7.l4`) and Parts 8 and 9 (`sga-parts8-9.l4`), each with a tests file.
-- The seat layer `sga-seat.l4` (39 questions, each with `@export` and `@desc`) and `sga-cases-seat.l4` (145 assertions).
+- The seat layer `sga-seat.l4` (39 questions, each with `@export` and `@desc`) and `sga-cases-seat.l4` (148 assertions).
 - `NOTES.md` (seat, jural relations, what is and is not encoded, fork register, statements of what the Act provides, what the stable binary does not accept, the `check.sh` output, cross-references, what remains, the coverage table), `encoding.json` and `SOURCE-LICENSE.md`.
 
 ## Decisions taken
@@ -24,6 +24,8 @@ Those scripts live outside the deposit.
 - A count "within N days of" or "N years from" an event, where the text does not say whether the day of the event is the first day, is computed under two readings and answered only where both agree; otherwise `NOTHING` (fork F-1).
 - A month-based count that lands on a day the target month does not have answers `NOTHING` on that day only (fork F-2).
 - The individual final shortfall is one amount for the employee and the QE day (fork F-4).
+- Where a rule with an "if" condition fails, a duty stated with "must" or "is required to" answers `JUST FALSE` and the other kinds answer `NOTHING`, as fork F-21 sets out (s 63B(1) answers `JUST FALSE`).
+- The extent to which an employer qualifies for the amnesty under s 74(2) is never below nil (fork F-24).
 - The forks are listed in `NOTES.md` with the readings seen and the text that licenses each.
 
 ## Next
