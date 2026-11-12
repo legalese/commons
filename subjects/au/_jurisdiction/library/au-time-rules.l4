@@ -1,0 +1,1647 @@
+IMPORT prelude
+IMPORT daydate
+
+-- Australian time rules for nine jurisdictions, in one self-contained module.
+--
+-- THIS FILE IS THE ORIGINAL.
+-- It lives at subjects/au/_jurisdiction/library/au-time-rules.l4 in legalese/commons.
+-- A later encoding holds a byte-identical copy of this file beside its own modules,
+-- because an IMPORT names a module and only the importing file's own folder is searched.
+-- That encoding records, in its NOTES, the path of this original and its sha256.
+--
+-- This module is assembled from nine source modules, the time module of each jurisdiction's
+-- interpretation Act, as they stand in legalese/commons at main ece722340.
+-- The nine are listed, with their paths, sha256 values and line counts, in au-time-rules.MANIFEST.json.
+-- A `Jurisdiction` is one of Cth, NSW, Vic, Qld, WA, SA, Tas, ACT, NT.
+--
+-- How to read it.
+-- Every rule family is a section.
+-- Every function takes a `Jurisdiction` first and answers what that jurisdiction's source module answers.
+-- Where the nine agree, one body serves them all.
+-- Where they differ, each jurisdiction has its own branch, and the comment on the branch names the source module and its function.
+-- A jurisdiction whose source module does not encode a rule family answers NOTHING for it.
+-- Nothing is added that a source module does not compute.
+--
+-- What the caller supplies.
+-- Public holidays, bank holidays and days an office is closed are never built in; they are a `Days of rest and closure` the caller passes in.
+-- Saturday and Sunday are computed.
+-- Sitting days of a House, and the day a letter would be delivered in the ordinary course of post, are inputs.
+--
+-- This file describes what each source module computes.
+-- It does not assess the Acts.
+-- NOTES (au-time-rules.NOTES.md) lists, family by family and jurisdiction by jurisdiction, what is carried and what is not.
+
+§ `The nouns of this module`
+
+DECLARE Jurisdiction IS ONE OF Cth, NSW, Vic, Qld, WA, SA, Tas, ACT, NT
+
+-- The units a period can be counted in.
+-- `Calendar years` is the unit NSW and ACT name separately from a year of 12 months.
+DECLARE `Unit of a period` IS ONE OF Days, Weeks, Months, Years, `Calendar years`
+
+-- The ways the nine source modules describe how a period is tied to a day.
+-- Each jurisdiction answers only the expressions its own module encodes; the table is in NOTES.
+DECLARE `How a period is expressed` IS ONE OF
+    `between two days`
+    `begins at, on or with a specified day`
+    `begins from a specified day`
+    `begins after a specified day`
+    `begins on, from or after the happening of an act or event`
+    `continues until a specified day`
+    `ends at, on or with a specified day`
+    `ends before a specified day`
+    `is reckoned to a specified day`
+    `occurs between two events`
+
+-- SA and NT carry a flag that a public holiday covers only part of a day; the other jurisdictions ignore the flag.
+DECLARE `A public holiday` HAS
+    `the day of the holiday`         IS A DATE
+    `it covers only part of the day` IS A BOOLEAN
+
+-- The facts about days that the Acts borrow from other instruments.
+-- Which lists a jurisdiction reads is set out in NOTES.
+DECLARE `Days of rest and closure` HAS
+    `public holidays`                            IS A LIST OF `A public holiday`
+    `bank holidays`                              IS A LIST OF DATE
+    `public service holidays`                    IS A LIST OF DATE
+    `days the office is closed for the whole day` IS A LIST OF DATE
+
+-- What is to be done matters to Qld (filing or registering) and to ACT (office, ordinary, deposit-taking institution).
+DECLARE `What is to be done` IS ONE OF
+    `filing or registering a document`
+    `something at an office of a public entity`
+    `anything else`
+    `anything else, by or in relation to an authorised deposit-taking institution`
+
+DECLARE `Point in a day` IS ONE OF
+    `the beginning of the day`
+    `the last moment of the day`
+    `midnight at the end of the day`
+
+DECLARE `Moment in a day` HAS
+    `the day of the moment` IS A DATE
+    `the point in that day` IS A `Point in a day`
+
+§ `Small helpers`
+
+GIVEN n IS A NUMBER
+GIVETH A BOOLEAN
+`is a whole number of at least 1` n MEANS
+    n AT LEAST 1 AND FLOOR n EQUALS n
+
+GIVEN d IS A DATE
+      holidays IS A LIST OF `A public holiday`
+GIVETH A BOOLEAN
+`is a public holiday, whether or not it covers only part of the day` d holidays MEANS
+    any (GIVEN h YIELD h's `the day of the holiday` EQUALS d) holidays
+
+GIVEN d IS A DATE
+      holidays IS A LIST OF `A public holiday`
+GIVETH A BOOLEAN
+`is a public holiday that covers the whole day` d holidays MEANS
+    any (GIVEN h YIELD h's `the day of the holiday` EQUALS d AND (NOT h's `it covers only part of the day`)) holidays
+
+-- Sunday, by the day number, as Tas writes it (tas-interpretation-time: `s 29(3): a day is a Sunday`).
+GIVEN d IS A DATE
+GIVETH A BOOLEAN
+`is a Sunday` d MEANS
+    ((Day d) MODULO 7) EQUALS 0
+
+§ `Which expression a period is tied to a day by (Cth s 36(1) table; NSW s 36(1); Vic s 44(1) and (2); Qld s 38(1); WA s 61(1); SA s 44(1) table; Tas s 29(1); ACT s 151 table 151; NT s 28(1) and (1A))`
+
+-- Does a period expressed in this way include the specified day?
+-- NOTHING where the jurisdiction's module has no rule for that expression.
+-- Cth: au-interpretation-time `a period expressed in this way includes the specified day` (Cth s 36(1) items 1 to 7).
+-- NSW: nsw-interpretation-time `s 36(1) the first day counted in a period dating from a given day` (the given day is left out).
+-- Vic: vic-interpretation-time `s44(1)-(2) the day a period is expressed to begin on or end on is counted in the period`.
+-- Qld: qld-interpretation-time `a day is counted in a period beginning on a given day (s 38(1))` (the given day is left out).
+-- WA: wa-interpretation-time `the first day of a period` (s 61(1)(a), (b)) with `the end of a period expressed to end on` (s 61(1)(d)) and `the time within a time before a day` (s 61(1)(c)).
+-- SA: sa-interpretation-time `s 44(1): the first day counted in a period` and `s 44(1) items 4, 5 and 7`, with item 1.
+-- Tas: tas-interpretation-time `s 29(1): a day is counted in a period of days reckoned forwards from` (the given day is left out).
+-- ACT: act-interpretation-time `s 151 (2), table 151: the period includes the stated day`.
+-- NT: nt-interpretation-time `s 28(1), (1A): the given day, act or event is counted in the period`.
+GIVEN j IS A Jurisdiction
+      how IS A `How a period is expressed`
+GIVETH A MAYBE BOOLEAN
+`a period expressed in this way includes the specified day` j how MEANS
+    CONSIDER j
+    -- Cth: au-interpretation-time `a period expressed in this way includes the specified day` (Cth s 36(1) items 1 to 7).
+    WHEN Cth THEN
+        CONSIDER how
+        WHEN `between two days` THEN JUST TRUE
+        WHEN `begins at, on or with a specified day` THEN JUST TRUE
+        WHEN `begins from a specified day` THEN JUST FALSE
+        WHEN `begins after a specified day` THEN JUST FALSE
+        WHEN `continues until a specified day` THEN JUST TRUE
+        WHEN `ends at, on or with a specified day` THEN JUST TRUE
+        WHEN `ends before a specified day` THEN JUST FALSE
+        OTHERWISE NOTHING
+    -- NSW: nsw-interpretation-time `s 36(1) the first day counted in a period dating from a given day` (the given day is left out).
+    WHEN NSW THEN
+        CONSIDER how
+        WHEN `begins from a specified day` THEN JUST FALSE
+        WHEN `begins on, from or after the happening of an act or event` THEN JUST FALSE
+        OTHERWISE NOTHING
+    -- Vic: vic-interpretation-time `s44(1)-(2) the day a period is expressed to begin on or end on is counted in the period`.
+    WHEN Vic THEN
+        CONSIDER how
+        WHEN `begins at, on or with a specified day` THEN JUST FALSE
+        WHEN `begins from a specified day` THEN JUST FALSE
+        WHEN `ends at, on or with a specified day` THEN JUST TRUE
+        WHEN `is reckoned to a specified day` THEN JUST TRUE
+        OTHERWISE NOTHING
+    -- Qld: qld-interpretation-time `a day is counted in a period beginning on a given day (s 38(1))` (the given day is left out).
+    WHEN Qld THEN
+        CONSIDER how
+        WHEN `begins at, on or with a specified day` THEN JUST FALSE
+        WHEN `begins from a specified day` THEN JUST FALSE
+        WHEN `begins on, from or after the happening of an act or event` THEN JUST FALSE
+        OTHERWISE NOTHING
+    -- WA: wa-interpretation-time `the first day of a period` (s 61(1)(a), (b)) with `the end of a period expressed to end on` (s 61(1)(d)) and `the time within a time before a day` (s 61(1)(c)).
+    WHEN WA THEN
+        CONSIDER how
+        WHEN `begins at, on or with a specified day` THEN JUST TRUE
+        WHEN `begins from a specified day` THEN JUST FALSE
+        WHEN `begins after a specified day` THEN JUST FALSE
+        WHEN `continues until a specified day` THEN JUST TRUE
+        WHEN `ends at, on or with a specified day` THEN JUST TRUE
+        WHEN `ends before a specified day` THEN JUST FALSE
+        OTHERWISE NOTHING
+    -- SA: sa-interpretation-time `s 44(1): the first day counted in a period` and `s 44(1) items 4, 5 and 7`, with item 1.
+    WHEN SA THEN
+        CONSIDER how
+        WHEN `between two days` THEN JUST TRUE
+        WHEN `begins at, on or with a specified day` THEN JUST TRUE
+        WHEN `begins after a specified day` THEN JUST FALSE
+        WHEN `begins on, from or after the happening of an act or event` THEN JUST FALSE
+        WHEN `continues until a specified day` THEN JUST TRUE
+        WHEN `ends at, on or with a specified day` THEN JUST TRUE
+        WHEN `ends before a specified day` THEN JUST FALSE
+        OTHERWISE NOTHING
+    -- Tas: tas-interpretation-time `s 29(1): a day is counted in a period of days reckoned forwards from` (the given day is left out).
+    WHEN Tas THEN
+        CONSIDER how
+        WHEN `begins from a specified day` THEN JUST FALSE
+        WHEN `begins on, from or after the happening of an act or event` THEN JUST FALSE
+        OTHERWISE NOTHING
+    -- ACT: act-interpretation-time `s 151 (2), table 151: the period includes the stated day`.
+    WHEN ACT THEN
+        CONSIDER how
+        WHEN `begins at, on or with a specified day` THEN JUST TRUE
+        WHEN `begins from a specified day` THEN JUST FALSE
+        WHEN `begins after a specified day` THEN JUST FALSE
+        WHEN `continues until a specified day` THEN JUST TRUE
+        WHEN `ends at, on or with a specified day` THEN JUST TRUE
+        WHEN `ends before a specified day` THEN JUST FALSE
+        WHEN `occurs between two events` THEN JUST FALSE
+        OTHERWISE NOTHING
+    -- NT: nt-interpretation-time `s 28(1), (1A): the given day, act or event is counted in the period`.
+    WHEN NT THEN
+        CONSIDER how
+        WHEN `begins from a specified day` THEN JUST FALSE
+        WHEN `begins on, from or after the happening of an act or event` THEN JUST FALSE
+        WHEN `ends at, on or with a specified day` THEN JUST TRUE
+        OTHERWISE NOTHING
+
+-- Does the specified day name the START of a period expressed in this way, for the purpose of counting forward from it?
+-- Cth: `the specified day names the start of a period expressed in this way`.
+-- The other jurisdictions have no such function; the set below is the expressions their forward-counting functions accept.
+GIVEN j IS A Jurisdiction
+      how IS A `How a period is expressed`
+GIVETH A BOOLEAN
+`the specified day names the start of a period expressed in this way` j how MEANS
+    CONSIDER j
+    -- Cth: `the specified day names the start of a period expressed in this way`.
+    WHEN Cth THEN
+        CONSIDER how
+        WHEN `between two days` THEN TRUE
+        WHEN `begins at, on or with a specified day` THEN TRUE
+        WHEN `begins from a specified day` THEN TRUE
+        WHEN `begins after a specified day` THEN TRUE
+        OTHERWISE FALSE
+    -- NSW: nsw-interpretation-time `s 36 the last day of a period of n units dating from a given day` (the expressions that function takes; the map is in the NOTES).
+    WHEN NSW THEN
+        CONSIDER how
+        WHEN `begins from a specified day` THEN TRUE
+        WHEN `begins on, from or after the happening of an act or event` THEN TRUE
+        OTHERWISE FALSE
+    -- Vic: vic-interpretation-time `s44 last day counted forward from a day` (the expressions that function takes; the map is in the NOTES).
+    WHEN Vic THEN
+        CONSIDER how
+        WHEN `begins at, on or with a specified day` THEN TRUE
+        WHEN `begins from a specified day` THEN TRUE
+        OTHERWISE FALSE
+    -- Qld: qld-interpretation-time `the last day of a period beginning on a given day (s 38(1))` (the expressions that function takes; the map is in the NOTES).
+    WHEN Qld THEN
+        CONSIDER how
+        WHEN `begins at, on or with a specified day` THEN TRUE
+        WHEN `begins from a specified day` THEN TRUE
+        WHEN `begins on, from or after the happening of an act or event` THEN TRUE
+        OTHERWISE FALSE
+    -- WA: wa-interpretation-time `reckon a period` (the expressions that function takes; the map is in the NOTES).
+    WHEN WA THEN
+        CONSIDER how
+        WHEN `begins at, on or with a specified day` THEN TRUE
+        WHEN `begins from a specified day` THEN TRUE
+        WHEN `begins after a specified day` THEN TRUE
+        OTHERWISE FALSE
+    -- SA: sa-interpretation-time `s 44(1): the last day of a period` (the expressions that function takes; the map is in the NOTES).
+    WHEN SA THEN
+        CONSIDER how
+        WHEN `begins at, on or with a specified day` THEN TRUE
+        WHEN `begins after a specified day` THEN TRUE
+        WHEN `begins on, from or after the happening of an act or event` THEN TRUE
+        OTHERWISE FALSE
+    -- Tas: tas-interpretation-time `s 29(1): the last day of a period of days reckoned forwards from` (the expressions that function takes; the map is in the NOTES).
+    WHEN Tas THEN
+        CONSIDER how
+        WHEN `begins from a specified day` THEN TRUE
+        WHEN `begins on, from or after the happening of an act or event` THEN TRUE
+        OTHERWISE FALSE
+    -- ACT: act-interpretation-time `s 151: the last day of a period of days, months or years that begins on or from a stated day` (the expressions that function takes; the map is in the NOTES).
+    WHEN ACT THEN
+        CONSIDER how
+        WHEN `begins at, on or with a specified day` THEN TRUE
+        WHEN `begins from a specified day` THEN TRUE
+        WHEN `begins after a specified day` THEN TRUE
+        OTHERWISE FALSE
+    -- NT: nt-interpretation-time `s 28(1): the last day of a period dating from` (the expressions that function takes; the map is in the NOTES).
+    WHEN NT THEN
+        CONSIDER how
+        WHEN `begins from a specified day` THEN TRUE
+        WHEN `begins on, from or after the happening of an act or event` THEN TRUE
+        OTHERWISE FALSE
+
+-- The first day counted in a period tied to a day by the expression: the specified day, or the day after it.
+GIVEN j IS A Jurisdiction
+      how IS A `How a period is expressed`
+      anchor IS A DATE
+GIVETH A MAYBE DATE
+`the first day counted in a period` j how anchor MEANS
+    IF `the specified day names the start of a period expressed in this way` j how
+    THEN CONSIDER `a period expressed in this way includes the specified day` j how
+         WHEN JUST TRUE THEN JUST anchor
+         WHEN JUST FALSE THEN JUST (anchor PLUS 1)
+         WHEN NOTHING THEN NOTHING
+    ELSE NOTHING
+
+-- The last day of a period whose END is tied to a day by the expression.
+-- Cth: au-interpretation-time `the last day of the period`.
+-- Vic: vic-interpretation-time `s44(2) last day of a period expressed to end on or be reckoned to a day`.
+-- WA: wa-interpretation-time `the end of a period expressed to end on` (the last day by the calendar).
+-- SA: sa-interpretation-time `s 44(1) items 4, 5 and 7: the last day of a period that ends by reference to a specified day`.
+-- NSW, Qld, Tas, ACT, NT: no such function in the source module.
+GIVEN j IS A Jurisdiction
+      how IS A `How a period is expressed`
+      anchor IS A DATE
+GIVETH A MAYBE DATE
+`the last day of a period that ends by reference to a day` j how anchor MEANS
+    CONSIDER j
+    -- Cth: au-interpretation-time `the last day of the period`.
+    WHEN Cth THEN
+        CONSIDER how
+        WHEN `between two days` THEN JUST anchor
+        WHEN `continues until a specified day` THEN JUST anchor
+        WHEN `ends at, on or with a specified day` THEN JUST anchor
+        WHEN `ends before a specified day` THEN JUST (anchor MINUS 1)
+        OTHERWISE NOTHING
+    -- NSW: no such rule in nsw-interpretation-time (answers NOTHING).
+    WHEN NSW THEN NOTHING
+    -- Vic: vic-interpretation-time `s44(2) last day of a period expressed to end on or be reckoned to a day`.
+    WHEN Vic THEN
+        CONSIDER how
+        WHEN `ends at, on or with a specified day` THEN JUST anchor
+        WHEN `is reckoned to a specified day` THEN JUST anchor
+        OTHERWISE NOTHING
+    -- Qld: no such rule in qld-interpretation-time (answers NOTHING).
+    WHEN Qld THEN NOTHING
+    -- WA: wa-interpretation-time `the end of a period expressed to end on` (the last day by the calendar).
+    WHEN WA THEN
+        CONSIDER how
+        WHEN `continues until a specified day` THEN JUST anchor
+        WHEN `ends at, on or with a specified day` THEN JUST anchor
+        OTHERWISE NOTHING
+    -- SA: sa-interpretation-time `s 44(1) items 4, 5 and 7: the last day of a period that ends by reference to a specified day`.
+    WHEN SA THEN
+        CONSIDER how
+        WHEN `continues until a specified day` THEN JUST anchor
+        WHEN `ends at, on or with a specified day` THEN JUST anchor
+        WHEN `ends before a specified day` THEN JUST (anchor MINUS 1)
+        OTHERWISE NOTHING
+    -- Tas: no such rule in tas-interpretation-time (answers NOTHING).
+    WHEN Tas THEN NOTHING
+    -- ACT: no such rule in act-interpretation-time (answers NOTHING).
+    WHEN ACT THEN NOTHING
+    -- NT: no such rule in nt-interpretation-time (answers NOTHING).
+    WHEN NT THEN NOTHING
+
+-- The first day of a period of a number of days that ENDS by reference to a day.
+-- Qld: qld-interpretation-time `the earliest day of a period of days calculated backwards from a given day (s 38(1) and (3))`, read for `ends before a specified day`.
+-- Tas: tas-interpretation-time `s 29(1): the first day of a period of days reckoned backwards from`, read for `ends before a specified day`.
+-- WA: wa-interpretation-time `the time within a time before a day` (s 61(1)(c)).
+-- ACT: act-interpretation-time `s 151: the first day of a period of days that ends at, by, on or with, or before, a stated day`.
+-- NT: nt-interpretation-time `s 28(1A): the first day of a period ending on`.
+-- Cth, NSW, Vic, SA: no such function in the source module.
+GIVEN j IS A Jurisdiction
+      n IS A NUMBER
+      how IS A `How a period is expressed`
+      anchor IS A DATE
+GIVETH A MAYBE DATE
+`the first day of a period of days that ends by reference to a day` j n how anchor MEANS
+    CONSIDER j
+    -- Cth: no such rule in au-interpretation-time (answers NOTHING).
+    WHEN Cth THEN NOTHING
+    -- NSW: no such rule in nsw-interpretation-time (answers NOTHING).
+    WHEN NSW THEN NOTHING
+    -- Vic: no such rule in vic-interpretation-time (answers NOTHING).
+    WHEN Vic THEN NOTHING
+    -- Qld: qld-interpretation-time `the earliest day of a period of days calculated backwards from a given day (s 38(1) and (3))`, read for `ends before a specified day`.
+    WHEN Qld THEN
+        IF how EQUALS `ends before a specified day` AND n AT LEAST 1 THEN JUST (anchor MINUS n) ELSE NOTHING
+    -- WA: wa-interpretation-time `the time within a time before a day` (s 61(1)(c)).
+    WHEN WA THEN
+        IF how EQUALS `ends before a specified day` AND `is a whole number of at least 1` n THEN JUST (anchor MINUS n) ELSE NOTHING
+    -- SA: no such rule in sa-interpretation-time (answers NOTHING).
+    WHEN SA THEN NOTHING
+    -- Tas: tas-interpretation-time `s 29(1): the first day of a period of days reckoned backwards from`, read for `ends before a specified day`.
+    WHEN Tas THEN
+        IF how EQUALS `ends before a specified day` THEN JUST (anchor MINUS n) ELSE NOTHING
+    -- ACT: act-interpretation-time `s 151: the first day of a period of days that ends at, by, on or with, or before, a stated day`.
+    WHEN ACT THEN
+        IF n LESS THAN 1 THEN NOTHING
+        ELSE CONSIDER how
+             WHEN `continues until a specified day` THEN JUST (anchor MINUS (n MINUS 1))
+             WHEN `ends at, on or with a specified day` THEN JUST (anchor MINUS (n MINUS 1))
+             WHEN `ends before a specified day` THEN JUST (anchor MINUS n)
+             OTHERWISE NOTHING
+    -- NT: nt-interpretation-time `s 28(1A): the first day of a period ending on`.
+    WHEN NT THEN
+        IF how EQUALS `ends at, on or with a specified day` AND `is a whole number of at least 1` n
+        THEN JUST (anchor PLUS (1 MINUS n))
+        ELSE NOTHING
+
+§ `Calendar months and years: the ways the source modules count them (Cth s 2G; NSW Sch 4 "calendar month"; Vic s 44(6); Qld Sch 1 "calendar month"; WA s 62; SA s 4 "month" and "year"; Tas s 46; ACT dictionary "month"; NT s 17)`
+
+-- Counted straight to the corresponding day of the month that many months on.
+-- The last day is the day before that corresponding day, or the end of that month if it has no such day.
+-- Cth: au-interpretation-time `the last day of n calendar months starting on` (s 2G(1), (2)).
+-- SA: sa-interpretation-time `s 4 and s 44(1) item 8: the last day of a period of months beginning on a day`.
+GIVEN n IS A NUMBER
+      s IS A DATE
+GIVETH A DATE
+`the last day of months counted straight to the corresponding day` n s MEANS
+    IF   DATE_DAY s AT MOST `Days in month` targetMonth targetYear
+    THEN Date (DATE_DAY s) targetMonth targetYear MINUS 1
+    ELSE Date (`Days in month` targetMonth targetYear) targetMonth targetYear
+    WHERE
+        monthCount MEANS ((DATE_YEAR s) TIMES 12) PLUS ((DATE_MONTH s) MINUS 1) PLUS n
+        targetYear MEANS FLOOR (monthCount DIVIDED BY 12)
+        targetMonth MEANS (monthCount MODULO 12) PLUS 1
+
+-- WA counts a period of months with the library's `add months`, which clamps to the end of a short month.
+-- WA: wa-interpretation-time `the last day of a period of months beginning on` (s 62(2), (3)).
+GIVEN firstDay IS A DATE
+      numberOfMonths IS A NUMBER
+GIVETH A DATE
+`the last day of months counted with add months` firstDay numberOfMonths MEANS
+    IF DATE_DAY target EQUALS DATE_DAY firstDay
+    THEN Date (Day target MINUS 1)
+    ELSE target
+    WHERE
+        target MEANS `add months` firstDay numberOfMonths
+
+-- One calendar month at a time: each month starts the day after the one before it ended.
+-- NSW: nsw-interpretation-time `Schedule 4 the last day of n successive calendar months, the first commencing at the beginning of a day`.
+-- Qld: qld-interpretation-time `the last day of calendar months in succession`.
+-- ACT: act-interpretation-time `dictionary, month: the last day of a run of successive months, the first beginning at the start of a day`.
+-- NT: nt-interpretation-time `s 17 "month": the last day of consecutive calendar months, the first commencing at the beginning of`.
+GIVEN s IS A DATE
+GIVETH A DATE
+`the last day of one calendar month starting on` s MEANS
+    IF   DATE_DAY s AT MOST `Days in month` nextMonth nextYear
+    THEN (Date (DATE_DAY s) nextMonth nextYear) MINUS 1
+    ELSE Date (`Days in month` nextMonth nextYear) nextMonth nextYear
+    WHERE
+        nextMonth MEANS IF DATE_MONTH s EQUALS 12 THEN 1 ELSE DATE_MONTH s PLUS 1
+        nextYear MEANS IF DATE_MONTH s EQUALS 12 THEN DATE_YEAR s PLUS 1 ELSE DATE_YEAR s
+
+GIVEN n IS A NUMBER
+      s IS A DATE
+GIVETH A DATE
+`the last day of months counted one calendar month at a time` n s MEANS
+    IF   n AT MOST 1
+    THEN `the last day of one calendar month starting on` s
+    ELSE `the last day of months counted one calendar month at a time` (n MINUS 1) ((`the last day of one calendar month starting on` s) PLUS 1)
+
+-- Vic gives an answer for a period of months only where two readings of the text agree.
+-- Reading A leaves the given day out and takes the day before the same-numbered day n months on from the next day.
+-- Reading B takes the day with the given day's own number, n months on.
+-- Each reading is NOTHING where the later month has no day with the number it needs.
+-- Vic: vic-interpretation-time `s44(1),(6)(b) last day of n calendar months reckoned from a day` (readings A and B inside it).
+GIVEN anchor IS A DATE
+      n IS A NUMBER
+GIVETH A MAYBE DATE
+`the last day of months where Vic's two readings agree` anchor n MEANS
+    CONSIDER readingA
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST a THEN
+        CONSIDER readingB
+        WHEN NOTHING THEN NOTHING
+        WHEN JUST b THEN IF a EQUALS b THEN JUST a ELSE NOTHING
+    WHERE
+        firstCounted MEANS anchor PLUS 1
+        targetA MEANS Date (DATE_DAY firstCounted) (DATE_MONTH firstCounted PLUS n) (DATE_YEAR firstCounted)
+        readingA MEANS IF DATE_DAY targetA EQUALS DATE_DAY firstCounted THEN JUST (targetA MINUS 1) ELSE NOTHING
+        targetB MEANS Date (DATE_DAY anchor) (DATE_MONTH anchor PLUS n) (DATE_YEAR anchor)
+        readingB MEANS IF DATE_DAY targetB EQUALS DATE_DAY anchor THEN JUST targetB ELSE NOTHING
+
+-- Tas counts the same-numbered day in the month reached, and answers NOTHING where that month has no such day.
+-- Tas: tas-interpretation-time `s 46: the day of the same number in the month reached by counting calendar months from`.
+GIVEN start IS A DATE
+      months IS A NUMBER
+GIVETH A MAYBE DATE
+`the same-numbered day in the month reached` start months MEANS
+    IF DATE_DAY start AT MOST `Days in month` targetMonth targetYear
+    THEN JUST (Date (DATE_DAY start) targetMonth targetYear)
+    ELSE NOTHING
+    WHERE
+        monthIndex MEANS ((DATE_YEAR start) TIMES 12) PLUS ((DATE_MONTH start) MINUS 1) PLUS months
+        targetYear MEANS FLOOR (monthIndex DIVIDED BY 12)
+        targetMonth MEANS (monthIndex MODULO 12) PLUS 1
+
+-- SA counts a year as ending the day before the corresponding day of the next calendar year; a year starting on 29 February ends on 28 February.
+-- A period of several years is that many years in succession.
+-- SA: sa-interpretation-time `s 4: the last day of a year beginning on a day` and `s 4: the last day of a period of years beginning on a day`.
+GIVEN firstDay IS A DATE
+GIVETH A DATE
+`the last day of one year beginning on` firstDay MEANS
+    IF DATE_DAY firstDay EQUALS 29 AND DATE_MONTH firstDay EQUALS 2
+    THEN Date 28 2 (DATE_YEAR firstDay PLUS 1)
+    ELSE (Date (DATE_DAY firstDay) (DATE_MONTH firstDay) (DATE_YEAR firstDay PLUS 1)) MINUS 1
+
+GIVEN firstDay IS A DATE
+      numberOfYears IS A NUMBER
+GIVETH A DATE
+`the last day of years counted one year at a time` firstDay numberOfYears MEANS
+    IF numberOfYears AT MOST 1
+    THEN `the last day of one year beginning on` firstDay
+    ELSE `the last day of years counted one year at a time` ((`the last day of one year beginning on` firstDay) PLUS 1) (numberOfYears MINUS 1)
+
+§ `The last day of a period of days, months or years (Cth s 36(1) with s 2G; NSW s 36(1) and Sch 4; Vic s 44(1); Qld s 38(1); WA ss 61, 62; SA s 44(1); Tas s 29(1) and s 46; ACT s 151 and dictionary; NT s 28(1))`
+
+-- The last day of a period of n units tied to a day by the expression.
+-- The first day is found as above; Vic, Tas and the other modules that start from the given day itself are read from the day before the first day counted.
+-- Weeks answer NOTHING for every jurisdiction: the source modules that mention a period of weeks return NOTHING for it.
+-- Cth: au-interpretation-time `the last day of a counted period of` (s 36(1) with s 2G); years answer NOTHING there.
+-- NSW: nsw-interpretation-time `s 36 the last day of a period of n units dating from a given day`; a year answers NOTHING, a calendar year only from 1 January.
+-- Vic: vic-interpretation-time `s44 last day counted forward from a day` with `s44 last day, start left out`.
+-- Qld: qld-interpretation-time `the last day of a period beginning on a given day (s 38(1))`.
+-- WA: wa-interpretation-time `reckon a period` (the last day by the calendar).
+-- SA: sa-interpretation-time `s 44(1): the last day of a period`.
+-- Tas: tas-interpretation-time `s 29(1): the last day of a period of days reckoned forwards from`, `s 29(1) and s 46: the last day of a period of calendar months reckoned forwards from`; years and weeks answer NOTHING there.
+-- ACT: act-interpretation-time `s 151: the last day of a period of days, months or years that begins on or from a stated day`.
+-- NT: nt-interpretation-time `s 28(1): the last day of a period dating from`.
+GIVEN j IS A Jurisdiction
+      n IS A NUMBER
+      unit IS A `Unit of a period`
+      how IS A `How a period is expressed`
+      anchor IS A DATE
+GIVETH A MAYBE DATE
+`the last day of a period` j n unit how anchor MEANS
+    CONSIDER `the first day counted in a period` j how anchor
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST first THEN
+        CONSIDER j
+        -- Cth: au-interpretation-time `the last day of a counted period of` (s 36(1) with s 2G); years answer NOTHING there.
+        WHEN Cth THEN
+            IF NOT (`is a whole number of at least 1` n) THEN NOTHING
+            ELSE CONSIDER unit
+                 WHEN Days THEN JUST (first PLUS (n MINUS 1))
+                 WHEN Weeks THEN NOTHING
+                 WHEN Months THEN JUST (`the last day of months counted straight to the corresponding day` n first)
+                 WHEN Years THEN NOTHING
+                 WHEN `Calendar years` THEN NOTHING
+        -- NSW: nsw-interpretation-time `s 36 the last day of a period of n units dating from a given day`; a year answers NOTHING, a calendar year only from 1 January.
+        WHEN NSW THEN
+            IF NOT (`is a whole number of at least 1` n) THEN NOTHING
+            ELSE CONSIDER unit
+                 WHEN Days THEN JUST (first PLUS (n MINUS 1))
+                 WHEN Weeks THEN NOTHING
+                 WHEN Months THEN JUST (`the last day of months counted one calendar month at a time` n first)
+                 WHEN Years THEN NOTHING
+                 WHEN `Calendar years` THEN
+                     IF DATE_DAY first EQUALS 1 AND DATE_MONTH first EQUALS 1
+                     THEN JUST (`the last day of months counted one calendar month at a time` (12 TIMES n) first)
+                     ELSE NOTHING
+        -- Vic: vic-interpretation-time `s44 last day counted forward from a day` with `s44 last day, start left out`.
+        WHEN Vic THEN
+            CONSIDER unit
+            WHEN Days THEN JUST (anchor PLUS n)
+            WHEN Weeks THEN NOTHING
+            WHEN Months THEN `the last day of months where Vic's two readings agree` anchor n
+            WHEN Years THEN `the last day of months where Vic's two readings agree` anchor (n TIMES 12)
+            WHEN `Calendar years` THEN NOTHING
+        -- Qld: qld-interpretation-time `the last day of a period beginning on a given day (s 38(1))`.
+        WHEN Qld THEN
+            IF n LESS THAN 1 THEN NOTHING
+            ELSE CONSIDER unit
+                 WHEN Days THEN JUST (anchor PLUS n)
+                 WHEN Weeks THEN NOTHING
+                 WHEN Months THEN JUST (`the last day of months counted one calendar month at a time` n first)
+                 WHEN Years THEN JUST (`the last day of months counted one calendar month at a time` (12 TIMES n) first)
+                 WHEN `Calendar years` THEN NOTHING
+        -- WA: wa-interpretation-time `reckon a period` (the last day by the calendar).
+        WHEN WA THEN
+            IF NOT (`is a whole number of at least 1` n) THEN NOTHING
+            ELSE CONSIDER unit
+                 WHEN Days THEN JUST (first PLUS (n MINUS 1))
+                 WHEN Weeks THEN NOTHING
+                 WHEN Months THEN JUST (`the last day of months counted with add months` first n)
+                 WHEN Years THEN JUST (`the last day of months counted with add months` first (n TIMES 12))
+                 WHEN `Calendar years` THEN NOTHING
+        -- SA: sa-interpretation-time `s 44(1): the last day of a period`.
+        WHEN SA THEN
+            IF n LESS THAN 1 THEN NOTHING
+            ELSE CONSIDER unit
+                 WHEN Days THEN JUST (first PLUS (n MINUS 1))
+                 WHEN Weeks THEN NOTHING
+                 WHEN Months THEN JUST (`the last day of months counted straight to the corresponding day` n first)
+                 WHEN Years THEN JUST (`the last day of years counted one year at a time` first n)
+                 WHEN `Calendar years` THEN NOTHING
+        -- Tas: tas-interpretation-time `s 29(1): the last day of a period of days reckoned forwards from`, `s 29(1) and s 46: the last day of a period of calendar months reckoned forwards from`; years and weeks answer NOTHING there.
+        WHEN Tas THEN
+            CONSIDER unit
+            WHEN Days THEN JUST (anchor PLUS n)
+            WHEN Weeks THEN NOTHING
+            WHEN Months THEN `the same-numbered day in the month reached` anchor n
+            WHEN Years THEN NOTHING
+            WHEN `Calendar years` THEN NOTHING
+        -- ACT: act-interpretation-time `s 151: the last day of a period of days, months or years that begins on or from a stated day`.
+        WHEN ACT THEN
+            IF n LESS THAN 1 THEN NOTHING
+            ELSE CONSIDER unit
+                 WHEN Days THEN JUST (first PLUS (n MINUS 1))
+                 WHEN Weeks THEN NOTHING
+                 WHEN Months THEN JUST (`the last day of months counted one calendar month at a time` n first)
+                 WHEN Years THEN
+                     IF DATE_MONTH first EQUALS 1 AND DATE_DAY first EQUALS 1
+                     THEN JUST (`the last day of months counted one calendar month at a time` (n TIMES 12) first)
+                     ELSE NOTHING
+                 WHEN `Calendar years` THEN
+                     IF DATE_MONTH first EQUALS 1 AND DATE_DAY first EQUALS 1
+                     THEN JUST (`the last day of months counted one calendar month at a time` (n TIMES 12) first)
+                     ELSE NOTHING
+        -- NT: nt-interpretation-time `s 28(1): the last day of a period dating from`.
+        WHEN NT THEN
+            IF NOT (`is a whole number of at least 1` n) THEN NOTHING
+            ELSE CONSIDER unit
+                 WHEN Days THEN JUST (anchor PLUS n)
+                 WHEN Weeks THEN NOTHING
+                 WHEN Months THEN JUST (`the last day of months counted one calendar month at a time` n first)
+                 WHEN Years THEN JUST (`the last day of months counted one calendar month at a time` (12 TIMES n) first)
+                 WHEN `Calendar years` THEN NOTHING
+
+§ `Days of rest, and the day a thing may be done when its last day is one (Cth s 36(2) and (3); NSW s 36(2); Vic s 44(3) and (4); Qld s 38(2), (3) and (5); WA s 61(1)(e) and (2); SA s 44(2); Tas s 29(3) to (6); ACT s 151A; NT s 28(2))`
+
+-- Only Qld and ACT read the kind of thing; the other jurisdictions ignore it.
+-- Qld has a rule for filing or registering and for anything else; ACT for an office of a public entity, anything else, and anything else by a deposit-taking institution.
+GIVEN j IS A Jurisdiction
+      kind IS A `What is to be done`
+GIVETH A BOOLEAN
+`the jurisdiction states a rule for this kind of thing` j kind MEANS
+    CONSIDER j
+    -- Cth: au-interpretation-time `is a Saturday, a Sunday or a holiday` takes no kind of thing, so the rule applies to every kind.
+    WHEN Cth THEN TRUE
+    -- NSW: nsw-interpretation-time `s 36(2) the day is a Saturday, a Sunday, or a public holiday or bank holiday in the place` takes no kind of thing, so the rule applies to every kind.
+    WHEN NSW THEN TRUE
+    -- Vic: vic-interpretation-time `s44(4) a day is a holiday` takes no kind of thing, so the rule applies to every kind.
+    WHEN Vic THEN TRUE
+    -- Qld: qld-interpretation-time `is an excluded day (s 38(5))` reads the kind of thing: it states a rule for filing or registering a document and for anything else.
+    WHEN Qld THEN
+        CONSIDER kind
+        WHEN `filing or registering a document` THEN TRUE
+        WHEN `something at an office of a public entity` THEN FALSE
+        WHEN `anything else` THEN TRUE
+        WHEN `anything else, by or in relation to an authorised deposit-taking institution` THEN FALSE
+    -- WA: wa-interpretation-time `is an excluded day` takes no kind of thing, so the rule applies to every kind.
+    WHEN WA THEN TRUE
+    -- SA: sa-interpretation-time `s 4: is a business day` (negated) takes no kind of thing, so the rule applies to every kind.
+    WHEN SA THEN TRUE
+    -- Tas: tas-interpretation-time `s 29(3): a day is an excluded day` takes no kind of thing, so the rule applies to every kind.
+    WHEN Tas THEN TRUE
+    -- ACT: act-interpretation-time `s 151A (4): the day is a working day for doing the thing` reads the kind of thing: it states a rule for an office of a public entity, for anything else, and for anything else by a deposit-taking institution.
+    WHEN ACT THEN
+        CONSIDER kind
+        WHEN `filing or registering a document` THEN FALSE
+        WHEN `something at an office of a public entity` THEN TRUE
+        WHEN `anything else` THEN TRUE
+        WHEN `anything else, by or in relation to an authorised deposit-taking institution` THEN TRUE
+    -- NT: nt-interpretation-time `s 28(2): the day is a Saturday, a Sunday or a public holiday` takes no kind of thing, so the rule applies to every kind.
+    WHEN NT THEN TRUE
+
+-- Is the day a day of rest for the time for doing a thing?
+-- Cth: au-interpretation-time `is a Saturday, a Sunday or a holiday` (public holidays and days the office is closed for the whole day).
+-- NSW: nsw-interpretation-time `s 36(2) the day is a Saturday, a Sunday, or a public holiday or bank holiday in the place`.
+-- Vic: vic-interpretation-time `s44(4) a day is a holiday`.
+-- Qld: qld-interpretation-time `is an excluded day (s 38(5))`: for filing or registering, only a day the office is closed; otherwise a day that is not a business day.
+-- WA: wa-interpretation-time `is an excluded day` (public service holidays, bank holidays and public holidays).
+-- SA: sa-interpretation-time `s 4: is a business day` negated: Saturday, Sunday or a public holiday that covers the whole day.
+-- Tas: tas-interpretation-time `s 29(3): a day is an excluded day`: Sunday or a listed holiday; Saturday is not one.
+-- ACT: act-interpretation-time `s 151A (4): the day is a working day for doing the thing` negated.
+-- NT: nt-interpretation-time `s 28(2): the day is a Saturday, a Sunday or a public holiday`.
+GIVEN j IS A Jurisdiction
+      kind IS A `What is to be done`
+      d IS A DATE
+      rest IS A `Days of rest and closure`
+GIVETH A BOOLEAN
+`is a day of rest` j kind d rest MEANS
+    CONSIDER j
+    -- Cth: au-interpretation-time `is a Saturday, a Sunday or a holiday` (public holidays and days the office is closed for the whole day).
+    WHEN Cth THEN
+            `is weekend` d
+         OR `is a public holiday, whether or not it covers only part of the day` d (rest's `public holidays`)
+         OR elem d (rest's `days the office is closed for the whole day`)
+    -- NSW: nsw-interpretation-time `s 36(2) the day is a Saturday, a Sunday, or a public holiday or bank holiday in the place`.
+    WHEN NSW THEN
+            `is weekend` d
+         OR `is a public holiday, whether or not it covers only part of the day` d (rest's `public holidays`)
+         OR elem d (rest's `bank holidays`)
+    -- Vic: vic-interpretation-time `s44(4) a day is a holiday`.
+    WHEN Vic THEN
+            `is weekend` d
+         OR `is a public holiday, whether or not it covers only part of the day` d (rest's `public holidays`)
+    -- Qld: qld-interpretation-time `is an excluded day (s 38(5))`: for filing or registering, only a day the office is closed; otherwise a day that is not a business day.
+    WHEN Qld THEN
+        CONSIDER kind
+        WHEN `filing or registering a document` THEN elem d (rest's `days the office is closed for the whole day`)
+        OTHERWISE
+                `is weekend` d
+             OR `is a public holiday, whether or not it covers only part of the day` d (rest's `public holidays`)
+             OR elem d (rest's `bank holidays`)
+    -- WA: wa-interpretation-time `is an excluded day` (public service holidays, bank holidays and public holidays).
+    WHEN WA THEN
+            `is weekend` d
+         OR elem d (rest's `public service holidays`)
+         OR elem d (rest's `bank holidays`)
+         OR `is a public holiday, whether or not it covers only part of the day` d (rest's `public holidays`)
+    -- SA: sa-interpretation-time `s 4: is a business day` negated: Saturday, Sunday or a public holiday that covers the whole day.
+    WHEN SA THEN
+            `is weekend` d
+         OR `is a public holiday that covers the whole day` d (rest's `public holidays`)
+    -- Tas: tas-interpretation-time `s 29(3): a day is an excluded day`: Sunday or a listed holiday; Saturday is not one.
+    WHEN Tas THEN
+            `is a Sunday` d
+         OR `is a public holiday, whether or not it covers only part of the day` d (rest's `public holidays`)
+    -- ACT: act-interpretation-time `s 151A (4): the day is a working day for doing the thing` negated.
+    WHEN ACT THEN
+        CONSIDER kind
+        WHEN `something at an office of a public entity` THEN elem d (rest's `days the office is closed for the whole day`)
+        WHEN `anything else, by or in relation to an authorised deposit-taking institution` THEN
+                `is weekend` d
+             OR `is a public holiday, whether or not it covers only part of the day` d (rest's `public holidays`)
+             OR elem d (rest's `bank holidays`)
+        OTHERWISE
+                `is weekend` d
+             OR `is a public holiday, whether or not it covers only part of the day` d (rest's `public holidays`)
+    -- NT: nt-interpretation-time `s 28(2): the day is a Saturday, a Sunday or a public holiday`.
+    WHEN NT THEN
+            `is weekend` d
+         OR `is a public holiday that covers the whole day` d (rest's `public holidays`)
+
+-- The first day from a given day, counting the day itself, that is not a day of rest; unbounded search.
+GIVEN j IS A Jurisdiction
+      kind IS A `What is to be done`
+      d IS A DATE
+      rest IS A `Days of rest and closure`
+GIVETH A DATE
+`the first day from a day that is not a day of rest` j kind d rest MEANS
+    IF   `is a day of rest` j kind d rest
+    THEN `the first day from a day that is not a day of rest` j kind (d PLUS 1) rest
+    ELSE d
+
+-- Vic searches forward with a limit of 400 days.
+-- Vic: vic-interpretation-time `s44(3) first day on or after a day that is not a holiday` and `s44(3) day to which a time limited for doing an act or thing extends`.
+GIVEN d IS A DATE
+      fuel IS A NUMBER
+      rest IS A `Days of rest and closure`
+GIVETH A MAYBE DATE
+`Vic: the first day from a day that is not a holiday, within a limit on the search` d fuel rest MEANS
+    BRANCH
+        IF fuel AT MOST 0 THEN NOTHING
+        IF `is a day of rest` Vic `anything else` d rest THEN `Vic: the first day from a day that is not a holiday, within a limit on the search` (d PLUS 1) (fuel MINUS 1) rest
+        OTHERWISE JUST d
+
+-- ACT searches forward with a limit of 400 days, starting at the last day itself.
+-- ACT: act-interpretation-time `s 151A (2): the first working day on or after a day, searching a limited number of days`.
+GIVEN kind IS A `What is to be done`
+      d IS A DATE
+      rest IS A `Days of rest and closure`
+      left IS A NUMBER
+GIVETH A MAYBE DATE
+`ACT: the first working day from a day, within a limit on the search` kind d rest left MEANS
+    IF   NOT (`is a day of rest` ACT kind d rest)
+    THEN JUST d
+    ELSE IF   left AT MOST 0
+         THEN NOTHING
+         ELSE `ACT: the first working day from a day, within a limit on the search` kind (d PLUS 1) rest (left MINUS 1)
+
+-- The latest day on which a thing may be done when the last day for doing it is the given day.
+-- Seven jurisdictions step forward to the first day that is not a day of rest; Vic and ACT do so with a limit of 400 days.
+-- Cth: au-interpretation-time `the last day on which the thing may be done` (with an Act that requires or allows the thing taken as true).
+-- NSW: nsw-interpretation-time `s 36(2) the latest day on which the thing may be done when the period ends on a day`.
+-- Vic: vic-interpretation-time `s44(3) day to which a time limited for doing an act or thing extends` (with the time limited for doing an act taken as true).
+-- Qld: qld-interpretation-time `the day a time or last day calculated forwards is taken to fall on (s 38(2))`.
+-- WA: wa-interpretation-time `the next day that is not an excluded day, counting the day itself`.
+-- SA: sa-interpretation-time `s 44(2): the last day on which a thing may be done`.
+-- Tas: tas-interpretation-time `s 29(3)(a): the last day on which an act is in due time, a time reckoned forwards ending on`.
+-- ACT: act-interpretation-time `s 151A (2): the day on which the thing must or may be done, where the particular day or the last day of the period is that day`.
+-- NT: nt-interpretation-time `s 28(2): the last day on which the thing may be done, for a period whose last day is`.
+GIVEN j IS A Jurisdiction
+      kind IS A `What is to be done`
+      lastDay IS A DATE
+      rest IS A `Days of rest and closure`
+GIVETH A MAYBE DATE
+`the latest day on which a thing may be done` j kind lastDay rest MEANS
+    IF NOT (`the jurisdiction states a rule for this kind of thing` j kind)
+    THEN NOTHING
+    ELSE CONSIDER j
+         -- Cth: au-interpretation-time `the last day on which the thing may be done` (with an Act that requires or allows the thing taken as true).
+         WHEN Cth THEN JUST (`the first day from a day that is not a day of rest` Cth kind lastDay rest)
+         -- NSW: nsw-interpretation-time `s 36(2) the latest day on which the thing may be done when the period ends on a day`.
+         WHEN NSW THEN JUST (`the first day from a day that is not a day of rest` NSW kind lastDay rest)
+         -- Vic: vic-interpretation-time `s44(3) day to which a time limited for doing an act or thing extends` (with the time limited for doing an act taken as true).
+         WHEN Vic THEN
+             IF `is a day of rest` Vic kind lastDay rest
+             THEN `Vic: the first day from a day that is not a holiday, within a limit on the search` (lastDay PLUS 1) 400 rest
+             ELSE JUST lastDay
+         -- Qld: qld-interpretation-time `the day a time or last day calculated forwards is taken to fall on (s 38(2))`.
+         WHEN Qld THEN JUST (`the first day from a day that is not a day of rest` Qld kind lastDay rest)
+         -- WA: wa-interpretation-time `the next day that is not an excluded day, counting the day itself`.
+         WHEN WA THEN JUST (`the first day from a day that is not a day of rest` WA kind lastDay rest)
+         -- SA: sa-interpretation-time `s 44(2): the last day on which a thing may be done`.
+         WHEN SA THEN JUST (`the first day from a day that is not a day of rest` SA kind lastDay rest)
+         -- Tas: tas-interpretation-time `s 29(3)(a): the last day on which an act is in due time, a time reckoned forwards ending on`.
+         WHEN Tas THEN JUST (`the first day from a day that is not a day of rest` Tas kind lastDay rest)
+         -- ACT: act-interpretation-time `s 151A (2): the day on which the thing must or may be done, where the particular day or the last day of the period is that day`.
+         WHEN ACT THEN `ACT: the first working day from a day, within a limit on the search` kind lastDay rest 400
+         -- NT: nt-interpretation-time `s 28(2): the last day on which the thing may be done, for a period whose last day is`.
+         WHEN NT THEN JUST (`the first day from a day that is not a day of rest` NT kind lastDay rest)
+
+-- The day a time, or earliest day, calculated BACKWARDS is taken to fall on: the first earlier day that is not a day of rest.
+-- Qld: qld-interpretation-time `the day a time or earliest day calculated backwards is taken to fall on (s 38(3))`.
+-- Tas: tas-interpretation-time `s 29(3)(b): the day on or before which an act is in due time, a time reckoned backwards ending on`.
+-- The other seven source modules have no backward rule.
+GIVEN j IS A Jurisdiction
+      kind IS A `What is to be done`
+      d IS A DATE
+      rest IS A `Days of rest and closure`
+GIVETH A MAYBE DATE
+`the day a time calculated backwards is taken to fall on` j kind d rest MEANS
+    IF NOT (`the jurisdiction states a rule for this kind of thing` j kind)
+    THEN NOTHING
+    ELSE CONSIDER j
+         -- Cth: no such rule in au-interpretation-time (answers NOTHING).
+         WHEN Cth THEN NOTHING
+         -- NSW: no such rule in nsw-interpretation-time (answers NOTHING).
+         WHEN NSW THEN NOTHING
+         -- Vic: no such rule in vic-interpretation-time (answers NOTHING).
+         WHEN Vic THEN NOTHING
+         -- Qld: qld-interpretation-time `the day a time or earliest day calculated backwards is taken to fall on (s 38(3))`.
+         WHEN Qld THEN JUST (`the first earlier day that is not a day of rest` Qld kind d rest)
+         -- WA: no such rule in wa-interpretation-time (answers NOTHING).
+         WHEN WA THEN NOTHING
+         -- SA: no such rule in sa-interpretation-time (answers NOTHING).
+         WHEN SA THEN NOTHING
+         -- Tas: tas-interpretation-time `s 29(3)(b): the day on or before which an act is in due time, a time reckoned backwards ending on`.
+         WHEN Tas THEN JUST (`the first earlier day that is not a day of rest` Tas kind d rest)
+         -- ACT: no such rule in act-interpretation-time (answers NOTHING).
+         WHEN ACT THEN NOTHING
+         -- NT: no such rule in nt-interpretation-time (answers NOTHING).
+         WHEN NT THEN NOTHING
+
+GIVEN j IS A Jurisdiction
+      kind IS A `What is to be done`
+      d IS A DATE
+      rest IS A `Days of rest and closure`
+GIVETH A DATE
+`the first earlier day that is not a day of rest` j kind d rest MEANS
+    IF   `is a day of rest` j kind d rest
+    THEN `the first earlier day that is not a day of rest` j kind (d MINUS 1) rest
+    ELSE d
+
+-- Tas counts a time of 6 days or fewer without reckoning days of rest.
+-- Tas: tas-interpretation-time `s 29(6): the day reached by counting days forwards from a day, excluded days not reckoned`.
+GIVEN start IS A DATE
+      remaining IS A NUMBER
+      rest IS A `Days of rest and closure`
+GIVETH A DATE
+`Tas: the day reached counting days forwards, days of rest not reckoned` start remaining rest MEANS
+    IF remaining AT MOST 0
+    THEN start
+    ELSE IF `is a day of rest` Tas `anything else` (start PLUS 1) rest
+         THEN `Tas: the day reached counting days forwards, days of rest not reckoned` (start PLUS 1) remaining rest
+         ELSE `Tas: the day reached counting days forwards, days of rest not reckoned` (start PLUS 1) (remaining MINUS 1) rest
+
+-- The latest day on which a thing may be done within a period: the last day of the period, then the day-of-rest rule.
+-- Tas applies s 29(6) instead when the period is 1 to 6 days.
+-- Tas: tas-interpretation-time `s 29: the last day for doing an act within a number of days reckoned forwards from`.
+GIVEN j IS A Jurisdiction
+      kind IS A `What is to be done`
+      n IS A NUMBER
+      unit IS A `Unit of a period`
+      how IS A `How a period is expressed`
+      anchor IS A DATE
+      rest IS A `Days of rest and closure`
+GIVETH A MAYBE DATE
+`the latest day on which a thing may be done within a period` j kind n unit how anchor rest MEANS
+    IF   j EQUALS Tas AND unit EQUALS Days AND n AT LEAST 1 AND n AT MOST 6
+    THEN IF `the specified day names the start of a period expressed in this way` Tas how
+         THEN JUST (`Tas: the day reached counting days forwards, days of rest not reckoned` anchor n rest)
+         ELSE NOTHING
+    ELSE CONSIDER `the last day of a period` j n unit how anchor
+         WHEN NOTHING THEN NOTHING
+         WHEN JUST last THEN `the latest day on which a thing may be done` j kind last rest
+
+§ `Business days (Cth s 2B; NSW Sch 4 and s 76(2); Qld Sch 1; SA s 4; ACT dictionary; NT s 17)`
+
+-- Is the day a business day?
+-- Vic, WA and Tas have no definition of a business day in their source modules.
+-- Cth: au-interpretation-time `is a business day` (not a Saturday, a Sunday or a public holiday in the place concerned; days an office is closed are not read).
+-- NSW: nsw-interpretation-time `Schedule 4 the day is a business day` and `s 76(2) the day is a working day` (public and bank holidays).
+-- Qld: qld-interpretation-time `is a business day (Schedule 1)` (public, special and bank holidays).
+-- SA: sa-interpretation-time `s 4: is a business day` (a part-day public holiday does not count).
+-- ACT: act-interpretation-time `dictionary, business day: the day is a business day` (public and bank holidays).
+-- NT: nt-interpretation-time `s 17 "business day": the day is a business day` (a part-day public holiday does not count).
+GIVEN j IS A Jurisdiction
+      d IS A DATE
+      rest IS A `Days of rest and closure`
+GIVETH A MAYBE BOOLEAN
+`is a business day` j d rest MEANS
+    CONSIDER j
+    -- Cth: au-interpretation-time `is a business day` (not a Saturday, a Sunday or a public holiday in the place concerned; days an office is closed are not read).
+    WHEN Cth THEN JUST ((NOT (`is weekend` d)) AND (NOT (`is a public holiday, whether or not it covers only part of the day` d (rest's `public holidays`))))
+    -- NSW: nsw-interpretation-time `Schedule 4 the day is a business day` and `s 76(2) the day is a working day` (public and bank holidays).
+    WHEN NSW THEN JUST (NOT (`is a day of rest` NSW `anything else` d rest))
+    -- Vic: no definition of a business day in vic-interpretation-time (answers NOTHING).
+    WHEN Vic THEN NOTHING
+    -- Qld: qld-interpretation-time `is a business day (Schedule 1)` (public, special and bank holidays).
+    WHEN Qld THEN JUST (NOT (`is a day of rest` Qld `anything else` d rest))
+    -- WA: no definition of a business day in wa-interpretation-time (answers NOTHING).
+    WHEN WA THEN NOTHING
+    -- SA: sa-interpretation-time `s 4: is a business day` (a part-day public holiday does not count).
+    WHEN SA THEN JUST (NOT (`is a day of rest` SA `anything else` d rest))
+    -- Tas: no definition of a business day in tas-interpretation-time (answers NOTHING).
+    WHEN Tas THEN NOTHING
+    -- ACT: act-interpretation-time `dictionary, business day: the day is a business day` (public and bank holidays).
+    WHEN ACT THEN JUST (NOT (`is a day of rest` ACT `anything else, by or in relation to an authorised deposit-taking institution` d rest))
+    -- NT: nt-interpretation-time `s 17 "business day": the day is a business day` (a part-day public holiday does not count).
+    WHEN NT THEN JUST (NOT (`is a day of rest` NT `anything else` d rest))
+
+§ `When an enactment begins and stops operating, and at what moment of the day (Cth ss 3 and 3A; NSW ss 23, 24, 71 and Sch 4; Vic ss 11, 12, 24, 25 and 44(6)(a); Qld ss 15A, 15B, 18 and Sch 1; WA ss 20, 21; SA ss 27, 28, 30; Tas ss 9, 14, 16; ACT ss 73, 74, 85; NT ss 5, 6A)`
+
+-- An enactment that comes into operation on a particular day does so at the beginning of that day.
+-- All nine source modules say so.
+-- Cth: au-interpretation-time `the moment the enactment comes into operation` (s 3).
+-- NSW: nsw-interpretation-time `s 24 the moment an Act or statutory rule commences on a particular day` (an Act or a statutory rule; another instrument is NOTHING there and is not reproduced here).
+-- Vic: vic-interpretation-time `s11 moment an Act or provision comes into operation on a fixed day` (s 11(1)) and `s24 moment a subordinate instrument that is not a statutory rule comes into operation`.
+-- Qld: qld-interpretation-time `the moment a provision commences on a day (s 15B)`.
+-- WA: wa-interpretation-time `the moment a written law comes into operation` (s 21).
+-- SA: sa-interpretation-time `s 28: the moment an Act or provision comes into operation on a particular day`.
+-- Tas: tas-interpretation-time `s 9(5): the moment at which an Act or instrument expressed to commence on a day takes effect`.
+-- ACT: act-interpretation-time `s 74 (1), (2): the beginning of a day` (s 74: unless a different time is provided).
+-- NT: nt-interpretation-time `s 6A: the moment at which an Act or a provision commences` (unless a time of day is provided in the Act).
+GIVEN j IS A Jurisdiction
+      d IS A DATE
+GIVETH A MAYBE `Moment in a day`
+`the moment an enactment comes into operation on a day` j d MEANS
+    CONSIDER j
+    -- Cth: au-interpretation-time `the moment the enactment comes into operation` (s 3).
+    WHEN Cth THEN JUST (`Moment in a day` OF d, `the beginning of the day`)
+    -- NSW: nsw-interpretation-time `s 24 the moment an Act or statutory rule commences on a particular day` (an Act or a statutory rule; another instrument is NOTHING there and is not reproduced here).
+    WHEN NSW THEN JUST (`Moment in a day` OF d, `the beginning of the day`)
+    -- Vic: vic-interpretation-time `s11 moment an Act or provision comes into operation on a fixed day` (s 11(1)) and `s24 moment a subordinate instrument that is not a statutory rule comes into operation`.
+    WHEN Vic THEN JUST (`Moment in a day` OF d, `the beginning of the day`)
+    -- Qld: qld-interpretation-time `the moment a provision commences on a day (s 15B)`.
+    WHEN Qld THEN JUST (`Moment in a day` OF d, `the beginning of the day`)
+    -- WA: wa-interpretation-time `the moment a written law comes into operation` (s 21).
+    WHEN WA THEN JUST (`Moment in a day` OF d, `the beginning of the day`)
+    -- SA: sa-interpretation-time `s 28: the moment an Act or provision comes into operation on a particular day`.
+    WHEN SA THEN JUST (`Moment in a day` OF d, `the beginning of the day`)
+    -- Tas: tas-interpretation-time `s 9(5): the moment at which an Act or instrument expressed to commence on a day takes effect`.
+    WHEN Tas THEN JUST (`Moment in a day` OF d, `the beginning of the day`)
+    -- ACT: act-interpretation-time `s 74 (1), (2): the beginning of a day` (s 74: unless a different time is provided).
+    WHEN ACT THEN JUST (`Moment in a day` OF d, `the beginning of the day`)
+    -- NT: nt-interpretation-time `s 6A: the moment at which an Act or a provision commences` (unless a time of day is provided in the Act).
+    WHEN NT THEN JUST (`Moment in a day` OF d, `the beginning of the day`)
+
+-- The moment up to which an enactment expressed to expire on a day, or to continue in force until a day, has effect.
+-- NSW, Qld, SA and ACT name the end of the day, as midnight; Vic and Tas name the last moment of the day.
+-- Cth, WA and NT: no such rule in the source module.
+-- NSW: nsw-interpretation-time `s 71 the moment an Act or instrument expressed to expire or remain in force until a day stops operating`.
+-- Vic: vic-interpretation-time `s12 moment until which a temporary Act or provision continues in operation`.
+-- Qld: qld-interpretation-time `the last moment an Act or provision has effect (s 18)`.
+-- SA: sa-interpretation-time `s 30: the moment up to which an expiring provision continues to have effect`.
+-- Tas: tas-interpretation-time `s 14(2): the last moment of operation of an enactment expressed to expire or remain in force until a specified day`.
+-- ACT: act-interpretation-time `s 85: when the repeal of a law takes effect`, for a law not remade on that day (the repeal takes effect at midnight on the day).
+GIVEN j IS A Jurisdiction
+      d IS A DATE
+GIVETH A MAYBE `Moment in a day`
+`the moment an enactment stops operating on its expiry day` j d MEANS
+    CONSIDER j
+    -- Cth: no such rule in au-interpretation-time (answers NOTHING).
+    WHEN Cth THEN NOTHING
+    -- NSW: nsw-interpretation-time `s 71 the moment an Act or instrument expressed to expire or remain in force until a day stops operating`.
+    WHEN NSW THEN JUST (`Moment in a day` OF d, `midnight at the end of the day`)
+    -- Vic: vic-interpretation-time `s12 moment until which a temporary Act or provision continues in operation`.
+    WHEN Vic THEN JUST (`Moment in a day` OF d, `the last moment of the day`)
+    -- Qld: qld-interpretation-time `the last moment an Act or provision has effect (s 18)`.
+    WHEN Qld THEN JUST (`Moment in a day` OF d, `midnight at the end of the day`)
+    -- WA: no such rule in wa-interpretation-time (answers NOTHING).
+    WHEN WA THEN NOTHING
+    -- SA: sa-interpretation-time `s 30: the moment up to which an expiring provision continues to have effect`.
+    WHEN SA THEN JUST (`Moment in a day` OF d, `midnight at the end of the day`)
+    -- Tas: tas-interpretation-time `s 14(2): the last moment of operation of an enactment expressed to expire or remain in force until a specified day`.
+    WHEN Tas THEN JUST (`Moment in a day` OF d, `the last moment of the day`)
+    -- ACT: act-interpretation-time `s 85: when the repeal of a law takes effect`, for a law not remade on that day (the repeal takes effect at midnight on the day).
+    WHEN ACT THEN JUST (`Moment in a day` OF d, `midnight at the end of the day`)
+    -- NT: no such rule in nt-interpretation-time (answers NOTHING).
+    WHEN NT THEN NOTHING
+
+-- Midnight, in relation to a particular day, is the point at which that day ends.
+-- NSW: nsw-interpretation-time `Schedule 4 midnight in relation to a particular day`.
+-- Vic: vic-interpretation-time `s44(6)(a) midnight in relation to a day is the point at which that day ends`.
+-- Qld: qld-interpretation-time `midnight of a day, the point of time at which the day ends (Schedule 1)`.
+-- ACT: act-interpretation-time `s 74 and dictionary, midnight` (midnight at the end of the day).
+-- Cth, WA, SA, Tas, NT: no such definition in the source module.
+GIVEN j IS A Jurisdiction
+      d IS A DATE
+GIVETH A MAYBE `Moment in a day`
+`midnight in relation to a day` j d MEANS
+    CONSIDER j
+    -- Cth: no such rule in au-interpretation-time (answers NOTHING).
+    WHEN Cth THEN NOTHING
+    -- NSW: nsw-interpretation-time `Schedule 4 midnight in relation to a particular day`.
+    WHEN NSW THEN JUST (`Moment in a day` OF d, `midnight at the end of the day`)
+    -- Vic: vic-interpretation-time `s44(6)(a) midnight in relation to a day is the point at which that day ends`.
+    WHEN Vic THEN JUST (`Moment in a day` OF d, `midnight at the end of the day`)
+    -- Qld: qld-interpretation-time `midnight of a day, the point of time at which the day ends (Schedule 1)`.
+    WHEN Qld THEN JUST (`Moment in a day` OF d, `midnight at the end of the day`)
+    -- WA: no such rule in wa-interpretation-time (answers NOTHING).
+    WHEN WA THEN NOTHING
+    -- SA: no such rule in sa-interpretation-time (answers NOTHING).
+    WHEN SA THEN NOTHING
+    -- Tas: no such rule in tas-interpretation-time (answers NOTHING).
+    WHEN Tas THEN NOTHING
+    -- ACT: act-interpretation-time `s 74 and dictionary, midnight` (midnight at the end of the day).
+    WHEN ACT THEN JUST (`Moment in a day` OF d, `midnight at the end of the day`)
+    -- NT: no such rule in nt-interpretation-time (answers NOTHING).
+    WHEN NT THEN NOTHING
+
+§ `The day an Act commences when it says nothing about its commencement (Cth s 3A; NSW s 23(1)(a); Qld s 15A; WA s 20; SA s 27(1); ACT s 73(1); NT s 5(4))`
+
+-- Cth: au-interpretation-time `the day the enactment commences` (s 3A(2): the 28th day after the day of Royal Assent; an Act to alter the Constitution is not reproduced here).
+-- NSW: nsw-interpretation-time `s 23(1)(a) the day an Act commences when nothing else provides` (the day occurring 28 days after assent).
+-- Vic: s 10A names a day to be proclaimed or the first anniversary; see the automatic-commencement section below. NOTHING here.
+-- Qld: qld-interpretation-time `the day an Act commences on the date of assent (s 15A)` (the Act does not otherwise expressly provide).
+-- WA: wa-interpretation-time `the day an Act comes into operation` (s 20: assent before 1 July 1984, the day of assent; otherwise the 28th day after).
+-- SA: sa-interpretation-time `s 27(1): the day an Act with no commencement provision comes into operation`.
+-- Tas: tas-interpretation-time s 9(2) and (3) depend on the day section 8 of the 1981 amending Act commenced, which the module takes as an input and this surface does not; NOTHING here.
+-- ACT: act-interpretation-time `s 73 (1) and s 74 (1): when an Act commences` (the day after the notification day; the input is read as the notification day).
+-- NT: nt-interpretation-time `s 5: the day on which an Act or a provision commences` (the day after the day assent is declared).
+GIVEN j IS A Jurisdiction
+      assent IS A DATE
+GIVETH A MAYBE DATE
+`the day an Act that says nothing about its commencement commences` j assent MEANS
+    CONSIDER j
+    -- Cth: au-interpretation-time `the day the enactment commences` (s 3A(2): the 28th day after the day of Royal Assent; an Act to alter the Constitution is not reproduced here).
+    WHEN Cth THEN JUST (assent PLUS 28)
+    -- NSW: nsw-interpretation-time `s 23(1)(a) the day an Act commences when nothing else provides` (the day occurring 28 days after assent).
+    WHEN NSW THEN JUST (assent PLUS 28)
+    -- Vic: s 10A names a day to be proclaimed or the first anniversary; see the automatic-commencement section below. NOTHING here.
+    WHEN Vic THEN NOTHING
+    -- Qld: qld-interpretation-time `the day an Act commences on the date of assent (s 15A)` (the Act does not otherwise expressly provide).
+    WHEN Qld THEN JUST assent
+    -- WA: wa-interpretation-time `the day an Act comes into operation` (s 20: assent before 1 July 1984, the day of assent; otherwise the 28th day after).
+    WHEN WA THEN
+        IF Day assent LESS THAN Day (Date 1 7 1984)
+        THEN JUST assent
+        ELSE JUST (assent PLUS 28)
+    -- SA: sa-interpretation-time `s 27(1): the day an Act with no commencement provision comes into operation`.
+    WHEN SA THEN JUST assent
+    -- Tas: tas-interpretation-time s 9(2) and (3) depend on the day section 8 of the 1981 amending Act commenced, which the module takes as an input and this surface does not; NOTHING here.
+    WHEN Tas THEN NOTHING
+    -- ACT: act-interpretation-time `s 73 (1) and s 74 (1): when an Act commences` (the day after the notification day; the input is read as the notification day).
+    WHEN ACT THEN JUST (assent PLUS 1)
+    -- NT: nt-interpretation-time `s 5: the day on which an Act or a provision commences` (the day after the day assent is declared).
+    WHEN NT THEN JUST (assent PLUS 1)
+
+§ `A day fixed for commencement that is not later than the day the proclamation or notice is published (NSW s 23(5); Vic s 11(2A); Qld s 15D; ACT s 77(3) and (4))`
+
+-- Cth, WA, SA, Tas and NT: no such rule in the source module.
+-- NSW: nsw-interpretation-time `s 23(1) and (5) the day an Act commences` (a day fixed by proclamation, published later: the later of the two).
+-- Vic: vic-interpretation-time `s11 commencement once the proclamation is published` (the proclamation made on or before the fixed day; otherwise NOTHING).
+-- Qld: qld-interpretation-time `the day an Act commences when a day is fixed by proclamation (s 15D)` (the later of the two).
+-- ACT: act-interpretation-time `s 77 (3), (4): when a law commences under a commencement notice` (the day after the notification day, unless the notice clearly indicates an earlier commencement under authority given by an Act).
+GIVEN j IS A Jurisdiction
+      fixedDay IS A DATE
+      publishedDay IS A DATE
+      `the proclamation was made on or before the fixed day` IS A BOOLEAN
+      `the notice clearly indicates an earlier commencement and provides for it under authority given by an Act` IS A BOOLEAN
+GIVETH A MAYBE DATE
+`the day an Act commences when the day fixed is not later than the day of publication` j fixedDay publishedDay `the proclamation was made on or before the fixed day` `the notice clearly indicates an earlier commencement and provides for it under authority given by an Act` MEANS
+    CONSIDER j
+    -- Cth: no such rule in au-interpretation-time (answers NOTHING).
+    WHEN Cth THEN NOTHING
+    -- NSW: nsw-interpretation-time `s 23(1) and (5) the day an Act commences` (a day fixed by proclamation, published later: the later of the two).
+    WHEN NSW THEN
+        IF Day publishedDay AT MOST Day fixedDay THEN JUST fixedDay ELSE JUST publishedDay
+    -- Vic: vic-interpretation-time `s11 commencement once the proclamation is published` (the proclamation made on or before the fixed day; otherwise NOTHING).
+    WHEN Vic THEN
+        BRANCH
+            IF publishedDay AT MOST fixedDay THEN JUST fixedDay
+            IF `the proclamation was made on or before the fixed day` THEN JUST publishedDay
+            OTHERWISE NOTHING
+    -- Qld: qld-interpretation-time `the day an Act commences when a day is fixed by proclamation (s 15D)` (the later of the two).
+    WHEN Qld THEN
+        IF fixedDay LESS THAN publishedDay THEN JUST publishedDay ELSE JUST fixedDay
+    -- WA: no such rule in wa-interpretation-time (answers NOTHING).
+    WHEN WA THEN NOTHING
+    -- SA: no such rule in sa-interpretation-time (answers NOTHING).
+    WHEN SA THEN NOTHING
+    -- Tas: no such rule in tas-interpretation-time (answers NOTHING).
+    WHEN Tas THEN NOTHING
+    -- ACT: act-interpretation-time `s 77 (3), (4): when a law commences under a commencement notice` (the day after the notification day, unless the notice clearly indicates an earlier commencement under authority given by an Act).
+    WHEN ACT THEN
+        IF   fixedDay AT MOST publishedDay
+         AND NOT `the notice clearly indicates an earlier commencement and provides for it under authority given by an Act`
+        THEN JUST (publishedDay PLUS 1)
+        ELSE JUST fixedDay
+    -- NT: no such rule in nt-interpretation-time (answers NOTHING).
+    WHEN NT THEN NOTHING
+
+§ `An Act to commence on a day to be fixed that has not commenced by a time limit (Vic s 10A(3) and (4); Qld s 15DA; SA s 27(6) and (7); ACT s 79(1))`
+
+-- The day by which the Act commences automatically if no earlier day has been fixed.
+-- Cth, NSW, WA, Tas and NT: no such rule in the source module.
+-- Vic: vic-interpretation-time `s10A first anniversary of the passing of an Act` (NOTHING where the year has no same-numbered day).
+-- Qld: qld-interpretation-time `the day a postponed law automatically commences (s 15DA)`; the two further inputs are the Act's own statement that s 15DA does not apply and the months a regulation has extended the period to (0 if none).
+-- SA: sa-interpretation-time `s 27(6) and (7): the day an Act or provision to be brought into operation by proclamation comes into operation`, with the provision covered by s 27(6), no proclamation made, and the Act's own statement that s 27(6) does not apply.
+-- ACT: act-interpretation-time `s 79 (1): when a postponed law automatically commences`: the first day after 6 months beginning on the notification day (the input is read as the notification day).
+GIVEN j IS A Jurisdiction
+      assentOrNotification IS A DATE
+      `the Act says that the automatic rule does not apply` IS A BOOLEAN
+      `the months a regulation has extended the period to, or 0 if none` IS A NUMBER
+GIVETH A MAYBE DATE
+`the day an Act to commence on a day to be fixed commences automatically` j assentOrNotification `the Act says that the automatic rule does not apply` `the months a regulation has extended the period to, or 0 if none` MEANS
+    CONSIDER j
+    -- Cth: no such rule in au-interpretation-time (answers NOTHING).
+    WHEN Cth THEN NOTHING
+    -- NSW: no such rule in nsw-interpretation-time (answers NOTHING).
+    WHEN NSW THEN NOTHING
+    -- Vic: vic-interpretation-time `s10A first anniversary of the passing of an Act` (NOTHING where the year has no same-numbered day).
+    WHEN Vic THEN
+        IF DATE_DAY vicAnniversary EQUALS DATE_DAY assentOrNotification THEN JUST vicAnniversary ELSE NOTHING
+    -- Qld: qld-interpretation-time `the day a postponed law automatically commences (s 15DA)`; the two further inputs are the Act's own statement that s 15DA does not apply and the months a regulation has extended the period to (0 if none).
+    WHEN Qld THEN
+        IF     assentOrNotification GREATER THAN Date 31 12 1994
+           AND (NOT `the Act says that the automatic rule does not apply`)
+           AND (   `the months a regulation has extended the period to, or 0 if none` EQUALS 0
+                OR (`the months a regulation has extended the period to, or 0 if none` AT LEAST 13 AND `the months a regulation has extended the period to, or 0 if none` AT MOST 24))
+        THEN JUST ((`the last day of months counted one calendar month at a time` qldMonths (assentOrNotification PLUS 1)) PLUS 1)
+        ELSE NOTHING
+    -- WA: no such rule in wa-interpretation-time (answers NOTHING).
+    WHEN WA THEN NOTHING
+    -- SA: sa-interpretation-time `s 27(6) and (7): the day an Act or provision to be brought into operation by proclamation comes into operation`, with the provision covered by s 27(6), no proclamation made, and the Act's own statement that s 27(6) does not apply.
+    WHEN SA THEN
+        IF `the Act says that the automatic rule does not apply` THEN NOTHING
+        ELSE IF DATE_DAY saAnniversary EQUALS DATE_DAY assentOrNotification AND DATE_MONTH saAnniversary EQUALS DATE_MONTH assentOrNotification
+             THEN JUST saAnniversary
+             ELSE NOTHING
+    -- Tas: no such rule in tas-interpretation-time (answers NOTHING).
+    WHEN Tas THEN NOTHING
+    -- ACT: act-interpretation-time `s 79 (1): when a postponed law automatically commences`: the first day after 6 months beginning on the notification day (the input is read as the notification day).
+    WHEN ACT THEN JUST ((`the last day of months counted one calendar month at a time` 6 assentOrNotification) PLUS 1)
+    -- NT: no such rule in nt-interpretation-time (answers NOTHING).
+    WHEN NT THEN NOTHING
+    WHERE
+        vicAnniversary MEANS Date (DATE_DAY assentOrNotification) (DATE_MONTH assentOrNotification) (DATE_YEAR assentOrNotification PLUS 1)
+        saAnniversary MEANS Date (DATE_DAY assentOrNotification) (DATE_MONTH assentOrNotification) (DATE_YEAR assentOrNotification PLUS 2)
+        qldMonths MEANS IF `the months a regulation has extended the period to, or 0 if none` EQUALS 0 THEN 12 ELSE `the months a regulation has extended the period to, or 0 if none`
+
+§ `When an amending Act is repealed automatically (NSW s 30C(2) and (3); Qld s 22C(1); ACT s 89(1))`
+
+-- The day on which an amending Act is repealed once all its provisions have commenced.
+-- Cth, Vic, WA, SA, Tas and NT: no such rule in the source module.
+-- NSW: nsw-interpretation-time `s 30C(2) and (3) the day an amending Act is repealed` (the day after the last commencement, or the day after assent if the last commencement is before assent).
+-- Qld: qld-interpretation-time `the moment an amending Act is automatically repealed (s 22C(1))` (an amending Act enacted after 30 June 1994; the module's own flag that the Act is an amending Act is taken as true); read at the day it falls on.
+-- ACT: act-interpretation-time `s 89 (1): the day an amending law is automatically repealed` (all provisions commenced; the alternative limb of paragraph (b) is not read).
+GIVEN j IS A Jurisdiction
+      assent IS A DATE
+      `the day on which the last provision commenced` IS A DATE
+GIVETH A MAYBE DATE
+`the day an amending Act is repealed automatically` j assent `the day on which the last provision commenced` MEANS
+    CONSIDER j
+    -- Cth: no such rule in au-interpretation-time (answers NOTHING).
+    WHEN Cth THEN NOTHING
+    -- NSW: nsw-interpretation-time `s 30C(2) and (3) the day an amending Act is repealed` (the day after the last commencement, or the day after assent if the last commencement is before assent).
+    WHEN NSW THEN
+        IF Day `the day on which the last provision commenced` LESS THAN Day assent
+        THEN JUST (assent PLUS 1)
+        ELSE JUST (`the day on which the last provision commenced` PLUS 1)
+    -- Vic: no such rule in vic-interpretation-time (answers NOTHING).
+    WHEN Vic THEN NOTHING
+    -- Qld: qld-interpretation-time `the moment an amending Act is automatically repealed (s 22C(1))` (an amending Act enacted after 30 June 1994; the module's own flag that the Act is an amending Act is taken as true); read at the day it falls on.
+    WHEN Qld THEN
+        IF assent GREATER THAN Date 30 6 1994 THEN JUST (`the day on which the last provision commenced` PLUS 1) ELSE NOTHING
+    -- WA: no such rule in wa-interpretation-time (answers NOTHING).
+    WHEN WA THEN NOTHING
+    -- SA: no such rule in sa-interpretation-time (answers NOTHING).
+    WHEN SA THEN NOTHING
+    -- Tas: no such rule in tas-interpretation-time (answers NOTHING).
+    WHEN Tas THEN NOTHING
+    -- ACT: act-interpretation-time `s 89 (1): the day an amending law is automatically repealed` (all provisions commenced; the alternative limb of paragraph (b) is not read).
+    WHEN ACT THEN JUST (`the day on which the last provision commenced` PLUS 1)
+    -- NT: no such rule in nt-interpretation-time (answers NOTHING).
+    WHEN NT THEN NOTHING
+
+§ `The day a person attains an age, and a person's age on a day (Cth s 37A; NSW s 37; Vic s 55(2); Qld s 38A; SA s 49; ACT s 149; NT s 30)`
+
+-- The day on which a person attains an age expressed in years.
+-- WA, Tas and Qld give no such day: WA and Tas have no age rule, and Qld computes an age on a day (next function).
+-- Cth: au-interpretation-time `the moment a person attains the age` (s 37A: NOTHING where that year has no anniversary day; the day of the moment is returned).
+-- NSW: nsw-interpretation-time `s 37 the moment a person attains an age in years` (the day of the moment is returned).
+-- Vic: vic-interpretation-time `s55(2) day on which a person born on a day reaches eighteen years, taken as the eighteenth anniversary`; the module encodes eighteen years only, so any other age is NOTHING.
+-- SA: sa-interpretation-time `s 49: the moment a person attains an age in years` (1 March in a year without 29 February for a person born on 29 February; the day of the moment is returned).
+-- ACT: act-interpretation-time `s 149: the day a person attains an age in years`.
+-- NT: nt-interpretation-time `s 30(1): the day on which a person attains the age` (28 February in a year without 29 February for a person born on 29 February).
+GIVEN j IS A Jurisdiction
+      born IS A DATE
+      years IS A NUMBER
+GIVETH A MAYBE DATE
+`the day a person attains an age in years` j born years MEANS
+    CONSIDER j
+    -- Cth: au-interpretation-time `the moment a person attains the age` (s 37A: NOTHING where that year has no anniversary day; the day of the moment is returned).
+    WHEN Cth THEN
+        IF years LESS THAN 1 OR (NOT (FLOOR years EQUALS years))
+        THEN NOTHING
+        ELSE IF DATE_DAY born AT MOST `Days in month` (DATE_MONTH born) anniversaryYear
+             THEN JUST (Date (DATE_DAY born) (DATE_MONTH born) anniversaryYear)
+             ELSE NOTHING
+    -- NSW: nsw-interpretation-time `s 37 the moment a person attains an age in years` (the day of the moment is returned).
+    WHEN NSW THEN
+        IF years AT LEAST 0 AND FLOOR years EQUALS years
+        THEN IF DATE_DAY born EQUALS 29 AND DATE_MONTH born EQUALS 2 AND NOT (`is leap year` anniversaryYear)
+             THEN NOTHING
+             ELSE JUST (Date (DATE_DAY born) (DATE_MONTH born) anniversaryYear)
+        ELSE NOTHING
+    -- Vic: vic-interpretation-time `s55(2) day on which a person born on a day reaches eighteen years, taken as the eighteenth anniversary`; the module encodes eighteen years only, so any other age is NOTHING.
+    WHEN Vic THEN
+        IF years EQUALS 18 AND DATE_DAY vicTarget EQUALS DATE_DAY born THEN JUST vicTarget ELSE NOTHING
+    -- Qld: qld-interpretation-time has no day on which an age is attained; it computes an age on a day (`the age in years of a person on a day`) (answers NOTHING).
+    WHEN Qld THEN NOTHING
+    -- WA: no age rule in wa-interpretation-time (answers NOTHING).
+    WHEN WA THEN NOTHING
+    -- SA: sa-interpretation-time `s 49: the moment a person attains an age in years` (1 March in a year without 29 February for a person born on 29 February; the day of the moment is returned).
+    WHEN SA THEN
+        IF DATE_DAY born EQUALS 29 AND DATE_MONTH born EQUALS 2 AND NOT (`is leap year` anniversaryYear)
+        THEN JUST (Date 1 3 anniversaryYear)
+        ELSE JUST (Date (DATE_DAY born) (DATE_MONTH born) anniversaryYear)
+    -- Tas: no age rule in tas-interpretation-time (answers NOTHING).
+    WHEN Tas THEN NOTHING
+    -- ACT: act-interpretation-time `s 149: the day a person attains an age in years`.
+    WHEN ACT THEN
+        IF years LESS THAN 0
+        THEN NOTHING
+        ELSE IF DATE_DAY born AT MOST `Days in month` (DATE_MONTH born) anniversaryYear
+             THEN JUST (Date (DATE_DAY born) (DATE_MONTH born) anniversaryYear)
+             ELSE NOTHING
+    -- NT: nt-interpretation-time `s 30(1): the day on which a person attains the age` (28 February in a year without 29 February for a person born on 29 February).
+    WHEN NT THEN
+        IF years LESS THAN 1 OR (NOT (FLOOR years EQUALS years))
+        THEN NOTHING
+        ELSE IF DATE_DAY born EQUALS 29 AND DATE_MONTH born EQUALS 2 AND (NOT (`is leap year` anniversaryYear))
+             THEN JUST (Date 28 2 anniversaryYear)
+             ELSE JUST (Date (DATE_DAY born) (DATE_MONTH born) anniversaryYear)
+    WHERE
+        anniversaryYear MEANS DATE_YEAR born PLUS years
+        vicTarget MEANS Date (DATE_DAY born) (DATE_MONTH born) (DATE_YEAR born PLUS 18)
+
+-- A person's age in years on a day.
+-- Qld: qld-interpretation-time `the age in years of a person on a day (s 38A)` (NOTHING on 28 February of a year without 29 February for a person born on 29 February).
+-- ACT: act-interpretation-time `s 149: the age in years of a person on a day`.
+-- The other seven source modules have no such function.
+GIVEN j IS A Jurisdiction
+      born IS A DATE
+      day IS A DATE
+GIVETH A MAYBE NUMBER
+`the age in years of a person on a day` j born day MEANS
+    CONSIDER j
+    -- Cth: no such rule in au-interpretation-time (answers NOTHING).
+    WHEN Cth THEN NOTHING
+    -- NSW: no such rule in nsw-interpretation-time (answers NOTHING).
+    WHEN NSW THEN NOTHING
+    -- Vic: no such rule in vic-interpretation-time (answers NOTHING).
+    WHEN Vic THEN NOTHING
+    -- Qld: qld-interpretation-time `the age in years of a person on a day (s 38A)` (NOTHING on 28 February of a year without 29 February for a person born on 29 February).
+    WHEN Qld THEN
+        IF day LESS THAN born
+        THEN NOTHING
+        ELSE IF     DATE_MONTH born EQUALS 2
+                AND DATE_DAY born EQUALS 29
+                AND (NOT `is leap year` (DATE_YEAR day))
+                AND DATE_MONTH day EQUALS 2
+                AND DATE_DAY day EQUALS 28
+             THEN NOTHING
+             ELSE IF ((DATE_MONTH day) TIMES 100 PLUS DATE_DAY day) AT LEAST ((DATE_MONTH born) TIMES 100 PLUS DATE_DAY born)
+                  THEN JUST (DATE_YEAR day MINUS DATE_YEAR born)
+                  ELSE JUST (DATE_YEAR day MINUS DATE_YEAR born MINUS 1)
+    -- WA: no such rule in wa-interpretation-time (answers NOTHING).
+    WHEN WA THEN NOTHING
+    -- SA: no such rule in sa-interpretation-time (answers NOTHING).
+    WHEN SA THEN NOTHING
+    -- Tas: no such rule in tas-interpretation-time (answers NOTHING).
+    WHEN Tas THEN NOTHING
+    -- ACT: act-interpretation-time `s 149: the age in years of a person on a day`.
+    WHEN ACT THEN
+        IF day LESS THAN born
+        THEN NOTHING
+        ELSE IF DATE_DAY born AT MOST `Days in month` (DATE_MONTH born) (DATE_YEAR day)
+             THEN JUST (yearsApart MINUS (IF day LESS THAN Date (DATE_DAY born) (DATE_MONTH born) (DATE_YEAR day) THEN 1 ELSE 0))
+             ELSE IF day LESS THAN Date 28 2 (DATE_YEAR day)
+                  THEN JUST (yearsApart MINUS 1)
+                  ELSE IF day AT LEAST Date 1 3 (DATE_YEAR day)
+                       THEN JUST yearsApart
+                       ELSE NOTHING
+    -- NT: no such rule in nt-interpretation-time (answers NOTHING).
+    WHEN NT THEN NOTHING
+    WHERE
+        yearsApart MEANS DATE_YEAR day MINUS DATE_YEAR born
+
+§ `Service by post (Cth s 29; NSW s 76; Vic s 49; Qld s 39A; WA s 75(1); SA s 51(5); Tas s 30; ACT s 250; NT s 25)`
+
+-- The n-th working day after a day, where a working day is not a day of rest.
+-- NSW: nsw-interpretation-time `s 76 the nth working day after a day`.
+GIVEN d IS A DATE
+      n IS A NUMBER
+      rest IS A `Days of rest and closure`
+GIVETH A DATE
+`NSW: the n-th working day after a day` d n rest MEANS
+    IF n AT MOST 0
+    THEN d
+    ELSE IF NOT (`is a day of rest` NSW `anything else` next rest)
+         THEN `NSW: the n-th working day after a day` next (n MINUS 1) rest
+         ELSE `NSW: the n-th working day after a day` next n rest
+    WHERE
+        next MEANS d PLUS 1
+
+-- The day service of a document by post is taken to be effected.
+-- Inputs: whether the document was properly addressed, prepaid and posted as a letter (read where the source module reads it);
+-- the day it was posted; the day it would be delivered in the ordinary course of post; and the day service in fact took place if the contrary is proved.
+-- Cth: au-interpretation-time `the day service by post is taken to be effected` (s 29(1)): the contrary day if proved, otherwise the ordinary-course day; NOTHING if not properly done.
+-- NSW: nsw-interpretation-time `s 76(1)(b) the day service by post in Australia or an external Territory is taken to be effected` (the seventh working day after posting; the ordinary-course day is not read).
+-- Vic: vic-interpretation-time `s49 day on which service by post is deemed effected` (the ordinary-course day; NOTHING where the contrary is proved; the flag is not read).
+-- Qld: qld-interpretation-time `the time service by post is taken to have been effected (s 39A(1)(b))` (the ordinary-course day; NOTHING where the contrary is proved; the flag is not read).
+-- WA: wa-interpretation-time `the day service by post is deemed effected` (s 75(1)): the contrary day if proved, otherwise the ordinary-course day; NOTHING if not properly done.
+-- SA: sa-interpretation-time `s 51(5): the moment service by post is taken to be effected` (the contrary day if proved, otherwise the ordinary-course day; the flag is not read).
+-- Tas: tas-interpretation-time `s 30(1): the day service by post is deemed to have been effected` (the ordinary-course day; NOTHING if not properly done or the contrary is proved).
+-- ACT: act-interpretation-time `s 250: the day a document is taken to be served`, by prepaid post (the ordinary-course day).
+-- NT: nt-interpretation-time `s 25(2), (3), (4): the day on which a document is taken to be served`, by prepaid post (the ordinary-course day).
+GIVEN j IS A Jurisdiction
+      `the document was properly addressed, prepaid and posted as a letter` IS A BOOLEAN
+      posted IS A DATE
+      `the day it would be delivered in the ordinary course of post` IS A DATE
+      `the day service in fact took place, if the contrary is proved` IS A MAYBE DATE
+      rest IS A `Days of rest and closure`
+GIVETH A MAYBE DATE
+`the day service by post is taken to be effected` j `the document was properly addressed, prepaid and posted as a letter` posted `the day it would be delivered in the ordinary course of post` `the day service in fact took place, if the contrary is proved` rest MEANS
+    CONSIDER j
+    -- Cth: au-interpretation-time `the day service by post is taken to be effected` (s 29(1)): the contrary day if proved, otherwise the ordinary-course day; NOTHING if not properly done.
+    WHEN Cth THEN
+        IF `the document was properly addressed, prepaid and posted as a letter`
+        THEN CONSIDER `the day service in fact took place, if the contrary is proved`
+             WHEN JUST proved THEN JUST proved
+             WHEN NOTHING THEN JUST `the day it would be delivered in the ordinary course of post`
+        ELSE NOTHING
+    -- NSW: nsw-interpretation-time `s 76(1)(b) the day service by post in Australia or an external Territory is taken to be effected` (the seventh working day after posting; the ordinary-course day is not read).
+    WHEN NSW THEN JUST (`NSW: the n-th working day after a day` posted 7 rest)
+    -- Vic: vic-interpretation-time `s49 day on which service by post is deemed effected` (the ordinary-course day; NOTHING where the contrary is proved; the flag is not read).
+    WHEN Vic THEN
+        CONSIDER `the day service in fact took place, if the contrary is proved`
+        WHEN JUST proved THEN NOTHING
+        WHEN NOTHING THEN JUST `the day it would be delivered in the ordinary course of post`
+    -- Qld: qld-interpretation-time `the time service by post is taken to have been effected (s 39A(1)(b))` (the ordinary-course day; NOTHING where the contrary is proved; the flag is not read).
+    WHEN Qld THEN
+        CONSIDER `the day service in fact took place, if the contrary is proved`
+        WHEN JUST proved THEN NOTHING
+        WHEN NOTHING THEN JUST `the day it would be delivered in the ordinary course of post`
+    -- WA: wa-interpretation-time `the day service by post is deemed effected` (s 75(1)): the contrary day if proved, otherwise the ordinary-course day; NOTHING if not properly done.
+    WHEN WA THEN
+        IF `the document was properly addressed, prepaid and posted as a letter`
+        THEN CONSIDER `the day service in fact took place, if the contrary is proved`
+             WHEN JUST proved THEN JUST proved
+             WHEN NOTHING THEN JUST `the day it would be delivered in the ordinary course of post`
+        ELSE NOTHING
+    -- SA: sa-interpretation-time `s 51(5): the moment service by post is taken to be effected` (the contrary day if proved, otherwise the ordinary-course day; the flag is not read).
+    WHEN SA THEN
+        CONSIDER `the day service in fact took place, if the contrary is proved`
+        WHEN JUST proved THEN JUST proved
+        WHEN NOTHING THEN JUST `the day it would be delivered in the ordinary course of post`
+    -- Tas: tas-interpretation-time `s 30(1): the day service by post is deemed to have been effected` (the ordinary-course day; NOTHING if not properly done or the contrary is proved).
+    WHEN Tas THEN
+        CONSIDER `the day service in fact took place, if the contrary is proved`
+        WHEN JUST proved THEN NOTHING
+        WHEN NOTHING THEN
+            IF `the document was properly addressed, prepaid and posted as a letter`
+            THEN JUST `the day it would be delivered in the ordinary course of post`
+            ELSE NOTHING
+    -- ACT: act-interpretation-time `s 250: the day a document is taken to be served`, by prepaid post (the ordinary-course day).
+    WHEN ACT THEN JUST `the day it would be delivered in the ordinary course of post`
+    -- NT: nt-interpretation-time `s 25(2), (3), (4): the day on which a document is taken to be served`, by prepaid post (the ordinary-course day).
+    WHEN NT THEN JUST `the day it would be delivered in the ordinary course of post`
+
+§ `Sitting days of a House (Cth s 2M; NSW s 18; Tas s 44; NT s 17 "sitting day")`
+
+-- The n-th sitting day after a day, from the days the caller supplies.
+-- For Cth the supplied days are the days on which a sitting BEGINS (the later days of a long sitting are part of the earlier sitting day); for NSW, Tas and NT they are the days the House sat or met.
+-- Cth, NSW and NT sort the days; Cth and NT also drop repeats; Tas takes the supplied order as it is.
+-- Vic, Qld, WA and SA and ACT: no such function in the source module.
+-- Cth: au-interpretation-time `the sitting day that is the n-th after` (s 2M with s 36(1) item 6).
+-- NSW: nsw-interpretation-time `s 18 the nth sitting day of a House after a day`.
+-- Tas: tas-interpretation-time `s 44: the sitting day of a House that is the number given after a day`.
+-- NT: nt-interpretation-time `s 17 "sitting day": the nth sitting day after`.
+GIVEN j IS A Jurisdiction
+      n IS A NUMBER
+      d IS A DATE
+      sittings IS A LIST OF DATE
+GIVETH A MAYBE DATE
+`the n-th sitting day after a day` j n d sittings MEANS
+    CONSIDER j
+    -- Cth: au-interpretation-time `the sitting day that is the n-th after` (s 2M with s 36(1) item 6).
+    WHEN Cth THEN
+        IF n LESS THAN 1 OR (NOT (FLOOR n EQUALS n)) OR count cthLater LESS THAN n
+        THEN NOTHING
+        ELSE JUST (Date (at cthLater (n MINUS 1)))
+    -- NSW: nsw-interpretation-time `s 18 the nth sitting day of a House after a day`.
+    WHEN NSW THEN
+        IF n AT LEAST 1 AND FLOOR n EQUALS n AND count later AT LEAST n
+        THEN JUST (Date (at (sort (map (GIVEN x YIELD Day x) later)) (n MINUS 1)))
+        ELSE NOTHING
+    -- Vic: no such rule in vic-interpretation-time (answers NOTHING).
+    WHEN Vic THEN NOTHING
+    -- Qld: no such rule in qld-interpretation-time (answers NOTHING).
+    WHEN Qld THEN NOTHING
+    -- WA: no such rule in wa-interpretation-time (answers NOTHING).
+    WHEN WA THEN NOTHING
+    -- SA: no such rule in sa-interpretation-time (answers NOTHING).
+    WHEN SA THEN NOTHING
+    -- Tas: tas-interpretation-time `s 44: the sitting day of a House that is the number given after a day`.
+    WHEN Tas THEN
+        IF count later AT LEAST n AND n AT LEAST 1
+        THEN JUST (at later (n MINUS 1))
+        ELSE NOTHING
+    -- ACT: no such rule in act-interpretation-time (answers NOTHING).
+    WHEN ACT THEN NOTHING
+    -- NT: nt-interpretation-time `s 17 "sitting day": the nth sitting day after`.
+    WHEN NT THEN
+        IF n LESS THAN 1 OR (NOT (FLOOR n EQUALS n)) OR count cthLater LESS THAN n
+        THEN NOTHING
+        ELSE JUST (Date (at cthLater (n MINUS 1)))
+    WHERE
+        later MEANS filter (GIVEN x YIELD Day x GREATER THAN Day d) sittings
+        cthLater MEANS sort (nub (map (GIVEN x YIELD Day x) later))
+
+§ `Financial years and calendar years (Cth s 2B; NSW Sch 4; Vic s 44(6); Qld Sch 1; WA s 5; SA s 4; Tas s 45(1); ACT dictionary and s 89(2); NT s 17)`
+
+-- Every source module that defines a financial year says it runs from 1 July to 30 June.
+-- Every source module that defines a calendar year says it runs from 1 January to 31 December.
+-- Which of the four dates each module computes is set out here; the year asked about is the year in which the financial year ENDS, or the calendar year itself.
+-- Where a module takes the year in which the financial year BEGINS, the branch comment says so.
+-- Cth: au-interpretation-time `the financial year containing` and `the calendar year containing`.
+-- Vic: vic-interpretation-time `s44(6)(d) first day of the financial year ending on 30 June of a year`, `s44(6)(d) midnight at which the financial year ending in a calendar year ends`, `s44(6)(e) first day of the calendar year ending on 31 December of a year`, `s44(6)(e) midnight at which a calendar year ends`.
+-- Qld: qld-interpretation-time `the first day of the calendar year (Schedule 1)`, `the last day of the calendar year (Schedule 1)`, `the last day of the financial year beginning on 1 July (Schedule 1)` (taking the year it begins in).
+-- WA: wa-interpretation-time `the first day of the financial year ending in` and `the last day of the financial year ending in`.
+-- SA: sa-interpretation-time `s 4: the last day of the calendar year` and `s 4: the last day of the financial year starting on 1 July` (taking the year it starts in).
+-- Tas: tas-interpretation-time `s 45(1): the first day of the financial year ending in the year` and `s 45(1): the last day of the financial year ending in the year`.
+-- ACT: act-interpretation-time `s 89 (2): the day an appropriation Act is automatically repealed` (the last day of the financial year beginning in the year given).
+-- NT: nt-interpretation-time `s 17 "financial year": the first day of the financial year ending on 30 June of` and `s 17 "calendar year": the last day of the calendar year of`.
+-- NSW: nsw-interpretation-time `s 36 the last day of a period of n units dating from a given day` with a calendar year (31 December).
+GIVEN j IS A Jurisdiction
+      yearOfEnding IS A NUMBER
+GIVETH A MAYBE DATE
+`the first day of the financial year ending in` j yearOfEnding MEANS
+    CONSIDER j
+    -- Cth: au-interpretation-time `the financial year containing` (a financial year runs from 1 July to 30 June; the first day of the span is returned).
+    WHEN Cth THEN JUST (Date 1 7 (yearOfEnding MINUS 1))
+    -- NSW: no financial-year rule in nsw-interpretation-time (answers NOTHING).
+    WHEN NSW THEN NOTHING
+    -- Vic: vic-interpretation-time `s44(6)(d) first day of the financial year ending on 30 June of a year`.
+    WHEN Vic THEN JUST (Date 1 7 (yearOfEnding MINUS 1))
+    -- Qld: qld-interpretation-time has `the last day of the financial year beginning on 1 July (Schedule 1)` only, with no first-day function (answers NOTHING).
+    WHEN Qld THEN NOTHING
+    -- WA: wa-interpretation-time `the first day of the financial year ending in`.
+    WHEN WA THEN JUST (Date 1 7 (yearOfEnding MINUS 1))
+    -- SA: sa-interpretation-time has `s 4: the last day of the financial year starting on 1 July` only, with no first-day function (answers NOTHING).
+    WHEN SA THEN NOTHING
+    -- Tas: tas-interpretation-time `s 45(1): the first day of the financial year ending in the year`.
+    WHEN Tas THEN JUST (Date 1 7 (yearOfEnding MINUS 1))
+    -- ACT: act-interpretation-time has `s 89 (2): the day an appropriation Act is automatically repealed` only, with no first-day function (answers NOTHING).
+    WHEN ACT THEN NOTHING
+    -- NT: nt-interpretation-time `s 17 "financial year": the first day of the financial year ending on 30 June of`.
+    WHEN NT THEN JUST (Date 1 7 (yearOfEnding MINUS 1))
+
+GIVEN j IS A Jurisdiction
+      yearOfEnding IS A NUMBER
+GIVETH A MAYBE DATE
+`the last day of the financial year ending in` j yearOfEnding MEANS
+    CONSIDER j
+    -- Cth: au-interpretation-time `the financial year containing` (the last day of the span is returned).
+    WHEN Cth THEN JUST (Date 30 6 yearOfEnding)
+    -- NSW: no financial-year rule in nsw-interpretation-time (answers NOTHING).
+    WHEN NSW THEN NOTHING
+    -- Vic: vic-interpretation-time `s44(6)(d) midnight at which the financial year ending in a calendar year ends` (the day of that midnight).
+    WHEN Vic THEN JUST (Date 30 6 yearOfEnding)
+    -- Qld: qld-interpretation-time `the last day of the financial year beginning on 1 July (Schedule 1)` (it takes the year the financial year begins in).
+    WHEN Qld THEN JUST (Date 30 6 yearOfEnding)
+    -- WA: wa-interpretation-time `the last day of the financial year ending in`.
+    WHEN WA THEN JUST (Date 30 6 yearOfEnding)
+    -- SA: sa-interpretation-time `s 4: the last day of the financial year starting on 1 July` (it takes the year the financial year starts in).
+    WHEN SA THEN JUST (Date 30 6 yearOfEnding)
+    -- Tas: tas-interpretation-time `s 45(1): the last day of the financial year ending in the year`.
+    WHEN Tas THEN JUST (Date 30 6 yearOfEnding)
+    -- ACT: act-interpretation-time `s 89 (2): the day an appropriation Act is automatically repealed` (it takes the year the financial year begins in).
+    WHEN ACT THEN JUST (Date 30 6 yearOfEnding)
+    -- NT: nt-interpretation-time has `s 17 "financial year": the first day of the financial year ending on 30 June of` only, with no last-day function (answers NOTHING).
+    WHEN NT THEN NOTHING
+
+GIVEN j IS A Jurisdiction
+      year IS A NUMBER
+GIVETH A MAYBE DATE
+`the first day of the calendar year` j year MEANS
+    CONSIDER j
+    -- Cth: au-interpretation-time `the calendar year containing` (the first day of the span is returned).
+    WHEN Cth THEN JUST (Date 1 1 year)
+    -- NSW: no first-day-of-calendar-year function in nsw-interpretation-time (answers NOTHING).
+    WHEN NSW THEN NOTHING
+    -- Vic: vic-interpretation-time `s44(6)(e) first day of the calendar year ending on 31 December of a year`.
+    WHEN Vic THEN JUST (Date 1 1 year)
+    -- Qld: qld-interpretation-time `the first day of the calendar year (Schedule 1)`.
+    WHEN Qld THEN JUST (Date 1 1 year)
+    -- WA: no calendar-year function in wa-interpretation-time (answers NOTHING).
+    WHEN WA THEN NOTHING
+    -- SA: no first-day-of-calendar-year function in sa-interpretation-time (answers NOTHING).
+    WHEN SA THEN NOTHING
+    -- Tas: no calendar-year function in tas-interpretation-time (answers NOTHING).
+    WHEN Tas THEN NOTHING
+    -- ACT: no first-day-of-calendar-year function in act-interpretation-time (answers NOTHING).
+    WHEN ACT THEN NOTHING
+    -- NT: no first-day-of-calendar-year function in nt-interpretation-time (answers NOTHING).
+    WHEN NT THEN NOTHING
+
+GIVEN j IS A Jurisdiction
+      year IS A NUMBER
+GIVETH A MAYBE DATE
+`the last day of the calendar year` j year MEANS
+    CONSIDER j
+    -- Cth: au-interpretation-time `the calendar year containing` (the last day of the span is returned).
+    WHEN Cth THEN JUST (Date 31 12 year)
+    -- NSW: nsw-interpretation-time `s 36(1) and Schedule 4 the last day of a period of n calendar years dating from a given day` (one calendar year dating from 31 December of the year before).
+    WHEN NSW THEN JUST (Date 31 12 year)
+    -- Vic: vic-interpretation-time `s44(6)(e) midnight at which a calendar year ends` (the day of that midnight).
+    WHEN Vic THEN JUST (Date 31 12 year)
+    -- Qld: qld-interpretation-time `the last day of the calendar year (Schedule 1)`.
+    WHEN Qld THEN JUST (Date 31 12 year)
+    -- WA: no calendar-year function in wa-interpretation-time (answers NOTHING).
+    WHEN WA THEN NOTHING
+    -- SA: sa-interpretation-time `s 4: the last day of the calendar year`.
+    WHEN SA THEN JUST (Date 31 12 year)
+    -- Tas: no calendar-year function in tas-interpretation-time (answers NOTHING).
+    WHEN Tas THEN NOTHING
+    -- ACT: act-interpretation-time `dictionary, calendar year and year: the last day of a run of calendar years beginning at the start of a day` (one calendar year beginning on 1 January).
+    WHEN ACT THEN JUST (Date 31 12 year)
+    -- NT: nt-interpretation-time `s 17 "calendar year": the last day of the calendar year of`.
+    WHEN NT THEN JUST (Date 31 12 year)
+
+-- The calendar year in which the financial year containing a day ends.
+-- Cth: au-interpretation-time `the financial year containing` (the year of its last day).
+-- WA: wa-interpretation-time `the calendar year in which the financial year containing the date ends`.
+-- Tas: tas-interpretation-time `s 45(1): the year in which the financial year containing a day ends`.
+-- The other six source modules have no such function.
+GIVEN j IS A Jurisdiction
+      d IS A DATE
+GIVETH A MAYBE NUMBER
+`the year in which the financial year containing a day ends` j d MEANS
+    CONSIDER j
+    -- Cth: au-interpretation-time `the financial year containing` (the year of its last day).
+    WHEN Cth THEN JUST (IF DATE_MONTH d AT LEAST 7 THEN DATE_YEAR d PLUS 1 ELSE DATE_YEAR d)
+    -- NSW: no such rule in nsw-interpretation-time (answers NOTHING).
+    WHEN NSW THEN NOTHING
+    -- Vic: no such rule in vic-interpretation-time (answers NOTHING).
+    WHEN Vic THEN NOTHING
+    -- Qld: no such rule in qld-interpretation-time (answers NOTHING).
+    WHEN Qld THEN NOTHING
+    -- WA: wa-interpretation-time `the calendar year in which the financial year containing the date ends`.
+    WHEN WA THEN JUST (IF DATE_MONTH d AT LEAST 7 THEN DATE_YEAR d PLUS 1 ELSE DATE_YEAR d)
+    -- SA: no such rule in sa-interpretation-time (answers NOTHING).
+    WHEN SA THEN NOTHING
+    -- Tas: tas-interpretation-time `s 45(1): the year in which the financial year containing a day ends`.
+    WHEN Tas THEN JUST (IF DATE_MONTH d AT LEAST 7 THEN DATE_YEAR d PLUS 1 ELSE DATE_YEAR d)
+    -- ACT: no such rule in act-interpretation-time (answers NOTHING).
+    WHEN ACT THEN NOTHING
+    -- NT: no such rule in nt-interpretation-time (answers NOTHING).
+    WHEN NT THEN NOTHING
+
+§ `Clear days and days between events (Qld s 38(1); Tas s 29(2); WA s 61(1)(f) and (g); ACT s 151 table 151 item 5)`
+
+-- The earliest day on which the purpose can be fulfilled after a number of clear days from a given day.
+-- Qld: qld-interpretation-time `the earliest day on which the purpose can be fulfilled after clear days (s 38(1)(a))`.
+-- Tas: tas-interpretation-time `s 29(2): the earliest day on which the purpose may be fulfilled after a number of clear days from`.
+-- The other seven source modules have no such function.
+GIVEN j IS A Jurisdiction
+      n IS A NUMBER
+      given IS A DATE
+GIVETH A MAYBE DATE
+`the earliest day on which the purpose can be fulfilled after clear days` j n given MEANS
+    CONSIDER j
+    -- Cth: no such rule in au-interpretation-time (answers NOTHING).
+    WHEN Cth THEN NOTHING
+    -- NSW: no such rule in nsw-interpretation-time (answers NOTHING).
+    WHEN NSW THEN NOTHING
+    -- Vic: no such rule in vic-interpretation-time (answers NOTHING).
+    WHEN Vic THEN NOTHING
+    -- Qld: qld-interpretation-time `the earliest day on which the purpose can be fulfilled after clear days (s 38(1)(a))`.
+    WHEN Qld THEN IF n LESS THAN 1 THEN NOTHING ELSE JUST ((given PLUS n) PLUS 1)
+    -- WA: no such rule in wa-interpretation-time (answers NOTHING).
+    WHEN WA THEN NOTHING
+    -- SA: no such rule in sa-interpretation-time (answers NOTHING).
+    WHEN SA THEN NOTHING
+    -- Tas: tas-interpretation-time `s 29(2): the earliest day on which the purpose may be fulfilled after a number of clear days from`.
+    WHEN Tas THEN JUST ((given PLUS n) PLUS 1)
+    -- ACT: no such rule in act-interpretation-time (answers NOTHING).
+    WHEN ACT THEN NOTHING
+    -- NT: no such rule in nt-interpretation-time (answers NOTHING).
+    WHEN NT THEN NOTHING
+
+-- The latest day for an event so that a number of clear days lie between it and a later day.
+-- Tas: tas-interpretation-time `s 29(2): the latest day on which the purpose may be fulfilled before a number of clear days from`.
+-- ACT: act-interpretation-time `s 151 (2), table 151 item 5: the latest day for the earlier event, so that the given number of days lie between the 2 events`.
+-- The other seven source modules have no such function.
+GIVEN j IS A Jurisdiction
+      n IS A NUMBER
+      laterDay IS A DATE
+GIVETH A MAYBE DATE
+`the latest day for the earlier event so that clear days lie between` j n laterDay MEANS
+    CONSIDER j
+    -- Cth: no such rule in au-interpretation-time (answers NOTHING).
+    WHEN Cth THEN NOTHING
+    -- NSW: no such rule in nsw-interpretation-time (answers NOTHING).
+    WHEN NSW THEN NOTHING
+    -- Vic: no such rule in vic-interpretation-time (answers NOTHING).
+    WHEN Vic THEN NOTHING
+    -- Qld: no such rule in qld-interpretation-time (answers NOTHING).
+    WHEN Qld THEN NOTHING
+    -- WA: no such rule in wa-interpretation-time (answers NOTHING).
+    WHEN WA THEN NOTHING
+    -- SA: no such rule in sa-interpretation-time (answers NOTHING).
+    WHEN SA THEN NOTHING
+    -- Tas: tas-interpretation-time `s 29(2): the latest day on which the purpose may be fulfilled before a number of clear days from`.
+    WHEN Tas THEN JUST ((laterDay MINUS n) MINUS 1)
+    -- ACT: act-interpretation-time `s 151 (2), table 151 item 5: the latest day for the earlier event, so that the given number of days lie between the 2 events`.
+    WHEN ACT THEN JUST (laterDay MINUS (n PLUS 1))
+    -- NT: no such rule in nt-interpretation-time (answers NOTHING).
+    WHEN NT THEN NOTHING
+
+-- The number of days counted between two events.
+-- WA: wa-interpretation-time `the number of days counted between two events`: clear days, or at least a number of days, exclude both event days; any other count excludes the first event's day and includes the second's.
+-- ACT: act-interpretation-time `s 151 (2), table 151 item 5: the number of days between 2 events` (both event days excluded).
+-- The other seven source modules have no such function.
+GIVEN j IS A Jurisdiction
+      `clear days, or at least a number of days` IS A BOOLEAN
+      firstEvent IS A DATE
+      secondEvent IS A DATE
+GIVETH A MAYBE NUMBER
+`the number of days counted between two events` j `clear days, or at least a number of days` firstEvent secondEvent MEANS
+    CONSIDER j
+    -- Cth: no such rule in au-interpretation-time (answers NOTHING).
+    WHEN Cth THEN NOTHING
+    -- NSW: no such rule in nsw-interpretation-time (answers NOTHING).
+    WHEN NSW THEN NOTHING
+    -- Vic: no such rule in vic-interpretation-time (answers NOTHING).
+    WHEN Vic THEN NOTHING
+    -- Qld: no such rule in qld-interpretation-time (answers NOTHING).
+    WHEN Qld THEN NOTHING
+    -- WA: wa-interpretation-time `the number of days counted between two events`: clear days, or at least a number of days, exclude both event days; any other count excludes the first event's day and includes the second's.
+    WHEN WA THEN
+        IF `clear days, or at least a number of days`
+        THEN JUST ((Day secondEvent MINUS Day firstEvent) MINUS 1)
+        ELSE JUST (Day secondEvent MINUS Day firstEvent)
+    -- SA: no such rule in sa-interpretation-time (answers NOTHING).
+    WHEN SA THEN NOTHING
+    -- Tas: no such rule in tas-interpretation-time (answers NOTHING).
+    WHEN Tas THEN NOTHING
+    -- ACT: act-interpretation-time `s 151 (2), table 151 item 5: the number of days between 2 events` (both event days excluded).
+    WHEN ACT THEN
+        IF `clear days, or at least a number of days`
+        THEN JUST ((secondEvent MINUS firstEvent) MINUS 1)
+        ELSE NOTHING
+    -- NT: no such rule in nt-interpretation-time (answers NOTHING).
+    WHEN NT THEN NOTHING
