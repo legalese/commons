@@ -1,0 +1,973 @@
+IMPORT prelude
+IMPORT daydate
+
+-- sga-time.l4: every function that counts or compares a period, a date or a time of day in the text of
+-- Superannuation Guarantee (Administration) Act 1992 (Commonwealth), sections 1 to 80
+-- (Federal Register compilation C2026C00272). It imports only prelude and daydate.
+--
+-- How the text counts, and what it leaves open:
+--   * Where the text says in its own words which days a period takes in ("the 28-day period that started on the day",
+--     "ending on the 28th day after", "the 60-day period starting on the day"), that is encoded as written.
+--   * Where the text says "within N days of", "N years from" or "N business days of" an event and does not say whether
+--     the day of the event is the first day of the count, there are two readings, and the text licenses neither.
+--     The functions below take the reading as an input (a Counting), and the questions asked of a case answer
+--     JUST TRUE or JUST FALSE only when both readings give the same answer, and NOTHING when they differ.
+--   * Dates are built with Date day month year. daydate's `add months` and `add years` clamp the day of the month to the
+--     last day of the target month (a start on 31 January plus one month is 28 February; a start on 29 February
+--     plus one year is 28 February); Date itself rolls an impossible date forward (Date 29 2 2027 is 1 March 2027).
+--     sga-tests-time.l4 shows both. Where the text counts in months or years from a day that has no counterpart in the
+--     target month, it does not say which day is meant, so `the same day n months after` answers NOTHING there.
+--   * Public holidays are not in the text: the days that are a public holiday for the whole of a State, the Australian
+--     Capital Territory or the Northern Territory are supplied as a list of dates.
+
+§ `Two readings of a count`
+
+-- The two ways a count "of" or "from" an event can run when the text does not say. Neither is chosen by the text.
+DECLARE Counting IS ONE OF
+    `the day of the event is not counted`
+    `the day of the event is counted as the first day`
+
+GIVEN a IS A MAYBE BOOLEAN
+      b IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`the two readings agree` MEANS
+    CONSIDER a
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST x THEN
+        CONSIDER b
+        WHEN NOTHING THEN NOTHING
+        WHEN JUST y THEN IF x EQUALS y THEN JUST x ELSE NOTHING
+
+GIVEN a IS A DATE
+      b IS A DATE
+GIVETH A DATE
+`the later of two days` MEANS
+    IF a AT LEAST b THEN a ELSE b
+
+-- The day of the month of d, n months after d (n may be negative). Where that month has no such day (31 January plus one month,
+-- 29 February plus one year) the text does not say whether the last day of the month or the first day of the next is meant: NOTHING.
+GIVEN d IS A DATE
+      n IS A NUMBER
+GIVETH A MAYBE DATE
+`the same day n months after` MEANS
+    IF DATE_DAY d AT MOST `Days in month` tm ty
+    THEN JUST (Date (DATE_DAY d) tm ty)
+    ELSE NOTHING
+    WHERE
+        total MEANS (DATE_YEAR d TIMES 12) PLUS (DATE_MONTH d MINUS 1) PLUS n
+        ty MEANS FLOOR (total DIVIDED BY 12)
+        tm MEANS (total MINUS (ty TIMES 12)) PLUS 1
+
+GIVEN d IS A MAYBE DATE
+      n IS A NUMBER
+GIVETH A MAYBE DATE
+`that day plus n days` MEANS
+    CONSIDER d
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST x THEN JUST (x PLUS n)
+
+-- A lower bound n months from a day d (n negative for earlier). Where d has no counterpart in the target month, the text does not say whether the bound is the last day of that month
+-- or the first day of the next; a day on or after the first day of the next month is inside on either reading, a day before the last day of that month is outside on either reading,
+-- and the last day of that month is the one day the two readings give different answers for.
+GIVEN x IS A DATE
+      d IS A DATE
+      n IS A NUMBER
+GIVETH A MAYBE BOOLEAN
+`a day is on or after the day n months from` MEANS
+    BRANCH IF DATE_DAY d AT MOST `Days in month` tm ty THEN JUST (x AT LEAST (Date (DATE_DAY d) tm ty))
+           IF x LESS THAN clamped THEN JUST FALSE
+           IF x EQUALS clamped THEN NOTHING
+           OTHERWISE JUST TRUE
+    WHERE
+        total MEANS (DATE_YEAR d TIMES 12) PLUS (DATE_MONTH d MINUS 1) PLUS n
+        ty MEANS FLOOR (total DIVIDED BY 12)
+        tm MEANS (total MINUS (ty TIMES 12)) PLUS 1
+        clamped MEANS `add months` d n
+
+GIVEN act IS A DATE
+      limit IS A MAYBE DATE
+GIVETH A MAYBE BOOLEAN
+`the day is on or after the limit` MEANS
+    CONSIDER limit
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST x THEN JUST (act AT LEAST x)
+
+GIVEN act IS A DATE
+      limit IS A MAYBE DATE
+GIVETH A MAYBE BOOLEAN
+`the day is on or before the limit` MEANS
+    CONSIDER limit
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST x THEN JUST (act AT MOST x)
+
+§ `Section 6(1): business day, usual period, extended usual period, quarter, year`
+
+-- src:101 | business day means a day other than:
+-- src:102 | (a) a Saturday or a Sunday; or
+-- src:103 | (b) a day which is a public holiday for the whole of:
+-- src:104 | (i) any State; or
+-- src:105 | (ii) the Australian Capital Territory; or
+-- src:106 | (iii) the Northern Territory.
+@ref s 6(1) "business day" (src:101-106)
+GIVEN d IS A DATE
+      holidays IS A LIST OF DATE
+GIVETH A BOOLEAN
+`a business day` MEANS
+        `is weekday` d
+    AND NOT (elem d holidays)
+
+-- "the seventh business day after the QE day": the QE day itself is not counted, the first business day after it is the first.
+-- src:231 | usual period, for a QE day and an employer, means the period:
+-- src:232 | (a) starting on the QE day; and
+-- src:233 | (b) ending on the seventh business day after the QE day.
+@ref s 6(1) "usual period" (src:231-233)
+GIVEN n IS A NUMBER
+      d IS A DATE
+      holidays IS A LIST OF DATE
+GIVETH A DATE
+`the nth business day after` MEANS
+    IF n AT MOST 0
+    THEN d
+    ELSE IF `a business day` nxt holidays
+         THEN `the nth business day after` (n MINUS 1) nxt holidays
+         ELSE `the nth business day after` n nxt holidays
+    WHERE
+        nxt MEANS d PLUS 1
+
+-- src:231 | usual period, for a QE day and an employer, means the period:
+-- src:232 | (a) starting on the QE day; and
+-- src:233 | (b) ending on the seventh business day after the QE day.
+@ref s 6(1) "usual period" (src:231-233)
+GIVEN qe IS A DATE
+      holidays IS A LIST OF DATE
+GIVETH A DATE
+`the last day of the usual period` MEANS
+    `the nth business day after` 7 qe holidays
+
+-- src:231 | usual period, for a QE day and an employer, means the period:
+-- src:232 | (a) starting on the QE day; and
+-- src:233 | (b) ending on the seventh business day after the QE day.
+@ref s 6(1) "usual period" (src:231-233)
+GIVEN qe IS A DATE
+      x IS A DATE
+      holidays IS A LIST OF DATE
+GIVETH A BOOLEAN
+`a day is in the usual period` MEANS
+        x AT LEAST qe
+    AND x AT MOST `the last day of the usual period` qe holidays
+
+-- src:139 | extended usual period, for a QE day and an employer, means the period:
+-- src:140 | (a) starting on the QE day; and
+-- src:141 | (b) ending on the 20th business day after the QE day.
+@ref s 6(1) "extended usual period" (src:139-141)
+GIVEN qe IS A DATE
+      holidays IS A LIST OF DATE
+GIVETH A DATE
+`the last day of the extended usual period` MEANS
+    `the nth business day after` 20 qe holidays
+
+-- src:139 | extended usual period, for a QE day and an employer, means the period:
+-- src:140 | (a) starting on the QE day; and
+-- src:141 | (b) ending on the 20th business day after the QE day.
+@ref s 6(1) "extended usual period" (src:139-141)
+GIVEN qe IS A DATE
+      x IS A DATE
+      holidays IS A LIST OF DATE
+GIVETH A BOOLEAN
+`a day is in the extended usual period` MEANS
+        x AT LEAST qe
+    AND x AT MOST `the last day of the extended usual period` qe holidays
+
+-- "a period of 3 months beginning on 1 January, 1 April, 1 July or 1 October": the quarter that holds a day.
+-- src:184 | quarter means a period of 3 months beginning on 1 January, 1 April, 1 July or 1 October.
+@ref s 6(1) "quarter" (src:184-184)
+GIVEN d IS A DATE
+GIVETH A DATE
+`the first day of the quarter holding` MEANS
+    BRANCH IF DATE_MONTH d AT MOST 3 THEN Date 1 1 (DATE_YEAR d)
+           IF DATE_MONTH d AT MOST 6 THEN Date 1 4 (DATE_YEAR d)
+           IF DATE_MONTH d AT MOST 9 THEN Date 1 7 (DATE_YEAR d)
+           OTHERWISE Date 1 10 (DATE_YEAR d)
+
+-- src:184 | quarter means a period of 3 months beginning on 1 January, 1 April, 1 July or 1 October.
+@ref s 6(1) "quarter" (src:184-184)
+GIVEN d IS A DATE
+GIVETH A DATE
+`the last day of the quarter holding` MEANS
+    (`add months` (`the first day of the quarter holding` d) 3) MINUS 1
+
+-- "year means financial year": the text does not say what a financial year is, so no answer is given.
+-- src:236 | year means financial year.
+@ref s 6(1) "year" (src:236-236)
+GIVEN d IS A DATE
+GIVETH A MAYBE NUMBER
+`the financial year in which a day falls` MEANS NOTHING
+
+§ `Section 6B(3) and section 10(4): the earliest day a notice or certificate may take effect`
+
+-- 6B(3)(a) to (e): the quarter starting 1 April, 1 July, 1 October or 1 January, and the 15th day of its second month.
+-- src:257 | (3) A conversion notice may be expressed to take effect on a day that is not earlier than:
+-- src:258 | (a) if the notice is given before 15 May in a quarter starting on 1 April—1 January in the previous quarter; or
+-- src:259 | (b) if the notice is given before 15 August in a quarter starting on 1 July—1 April in the previous quarter; or
+-- src:260 | (c) if the notice is given before 15 November in a quarter starting on 1 October—1 July in the previous quarter; or
+-- src:261 | (d) if the notice is given before 15 February in a quarter starting on 1 January—1 October in the previous quarter; or
+-- src:262 | (e) in any other case—the first day of the quarter in which the notice is given.
+@ref s 6B(3) (src:257-262)
+GIVEN given IS A DATE
+GIVETH A DATE
+`the earliest day a conversion notice may be expressed to take effect` MEANS
+    BRANCH IF qm EQUALS 4 AND given LESS THAN (Date 15 5 y) THEN Date 1 1 y
+           IF qm EQUALS 7 AND given LESS THAN (Date 15 8 y) THEN Date 1 4 y
+           IF qm EQUALS 10 AND given LESS THAN (Date 15 11 y) THEN Date 1 7 y
+           IF qm EQUALS 1 AND given LESS THAN (Date 15 2 y) THEN Date 1 10 (y MINUS 1)
+           OTHERWISE `the first day of the quarter holding` given
+    WHERE
+        y MEANS DATE_YEAR given
+        qm MEANS DATE_MONTH (`the first day of the quarter holding` given)
+
+-- 10(4)(a)(i) to (v): the same, but each cut-off day also stretches to "a later day in that quarter allowed by the Commissioner".
+-- src:286 | (4) A benefit certificate may be expressed to have effect from:
+-- src:287 | (a) a day that is no earlier than:
+-- src:288 | (i) if the certificate is issued before 15 May in a quarter starting on 1 April, or before a later day in that quarter allowed by the Commissioner—1 January in the previous quarter; or
+-- src:289 | (ii) if the certificate is issued before 15 August in a quarter starting on 1 July, or before a later day in that quarter allowed by the Commissioner—1 April in the previous quarter; or
+-- src:290 | (iii) if the certificate is issued before 15 November in a quarter starting on 1 October, or before a later day in that quarter allowed by the Commissioner—1 July in the previous quarter; or
+-- src:291 | (iv) if the certificate is issued before 15 February in a quarter starting on 1 January, or before a later day in that quarter allowed by the Commissioner—1 October in the previous quarter; or
+-- src:292 | (v) in any other case—the first day of the quarter in which the certificate is issued; and
+-- src:293 | (b) a day that is no later than the day on which the certificate is issued.
+@ref s 10(4) (src:286-293)
+GIVEN issued IS A DATE
+      `the later day the Commissioner allows` IS A MAYBE DATE
+GIVETH A DATE
+`the earliest day a benefit certificate may be expressed to have effect` MEANS
+    BRANCH IF qm EQUALS 4 AND issued LESS THAN (`the cut-off` (Date 15 5 y)) THEN Date 1 1 y
+           IF qm EQUALS 7 AND issued LESS THAN (`the cut-off` (Date 15 8 y)) THEN Date 1 4 y
+           IF qm EQUALS 10 AND issued LESS THAN (`the cut-off` (Date 15 11 y)) THEN Date 1 7 y
+           IF qm EQUALS 1 AND issued LESS THAN (`the cut-off` (Date 15 2 y)) THEN Date 1 10 (y MINUS 1)
+           OTHERWISE `the first day of the quarter holding` issued
+    WHERE
+        y MEANS DATE_YEAR issued
+        qm MEANS DATE_MONTH (`the first day of the quarter holding` issued)
+        `the cut-off` fixed MEANS
+            CONSIDER `the later day the Commissioner allows`
+            WHEN NOTHING THEN fixed
+            WHEN JUST allowed THEN `the later of two days` fixed allowed
+
+-- src:286 | (4) A benefit certificate may be expressed to have effect from:
+-- src:287 | (a) a day that is no earlier than:
+-- src:288 | (i) if the certificate is issued before 15 May in a quarter starting on 1 April, or before a later day in that quarter allowed by the Commissioner—1 January in the previous quarter; or
+-- src:289 | (ii) if the certificate is issued before 15 August in a quarter starting on 1 July, or before a later day in that quarter allowed by the Commissioner—1 April in the previous quarter; or
+-- src:290 | (iii) if the certificate is issued before 15 November in a quarter starting on 1 October, or before a later day in that quarter allowed by the Commissioner—1 July in the previous quarter; or
+-- src:291 | (iv) if the certificate is issued before 15 February in a quarter starting on 1 January, or before a later day in that quarter allowed by the Commissioner—1 October in the previous quarter; or
+-- src:292 | (v) in any other case—the first day of the quarter in which the certificate is issued; and
+-- src:293 | (b) a day that is no later than the day on which the certificate is issued.
+@ref s 10(4) (src:286-293)
+GIVEN issued IS A DATE
+      effect IS A DATE
+      `the later day the Commissioner allows` IS A MAYBE DATE
+GIVETH A BOOLEAN
+`a benefit certificate may be expressed to have effect from that day` MEANS
+        effect AT LEAST `the earliest day a benefit certificate may be expressed to have effect` issued `the later day the Commissioner allows`
+    AND effect AT MOST issued
+
+§ `Periods the text counts in its own words`
+
+-- "the 60-day period starting on the day the application was made": the day the application was made is the first day.
+-- src:474 | (3) The Commissioner is treated as having decided not to issue a certificate to the applicant if the Commissioner does not give notice (under subsection (1)) of the decision during the 60-day period starting on the day the application was made.
+@ref s 17D(3) (src:474-474)
+GIVEN made IS A DATE
+      x IS A DATE
+GIVETH A BOOLEAN
+`a day is in the 60-day period starting on the day an application was made` MEANS
+        x AT LEAST made
+    AND x AT MOST (made PLUS 59)
+
+-- "at least 30 days before the first day of the period": the first day minus the day of the application is 30 or more.
+-- src:462 | (c) must be made at least 30 days before the first day of the period.
+@ref s 17C(4)(c) (src:462-462)
+GIVEN `the day the application is made` IS A DATE
+      `the first day of the period` IS A DATE
+GIVETH A BOOLEAN
+`an application is made at least 30 days before the first day of the period` MEANS
+    `the first day of the period` MINUS `the day the application is made` AT LEAST 30
+
+-- "the 12-month period ending on the day before the current QE day": it starts on the day twelve months before the QE day.
+-- src:547 | (c) is so received during one of these periods (the standard periods):
+-- src:548 | (i) the usual period for the current QE day; or
+-- src:549 | (ii) the 12-month period ending on the day before the current QE day;
+@ref s 18C(1)(c)(ii) (src:547-549)
+GIVEN qe IS A DATE
+GIVETH A MAYBE DATE
+`the first day of the 12-month period ending on the day before` MEANS
+    `the same day n months after` qe (0 MINUS 12)
+
+-- src:547 | (c) is so received during one of these periods (the standard periods):
+-- src:548 | (i) the usual period for the current QE day; or
+-- src:549 | (ii) the 12-month period ending on the day before the current QE day;
+@ref s 18C(1)(c)(ii) (src:547-549)
+GIVEN qe IS A DATE
+      x IS A DATE
+GIVETH A MAYBE BOOLEAN
+`a day is in the 12-month period ending on the day before the QE day` MEANS
+    IF x GREATER THAN (qe MINUS 1)
+    THEN JUST FALSE
+    ELSE `a day is on or after the day n months from` x qe (0 MINUS 12)
+
+-- "the period of 20 business days starting on the day after the determination is made": the day after is the first day, so the last day
+-- is the 19th business day counted from that day (or later, if that day is not a business day).
+-- src:568 | 3
+-- src:569 | the employer and the current QE day are covered by a determination under subsection (4)
+-- src:570 | before the later of:
+-- src:571 | (a) the end of the extended usual period for the current QE day; and
+-- src:572 | (b) the end of the period of 20 business days starting on the day after the determination is made.
+@ref s 18C(2) item 3 (src:568-572)
+GIVEN determined IS A DATE
+      holidays IS A LIST OF DATE
+GIVETH A DATE
+`the last day of the 20 business days starting on the day after a determination` MEANS
+    IF `a business day` start holidays
+    THEN `the nth business day after` 19 start holidays
+    ELSE `the nth business day after` 20 start holidays
+    WHERE
+        start MEANS determined PLUS 1
+
+-- "no earlier than 15 months before the QE day".
+-- src:662 | The certificate under paragraph (c) must have been provided no earlier than 15 months before the QE day.
+@ref s 20B(2)(c) (src:662-662)
+GIVEN qe IS A DATE
+      provided IS A DATE
+GIVETH A MAYBE BOOLEAN
+`a certificate is provided no earlier than 15 months before the QE day` MEANS
+    `a day is on or after the day n months from` provided qe (0 MINUS 15)
+
+-- 20C(3)(a)(iii): a notice period cannot begin before 1 July 2026.
+-- src:686 | (3) In this section:
+-- src:687 | notice period means the period:
+-- src:688 | (a) beginning on the latest of:
+-- src:689 | (i) the day the employee’s employment with the employer starts; and
+-- src:690 | (ii) the day after the end of the immediately preceding notice period for the employer and the employee; and
+-- src:691 | (iii) 1 July 2026; and
+-- src:692 | (b) ending on the day the Commissioner gives the employer written notice that the employer’s notice period for the employee has ended.
+@ref s 20C(3) (src:686-692)
+GIVEN `the day the employment starts` IS A DATE
+      `the day after the end of the preceding notice period` IS A MAYBE DATE
+GIVETH A DATE
+`the day a notice period begins` MEANS
+    `the later of two days` (`the later of two days` `the day the employment starts` earlier) (Date 1 7 2026)
+    WHERE
+        earlier MEANS
+            CONSIDER `the day after the end of the preceding notice period`
+            WHEN NOTHING THEN `the day the employment starts`
+            WHEN JUST d THEN d
+
+-- "2 months after the employee or the Commissioner gives the notice": add months clamps a start on the 31st to the last day of a shorter month.
+-- src:857 | (2) The fund becomes a chosen fund for the employee 2 months after the employee or the Commissioner gives the notice to the employer, or at such earlier time after the notice is given as the employer determines.
+@ref s 32F(2) (src:857-857)
+GIVEN `the day the notice is given to the employer` IS A DATE
+GIVETH A MAYBE DATE
+`the day a chosen fund takes effect` MEANS
+    `the same day n months after` `the day the notice is given to the employer` 2
+
+-- 32F(1A)(d) and (e), "whichever last occurs": 1 July 2005, or 2 months after the fund is chosen, unless the employer fixes an earlier time within the 2 months.
+-- src:849 | (1A) If:
+-- src:850 | (a) an employer has offered an employee a choice of fund before 1 July 2005; and
+-- src:851 | (b) the employee has chosen a fund in accordance with the choice of funds that is offered; and
+-- src:852 | (c) the limitations on that choice are consistent with section 32G or, if the choice was made before the commencement of that section, would have been consistent with section 32G if the section had been in force at the time the choice was made;
+-- src:853 | then, for the purposes of this Part, any fund chosen by the employee is taken to be the chosen fund for the employee with effect from:
+-- src:854 | (d) 1 July 2005; or
+-- src:855 | (e) a date that is 2 months after the fund is so chosen (unless the employer determines an earlier time after 1 July 2005 but within that 2 months);
+-- src:856 | whichever last occurs.
+@ref s 32F(1A) (src:849-856)
+GIVEN `the day the fund was chosen` IS A DATE
+      `the earlier time the employer determines` IS A MAYBE DATE
+GIVETH A MAYBE DATE
+`the day a pre-1 July 2005 chosen fund takes effect` MEANS
+    CONSIDER `the day two months after the fund was chosen`
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST two THEN JUST (`the later of two days` (Date 1 7 2005) (`the day under paragraph (e)` two))
+    WHERE
+        `the day two months after the fund was chosen` MEANS `the same day n months after` `the day the fund was chosen` 2
+        `the day under paragraph (e)` two MEANS
+            CONSIDER `the earlier time the employer determines`
+            WHEN NOTHING THEN two
+            WHEN JUST e THEN
+                IF e AT LEAST (Date 1 7 2005) AND e AT MOST two
+                THEN e
+                ELSE two
+
+-- "the 28-day period that started on the day (the imposition day) the charge became payable", and "the day after the end of" it.
+-- src:1105 | (1) This section applies if superannuation guarantee charge payable by an employer is unpaid on the day (the current notice trigger day) that is the day after the end of the 28-day period that started on the day (the imposition day) the charge became payable.
+@ref s 59A(1) (src:1105-1105)
+GIVEN `the imposition day` IS A DATE
+GIVETH A DATE
+`the current notice trigger day` MEANS
+    `the imposition day` PLUS 28
+
+-- "the 50-day period ending on the day before the current notice trigger day".
+-- src:1113 | (d) the employer has not been given an earlier notice under this subsection during the 50-day period ending on the day before the current notice trigger day; and
+@ref s 59A(2)(d) (src:1113-1113)
+GIVEN `the current notice trigger day` IS A DATE
+      x IS A DATE
+GIVETH A BOOLEAN
+`a day is in the 50-day period ending on the day before the trigger day` MEANS
+        x AT LEAST (`the current notice trigger day` MINUS 50)
+    AND x AT MOST (`the current notice trigger day` MINUS 1)
+
+-- "starting on the day specified in the notice ... ending on the 28th day after the day specified".
+-- src:1119 | (3) The Commissioner must ensure that the current notice includes words to the effect that an administrative penalty will arise if the employer fails to pay the specified amount during the period (the current notice payment period):
+-- src:1120 | (a) starting on the day specified in the notice (which must be on or after the current notice trigger day); and
+-- src:1121 | (b) ending on the 28th day after the day specified in the notice.
+@ref s 59A(3) (src:1119-1121)
+GIVEN `the day specified in the notice` IS A DATE
+GIVETH A DATE
+`the last day of the current notice payment period` MEANS
+    `the day specified in the notice` PLUS 28
+
+-- src:1119 | (3) The Commissioner must ensure that the current notice includes words to the effect that an administrative penalty will arise if the employer fails to pay the specified amount during the period (the current notice payment period):
+-- src:1120 | (a) starting on the day specified in the notice (which must be on or after the current notice trigger day); and
+-- src:1121 | (b) ending on the 28th day after the day specified in the notice.
+@ref s 59A(3) (src:1119-1121)
+GIVEN `the current notice trigger day` IS A DATE
+      `the day specified in the notice` IS A DATE
+GIVETH A BOOLEAN
+`the day specified in the notice is on or after the trigger day` MEANS
+    `the day specified in the notice` AT LEAST `the current notice trigger day`
+
+-- src:1119 | (3) The Commissioner must ensure that the current notice includes words to the effect that an administrative penalty will arise if the employer fails to pay the specified amount during the period (the current notice payment period):
+-- src:1120 | (a) starting on the day specified in the notice (which must be on or after the current notice trigger day); and
+-- src:1121 | (b) ending on the 28th day after the day specified in the notice.
+@ref s 59A(3) (src:1119-1121)
+GIVEN `the day specified in the notice` IS A DATE
+      x IS A DATE
+GIVETH A BOOLEAN
+`a day is in the current notice payment period` MEANS
+        x AT LEAST `the day specified in the notice`
+    AND x AT MOST `the last day of the current notice payment period` `the day specified in the notice`
+
+-- "the 24-month period ending on the day after the end of the current notice payment period": a 24-month period that ends on a day starts 24 months before the day after it.
+-- src:1147 | (b) the employer has become liable under subsection (1) for a penalty that is greater than nil for an earlier notice during the 24-month period ending on the day after the end of the current notice payment period
+@ref s 59C(2) item 2 (src:1147-1147)
+GIVEN `the day specified in the notice` IS A DATE
+GIVETH A MAYBE DATE
+`the first day of the 24-month period ending on the day after the end of the payment period` MEANS
+    `the same day n months after` ((`the last day of the current notice payment period` `the day specified in the notice`) PLUS 2) (0 MINUS 24)
+
+-- src:1147 | (b) the employer has become liable under subsection (1) for a penalty that is greater than nil for an earlier notice during the 24-month period ending on the day after the end of the current notice payment period
+@ref s 59C(2) item 2 (src:1147-1147)
+GIVEN `the day specified in the notice` IS A DATE
+      x IS A DATE
+GIVETH A MAYBE BOOLEAN
+`a day is in the 24-month period ending on the day after the end of the payment period` MEANS
+    IF x GREATER THAN ((`the last day of the current notice payment period` `the day specified in the notice`) PLUS 1)
+    THEN JUST FALSE
+    ELSE `a day is on or after the day n months from` x (((`the last day of the current notice payment period` `the day specified in the notice`) PLUS 1) PLUS 1) (0 MINUS 24)
+
+-- "at least 14 days after the day the notice is given".
+-- src:1156 | (3) The penalty becomes due for payment on the day specified in the notice, which must be at least 14 days after the day the notice is given to the employer.
+@ref s 59D(3) (src:1156-1156)
+GIVEN `the day the notice is given` IS A DATE
+      `the day specified in the notice` IS A DATE
+GIVETH A BOOLEAN
+`the due day is at least 14 days after the day the notice is given` MEANS
+    `the day specified in the notice` MINUS `the day the notice is given` AT LEAST 14
+
+-- "at least 28 days have passed since the notice was given".
+-- src:1272 | (b) at least 28 days have passed since the notice was given; and
+@ref s 69(4)(b) (src:1272-1272)
+GIVEN `the day the notice was given` IS A DATE
+      `the day of recovery` IS A DATE
+GIVETH A BOOLEAN
+`at least 28 days have passed since the notice was given` MEANS
+    `the day of recovery` MINUS `the day the notice was given` AT LEAST 28
+
+-- 74(1)(b): the amnesty period (started on 24 May 2018) "started after the end of the period of 28 days after the end of the quarter".
+-- src:1315 | (b) the amnesty period started after the end of the period of 28 days after the end of the quarter; and
+@ref s 74(1)(b), (3) (src:1315-1315)
+-- src:1318 | (3) The amnesty period is the period that:
+-- src:1319 | (a) started on 24 May 2018; and
+-- src:1320 | (b) ends 6 months after the day the Treasury Laws Amendment (Recovering Unpaid Superannuation) Act 2020 receives the Royal Assent.
+@ref s 74(1)(b), (3) (src:1318-1320)
+GIVEN `the last day of the quarter` IS A DATE
+GIVETH A BOOLEAN
+`the amnesty period started after the end of the 28 days after the quarter` MEANS
+    Date 24 5 2018 GREATER THAN (`the last day of the quarter` PLUS 28)
+
+-- src:1318 | (3) The amnesty period is the period that:
+-- src:1319 | (a) started on 24 May 2018; and
+-- src:1320 | (b) ends 6 months after the day the Treasury Laws Amendment (Recovering Unpaid Superannuation) Act 2020 receives the Royal Assent.
+@ref s 74(3) (src:1318-1320)
+GIVEN `the day the Royal Assent was received` IS A DATE
+GIVETH A MAYBE DATE
+`the last day of the amnesty period` MEANS
+    `the same day n months after` `the day the Royal Assent was received` 6
+
+§ `Sections 18C and 18D: the days an eligible contribution can be received, and the late period`
+
+-- A three-valued "or": JUST TRUE if either is, JUST FALSE if both are, otherwise NOTHING.
+GIVEN a IS A MAYBE BOOLEAN
+      b IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`either of two possibly unknown conditions holds` MEANS
+    BRANCH IF a EQUALS JUST TRUE THEN JUST TRUE
+           IF b EQUALS JUST TRUE THEN JUST TRUE
+           IF a EQUALS JUST FALSE AND b EQUALS JUST FALSE THEN JUST FALSE
+           OTHERWISE NOTHING
+
+-- The later of two items of a table, either of which may not apply (NOTHING means the item does not apply).
+GIVEN a IS A MAYBE DATE
+      b IS A MAYBE DATE
+GIVETH A MAYBE DATE
+`the later of two items that may not apply` MEANS
+    CONSIDER a
+    WHEN NOTHING THEN b
+    WHEN JUST x THEN
+        CONSIDER b
+        WHEN NOTHING THEN JUST x
+        WHEN JUST y THEN JUST (`the later of two days` x y)
+
+-- Table in 18C(2): the latest day under any applicable item. NOTHING means no item applies.
+-- Item 1: the extended usual period for the current QE day. Item 2: the end of the usual period for the first standard QE day after the current QE day.
+-- Item 3: the later of the end of the extended usual period and the end of the period of 20 business days starting on the day after the determination.
+-- Item 4: the latest due day, if the usual period for the current QE day ends before it.
+-- src:554 | (2) In addition to the standard periods, the eligible contribution can be received before the end of the latest day in any applicable item of the following table:
+-- src:555 | Allowable longer periods for receiving eligible contributions
+-- src:556 | Item
+-- src:557 | If this happens:
+-- src:558 | The eligible contribution is to be received:
+-- src:559 | 1
+-- src:560 | the eligible contribution is the first eligible contribution made to a particular complying superannuation fund or RSA by the employer for the benefit of the employee:
+-- src:561 | (a) after the employee commenced (or recommenced) employment with the employer; or
+-- src:562 | (b) after the employer ceased making one or more eligible contributions for the benefit of the employee to another complying superannuation fund or RSA
+-- src:563 | during the extended usual period for the current QE day.
+-- src:564 | 2
+-- src:565 | (a) the current QE day relates to qualifying earnings of a kind determined under subsection (3); and
+-- src:566 | (b) a later QE day (a standard QE day) for the employer and the employee relates to qualifying earnings not of a kind determined under subsection (3)
+-- src:567 | before the end of the usual period for the first standard QE day after the current QE day.
+-- src:568 | 3
+-- src:569 | the employer and the current QE day are covered by a determination under subsection (4)
+-- src:570 | before the later of:
+-- src:571 | (a) the end of the extended usual period for the current QE day; and
+-- src:572 | (b) the end of the period of 20 business days starting on the day after the determination is made.
+-- src:573 | 4
+-- src:574 | the usual period for the current QE day ends before the latest day (the latest due day) that an earlier eligible contribution that:
+-- src:575 | (a) was made by the employer for the benefit of the employee; and
+-- src:576 | (b) was applied under subsection (1) for an earlier QE day;
+-- src:577 | was able to be received for the purposes of subsection (1)
+-- src:578 | before the end of the latest due day.
+-- src:579 | Note: When the contribution is received is not the only factor for whether it is an eligible contribution relevant for the QE day (see paragraphs (a), (b) and (d) of the definition of that expression in subsection (1)).
+-- src:580 | Kinds of out-of-cycle qualifying earnings
+@ref s 18C(2) table (src:554-580)
+GIVEN qe IS A DATE
+      holidays IS A LIST OF DATE
+      `item 1 applies` IS A BOOLEAN
+      `the first standard QE day after the current QE day` IS A MAYBE DATE
+      `the day the determination covering the employer and the current QE day was made` IS A MAYBE DATE
+      `the latest due day` IS A MAYBE DATE
+GIVETH A MAYBE DATE
+`the latest day under the table of allowable longer periods` MEANS
+    `the later of two items that may not apply`
+        (`the later of two items that may not apply` item1 item2)
+        (`the later of two items that may not apply` item3 item4)
+    WHERE
+        item1 MEANS IF `item 1 applies` THEN JUST (`the last day of the extended usual period` qe holidays) ELSE NOTHING
+        item2 MEANS
+            CONSIDER `the first standard QE day after the current QE day`
+            WHEN NOTHING THEN NOTHING
+            WHEN JUST d THEN JUST (`the last day of the usual period` d holidays)
+        item3 MEANS
+            CONSIDER `the day the determination covering the employer and the current QE day was made`
+            WHEN NOTHING THEN NOTHING
+            WHEN JUST d THEN JUST (`the later of two days` (`the last day of the extended usual period` qe holidays) (`the last day of the 20 business days starting on the day after a determination` d holidays))
+        item4 MEANS
+            CONSIDER `the latest due day`
+            WHEN NOTHING THEN NOTHING
+            WHEN JUST d THEN IF `the last day of the usual period` qe holidays LESS THAN d THEN JUST d ELSE NOTHING
+
+-- 18C(1)(c): received during the usual period for the current QE day, or during the 12-month period ending on the day before it, or before the end of the latest day under the table.
+-- src:547 | (c) is so received during one of these periods (the standard periods):
+-- src:548 | (i) the usual period for the current QE day; or
+-- src:549 | (ii) the 12-month period ending on the day before the current QE day;
+-- src:550 | or before the end of the latest day in any applicable items of the table in subsection (2) of this section; and
+@ref s 18C(1)(c) (src:547-550)
+GIVEN qe IS A DATE
+      received IS A DATE
+      holidays IS A LIST OF DATE
+      `the latest day under the table` IS A MAYBE DATE
+GIVETH A MAYBE BOOLEAN
+`a day of receipt is within the periods for the QE day` MEANS
+    `either of two possibly unknown conditions holds`
+        (JUST (`a day is in the usual period` qe received holidays))
+        (`either of two possibly unknown conditions holds`
+            (`a day is in the 12-month period ending on the day before the QE day` qe received)
+            (`received on or before the latest day under the table`))
+    WHERE
+        `received on or before the latest day under the table` MEANS
+            CONSIDER `the latest day under the table`
+            WHEN NOTHING THEN JUST FALSE
+            WHEN JUST d THEN JUST (received AT MOST d)
+
+-- 18D(2): the late period starts on the day after the latest day an eligible contribution is able to be applied under 18C(1) for the QE day, and ends on the day before the assessment.
+-- src:151 | late period, for a QE day, an employer and an employee, means the period:
+-- src:152 | (a) starting on the day after the latest day that an eligible contribution made by the employer for the benefit of the employee is able to be applied under subsection 18C(1) for the QE day; and
+-- src:153 | (b) ending on the day before the day an assessment for the QE day is made for the employer.
+@ref s 6(1) "late period" (src:151-153)
+GIVEN qe IS A DATE
+      holidays IS A LIST OF DATE
+      `the latest day under the table` IS A MAYBE DATE
+GIVETH A DATE
+`the latest day an eligible contribution is able to be applied for the QE day` MEANS
+    CONSIDER `the latest day under the table`
+    WHEN NOTHING THEN `the last day of the usual period` qe holidays
+    WHEN JUST d THEN `the later of two days` (`the last day of the usual period` qe holidays) d
+
+-- src:151 | late period, for a QE day, an employer and an employee, means the period:
+-- src:152 | (a) starting on the day after the latest day that an eligible contribution made by the employer for the benefit of the employee is able to be applied under subsection 18C(1) for the QE day; and
+-- src:153 | (b) ending on the day before the day an assessment for the QE day is made for the employer.
+@ref s 6(1) "late period" (src:151-153)
+GIVEN `the latest day an eligible contribution is able to be applied` IS A DATE
+      `the day the assessment is made` IS A DATE
+      x IS A DATE
+GIVETH A BOOLEAN
+`a day is in the late period` MEANS
+        x AT LEAST (`the latest day an eligible contribution is able to be applied` PLUS 1)
+    AND x AT MOST (`the day the assessment is made` MINUS 1)
+
+-- src:151 | late period, for a QE day, an employer and an employee, means the period:
+-- src:152 | (a) starting on the day after the latest day that an eligible contribution made by the employer for the benefit of the employee is able to be applied under subsection 18C(1) for the QE day; and
+-- src:153 | (b) ending on the day before the day an assessment for the QE day is made for the employer.
+@ref s 6(1) "late period" (src:151-153)
+GIVEN `the latest day an eligible contribution is able to be applied` IS A DATE
+      `the day the assessment is made` IS A DATE
+GIVETH A NUMBER
+`the number of days in the late period` MEANS
+    IF `the day the assessment is made` MINUS `the latest day an eligible contribution is able to be applied` AT MOST 1
+    THEN 0
+    ELSE (`the day the assessment is made` MINUS `the latest day an eligible contribution is able to be applied`) MINUS 1
+
+§ `Section 17B: a period that includes the QE day`
+
+-- "a period that includes the QE day": the period specified in the certificate runs from its first day to the end of a specified financial year.
+-- src:431 | 17B An exemption certificate can reduce this amount to nil
+-- src:432 | However, if an employer shortfall exemption certificate is in force for the employee in relation to:
+-- src:433 | (a) the employer; and
+-- src:434 | (b) a period that includes the QE day;
+-- src:435 | treat the employee as having already reached the maximum contributions base before the QE day.
+-- src:436 | Note 1: This means:
+-- src:437 | (a) the amount of the payment of qualifying earnings on the QE day is treated as if it were nil (see subsection 10A(6)); and
+-- src:438 | (b) the individual superannuation guarantee amount is nil.
+-- src:439 | Note 2: If the employee has more than one employer and the certificate is issued in relation to only this employer, then the certificate does not affect the other employers’ individual superannuation guarantee amounts.
+@ref s 17B (src:431-439)
+GIVEN `the first day of the period specified in the certificate` IS A DATE
+      `the last day of the period specified in the certificate` IS A DATE
+      `the QE day` IS A DATE
+GIVETH A BOOLEAN
+`the period specified in the certificate includes the QE day` MEANS
+        `the QE day` AT LEAST `the first day of the period specified in the certificate`
+    AND `the QE day` AT MOST `the last day of the period specified in the certificate`
+
+-- 17D(3): the Commissioner is treated as having decided not to issue a certificate if no notice is given during the 60-day period starting on the day the application was made.
+-- src:474 | (3) The Commissioner is treated as having decided not to issue a certificate to the applicant if the Commissioner does not give notice (under subsection (1)) of the decision during the 60-day period starting on the day the application was made.
+@ref s 17D(3) (src:474-474)
+GIVEN `the day the application was made` IS A DATE
+      `the day asked about` IS A DATE
+      `the day the Commissioner gave notice of the decision` IS A MAYBE DATE
+GIVETH A MAYBE BOOLEAN
+`the Commissioner is treated as having decided not to issue a certificate` MEANS
+    CONSIDER `the day the Commissioner gave notice of the decision`
+    WHEN JUST d THEN
+        IF `a day is in the 60-day period starting on the day an application was made` `the day the application was made` d
+        THEN NOTHING
+        ELSE IF `the day asked about` GREATER THAN (`the day the application was made` PLUS 59) THEN JUST TRUE ELSE NOTHING
+    WHEN NOTHING THEN
+        IF `the day asked about` GREATER THAN (`the day the application was made` PLUS 59) THEN JUST TRUE ELSE NOTHING
+
+§ `Section 20C(3): the notice period that includes a QE day`
+
+-- A QE day is in the notice period if it is on or after the day the period begins and, when the Commissioner has given written notice that the period has ended, on or before the day of that notice.
+-- NOTHING for the day of the notice means no such notice has been given.
+-- src:687 | notice period means the period:
+-- src:688 | (a) beginning on the latest of:
+-- src:689 | (i) the day the employee’s employment with the employer starts; and
+-- src:690 | (ii) the day after the end of the immediately preceding notice period for the employer and the employee; and
+-- src:691 | (iii) 1 July 2026; and
+-- src:692 | (b) ending on the day the Commissioner gives the employer written notice that the employer’s notice period for the employee has ended.
+@ref s 20C(3) (src:687-692)
+GIVEN `the day the notice period begins` IS A DATE
+      `the day the Commissioner gives written notice that the notice period has ended` IS A MAYBE DATE
+      `the QE day` IS A DATE
+GIVETH A BOOLEAN
+`a QE day is in the notice period` MEANS
+        `the QE day` AT LEAST `the day the notice period begins`
+    AND (CONSIDER `the day the Commissioner gives written notice that the notice period has ended`
+         WHEN NOTHING THEN TRUE
+         WHEN JUST d THEN `the QE day` AT MOST d)
+
+§ `Part 3A: stated days`
+
+-- src:891 | (1) An employer must give a standard choice form before 29 July 2005 to each employee employed by the employer on 1 July 2005.
+@ref s 32N(1) (src:891-891)
+GIVEN d IS A DATE
+GIVETH A BOOLEAN
+`a day is before 29 July 2005` MEANS d LESS THAN (Date 29 7 2005)
+
+-- src:841 | and, until immediately before 1 July 2006, includes the account that is continued in existence under section 8 of the Small Superannuation Accounts Act 1995 as the Superannuation Holding Accounts Special Account.
+@ref s 32E(1) (src:841-841)
+GIVEN d IS A DATE
+GIVETH A BOOLEAN
+`a day is before 1 July 2006` MEANS d LESS THAN (Date 1 7 2006)
+
+-- src:791 | (g) if subsection (6AAA) applies—a workplace determination made before 1 January 2021; or
+-- src:792 | (h) if subsection (6AAA) applies—an enterprise agreement made before 1 January 2021; or
+@ref s 32C(6)(g), (h) (src:791-792)
+GIVEN d IS A DATE
+GIVETH A BOOLEAN
+`a day is before 1 January 2021` MEANS d LESS THAN (Date 1 1 2021)
+
+-- src:850 | (a) an employer has offered an employee a choice of fund before 1 July 2005; and
+@ref s 32F(1A)(a) (src:850-850)
+GIVEN d IS A DATE
+GIVETH A BOOLEAN
+`a day is before 1 July 2005` MEANS d LESS THAN (Date 1 7 2005)
+
+-- 32F(2): the fund becomes a chosen fund 2 months after the notice is given, or at such earlier time after the notice as the employer determines.
+-- src:857 | (2) The fund becomes a chosen fund for the employee 2 months after the employee or the Commissioner gives the notice to the employer, or at such earlier time after the notice is given as the employer determines.
+@ref s 32F(2) (src:857-857)
+GIVEN `the day the notice is given to the employer` IS A DATE
+      `the earlier time the employer determines` IS A MAYBE DATE
+GIVETH A MAYBE DATE
+`the day a fund becomes a chosen fund` MEANS
+    CONSIDER `the earlier time the employer determines`
+    WHEN NOTHING THEN `the day a chosen fund takes effect` `the day the notice is given to the employer`
+    WHEN JUST e THEN
+        IF e AT LEAST `the day the notice is given to the employer` AND e LESS THAN (`add months` `the day the notice is given to the employer` 2)
+        THEN JUST e
+        ELSE `the day a chosen fund takes effect` `the day the notice is given to the employer`
+
+§ `Parts 4 to 7: lodging, assessments, general interest charge and the notice period`
+
+-- src:1000 | (a) is lodged before the day an assessment is made for the employer for the QE day; and
+@ref s 33(2)(a) (src:1000-1000)
+GIVEN `the day the statement is lodged` IS A DATE
+      `the day an assessment is made for the employer for the QE day` IS A DATE
+GIVETH A BOOLEAN
+`a statement is lodged before the day an assessment is made` MEANS
+    `the day the statement is lodged` LESS THAN `the day an assessment is made for the employer for the QE day`
+
+-- 36(3): where the statement gives a payment day but no receipt day, the receipt day is taken to be the seventh business day after the payment day.
+-- src:1019 | (3) For an assessment based on information in a voluntary disclosure statement lodged by the employer for the QE day that:
+-- src:1020 | (a) includes a payment day for an eligible contribution that:
+-- src:1021 | (i) is covered by paragraph 18A(1)(a), (b) or (c); and
+-- src:1022 | (ii) was applied under subsection 18D(2) for the employer, an employee and the QE day; but
+-- src:1023 | (b) does not include a receipt day for the contribution;
+-- src:1024 | the employer’s individual notional earnings component (if any) for the employee and the QE day is worked out as if the receipt day for the contribution were the seventh business day after the payment day.
+-- src:1025 | Note: This subsection can change the day the contribution is applied for working out the employer’s individual final superannuation guarantee shortfall on a particular day as part of calculating the individual notional earnings component in section 19A. Any such change does not apply for the purposes of paragraph 16B(2)(a) or any other provision of this Act.
+-- src:1026 | When charge relating to an assessment is payable
+@ref s 36(3) (src:1019-1026)
+GIVEN `the payment day` IS A DATE
+      holidays IS A LIST OF DATE
+GIVETH A DATE
+`the receipt day taken where the statement gives only a payment day` MEANS
+    `the nth business day after` 7 `the payment day` holidays
+
+-- 49(3): general interest charge for each day from the beginning of the day the charge was due to the end of the last day on which any of it remains unpaid at the end of the day.
+-- src:1073 | (3) The employer is liable to pay the general interest charge for each day in the period that:
+-- src:1074 | (a) started at the beginning of the day by which the superannuation guarantee charge was due to be paid; and
+-- src:1075 | (b) finishes at the end of the last day on which, at the end of the day, any of the following remains unpaid:
+-- src:1076 | (i) the superannuation guarantee charge;
+-- src:1077 | (ii) general interest charge on any of the superannuation guarantee charge.
+@ref s 49(3) (src:1073-1077)
+GIVEN `the day the charge was due to be paid` IS A DATE
+      `the last day on which, at the end of the day, any of it remains unpaid` IS A DATE
+GIVETH A NUMBER
+`the number of days for which general interest charge is payable` MEANS
+    IF `the last day on which, at the end of the day, any of it remains unpaid` LESS THAN `the day the charge was due to be paid`
+    THEN 0
+    ELSE (`the last day on which, at the end of the day, any of it remains unpaid` MINUS `the day the charge was due to be paid`) PLUS 1
+
+-- 59B: "the current notice payment period has not expired": the day is no later than the last day of the period.
+-- src:1119 | (3) The Commissioner must ensure that the current notice includes words to the effect that an administrative penalty will arise if the employer fails to pay the specified amount during the period (the current notice payment period):
+-- src:1120 | (a) starting on the day specified in the notice (which must be on or after the current notice trigger day); and
+-- src:1121 | (b) ending on the 28th day after the day specified in the notice.
+@ref s 59A(3), 59B (src:1119-1121)
+GIVEN `the day specified in the notice` IS A DATE
+      day IS A DATE
+GIVETH A BOOLEAN
+`the current notice payment period has not expired on the day` MEANS
+    day AT MOST `the last day of the current notice payment period` `the day specified in the notice`
+
+-- 59C(2) item 1: a determination under 18C(4) covers the employer for any part of the period starting on the imposition day and ending on the last day of the current notice payment period.
+-- src:1141 | a determination is made under subsection 18C(4) covering the employer for any part of the period:
+-- src:1142 | (a) starting on the imposition day (see subsection 59A(1)); and
+-- src:1143 | (b) ending on the last day of the current notice payment period
+@ref s 59C(2) item 1 (src:1141-1143)
+GIVEN `the imposition day` IS A DATE
+      `the day specified in the notice` IS A DATE
+      `the first day the determination covers the employer` IS A DATE
+      `the last day the determination covers the employer` IS A MAYBE DATE
+GIVETH A BOOLEAN
+`a determination covers the employer for some part of the period for item 1` MEANS
+        `the first day the determination covers the employer` AT MOST `the last day of the current notice payment period` `the day specified in the notice`
+    AND (CONSIDER `the last day the determination covers the employer`
+         WHEN NOTHING THEN TRUE
+         WHEN JUST d THEN d AT LEAST `the imposition day`)
+
+§ `Section 74: the amnesty period`
+
+-- An upper bound n months from a day d. Where d has no counterpart in the target month the bound is the last day of that month or the first day of the next (the text does not say);
+-- a day on or before the last day is inside on either reading, a day after the first day of the next month is outside on either, and that first day is the one day they differ on.
+GIVEN x IS A DATE
+      d IS A DATE
+      n IS A NUMBER
+GIVETH A MAYBE BOOLEAN
+`a day is on or before the day n months from` MEANS
+    BRANCH IF DATE_DAY d AT MOST `Days in month` tm ty THEN JUST (x AT MOST (Date (DATE_DAY d) tm ty))
+           IF x AT MOST clamped THEN JUST TRUE
+           IF x EQUALS (clamped PLUS 1) THEN NOTHING
+           OTHERWISE JUST FALSE
+    WHERE
+        total MEANS (DATE_YEAR d TIMES 12) PLUS (DATE_MONTH d MINUS 1) PLUS n
+        ty MEANS FLOOR (total DIVIDED BY 12)
+        tm MEANS (total MINUS (ty TIMES 12)) PLUS 1
+        clamped MEANS `add months` d n
+
+-- 74(3): the amnesty period started on 24 May 2018 and ends 6 months after the day the Royal Assent was received.
+-- src:1318 | (3) The amnesty period is the period that:
+-- src:1319 | (a) started on 24 May 2018; and
+-- src:1320 | (b) ends 6 months after the day the Treasury Laws Amendment (Recovering Unpaid Superannuation) Act 2020 receives the Royal Assent.
+@ref s 74(3) (src:1318-1320)
+GIVEN `the day the Royal Assent was received` IS A DATE
+      `the day of the disclosure` IS A DATE
+GIVETH A MAYBE BOOLEAN
+`a disclosure is made during the amnesty period` MEANS
+    IF `the day of the disclosure` LESS THAN (Date 24 5 2018)
+    THEN JUST FALSE
+    ELSE `a day is on or before the day n months from` `the day of the disclosure` `the day the Royal Assent was received` 6
+
+§ `Periods "within", "from" or "of" an event: the text does not say whether the day of the event is counted`
+
+-- "within 28 days of ...", "within 28 days after ...": the last day is the event day plus 28 (the day of the event is not counted)
+-- or plus 27 (the day of the event is the first day).
+-- src:893 | (2) An employer must give a standard choice form to an employee within 28 days of the employee first commencing employment with the employer.
+-- src:894 | (3) An employer must also give a standard choice form to an employee within 28 days of the employee giving the employer a written request to do so. However, a request is taken never to have been made if the employee has been given a standard choice form within the previous 12 months.
+@ref s 32N(2), (3) (src:893-894)
+GIVEN reading IS A Counting
+      event IS A DATE
+      n IS A NUMBER
+GIVETH A DATE
+`the last day of n days after an event` MEANS
+    CONSIDER reading
+    WHEN `the day of the event is not counted` THEN event PLUS n
+    WHEN `the day of the event is counted as the first day` THEN event PLUS (n MINUS 1)
+
+-- src:893 | (2) An employer must give a standard choice form to an employee within 28 days of the employee first commencing employment with the employer.
+-- src:894 | (3) An employer must also give a standard choice form to an employee within 28 days of the employee giving the employer a written request to do so. However, a request is taken never to have been made if the employee has been given a standard choice form within the previous 12 months.
+@ref s 32N(2), (3) (src:893-894)
+GIVEN act IS A DATE
+      event IS A DATE
+      n IS A NUMBER
+GIVETH A MAYBE BOOLEAN
+`an act is within n days of an event` MEANS
+    IF act LESS THAN event
+    THEN NOTHING
+    ELSE `the two readings agree`
+            (JUST (act AT MOST `the last day of n days after an event` `the day of the event is not counted` event n))
+            (JUST (act AT MOST `the last day of n days after an event` `the day of the event is counted as the first day` event n))
+
+-- "within 7 business days of the receipt": the first business day after the receipt is the first, or the day of receipt is the first if it is one.
+-- src:270 | within 7 business days of the receipt by the trustee of the employer’s first contribution.
+@ref s 6B(5) (src:270-270)
+GIVEN reading IS A Counting
+      event IS A DATE
+      n IS A NUMBER
+      holidays IS A LIST OF DATE
+GIVETH A DATE
+`the last day of n business days after an event` MEANS
+    CONSIDER reading
+    WHEN `the day of the event is not counted` THEN `the nth business day after` n event holidays
+    WHEN `the day of the event is counted as the first day` THEN
+        IF `a business day` event holidays
+        THEN `the nth business day after` (n MINUS 1) event holidays
+        ELSE `the nth business day after` n event holidays
+
+-- src:270 | within 7 business days of the receipt by the trustee of the employer’s first contribution.
+@ref s 6B(5) (src:270-270)
+GIVEN act IS A DATE
+      event IS A DATE
+      n IS A NUMBER
+      holidays IS A LIST OF DATE
+GIVETH A MAYBE BOOLEAN
+`an act is within n business days of an event` MEANS
+    IF act LESS THAN event
+    THEN NOTHING
+    ELSE `the two readings agree`
+            (JUST (act AT MOST `the last day of n business days after an event` `the day of the event is not counted` event n holidays))
+            (JUST (act AT MOST `the last day of n business days after an event` `the day of the event is counted as the first day` event n holidays))
+
+-- "within 4 years from the day", "a period of 5 years from the date of issue", "the end of 5 years after": the anniversary, or the day before it.
+-- src:1032 | (b) in any other case—within 4 years from the day on which the assessment is made;
+@ref s 37(2)(b) (src:1032-1032)
+GIVEN reading IS A Counting
+      event IS A DATE
+      n IS A NUMBER
+GIVETH A MAYBE DATE
+`the last day of n years from an event` MEANS
+    CONSIDER reading
+    WHEN `the day of the event is not counted` THEN `the same day n months after` event (n TIMES 12)
+    WHEN `the day of the event is counted as the first day` THEN `that day plus n days` (`the same day n months after` event (n TIMES 12)) (0 MINUS 1)
+
+-- src:1032 | (b) in any other case—within 4 years from the day on which the assessment is made;
+@ref s 37(2)(b) (src:1032-1032)
+GIVEN act IS A DATE
+      event IS A DATE
+      n IS A NUMBER
+GIVETH A MAYBE BOOLEAN
+`an act is within n years from an event` MEANS
+    IF act LESS THAN event
+    THEN NOTHING
+    ELSE `the two readings agree`
+            (`the day is on or before the limit` act (`the last day of n years from an event` `the day of the event is not counted` event n))
+            (`the day is on or before the limit` act (`the last day of n years from an event` `the day of the event is counted as the first day` event n))
+
+-- 10(3)(c): a benefit certificate has effect "until ... a period of 5 years from the date of issue expires": on the day the period expires or not.
+-- src:283 | (c) a period of 5 years from the date of issue expires; or
+@ref s 10(3)(c) (src:283-283)
+GIVEN act IS A DATE
+      issued IS A DATE
+GIVETH A MAYBE BOOLEAN
+`a benefit certificate has not yet reached the end of 5 years from its issue` MEANS
+    `an act is within n years from an event` act issued 5
+
+-- 79(4): "until the end of 5 years after those records were prepared or obtained, or the completion of the transactions or acts to which those records relate, whichever is later".
+-- src:1338 | (4) An employer who has possession of any records kept or obtained under or for the purposes of this Act must retain them until the end of 5 years after those records were prepared or obtained, or the completion of the transactions or acts to which those records relate, whichever is later.
+@ref s 79(4) (src:1338-1338)
+GIVEN a IS A MAYBE DATE
+      b IS A MAYBE DATE
+GIVETH A MAYBE DATE
+`the later of two possible days` MEANS
+    CONSIDER a
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST x THEN
+        CONSIDER b
+        WHEN NOTHING THEN NOTHING
+        WHEN JUST y THEN JUST (`the later of two days` x y)
+
+-- src:1338 | (4) An employer who has possession of any records kept or obtained under or for the purposes of this Act must retain them until the end of 5 years after those records were prepared or obtained, or the completion of the transactions or acts to which those records relate, whichever is later.
+@ref s 79(4) (src:1338-1338)
+GIVEN reading IS A Counting
+      `the day the records were prepared or obtained` IS A DATE
+      `the day the transactions or acts were completed` IS A DATE
+GIVETH A MAYBE DATE
+`the last day records must be retained` MEANS
+    `the later of two possible days`
+        (`the last day of n years from an event` reading `the day the records were prepared or obtained` 5)
+        (`the last day of n years from an event` reading `the day the transactions or acts were completed` 5)
+
+-- src:1338 | (4) An employer who has possession of any records kept or obtained under or for the purposes of this Act must retain them until the end of 5 years after those records were prepared or obtained, or the completion of the transactions or acts to which those records relate, whichever is later.
+@ref s 79(4) (src:1338-1338)
+GIVEN act IS A DATE
+      `the day the records were prepared or obtained` IS A DATE
+      `the day the transactions or acts were completed` IS A DATE
+GIVETH A MAYBE BOOLEAN
+`the retention period has not yet ended` MEANS
+    `the two readings agree`
+        (`the day is on or before the limit` act (`the last day records must be retained` `the day of the event is not counted` `the day the records were prepared or obtained` `the day the transactions or acts were completed`))
+        (`the day is on or before the limit` act (`the last day records must be retained` `the day of the event is counted as the first day` `the day the records were prepared or obtained` `the day the transactions or acts were completed`))

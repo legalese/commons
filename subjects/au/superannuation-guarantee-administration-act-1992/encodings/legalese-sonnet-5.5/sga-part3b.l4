@@ -1,0 +1,404 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `sga-time`
+IMPORT `sga-part2`
+IMPORT `sga-part3a`
+
+-- sga-part3b.l4: Part 3, Division 2, Subdivisions A, C, D and E (sections 16B, 18C, 18D, 19 to 20D) and Division 3 (section 30)
+-- of the Superannuation Guarantee (Administration) Act 1992 (Commonwealth), Federal Register compilation C2026C00272,
+-- plain-text conversion (not the authorised text).
+-- The shortfall for one QE day is worked out in the order the text works it out:
+--   the individual superannuation guarantee amount (17A, in sga-part3a) -> the individual base shortfall (18C) -> the individual final shortfall (18D)
+--   -> the individual notional earnings component (19A) -> the administrative uplift amount (19B) and the choice loading (20 to 20D) -> the shortfall (16B).
+-- Each eligible contribution is described by the amount of it not yet applied to an earlier QE day and the day the fund, RSA, representative or scheme received it.
+
+§ `Contributions that count for a QE day`
+
+DECLARE `Eligible contribution received` HAS
+    `amount not yet applied for an earlier QE day` IS A NUMBER
+    `day received by the relevant fund, RSA, representative or scheme` IS A DATE
+
+-- 18C(1)(c): the contributions received during the periods for the current QE day (or before the end of the latest day under the table). NOTHING if a day of receipt cannot be placed.
+-- src:544 | eligible contributions relevant for the QE day means so much of each eligible contribution made by the employer for the benefit of the employee as:
+-- src:545 | (a) is applied under this subsection for the QE day (the current QE day), and has not been applied under this subsection or section 18D for an earlier QE day; and
+-- src:546 | (b) is applied under this subsection in the order that it is received by the relevant fund, RSA, representative or scheme; and
+-- src:547 | (c) is so received during one of these periods (the standard periods):
+-- src:548 | (i) the usual period for the current QE day; or
+-- src:549 | (ii) the 12-month period ending on the day before the current QE day;
+-- src:550 | or before the end of the latest day in any applicable items of the table in subsection (2) of this section; and
+-- src:551 | (d) does not cause the amount resulting from this subsection for the employee and the QE day to be less than nil.
+-- src:552 | Note: An eligible contribution in the form of a notional contribution to a defined benefit superannuation scheme will always be covered by subparagraph (c)(i) because it is treated as being received on the current QE day (see subsection 18A(3)).
+-- src:553 | Allowable longer periods for receiving eligible contributions
+@ref s 18C(1) "eligible contributions relevant for the QE day" (src:544-553)
+GIVEN qe IS A DATE
+      holidays IS A LIST OF DATE
+      `the latest day under the table` IS A MAYBE DATE
+      contributions IS A LIST OF `Eligible contribution received`
+GIVETH A MAYBE NUMBER
+`the total of the eligible contributions received in the periods for the QE day` MEANS
+    CONSIDER contributions
+    WHEN EMPTY THEN JUST 0
+    WHEN c FOLLOWED BY rest THEN
+        CONSIDER `a day of receipt is within the periods for the QE day` qe (c's `day received by the relevant fund, RSA, representative or scheme`) holidays `the latest day under the table`
+        WHEN NOTHING THEN NOTHING
+        WHEN JUST counts THEN
+            CONSIDER `the total of the eligible contributions received in the periods for the QE day` qe holidays `the latest day under the table` rest
+            WHEN NOTHING THEN NOTHING
+            WHEN JUST others THEN JUST (IF counts THEN (c's `amount not yet applied for an earlier QE day`) PLUS others ELSE others)
+
+-- 18C(1): individual superannuation guarantee amount less the eligible contributions relevant for the QE day, but not below nil (paragraph (d)).
+-- src:542 | (1) An employer’s individual base superannuation guarantee shortfall for an employee and a QE day is equal to:
+-- src:543 | where:
+@ref s 18C(1) (src:542-543)
+-- src:551 | (d) does not cause the amount resulting from this subsection for the employee and the QE day to be less than nil.
+-- src:552 | Note: An eligible contribution in the form of a notional contribution to a defined benefit superannuation scheme will always be covered by subparagraph (c)(i) because it is treated as being received on the current QE day (see subsection 18A(3)).
+-- src:553 | Allowable longer periods for receiving eligible contributions
+@ref s 18C(1) (src:551-553)
+GIVEN `the individual superannuation guarantee amount` IS A NUMBER
+      `the eligible contributions relevant for the QE day` IS A NUMBER
+GIVETH A NUMBER
+`the individual base superannuation guarantee shortfall` MEANS
+    IF `the eligible contributions relevant for the QE day` GREATER THAN `the individual superannuation guarantee amount`
+    THEN 0
+    ELSE `the individual superannuation guarantee amount` MINUS `the eligible contributions relevant for the QE day`
+
+-- 18D(2): the eligible contributions relevant for the late period are those received during the late period.
+-- src:597 | eligible contributions relevant for the late period for the QE day means so much of an eligible contribution made by the employer for the benefit of the employee as:
+-- src:598 | (a) is applied under this section for the QE day, and has not been applied under this section for an earlier QE day; and
+-- src:599 | (b) is applied under this subsection in the order that it is received by the relevant fund, RSA, representative or scheme; and
+-- src:600 | (c) is so received during the late period for the QE day; and
+-- src:601 | (d) does not cause the amount resulting from this subsection for the employee and the QE day to be less than nil.
+@ref s 18D(2) "eligible contributions relevant for the late period for the QE day" (src:597-601)
+GIVEN `the latest day an eligible contribution is able to be applied` IS A DATE
+      `the day the assessment is made` IS A DATE
+      contributions IS A LIST OF `Eligible contribution received`
+GIVETH A NUMBER
+`the total of the eligible contributions received during the late period` MEANS
+    CONSIDER contributions
+    WHEN EMPTY THEN 0
+    WHEN c FOLLOWED BY rest THEN
+        IF `a day is in the late period` `the latest day an eligible contribution is able to be applied` `the day the assessment is made` (c's `day received by the relevant fund, RSA, representative or scheme`)
+        THEN (c's `amount not yet applied for an earlier QE day`) PLUS `the total of the eligible contributions received during the late period` `the latest day an eligible contribution is able to be applied` `the day the assessment is made` rest
+        ELSE `the total of the eligible contributions received during the late period` `the latest day an eligible contribution is able to be applied` `the day the assessment is made` rest
+
+-- 18D(1), (2): nil if the individual base shortfall is nil; otherwise the base shortfall less the contributions received during the late period, but not below nil.
+-- src:592 | (1) An employer’s individual final superannuation guarantee shortfall for an employee and a QE day is:
+-- src:593 | (a) if the employer’s individual base superannuation guarantee shortfall for the employee and QE day is nil—nil; or
+-- src:594 | (b) otherwise—equal to the amount in subsection (2).
+@ref s 18D(1), (2) (src:592-594)
+-- src:595 | (2) The amount is:
+-- src:596 | where:
+@ref s 18D(1), (2) (src:595-596)
+GIVEN `the individual base superannuation guarantee shortfall` IS A NUMBER
+      `the eligible contributions relevant for the late period` IS A NUMBER
+GIVETH A NUMBER
+`the individual final superannuation guarantee shortfall` MEANS
+    BRANCH IF `the individual base superannuation guarantee shortfall` EQUALS 0 THEN 0
+           IF `the eligible contributions relevant for the late period` GREATER THAN `the individual base superannuation guarantee shortfall` THEN 0
+           OTHERWISE `the individual base superannuation guarantee shortfall` MINUS `the eligible contributions relevant for the late period`
+
+§ `Section 19A: the individual notional earnings component`
+
+-- 19A(2): for each day, the notional sum x the general interest charge rate; the notional sum is the individual base shortfall plus the amount for each earlier day.
+-- src:610 | (2) For a day referred to in subsection (1) for the QE day, work out:
+-- src:611 | where:
+-- src:612 | general interest charge rate has the same meaning as in section 8AAD of the Taxation Administration Act 1953.
+-- src:613 | notional sum means the sum of:
+-- src:614 | (a) the employer’s individual base superannuation guarantee shortfall for the employee and the QE day; and
+-- src:615 | (b) the amount worked out under this subsection for each earlier day referred to in subsection (1) for the QE day.
+@ref s 19A(2) (src:610-615)
+GIVEN `the notional sum before the first of these days` IS A NUMBER
+      `the general interest charge rate for each of these days, in order` IS A LIST OF NUMBER
+GIVETH A NUMBER
+`the notional earnings for the days` MEANS
+    CONSIDER `the general interest charge rate for each of these days, in order`
+    WHEN EMPTY THEN 0
+    WHEN r FOLLOWED BY rest THEN
+        (`the notional sum before the first of these days` TIMES r) PLUS `the notional earnings for the days` (`the notional sum before the first of these days` PLUS (`the notional sum before the first of these days` TIMES r)) rest
+
+-- 19A(1): the sum of the amounts for each day in the late period on which the individual final shortfall is greater than nil. The final shortfall is one amount for the QE day
+-- (18D), so every day of the late period counts if it is greater than nil and none does if it is nil; the text does not make the shortfall depend on the day.
+-- The caller gives one rate for each day of the late period; a list of any other length is not covered.
+-- src:606 | (1) The employer’s individual notional earnings component for the employee and the QE day is the sum of each amount worked out under subsection (2) for each day that:
+-- src:607 | (a) is during the late period for the QE day; and
+-- src:608 | (b) is a day on which the employer’s individual final superannuation guarantee shortfall for the employee and the QE day is greater than nil.
+-- src:609 | Note: Subsection 36(3) may affect the days that paragraph (b) applies to.
+@ref s 19A(1) (src:606-609)
+GIVEN `the individual base superannuation guarantee shortfall` IS A NUMBER
+      `the individual final superannuation guarantee shortfall` IS A NUMBER
+      `the number of days to be counted in the late period` IS A NUMBER
+      `the general interest charge rate for each day of the late period, in order` IS A LIST OF NUMBER
+GIVETH A MAYBE NUMBER
+`the individual notional earnings component` MEANS
+    BRANCH IF `the individual final superannuation guarantee shortfall` AT MOST 0 THEN JUST 0
+           IF count `the general interest charge rate for each day of the late period, in order` EQUALS `the number of days to be counted in the late period`
+              THEN JUST (`the notional earnings for the days` `the individual base superannuation guarantee shortfall` `the general interest charge rate for each day of the late period, in order`)
+           OTHERWISE NOTHING
+
+§ `Section 19B: the administrative uplift amount`
+
+-- src:617 | (1) The employer’s administrative uplift amount for the QE day is equal to 60% of the sum of:
+-- src:618 | (a) the total of the employer’s individual final superannuation guarantee shortfalls for the QE day; and
+-- src:619 | (b) the total of the employer’s individual notional earnings components for the QE day.
+-- src:620 | Note: The administrative uplift amount will be nil if these totals are nil.
+@ref s 19B(1), (2) (src:617-620)
+-- src:621 | (2) However, this amount may be reduced (but not below nil) in accordance with the regulations.
+@ref s 19B(1), (2) (src:621-621)
+GIVEN `the total of the individual final superannuation guarantee shortfalls for the QE day` IS A NUMBER
+      `the total of the individual notional earnings components for the QE day` IS A NUMBER
+      `the reduction the regulations allow` IS A NUMBER
+GIVETH A NUMBER
+`the administrative uplift amount` MEANS
+    IF reduction GREATER THAN sixty
+    THEN 0
+    ELSE sixty MINUS reduction
+    WHERE
+        sixty MEANS ((`the total of the individual final superannuation guarantee shortfalls for the QE day` PLUS `the total of the individual notional earnings components for the QE day`) TIMES 60) DIVIDED BY 100
+        reduction MEANS `the reduction the regulations allow`
+
+§ `Sections 20 to 20D: the choice loading`
+
+-- src:629 | 20 When this Subdivision applies
+-- src:630 | This Subdivision applies if:
+-- src:631 | (a) an employer has an individual superannuation guarantee amount for an employee and a QE day; and
+-- src:632 | (b) the employer makes, for the benefit of the employee, one or more eligible contributions that:
+-- src:633 | (i) result in the employer’s individual base superannuation guarantee shortfall, or individual final superannuation guarantee shortfall, for the employee and the QE day being less than what it would otherwise be; or
+-- src:634 | (ii) if the amount mentioned in paragraph (a) is nil—would have resulted in a shortfall mentioned in subparagraph (i) being less than what it would have otherwise been had the amount mentioned in paragraph (a) been greater than nil.
+@ref s 20 (src:629-634)
+GIVEN `the employer has an individual superannuation guarantee amount for the employee and the QE day` IS A BOOLEAN
+      `the employer makes one or more eligible contributions for the benefit of the employee that make the individual base or final shortfall less than it would otherwise be` IS A BOOLEAN
+      `the amount is nil and the contributions would have made a shortfall less than it would have been had the amount been greater than nil` IS A BOOLEAN
+GIVETH A BOOLEAN
+`Subdivision E applies` MEANS
+        `the employer has an individual superannuation guarantee amount for the employee and the QE day`
+    AND (   `the employer makes one or more eligible contributions for the benefit of the employee that make the individual base or final shortfall less than it would otherwise be`
+         OR `the amount is nil and the contributions would have made a shortfall less than it would have been had the amount been greater than nil`)
+
+-- src:693 | 20D Relying on most recent Commissioner notification
+-- src:694 | This section applies to an eligible contribution for the benefit of the employee that is not made in compliance with the choice of fund requirements if:
+-- src:695 | (a) the employer attempts to make the contribution at a particular time; and
+-- src:696 | (b) at that time, there is no chosen fund for the employee; and
+-- src:697 | (c) at that time, the most recent notification to the employer:
+-- src:698 | (i) by the Commissioner; and
+-- src:699 | (ii) relating to a request by the employer (or by the employer’s agent) for the Commissioner to identify any stapled fund for the employee;
+-- src:700 | is that the Commissioner is satisfied that the fund is the stapled fund for the employee; and
+-- src:701 | (d) the fund does not accept the contribution from the employer for the benefit of the employee; and
+-- src:702 | (e) the employer made the contribution to another fund for the benefit of the employee.
+@ref s 20D (src:693-702)
+GIVEN `the employer attempts to make the contribution at a particular time` IS A BOOLEAN
+      `at that time there is no chosen fund for the employee` IS A BOOLEAN
+      `the most recent notification to the employer by the Commissioner, about a request to identify any stapled fund for the employee, is that the Commissioner is satisfied that the fund is the stapled fund` IS A BOOLEAN
+      `the fund does not accept the contribution from the employer for the benefit of the employee` IS A BOOLEAN
+      `the employer made the contribution to another fund for the benefit of the employee` IS A BOOLEAN
+GIVETH A BOOLEAN
+`section 20D applies to a contribution not made in compliance with the choice of fund requirements` MEANS
+        `the employer attempts to make the contribution at a particular time`
+    AND `at that time there is no chosen fund for the employee`
+    AND `the most recent notification to the employer by the Commissioner, about a request to identify any stapled fund for the employee, is that the Commissioner is satisfied that the fund is the stapled fund`
+    AND `the fund does not accept the contribution from the employer for the benefit of the employee`
+    AND `the employer made the contribution to another fund for the benefit of the employee`
+
+-- src:642 | (2) This subsection applies if:
+-- src:643 | (a) some or all of the contributions mentioned in paragraph 20(b) are not made in compliance with the choice of fund requirements; and
+-- src:644 | (b) section 20D (relying on most recent Commissioner notification) does not apply to the contributions.
+-- src:645 | Contributions notionally made to a defined benefit superannuation scheme
+@ref s 20A(2) (src:642-645)
+GIVEN `some or all of the contributions are not made in compliance with the choice of fund requirements` IS A BOOLEAN
+      `section 20D applies to the contributions` IS A BOOLEAN
+GIVETH A BOOLEAN
+`subsection 20A(2) applies` MEANS
+    `some or all of the contributions are not made in compliance with the choice of fund requirements` AND (NOT (`section 20D applies to the contributions`))
+
+-- src:646 | (3) This subsection applies if:
+-- src:647 | (a) some or all of the contributions mentioned in paragraph 20(b):
+-- src:648 | (i) are notionally made as described in subsection 18A(3) to a defined benefit superannuation scheme; and
+-- src:649 | (ii) if paragraph 32C(2)(c) were disregarded—would not have been made in compliance with the choice of fund requirements if they had been actually (rather than notionally) made to the scheme; and
+-- src:650 | (b) none of subsections 20B(2), (3) and (4) apply to the employer for the employee, the scheme and the QE day; and
+-- src:651 | (c) section 20D (relying on most recent Commissioner notification) does not apply to the contributions.
+-- src:652 | Note: Paragraph 32C(2)(c) is a requirement for a fund to include a MySuper product.
+@ref s 20A(3) (src:646-652)
+GIVEN `some or all of the contributions are notionally made to a defined benefit superannuation scheme, and would not have complied with the choice of fund requirements had they been actually made, disregarding paragraph 32C(2)(c)` IS A BOOLEAN
+      `subsection 20B(2) applies` IS A BOOLEAN
+      `subsection 20B(3) applies` IS A BOOLEAN
+      `subsection 20B(4) applies` IS A BOOLEAN
+      `section 20D applies to the contributions` IS A BOOLEAN
+GIVETH A BOOLEAN
+`subsection 20A(3) applies` MEANS
+        `some or all of the contributions are notionally made to a defined benefit superannuation scheme, and would not have complied with the choice of fund requirements had they been actually made, disregarding paragraph 32C(2)(c)`
+    AND (NOT (`subsection 20B(2) applies` OR `subsection 20B(3) applies` OR `subsection 20B(4) applies`))
+    AND (NOT (`section 20D applies to the contributions`))
+
+-- 20B(2): scheme in surplus. The certificate under paragraph (c) must have been provided no earlier than 15 months before the QE day.
+-- src:654 | (1) This section applies for the purposes of paragraph 20A(3)(b).
+-- src:655 | Scheme in surplus
+@ref s 20B(1), (2) (src:654-655)
+-- src:656 | (2) This subsection applies if:
+-- src:657 | (a) the employee was a defined benefit member of the fund immediately before 1 July 2005 and has not ceased to be such a member during the period (the membership period):
+-- src:658 | (i) starting on 1 July 2005; and
+-- src:659 | (ii) ending at the end of the QE day; and
+-- src:660 | (b) an actuary has provided a certificate in accordance with regulations under the Superannuation Industry (Supervision) Act 1993 stating that the employer is not required to make contributions for a period including the QE day, and there has been such a certificate covering all times since 1 July 2005; and
+-- src:661 | (c) an actuary has provided a certificate stating that, in the actuary’s opinion, at all times during the membership period there is a high probability that the assets of the scheme are, and will be, equal to or greater than 110% of the greater of the scheme’s liabilities in respect of vested benefits and the scheme’s accrued actuarial liabilities.
+-- src:662 | The certificate under paragraph (c) must have been provided no earlier than 15 months before the QE day.
+-- src:663 | Member has accrued maximum benefit
+@ref s 20B(1), (2) (src:656-663)
+GIVEN `the employee was a defined benefit member of the fund immediately before 1 July 2005 and has not ceased to be one since` IS A BOOLEAN
+      `an actuary has certified that the employer is not required to make contributions for a period including the QE day, and a certificate has covered all times since 1 July 2005` IS A BOOLEAN
+      `an actuary has certified a high probability that the assets are and will be at least 110 percent of the greater of the liabilities in respect of vested benefits and the accrued actuarial liabilities` IS A BOOLEAN
+      `the day the certificate under paragraph (c) was provided` IS A DATE
+      `the QE day` IS A DATE
+GIVETH A MAYBE BOOLEAN
+`subsection 20B(2) applies` MEANS
+    IF     `the employee was a defined benefit member of the fund immediately before 1 July 2005 and has not ceased to be one since`
+       AND `an actuary has certified that the employer is not required to make contributions for a period including the QE day, and a certificate has covered all times since 1 July 2005`
+       AND `an actuary has certified a high probability that the assets are and will be at least 110 percent of the greater of the liabilities in respect of vested benefits and the accrued actuarial liabilities`
+    THEN `a certificate is provided no earlier than 15 months before the QE day` `the QE day` `the day the certificate under paragraph (c) was provided`
+    ELSE JUST FALSE
+
+-- src:664 | (3) This subsection applies if, on the QE day, the defined benefit that has accrued to the employee will not increase other than:
+-- src:665 | (a) as a result of increases in the employee’s salary or remuneration; or
+-- src:666 | (b) by reference to accruals of investment earnings; or
+-- src:667 | (c) by reference to indexation based on, or calculated by reference to, a relevant price index or wages index; or
+-- src:668 | (d) in any other way prescribed by the regulations.
+-- src:669 | Member’s benefit not affected
+@ref s 20B(3) (src:664-669)
+GIVEN `the defined benefit accrued to the employee will not increase other than by salary increases, investment earnings, indexation or a way prescribed by the regulations` IS A BOOLEAN
+GIVETH A BOOLEAN
+`subsection 20B(3) applies` MEANS `the defined benefit accrued to the employee will not increase other than by salary increases, investment earnings, indexation or a way prescribed by the regulations`
+
+-- src:670 | (4) This subsection applies if the employee would be entitled, on the employee’s retirement, resignation or retrenchment, to the same amount of benefit from the defined benefit superannuation scheme, whether or not the employee had contributions:
+-- src:671 | (a) for the QE day; and
+-- src:672 | (b) made by the employer for the benefit of the employee;
+-- src:673 | to a fund (within the meaning of Part 3A) other than the defined benefit superannuation scheme.
+-- src:674 | Meaning of scheme’s accrued actuarial liabilities and scheme’s liabilities in respect of vested benefits
+@ref s 20B(4) (src:670-674)
+GIVEN `the employee would be entitled on retirement, resignation or retrenchment to the same benefit from the scheme whether or not the employee had contributions for the QE day made by the employer to a fund other than the scheme` IS A BOOLEAN
+GIVETH A BOOLEAN
+`subsection 20B(4) applies` MEANS `the employee would be entitled on retirement, resignation or retrenchment to the same benefit from the scheme whether or not the employee had contributions for the QE day made by the employer to a fund other than the scheme`
+
+-- 20C(1), (2): the limit is $1,200, reduced (not below nil) by 25% of the other eligible contributions to which 20A(2) or (3) applied for earlier QE days in the notice period that includes the current QE day.
+DECLARE `Earlier contribution subject to the choice loading` HAS
+    `the QE day it was applied to` IS A DATE
+    `the amount to which subsection 20A(2) or (3) applied` IS A NUMBER
+
+-- src:683 | (2) However, this amount is reduced (but not below nil) by the amount equal to 25% of the sum of any other eligible contributions:
+-- src:684 | (a) made by the employer for the benefit of the employee; and
+-- src:685 | (b) to which subsection 20A(2) or (3) applies for any earlier QE day for the employer and employee during the notice period that includes the current QE day.
+@ref s 20C(2) (src:683-685)
+GIVEN `the day the notice period begins` IS A DATE
+      `the day the Commissioner gives written notice that the notice period has ended` IS A MAYBE DATE
+      `the current QE day` IS A DATE
+      `the earlier contributions` IS A LIST OF `Earlier contribution subject to the choice loading`
+GIVETH A NUMBER
+`the other eligible contributions within the notice period` MEANS
+    CONSIDER `the earlier contributions`
+    WHEN EMPTY THEN 0
+    WHEN c FOLLOWED BY rest THEN
+        IF `a QE day is in the notice period` `the day the notice period begins` `the day the Commissioner gives written notice that the notice period has ended` (c's `the QE day it was applied to`)
+        THEN (c's `the amount to which subsection 20A(2) or (3) applied`) PLUS `the other eligible contributions within the notice period` `the day the notice period begins` `the day the Commissioner gives written notice that the notice period has ended` `the current QE day` rest
+        ELSE `the other eligible contributions within the notice period` `the day the notice period begins` `the day the Commissioner gives written notice that the notice period has ended` `the current QE day` rest
+
+-- src:682 | (1) The choice loading limit for the QE day (the current QE day) is $1,200.
+@ref s 20C(1), (2) (src:682-682)
+-- src:683 | (2) However, this amount is reduced (but not below nil) by the amount equal to 25% of the sum of any other eligible contributions:
+-- src:684 | (a) made by the employer for the benefit of the employee; and
+-- src:685 | (b) to which subsection 20A(2) or (3) applies for any earlier QE day for the employer and employee during the notice period that includes the current QE day.
+@ref s 20C(1), (2) (src:683-685)
+GIVEN `the sum of the other eligible contributions within the notice period` IS A NUMBER
+GIVETH A NUMBER
+`the choice loading limit for the QE day` MEANS
+    IF reduction GREATER THAN 1200 THEN 0 ELSE 1200 MINUS reduction
+    WHERE
+        reduction MEANS (`the sum of the other eligible contributions within the notice period` TIMES 25) DIVIDED BY 100
+
+-- 20A(1): the lower of 25% of the total of the contributions to which subsection (2) or (3) applies and the choice loading limit; otherwise nil. Subdivision E must apply.
+-- src:636 | (1) The employer’s choice loading for the employee and the QE day is:
+-- src:637 | (a) if subsection (2) or (3) applies to some or all of those eligible contributions—the lower of:
+-- src:638 | (i) the amount equal to 25% of the total of the contributions to which that subsection applies; and
+-- src:639 | (ii) the choice loading limit for the QE day; or
+-- src:640 | (b) otherwise—nil.
+-- src:641 | Contributions made to an RSA or a fund other than a defined benefit superannuation scheme
+@ref s 20A(1) (src:636-641)
+GIVEN `Subdivision E applies` IS A BOOLEAN
+      `subsection 20A(2) or (3) applies to some or all of the contributions` IS A BOOLEAN
+      `the total of the contributions to which that subsection applies` IS A NUMBER
+      `the choice loading limit for the QE day` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`the choice loading for the employee and the QE day` MEANS
+    BRANCH IF NOT (`Subdivision E applies`) THEN NOTHING
+           IF NOT (`subsection 20A(2) or (3) applies to some or all of the contributions`) THEN JUST 0
+           IF quarter GREATER THAN `the choice loading limit for the QE day` THEN JUST `the choice loading limit for the QE day`
+           OTHERWISE JUST quarter
+    WHERE
+        quarter MEANS (`the total of the contributions to which that subsection applies` TIMES 25) DIVIDED BY 100
+
+§ `Section 16B: the superannuation guarantee shortfall for a QE day`
+
+-- src:404 | 16B Superannuation guarantee shortfalls
+-- src:405 | (1) This section applies if an employer has:
+-- src:406 | (a) one or more individual base superannuation guarantee shortfalls for a QE day that are greater than nil; or
+-- src:407 | (b) one or more choice loadings for a QE day that are greater than nil.
+-- src:408 | (2) The employer has a superannuation guarantee shortfall for the QE day equal to the sum of the following:
+-- src:409 | (a) the total of the employer’s individual final superannuation guarantee shortfalls for the QE day;
+-- src:410 | (b) the total of the employer’s individual notional earnings components for the QE day;
+-- src:411 | (c) the employer’s administrative uplift amount for the QE day;
+-- src:412 | (d) the total of the employer’s choice loadings for the QE day.
+-- src:413 | Note: Some (but not all) of these amounts may be nil.
+@ref s 16B (src:404-413)
+GIVEN `the individual base superannuation guarantee shortfalls for the QE day` IS A LIST OF NUMBER
+      `the choice loadings for the QE day` IS A LIST OF NUMBER
+      `the individual final superannuation guarantee shortfalls for the QE day` IS A LIST OF NUMBER
+      `the individual notional earnings components for the QE day` IS A LIST OF NUMBER
+      `the administrative uplift amount for the QE day` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`the superannuation guarantee shortfall of an employer for a QE day` MEANS
+    IF    `some amount is greater than nil` `the individual base superannuation guarantee shortfalls for the QE day`
+       OR `some amount is greater than nil` `the choice loadings for the QE day`
+    THEN JUST (`the total of the amounts` (LIST (`the total of the amounts` `the individual final superannuation guarantee shortfalls for the QE day`), (`the total of the amounts` `the individual notional earnings components for the QE day`), `the administrative uplift amount for the QE day`, (`the total of the amounts` `the choice loadings for the QE day`)))
+    ELSE NOTHING
+
+GIVEN amounts IS A LIST OF NUMBER
+GIVETH A NUMBER
+`the total of the amounts` MEANS
+    CONSIDER amounts
+    WHEN EMPTY THEN 0
+    WHEN a FOLLOWED BY rest THEN a PLUS `the total of the amounts` rest
+
+GIVEN amounts IS A LIST OF NUMBER
+GIVETH A BOOLEAN
+`some amount is greater than nil` MEANS
+    CONSIDER amounts
+    WHEN EMPTY THEN FALSE
+    WHEN a FOLLOWED BY rest THEN a GREATER THAN 0 OR `some amount is greater than nil` rest
+
+§ `Section 30: arrangements to avoid payment`
+
+-- src:704 | 30 Arrangements to avoid payment of superannuation guarantee charge
+-- src:705 | If:
+-- src:706 | (a) an employer makes an arrangement; and
+-- src:707 | (b) as a result of the arrangement the employer’s superannuation guarantee shortfall for a QE day is reduced; and
+-- src:708 | (c) in the Commissioner’s opinion the arrangement was made solely or principally for the purpose of avoiding payment of superannuation guarantee charge otherwise than in accordance with this Act;
+-- src:709 | the employer is liable to pay for a QE day an amount of superannuation guarantee charge equal to the amount that, in the Commissioner’s opinion, the employer would have been liable to pay if the arrangement had not been made.
+@ref s 30 (src:704-709)
+GIVEN `an employer makes an arrangement` IS A BOOLEAN
+      `as a result the superannuation guarantee shortfall for a QE day is reduced` IS A BOOLEAN
+      `in the Commissioner's opinion the arrangement was made solely or principally for the purpose of avoiding payment of superannuation guarantee charge otherwise than in accordance with this Act` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`the employer is liable under section 30` MEANS
+    IF     `an employer makes an arrangement`
+       AND `as a result the superannuation guarantee shortfall for a QE day is reduced`
+       AND `in the Commissioner's opinion the arrangement was made solely or principally for the purpose of avoiding payment of superannuation guarantee charge otherwise than in accordance with this Act`
+    THEN JUST TRUE
+    ELSE JUST FALSE
+
+-- src:704 | 30 Arrangements to avoid payment of superannuation guarantee charge
+-- src:705 | If:
+-- src:706 | (a) an employer makes an arrangement; and
+-- src:707 | (b) as a result of the arrangement the employer’s superannuation guarantee shortfall for a QE day is reduced; and
+-- src:708 | (c) in the Commissioner’s opinion the arrangement was made solely or principally for the purpose of avoiding payment of superannuation guarantee charge otherwise than in accordance with this Act;
+-- src:709 | the employer is liable to pay for a QE day an amount of superannuation guarantee charge equal to the amount that, in the Commissioner’s opinion, the employer would have been liable to pay if the arrangement had not been made.
+@ref s 30 (src:704-709)
+GIVEN `the employer is liable under section 30` IS A BOOLEAN
+      `the amount the employer would, in the Commissioner's opinion, have been liable to pay had the arrangement not been made` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`the amount of superannuation guarantee charge payable under section 30` MEANS
+    IF `the employer is liable under section 30` THEN JUST `the amount the employer would, in the Commissioner's opinion, have been liable to pay had the arrangement not been made` ELSE NOTHING
