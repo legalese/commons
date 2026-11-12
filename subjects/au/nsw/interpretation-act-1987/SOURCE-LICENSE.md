@@ -33,3 +33,11 @@ An encoding that adapts the text must say "Based on content from the New South W
 Text deposited 2026-11-11 as `registers/source-bundle/act-1987-015.txt` (110651 characters, sha256 de2ef5f8f8d254e0bd2717c79d80193b35352a2870146128a7ef688bd35a0fda).
 It is the text of the version dated 2024-11-21, taken from the corpus file `corpus.jsonl` (sha256 5abc64a3ad35a44eca65706babd63d1095c29ebebf3f5c588beb56612097b758, 9401179433 bytes).
 It is unofficial and possibly out of date; replace it with text from legislation.nsw.gov.au when that site can be fetched.
+
+**Comparison with the register's current version (added 2026-11-12).**
+On 2026-11-12 the deposited text was compared with the register's page for the current version (status line "Current version for 1 July 2026 to date", printed to PDF from legislation.nsw.gov.au on that day).
+The comparison was of lower-cased alphanumeric words, so case and punctuation were not compared.
+Apart from the front matter and the page headers of the print, the two texts differ in three places.
+In the deposited text "committal proceedings" means proceedings before a Magistrate, and "Magistrate" is defined as a Magistrate appointed under the Local Court Act 2007; the current version says "a Judge of the Local Court" and has no definition of "Magistrate".
+The current version also has four definitions that the deposited text lacks, "complying development", "complying development certificate", "development consent" and "exempt development", each of which "has the same meaning as in the Environmental Planning and Assessment Act 1979".
+The deposited text has not been changed.

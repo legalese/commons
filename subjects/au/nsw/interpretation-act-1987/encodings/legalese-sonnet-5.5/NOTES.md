@@ -5,6 +5,7 @@
 - **Target:** `main`.
   Written with the stable build 1.6.98; `check.sh` also runs every module on the main build 1.6.110 and compares the four counts.
 - **Text encoded:** `act-1987-015.txt`, the Open Australian Legal Corpus rendering of Interpretation Act 1987 No 15 (NSW), version dated 2024-11-21.
+- **Version difference:** the register's current version (1 July 2026) differs from the deposited version at the dictionary entries this encoding uses at src:980 ("committal proceedings") and src:1038 ("Magistrate"), and adds four definitions this encoding does not have; see the "Comparison with the register's current version" paragraph of `subjects/au/nsw/interpretation-act-1987/SOURCE-LICENSE.md`.
   It is an unofficial plain-text rendering (see "The text is an unofficial rendering" below).
 - **Method:** a single Sonnet 5.5 agent working alone from the brief; no other agent read or tested the work.
 - **Where the files are:** every `.l4` file sits in this folder; layer 1 is the `nsw-*.l4` modules and their tests, layer 2 is `nsw-seat.l4` and `nsw-cases-seat.l4`.

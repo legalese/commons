@@ -33,3 +33,8 @@ Text deposited 2026-11-11: `registers/source-bundle/act-1954-003.txt`, converted
 The page text does not print an "in force from" sentence; the version date is read from the page's own "View whole Act" link and its `PublicationDate` search parameter, and the landing page carries the same link and parameter (see `notes` in `registers/source-bundle/act-1954-003.meta.json`).
 sha256 of the download: `2d225bd19ec9de586365ea737e84fbc8b87210ad8334c0c779541b2181ef21ed`.
 sha256 of the converted text: `56dd0abf4c9caa3e238b882a403c7b30dbb85db02980e67cd69fc75dc4cfbce2`.
+
+**Omitted definitions in Schedule 1 (added 2026-11-12).**
+Schedule 1 (the dictionary) prints 66 defined terms followed by "..." with no definition, such as "Aboriginal local government ...".
+In the register's page each of those 66 blocks carries the class `view-repealed`, and a history note follows it; the conversion to plain text dropped the class, so those lines read as definitions that are missing.
+They are kept as printed, and `notes` in `registers/source-bundle/act-1954-003.meta.json` already counts them.
