@@ -1,0 +1,506 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `ppl-logic`
+IMPORT `ppl-time`
+IMPORT `ppl-nouns`
+IMPORT `ppl-definitions`
+IMPORT `ppl-key-provisions`
+IMPORT `ppl-income-test`
+IMPORT `ppl-work-test`
+IMPORT `ppl-eligibility`
+IMPORT `ppl-determinations`
+
+-- Paid Parental Leave Act 2010 (Commonwealth), compilation C2026C00425, Chapter 2 Parts 2-1 to 2-3 Division 4 (sections 7 to 44) -- THE SEAT LAYER.
+--
+-- SEAT: a parent, or the partner or adoptive parent of one, who has claimed parental leave pay for flexible PPL days for a child.
+-- The seat asks whether the Secretary can determine that parental leave pay is payable,
+-- what the eligibility, work and income tests need, and when another claimant's permission is needed.
+-- There is no seat for the Secretary: what the Act says the Secretary must do is answered here only as what it means for the claimant.
+-- Nothing here is new law.
+--
+-- PLAIN INPUTS. Every question takes plain inputs (yes or no, numbers, dates, and the two choices declared below), one for each fact the claimant states.
+-- The records the modules expect are built inside each question, in its WHERE, from those answers, and the module rule is then called; no rule is restated here.
+-- Where a module rule reads a result that another question answers (eligibility, the work test, the income test), the claimant gives that result as an answer:
+-- yes, no, or "The Act does not say" (the answer the earlier question gave).
+-- Facts that the Act borrows from other instruments (the PPL rules, the Social Security Act, the Family Assistance Act, the Consumer Price Index) are asked as facts.
+--
+-- Two limits of this form, recorded where they bite:
+--   * The work test question describes the work test period as up to five blocks of days, in time order, each with the hours of paid work done on each day of the block.
+--     It does not ask about paid leave, flexible PPL days for a previous child, or the jobkeeper and COVID-19 payment periods; the module rules for those are in ppl-work-test.
+--   * The income test question takes the two PPL income limits that apply as figures; after the first indexation day they depend on published Consumer Price Index numbers.
+--     The question "what limit does the Act itself state for a day" answers only where the Act states a figure.
+
+§ `Paid Parental Leave Act 2010 -- the claimant's questions`
+
+DECLARE `My relationship to the child` IS ONE OF
+    `I am the child's birth mother`
+    `I am a parent of the child and not the birth mother`
+    `I am the partner of the child's birth mother`
+    `I am the partner of a parent who is not the child's birth mother`
+    `I am an adoptive parent of the child`
+    `I am the partner of an adoptive parent of the child`
+
+DECLARE `An answer to an earlier question` IS ONE OF
+    Yes
+    No
+    `The Act does not say`
+
+GIVEN a IS A `An answer to an earlier question`
+GIVETH A MAYBE BOOLEAN
+`the answer as a result` MEANS
+    CONSIDER a
+    WHEN Yes THEN JUST TRUE
+    WHEN No THEN JUST FALSE
+    WHEN `The Act does not say` THEN NOTHING
+
+GIVEN c IS A `My relationship to the child`
+GIVETH A `The parental relationship`
+`the relationship record built from the choice` MEANS
+    CONSIDER c
+    WHEN `I am the child's birth mother` THEN `The parental relationship` OF FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE
+    WHEN `I am a parent of the child and not the birth mother` THEN `The parental relationship` OF FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE
+    WHEN `I am the partner of the child's birth mother` THEN `The parental relationship` OF FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE
+    WHEN `I am the partner of a parent who is not the child's birth mother` THEN `The parental relationship` OF FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE
+    WHEN `I am an adoptive parent of the child` THEN `The parental relationship` OF TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE
+    WHEN `I am the partner of an adoptive parent of the child` THEN `The parental relationship` OF TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE
+
+§§ `Is this a flexible PPL day, and how many can be paid?`
+
+-- s 11D. A flexible PPL day is a day from the day the child is born to the day before the child's second birthday.
+@export Is this day a flexible PPL day for my child (s 11D)?
+GIVEN day IS A DATE @desc The day you are asking about.
+      born IS A DATE @desc The day your child was born.
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is this day a flexible PPL day for my child` IS
+    `a day is a flexible PPL day for a child born on` day born
+
+-- s 31ABA. The most flexible PPL days that can be paid for a child depends on when the child was born; where the claimant had a partner at the first effective claim, a smaller number is theirs and the rest is reserved for others.
+@export What is the most flexible PPL days that can be paid to me for my child (s 31ABA)?
+GIVEN born IS A DATE @desc The day your child was born.
+      `I had a partner when I made my first effective claim for the child` IS A BOOLEAN @desc Did you have a partner at the time you made your first effective claim for parental leave pay for this child?
+GIVETH A NUMBER
+DECIDE `What is the most flexible PPL days that can be paid to me for my child` IS
+    IF `I had a partner when I made my first effective claim for the child`
+    THEN `the claimant limit of flexible PPL days when partnered, for a child born on` born
+    ELSE `the total limit of flexible PPL days for a child born on` born
+
+-- s 31ABA(1). The limit of flexible PPL days for the child, counting all claimants.
+@export What is the most flexible PPL days that can be paid for my child, counting everyone who claims (s 31ABA(1))?
+GIVEN born IS A DATE @desc The day your child was born.
+GIVETH A NUMBER
+DECIDE `What is the most flexible PPL days that can be paid for my child counting everyone who claims` IS
+    `the total limit of flexible PPL days for a child born on` born
+
+§§ `Am I eligible?`
+
+-- ss 31AA and 31AB. Eligibility on one flexible PPL day: one of the four routes in s 31AA, and none of the eight bars in s 31AB.
+@export Am I eligible for parental leave pay on this flexible PPL day (ss 31AA, 31AB)?
+GIVEN born IS A DATE @desc The day your child was born.
+      `I satisfy the Australian residency test on the day` IS A BOOLEAN @desc Do you satisfy the Australian residency test (sections 45 and 46) on that day?
+      `I am caring for the child on the day` IS A BOOLEAN @desc Are you caring for the child (section 47 onward) on that day?
+      `hours of paid work I perform on the day` IS A NUMBER @desc How many hours of paid work do you perform on that day? (0 if none)
+      `I have not previously satisfied the work and income tests for this child` IS A BOOLEAN @desc Is it true that you have not previously satisfied the work test and the income test in relation to this child (no payability determination or conditional eligibility determination of yours is in force)?
+      `my work test answer` IS A `An answer to an earlier question` @desc The answer to the question "Do I satisfy the work test?" for that day: Yes, No, or The Act does not say.
+      `my income test answer` IS A `An answer to an earlier question` @desc The answer to the question "Do I satisfy the income test?" for that day: Yes, No, or The Act does not say.
+      `I satisfied the Australian residency test on the day the child was born` IS A BOOLEAN @desc Did you satisfy the Australian residency test on the day the child was born?
+      `the day the child was born is in a newly arrived resident's waiting period that I am subject to` IS A BOOLEAN @desc Is the day the child was born in a newly arrived resident's waiting period that you are subject to under section 31A?
+      `subsection 31A(7) or (7A) applied to me on the day the child was born` IS A BOOLEAN @desc Did subsection 31A(7) or (7A) apply to you on the day the child was born?
+      `the child is stillborn or has died before the day` IS A BOOLEAN @desc Is the child stillborn, or did the child die before that day?
+      `I would have been caring for the child on the day had the child not been stillborn or died` IS A BOOLEAN @desc Would you have been caring for the child on that day had the child not been stillborn or died?
+      `I satisfy the circumstances prescribed as exceptional circumstances in which a special PPL claim can be made` IS A BOOLEAN @desc Do you satisfy the circumstances the PPL rules prescribe as exceptional circumstances in which a special PPL claim can be made?
+      `I satisfy the conditions prescribed for paragraph 31AA(4)(e)` IS A BOOLEAN @desc On that day, do you satisfy the conditions the PPL rules prescribe for paragraph 31AA(4)(e)?
+      `I satisfy the conditions prescribed for paragraph 31AA(5)(d)` IS A BOOLEAN @desc On that day, do you satisfy the conditions the PPL rules prescribe for paragraph 31AA(5)(d)?
+      `I satisfy the circumstances prescribed as exceptional circumstances in which a PPL claim can be made` IS A BOOLEAN @desc Do you satisfy the circumstances the PPL rules prescribe as exceptional circumstances in which a PPL claim can be made?
+      `my partner satisfies the circumstances prescribed as exceptional circumstances in which a PPL claim can be made` IS A BOOLEAN @desc Does your partner satisfy those circumstances?
+      `I had a partner at the time I made my first effective claim` IS A BOOLEAN @desc Did you have a partner when you made your first effective claim for the child?
+      `I satisfy the conditions prescribed for paragraph 31AB(3)(d)` IS A BOOLEAN @desc Do you satisfy the conditions the PPL rules prescribe for paragraph 31AB(3)(d)?
+      `I satisfy the conditions prescribed for paragraph 31AB(5)(c)` IS A BOOLEAN @desc Do you satisfy the conditions the PPL rules prescribe for paragraph 31AB(5)(c)?
+      `flexible PPL days covered by determinations in force for any person` IS A NUMBER @desc For how many flexible PPL days for this child are determinations under section 13 or 14, for anyone, in force?
+      `flexible PPL days covered by determinations in force for me or my partner` IS A NUMBER @desc For how many flexible PPL days for this child are determinations under section 13 or 14 in force for you or your partner?
+      `flexible PPL days covered by determinations under section 13 in force for me` IS A NUMBER @desc For how many flexible PPL days for this child are determinations under section 13 in force for you?
+      `flexible PPL days covered by determinations under section 13 or 14 in force for me` IS A NUMBER @desc For how many flexible PPL days for this child are determinations under section 13 or 14 in force for you? (Count every day covered by a determination of either kind that parental leave pay is payable to you.)
+      `I am deceased on the day` IS A BOOLEAN @desc Is the claimant deceased on that day? (Answer for the claimant if someone else is asking on their behalf.)
+      `the day is in a newly arrived resident's waiting period for me` IS A BOOLEAN @desc Is that day in a newly arrived resident's waiting period for you (section 31A)?
+      `subsection 31A(7) or (7A) applies to me on the day` IS A BOOLEAN @desc Does subsection 31A(7) or (7A) apply to you on that day?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Am I eligible for parental leave pay on this flexible PPL day` IS
+    `a person is eligible for parental leave pay on a flexible PPL day for a child` born facts
+    WHERE
+        facts MEANS
+            `The claimant's facts on a flexible PPL day` OF
+                `I satisfy the Australian residency test on the day`,
+                `I am caring for the child on the day`,
+                `hours of paid work I perform on the day`,
+                `I have not previously satisfied the work and income tests for this child`,
+                `the answer as a result` `my work test answer`,
+                `the answer as a result` `my income test answer`,
+                `I satisfied the Australian residency test on the day the child was born`,
+                `the day the child was born is in a newly arrived resident's waiting period that I am subject to`,
+                `subsection 31A(7) or (7A) applied to me on the day the child was born`,
+                `the child is stillborn or has died before the day`,
+                `I would have been caring for the child on the day had the child not been stillborn or died`,
+                `I satisfy the circumstances prescribed as exceptional circumstances in which a special PPL claim can be made`,
+                `I satisfy the conditions prescribed for paragraph 31AA(4)(e)`,
+                `I satisfy the conditions prescribed for paragraph 31AA(5)(d)`,
+                `I satisfy the circumstances prescribed as exceptional circumstances in which a PPL claim can be made`,
+                `my partner satisfies the circumstances prescribed as exceptional circumstances in which a PPL claim can be made`,
+                `I had a partner at the time I made my first effective claim`,
+                `I satisfy the conditions prescribed for paragraph 31AB(3)(d)`,
+                `I satisfy the conditions prescribed for paragraph 31AB(5)(c)`,
+                `flexible PPL days covered by determinations in force for any person`,
+                `flexible PPL days covered by determinations in force for me or my partner`,
+                `flexible PPL days covered by determinations under section 13 in force for me`,
+                `I am deceased on the day`,
+                `the day is in a newly arrived resident's waiting period for me`,
+                `subsection 31A(7) or (7A) applies to me on the day`,
+                `flexible PPL days covered by determinations under section 13 or 14 in force for me`
+
+-- s 31A(1B), (2), (3), (4). When a newly arrived resident's waiting period starts.
+@export When does my newly arrived resident's waiting period start (s 31A(2)-(4))?
+GIVEN `I am subject to a newly arrived resident's waiting period` IS A BOOLEAN @desc Are you subject to a newly arrived resident's waiting period under section 31A(1)?
+      `my visa is in a class determined by the Minister for the purposes of paragraph 739A(3)(b) of the Social Security Act` IS A BOOLEAN @desc Is the visa in a class of visas the Minister has determined for paragraph 739A(3)(b) of the Social Security Act?
+      `I previously held a visa in a class determined by the Minister for the purposes of paragraph 739A(4)(b) of the Social Security Act` IS A BOOLEAN @desc Did you previously hold one or more visas in a class the Minister has determined for paragraph 739A(4)(b) of the Social Security Act?
+      `the day I applied for that visa` IS A DATE @desc The day you applied for the visa.
+      `the day I applied for the last of those earlier visas` IS A DATE @desc The day you applied for the last of the earlier visas (any date if none).
+      `the day I first entered Australia` IS A DATE @desc The day you first entered Australia.
+      `the day I became the holder of a permanent visa` IS A DATE @desc The day you became the holder of a permanent visa.
+GIVETH A MAYBE DATE
+DECIDE `When does my newly arrived resident's waiting period start` IS
+    `the day a newly arrived resident's waiting period starts`
+        `I am subject to a newly arrived resident's waiting period`
+        `my visa is in a class determined by the Minister for the purposes of paragraph 739A(3)(b) of the Social Security Act`
+        `I previously held a visa in a class determined by the Minister for the purposes of paragraph 739A(4)(b) of the Social Security Act`
+        `the day I applied for that visa`
+        `the day I applied for the last of those earlier visas`
+        `the day I first entered Australia`
+        `the day I became the holder of a permanent visa`
+
+§§ `Do I satisfy the income test?`
+
+-- ss 37, 40. The test compares adjusted taxable income for the reference income year with the limit that applied on the earlier of the day of the claim and the day of the birth.
+@export Do I satisfy the income test on this day (ss 37-40)?
+GIVEN `the day is a flexible PPL day for a child of mine` IS A BOOLEAN @desc Is that day a flexible PPL day for a child of yours?
+      `a conditional eligibility determination or an initial eligibility determination is made in relation to me on the day` IS A BOOLEAN @desc Is a conditional eligibility determination or an initial eligibility determination made in relation to you on that day?
+      `I have a partner at the time I make the claim` IS A BOOLEAN @desc Did you have a partner at the time you made the claim to which that day or determination relates?
+      `my adjusted taxable income for the reference income year` IS A NUMBER @desc Your adjusted taxable income in dollars for the reference income year (the income year that ended before the earlier of the day you made the claim and the day your child was born), worked out under Schedule 3 to the Family Assistance Act.
+      `my partner's adjusted taxable income for the reference income year` IS A NUMBER @desc Your partner's adjusted taxable income in dollars for the same income year (0 if you have no partner).
+      `the individual PPL income limit that applies to me` IS A NUMBER @desc The individual PPL income limit in dollars on the earlier of the day you made the claim and the day your child was born.
+      `the family PPL income limit that applies to me` IS A NUMBER @desc The family PPL income limit in dollars on that earlier day.
+GIVETH A MAYBE BOOLEAN
+DECIDE `Do I satisfy the income test on this day` IS
+    `a person satisfies the income test on a day`
+        `the day is a flexible PPL day for a child of mine`
+        `a conditional eligibility determination or an initial eligibility determination is made in relation to me on the day`
+        `I have a partner at the time I make the claim`
+        `my adjusted taxable income for the reference income year`
+        `my partner's adjusted taxable income for the reference income year`
+        (JUST `the individual PPL income limit that applies to me`)
+        (JUST `the family PPL income limit that applies to me`)
+
+-- s 41. The figure the Act itself states for the individual limit on a day; after 1 July 2021 the limit is indexed and the Act states no figure.
+@export What individual PPL income limit does the Act itself state for this day (s 41(1))?
+GIVEN day IS A DATE @desc The earlier of the day you made the claim and the day your child was born.
+GIVETH A MAYBE NUMBER
+DECIDE `What individual PPL income limit does the Act itself state for this day` IS
+    `the individual limit stated for a day` day
+
+-- s 41. The figure the Act itself states for the family limit on a day.
+@export What family PPL income limit does the Act itself state for this day (s 41(2))?
+GIVEN day IS A DATE @desc The earlier of the day you made the claim and the day your child was born.
+GIVETH A MAYBE NUMBER
+DECIDE `What family PPL income limit does the Act itself state for this day` IS
+    `the family limit stated for a day` day
+
+§§ `Do I satisfy the work test?`
+
+-- s 33. The work test period is the 392 days (600 for a COVID-19 affected claimant) immediately before a day that depends on the circumstances.
+@export Which day does my work test period count back from (ss 33, 33A)?
+GIVEN `this is for an initial eligibility determination` IS A BOOLEAN @desc Is this for an initial eligibility determination (rather than a payability determination)?
+      `subsection 33(2A) applies to me` IS A BOOLEAN @desc Do you meet section 33(2A): you are pregnant with the child or are the birth mother, you did paid work of a particular kind, you stop (or stopped) it on a particular day because of hazards to the pregnancy, and any conditions prescribed by the PPL rules are satisfied?
+      `my work cessation day` IS A DATE @desc The day you stop (or stopped) that kind of work because of the hazards (any date if section 33(2A) does not apply to you).
+      `I would not satisfy the work test with the period that would otherwise apply` IS A BOOLEAN @desc Would you fail the work test if the period were the one that would otherwise apply (the period counted back from the day the child is born or the expected date of birth)?
+      `my child was born after the expected date of birth` IS A BOOLEAN @desc Was your child born after the expected date of birth?
+      `I would not satisfy the work test with the period counted back from the day the child is born` IS A BOOLEAN @desc Would you fail the work test if the period were counted back from the day the child is born?
+      `the expected date of birth` IS A DATE @desc The expected date of your child's birth.
+      `the day my child is born` IS A DATE @desc The day your child is born.
+GIVETH A DATE
+DECIDE `Which day does my work test period count back from` IS
+    `the day the work test period is counted back from`
+        `this is for an initial eligibility determination`
+        `subsection 33(2A) applies to me`
+        `my work cessation day`
+        `I would not satisfy the work test with the period that would otherwise apply`
+        `my child was born after the expected date of birth`
+        `I would not satisfy the work test with the period counted back from the day the child is born`
+        `the expected date of birth`
+        `the day my child is born`
+
+@export How many days long is my work test period (ss 33, 33A)?
+GIVEN `I am a COVID-19 affected claimant` IS A BOOLEAN @desc Are you a COVID-19 affected claimant (the child was born, or is expected, between 22 March 2020 and 31 March 2021, and the other conditions of the Dictionary definition are met)?
+GIVETH A NUMBER
+DECIDE `How many days long is my work test period` IS
+    `the number of days in the work test period` `I am a COVID-19 affected claimant`
+
+@export How many consecutive days must my qualifying period have (s 32, step 4)?
+GIVETH A NUMBER
+DECIDE `How many consecutive days must my qualifying period have` IS
+    `the number of consecutive days in a qualifying period`
+
+@export How many hours of qualifying work must I have performed in a qualifying period (s 32, step 5)?
+GIVETH A NUMBER
+DECIDE `How many hours of qualifying work must I have performed in a qualifying period` IS
+    `the hours of qualifying work needed in a qualifying period`
+
+-- s 32. The method statement. The work test period is described in up to five blocks in time order (earliest first); each block is a number of days on each of which the same hours of paid work were done.
+@export Do I satisfy the work test by the method statement in section 32 (ss 32-36)?
+GIVEN `I am a COVID-19 affected claimant` IS A BOOLEAN @desc Are you a COVID-19 affected claimant (see the question about the length of the work test period)?
+      `the day my work test period is counted back from` IS A DATE @desc The day your work test period counts back from (see the question about which day that is).
+      `I performed qualifying work on a day before my work test period began` IS A BOOLEAN @desc Did you perform qualifying work on some day before the first day of your work test period?
+      `the number of days from that day to the first day of my work test period` IS A NUMBER @desc How many days before the first day of your work test period was your last qualifying work day before it? (0 if none)
+      `I performed qualifying work on a day after my work test period ended` IS A BOOLEAN @desc Did you perform qualifying work on some day after the last day of your work test period?
+      `the number of days from the last day of my work test period to that day` IS A NUMBER @desc How many days after the last day of your work test period was your next qualifying work day? (0 if none)
+      `days in block 1` IS A NUMBER @desc Block 1 (earliest): how many days?
+      `hours of paid work on each day of block 1` IS A NUMBER @desc Block 1: hours of paid work on each of those days.
+      `days in block 2` IS A NUMBER @desc Block 2: how many days? (0 if none)
+      `hours of paid work on each day of block 2` IS A NUMBER @desc Block 2: hours of paid work on each of those days.
+      `days in block 3` IS A NUMBER @desc Block 3: how many days? (0 if none)
+      `hours of paid work on each day of block 3` IS A NUMBER @desc Block 3: hours of paid work on each of those days.
+      `days in block 4` IS A NUMBER @desc Block 4: how many days? (0 if none)
+      `hours of paid work on each day of block 4` IS A NUMBER @desc Block 4: hours of paid work on each of those days.
+      `days in block 5` IS A NUMBER @desc Block 5 (latest): how many days? (0 if none)
+      `hours of paid work on each day of block 5` IS A NUMBER @desc Block 5: hours of paid work on each of those days.
+GIVETH A MAYBE BOOLEAN
+DECIDE `Do I satisfy the work test by the method statement in section 32` IS
+    `a person satisfies the work test by the method statement in section 32`
+        `I am a COVID-19 affected claimant`
+        (`the first day of the work test period` `the day my work test period is counted back from` (`the number of days in the work test period` `I am a COVID-19 affected claimant`))
+        `I performed qualifying work on a day before my work test period began`
+        `the number of days from that day to the first day of my work test period`
+        `I performed qualifying work on a day after my work test period ended`
+        `the number of days from the last day of my work test period to that day`
+        `the days of my work test period`
+    WHERE
+        `the days of my work test period` MEANS
+            append (`a block of days` `days in block 1` `hours of paid work on each day of block 1`)
+                (append (`a block of days` `days in block 2` `hours of paid work on each day of block 2`)
+                    (append (`a block of days` `days in block 3` `hours of paid work on each day of block 3`)
+                        (append (`a block of days` `days in block 4` `hours of paid work on each day of block 4`)
+                                (`a block of days` `days in block 5` `hours of paid work on each day of block 5`))))
+
+GIVEN days IS A NUMBER, hours IS A NUMBER
+GIVETH A LIST OF `A day in the work test period`
+`a block of days` MEANS
+    replicate days (`A day in the work test period` OF hours, 0, FALSE, FALSE, 0, FALSE, 0)
+
+-- ss 36A, 36AA. Other ways to satisfy the work test.
+@export Can I satisfy the work test in another way (ss 36A, 36AA)?
+GIVEN `my relationship to the child` IS A `My relationship to the child` @desc How are you related to the child?
+      `the Secretary is satisfied that the child was born prematurely` IS A BOOLEAN @desc Was the child born prematurely (less than 37 weeks of gestation at delivery)?
+      `the Secretary is satisfied that while I was pregnant I had complications or illness related to the pregnancy which prevented me from performing paid work` IS A BOOLEAN @desc Were you pregnant with the child, and did complications or illness related to the pregnancy prevent you from performing paid work?
+      `I would have satisfied the work test by the method statement if that circumstance, or those circumstances, had not existed` IS A BOOLEAN @desc Would you have satisfied the work test under section 32 if the premature birth or the complications or illness had not existed?
+      `special circumstances of a kind prescribed by the PPL rules exist in relation to me on the day` IS A BOOLEAN @desc Do special circumstances of a kind the PPL rules prescribe exist in relation to you on that day?
+      `I would have satisfied the work test by the method statement if those special circumstances had not existed` IS A BOOLEAN @desc Would you have satisfied the work test under section 32 if those special circumstances had not existed?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Can I satisfy the work test in another way` IS
+    `either result holds`
+        (`a person also satisfies the work test on a day under section 36A`
+            (`my relationship to the child` EQUALS `I am the child's birth mother`)
+            (`my relationship to the child` EQUALS `I am a parent of the child and not the birth mother`)
+            (`my relationship to the child` EQUALS `I am the partner of the child's birth mother`)
+            `the Secretary is satisfied that the child was born prematurely`
+            `the Secretary is satisfied that while I was pregnant I had complications or illness related to the pregnancy which prevented me from performing paid work`
+            `I would have satisfied the work test by the method statement if that circumstance, or those circumstances, had not existed`)
+        (`a person also satisfies the work test on a day under section 36AA`
+            `special circumstances of a kind prescribed by the PPL rules exist in relation to me on the day`
+            `I would have satisfied the work test by the method statement if those special circumstances had not existed`)
+
+§§ `When is another claimant's permission needed?`
+
+-- ss 13(2)(d), 13(2)(e), 13(3), 13(4). A claimant covered by s 13(3) or (4) needs a permission unless the circumstances the PPL rules prescribe apply.
+@export Do I need another claimant's permission before the Secretary can determine my PPL claim (s 13(2)(d), (e))?
+GIVEN `my relationship to the child` IS A `My relationship to the child` @desc How are you related to the child?
+      `a payability determination under section 13 is in force for another adoptive parent of the child` IS A BOOLEAN @desc Is a payability determination under section 13 in force for another adoptive parent of the child?
+      `the circumstances prescribed by the PPL rules for paragraph 13(2)(d) apply to me` IS A BOOLEAN @desc Do the circumstances the PPL rules prescribe for paragraph 13(2)(d) apply to you?
+      `the circumstances prescribed by the PPL rules for paragraph 13(2)(e) apply to me` IS A BOOLEAN @desc Do the circumstances the PPL rules prescribe for paragraph 13(2)(e) apply to you?
+GIVETH A BOOLEAN
+DECIDE `Do I need another claimant's permission before the Secretary can determine my PPL claim` IS
+    `a permission is needed before the Secretary can determine a PPL claim`
+        (`the relationship record built from the choice` `my relationship to the child`)
+        `a payability determination under section 13 is in force for another adoptive parent of the child`
+        `the circumstances prescribed by the PPL rules for paragraph 13(2)(d) apply to me`
+        `the circumstances prescribed by the PPL rules for paragraph 13(2)(e) apply to me`
+
+-- s 14(2)(c). A special PPL claimant who is the partner of a person in the exceptional circumstances the PPL rules prescribe needs a permission.
+@export Do I need a permission before the Secretary can determine my special PPL claim (s 14(2)(c))?
+GIVEN `I am the partner of a person who satisfies the circumstances prescribed by the PPL rules as being exceptional circumstances in which a PPL claim can be made` IS A BOOLEAN @desc Are you the partner of a person who satisfies the circumstances the PPL rules prescribe as exceptional circumstances in which a PPL claim can be made?
+GIVETH A BOOLEAN
+DECIDE `Do I need a permission before the Secretary can determine my special PPL claim` IS
+    `a permission is needed before the Secretary can determine a special PPL claim`
+        `I am the partner of a person who satisfies the circumstances prescribed by the PPL rules as being exceptional circumstances in which a PPL claim can be made`
+
+-- s 15(1). Who may give a PPL claimant permission to claim flexible PPL days.
+@export May this person give me permission to claim flexible PPL days (s 15(1))?
+GIVEN `the person is the child's birth mother` IS A BOOLEAN @desc Is the person who would give the permission the child's birth mother?
+      `the person is an adoptive parent of the child` IS A BOOLEAN @desc Is that person an adoptive parent of the child?
+      `a payability determination under section 13 for the child is in force in respect of the person` IS A BOOLEAN @desc Is a payability determination under section 13 that parental leave pay for the child is payable in force in respect of that person?
+      `the person is the first adoptive parent in respect of whom such a determination has been made` IS A BOOLEAN @desc Is that person the first adoptive parent of the child in respect of whom such a determination has been made?
+      `the person is an adoptive parent nominated by the partner of an adoptive parent to give permission to that partner` IS A BOOLEAN @desc Has the partner of an adoptive parent nominated that person, an adoptive parent, to give permission to that partner?
+GIVETH A MAYBE BOOLEAN
+DECIDE `May this person give me permission to claim flexible PPL days` IS
+    `a person may give permission to a PPL claimant under subsection 15(1)`
+        `the person is the child's birth mother`
+        `the person is an adoptive parent of the child`
+        `a payability determination under section 13 for the child is in force in respect of the person`
+        `the person is the first adoptive parent in respect of whom such a determination has been made`
+        `the person is an adoptive parent nominated by the partner of an adoptive parent to give permission to that partner`
+
+-- s 15(2). Who may give a special PPL claimant permission.
+@export May this person give me permission as a special PPL claimant (s 15(2))?
+GIVEN `the person satisfies the circumstances prescribed by the PPL rules as being exceptional circumstances in which a PPL claim can be made` IS A BOOLEAN @desc Does the person who would give the permission satisfy the circumstances the PPL rules prescribe as exceptional circumstances in which a PPL claim can be made?
+      `a payability determination under section 13 for the child is in force in respect of the person` IS A BOOLEAN @desc Is a payability determination under section 13 that parental leave pay for the child is payable in force in respect of that person?
+GIVETH A MAYBE BOOLEAN
+DECIDE `May this person give me permission as a special PPL claimant` IS
+    `a person may give permission to a special PPL claimant under subsection 15(2)`
+        `the person satisfies the circumstances prescribed by the PPL rules as being exceptional circumstances in which a PPL claim can be made`
+        `a payability determination under section 13 for the child is in force in respect of the person`
+
+§§ `Can the Secretary determine that parental leave pay is payable to me?`
+
+-- ss 11B, 11C, 13(2), 18, 19B, 20, 21. For a PPL claimant.
+@export Can the Secretary determine that parental leave pay is payable to me as a PPL claimant (ss 11A-11C, 13, 18-21)?
+GIVEN `my relationship to the child` IS A `My relationship to the child` @desc How are you related to the child?
+      `I have made an effective PPL claim for the day` IS A BOOLEAN @desc Have you made an effective PPL claim for parental leave pay for that flexible PPL day?
+      `my eligibility answer` IS A `An answer to an earlier question` @desc The answer to the question "Am I eligible for parental leave pay on this flexible PPL day?": Yes, No, or The Act does not say.
+      `the child's birth mother has not previously satisfied the work test` IS A BOOLEAN @desc Is it true that the child's birth mother has not previously satisfied the work test in relation to the child?
+      `the birth mother's work test answer` IS A `An answer to an earlier question` @desc Does the child's birth mother satisfy the work test on the day the determination is made: Yes, No, or The Act does not say.
+      `an adoptive parent of the child has not previously satisfied the work test` IS A BOOLEAN @desc Is it true that an adoptive parent of the child has not previously satisfied the work test in relation to the child?
+      `the person who gave me permission satisfies the work test` IS A `An answer to an earlier question` @desc Does the person who gave you permission satisfy the work test on the day the determination is made: Yes, No, or The Act does not say.
+      `the circumstances prescribed by the PPL rules for paragraph 13(2)(d) apply to me` IS A BOOLEAN @desc Do the circumstances the PPL rules prescribe for paragraph 13(2)(d) apply to you?
+      `the circumstances prescribed by the PPL rules for paragraph 13(2)(e) apply to me` IS A BOOLEAN @desc Do the circumstances the PPL rules prescribe for paragraph 13(2)(e) apply to you?
+      `a payability determination under section 13 is in force for another adoptive parent of the child` IS A BOOLEAN @desc Is a payability determination under section 13 in force for another adoptive parent of the child?
+      `a permission has been given to me` IS A BOOLEAN @desc Has a permission to claim flexible PPL days for the child been given to you?
+      `that permission has been revoked` IS A BOOLEAN @desc Has that permission been revoked?
+      `the number of flexible PPL days specified in that permission` IS A NUMBER @desc How many flexible PPL days does the permission specify? (0 if there is no permission)
+      `the number of flexible PPL days for which parental leave pay would be payable to me if the determination were made` IS A NUMBER @desc How many flexible PPL days for the child would parental leave pay be payable to you for if the determination were made?
+      `a PPL claimant has verified the child's birth` IS A BOOLEAN @desc Has a PPL claimant verified the child's birth (section 18)?
+      `I am a COVID-19 affected claimant in relation to my claim` IS A BOOLEAN @desc Are you a COVID-19 affected claimant in relation to your claim?
+      born IS A DATE @desc The day your child was born.
+      `my child and another child were born during the same multiple birth` IS A BOOLEAN @desc Were your child and another child born during the same multiple birth?
+      `parental leave pay is or was payable to someone for the other child` IS A BOOLEAN @desc Is parental leave pay, or was it, payable to you or another person for the other child?
+      `the number of flexible PPL days that count for which parental leave pay is payable to more than one person for the same flexible PPL day` IS A NUMBER @desc For how many flexible PPL days for this child is parental leave pay payable to more than one person for the same day (not counting a day the PPL rules say does not count)?
+      `a payability determination makes parental leave pay payable to another person for that day` IS A BOOLEAN @desc Does a payability determination make parental leave pay payable to another person for that same day?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Can the Secretary determine that parental leave pay is payable to me as a PPL claimant` IS
+    `the Secretary can determine that parental leave pay is payable` positive bars
+    WHERE
+        `my relationship record` MEANS `the relationship record built from the choice` `my relationship to the child`
+        permission MEANS `A permission to claim flexible PPL days` OF `a permission has been given to me`, `that permission has been revoked`, `the number of flexible PPL days specified in that permission`
+        facts MEANS
+            `The facts for a determination under section 13(2)` OF
+                `the answer as a result` `my eligibility answer`,
+                `the child's birth mother has not previously satisfied the work test`,
+                `the answer as a result` `the birth mother's work test answer`,
+                `an adoptive parent of the child has not previously satisfied the work test`,
+                `the answer as a result` `the person who gave me permission satisfies the work test`,
+                `the circumstances prescribed by the PPL rules for paragraph 13(2)(d) apply to me`,
+                `the circumstances prescribed by the PPL rules for paragraph 13(2)(e) apply to me`,
+                `a payability determination under section 13 is in force for another adoptive parent of the child`,
+                permission,
+                permission,
+                `the number of flexible PPL days for which parental leave pay would be payable to me if the determination were made`
+        positive MEANS `the Secretary must determine that parental leave pay is payable under section 13(2)` `my relationship record` facts
+        bars MEANS
+            LIST `the Secretary can make a determination under section 13 or 14 for a flexible PPL day, as section 11B bears on it` (`the answer as a result` `my eligibility answer`)
+               , `the Secretary can make a determination under section 13 or 14 for a flexible PPL day, as section 11C bears on it` `I have made an effective PPL claim for the day` FALSE
+               , `the Secretary can make a payability determination, as section 18 bears on it` `a PPL claimant has verified the child's birth`
+               , `the Secretary can make a payability determination, as section 19B bears on it` `I am a COVID-19 affected claimant in relation to my claim` born
+               , `the Secretary can make a payability determination, as section 20 bears on it` `my child and another child were born during the same multiple birth` `parental leave pay is or was payable to someone for the other child`
+               , `the Secretary can make a payability determination, as section 21 bears on it` `the number of flexible PPL days that count for which parental leave pay is payable to more than one person for the same flexible PPL day` `a payability determination makes parental leave pay payable to another person for that day` born
+
+-- ss 11B, 11C, 14(2), 18, 19B, 20, 21. For a special PPL claimant.
+@export Can the Secretary determine that parental leave pay is payable to me as a special PPL claimant (ss 11A-11C, 14, 18-21)?
+GIVEN `I have made an effective special PPL claim for the day` IS A BOOLEAN @desc Have you made an effective special PPL claim for parental leave pay for that flexible PPL day?
+      `a payability determination under section 13 that parental leave pay for the child is payable to a PPL claimant is in force` IS A BOOLEAN @desc Is a payability determination under section 13 that parental leave pay for the child is payable to a PPL claimant in force?
+      `my eligibility answer` IS A `An answer to an earlier question` @desc The answer to the question "Am I eligible for parental leave pay on this flexible PPL day?": Yes, No, or The Act does not say.
+      `I am the partner of a person who satisfies the circumstances prescribed by the PPL rules as being exceptional circumstances in which a PPL claim can be made` IS A BOOLEAN @desc Are you the partner of a person who satisfies the circumstances the PPL rules prescribe as exceptional circumstances in which a PPL claim can be made?
+      `a permission has been given to me` IS A BOOLEAN @desc Has a permission under subsection 15(2) been given to you?
+      `that permission has been revoked` IS A BOOLEAN @desc Has that permission been revoked?
+      `the number of flexible PPL days specified in that permission` IS A NUMBER @desc How many flexible PPL days does the permission specify? (0 if there is no permission)
+      `the number of flexible PPL days for which parental leave pay would be payable to me if the determination were made` IS A NUMBER @desc How many flexible PPL days for the child would parental leave pay be payable to you for if the determination were made?
+      `a PPL claimant has verified the child's birth` IS A BOOLEAN @desc Has a PPL claimant verified the child's birth (section 18)?
+      `I am a COVID-19 affected claimant in relation to my claim` IS A BOOLEAN @desc Are you a COVID-19 affected claimant in relation to your claim?
+      born IS A DATE @desc The day your child was born.
+      `my child and another child were born during the same multiple birth` IS A BOOLEAN @desc Were your child and another child born during the same multiple birth?
+      `parental leave pay is or was payable to someone for the other child` IS A BOOLEAN @desc Is parental leave pay, or was it, payable to you or another person for the other child?
+      `the number of flexible PPL days that count for which parental leave pay is payable to more than one person for the same flexible PPL day` IS A NUMBER @desc For how many flexible PPL days for this child is parental leave pay payable to more than one person for the same day (not counting a day the PPL rules say does not count)?
+      `a payability determination makes parental leave pay payable to another person for that day` IS A BOOLEAN @desc Does a payability determination make parental leave pay payable to another person for that same day?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Can the Secretary determine that parental leave pay is payable to me as a special PPL claimant` IS
+    `the Secretary can determine that parental leave pay is payable` positive bars
+    WHERE
+        permission MEANS `A permission to claim flexible PPL days` OF `a permission has been given to me`, `that permission has been revoked`, `the number of flexible PPL days specified in that permission`
+        facts MEANS
+            `The facts for a determination under section 14(2)` OF
+                `a payability determination under section 13 that parental leave pay for the child is payable to a PPL claimant is in force`,
+                `the answer as a result` `my eligibility answer`,
+                `I am the partner of a person who satisfies the circumstances prescribed by the PPL rules as being exceptional circumstances in which a PPL claim can be made`,
+                permission,
+                `the number of flexible PPL days for which parental leave pay would be payable to me if the determination were made`
+        positive MEANS `the Secretary must determine that parental leave pay is payable under section 14(2)` facts
+        bars MEANS
+            LIST `the Secretary can make a determination under section 13 or 14 for a flexible PPL day, as section 11B bears on it` (`the answer as a result` `my eligibility answer`)
+               , `the Secretary can make a determination under section 13 or 14 for a flexible PPL day, as section 11C bears on it` FALSE `I have made an effective special PPL claim for the day`
+               , `the Secretary can make a payability determination, as section 18 bears on it` `a PPL claimant has verified the child's birth`
+               , `the Secretary can make a payability determination, as section 19B bears on it` `I am a COVID-19 affected claimant in relation to my claim` born
+               , `the Secretary can make a payability determination, as section 20 bears on it` `my child and another child were born during the same multiple birth` `parental leave pay is or was payable to someone for the other child`
+               , `the Secretary can make a payability determination, as section 21 bears on it` `the number of flexible PPL days that count for which parental leave pay is payable to more than one person for the same flexible PPL day` `a payability determination makes parental leave pay payable to another person for that day` born
+
+§§ `After a determination`
+
+-- s 23. A payability determination is in force from the day it is made until revoked or set aside.
+@export Is my payability determination in force on this day (s 23)?
+GIVEN day IS A DATE @desc The day you are asking about.
+      `the day the determination was made` IS A DATE @desc The day the Secretary made the determination.
+      `it has been revoked` IS A BOOLEAN @desc Has the determination been revoked on your request under section 25?
+      `the day I asked for the revocation` IS A DATE @desc The day you asked the Secretary to revoke it (any date if it has not been revoked).
+      `it has been set aside under Chapter 5` IS A BOOLEAN @desc Has the determination been set aside on review under Chapter 5?
+      `the first day it is no longer in force because it was set aside` IS A DATE @desc The first day on which it is no longer in force because it was set aside (any date if it has not been set aside).
+GIVETH A BOOLEAN
+DECIDE `Is my payability determination in force on this day` IS
+    `a payability determination is in force on a day` day `the day the determination was made`
+        (IF `it has been revoked` THEN JUST `the day I asked for the revocation` ELSE NOTHING)
+        (IF `it has been set aside under Chapter 5` THEN JUST `the first day it is no longer in force because it was set aside` ELSE NOTHING)
+
+-- s 25. The Secretary must revoke a payability determination at the person's request, if the request is made before the last day of the instalment period.
+@export Must the Secretary revoke my payability determination if I ask (s 25)?
+GIVEN `a payability determination has been made that parental leave pay is payable to me for the flexible PPL day` IS A BOOLEAN @desc Has a payability determination been made that parental leave pay is payable to you for that flexible PPL day?
+      `I request the Secretary to revoke the determination` IS A BOOLEAN @desc Do you request the Secretary to revoke it?
+      `the day I make the request` IS A DATE @desc The day you make the request.
+      `the last day of the instalment period for the instalment that relates to that flexible PPL day` IS A DATE @desc The last day of the instalment period for the instalment that relates to that flexible PPL day.
+      `I make the request in a manner approved by the Secretary` IS A BOOLEAN @desc Do you make the request in a manner the Secretary has approved?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Must the Secretary revoke my payability determination if I ask` IS
+    `the Secretary must revoke the determination on request`
+        `a payability determination has been made that parental leave pay is payable to me for the flexible PPL day`
+        `I request the Secretary to revoke the determination`
+        `the day I make the request`
+        `the last day of the instalment period for the instalment that relates to that flexible PPL day`
+        `I make the request in a manner approved by the Secretary`
+
+-- s 15(6). When a permission to the claimant is varied, the days of the determination that have not yet occurred and exceed the number now specified are removed.
+@export How many days are removed from my determination when the permission I was given is varied (s 15(6))?
+GIVEN `a payability determination is in force in relation to my claim` IS A BOOLEAN @desc Is a payability determination in force in relation to your claim?
+      `permission was given in relation to my claim under subsection 15(1) or (2)` IS A BOOLEAN @desc Was permission given in relation to your claim under subsection 15(1) or (2)?
+      `that permission is varied under paragraph 15(4)(a)` IS A BOOLEAN @desc Is that permission varied under paragraph 15(4)(a)?
+      `the number of days specified in my determination` IS A NUMBER @desc How many flexible PPL days does your determination specify?
+      `the number of those days that have not yet occurred when the permission is varied` IS A NUMBER @desc How many of those days have not yet occurred when the permission is varied?
+      `the number of days the permission now specifies` IS A NUMBER @desc How many flexible PPL days does the permission specify as varied?
+GIVETH A MAYBE NUMBER
+DECIDE `How many days are removed from my determination when the permission I was given is varied` IS
+    `the number of days the Secretary must remove from the determination when a permission is varied`
+        `a payability determination is in force in relation to my claim`
+        `permission was given in relation to my claim under subsection 15(1) or (2)`
+        `that permission is varied under paragraph 15(4)(a)`
+        `the number of days specified in my determination`
+        `the number of those days that have not yet occurred when the permission is varied`
+        `the number of days the permission now specifies`
