@@ -13,10 +13,10 @@ Text deposited 2026-11-08: `registers/source-bundle/11573.txt`, as in force at 1
 
 The register's Word download is a binary .doc served under a .docx-like name; it was renamed .doc before conversion.
 
-**Non-breaking hyphens (added 2026-11-12).**
-The register still serves the same file (the same sha256 as above, checked on 2026-11-12).
-A second conversion of it, made with the operating system's text-conversion tool and a paragraph extractor that keeps non-breaking hyphens, shows that the first conversion dropped two of them.
-In Schedule 6 Part I, item 2, the spouse's entitlement under paragraph 1(b) is "one‑half" in subparagraph (i) and "one‑third" in subparagraph (ii) in the Word file, but `11573.txt` reads "onehalf" and "onethird" at lines 953 and 954.
-`registers/source-bundle/11573.nb-hyphens.txt` (sha256 `639fd0a33a5493500bc8d169ae30da908c9a53b994edfa32fe6f5c90940e560b`) is not a fresh conversion: it is the deposited text with those two words corrected to what the second conversion shows, and one sentence added to its change note.
-Use it in place of `11573.txt` where the two hyphens matter; `11573.txt` is left as deposited, as docs/ENCODING-GUIDE.md §8 requires.
+**Non-breaking hyphens (corrected 2026-11-12).**
+The register still serves the same file (the same download sha256 as above, checked on 2026-11-12).
+A second conversion of it, made with the operating system's text-conversion tool and a paragraph extractor that keeps non-breaking hyphens, showed that the first conversion had dropped two of them.
+In Schedule 6 Part I, item 2, the spouse's entitlement under paragraph 1(b) is "one‑half" in subparagraph (i) and "one‑third" in subparagraph (ii) in the Word file, and `registers/source-bundle/11573.txt` had read "onehalf" and "onethird" at lines 953 and 954.
+The deposit now carries those two words as the second conversion shows them, and one sentence is added to the change note in its notice block; no line is added or removed, so every line number is unchanged.
+`text_sha256` and `text_chars` in `registers/source-bundle/11573.meta.json` are updated to match (the text hash is now `93b2dc434831bf849d62bd120e232a18bf4e0b9f6f5b494c0a1c8e051cb6dd5e`); the download hash is unchanged.
 Leaving out the field-code text and a running footer that the second tool adds, the two conversions agree word for word apart from the notice block and these two words (compared as lower-cased alphanumeric words, so case and punctuation were not compared).
