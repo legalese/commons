@@ -162,7 +162,13 @@ A question goes in the ledger of the law that answers it. Refer across ledgers b
 ## 8. Sources
 
 - **Encode only from a deposited source:** `subjects/<jurisdiction>/<slug>/registers/source-bundle/*.txt`, with its `.meta.json` and the subject's `SOURCE-LICENSE.md`.
-- **Never alter a deposited text.** A correction or a newer version goes beside it as a new file. A formula that was lost in conversion is transcribed into a `<source-id>.formulas.md` sidecar, citing the authorised rendering it came from.
+- **A correction that makes a deposited text match its own source file is made in place.**
+  A character, hyphen or word that the conversion lost or garbled, checked against the same downloaded file, is fixed in the text itself: update `text_sha256` and `text_chars` in its `.meta.json`, add a sentence to the change note in its notice block saying what was restored and from what, and say so in the subject's `SOURCE-LICENSE.md`.
+  Git keeps the earlier bytes, so anyone who needs them cites the commit.
+  If the fix adds or removes a line, re-run the source-reference check of every encoding that cites the text, in the same commit.
+- **A newer version of the law goes beside the earlier one as a new file:** a later compilation or revision, above all one whose changes alter what an encoding's rules take or give.
+  The earlier file stays, because encodings of that version cite it.
+- A formula that was lost in conversion is transcribed into a `<source-id>.formulas.md` sidecar, citing the authorised rendering it came from.
 - **When fetching:**
   - use the User-Agent `legalese-commons-source-fetcher/1.0 (+https://github.com/legalese/commons)`, and never put an email address in it;
   - obey robots.txt and each site's rate limits. The Federal Register of Legislation refuses after about 23 requests in a window, so send at most 20 per batch, at least 20 seconds apart;
