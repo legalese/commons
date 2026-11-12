@@ -333,6 +333,6 @@ A search of every module's `l4 run` output for `_Warning` and `_Error` on both b
 - A reader with the authorised text should check the encoding against it; the text used is a converted rendering, and the three formulas come from a sidecar.
 - Each fork above should be ruled; F2, F3, F5, F6, F8 and F20 change answers a person would act on.
 - The index numbers of s 4AA(4) and the Minister's notice of s 4AA(1A) should be fetched, so that the amount after 1 July 2026 is known and not an input.
-- The provisions prescribed for s 4AB(3), the Divisions of the Criminal Code named in s 4J(7), and section 76 of the Competition and Consumer Act 2010 should be read and, where a rule turns on them, encoded.
+- The provisions prescribed for s 4AB(3), the Divisions of the Criminal Code named in s 4J(7), and section 76 of the Competition and Consumer Act 2010 are not in this text; a later reading would take them up and encode any rule that turns on them.
 - The currency of compilation C2026C00368 should be confirmed against the Federal Register of Legislation.
 - The seat's three-offence limit for s 4K(4) should be lifted if the form can take a list.
