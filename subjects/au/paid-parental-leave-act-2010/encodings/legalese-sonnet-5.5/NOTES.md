@@ -589,7 +589,7 @@ Each entry gives the provision, the rule that carries the reading taken, the rea
 
 | id | provision | rule | readings seen and the one taken | text that licenses each |
 |---|---|---|---|---|
-| F1 | s 11D(b) | `the second birthday of a child born on`, `the last flexible PPL day for a child born on` (`ppl-time`) | For a child born on 29 February the second birthday is (a) 28 February, (b) 1 March, or (c) not stated. Taken: (c), answer `NOTHING`. | 11D(b) says "the day before the child's second birthday" and the sources state no rule for counting a birthday that does not exist in the second year. |
+| F1 | s 11D(b) | `the second birthday of a child born on`, `the last flexible PPL day for a child born on` (`ppl-time`) | For a child born on 29 February the second birthday is (a) 28 February, (b) 1 March, or (c) not stated. Taken: (c), answer `NOTHING`. | 11D(b) says "the day before the child's second birthday" and the sources state no rule for counting a birthday that has no such day in the second year. |
 | F2 | ss 13(2), 13(6), 14(2), 14(4), 15(1), 26A, 36A, 36AA | the functions of those sections (`ppl-determinations`, `ppl-work-test`) | "The Secretary is satisfied that X" can be read as a decision the Secretary has taken or as X holding on the facts. Taken: X on the facts as stated. | The sections state the matters of which the Secretary is to be satisfied, and the claimant asks whether those matters are met. |
 | F3 | ss 13(3), 13(4) | `a person is covered by subsection 13(3)`, `a person is covered by subsection 13(4)` (`ppl-determinations`) | A person not on the list is (a) not covered or (b) not answered. Taken: (a), a plain `BOOLEAN`, because paragraphs 13(2)(b), (d) and (e) begin "if the PPL claimant is a person covered by" and need an antecedent. | "The following persons are covered" does not close the list with "only". |
 | F4 | s 14(2)(d), (e) | `the Secretary must determine that parental leave pay is payable under section 14(2)` (`ppl-determinations`) | For a special PPL claimant to whom (c) does not apply, paragraphs (d) and (e) can be read as (a) requiring a permission or (b) not applying. Taken: the text does not say; with no permission the answer is `NOTHING`. | Paragraphs (d) and (e) refer to "the permission". |
@@ -678,7 +678,7 @@ Loud (a parse or type error names the line):
 Silent (an answer other than the one intended, and no error):
 
 - `NOT a AND b` and `NOT a OR b` parse as `NOT (a AND b)` and `NOT (a OR b)`; parenthesise every `NOT`.
-- `Date 29 2 2023` rolls forward to 1 March 2023; a date that does not exist is not an error.
+- `Date 29 2 2023` rolls forward to 1 March 2023; a date with no such day is not an error.
 
 ## What check.sh prints
 
