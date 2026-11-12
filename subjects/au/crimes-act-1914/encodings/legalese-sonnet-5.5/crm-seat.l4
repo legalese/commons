@@ -1,0 +1,563 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `crm-time`
+IMPORT `crm-defs`
+IMPORT `crm-penalty-units`
+IMPORT `crm-penalties`
+IMPORT `crm-offences`
+IMPORT `crm-liability`
+
+-- Crimes Act 1914 (Commonwealth), sections 4AA to 4N, with section 4A and the
+-- section 3 terms those sections use -- THE SEAT LAYER.
+--
+-- SEAT: a person or officer working out the most that can be imposed for a
+-- Commonwealth offence. The questions are those such a person asks: what a
+-- penalty of so many penalty units comes to in dollars, how a penalty stated
+-- in dollars converts to penalty units, what a natural person or a body
+-- corporate may be fined, whether an offence is indictable or summary and
+-- whether a court of summary jurisdiction may deal with it, and whether a
+-- child of a given age can be liable. Nothing here is new law: each question
+-- calls the rule of the layer-1 module that holds it.
+--
+-- PLAIN INPUTS. Every question takes yes/no answers, numbers, dates and choices
+-- from a short list, one for each fact the person can state. A judgment the
+-- text leaves to a court ("the court thinks it appropriate", "the court thinks
+-- fit", "a contrary intention appears") is a plain yes/no input.
+--
+-- ANSWERS. A question that asks "does X apply" answers a MAYBE BOOLEAN:
+-- JUST TRUE where the text says yes, JUST FALSE where the text says no in its
+-- own words, NOTHING where the text does not say. A question that asks "how
+-- much" answers a MAYBE NUMBER, or one of the answer types declared below
+-- where "the text says none" must be told apart from "the text does not say".
+
+§ `Crimes Act 1914 (Cth) -- the questions of a person working out the most that can be imposed`
+
+DECLARE MostAnswer IS ONE OF
+    `no more than this` HAS `the number` IS A NUMBER
+    `none is allowed by this provision`
+    `the text does not say`
+
+DECLARE ConversionAnswer IS ONE OF
+    `converted to penalty units` HAS `penalty units` IS A NUMBER
+    `the text says the conversion does not apply`
+    `the text does not say how this converts`
+
+DECLARE WherePrinted IS ONE OF
+    `at the foot of a section`
+    `at the foot of a subsection, and not at the foot of the section that contains it`
+    `at the foot of a subsection, and also at the foot of the section that contains it`
+    `at the foot of a clause of a Schedule`
+    `at the foot of a subclause of a Schedule, and not at the foot of the clause that contains it`
+    `at the foot of a subclause of a Schedule, and also at the foot of the clause that contains it`
+    `somewhere else`
+
+DECLARE WhereTheOtherLawComesFrom IS ONE OF
+    `the Northern Territory`
+    `a State other than the Northern Territory`
+    `the Australian Capital Territory or another Territory`
+
+-- The helpers below are not questions. They turn the plain answers of a
+-- question into the values the layer-1 rules take.
+
+GIVEN `the offence is punishable by imprisonment` IS A BOOLEAN
+      `the offence is punishable by imprisonment for life` IS A BOOLEAN
+      `the longest term of imprisonment, in months` IS A NUMBER
+GIVETH AN ImprisonmentTerm
+DECIDE `the maximum term of imprisonment stated` IS
+    IF (NOT `the offence is punishable by imprisonment`)
+    THEN NoImprisonment
+    ELSE IF `the offence is punishable by imprisonment for life`
+         THEN ForLife
+         ELSE Months `the longest term of imprisonment, in months`
+
+GIVEN `where it is printed` IS A WherePrinted
+GIVETH A FootPosition
+DECIDE `the position of the printed penalty` IS
+    CONSIDER `where it is printed`
+    WHEN `at the foot of a section` THEN FootPosition OF TRUE, FALSE, FALSE, FALSE
+    WHEN `at the foot of a subsection, and not at the foot of the section that contains it` THEN FootPosition OF FALSE, TRUE, FALSE, FALSE
+    WHEN `at the foot of a subsection, and also at the foot of the section that contains it` THEN FootPosition OF TRUE, TRUE, FALSE, FALSE
+    WHEN `at the foot of a clause of a Schedule` THEN FootPosition OF FALSE, FALSE, TRUE, FALSE
+    WHEN `at the foot of a subclause of a Schedule, and not at the foot of the clause that contains it` THEN FootPosition OF FALSE, FALSE, FALSE, TRUE
+    WHEN `at the foot of a subclause of a Schedule, and also at the foot of the clause that contains it` THEN FootPosition OF FALSE, FALSE, TRUE, TRUE
+    WHEN `somewhere else` THEN FootPosition OF FALSE, FALSE, FALSE, FALSE
+
+GIVEN `the offence relates to property` IS A BOOLEAN
+      `the value of that property, in dollars` IS A NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `the value of the property stated` IS
+    IF `the offence relates to property` THEN JUST `the value of that property, in dollars` ELSE NOTHING
+
+-- The amount of a penalty unit on the day of the offence. Before the first
+-- indexation day it is the amount in s 4AA(1). On or after it, it is the amount
+-- worked out under s 4AA(3) for the latest indexation day on or before the day
+-- of the offence, from the amount just before that indexation day and the two
+-- published index numbers.
+GIVEN `the day of the offence` IS A DATE
+      `the amount just before the latest indexation day, in dollars` IS A NUMBER
+      `the index number for the reference quarter` IS A NUMBER
+      `the index number for the base quarter` IS A NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `the amount of a penalty unit on the day of the offence` IS
+    IF `the number of indexation days on or before` `the day of the offence` EQUALS 0
+    THEN JUST `the amount of a penalty unit before any indexation, in dollars`
+    ELSE CONSIDER `s 4AA(3) the dollar amount mentioned in subsection (1) after the indexation day` `the latest indexation day` `the amount just before the latest indexation day, in dollars` `the index number for the reference quarter` `the index number for the base quarter`
+         WHEN NOTHING THEN NOTHING
+         WHEN JUST after THEN `s 4AA(3), (8) the amount of a penalty unit for an offence` `the amount just before the latest indexation day, in dollars` after `the day of the offence` `the latest indexation day`
+    WHERE
+        `the latest indexation day` MEANS `the indexation day numbered` (`the number of indexation days on or before` `the day of the offence` MINUS 1)
+
+§§ `What a penalty unit comes to in dollars (s 4AA)`
+
+-- s 4AA(1), (3), (8). A penalty unit is $330 until the first indexation day, 1
+-- July 2026; on each indexation day (that day and every third 1 July after it)
+-- the amount is replaced by the amount worked out from the published index
+-- numbers; the increased amount applies only to offences committed on or after
+-- the indexation day.
+@export What is a penalty unit worth, in dollars, for an offence on a given day (s 4AA)?
+GIVEN `the day of my offence` IS A DATE @desc On what day was the offence committed?
+      `the amount just before the latest indexation day` IS A NUMBER @desc What was the amount of a penalty unit, in dollars, just before the latest indexation day on or before the day of the offence? (Indexation days are 1 July 2026 and every third 1 July after it. Enter 330 if no indexation day has yet fallen, or if the latest one is the first.)
+      `the reference quarter index number` IS A NUMBER @desc What is the published All Groups Consumer Price Index number (weighted average of the 8 capital cities) for the March quarter immediately before that indexation day? (Enter 0 if no indexation day has yet fallen.)
+      `the base quarter index number` IS A NUMBER @desc What is the published All Groups Consumer Price Index number for the March quarter 3 years before that March quarter? (Enter 0 if no indexation day has yet fallen.)
+GIVETH A MAYBE NUMBER
+DECIDE `What is a penalty unit worth` IS
+    `the amount of a penalty unit on the day of the offence` `the day of my offence` `the amount just before the latest indexation day` `the reference quarter index number` `the base quarter index number`
+
+@export What does a penalty of so many penalty units come to, in dollars, for an offence on a given day (s 4AA)?
+GIVEN `the number of penalty units` IS A NUMBER @desc How many penalty units is the penalty?
+      `the day of my offence` IS A DATE @desc On what day was the offence committed?
+      `the amount just before the latest indexation day` IS A NUMBER @desc What was the amount of a penalty unit, in dollars, just before the latest indexation day on or before the day of the offence? (Enter 330 if no indexation day has yet fallen, or if the latest one is the first.)
+      `the reference quarter index number` IS A NUMBER @desc What is the published All Groups Consumer Price Index number for the March quarter immediately before that indexation day? (Enter 0 if no indexation day has yet fallen.)
+      `the base quarter index number` IS A NUMBER @desc What is the published All Groups Consumer Price Index number for the March quarter 3 years before that March quarter? (Enter 0 if no indexation day has yet fallen.)
+GIVETH A MAYBE NUMBER
+DECIDE `What does a penalty of so many penalty units come to in dollars` IS
+    CONSIDER `the amount of a penalty unit on the day of the offence` `the day of my offence` `the amount just before the latest indexation day` `the reference quarter index number` `the base quarter index number`
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST unit THEN JUST (`s 4AA(1) the number of dollars in a penalty of a number of penalty units` `the number of penalty units` unit)
+
+§§ `A penalty stated in dollars (s 4AB)`
+
+-- s 4AB(1), (2), (3). A penalty of D dollars in a law of the Commonwealth or a
+-- Territory Ordinance is taken to be P penalty units, P being D divided by 100
+-- if that is a whole number, and otherwise the next whole number up; but not
+-- for the maximum amount of a penalty not imposed by a court or a service
+-- tribunal, nor for section 76 of the Competition and Consumer Act 2010 or a
+-- provision prescribed for the purpose.
+@export How many penalty units is a penalty stated in dollars taken to be (s 4AB)?
+GIVEN `the penalty in dollars` IS A NUMBER @desc What is the dollar amount of the penalty the law states?
+      `the law is a law of the Commonwealth or a Territory Ordinance` IS A BOOLEAN @desc Is the reference in a law of the Commonwealth or in a Territory Ordinance?
+      `it is the maximum amount of a penalty` IS A BOOLEAN @desc Is the dollar amount the maximum amount of a penalty?
+      `a court or service tribunal imposes it` IS A BOOLEAN @desc Is the penalty imposed by a court, or by a service tribunal under the Defence Force Discipline Act 1982?
+      `it is section 76 of the Competition and Consumer Act 2010` IS A BOOLEAN @desc Is the provision section 76 of the Competition and Consumer Act 2010?
+      `it is a prescribed provision` IS A BOOLEAN @desc Is the provision one of a law of the Commonwealth prescribed for the purposes of section 4AB(3)?
+GIVETH A ConversionAnswer
+DECIDE `How many penalty units is a penalty stated in dollars taken to be` IS
+    CONSIDER `s 4AB the conversion of a penalty of D dollars to penalty units applies` `the law is a law of the Commonwealth or a Territory Ordinance` `it is the maximum amount of a penalty` `a court or service tribunal imposes it` `it is section 76 of the Competition and Consumer Act 2010` `it is a prescribed provision`
+    WHEN JUST TRUE THEN `converted to penalty units` (`s 4AB(1) P is` `the penalty in dollars`)
+    WHEN JUST FALSE THEN `the text says the conversion does not apply`
+    WHEN NOTHING THEN `the text does not say how this converts`
+
+§§ `What a court may fine a natural person or a body corporate (s 4B)`
+
+-- s 4B(2) and (2A). Where a natural person is convicted of an offence punishable
+-- by imprisonment only, the court may, unless a contrary intention appears and if
+-- it thinks it appropriate, impose a pecuniary penalty instead of, or as well as,
+-- imprisonment of not more than 5 penalty units for each month of the longest
+-- term; where the offence is punishable by imprisonment for life, not more than
+-- 2,000 penalty units.
+@export What is the most pecuniary penalty a court may impose on a natural person instead of, or as well as, imprisonment, in penalty units (s 4B(2), (2A))?
+GIVEN `I am a natural person convicted of an offence against a law of the Commonwealth` IS A BOOLEAN @desc Is the defendant a natural person (not a body corporate) convicted of an offence against a law of the Commonwealth?
+      `the offence is punishable by imprisonment only` IS A BOOLEAN @desc Is the offence punishable by imprisonment only (no fine is provided for it)?
+      `the offence is punishable by imprisonment for life` IS A BOOLEAN @desc Can a court impose imprisonment for life for the offence?
+      `the longest term of imprisonment in months` IS A NUMBER @desc What is the longest term of imprisonment for the offence, in months? (Enter 0 if the offence carries imprisonment for life.)
+      `a contrary intention appears` IS A BOOLEAN @desc Does the law creating the offence show an intention that section 4B should not apply?
+      `the court thinks it appropriate` IS A BOOLEAN @desc Does the court think it appropriate in all the circumstances of the case?
+GIVETH A MostAnswer
+DECIDE `What is the most pecuniary penalty a court may impose on a natural person` IS
+    IF `the offence is punishable by imprisonment for life`
+    THEN CONSIDER `s 4B(2A) the court may impose a pecuniary penalty instead of, or in addition to, imprisonment for life` `I am a natural person convicted of an offence against a law of the Commonwealth` `the offence is punishable by imprisonment for life` `a contrary intention appears` `the court thinks it appropriate`
+         WHEN JUST TRUE THEN CONSIDER `s 4B(2A) the number of penalty units the pecuniary penalty may not exceed` `I am a natural person convicted of an offence against a law of the Commonwealth` `the offence is punishable by imprisonment for life` `a contrary intention appears` `the court thinks it appropriate`
+                                  WHEN JUST n THEN `no more than this` n
+                                  WHEN NOTHING THEN `the text does not say`
+         WHEN JUST FALSE THEN `none is allowed by this provision`
+         WHEN NOTHING THEN `the text does not say`
+    ELSE CONSIDER `s 4B(2) the court may impose a pecuniary penalty instead of, or in addition to, imprisonment` `I am a natural person convicted of an offence against a law of the Commonwealth` `the offence is punishable by imprisonment only` `a contrary intention appears` `the court thinks it appropriate`
+         WHEN JUST TRUE THEN CONSIDER `s 4B(2) the number of penalty units the pecuniary penalty may not exceed` `I am a natural person convicted of an offence against a law of the Commonwealth` `the offence is punishable by imprisonment only` `a contrary intention appears` `the court thinks it appropriate` (Months `the longest term of imprisonment in months`)
+                                  WHEN JUST n THEN `no more than this` n
+                                  WHEN NOTHING THEN `the text does not say`
+         WHEN JUST FALSE THEN `none is allowed by this provision`
+         WHEN NOTHING THEN `the text does not say`
+
+-- s 4B(3). Where a body corporate is convicted of an offence against a law of
+-- the Commonwealth, the court may, unless a contrary intention appears and if
+-- it thinks fit, impose a pecuniary penalty of not more than 5 times the most
+-- that could be imposed on a natural person convicted of the same offence.
+@export What is the most pecuniary penalty a court may impose on a body corporate, in penalty units (s 4B(3))?
+GIVEN `I am a body corporate convicted of an offence against a law of the Commonwealth` IS A BOOLEAN @desc Is the defendant a body corporate convicted of an offence against a law of the Commonwealth?
+      `a contrary intention appears` IS A BOOLEAN @desc Does the law creating the offence show an intention that section 4B(3) should not apply?
+      `the court thinks fit` IS A BOOLEAN @desc Does the court think fit to impose a pecuniary penalty?
+      `the most a natural person could be fined for the same offence` IS A NUMBER @desc What is the most pecuniary penalty, in penalty units, that the court could impose on a natural person convicted of the same offence?
+GIVETH A MostAnswer
+DECIDE `What is the most pecuniary penalty a court may impose on a body corporate` IS
+    CONSIDER `s 4B(3) the court may impose a pecuniary penalty on a body corporate` `I am a body corporate convicted of an offence against a law of the Commonwealth` `a contrary intention appears` `the court thinks fit`
+    WHEN JUST TRUE THEN CONSIDER `s 4B(3) the number of penalty units the pecuniary penalty on a body corporate may not exceed` `I am a body corporate convicted of an offence against a law of the Commonwealth` `a contrary intention appears` `the court thinks fit` `the most a natural person could be fined for the same offence`
+                             WHEN JUST n THEN `no more than this` n
+                             WHEN NOTHING THEN `the text does not say`
+    WHEN JUST FALSE THEN `none is allowed by this provision`
+    WHEN NOTHING THEN `the text does not say`
+
+§§ `The penalty printed at the foot of a provision (s 4D)`
+
+-- s 4D(1) and (1A). A penalty printed at the foot of a section, of a subsection
+-- (and so also where it is at the foot of the section containing it), of a clause
+-- of a Schedule, or of a subclause is, unless a contrary intention appears, the
+-- most that can be imposed; where the provision does not itself create an
+-- offence, contravening it is an offence punishable by that penalty.
+@export Is the offence punishable up to the penalty printed at the foot of the provision (s 4D(1))?
+GIVEN `where the penalty is printed` IS A WherePrinted @desc Where is the penalty printed?
+      `the provision expressly creates an offence` IS A BOOLEAN @desc Does the provision itself expressly create an offence?
+      `a contrary intention appears` IS A BOOLEAN @desc Does the law show an intention that the printed penalty is not the penalty?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is the offence punishable up to the penalty printed at the foot of the provision` IS
+    IF `the provision expressly creates an offence`
+    THEN `s 4D(1)(a) the offence is punishable on conviction by a penalty not exceeding the penalty so set out` (`the position of the printed penalty` `where the penalty is printed`) `the provision expressly creates an offence` `a contrary intention appears`
+    ELSE `s 4D(1)(b) contravention of the provision is an offence against the provision, punishable on conviction by a penalty not exceeding the penalty so set out` (`the position of the printed penalty` `where the penalty is printed`) `the provision expressly creates an offence` `a contrary intention appears`
+
+@export Does the penalty printed at the foot of a rule, regulation or by-law made under an Act work the same way (s 4D(2))?
+GIVEN `it is an instrument made under an Act` IS A BOOLEAN @desc Is it an instrument made under an Act (including rules, regulations or by-laws)?
+      `it is a law of a Territory` IS A BOOLEAN @desc Is it a law of a Territory?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Does the penalty printed at the foot of a rule, regulation or by-law work the same way` IS
+    `s 4D(2) subsection (1) applies to the instrument` `it is an instrument made under an Act` `it is a law of a Territory`
+
+@export Does the penalty printed at the foot of a provision change how section 4B works (s 4D(1B))?
+GIVEN `which provision it is` IS A ProvisionOfSection4B @desc Which provision is it: subsection 4B(2), subsection 4B(2A), subsection 4B(3), or another provision?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Does the penalty printed at the foot of a provision change how section 4B works` IS
+    `s 4D(1B) subsection (1) affects the operation of` `which provision it is`
+
+§§ `Where a pecuniary penalty is recovered, and later changes in a penalty (ss 4E, 4F)`
+
+@export May the pecuniary penalty be recovered in a court of summary jurisdiction (s 4E)?
+GIVEN `it is a pecuniary penalty for an offence against a law of the Commonwealth` IS A BOOLEAN @desc Is it a pecuniary penalty for an offence against a law of the Commonwealth?
+      `the court is a court of summary jurisdiction` IS A BOOLEAN @desc Is the court a court of summary jurisdiction?
+      `a contrary intention appears` IS A BOOLEAN @desc Does the law show an intention that the penalty may not be recovered there?
+GIVETH A MAYBE BOOLEAN
+DECIDE `May the pecuniary penalty be recovered in a court of summary jurisdiction` IS
+    `s 4E the pecuniary penalty may be recovered in the court` `it is a pecuniary penalty for an offence against a law of the Commonwealth` `the court is a court of summary jurisdiction` `a contrary intention appears`
+
+@export Does a later increase in the penalty apply to my offence (s 4F(1))?
+GIVEN `a law of the Commonwealth increases the penalty` IS A BOOLEAN @desc Has a provision of a law of the Commonwealth increased the penalty or maximum penalty for the offence?
+      `the day of my offence` IS A DATE @desc On what day was the offence committed?
+      `the day the increase commences` IS A DATE @desc On what day did the increase commence?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Does a later increase in the penalty apply to my offence` IS
+    `s 4F(1) the penalty or maximum penalty as increased applies to the offence` `a law of the Commonwealth increases the penalty` `the day of my offence` `the day the increase commences`
+
+@export Does a later reduction in the penalty reach my offence (s 4F(2))?
+GIVEN `a law of the Commonwealth reduces the penalty` IS A BOOLEAN @desc Has a provision of a law of the Commonwealth reduced the penalty or maximum penalty for the offence?
+      `the day of my offence` IS A DATE @desc On what day was the offence committed?
+      `the day the reduction commences` IS A DATE @desc On what day did the reduction commence?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Does a later reduction in the penalty reach my offence` IS
+    `s 4F(2) the penalty or maximum penalty as reduced extends to an offence committed before the commencement` `a law of the Commonwealth reduces the penalty` `the day of my offence` `the day the reduction commences`
+
+@export Does a later reduction in the penalty affect a penalty already imposed on me (s 4F(2))?
+GIVEN `a law of the Commonwealth reduces the penalty` IS A BOOLEAN @desc Has a provision of a law of the Commonwealth reduced the penalty or maximum penalty for the offence?
+      `the day the penalty was imposed` IS A DATE @desc On what day was the penalty imposed?
+      `the day the reduction commences` IS A DATE @desc On what day did the reduction commence?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Does a later reduction in the penalty affect a penalty already imposed on me` IS
+    `s 4F(2) the reduction affects a penalty imposed before the commencement` `a law of the Commonwealth reduces the penalty` `the day the penalty was imposed` `the day the reduction commences`
+
+§§ `Indictable and summary offences (ss 4G, 4H)`
+
+-- s 4G. An offence against a law of the Commonwealth punishable by imprisonment
+-- for a period exceeding 12 months is indictable, unless a contrary intention
+-- appears.
+@export Is my offence an indictable offence (s 4G)?
+GIVEN `the offence is against a law of the Commonwealth` IS A BOOLEAN @desc Is the offence against a law of the Commonwealth?
+      `the offence is punishable by imprisonment` IS A BOOLEAN @desc Is the offence punishable by imprisonment?
+      `the offence is punishable by imprisonment for life` IS A BOOLEAN @desc Is the offence punishable by imprisonment for life?
+      `the longest term of imprisonment in months` IS A NUMBER @desc What is the longest term of imprisonment for the offence, in months? (Enter 0 if there is none, or if it is for life.)
+      `a contrary intention appears` IS A BOOLEAN @desc Does the law creating the offence show that it is not to be indictable?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is my offence an indictable offence` IS
+    `s 4G the offence is an indictable offence` `the offence is against a law of the Commonwealth` (`the maximum term of imprisonment stated` `the offence is punishable by imprisonment` `the offence is punishable by imprisonment for life` `the longest term of imprisonment in months`) `a contrary intention appears`
+
+-- s 4H. An offence against a law of the Commonwealth punishable by imprisonment
+-- for a period not exceeding 12 months, or not punishable by imprisonment, is
+-- summary, unless a contrary intention appears.
+@export Is my offence a summary offence (s 4H)?
+GIVEN `the offence is against a law of the Commonwealth` IS A BOOLEAN @desc Is the offence against a law of the Commonwealth?
+      `the offence is punishable by imprisonment` IS A BOOLEAN @desc Is the offence punishable by imprisonment?
+      `the offence is punishable by imprisonment for life` IS A BOOLEAN @desc Is the offence punishable by imprisonment for life?
+      `the longest term of imprisonment in months` IS A NUMBER @desc What is the longest term of imprisonment for the offence, in months? (Enter 0 if there is none, or if it is for life.)
+      `a contrary intention appears` IS A BOOLEAN @desc Does the law creating the offence show that it is not to be summary?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is my offence a summary offence` IS
+    `s 4H the offence is a summary offence` `the offence is against a law of the Commonwealth` (`the maximum term of imprisonment stated` `the offence is punishable by imprisonment` `the offence is punishable by imprisonment for life` `the longest term of imprisonment in months`) `a contrary intention appears`
+
+§§ `Dealing with an indictable offence in a court of summary jurisdiction (s 4J)`
+
+-- s 4J(1), (2), (4) and (7). An indictable offence punishable by imprisonment for
+-- not more than 10 years may, with the consent of the prosecutor and the
+-- defendant and unless a contrary intention appears, be heard and determined by a
+-- court of summary jurisdiction; not where subsection (4) refers to it, where
+-- another law lets such a court hear it, or where subsection (7) says section 4J
+-- does not apply.
+@export May a court of summary jurisdiction hear and determine my indictable offence with our consent (s 4J(1))?
+GIVEN `the offence is an indictable offence against a law of the Commonwealth` IS A BOOLEAN @desc Is the offence an indictable offence against a law of the Commonwealth?
+      `the offence is punishable by imprisonment` IS A BOOLEAN @desc Is the offence punishable by imprisonment?
+      `the offence is punishable by imprisonment for life` IS A BOOLEAN @desc Is the offence punishable by imprisonment for life?
+      `the longest term of imprisonment in months` IS A NUMBER @desc What is the longest term of imprisonment for the offence, in months? (Enter 0 if there is none, or if it is for life.)
+      `the offence relates to property` IS A BOOLEAN @desc Does the offence relate to property?
+      `the value of that property, in dollars` IS A NUMBER @desc What is the value of that property, in dollars? (Enter 0 if the offence does not relate to property.)
+      `another law of the Commonwealth lets a court of summary jurisdiction hear it` IS A BOOLEAN @desc Does a law of the Commonwealth other than the Crimes Act 1914 say that the offence may be heard and determined by a court of summary jurisdiction?
+      `the offence is against this part of the Criminal Code` IS A CriminalCodeOffence @desc Is the offence against Division 80 (other than Subdivision CA), 82, 91 or 92 of the Criminal Code?
+      `a contrary intention appears` IS A BOOLEAN @desc Does the law creating the offence show that it may not be dealt with summarily?
+      `the prosecutor consents` IS A BOOLEAN @desc Does the prosecutor consent to the court of summary jurisdiction hearing it?
+      `the defendant consents` IS A BOOLEAN @desc Do you, the defendant, consent to the court of summary jurisdiction hearing it?
+GIVETH A MAYBE BOOLEAN
+DECIDE `May a court of summary jurisdiction hear and determine my indictable offence with our consent` IS
+    `s 4J(1) a court of summary jurisdiction may hear and determine the indictable offence` `the offence is an indictable offence against a law of the Commonwealth` (`the maximum term of imprisonment stated` `the offence is punishable by imprisonment` `the offence is punishable by imprisonment for life` `the longest term of imprisonment in months`) (`s 4J(4) the offence relates to property whose value does not exceed $5,000` (`the value of the property stated` `the offence relates to property` `the value of that property, in dollars`)) `another law of the Commonwealth lets a court of summary jurisdiction hear it` (`s 4J(7) section 4J does not apply to the offence` `the offence is against this part of the Criminal Code` EQUALS JUST TRUE) `a contrary intention appears` `the prosecutor consents` `the defendant consents`
+
+-- s 4J(4). A court of summary jurisdiction may, if it thinks fit, on the
+-- prosecutor's request, hear and determine any proceeding for an indictable
+-- offence relating to property whose value does not exceed $5,000.
+@export May a court of summary jurisdiction hear my indictable offence about property of $5,000 or less on the prosecutor's request (s 4J(4))?
+GIVEN `the offence is an indictable offence against a law of the Commonwealth` IS A BOOLEAN @desc Is the offence an indictable offence against a law of the Commonwealth?
+      `the offence relates to property` IS A BOOLEAN @desc Does the offence relate to property?
+      `the value of that property, in dollars` IS A NUMBER @desc What is the value of that property, in dollars? (Enter 0 if the offence does not relate to property.)
+      `the prosecutor requests it` IS A BOOLEAN @desc Has the prosecutor asked the court of summary jurisdiction to hear it?
+      `the court thinks fit` IS A BOOLEAN @desc Does the court think fit to hear it?
+      `the offence is against this part of the Criminal Code` IS A CriminalCodeOffence @desc Is the offence against Division 80 (other than Subdivision CA), 82, 91 or 92 of the Criminal Code?
+GIVETH A MAYBE BOOLEAN
+DECIDE `May a court of summary jurisdiction hear my indictable offence about property of $5,000 or less` IS
+    `s 4J(4) a court of summary jurisdiction may hear and determine the proceeding` `the offence is an indictable offence against a law of the Commonwealth` (`the value of the property stated` `the offence relates to property` `the value of that property, in dollars`) `the prosecutor requests it` `the court thinks fit` (`s 4J(7) section 4J does not apply to the offence` `the offence is against this part of the Criminal Code` EQUALS JUST TRUE)
+
+-- s 4J(3), (5) and (6)(a). The most months of imprisonment a court of summary
+-- jurisdiction may impose when it deals with the offence under subsection (1) is
+-- 12 where the offence is punishable by imprisonment for not more than 5 years
+-- and 24 where it is more than 5 years but not more than 10; under subsection
+-- (4) it is 12; never more than could have been imposed on indictment.
+@export What is the most imprisonment, in months, a court of summary jurisdiction may impose on me (s 4J(3), (5), (6)(a))?
+GIVEN `the court is dealing with it under subsection (4)` IS A BOOLEAN @desc Is the court dealing with it under section 4J(4) (property of $5,000 or less on the prosecutor's request), rather than under section 4J(1) (with consent)?
+      `the offence is punishable by imprisonment` IS A BOOLEAN @desc Is the offence punishable by imprisonment?
+      `the offence is punishable by imprisonment for life` IS A BOOLEAN @desc Is the offence punishable by imprisonment for life?
+      `the longest term of imprisonment in months` IS A NUMBER @desc What is the longest term of imprisonment that could be imposed on trial on indictment, in months? (Enter 0 if there is none, or if it is for life.)
+GIVETH A MAYBE NUMBER
+DECIDE `What is the most imprisonment, in months, a court of summary jurisdiction may impose on me` IS
+    CONSIDER `the limit under subsection (3) or (5)`
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST limit THEN `s 4J(6)(a) the most months of imprisonment the court may impose` limit `the term on indictment`
+    WHERE
+        `the term on indictment` MEANS `the maximum term of imprisonment stated` `the offence is punishable by imprisonment` `the offence is punishable by imprisonment for life` `the longest term of imprisonment in months`
+        `the limit under subsection (3) or (5)` MEANS
+            IF `the court is dealing with it under subsection (4)`
+            THEN `s 4J(5) the most months of imprisonment the court may impose` TRUE
+            ELSE `s 4J(3) the most months of imprisonment the court may impose` TRUE `the term on indictment`
+
+-- s 4J(3), (5) and (6)(b). The most fine, in penalty units, is 60 where the
+-- offence is punishable by imprisonment for not more than 5 years (or the court
+-- deals with it under subsection (4)) and 120 where it is more than 5 years but
+-- not more than 10; never more than the most fine that could have been imposed
+-- on trial on indictment.
+@export What is the most fine, in penalty units, a court of summary jurisdiction may impose on me (s 4J(3), (5), (6)(b))?
+GIVEN `the court is dealing with it under subsection (4)` IS A BOOLEAN @desc Is the court dealing with it under section 4J(4) (property of $5,000 or less on the prosecutor's request), rather than under section 4J(1) (with consent)?
+      `the offence is punishable by imprisonment` IS A BOOLEAN @desc Is the offence punishable by imprisonment?
+      `the offence is punishable by imprisonment for life` IS A BOOLEAN @desc Is the offence punishable by imprisonment for life?
+      `the longest term of imprisonment in months` IS A NUMBER @desc What is the longest term of imprisonment that could be imposed on trial on indictment, in months? (Enter 0 if there is none, or if it is for life.)
+      `the most fine on trial on indictment` IS A NUMBER @desc What is the most fine, in penalty units, that could have been imposed had the offence been tried on indictment?
+GIVETH A MAYBE NUMBER
+DECIDE `What is the most fine, in penalty units, a court of summary jurisdiction may impose on me` IS
+    CONSIDER `the limit under subsection (3) or (5)`
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST limit THEN JUST (`s 4J(6)(b) the most penalty units of fine the court may impose` limit `the most fine on trial on indictment`)
+    WHERE
+        `the term on indictment` MEANS `the maximum term of imprisonment stated` `the offence is punishable by imprisonment` `the offence is punishable by imprisonment for life` `the longest term of imprisonment in months`
+        `the limit under subsection (3) or (5)` MEANS
+            IF `the court is dealing with it under subsection (4)`
+            THEN `s 4J(5) the most penalty units of fine the court may impose` TRUE
+            ELSE `s 4J(3) the most penalty units of fine the court may impose` TRUE `the term on indictment`
+
+-- s 4J(6)(c). A court of summary jurisdiction shall not impose both a sentence
+-- of imprisonment and a fine if the offence is punishable on trial on
+-- indictment by a sentence of imprisonment or a fine, but not both.
+@export May a court of summary jurisdiction impose both imprisonment and a fine on me (s 4J(6)(c))?
+GIVEN `it is punishable on indictment by imprisonment or a fine but not both` IS A BOOLEAN @desc Is the offence punishable on trial on indictment by a sentence of imprisonment or a fine, but not both?
+GIVETH A MAYBE BOOLEAN
+DECIDE `May a court of summary jurisdiction impose both imprisonment and a fine on me` IS
+    `s 4J(6)(c) the court may impose both a sentence of imprisonment and a fine` `it is punishable on indictment by imprisonment or a fine but not both`
+
+§§ `Dealing with an indictable offence punishable by a fine only (s 4JA)`
+
+-- s 4JA(1), (3) and (4). A court of summary jurisdiction may hear and determine
+-- an indictable offence that is not punishable by imprisonment, where the
+-- pecuniary penalty is not more than 600 penalty units for an individual or
+-- 3,000 for a body corporate, and the defendant and prosecution consent; subject
+-- to a contrary intention of the law creating the offence, and not where that
+-- law lets such a court hear it or the offence is one described in section
+-- 4J(4).
+@export May a court of summary jurisdiction hear and determine my fine-only indictable offence (s 4JA(1))?
+GIVEN `the offence is an indictable offence` IS A BOOLEAN @desc Is the offence an indictable offence?
+      `the offence is punishable by imprisonment` IS A BOOLEAN @desc Is the offence punishable by imprisonment?
+      `I am a body corporate` IS A BOOLEAN @desc Is the defendant a body corporate (answer no for an individual)?
+      `the pecuniary penalty for the offence in penalty units` IS A NUMBER @desc What is the pecuniary penalty for the offence, in penalty units?
+      `the defendant and prosecution consent` IS A BOOLEAN @desc Do the defendant and the prosecution consent to the court of summary jurisdiction hearing it?
+      `the law creating the offence shows a contrary intention` IS A BOOLEAN @desc Does the law creating the offence show that it may not be dealt with summarily?
+      `the law creating the offence lets a court of summary jurisdiction hear it` IS A BOOLEAN @desc Does the law creating the offence provide that it may be heard and determined by a court of summary jurisdiction?
+      `the offence relates to property` IS A BOOLEAN @desc Does the offence relate to property?
+      `the value of that property, in dollars` IS A NUMBER @desc What is the value of that property, in dollars? (Enter 0 if the offence does not relate to property.)
+GIVETH A MAYBE BOOLEAN
+DECIDE `May a court of summary jurisdiction hear and determine my fine-only indictable offence` IS
+    `s 4JA(1) a court of summary jurisdiction may hear and determine the indictable offence` `the offence is an indictable offence` `the offence is punishable by imprisonment` `the kind of defendant` `the pecuniary penalty for the offence in penalty units` `the defendant and prosecution consent` `the law creating the offence shows a contrary intention` `the law creating the offence lets a court of summary jurisdiction hear it` (`the value of the property stated` `the offence relates to property` `the value of that property, in dollars`)
+    WHERE
+        `the kind of defendant` MEANS IF `I am a body corporate` THEN `a body corporate` ELSE `an individual`
+
+-- s 4JA(2). Paragraphs (a) and (b) each give a figure with a condition on the
+-- penalty on indictment, and the conditions overlap (an offence within (a)'s
+-- condition is also within (b)'s). The first question reads the two as
+-- alternatives and gives the greater figure; the second reads (a) as covering
+-- only the lower band. Either way the court may not impose more than the
+-- penalty that could have been imposed on indictment.
+@export What is the most pecuniary penalty, in penalty units, a court of summary jurisdiction may impose for my fine-only offence, reading paragraphs (a) and (b) as alternatives (s 4JA(2))?
+GIVEN `I am a body corporate` IS A BOOLEAN @desc Is the defendant a body corporate (answer no for an individual)?
+      `the penalty on indictment in penalty units` IS A NUMBER @desc What is the pecuniary penalty that could have been imposed if the offence had been prosecuted on indictment, in penalty units?
+GIVETH A MAYBE NUMBER
+DECIDE `What is the most pecuniary penalty a court of summary jurisdiction may impose for my fine-only offence, reading paragraphs (a) and (b) as alternatives` IS
+    `s 4JA(2) the most penalty units the court may impose, on the reading that either paragraph may be used` (IF `I am a body corporate` THEN `a body corporate` ELSE `an individual`) `the penalty on indictment in penalty units`
+
+@export What is the most pecuniary penalty, in penalty units, a court of summary jurisdiction may impose for my fine-only offence, reading paragraph (a) as covering only the lower band (s 4JA(2))?
+GIVEN `I am a body corporate` IS A BOOLEAN @desc Is the defendant a body corporate (answer no for an individual)?
+      `the penalty on indictment in penalty units` IS A NUMBER @desc What is the pecuniary penalty that could have been imposed if the offence had been prosecuted on indictment, in penalty units?
+GIVETH A MAYBE NUMBER
+DECIDE `What is the most pecuniary penalty a court of summary jurisdiction may impose for my fine-only offence, reading paragraph (a) as covering only the lower band` IS
+    `s 4JA(2) the most penalty units the court may impose, on the reading that paragraph (a) governs the lower band` (IF `I am a body corporate` THEN `a body corporate` ELSE `an individual`) `the penalty on indictment in penalty units`
+
+§§ `Offences under two or more laws (s 4C)`
+
+-- s 4C(1). Where an act or omission is an offence under 2 or more laws of the
+-- Commonwealth, or under a law of the Commonwealth and at common law, the
+-- offender is, unless a contrary intention appears, liable to be prosecuted and
+-- punished under either or any of them, but not to be punished twice for the
+-- same act or omission.
+@export May I be prosecuted and punished under either or any of the laws that make my act an offence (s 4C(1))?
+GIVEN `my act is an offence under 2 or more laws of the Commonwealth` IS A BOOLEAN @desc Is the act or omission an offence under 2 or more laws of the Commonwealth?
+      `my act is an offence under a law of the Commonwealth and at common law` IS A BOOLEAN @desc Is the act or omission an offence both under a law of the Commonwealth and at common law?
+      `a contrary intention appears` IS A BOOLEAN @desc Does a law show an intention that you may not be prosecuted and punished under each of them?
+GIVETH A MAYBE BOOLEAN
+DECIDE `May I be prosecuted and punished under either or any of the laws that make my act an offence` IS
+    `s 4C(1) the offender is liable to be prosecuted and punished under either or any of those laws` (`the overlap of laws`) `a contrary intention appears`
+    WHERE
+        `the overlap of laws` MEANS
+            BRANCH IF `my act is an offence under 2 or more laws of the Commonwealth` THEN `2 or more laws of the Commonwealth`
+                   IF `my act is an offence under a law of the Commonwealth and at common law` THEN `a law of the Commonwealth and the common law`
+                   OTHERWISE `some other combination of laws`
+
+@export May I be punished twice for the same act or omission (s 4C(1))?
+GIVEN `my act is an offence under 2 or more laws of the Commonwealth` IS A BOOLEAN @desc Is the act or omission an offence under 2 or more laws of the Commonwealth?
+      `my act is an offence under a law of the Commonwealth and at common law` IS A BOOLEAN @desc Is the act or omission an offence both under a law of the Commonwealth and at common law?
+GIVETH A MAYBE BOOLEAN
+DECIDE `May I be punished twice for the same act or omission` IS
+    `s 4C(1) the offender is liable to be punished twice for the same act or omission` (`the overlap of laws`)
+    WHERE
+        `the overlap of laws` MEANS
+            BRANCH IF `my act is an offence under 2 or more laws of the Commonwealth` THEN `2 or more laws of the Commonwealth`
+                   IF `my act is an offence under a law of the Commonwealth and at common law` THEN `a law of the Commonwealth and the common law`
+                   OTHERWISE `some other combination of laws`
+
+-- s 4C(2). Where an act or omission is an offence under both a law of the
+-- Commonwealth and a law of a State or of a Territory, and the offender has
+-- been punished under the State or Territory law, the offender is not liable to
+-- be punished under the law of the Commonwealth. Section 3(1) makes the
+-- Northern Territory a State and not a Territory.
+@export May I be punished under the law of the Commonwealth after I have been punished under a State or Territory law for the same act (s 4C(2))?
+GIVEN `my act is also an offence under a law of the Commonwealth` IS A BOOLEAN @desc Is the act or omission an offence under a law of the Commonwealth?
+      `where the other law comes from` IS A WhereTheOtherLawComesFrom @desc Where does the other law, the one that makes the act an offence, come from?
+      `I have been punished under that other law` IS A BOOLEAN @desc Have you been punished for the offence under that State or Territory law?
+GIVETH A MAYBE BOOLEAN
+DECIDE `May I be punished under the law of the Commonwealth after I have been punished under a State or Territory law for the same act` IS
+    `s 4C(2) the offender is liable to be punished for the offence under the law of the Commonwealth` `my act is also an offence under a law of the Commonwealth` `the other law is a law of a State` `the other law is a law of a Territory` `I have been punished under that other law`
+    WHERE
+        `the other law is a law of a State` MEANS
+            CONSIDER `where the other law comes from`
+            WHEN `the Northern Territory` THEN `s 3(1) a place is a State` NorthernTerritory FALSE EQUALS JUST TRUE
+            WHEN `a State other than the Northern Territory` THEN TRUE
+            WHEN `the Australian Capital Territory or another Territory` THEN FALSE
+        `the other law is a law of a Territory` MEANS
+            CONSIDER `where the other law comes from`
+            WHEN `the Northern Territory` THEN NOT (`s 3(1) a place is a Territory` NorthernTerritory FALSE EQUALS JUST FALSE)
+            WHEN `a State other than the Northern Territory` THEN FALSE
+            WHEN `the Australian Capital Territory or another Territory` THEN TRUE
+
+§§ `Defences (s 4L)`
+
+@export Does a defence set out in the law stop me using any other defence that is open to me (s 4L)?
+GIVEN `a provision of a law of the Commonwealth provides a defence to the offence` IS A BOOLEAN @desc Does a provision of a law of the Commonwealth provide a defence to the particular offence?
+      `a contrary intention appears` IS A BOOLEAN @desc Does the law show an intention that its defence is the only defence?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Does a defence set out in the law stop me using any other defence that is open to me` IS
+    CONSIDER `s 4L the provision does not prevent the use of any defence that is otherwise available` `a provision of a law of the Commonwealth provides a defence to the offence` `a contrary intention appears`
+    WHEN JUST TRUE THEN JUST FALSE
+    WHEN JUST FALSE THEN JUST TRUE
+    WHEN NOTHING THEN NOTHING
+
+§§ `Continuing offences, joined charges and one penalty (s 4K)`
+
+@export Does the obligation to do the act continue after the deadline has passed (s 4K(1))?
+GIVEN `a law of the Commonwealth requires the act within a period or before a time` IS A BOOLEAN @desc Does a law of the Commonwealth require an act or thing to be done within a particular period or before a particular time?
+      `the period has expired or the time has passed` IS A BOOLEAN @desc Has the period expired, or the time passed?
+      `the act has been done` IS A BOOLEAN @desc Has the act or thing been done?
+      `a contrary intention appears` IS A BOOLEAN @desc Does the law show an intention that the obligation does not continue?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Does the obligation to do the act continue after the deadline has passed` IS
+    `s 4K(1) the obligation to do that act or thing continues` `a law of the Commonwealth requires the act within a period or before a time` `the period has expired or the time has passed` `the act has been done` `a contrary intention appears`
+
+@export How many days is a continuing failure to comply charged as separate offences (s 4K(2))?
+GIVEN `the first day I failed to comply` IS A DATE @desc On what day did you first refuse or fail to comply?
+      `the last day I failed to comply` IS A DATE @desc On what day did you last refuse or fail to comply (or the day of conviction, or any later day, if you still do)?
+GIVETH A MAYBE NUMBER
+DECIDE `How many days is a continuing failure to comply charged as separate offences` IS
+    `the number of days in respect of each of which an offence is committed` `the first day I failed to comply` `the last day I failed to comply`
+
+@export May the charges against me be joined in the same information, complaint or summons (s 4K(3))?
+GIVEN `the charges are against the same person` IS A BOOLEAN @desc Are the charges against the same person?
+      `the offences are against the same provision` IS A BOOLEAN @desc Are all the offences against the same provision of a law of the Commonwealth?
+      `the charges are founded on the same facts` IS A BOOLEAN @desc Are the charges founded on the same facts?
+      `the charges are a series of the same or a similar character` IS A BOOLEAN @desc Do the charges form, or are they part of, a series of offences of the same or a similar character?
+GIVETH A MAYBE BOOLEAN
+DECIDE `May the charges against me be joined in the same information, complaint or summons` IS
+    `s 4K(3) the charges may be joined in the same information, complaint or summons` `the charges are against the same person` `the offences are against the same provision` `the charges are founded on the same facts` `the charges are a series of the same or a similar character`
+
+@export What is the most one penalty may be for several joined offences (s 4K(4))?
+GIVEN `I am convicted of 2 or more of those offences` IS A BOOLEAN @desc Are you convicted of 2 or more of the joined offences?
+      `the most for the first offence` IS A NUMBER @desc What is the most that could be imposed for the first offence? (Use one unit throughout: penalty units, or months of imprisonment.)
+      `the most for the second offence` IS A NUMBER @desc What is the most that could be imposed for the second offence?
+      `the most for a third offence` IS A NUMBER @desc What is the most that could be imposed for a third offence? (Enter 0 if there is no third offence.)
+GIVETH A MAYBE NUMBER
+DECIDE `What is the most one penalty may be for several joined offences` IS
+    `s 4K(4) the most the one penalty may be` `I am convicted of 2 or more of those offences` (LIST `the most for the first offence`, `the most for the second offence`, `the most for a third offence`)
+
+§§ `Children (ss 4M, 4N)`
+
+-- ss 4M and 4N(1). A child under 10 cannot be liable for an offence against a
+-- law of the Commonwealth. A child aged 10 or more but under 14 can be liable
+-- only if the child "knows that his or her conduct is wrong". The age is the
+-- number of completed years on the day of the offence.
+@export Can a child of this age be liable for an offence against a law of the Commonwealth (ss 4M, 4N)?
+GIVEN `the child's date of birth` IS A DATE @desc What is the child's date of birth?
+      `the day of the offence` IS A DATE @desc On what day was the offence committed?
+      `the child knows that his or her conduct is wrong` IS A BOOLEAN @desc Does the child know that his or her conduct is wrong?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Can a child of this age be liable for an offence against a law of the Commonwealth` IS
+    CONSIDER `the age in completed years` `the child's date of birth` `the day of the offence`
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST age THEN `ss 4M and 4N(1) a child can be liable for an offence against a law of the Commonwealth` age `the child knows that his or her conduct is wrong`
+
+@export How old is the child, in completed years, on the day of the offence (ss 4M, 4N)?
+GIVEN `the child's date of birth` IS A DATE @desc What is the child's date of birth?
+      `the day of the offence` IS A DATE @desc On what day was the offence committed?
+GIVETH A MAYBE NUMBER
+DECIDE `How old is the child, in completed years, on the day of the offence` IS
+    `the age in completed years` `the child's date of birth` `the day of the offence`
