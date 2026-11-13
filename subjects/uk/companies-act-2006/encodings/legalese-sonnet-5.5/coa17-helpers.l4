@@ -1,0 +1,136 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `coa-core`
+
+-- coa17-helpers.l4: small helpers that the coa17 modules share. Layer 1, part coa17 (Part 21 and Part 21A of the
+-- Companies Act 2006, ss 768 to 790ZH). Every name begins with the section label of the first provision that needs it.
+--
+-- SOURCE. The text is a plain-text rendering of the Act from legislation.gov.uk (Open Government Licence v3.0) made by
+-- a converter script (inputs/SOURCES.md). It is not the official text, and nothing here is "verified against the
+-- official text". The helpers quote nothing: they carry no law of their own, only the arithmetic and the three-valued
+-- logic that the sections below them need.
+--
+-- THREE-VALUED ANSWERS (the rule of 2026-10-29). A MAYBE BOOLEAN is JUST TRUE, JUST FALSE or NOTHING ("not covered").
+-- Where a section combines two such answers, a JUST FALSE on one side settles a conjunction, a JUST TRUE on one side
+-- settles a disjunction, and otherwise NOTHING stays NOTHING: a caller never turns NOTHING into FALSE.
+
+-- FORK NUMBERS in the comments of every coa17 module are those of NOTES.md, "Fork register (coa17)". The helpers carry: F1
+-- (`s 790D(4)(b) the last day of the period of 14 days beginning with the day` is the day plus 13, and `s 790LO(2) ...`
+-- the day plus 27), F2 (month counting), F9 (an act on the last day of the period is in time).
+
+§ `Helpers: three-valued logic`
+
+-- s 790C(6)(a) and (b) are joined by "and"; the same helper serves every conjunction of two seam answers.
+GIVEN a IS A MAYBE BOOLEAN
+      b IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 790C(6) both answers hold` MEANS
+    CONSIDER a
+    WHEN JUST x THEN
+        CONSIDER b
+        WHEN JUST y THEN JUST (x AND y)
+        WHEN NOTHING THEN IF x THEN NOTHING ELSE JUST FALSE
+    WHEN NOTHING THEN
+        CONSIDER b
+        WHEN JUST y THEN IF y THEN NOTHING ELSE JUST FALSE
+        WHEN NOTHING THEN NOTHING
+
+-- s 790C(7)(a) to (d) are alternatives; the same helper serves every disjunction of two seam answers.
+GIVEN a IS A MAYBE BOOLEAN
+      b IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 790C(7) either answer holds` MEANS
+    CONSIDER a
+    WHEN JUST x THEN
+        CONSIDER b
+        WHEN JUST y THEN JUST (x OR y)
+        WHEN NOTHING THEN IF x THEN JUST TRUE ELSE NOTHING
+    WHEN NOTHING THEN
+        CONSIDER b
+        WHEN JUST y THEN IF y THEN JUST TRUE ELSE NOTHING
+        WHEN NOTHING THEN NOTHING
+
+§ `Helpers: periods the text counts`
+
+-- "within the period of 14 days beginning with the day on which ..." (790D(4)(b) and every other 14-day notice):
+-- the day itself is the first day of the period, so the last day is thirteen days later.
+GIVEN `the day the period begins` IS A DATE
+GIVETH A DATE
+`s 790D(4)(b) the last day of the period of 14 days beginning with the day` MEANS
+    `the day the period begins` PLUS 13
+
+-- "within the period of 28 days beginning with ..." (790LO(2), 790LP(3), 790LR(4)): the last day is 27 days later.
+GIVEN `the day the period begins` IS A DATE
+GIVETH A DATE
+`s 790LO(2) the last day of the period of 28 days beginning with the day` MEANS
+    `the day the period begins` PLUS 27
+
+-- "the end of the period of one month beginning with the day on which ..." (790D(3), 790G(3)): the period ends on the
+-- day before the corresponding day of the next month; where the next month has no such day (a period beginning on the
+-- 31st of January), it ends on the last day of that month. The Act does not state a month-counting rule (fork F2).
+GIVEN `the day the period begins` IS A DATE
+GIVETH A DATE
+`s 790D(3) the last day of the period of one month beginning with the day` MEANS
+    IF DATE_DAY `the day the period begins` GREATER THAN DATE_DAY (`add months` `the day the period begins` 1)
+    THEN `add months` `the day the period begins` 1
+    ELSE (`add months` `the day the period begins` 1) MINUS 1
+
+-- "within two months after the date ..." (769(1), 771(1), 776(1)): the corresponding day two months later, or the last
+-- day of that month where there is none (the day is not counted: the period runs after it).
+GIVEN `the day the period runs from` IS A DATE
+GIVETH A DATE
+`s 769(1) the last day of the period of two months after the day` MEANS
+    `add months` `the day the period runs from` 2
+
+-- A notice or act that a section requires "within" a period that it fixes in its own words: done by the last day of the
+-- period is in time; done after it is out of time (the text says no); not yet done is out of time once the period has
+-- ended, and not yet decided before then. The calling section quotes its own words beside the call.
+GIVEN `the last day of the period` IS A DATE
+      `the day on which it was done` IS A MAYBE DATE
+      `the day on which the question is asked` IS A DATE
+GIVETH A MAYBE BOOLEAN
+`s 790D(4)(b) the act was done by the last day of the period` MEANS
+    CONSIDER `the day on which it was done`
+    WHEN JUST done THEN
+        IF done AT MOST `the last day of the period`
+        THEN JUST TRUE
+        ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): the period that the calling section fixes in its own words (done after its last day)
+    WHEN NOTHING THEN
+        IF `the day on which the question is asked` GREATER THAN `the last day of the period`
+        THEN JUST FALSE -- FALSE-kind (the text says no in its own words): the period that the calling section fixes in its own words (not done, and its last day has passed)
+        ELSE NOTHING -- NOTHING-kind (silent): not yet done, and the period has not ended
+
+-- "must require the person to comply with the notice by no later than the end of the period of one month beginning with
+-- the day on which it is given" (790D(3), 790DA(5), 790E(3), 790EA(3)).
+GIVEN `the day the notice is given` IS A DATE
+      `the day by which the notice requires compliance` IS A DATE
+GIVETH A MAYBE BOOLEAN
+`s 790D(3) the day required for compliance is no later than the end of the period of one month` MEANS
+    IF `the day by which the notice requires compliance` AT MOST `s 790D(3) the last day of the period of one month beginning with the day` `the day the notice is given`
+    THEN JUST TRUE
+    ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "by no later than the end of the period of one month beginning with the day on which it is given"
+
+§ `Helpers: penalties the text states`
+
+-- "liable on summary conviction to a fine not exceeding level N on the standard scale and, for continued contravention,
+-- a daily default fine not exceeding one-tenth of level N on the standard scale" (769(4), 771(4), 776(6), 790LJ(3) and
+-- 790LT(3)(b)). The pounds that a level stands for are not in the Act: they are inputs where a person needs them.
+GIVEN `the level on the standard scale` IS A NUMBER
+      `the fraction of that level for the daily default fine` IS A NUMBER
+GIVETH A Penalty
+`s 769(4) the penalty on summary conviction of a fine at a level and a daily default fine` MEANS
+    Penalty WITH
+        `how convicted` IS `on summary conviction`
+        `imprisonment not exceeding` IS NOTHING
+        `fine not exceeding` IS JUST (`a fine not exceeding a level on the standard scale` WITH level IS `the level on the standard scale`, `fraction of the level` IS 1)
+        `daily default fine for continued contravention` IS JUST (`a fine not exceeding a level on the standard scale` WITH level IS `the level on the standard scale`, `fraction of the level` IS `the fraction of that level for the daily default fine`)
+        `imprisonment and fine together` IS FALSE
+
+#ASSERT `s 790C(6) both answers hold` (JUST TRUE) (JUST TRUE) EQUALS JUST TRUE
+#ASSERT `s 790C(6) both answers hold` (JUST TRUE) (JUST FALSE) EQUALS JUST FALSE
+#ASSERT `s 790C(6) both answers hold` NOTHING (JUST FALSE) EQUALS JUST FALSE
+#ASSERT `s 790C(6) both answers hold` (JUST TRUE) NOTHING EQUALS NOTHING
+#ASSERT `s 790C(7) either answer holds` NOTHING (JUST TRUE) EQUALS JUST TRUE
+#ASSERT `s 790D(3) the last day of the period of one month beginning with the day` (Date 31 1 2026) EQUALS Date 28 2 2026
+#ASSERT `s 790D(3) the last day of the period of one month beginning with the day` (Date 5 1 2026) EQUALS Date 4 2 2026
+#ASSERT `s 790D(4)(b) the last day of the period of 14 days beginning with the day` (Date 5 1 2026) EQUALS Date 18 1 2026

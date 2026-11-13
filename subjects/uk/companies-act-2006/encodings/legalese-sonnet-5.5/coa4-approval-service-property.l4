@@ -1,0 +1,565 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `coa-core`
+
+-- coa4-approval-service-property.l4: Companies Act 2006 (United Kingdom), Part 10, Chapter 4: Transactions with directors
+-- requiring approval of members: "Service contracts" (ss 188, 189) and "Substantial property transactions" (ss 190 to 196),
+-- lines 2466-2568 of ukpga-2006-46.txt. Layer 1 (the law, objectively).
+--
+-- SOURCE and HOW TO READ AN ANSWER: as in coa4-requirements.l4. Every branch carries its FALSE-kind or NOTHING-kind comment.
+-- The prohibitions ("A company may not ... unless ... approved") are bar functions: JUST TRUE = the section bars the company
+-- from entering into the arrangement (the approval is missing), JUST FALSE = it does not (approved, conditional on approval,
+-- or approval not required), NOTHING = the arrangement is outside the section's own wording or the facts are not known.
+-- "connected with a director" (s 252), "associated" (s 256), "shadow director", "UK-registered company" (s 1158), "wholly-owned
+-- subsidiary" (s 1159(2)) and the other borrowed terms arrive as inputs under the names PLAN.md section 4 gives them.
+-- Naming: every top-level name begins with the label of the provision it implements.
+
+-- ---- s 188: directors' long-term service contracts: requirement of members' approval -----------------------------------------
+
+-- The end of a period that begins on a start day, by the calendar (daydate's `add months` and `add years` clamp to the last
+-- day of a shorter month). A period in working days needs a calendar of working days (s 1173(1), the keel's): NOTHING here.
+-- src:2476 | (3) The guaranteed term of a director's employment is—
+-- src:2477 | (a) the period (if any) during which the director's employment—
+-- src:2478 | (i) is to continue, or may be continued otherwise than at the instance of the company (whether under the original agreement or under a new agreement entered into in pursuance of it), and
+-- src:2479 | (ii) cannot be terminated by the company by notice, or can be so terminated only in specified circumstances, or
+-- src:2480 | (b) in the case of employment terminable by the company by notice, the period of notice required to be given,
+-- src:2481 | or, in the case of employment having a period within paragraph (a) and a period within paragraph (b), the aggregate of those periods.
+@ref s 188(3) The guaranteed term of a director's employment (src:2476-2481)
+GIVEN start IS A DATE
+      p IS A Period
+GIVETH A MAYBE DATE
+`s 188(3) the day on which a period beginning on the start day ends` MEANS
+    CONSIDER p's unit
+    WHEN Days THEN JUST (start PLUS p's `number of units`)
+    WHEN Weeks THEN JUST (start PLUS (7 TIMES p's `number of units`))
+    WHEN Months THEN JUST (`add months` start (p's `number of units`))
+    WHEN Years THEN JUST (`add years` start (p's `number of units`))
+    WHEN `Working days` THEN NOTHING -- NOTHING-kind (points outside the text): working days are counted by the calendar of s 1173(1) (the keel's), which this module does not take
+
+-- (3): the guaranteed term is (a) the period (if any) during which the employment is to continue, or may be continued otherwise
+-- than at the instance of the company, and cannot be terminated by the company by notice (or only in specified circumstances), or
+-- (b) for employment terminable by notice, the period of notice; or, where there are both, the aggregate of the two.
+-- src:2476 | (3) The guaranteed term of a director's employment is—
+-- src:2477 | (a) the period (if any) during which the director's employment—
+-- src:2478 | (i) is to continue, or may be continued otherwise than at the instance of the company (whether under the original agreement or under a new agreement entered into in pursuance of it), and
+-- src:2479 | (ii) cannot be terminated by the company by notice, or can be so terminated only in specified circumstances, or
+-- src:2480 | (b) in the case of employment terminable by the company by notice, the period of notice required to be given,
+-- src:2481 | or, in the case of employment having a period within paragraph (a) and a period within paragraph (b), the aggregate of those periods.
+@ref s 188(3) The guaranteed term of a director's employment (src:2476-2481)
+GIVEN start IS A DATE
+      `the period within paragraph (a)` IS A MAYBE Period
+      `the period within paragraph (b)` IS A MAYBE Period
+GIVETH A MAYBE DATE
+`s 188(3) the day on which the guaranteed term of the director's employment ends` MEANS
+    CONSIDER `the period within paragraph (a)`
+    WHEN NOTHING THEN `the end after paragraph (b)` start
+    WHEN JUST pa THEN
+         CONSIDER `s 188(3) the day on which a period beginning on the start day ends` start pa
+         WHEN NOTHING THEN NOTHING -- NOTHING-kind (points outside the text): the period is counted in working days
+         WHEN JUST d THEN `the end after paragraph (b)` d
+    WHERE
+        -- with neither paragraph the aggregate of the periods is none: the term is nil (fork F52)
+        `the end after paragraph (b)` d MEANS
+            CONSIDER `the period within paragraph (b)`
+            WHEN NOTHING THEN JUST d
+            WHEN JUST pb THEN `s 188(3) the day on which a period beginning on the start day ends` d pb
+
+-- src:2469 | (1) This section applies to provision under which the guaranteed term of a director's employment—
+-- src:2470 | (a) with the company of which he is a director, or
+-- src:2471 | (b) where he is the director of a holding company, within the group consisting of that company and its subsidiaries,
+-- src:2472 | is, or may be, longer than two years.
+@ref s 188(1) Directors' long-term service contracts (src:2469-2472)
+GIVEN `the employment is with the company of which the person is a director or, where the person is the director of a holding company, within the group consisting of that company and its subsidiaries` IS A BOOLEAN
+      `the first day of the employment` IS A DATE
+      `the day on which the longest guaranteed term the provision allows ends` IS A DATE
+GIVETH A MAYBE BOOLEAN
+`s 188(1) section 188 applies to the provision` MEANS
+    IF       `the employment is with the company of which the person is a director or, where the person is the director of a holding company, within the group consisting of that company and its subsidiaries`
+         AND `the day on which the longest guaranteed term the provision allows ends` GREATER THAN (`add years` `the first day of the employment` 2)
+    THEN JUST TRUE
+    ELSE NOTHING -- NOTHING-kind (limited by its own wording): "This section applies to provision under which the guaranteed term of a director's employment— (a) with the company of which he is a director, or (b) where he is the director of a holding company, within the group consisting of that company and its subsidiaries, is, or may be, longer than two years."
+
+-- (4): a further service contract entered into more than six months before the end of the guaranteed term (other than in pursuance
+-- of a right conferred on the other party by or under the original contract): the unexpired period of the original term is added.
+-- src:2482 | (4) If more than six months before the end of the guaranteed term of a director's employment the company enters into a further service contract (otherwise than in pursuance of a right conferred, by or under the original contract, on the other party to it), this section applies as if there were added to the guaranteed term of the new contract the unexpired period of the guaranteed term of the original contract.
+@ref s 188(4) A further service contract (src:2482)
+GIVEN `the day the company enters into the further service contract` IS A DATE
+      `the day on which the guaranteed term of the original contract ends` IS A DATE
+      `the further service contract is entered into in pursuance of a right conferred, by or under the original contract, on the other party to it` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 188(4) the unexpired period of the original guaranteed term is added to the guaranteed term of the new contract` MEANS
+    IF NOT (`the day on which the guaranteed term of the original contract ends` GREATER THAN (`add months` `the day the company enters into the further service contract` 6))
+    THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "If more than six months before the end of the guaranteed term of a director's employment the company enters into a further service contract"
+    ELSE IF `the further service contract is entered into in pursuance of a right conferred, by or under the original contract, on the other party to it`
+         THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "(otherwise than in pursuance of a right conferred, by or under the original contract, on the other party to it)"
+         ELSE JUST TRUE
+
+@ref s 188(4) The unexpired period added to the new term (src:2482)
+GIVEN `the day the company enters into the further service contract` IS A DATE
+      `the day on which the guaranteed term of the original contract ends` IS A DATE
+      `the day on which the guaranteed term of the new contract ends` IS A DATE
+GIVETH A DATE
+`s 188(4) the day on which the guaranteed term of the new contract is treated as ending` MEANS
+    `the day on which the guaranteed term of the new contract ends` PLUS (Day `the day on which the guaranteed term of the original contract ends` MINUS Day `the day the company enters into the further service contract`)
+
+GIVEN `s 1158 the body corporate is a UK-registered company` IS A BOOLEAN
+      `s 1159(2) the body corporate is a wholly-owned subsidiary of another body corporate` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 188(6) approval is required on the part of the members of the body corporate` MEANS
+    IF (NOT (`s 1158 the body corporate is a UK-registered company`)) OR `s 1159(2) the body corporate is a wholly-owned subsidiary of another body corporate`
+    THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "No approval is required under this section on the part of the members of a body corporate that— (a) is not a UK-registered company, or (b) is a wholly-owned subsidiary of another body corporate."
+    ELSE NOTHING -- NOTHING-kind (limited by its own wording): the subsection says only when no approval is required on the part of the members of a body corporate
+
+-- src:2491 | (7) In this section “employment” means any employment under a director's service contract.
+@ref s 188(7) "employment" (src:2491)
+GIVEN `the employment is employment under a director's service contract` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 188(7) the employment is employment for the purposes of section 188` MEANS
+    IF `the employment is employment under a director's service contract`
+    THEN JUST TRUE
+    ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "In this section “employment” means any employment under a director's service contract."
+
+-- src:2473 | (2) A company may not agree to such provision unless it has been approved—
+-- src:2474 | (a) by resolution of the members of the company, and
+-- src:2475 | (b) in the case of a director of a holding company, by resolution of the members of that company.
+@ref s 188(2) A company may not agree to such provision unless it has been approved (src:2473-2475)
+GIVEN `the answer under section 188(1)` IS A MAYBE BOOLEAN
+      `the company agrees to the provision` IS A BOOLEAN
+      `the provision has been approved by resolution of the members of the company` IS A BOOLEAN
+      `s 188(6) approval is required on the part of the members of the company` IS A MAYBE BOOLEAN
+      `the person is a director of a holding company` IS A BOOLEAN
+      `the provision has been approved by resolution of the members of that holding company` IS A BOOLEAN
+      `s 188(6) approval is required on the part of the members of the holding company` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 188(2) section 188(2) bars the company from agreeing to the provision` MEANS
+    CONSIDER `the answer under section 188(1)`
+    WHEN NOTHING THEN NOTHING -- NOTHING-kind (points outside the text): whether the section applies to the provision is not known
+    WHEN JUST FALSE THEN NOTHING -- NOTHING-kind (limited by its own wording): "A company may not agree to such provision"; the provision is not one to which the section applies
+    WHEN JUST TRUE THEN
+         IF NOT (`the company agrees to the provision`)
+         THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "A company may not agree to such provision"
+         ELSE IF       (`the provision has been approved by resolution of the members of the company` OR `s 188(6) approval is required on the part of the members of the company` EQUALS JUST FALSE)
+                   AND ((NOT (`the person is a director of a holding company`)) OR `the provision has been approved by resolution of the members of that holding company` OR `s 188(6) approval is required on the part of the members of the holding company` EQUALS JUST FALSE)
+              THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "unless it has been approved— (a) by resolution of the members of the company, and (b) in the case of a director of a holding company, by resolution of the members of that company."
+              ELSE JUST TRUE
+
+GIVEN way IS A `Way a resolution is passed`
+      `the memorandum sets out the proposed contract incorporating the provision` IS A BOOLEAN
+      `the memorandum was sent or submitted to every eligible member at or before the time at which the proposed resolution was sent or submitted to him` IS A BOOLEAN
+      `the first day on which the memorandum was available for inspection at the company's registered office` IS A DATE
+      `the day of the meeting` IS A DATE
+      `the memorandum was available for inspection at the meeting itself` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 188(5) the memorandum has been made available to members as the subsection requires` MEANS
+    IF NOT (`the memorandum sets out the proposed contract incorporating the provision`)
+    THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "A resolution approving provision to which this section applies must not be passed unless a memorandum setting out the proposed contract incorporating the provision is made available to members"
+    ELSE CONSIDER way
+         WHEN `as a written resolution`
+              THEN IF `the memorandum was sent or submitted to every eligible member at or before the time at which the proposed resolution was sent or submitted to him`
+                   THEN JUST TRUE
+                   ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "in the case of a written resolution, by being sent or submitted to every eligible member at or before the time at which the proposed resolution is sent or submitted to him"
+         OTHERWISE IF       ((Day `the day of the meeting` MINUS Day `the first day on which the memorandum was available for inspection at the company's registered office`) PLUS 1) AT LEAST 15
+                      AND `the memorandum was available for inspection at the meeting itself`
+                   THEN JUST TRUE
+                   ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "in the case of a resolution at a meeting, by being made available for inspection by members of the company both— (i) at the company's registered office for not less than 15 days ending with the date of the meeting, and (ii) at the meeting itself"
+
+
+-- ---- s 189: directors' long-term service contracts: civil consequences of contravention -----------------------------------------
+
+-- src:2492 | 189 Directors' long-term service contracts: civil consequences of contravention
+-- src:2493 | If a company agrees to provision in contravention of section 188 (directors' long-term service contracts: requirement of members' approval)—
+-- src:2494 | (a) the provision is void, to the extent of the contravention, and
+@ref s 189(a) The provision is void to the extent of the contravention (src:2492-2494)
+GIVEN `the company agrees to the provision` IS A BOOLEAN
+      `the answer under section 188(2)` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 189(a) the provision is void to the extent of the contravention` MEANS
+    IF NOT (`the company agrees to the provision`)
+    THEN NOTHING -- NOTHING-kind (limited by its own wording): "If a company agrees to provision in contravention of section 188"
+    ELSE CONSIDER `the answer under section 188(2)`
+         WHEN JUST TRUE THEN JUST TRUE
+         WHEN JUST FALSE THEN NOTHING -- NOTHING-kind (limited by its own wording): "in contravention of section 188"; there is no contravention
+         WHEN NOTHING THEN NOTHING -- NOTHING-kind (points outside the text): whether section 188 was contravened is not known
+
+-- src:2492 | 189 Directors' long-term service contracts: civil consequences of contravention
+-- src:2493 | If a company agrees to provision in contravention of section 188 (directors' long-term service contracts: requirement of members' approval)—
+-- src:2495 | (b) the contract is deemed to contain a term entitling the company to terminate it at any time by the giving of reasonable notice.
+@ref s 189(b) The contract is deemed to contain a term for termination on reasonable notice (src:2492-2493 and src:2495)
+GIVEN `the company agrees to the provision` IS A BOOLEAN
+      `the answer under section 188(2)` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 189(b) the contract is deemed to contain a term entitling the company to terminate it at any time by the giving of reasonable notice` MEANS
+    IF NOT (`the company agrees to the provision`)
+    THEN NOTHING -- NOTHING-kind (limited by its own wording): "If a company agrees to provision in contravention of section 188"
+    ELSE CONSIDER `the answer under section 188(2)`
+         WHEN JUST TRUE THEN JUST TRUE
+         WHEN JUST FALSE THEN NOTHING -- NOTHING-kind (limited by its own wording): "in contravention of section 188"; there is no contravention
+         WHEN NOTHING THEN NOTHING -- NOTHING-kind (points outside the text): whether section 188 was contravened is not known
+
+-- ---- s 191: meaning of "substantial" (first, because s 190 asks for its answer) ---------------------------------------------
+
+-- (4): "statutory accounts" means annual accounts prepared in accordance with Part 15; "most recent" statutory accounts means those
+-- in relation to which the time for sending them out to members (see section 424) is most recent.
+-- src:2523 | (4) A company's “statutory accounts” means its annual accounts prepared in accordance with Part 15, and its “most recent” statutory accounts means those in relation to which the time for sending them out to members (see section 424) is most recent.
+@ref s 191(4) Statutory accounts and most recent statutory accounts (src:2523)
+DECLARE `s 191(4) statutory accounts` HAS
+    `the day on which the time for sending them out to members falls (section 424)` IS A DATE
+    `the value of the company's net assets determined by reference to them` IS A NUMBER
+
+@ref s 191(4) The most recent statutory accounts (src:2523)
+GIVEN accounts IS A LIST OF `s 191(4) statutory accounts`
+GIVETH A MAYBE `s 191(4) statutory accounts`
+`s 191(4) the most recent statutory accounts` MEANS
+    CONSIDER accounts
+    WHEN EMPTY THEN NOTHING -- NOTHING-kind (silent): no statutory accounts have been prepared
+    WHEN x FOLLOWED BY rest THEN
+         CONSIDER `s 191(4) the most recent statutory accounts` rest
+         WHEN NOTHING THEN JUST x
+         WHEN JUST y THEN IF y's `the day on which the time for sending them out to members falls (section 424)` GREATER THAN x's `the day on which the time for sending them out to members falls (section 424)`
+                          THEN JUST y
+                          ELSE JUST x
+
+-- (3): a company's "asset value" at any time is (a) the value of its net assets by reference to its most recent statutory
+-- accounts, or (b) if no statutory accounts have been prepared, the amount of its called-up share capital.
+-- src:2520 | (3) For this purpose a company's “asset value” at any time is—
+-- src:2521 | (a) the value of the company's net assets determined by reference to its most recent statutory accounts, or
+-- src:2522 | (b) if no statutory accounts have been prepared, the amount of the company's called-up share capital.
+@ref s 191(3) The company's asset value (src:2520-2522)
+GIVEN accounts IS A LIST OF `s 191(4) statutory accounts`
+      `the amount of the company's called-up share capital` IS A NUMBER
+GIVETH A NUMBER
+`s 191(3) the company's asset value` MEANS
+    CONSIDER `s 191(4) the most recent statutory accounts` accounts
+    WHEN JUST a THEN a's `the value of the company's net assets determined by reference to them`
+    WHEN NOTHING THEN `the amount of the company's called-up share capital`
+
+-- (2): an asset is substantial if its value (a) exceeds 10% of the company's asset value and is more than 5,000 pounds, or
+-- (b) exceeds 100,000 pounds. The values in pounds are the text's own.
+-- src:2517 | (2) An asset is a substantial asset in relation to a company if its value—
+-- src:2518 | (a) exceeds 10% of the company's asset value and is more than £5,000, or
+-- src:2519 | (b) exceeds £100,000.
+@ref s 191(2) A substantial asset (src:2517-2519)
+GIVEN `the value of the asset` IS A NUMBER
+      `the company's asset value` IS A NUMBER
+GIVETH A MAYBE BOOLEAN
+`s 191(2) the asset is a substantial asset in relation to the company` MEANS
+    IF       (`the value of the asset` GREATER THAN (10% TIMES `the company's asset value`) AND `the value of the asset` GREATER THAN 5000)
+         OR   `the value of the asset` GREATER THAN 100000
+    THEN JUST TRUE
+    ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "An asset is a substantial asset in relation to a company if its value— (a) exceeds 10% of the company's asset value and is more than £5,000, or (b) exceeds £100,000."
+
+-- (5): "Whether an asset is a substantial asset shall be determined as at the time the arrangement is entered into."
+-- src:2524 | (5) Whether an asset is a substantial asset shall be determined as at the time the arrangement is entered into.
+@ref s 191(5) The time of determination (src:2524)
+GIVEN `the day as at which the value and the asset value are taken` IS A DATE
+      `the day the arrangement is entered into` IS A DATE
+GIVETH A MAYBE BOOLEAN
+`s 191(5) the determination is as at the time the arrangement is entered into` MEANS
+    IF `the day as at which the value and the asset value are taken` EQUALS `the day the arrangement is entered into`
+    THEN JUST TRUE
+    ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "Whether an asset is a substantial asset shall be determined as at the time the arrangement is entered into."
+
+-- ---- s 190: substantial property transactions: requirement of members' approval ----------------------------------------------
+
+GIVEN `s 1158 the body corporate is a UK-registered company` IS A BOOLEAN
+      `s 1159(2) the body corporate is a wholly-owned subsidiary of another body corporate` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 190(4) approval is required on the part of the members of the body corporate` MEANS
+    IF (NOT (`s 1158 the body corporate is a UK-registered company`)) OR `s 1159(2) the body corporate is a wholly-owned subsidiary of another body corporate`
+    THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "No approval is required under this section on the part of the members of a body corporate that— (a) is not a UK-registered company, or (b) is a wholly-owned subsidiary of another body corporate."
+    ELSE NOTHING -- NOTHING-kind (limited by its own wording): the subsection says only when no approval is required on the part of the members of a body corporate
+
+-- (5): an arrangement involving more than one non-cash asset, or one of a series involving non-cash assets, is treated as
+-- involving a non-cash asset of a value equal to the aggregate value of all the non-cash assets involved in the arrangement or series.
+-- src:2508 | (5) For the purposes of this section—
+-- src:2509 | (a) an arrangement involving more than one non-cash asset, or
+-- src:2510 | (b) an arrangement that is one of a series involving non-cash assets,
+-- src:2511 | shall be treated as if they involved a non-cash asset of a value equal to the aggregate value of all the non-cash assets involved in the arrangement or, as the case may be, the series.
+@ref s 190(5) Aggregation (src:2508-2511)
+GIVEN `the values of all the non-cash assets involved in the arrangement or, as the case may be, the series` IS A LIST OF NUMBER
+GIVETH A NUMBER
+`s 190(5) the value of the non-cash asset the arrangement is treated as involving` MEANS
+    sum `the values of all the non-cash assets involved in the arrangement or, as the case may be, the series`
+
+-- (6): "This section does not apply to a transaction so far as it relates (a) to anything to which a director of a company is
+-- entitled under his service contract, or (b) to payment for loss of office as defined in section 215".
+-- src:2512 | (6) This section does not apply to a transaction so far as it relates—
+-- src:2513 | (a) to anything to which a director of a company is entitled under his service contract, or
+-- src:2514 | (b) to payment for loss of office as defined in section 215 (payments to which the requirements of Chapter 4 or 4A apply).
+@ref s 190(6) Transactions to which the section does not apply (src:2512-2514)
+GIVEN `the transaction relates to anything to which a director of a company is entitled under his service contract` IS A BOOLEAN
+      `the transaction relates to payment for loss of office as defined in section 215` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 190(6) section 190 applies to the transaction` MEANS
+    IF `the transaction relates to anything to which a director of a company is entitled under his service contract` OR `the transaction relates to payment for loss of office as defined in section 215`
+    THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "This section does not apply to a transaction so far as it relates"
+    ELSE NOTHING -- NOTHING-kind (limited by its own wording): "so far as it relates"; the subsection says only what the section does not apply to
+
+-- (1): "A company may not enter into an arrangement under which (a) a director of the company or of its holding company, or a
+-- person connected with such a director, acquires or is to acquire from the company (directly or indirectly) a substantial non-cash
+-- asset, or (b) the company acquires or is to acquire a substantial non-cash asset (directly or indirectly) from such a director or
+-- a person so connected, unless the arrangement has been approved by a resolution of the members of the company or is conditional
+-- on such approval being obtained." The exceptions of ss 190(6), 192, 193 and 194 are one input.
+-- src:2497 | 190 Substantial property transactions: requirement of members' approval
+-- src:2498 | (1) A company may not enter into an arrangement under which—
+-- src:2499 | (a) a director of the company or of its holding company, or a person connected with such a director, acquires or is to acquire from the company (directly or indirectly) a substantial non-cash asset, or
+-- src:2500 | (b) the company acquires or is to acquire a substantial non-cash asset (directly or indirectly) from such a director or a person so connected,
+-- src:2501 | unless the arrangement has been approved by a resolution of the members of the company or is conditional on such approval being obtained.
+-- src:2502 | For the meaning of “substantial non-cash asset” see section 191.
+@ref s 190(1) Substantial property transactions: requirement of members' approval (src:2497-2502)
+GIVEN `the company disposes of a non-cash asset to the other party under the arrangement` IS A BOOLEAN
+      `the company acquires a non-cash asset from the other party under the arrangement` IS A BOOLEAN
+      `the other party is a director of the company or of its holding company` IS A BOOLEAN
+      `s 252 the other party is connected with a director of the company or of its holding company` IS A MAYBE BOOLEAN
+      `s 191 the non-cash asset is a substantial non-cash asset` IS A MAYBE BOOLEAN
+      `the arrangement has been approved by a resolution of the members of the company` IS A BOOLEAN
+      `the arrangement is conditional on such approval being obtained` IS A BOOLEAN
+      `s 190(4) approval is required on the part of the members of the company` IS A MAYBE BOOLEAN
+      `section 190(6), 192, 193 or 194 disapplies the requirement of approval` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 190(1) section 190(1) bars the company from entering into the arrangement` MEANS
+    IF NOT (`the company disposes of a non-cash asset to the other party under the arrangement` OR `the company acquires a non-cash asset from the other party under the arrangement`)
+    THEN NOTHING -- NOTHING-kind (limited by its own wording): "A company may not enter into an arrangement under which"; the arrangement is not an acquisition from or by the company
+    ELSE CONSIDER `s 191 the non-cash asset is a substantial non-cash asset`
+         WHEN JUST FALSE THEN NOTHING -- NOTHING-kind (limited by its own wording): "a substantial non-cash asset"
+         WHEN NOTHING THEN NOTHING -- NOTHING-kind (points outside the text): whether the asset is a substantial non-cash asset is s 191 and the caller's facts
+         WHEN JUST TRUE THEN
+              CONSIDER `the other party counts`
+              WHEN JUST FALSE THEN NOTHING -- NOTHING-kind (limited by its own wording): "such a director or a person so connected"
+              WHEN NOTHING THEN NOTHING -- NOTHING-kind (points outside the text): whether the other party is connected with a director is s 252 (coa5)
+              WHEN JUST TRUE THEN
+                   IF `the arrangement has been approved by a resolution of the members of the company` OR `the arrangement is conditional on such approval being obtained`
+                   THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "unless the arrangement has been approved by a resolution of the members of the company or is conditional on such approval being obtained"
+                   ELSE IF `section 190(6), 192, 193 or 194 disapplies the requirement of approval`
+                        THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "Approval is not required under section 190"
+                        ELSE IF `s 190(4) approval is required on the part of the members of the company` EQUALS JUST FALSE
+                             THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "No approval is required under this section on the part of the members of a body corporate"
+                             ELSE JUST TRUE
+    WHERE
+        `the other party counts` MEANS
+            IF `the other party is a director of the company or of its holding company` THEN JUST TRUE ELSE `s 252 the other party is connected with a director of the company or of its holding company`
+
+-- (2): the holding company's members too, where the director or connected person is a director of the holding company or connected
+-- with one.
+-- src:2503 | (2) If the director or connected person is a director of the company's holding company or a person connected with such a director, the arrangement must also have been approved by a resolution of the members of the holding company or be conditional on such approval being obtained.
+@ref s 190(2) The members of the holding company (src:2503)
+GIVEN `the director or connected person is a director of the company's holding company or a person connected with such a director` IS A BOOLEAN
+      `the arrangement has been approved by a resolution of the members of the holding company` IS A BOOLEAN
+      `the arrangement is conditional on such approval being obtained` IS A BOOLEAN
+      `s 190(4) approval is required on the part of the members of the holding company` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 190(2) section 190(2) requires the approval of the members of the holding company` MEANS
+    IF NOT (`the director or connected person is a director of the company's holding company or a person connected with such a director`)
+    THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "If the director or connected person is a director of the company's holding company or a person connected with such a director"
+    ELSE IF `the arrangement has been approved by a resolution of the members of the holding company` OR `the arrangement is conditional on such approval being obtained`
+         THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "the arrangement must also have been approved by a resolution of the members of the holding company or be conditional on such approval being obtained"
+         ELSE IF `s 190(4) approval is required on the part of the members of the holding company` EQUALS JUST FALSE
+              THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "No approval is required under this section on the part of the members of a body corporate"
+              ELSE JUST TRUE
+
+-- src:2504 | (3) A company shall not be subject to any liability by reason of a failure to obtain approval required by this section.
+@ref s 190(3) No liability of the company (src:2504)
+GIVEN `the company failed to obtain approval required by section 190` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 190(3) the company is subject to liability by reason of the failure to obtain approval` MEANS
+    IF `the company failed to obtain approval required by section 190`
+    THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "A company shall not be subject to any liability by reason of a failure to obtain approval required by this section."
+    ELSE NOTHING -- NOTHING-kind (limited by its own wording): "by reason of a failure to obtain approval required by this section"
+
+-- ---- s 192: exception for transactions with members or other group companies -------------------------------------------------------
+
+-- src:2525 | 192 Exception for transactions with members or other group companies
+-- src:2526 | Approval is not required under section 190 (requirement of members' approval for substantial property transactions)—
+-- src:2527 | (a) for a transaction between a company and a person in his character as a member of that company, or
+-- src:2528 | (b) for a transaction between—
+-- src:2529 | (i) a holding company and its wholly-owned subsidiary, or
+-- src:2530 | (ii) two wholly-owned subsidiaries of the same holding company.
+@ref s 192 Exception for transactions with members or other group companies (src:2525-2530)
+GIVEN `the transaction is between the company and a person in his character as a member of that company` IS A BOOLEAN
+      `the transaction is between a holding company and its wholly-owned subsidiary` IS A BOOLEAN
+      `the transaction is between two wholly-owned subsidiaries of the same holding company` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 192 approval is required under section 190 for the transaction` MEANS
+    IF `the transaction is between the company and a person in his character as a member of that company` OR `the transaction is between a holding company and its wholly-owned subsidiary` OR `the transaction is between two wholly-owned subsidiaries of the same holding company`
+    THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "Approval is not required under section 190 (requirement of members' approval for substantial property transactions)— (a) for a transaction between a company and a person in his character as a member of that company, or (b) for a transaction between— (i) a holding company and its wholly-owned subsidiary, or (ii) two wholly-owned subsidiaries of the same holding company."
+    ELSE NOTHING -- NOTHING-kind (limited by its own wording): the section says only for which transactions approval is not required
+
+-- ---- s 193: exception in case of company in winding up or administration ------------------------------------------------------------
+
+-- src:2531 | 193 Exception in case of company in winding up or administration
+-- src:2532 | (1) This section applies to a company—
+-- src:2533 | (a) that is being wound up (unless the winding up is a members' voluntary winding up), or
+-- src:2534 | (b) that is in administration within the meaning of Schedule B1 to the Insolvency Act 1986 (c. 45) or the Insolvency (Northern Ireland) Order 1989 (S.I. 1989/2405 (N.I. 19)).
+@ref s 193(1) Companies in winding up or administration (src:2531-2534)
+GIVEN `the company is being wound up` IS A BOOLEAN
+      `the winding up is a members' voluntary winding up` IS A BOOLEAN
+      `the company is in administration within the meaning of Schedule B1 to the Insolvency Act 1986 or the Insolvency (Northern Ireland) Order 1989` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 193(1) section 193 applies to the company` MEANS
+    IF `the company is in administration within the meaning of Schedule B1 to the Insolvency Act 1986 or the Insolvency (Northern Ireland) Order 1989`
+    THEN JUST TRUE
+    ELSE IF `the company is being wound up`
+         THEN IF `the winding up is a members' voluntary winding up`
+              THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "(unless the winding up is a members' voluntary winding up)"
+              ELSE JUST TRUE
+         ELSE NOTHING -- NOTHING-kind (limited by its own wording): "This section applies to a company— (a) that is being wound up (unless the winding up is a members' voluntary winding up), or (b) that is in administration"
+
+-- src:2535 | (2) Approval is not required under section 190 (requirement of members' approval for substantial property transactions)—
+-- src:2536 | (a) on the part of the members of a company to which this section applies, or
+-- src:2537 | (b) for an arrangement entered into by a company to which this section applies.
+@ref s 193(2) Approval is not required (src:2535-2537)
+GIVEN `the answer under section 193(1)` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 193(2) approval is required under section 190` MEANS
+    CONSIDER `the answer under section 193(1)`
+    WHEN JUST TRUE THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "Approval is not required under section 190 (requirement of members' approval for substantial property transactions)— (a) on the part of the members of a company to which this section applies, or (b) for an arrangement entered into by a company to which this section applies."
+    WHEN JUST FALSE THEN NOTHING -- NOTHING-kind (limited by its own wording): "a company to which this section applies"
+    WHEN NOTHING THEN NOTHING -- NOTHING-kind (points outside the text): whether section 193 applies is not known
+
+-- ---- s 194: exception for transactions on recognised investment exchange ----------------------------------------------------------
+
+-- src:2540 | (2) For this purpose—
+-- src:2541 | (a) “independent broker” means a person who, independently of the director or any person connected with him, selects the person with whom the transaction is to be effected; and
+@ref s 194(2)(a) "independent broker" (src:2540-2541)
+GIVEN `the person selects the person with whom the transaction is to be effected` IS A BOOLEAN
+      `the person does so independently of the director or any person connected with him` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 194(2) the person is an independent broker` MEANS
+    IF `the person selects the person with whom the transaction is to be effected` AND `the person does so independently of the director or any person connected with him`
+    THEN JUST TRUE
+    ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "“independent broker” means a person who, independently of the director or any person connected with him, selects the person with whom the transaction is to be effected"
+
+-- src:2542 | (b) “recognised investment exchange” has the same meaning as in Part 18 of the Financial Services and Markets Act 2000 (c. 8).
+@ref s 194(2)(b) "recognised investment exchange" (src:2542)
+GIVEN `the exchange has the same meaning as a recognised investment exchange in Part 18 of the Financial Services and Markets Act 2000` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 194(2) the exchange is a recognised investment exchange` MEANS
+    CONSIDER `the exchange has the same meaning as a recognised investment exchange in Part 18 of the Financial Services and Markets Act 2000`
+    WHEN JUST TRUE THEN JUST TRUE
+    WHEN JUST FALSE THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "“recognised investment exchange” has the same meaning as in Part 18 of the Financial Services and Markets Act 2000"; the borrowed definition says no, supplied as an input
+    WHEN NOTHING THEN NOTHING -- NOTHING-kind (points outside the text): the borrowed definition is in the Financial Services and Markets Act 2000
+
+-- src:2538 | 194 Exception for transactions on recognised investment exchange
+-- src:2539 | (1) Approval is not required under section 190 (requirement of members' approval for substantial property transactions) for a transaction on a recognised investment exchange effected by a director, or a person connected with him, through the agency of a person who in relation to the transaction acts as an independent broker.
+@ref s 194(1) Transactions on a recognised investment exchange (src:2538-2539)
+GIVEN `s 194(2) the exchange is a recognised investment exchange` IS A MAYBE BOOLEAN
+      `the transaction is effected by a director, or a person connected with him` IS A BOOLEAN
+      `s 194(2) the person through whose agency it is effected is an independent broker` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 194(1) approval is required under section 190 for the transaction` MEANS
+    IF `s 194(2) the exchange is a recognised investment exchange` EQUALS JUST TRUE AND `the transaction is effected by a director, or a person connected with him` AND `s 194(2) the person through whose agency it is effected is an independent broker` EQUALS JUST TRUE
+    THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "Approval is not required under section 190 (requirement of members' approval for substantial property transactions) for a transaction on a recognised investment exchange effected by a director, or a person connected with him, through the agency of a person who in relation to the transaction acts as an independent broker."
+    ELSE NOTHING -- NOTHING-kind (limited by its own wording): the subsection says only for which transactions approval is not required
+
+-- ---- s 195: property transactions: civil consequences of contravention ------------------------------------------------------------------
+
+-- (2): the arrangement and any transaction in pursuance of it is voidable at the instance of the company, unless (a) restitution
+-- is no longer possible, (b) the company has been indemnified, or (c) rights acquired in good faith, for value and without
+-- actual notice of the contravention by a person who is not a party would be affected by the avoidance.
+-- src:2544 | (1) This section applies where a company enters into an arrangement in contravention of section 190 (requirement of members' approval for substantial property transactions).
+-- src:2545 | (2) The arrangement, and any transaction entered into in pursuance of the arrangement (whether by the company or any other person), is voidable at the instance of the company, unless—
+-- src:2546 | (a) restitution of any money or other asset that was the subject matter of the arrangement or transaction is no longer possible,
+-- src:2547 | (b) the company has been indemnified in pursuance of this section by any other persons for the loss or damage suffered by it, or
+-- src:2548 | (c) rights acquired in good faith, for value and without actual notice of the contravention by a person who is not a party to the arrangement or transaction would be affected by the avoidance.
+@ref s 195(1) and (2) The arrangement is voidable (src:2544-2548)
+GIVEN `the company enters into the arrangement` IS A BOOLEAN
+      `the answer under section 190(1)` IS A MAYBE BOOLEAN
+      `restitution of any money or other asset that was the subject matter of the arrangement or transaction is no longer possible` IS A BOOLEAN
+      `the company has been indemnified in pursuance of section 195 by any other persons for the loss or damage suffered by it` IS A BOOLEAN
+      `rights acquired in good faith, for value and without actual notice of the contravention by a person who is not a party to the arrangement or transaction would be affected by the avoidance` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 195(2) the arrangement and any transaction entered into in pursuance of it is voidable at the instance of the company` MEANS
+    IF NOT (`the company enters into the arrangement`)
+    THEN NOTHING -- NOTHING-kind (limited by its own wording): "This section applies where a company enters into an arrangement in contravention of section 190"
+    ELSE CONSIDER `the answer under section 190(1)`
+         WHEN JUST FALSE THEN NOTHING -- NOTHING-kind (limited by its own wording): "in contravention of section 190"; there is no contravention
+         WHEN NOTHING THEN NOTHING -- NOTHING-kind (points outside the text): whether section 190 was contravened is not known
+         WHEN JUST TRUE THEN
+              IF       `restitution of any money or other asset that was the subject matter of the arrangement or transaction is no longer possible`
+                  OR   `the company has been indemnified in pursuance of section 195 by any other persons for the loss or damage suffered by it`
+                  OR   `rights acquired in good faith, for value and without actual notice of the contravention by a person who is not a party to the arrangement or transaction would be affected by the avoidance`
+              THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "is voidable at the instance of the company, unless— (a) restitution of any money or other asset that was the subject matter of the arrangement or transaction is no longer possible, (b) the company has been indemnified in pursuance of this section by any other persons for the loss or damage suffered by it, or (c) rights acquired in good faith, for value and without actual notice of the contravention by a person who is not a party to the arrangement or transaction would be affected by the avoidance"
+              ELSE JUST TRUE
+
+-- (3), (4), (6), (7): who is liable to account for any gain and to indemnify the company, "whether or not the arrangement or any
+-- such transaction has been avoided".
+DECLARE `s 195(4) person who may be liable` IS ONE OF
+    `s 195(4)(a) a director of the company or of its holding company with whom the company entered into the arrangement in contravention of section 190`
+    `s 195(4)(b) a person with whom the company entered into the arrangement who is connected with a director of the company or of its holding company`
+    `s 195(4)(c) the director of the company or of its holding company with whom such a connected person is connected`
+    `s 195(4)(d) any other director of the company who authorised the arrangement or any transaction entered into in pursuance of it`
+    `s 195(4) anyone else`
+
+-- src:2549 | (3) Whether or not the arrangement or any such transaction has been avoided, each of the persons specified in subsection (4) is liable—
+-- src:2550 | (a) to account to the company for any gain that he has made directly or indirectly by the arrangement or transaction, and
+-- src:2551 | (b) (jointly and severally with any other person so liable under this section) to indemnify the company for any loss or damage resulting from the arrangement or transaction.
+-- src:2552 | (4) The persons so liable are—
+-- src:2553 | (a) any director of the company or of its holding company with whom the company entered into the arrangement in contravention of section 190,
+-- src:2554 | (b) any person with whom the company entered into the arrangement in contravention of that section who is connected with a director of the company or of its holding company,
+-- src:2555 | (c) the director of the company or of its holding company with whom any such person is connected, and
+-- src:2556 | (d) any other director of the company who authorised the arrangement or any transaction entered into in pursuance of such an arrangement.
+-- src:2557 | (5) Subsections (3) and (4) are subject to the following two subsections.
+-- src:2558 | (6) In the case of an arrangement entered into by a company in contravention of section 190 with a person connected with a director of the company or of its holding company, that director is not liable by virtue of subsection (4)(c) if he shows that he took all reasonable steps to secure the company's compliance with that section.
+-- src:2559 | (7) In any case—
+-- src:2560 | (a) a person so connected is not liable by virtue of subsection (4)(b), and
+-- src:2561 | (b) a director is not liable by virtue of subsection (4)(d),
+-- src:2562 | if he shows that, at the time the arrangement was entered into, he did not know the relevant circumstances constituting the contravention.
+@ref s 195(3) to (7) Liability to account and to indemnify (src:2549-2562)
+GIVEN `the arrangement was entered into in contravention of section 190` IS A BOOLEAN
+      person IS A `s 195(4) person who may be liable`
+      `the director shows that he took all reasonable steps to secure the company's compliance with section 190` IS A BOOLEAN
+      `the person shows that, at the time the arrangement was entered into, he did not know the relevant circumstances constituting the contravention` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 195(3) the person is liable to account to the company for any gain and to indemnify the company for any loss or damage` MEANS
+    IF NOT (`the arrangement was entered into in contravention of section 190`)
+    THEN NOTHING -- NOTHING-kind (limited by its own wording): "This section applies where a company enters into an arrangement in contravention of section 190"
+    ELSE CONSIDER person
+         WHEN `s 195(4)(a) a director of the company or of its holding company with whom the company entered into the arrangement in contravention of section 190` THEN JUST TRUE
+         WHEN `s 195(4)(b) a person with whom the company entered into the arrangement who is connected with a director of the company or of its holding company`
+              THEN IF `the person shows that, at the time the arrangement was entered into, he did not know the relevant circumstances constituting the contravention`
+                   THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "a person so connected is not liable by virtue of subsection (4)(b), and (b) a director is not liable by virtue of subsection (4)(d), if he shows that, at the time the arrangement was entered into, he did not know the relevant circumstances constituting the contravention"
+                   ELSE JUST TRUE
+         WHEN `s 195(4)(c) the director of the company or of its holding company with whom such a connected person is connected`
+              THEN IF `the director shows that he took all reasonable steps to secure the company's compliance with section 190`
+                   THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "that director is not liable by virtue of subsection (4)(c) if he shows that he took all reasonable steps to secure the company's compliance with that section"
+                   ELSE JUST TRUE
+         WHEN `s 195(4)(d) any other director of the company who authorised the arrangement or any transaction entered into in pursuance of it`
+              THEN IF `the person shows that, at the time the arrangement was entered into, he did not know the relevant circumstances constituting the contravention`
+                   THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "a person so connected is not liable by virtue of subsection (4)(b), and (b) a director is not liable by virtue of subsection (4)(d), if he shows that, at the time the arrangement was entered into, he did not know the relevant circumstances constituting the contravention"
+                   ELSE JUST TRUE
+         WHEN `s 195(4) anyone else` THEN NOTHING -- NOTHING-kind (list not closed): subsection (8) leaves other enactments and rules of law, by which any liability to the company may arise, untouched
+
+-- src:2549 | (3) Whether or not the arrangement or any such transaction has been avoided, each of the persons specified in subsection (4) is liable—
+-- src:2550 | (a) to account to the company for any gain that he has made directly or indirectly by the arrangement or transaction, and
+-- src:2551 | (b) (jointly and severally with any other person so liable under this section) to indemnify the company for any loss or damage resulting from the arrangement or transaction.
+@ref s 195(3)(b) Joint and several liability (src:2549-2551)
+GIVEN `another person is so liable under section 195` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 195(3)(b) the liability to indemnify the company is joint and several with that of the other person` MEANS
+    IF `another person is so liable under section 195`
+    THEN JUST TRUE
+    ELSE NOTHING -- NOTHING-kind (limited by its own wording): "(jointly and severally with any other person so liable under this section)"
+
+-- src:2563 | (8) Nothing in this section shall be read as excluding the operation of any other enactment or rule of law by virtue of which the arrangement or transaction may be called in question or any liability to the company may arise.
+@ref s 195(8) Other enactments and rules of law (src:2563)
+`s 195(8) section 195 excludes the operation of any other enactment or rule of law by virtue of which the arrangement or transaction may be called in question or any liability to the company may arise` MEANS
+    JUST FALSE -- FALSE-kind (the text says no in its own words): "Nothing in this section shall be read as excluding the operation of any other enactment or rule of law by virtue of which the arrangement or transaction may be called in question or any liability to the company may arise."
+
+-- ---- s 196: property transactions: effect of subsequent affirmation ---------------------------------------------------------------------
+
+-- src:2564 | 196 Property transactions: effect of subsequent affirmation
+-- src:2565 | Where a transaction or arrangement is entered into by a company in contravention of section 190 (requirement of members' approval) but, within a reasonable period, it is affirmed—
+-- src:2566 | (a) in the case of a contravention of subsection (1) of that section, by resolution of the members of the company, and
+-- src:2567 | (b) in the case of a contravention of subsection (2) of that section, by resolution of the members of the holding company,
+-- src:2568 | the transaction or arrangement may no longer be avoided under section 195.
+@ref s 196 Effect of subsequent affirmation (src:2564-2568)
+GIVEN `the contravention is of subsection (1) of section 190` IS A BOOLEAN
+      `the contravention is of subsection (2) of section 190` IS A BOOLEAN
+      `within a reasonable period the transaction or arrangement is affirmed by resolution of the members of the company` IS A BOOLEAN
+      `within a reasonable period the transaction or arrangement is affirmed by resolution of the members of the holding company` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 196 the transaction or arrangement may no longer be avoided under section 195` MEANS
+    IF       (`the contravention is of subsection (1) of section 190` AND `within a reasonable period the transaction or arrangement is affirmed by resolution of the members of the company`)
+         OR  (`the contravention is of subsection (2) of section 190` AND `within a reasonable period the transaction or arrangement is affirmed by resolution of the members of the holding company`)
+    THEN JUST TRUE
+    ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "Where a transaction or arrangement is entered into by a company in contravention of section 190 (requirement of members' approval) but, within a reasonable period, it is affirmed"

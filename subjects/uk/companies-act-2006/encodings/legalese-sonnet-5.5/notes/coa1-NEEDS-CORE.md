@@ -1,0 +1,13 @@
+# NEEDS-CORE (coa1): types and constructors this part needed and the core lacks
+
+The core cannot be extended from another module, so each is declared in this part's own module under its own label, and recorded here for the lead to hoist at the merge. All are constructors for `Party` (an actor a deontic rule names) unless said otherwise.
+
+| wanted in the core | what this part declared instead | sections that need it | text |
+| --- | --- | --- | --- |
+| `Party` constructor for the person who affixes an official seal | `s 49(6) party` with the constructor `s 49(6) the person affixing the official seal`, in `coa1-part4-capacity.l4` | s 49(6) | "The person affixing the official seal must certify in writing on the deed or other document to which the seal is affixed the date on which, and place at which, it is affixed." |
+| `Party` constructor for "an officer of a company, or a person acting on behalf of a company" | `s 45(4) party` with the constructor `s 45(4) an officer of a company, or a person acting on behalf of a company`, in `coa1-part4-capacity.l4` | s 45(4) | "An officer of a company, or a person acting on behalf of a company, commits an offence if he uses, or authorises the use of, a seal purporting to be a seal of the company on which its name is not engraved" |
+| `Party` constructor for a liquidator (treated as an officer for ss 30 and 36) | none: s 30(4) and s 36(5) are decision functions over a plain fact (`the person is a liquidator of the company`) | s 30(4), s 36(5) | "For the purposes of this section, a liquidator of the company is treated as an officer of it." |
+| `Party` constructors for the Charity Commission (England and Wales) and the Department for Social Development (Northern Ireland) | none: s 42(4) takes the consent as a plain fact (`the prior written consent ... has been given`) | s 42(4) | "the affirmation of a transaction to which section 41 applies ... is ineffective without the prior written consent of— (a) in England and Wales, the Charity Commission; (b) in Northern Ireland, the Department for Social Development" |
+| a `Fine limit` for "level 3 on the standard scale" with a one-tenth fraction already exists (`a fine not exceeding a level on the standard scale` 3 0.1) | used as it is (`Penalty` constants in ss 26(4), 30(3), 32(4), 34(6), 35(4), 36(4), 45(5)) | none needed | |
+
+No new type was needed in the core beyond these constructors. The record types of this part (`s 10(2)(c) statement for a class of shares`, `s 32(2)(c) statement for a class of shares` and the like) are specific to their sections and stay in the part's modules.

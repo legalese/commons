@@ -1,0 +1,820 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `coa-core`
+IMPORT `coa-definitions`
+
+-- coa20-part26.l4: Companies Act 2006 (United Kingdom), Part 26 (Arrangements and reconstructions: general), ss 895 to 901,
+-- lines 12203-12331 of ukpga-2006-46.txt (coa20's range is 12203-13131: Parts 26, 26A and 27).
+-- LAYER 1: the law, objectively. Every answer is a MAYBE BOOLEAN: JUST TRUE, JUST FALSE ("the text says no in its own
+-- words") or NOTHING ("not covered"); a caller must never turn NOTHING into FALSE. Each branch that answers no carries
+-- -- FALSE-kind (the text says no in its own words): "<quoted words>"   and each branch that answers not covered carries
+-- -- NOTHING-kind (<why>)   (silent / list not closed / includes / undefined term / points outside the text / limited by its own wording).
+-- Seams (inputs another part answers) are named for the answering section, e.g. `s 1121 the officer is in default`.
+-- Source: a plain-text rendering of the Act from legislation.gov.uk made by a converter script; not the official text.
+
+-- ===========================================================================================================
+-- SHARED NOUNS AND HELPERS of this subject's Parts 26, 26A and 27 (every name begins with a section label)
+-- ===========================================================================================================
+
+-- Who may apply to the court (ss 896(2), 899(2), 901C(2), 901F(3), 938(2) all use the same list of applicants).
+DECLARE `s 896(2) applicant` IS ONE OF
+    `s 896(2) the company`
+    `s 896(2) a creditor of the company`
+    `s 896(2) a member of the company`
+    `s 896(2) the liquidator of the company`
+    `s 896(2) the administrator of the company`
+    `s 896(2) any other person`
+
+-- Who an offence of default can be charged against (ss 897(5), 901D(5)): the company, an officer in default, or a person
+-- the section treats as an officer (a liquidator or administrator, or a trustee of a deed securing debentures).
+DECLARE `s 897(5) person charged with the default` IS ONE OF
+    `s 897(5) the company`
+    `s 897(5) an officer of the company`
+    `s 897(5) a liquidator or administrator of the company`
+    `s 897(5) a trustee of a deed for securing the issue of debentures of the company`
+    `s 897(5) any other person`
+
+-- Penalties. The core's `Penalty` and `Fine limit` carry them; the pounds a level or the statutory maximum stands for are not in the Act.
+-- A conviction "on summary conviction" in general words covers a summary conviction in each of the three places.
+GIVEN mode IS A `Mode of conviction`
+GIVETH A BOOLEAN
+`s 897(8) the conviction is a summary conviction` MEANS
+    CONSIDER mode
+    WHEN `on conviction on indictment` THEN FALSE
+    OTHERWISE TRUE
+
+GIVEN mode IS A `Mode of conviction`
+      limit IS A `Fine limit`
+GIVETH A Penalty
+`s 897(8) a penalty of a fine only` MEANS
+    Penalty OF mode, NOTHING, JUST limit, NOTHING, FALSE
+
+GIVEN mode IS A `Mode of conviction`
+      limit IS A `Fine limit`
+      daily IS A `Fine limit`
+GIVETH A Penalty
+`s 900(8) a penalty of a fine and a daily default fine for continued contravention` MEANS
+    Penalty OF mode, NOTHING, JUST limit, JUST daily, FALSE
+
+-- Three-valued disjunction used where a section says "subject to" several others: JUST TRUE if any answers JUST TRUE;
+-- JUST FALSE if all answer JUST FALSE; otherwise NOTHING (some answer is not covered and none says yes).
+GIVEN answers IS A LIST OF MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 903(2) any of the provisions answers yes` MEANS
+    IF elem (JUST TRUE) answers
+    THEN JUST TRUE
+    ELSE IF elem NOTHING answers
+         THEN NOTHING -- NOTHING-kind (points outside the text): an answer the caller could not give is not turned into a no
+         ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): every provision consulted answered no
+
+-- The three states of a requirement that a section imposes and another section may switch off (Part 27 uses this throughout).
+DECLARE `s 903(1) status of a requirement` IS ONE OF
+    `s 903(1) requirement complied with`
+    `s 903(1) requirement not complied with`
+    `s 903(1) requirement does not apply`
+    `s 903(1) requirement not covered`
+
+-- excluded: the answer of the sections that switch the requirement off (JUST TRUE = switched off, JUST FALSE = not, NOTHING = not known).
+-- complied: whether the facts the requirement asks for are in order. A requirement that is switched off is not asked for.
+GIVEN excluded IS A MAYBE BOOLEAN
+      complied IS A BOOLEAN
+GIVETH A `s 903(1) status of a requirement`
+`s 903(1) the status of the requirement` MEANS
+    CONSIDER excluded
+    WHEN JUST TRUE THEN `s 903(1) requirement does not apply` -- FALSE-kind (the text says no in its own words): "do not apply" (the excluding section says so)
+    WHEN NOTHING THEN `s 903(1) requirement not covered` -- NOTHING-kind (points outside the text): whether an excluding section applies is not known
+    WHEN JUST FALSE THEN
+        IF complied
+        THEN `s 903(1) requirement complied with`
+        ELSE `s 903(1) requirement not complied with` -- a bare "must" not done (2026-11-05 ruling: decided here, fork F3)
+
+-- A calendar month later than a date: the library's `add months` clamps the day (31 January + 1 month = 28 or 29 February).
+GIVEN date IS A DATE
+GIVETH A DATE
+`s 906(3) the date one month after` MEANS `add months` date 1
+
+-- The same, backwards: the date one month before a date (31 March - 1 month = 28 or 29 February).
+GIVEN date IS A DATE
+GIVETH A DATE
+`s 906(3) the date one month before` MEANS `add months` date (0 MINUS 1)
+
+-- ===========================================================================================================
+§ `Part 26 -- Arrangements and reconstructions: general`
+-- ===========================================================================================================
+
+§§ `Application of this Part (s 895)`
+
+-- JURAL none (a rule fixing the scope of the Part)
+-- src:12206 | (1) The provisions of this Part apply where a compromise or arrangement is proposed between a company and—
+-- src:12207 | (a) its creditors, or any class of them, or
+-- src:12208 | (b) its members, or any class of them.
+@ref s 895(1) The Part applies where a compromise or arrangement is proposed with creditors or members (src:12206-12208)
+GIVEN `a compromise or arrangement is proposed between the company and its creditors, or any class of them` IS A BOOLEAN
+      `a compromise or arrangement is proposed between the company and its members, or any class of them` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 895(1) the provisions of Part 26 apply` MEANS
+    IF `a compromise or arrangement is proposed between the company and its creditors, or any class of them`
+       OR `a compromise or arrangement is proposed between the company and its members, or any class of them`
+    THEN JUST TRUE
+    ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "The provisions of this Part apply where a compromise or arrangement is proposed between a company and"
+
+-- JURAL none (a definition)
+-- src:12209 | (2) In this Part—
+-- src:12210 | “arrangement” includes a reorganisation of the company's share capital by the consolidation of shares of different classes or by the division of shares into shares of different classes, or by both of those methods; and
+@ref s 895(2) "arrangement" includes a reorganisation of the share capital (src:12209-12210)
+GIVEN `by the consolidation of shares of different classes` IS A BOOLEAN
+      `by the division of shares into shares of different classes` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 895(2) the reorganisation of the share capital is an arrangement` MEANS
+    IF `by the consolidation of shares of different classes` OR `by the division of shares into shares of different classes`
+    THEN JUST TRUE
+    ELSE NOTHING -- NOTHING-kind (includes): "“arrangement” includes a reorganisation of the company's share capital by the consolidation of shares of different classes or by the division of shares into shares of different classes, or by both"
+
+DECLARE `s 895(2) place where the word company is used` IS ONE OF
+    `s 895(2) in section 900`
+    `s 895(2) elsewhere in Part 26`
+
+-- JURAL none (a definition)
+-- src:12211 | “company”—
+-- src:12212 | (a) in section 900 (powers of court to facilitate reconstruction or amalgamation) means a company within the meaning of this Act, and
+-- src:12213 | (b) elsewhere in this Part means any company liable to be wound up under the Insolvency Act 1986 (c. 45) or the Insolvency (Northern Ireland) Order 1989 (S.I. 1989/2405 (N.I. 19)).
+@ref s 895(2) "company" in s 900 and elsewhere in Part 26 (src:12211-12213)
+GIVEN place IS A `s 895(2) place where the word company is used`
+      `s 1(1) the body is a company` IS A MAYBE BOOLEAN
+      `the body is liable to be wound up under the Insolvency Act 1986 or the Insolvency (Northern Ireland) Order 1989` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 895(2) the body is a company for the purposes of Part 26` MEANS
+    CONSIDER place
+    WHEN `s 895(2) in section 900` THEN `s 1(1) the body is a company` -- the definition is "means a company within the meaning of this Act": the seam answer (JUST FALSE is its "means" no)
+    WHEN `s 895(2) elsewhere in Part 26` THEN `the body is liable to be wound up under the Insolvency Act 1986 or the Insolvency (Northern Ireland) Order 1989` -- "means any company liable to be wound up under the Insolvency Act 1986 ...": a borrowed definition, supplied as an input (NOTHING = not known)
+
+-- JURAL none (a rule of precedence between Parts)
+-- src:12214 | (3) The provisions of this Part have effect subject to Part 27 (mergers and divisions of public companies) where that Part applies (see sections 902 and 903).
+@ref s 895(3) Part 26 has effect subject to Part 27 where that Part applies (src:12214)
+GIVEN `s 902(1) this Part applies` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 895(3) the provisions of Part 26 have effect subject to Part 27` MEANS
+    IF `s 902(1) this Part applies`
+    THEN JUST TRUE
+    ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "subject to Part 27 (mergers and divisions of public companies) where that Part applies"
+
+§§ `Court order for holding of meeting (s 896)`
+
+-- JURAL the creditors or members concerned: liability to be summoned to a meeting | the court: power (s 896(1)); the applicant: power to apply | the court: liability to hear it (s 896(2))
+-- src:12217 | (1) The court may, on an application under this section, order a meeting of the creditors or class of creditors, or of the members of the company or class of members (as the case may be), to be summoned in such manner as the court directs.
+@ref s 896(1) The court may, on an application, order a meeting (src:12217)
+GIVEN `an application under section 896 has been made` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 896(1) the court may order a meeting of the creditors, class of creditors, members or class of members` MEANS
+    IF `an application under section 896 has been made`
+    THEN JUST TRUE
+    ELSE NOTHING -- NOTHING-kind (limited by its own wording): "on an application under this section"
+
+-- src:12218 | (2) An application under this section may be made by—
+-- src:12219 | (a) the company,
+-- src:12220 | (b) any creditor or member of the company,
+-- src:12221 | (c) if the company is being wound up, the liquidator, or
+-- src:12222 | (d) if the company is in administration, the administrator.
+@ref s 896(2) Who may apply for the order (src:12218-12222)
+GIVEN applicant IS A `s 896(2) applicant`
+      `the company is being wound up` IS A BOOLEAN
+      `the company is in administration` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 896(2) the person may apply for an order for a meeting` MEANS
+    CONSIDER applicant
+    WHEN `s 896(2) the company` THEN JUST TRUE
+    WHEN `s 896(2) a creditor of the company` THEN JUST TRUE
+    WHEN `s 896(2) a member of the company` THEN JUST TRUE
+    WHEN `s 896(2) the liquidator of the company` THEN
+        IF `the company is being wound up` THEN JUST TRUE
+        ELSE NOTHING -- NOTHING-kind (limited by its own wording): "if the company is being wound up, the liquidator" (an unmet "if" on a power the text gives: fork F26)
+    WHEN `s 896(2) the administrator of the company` THEN
+        IF `the company is in administration` THEN JUST TRUE
+        ELSE NOTHING -- NOTHING-kind (limited by its own wording): "if the company is in administration, the administrator" (an unmet "if" on a power the text gives: fork F26)
+    WHEN `s 896(2) any other person` THEN NOTHING -- NOTHING-kind (list not closed): "An application under this section may be made by" lists, and does not say "only"
+
+-- JURAL the company (a corporation that is a creditor): power to appoint a representative | the meeting: liability to receive that representative (s 323 is outside this range)
+-- src:12223 | (3) Section 323 (representation of corporations at meetings) applies to a meeting of creditors under this section as to a meeting of the company (references to a member of the company being read as references to a creditor).
+@ref s 896(3) Section 323 applies to a meeting of creditors under this section (src:12223)
+GIVEN `the meeting is a meeting of creditors under section 896` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 896(3) section 323 applies to the meeting` MEANS
+    IF `the meeting is a meeting of creditors under section 896`
+    THEN JUST TRUE
+    ELSE NOTHING -- NOTHING-kind (limited by its own wording): "applies to a meeting of creditors under this section"
+
+-- JURAL none (a signpost whose effect is s 899A)
+-- src:12224 | (4) This section is subject to section 899A (moratorium debts, etc).
+@ref s 896(4) This section is subject to section 899A (src:12224)
+GIVEN `s 899A(1) this section applies` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 896(4) section 896 is subject to section 899A` MEANS
+    CONSIDER `s 899A(1) this section applies`
+    WHEN JUST TRUE THEN JUST TRUE
+    WHEN JUST FALSE THEN NOTHING -- NOTHING-kind (silent): section 899A does not apply, and s 896(4) says nothing else
+    WHEN NOTHING THEN NOTHING -- NOTHING-kind (points outside the text): whether section 899A applies is not known
+
+§§ `Statement to be circulated or made available (s 897)`
+
+DECLARE `s 897(1) how a notice summoning the meeting is given` IS ONE OF
+    `s 897(1) sent to a creditor or member`
+    `s 897(1) given by advertisement`
+
+-- JURAL the creditor or member: claim to the statement | the company: duty to send it (s 897(1)(a))
+-- src:12226 | (1) Where a meeting is summoned under section 896—
+-- src:12227 | (a) every notice summoning the meeting that is sent to a creditor or member must be accompanied by a statement complying with this section, and
+-- src:12228 | (b) every notice summoning the meeting that is given by advertisement must either—
+-- src:12229 | (i) include such a statement, or
+-- src:12230 | (ii) state where and how creditors or members entitled to attend the meeting may obtain copies of such a statement.
+@ref s 897(1) The notice must be accompanied by, or give access to, a statement (src:12226-12230)
+GIVEN `a meeting is summoned under section 896` IS A BOOLEAN
+      how IS A `s 897(1) how a notice summoning the meeting is given`
+      `the notice is accompanied by a statement complying with section 897` IS A BOOLEAN
+      `the advertisement includes such a statement` IS A BOOLEAN
+      `the advertisement states where and how creditors or members entitled to attend may obtain copies of such a statement` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 897(1) the notice summoning the meeting satisfies the requirement` MEANS
+    IF NOT (`a meeting is summoned under section 896`)
+    THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "Where a meeting is summoned under section 896" (the requirement does not arise)
+    ELSE CONSIDER how
+         WHEN `s 897(1) sent to a creditor or member` THEN
+             IF `the notice is accompanied by a statement complying with section 897`
+             THEN JUST TRUE
+             ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "must be accompanied by a statement complying with this section" (a bare "must" not done: fork F3)
+         WHEN `s 897(1) given by advertisement` THEN
+             IF `the advertisement includes such a statement` OR `the advertisement states where and how creditors or members entitled to attend may obtain copies of such a statement`
+             THEN JUST TRUE
+             ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "must either— (i) include such a statement, or (ii) state where and how"
+
+-- JURAL the company: duty to explain | the creditors and members: claim to the explanation (s 897(2)); interests of directors: duty of disclosure | the company (s 897(2)(b))
+-- src:12231 | (2) The statement must—
+-- src:12232 | (a) explain the effect of the compromise or arrangement, and
+-- src:12233 | (b) in particular, state—
+-- src:12234 | (i) any material interests of the directors of the company (whether as directors or as members or as creditors of the company or otherwise), and
+-- src:12235 | (ii) the effect on those interests of the compromise or arrangement, in so far as it is different from the effect on the like interests of other persons.
+@ref s 897(2) What the statement must explain and state (src:12231-12235)
+GIVEN `the statement explains the effect of the compromise or arrangement` IS A BOOLEAN
+      `the statement states any material interests of the directors of the company (whether as directors or as members or as creditors of the company or otherwise)` IS A BOOLEAN
+      `the statement states the effect on those interests of the compromise or arrangement, in so far as it is different from the effect on the like interests of other persons` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 897(2) the statement complies` MEANS
+    IF `the statement explains the effect of the compromise or arrangement`
+       AND `the statement states any material interests of the directors of the company (whether as directors or as members or as creditors of the company or otherwise)`
+       AND `the statement states the effect on those interests of the compromise or arrangement, in so far as it is different from the effect on the like interests of other persons`
+    THEN JUST TRUE
+    ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "The statement must— (a) explain the effect of the compromise or arrangement, and (b) in particular, state"
+
+-- src:12236 | (3) Where the compromise or arrangement affects the rights of debenture holders of the company, the statement must give the like explanation as respects the trustees of any deed for securing the issue of the debentures as it is required to give as respects the company's directors.
+@ref s 897(3) Debenture holders: the like explanation as respects the trustees (src:12236)
+GIVEN `the compromise or arrangement affects the rights of debenture holders of the company` IS A BOOLEAN
+      `the statement gives the like explanation as respects the trustees of any deed for securing the issue of the debentures` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 897(3) the statement complies as respects debenture holders` MEANS
+    IF NOT (`the compromise or arrangement affects the rights of debenture holders of the company`)
+    THEN NOTHING -- NOTHING-kind (limited by its own wording): "Where the compromise or arrangement affects the rights of debenture holders" (the text requires nothing here otherwise)
+    ELSE IF `the statement gives the like explanation as respects the trustees of any deed for securing the issue of the debentures`
+         THEN JUST TRUE
+         ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "the statement must give the like explanation as respects the trustees"
+
+-- JURAL the creditor or member entitled to attend: claim to a free copy | the company: duty to provide it
+-- src:12237 | (4) Where a notice given by advertisement states that copies of an explanatory statement can be obtained by creditors or members entitled to attend the meeting, every such creditor or member is entitled, on making application in the manner indicated by the notice, to be provided by the company with a copy of the statement free of charge.
+@ref s 897(4) A creditor or member may have a copy of the statement free of charge (src:12237)
+GIVEN `the notice given by advertisement states that copies of an explanatory statement can be obtained by creditors or members entitled to attend the meeting` IS A BOOLEAN
+      `the person is a creditor or member entitled to attend the meeting` IS A BOOLEAN
+      `the person has applied in the manner indicated by the notice` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 897(4) the person is entitled to be provided by the company with a copy of the statement free of charge` MEANS
+    IF `the notice given by advertisement states that copies of an explanatory statement can be obtained by creditors or members entitled to attend the meeting`
+       AND `the person is a creditor or member entitled to attend the meeting`
+       AND `the person has applied in the manner indicated by the notice`
+    THEN JUST TRUE
+    ELSE NOTHING -- NOTHING-kind (limited by its own wording): "Where a notice given by advertisement states ... every such creditor or member is entitled, on making application in the manner indicated by the notice"
+
+-- The offence of default: the company, and every officer of the company who is in default, subject to subsection (7).
+-- JURAL the State (a prosecuting power) | the company and every officer in default: liability to conviction
+-- src:12238 | (5) If a company makes default in complying with any requirement of this section, an offence is committed by—
+-- src:12239 | (a) the company, and
+-- src:12240 | (b) every officer of the company who is in default.
+-- src:12241 | This is subject to subsection (7) below.
+-- src:12242 | (6) For this purpose the following are treated as officers of the company—
+-- src:12243 | (a) a liquidator or administrator of the company, and
+-- src:12244 | (b) a trustee of a deed for securing the issue of debentures of the company.
+-- src:12245 | (7) A person is not guilty of an offence under this section if he shows that the default was due to the refusal of a director or trustee for debenture holders to supply the necessary particulars of his interests.
+@ref s 897(5)-(7) Offence by the company and every officer in default; who counts as an officer; the defence (src:12238-12245)
+GIVEN `the company makes default in complying with any requirement of section 897` IS A BOOLEAN
+      person IS A `s 897(5) person charged with the default`
+      `s 1121 the officer is in default` IS A MAYBE BOOLEAN
+      `the person shows that the default was due to the refusal of a director or trustee for debenture holders to supply the necessary particulars of his interests` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 897(5) the person is guilty of an offence under section 897` MEANS
+    BRANCH
+        IF NOT (`the company makes default in complying with any requirement of section 897`)
+            THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "If a company makes default in complying with any requirement of this section, an offence is committed by"
+        IF `the person shows that the default was due to the refusal of a director or trustee for debenture holders to supply the necessary particulars of his interests`
+            THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "A person is not guilty of an offence under this section if he shows that the default was due to the refusal"
+        IF person EQUALS `s 897(5) the company` THEN JUST TRUE
+        IF person EQUALS `s 897(5) any other person`
+            THEN NOTHING -- NOTHING-kind (list not closed): the offence is committed by "(a) the company, and (b) every officer of the company who is in default": no one else is named
+        OTHERWISE `s 1121 the officer is in default` -- an officer, a liquidator or administrator, or a trustee (subsection (6) treats them as officers): guilty only if in default; JUST FALSE is the "who is in default" no, supplied by s 1121
+
+-- A defence the person must show (the 2026-11-05 ruling (b)): when it is not shown, the answer is that THIS provision gives no defence on these facts.
+@ref s 897(7) The defence: refusal of a director or trustee to supply particulars (src:12245)
+GIVEN `the person shows that the default was due to the refusal of a director or trustee for debenture holders to supply the necessary particulars of his interests` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 897(7) section 897(7) gives the person a defence on these facts` MEANS
+    IF `the person shows that the default was due to the refusal of a director or trustee for debenture holders to supply the necessary particulars of his interests`
+    THEN JUST TRUE
+    ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "if he shows that the default was due to the refusal" (this section gives no defence on these facts, not "no defence at all")
+
+-- JURAL the State (a power to prosecute and the court's power to sentence) | the person guilty: liability to the penalty
+-- src:12246 | (8) A person guilty of an offence under this section is liable—
+-- src:12247 | (a) on conviction on indictment, to a fine;
+-- src:12248 | (b) on summary conviction, to a fine not exceeding the statutory maximum.
+@ref s 897(8) The penalty (src:12246-12248)
+GIVEN mode IS A `Mode of conviction`
+GIVETH A MAYBE Penalty
+`s 897(8) the penalty on conviction` MEANS
+    IF mode EQUALS `on conviction on indictment`
+    THEN JUST (`s 897(8) a penalty of a fine only` mode `a fine without a stated limit`) -- "(a) on conviction on indictment, to a fine"
+    ELSE JUST (`s 897(8) a penalty of a fine only` mode (`a fine not exceeding the statutory maximum` 1)) -- "(b) on summary conviction, to a fine not exceeding the statutory maximum"
+
+§§ `Duty of directors and trustees to provide information (s 898)`
+
+-- JURAL the company: claim to notice of a director's or trustee's matters | any director of the company and any trustee for its debenture holders: duty to give it
+-- src:12250 | (1) It is the duty of—
+-- src:12251 | (a) any director of the company, and
+-- src:12252 | (b) any trustee for its debenture holders,
+-- src:12253 | to give notice to the company of such matters relating to himself as may be necessary for the purposes of section 897 (explanatory statement to be circulated or made available).
+@ref s 898(1) The duty of a director or trustee to give the company notice of matters relating to himself (src:12250-12253)
+GIVEN `the person is a director of the company or a trustee for its debenture holders` IS A BOOLEAN
+      `the matter relates to the person himself and is necessary for the purposes of section 897` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 898(1) the person is under a duty to give the company notice of the matter` MEANS
+    IF `the person is a director of the company or a trustee for its debenture holders` AND `the matter relates to the person himself and is necessary for the purposes of section 897`
+    THEN JUST TRUE
+    ELSE NOTHING -- NOTHING-kind (limited by its own wording): "any director of the company, and any trustee for its debenture holders, to give notice to the company of such matters relating to himself as may be necessary"
+
+-- JURAL the State | any person who makes default in complying with section 898: liability to conviction (s 898(2)); the penalty (s 898(3))
+-- src:12254 | (2) Any person who makes default in complying with this section commits an offence.
+-- src:12255 | (3) A person guilty of an offence under this section is liable on summary conviction to a fine not exceeding level 3 on the standard scale.
+@ref s 898(2)-(3) Offence of default and its penalty (src:12254-12255)
+GIVEN `the person makes default in complying with section 898` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 898(2) the person commits an offence` MEANS
+    IF `the person makes default in complying with section 898`
+    THEN JUST TRUE
+    ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "Any person who makes default in complying with this section commits an offence"
+
+GIVEN mode IS A `Mode of conviction`
+GIVETH A MAYBE Penalty
+`s 898(3) the penalty on conviction` MEANS
+    IF `s 897(8) the conviction is a summary conviction` mode
+    THEN JUST (`s 897(8) a penalty of a fine only` mode (`a fine not exceeding a level on the standard scale` 3 1))
+    ELSE NOTHING -- NOTHING-kind (silent): "is liable on summary conviction to a fine not exceeding level 3 on the standard scale" says nothing of conviction on indictment
+
+§§ `Court sanction for compromise or arrangement (s 899)`
+
+-- 75% in value, and a majority in number: the Act says "a majority in number representing 75% in value ... present and voting".
+-- JURAL the company, any creditor or member: power to apply | the court: liability to hear; the court: power to sanction | those bound: liability (s 899(1))
+-- src:12258 | (1) If a majority in number representing 75% in value of the creditors or class of creditors or members or class of members (as the case may be), present and voting either in person or by proxy at the meeting summoned under section 896, agree a compromise or arrangement, the court may, on an application under this section, sanction the compromise or arrangement.
+@ref s 899(1) If a majority in number representing 75% in value agree, the court may sanction (src:12258)
+GIVEN `an application under section 899 has been made` IS A BOOLEAN
+      `the number of creditors or members present and voting at the meeting summoned under section 896` IS A NUMBER
+      `the number of them who agree the compromise or arrangement` IS A NUMBER
+      `the value represented by those present and voting` IS A NUMBER
+      `the value represented by those who agree` IS A NUMBER
+GIVETH A MAYBE BOOLEAN
+`s 899(1) the court may sanction the compromise or arrangement` MEANS
+    BRANCH
+        IF NOT (`an application under section 899 has been made`)
+            THEN NOTHING -- NOTHING-kind (limited by its own wording): "the court may, on an application under this section, sanction"
+        IF 2 TIMES `the number of them who agree the compromise or arrangement` GREATER THAN `the number of creditors or members present and voting at the meeting summoned under section 896`
+           AND `the value represented by those who agree` AT LEAST (0.75 TIMES `the value represented by those present and voting`)
+            THEN JUST TRUE
+        OTHERWISE NOTHING -- NOTHING-kind (limited by its own wording): "If a majority in number representing 75% in value of the creditors or class of creditors or members or class of members ... agree a compromise or arrangement, the court may" (an unmet "if" on a power the text gives: fork F27; the count test itself is fork F2)
+
+-- JURAL none (a signpost whose effect is s 899A)
+-- src:12259 | (1A) Subsection (1) is subject to section 899A (moratorium debts, etc).
+@ref s 899(1A) Subsection (1) is subject to section 899A (src:12259)
+GIVEN `s 899A(1) this section applies` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 899(1A) section 899(1) is subject to section 899A` MEANS
+    CONSIDER `s 899A(1) this section applies`
+    WHEN JUST TRUE THEN JUST TRUE
+    WHEN JUST FALSE THEN NOTHING -- NOTHING-kind (silent): section 899A does not apply, and s 899(1A) says nothing else
+    WHEN NOTHING THEN NOTHING -- NOTHING-kind (points outside the text): whether section 899A applies is not known
+
+-- The text shows two versions of limb (c) (lines 12263-12265); both are encoded together (fork F1): the liquidator of a company being wound up,
+-- and the administrator of a company in administration or in relation to which an administration order is in force.
+-- src:12260 | (2) An application under this section may be made by—
+-- src:12261 | (a) the company,
+-- src:12262 | (b) any creditor or member of the company,
+-- src:12263 | (c) if the company is being wound up or an administration order is in force in relation it, the liquidator or administrator.
+-- src:12264 | (c) if the company is being wound up, the liquidator, or
+-- src:12265 | (d) if the company is in administration, the administrator.
+@ref s 899(2) Who may apply for the sanction (src:12260-12265)
+GIVEN applicant IS A `s 896(2) applicant`
+      `the company is being wound up` IS A BOOLEAN
+      `the company is in administration or an administration order is in force in relation to it` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 899(2) the person may apply for the court's sanction` MEANS
+    CONSIDER applicant
+    WHEN `s 896(2) the company` THEN JUST TRUE
+    WHEN `s 896(2) a creditor of the company` THEN JUST TRUE
+    WHEN `s 896(2) a member of the company` THEN JUST TRUE
+    WHEN `s 896(2) the liquidator of the company` THEN
+        IF `the company is being wound up` THEN JUST TRUE
+        ELSE NOTHING -- NOTHING-kind (limited by its own wording): "if the company is being wound up, the liquidator" (an unmet "if" on a power the text gives: fork F28)
+    WHEN `s 896(2) the administrator of the company` THEN
+        IF `the company is in administration or an administration order is in force in relation to it` THEN JUST TRUE
+        ELSE NOTHING -- NOTHING-kind (limited by its own wording): "if the company is in administration, the administrator" (an unmet "if" on a power the text gives: fork F28)
+    WHEN `s 896(2) any other person` THEN NOTHING -- NOTHING-kind (list not closed): "An application under this section may be made by" lists, and does not say "only"
+
+DECLARE `s 899(3) person said to be bound` IS ONE OF
+    `s 899(3) a creditor of the creditors or class concerned`
+    `s 899(3) a member of the members or class concerned`
+    `s 899(3) the company`
+    `s 899(3) the liquidator of a company in the course of being wound up`
+    `s 899(3) a contributory of a company in the course of being wound up`
+    `s 899(3) any other person`
+
+-- JURAL the company, the creditors and members concerned: (the court's sanction is a power over them) | those bound: liability to be bound; the liquidator and contributories likewise
+-- src:12266 | (3) A compromise or arrangement sanctioned by the court is binding on—
+-- src:12267 | (a) all creditors or the class of creditors or on the members or class of members (as the case may be), and
+-- src:12268 | (b) the company or, in the case of a company in the course of being wound up, the liquidator and contributories of the company.
+@ref s 899(3) A sanctioned compromise or arrangement is binding on (src:12266-12268)
+GIVEN `the court has sanctioned the compromise or arrangement` IS A BOOLEAN
+      person IS A `s 899(3) person said to be bound`
+GIVETH A MAYBE BOOLEAN
+`s 899(3) the compromise or arrangement is binding on the person` MEANS
+    IF NOT (`the court has sanctioned the compromise or arrangement`)
+    THEN NOTHING -- NOTHING-kind (limited by its own wording): "A compromise or arrangement sanctioned by the court is binding on" (it says nothing of one that is not sanctioned)
+    ELSE CONSIDER person
+         WHEN `s 899(3) any other person` THEN NOTHING -- NOTHING-kind (list not closed): "binding on" lists the creditors, members, the company, the liquidator and contributories, and does not say "only"
+         OTHERWISE JUST TRUE
+
+-- The "until" bar (2026-11-05 ruling (d)): encoded as the bar, never as "the order has effect".
+-- JURAL the registrar (receipt) | the company: duty to deliver; every one the order affects: no right to rely on it before delivery
+-- src:12269 | (4) The court's order has no effect until a copy of it has been delivered to the registrar.
+@ref s 899(4) The court's order has no effect until a copy has been delivered to the registrar (src:12269)
+GIVEN `a copy of the order has been delivered to the registrar` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 899(4) the court's order cannot yet have effect` MEANS
+    IF `a copy of the order has been delivered to the registrar`
+    THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "has no effect until a copy of it has been delivered to the registrar" (the bar has lifted; the section does not say the order then has effect)
+    ELSE JUST TRUE
+
+-- src:12270 | (5) . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+-- s 899(5): the text shows only dots (repealed or omitted). Coverage row: repealed or blank in this text. No L4.
+
+§§ `Moratorium debts, etc (s 899A)`
+
+-- Period: "the period of 12 weeks beginning with the day after the end of any moratorium": the 84 days from the day after the
+-- moratorium ended; an application "before the end of the period" is made on or before the last of those days (fork F4).
+-- JURAL none (a rule fixing when the section applies)
+-- src:12273 | (1) This section applies where—
+-- src:12274 | (a) an application under section 896 in respect of a compromise or arrangement is made before the end of the period of 12 weeks beginning with the day after the end of any moratorium for the company under Part A1 of the Insolvency Act 1986 or Part 1A of the Insolvency (Northern Ireland) Order 1989 (S.I. 1989/2405 (N.I. 19)), and
+-- src:12275 | (b) the creditors with whom the compromise or arrangement is proposed include any relevant creditors (see subsection (2)).
+@ref s 899A(1) This section applies where an application is made within 12 weeks of the end of a moratorium and relevant creditors are included (src:12273-12275)
+GIVEN `date of the application under section 896` IS A DATE
+      `the last day of the moratorium under Part A1 of the Insolvency Act 1986 or Part 1A of the Insolvency (Northern Ireland) Order 1989` IS A DATE
+      `the creditors with whom the compromise or arrangement is proposed include any relevant creditors` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 899A(1) this section applies` MEANS
+    IF `date of the application under section 896` AT MOST (`the last day of the moratorium under Part A1 of the Insolvency Act 1986 or Part 1A of the Insolvency (Northern Ireland) Order 1989` PLUS 84)
+       AND `the creditors with whom the compromise or arrangement is proposed include any relevant creditors`
+    THEN JUST TRUE
+    ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "This section applies where" (an application after the 12 weeks, or no relevant creditor)
+
+-- src:12276 | (2) In this section “relevant creditor” means—
+-- src:12277 | (a) a creditor in respect of a moratorium debt, or
+-- src:12278 | (b) a creditor in respect of a priority pre-moratorium debt.
+@ref s 899A(2) "relevant creditor" (src:12276-12278)
+GIVEN `the creditor is a creditor in respect of a moratorium debt` IS A BOOLEAN
+      `the creditor is a creditor in respect of a priority pre-moratorium debt` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 899A(2) the creditor is a relevant creditor` MEANS
+    IF `the creditor is a creditor in respect of a moratorium debt` OR `the creditor is a creditor in respect of a priority pre-moratorium debt`
+    THEN JUST TRUE
+    ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "“relevant creditor” means"
+
+-- JURAL the relevant creditor: disability (it may not participate) | the meeting
+-- src:12279 | (3) The relevant creditors may not participate in the meeting summoned under section 896.
+@ref s 899A(3) Relevant creditors may not participate in the meeting (src:12279)
+GIVEN `s 899A(1) this section applies` IS A MAYBE BOOLEAN
+      `the creditor is a relevant creditor` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 899A(3) the relevant creditor may participate in the meeting summoned under section 896` MEANS
+    CONSIDER `s 899A(1) this section applies`
+    WHEN NOTHING THEN NOTHING -- NOTHING-kind (points outside the text): whether this section applies is not known
+    WHEN JUST FALSE THEN NOTHING -- NOTHING-kind (limited by its own wording): the prohibition is in a section that applies only "where" its conditions are met
+    WHEN JUST TRUE THEN
+        IF `the creditor is a relevant creditor`
+        THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "The relevant creditors may not participate in the meeting summoned under section 896"
+        ELSE NOTHING -- NOTHING-kind (silent): a creditor who is not a relevant creditor is not mentioned
+
+-- JURAL the relevant creditor: claim to a statement | the company: duty to send it (s 899A(4)(a))
+-- src:12280 | (4) For the purposes of section 897 (statement to be circulated or made available)—
+-- src:12281 | (a) the requirement in section 897(1)(a) is to be read as including a requirement to send each relevant creditor a statement complying with section 897;
+-- src:12282 | (b) any reference to creditors entitled to attend the meeting summoned under section 896 includes a reference to relevant creditors.
+@ref s 899A(4) Section 897 applies to relevant creditors (src:12280-12282)
+GIVEN `s 899A(1) this section applies` IS A MAYBE BOOLEAN
+      `the creditor is a relevant creditor` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 899A(4) the relevant creditor is within section 897 as a creditor entitled to be sent the statement and to attend` MEANS
+    CONSIDER `s 899A(1) this section applies`
+    WHEN JUST TRUE THEN
+        IF `the creditor is a relevant creditor`
+        THEN JUST TRUE
+        ELSE NOTHING -- NOTHING-kind (silent): a creditor who is not a relevant creditor is not mentioned
+    WHEN JUST FALSE THEN NOTHING -- NOTHING-kind (limited by its own wording): "For the purposes of section 897" in a section that applies only "where" its conditions are met
+    WHEN NOTHING THEN NOTHING -- NOTHING-kind (points outside the text): whether this section applies is not known
+
+-- JURAL the creditor (a relevant creditor that has not agreed): immunity from provision in the arrangement | the court: disability to sanction
+-- src:12283 | (5) The court may not sanction the compromise or arrangement under section 899 if it includes provision in respect of any relevant creditor who has not agreed to it.
+@ref s 899A(5) The court may not sanction an arrangement that includes provision for a relevant creditor who has not agreed (src:12283)
+GIVEN `s 899A(1) this section applies` IS A MAYBE BOOLEAN
+      `the compromise or arrangement includes provision in respect of a relevant creditor` IS A BOOLEAN
+      `that relevant creditor has agreed to it` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 899A(5) the court may sanction the compromise or arrangement under section 899` MEANS
+    CONSIDER `s 899A(1) this section applies`
+    WHEN NOTHING THEN NOTHING -- NOTHING-kind (points outside the text): whether this section applies is not known
+    WHEN JUST FALSE THEN NOTHING -- NOTHING-kind (limited by its own wording): the prohibition is in a section that applies only "where" its conditions are met
+    WHEN JUST TRUE THEN
+        IF `the compromise or arrangement includes provision in respect of a relevant creditor` AND NOT (`that relevant creditor has agreed to it`)
+        THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "The court may not sanction the compromise or arrangement under section 899 if it includes provision in respect of any relevant creditor who has not agreed to it"
+        ELSE NOTHING -- NOTHING-kind (limited by its own wording): the bar names only a relevant creditor who has not agreed
+
+DECLARE `s 899A(6) kind of moratorium` IS ONE OF
+    `s 899A(6) a moratorium under Part A1 of the Insolvency Act 1986`
+    `s 899A(6) a moratorium under Part 1A of the Insolvency (Northern Ireland) Order 1989`
+
+-- "moratorium debt" and "priority pre-moratorium debt" have the same meaning as in s 174A of the 1986 Act / Article 148A of the 1989 Order,
+-- which are not among the sources: the borrowed answer is an input (JUST TRUE / JUST FALSE as that provision says; NOTHING = not known).
+-- src:12284 | (6) In this section—
+-- src:12285 | “moratorium debt”—
+-- src:12286 | (a) in the case of a moratorium under Part A1 of the Insolvency Act 1986, has the same meaning as in section 174A of that Act;
+-- src:12287 | (b) in the case of a moratorium under Part 1A of the Insolvency (Northern Ireland) Order 1989, has the same meaning as in Article 148A of that Order;
+-- src:12288 | “priority pre-moratorium debt”—
+-- src:12289 | (a) in the case of a moratorium under Part A1 of the Insolvency Act 1986, has the same meaning as in section 174A of that Act;
+-- src:12290 | (b) in the case of a moratorium under Part 1A of the Insolvency (Northern Ireland) Order 1989, has the same meaning as in Article 148A of that Order.
+@ref s 899A(6) "moratorium debt" and "priority pre-moratorium debt" have the meaning in the Insolvency Act 1986 or the 1989 Order (src:12284-12290)
+GIVEN moratorium IS A `s 899A(6) kind of moratorium`
+      `the debt has the meaning given by section 174A of the Insolvency Act 1986 or Article 148A of the Insolvency (Northern Ireland) Order 1989 as the case may be, for a moratorium debt or a priority pre-moratorium debt` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 899A(6) the debt is a moratorium debt or a priority pre-moratorium debt` MEANS
+    CONSIDER moratorium
+    WHEN `s 899A(6) a moratorium under Part A1 of the Insolvency Act 1986` THEN `the debt has the meaning given by section 174A of the Insolvency Act 1986 or Article 148A of the Insolvency (Northern Ireland) Order 1989 as the case may be, for a moratorium debt or a priority pre-moratorium debt` -- NOTHING-kind (points outside the text): section 174A of that Act is not among the sources
+    WHEN `s 899A(6) a moratorium under Part 1A of the Insolvency (Northern Ireland) Order 1989` THEN `the debt has the meaning given by section 174A of the Insolvency Act 1986 or Article 148A of the Insolvency (Northern Ireland) Order 1989 as the case may be, for a moratorium debt or a priority pre-moratorium debt` -- NOTHING-kind (points outside the text): Article 148A of that Order is not among the sources
+
+§§ `Powers of court to facilitate reconstruction or amalgamation (s 900)`
+
+-- JURAL none (a rule fixing when the section applies)
+-- src:12293 | (1) This section applies where application is made to the court under section 899 to sanction a compromise or arrangement and it is shown that—
+-- src:12294 | (a) the compromise or arrangement is proposed for the purposes of, or in connection with, a scheme for the reconstruction of any company or companies, or the amalgamation of any two or more companies, and
+-- src:12295 | (b) under the scheme the whole or any part of the undertaking or the property of any company concerned in the scheme (“a transferor company”) is to be transferred to another company (“the transferee company”).
+@ref s 900(1) The section applies where a scheme of reconstruction or amalgamation involves a transfer (src:12293-12295)
+GIVEN `application is made to the court under section 899 to sanction a compromise or arrangement` IS A BOOLEAN
+      `the compromise or arrangement is proposed for the purposes of, or in connection with, a scheme for the reconstruction of any company or companies, or the amalgamation of any two or more companies` IS A BOOLEAN
+      `under the scheme the whole or any part of the undertaking or the property of any company concerned in the scheme is to be transferred to another company` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 900(1) this section applies` MEANS
+    IF `application is made to the court under section 899 to sanction a compromise or arrangement`
+       AND `the compromise or arrangement is proposed for the purposes of, or in connection with, a scheme for the reconstruction of any company or companies, or the amalgamation of any two or more companies`
+       AND `under the scheme the whole or any part of the undertaking or the property of any company concerned in the scheme is to be transferred to another company`
+    THEN JUST TRUE
+    ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "This section applies where application is made to the court under section 899 to sanction a compromise or arrangement and it is shown that"
+
+DECLARE `s 900(2) matter for which the court may make provision` IS ONE OF
+    `s 900(2)(a) the transfer to the transferee company of the undertaking, property or liabilities of a transferor company`
+    `s 900(2)(b) the allotting or appropriation by the transferee company of shares, debentures, policies or other like interests`
+    `s 900(2)(c) the continuation by or against the transferee company of legal proceedings pending by or against a transferor company`
+    `s 900(2)(d) the dissolution, without winding up, of a transferor company`
+    `s 900(2)(e) the provision for persons who dissent from the compromise or arrangement`
+    `s 900(2)(f) incidental, consequential and supplemental matters necessary to secure that the reconstruction or amalgamation is fully and effectively carried out`
+    `s 900(2) any other matter`
+
+-- JURAL the court: power to make the provision | the companies, creditors and members concerned: liability to it
+-- src:12296 | (2) The court may, either by the order sanctioning the compromise or arrangement or by a subsequent order, make provision for all or any of the following matters—
+-- src:12297 | (a) the transfer to the transferee company of the whole or any part of the undertaking and of the property or liabilities of any transferor company;
+-- src:12298 | (b) the allotting or appropriation by the transferee company of any shares, debentures, policies or other like interests in that company which under the compromise or arrangement are to be allotted or appropriated by that company to or for any person;
+-- src:12299 | (c) the continuation by or against the transferee company of any legal proceedings pending by or against any transferor company;
+-- src:12300 | (d) the dissolution, without winding up, of any transferor company;
+-- src:12301 | (e) the provision to be made for any persons who, within such time and in such manner as the court directs, dissent from the compromise or arrangement;
+-- src:12302 | (f) such incidental, consequential and supplemental matters as are necessary to secure that the reconstruction or amalgamation is fully and effectively carried out.
+@ref s 900(2) The matters for which the court may make provision (src:12296-12302)
+GIVEN `s 900(1) this section applies` IS A MAYBE BOOLEAN
+      matter IS A `s 900(2) matter for which the court may make provision`
+GIVETH A MAYBE BOOLEAN
+`s 900(2) the court may make provision for the matter` MEANS
+    CONSIDER `s 900(1) this section applies`
+    WHEN JUST FALSE THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "This section applies where" (the court has the powers of this section only where it applies)
+    WHEN NOTHING THEN NOTHING -- NOTHING-kind (points outside the text): whether the section applies is not known
+    WHEN JUST TRUE THEN
+        CONSIDER matter
+        WHEN `s 900(2) any other matter` THEN NOTHING -- NOTHING-kind (list not closed): "make provision for all or any of the following matters" lists, and does not say "only"
+        OTHERWISE JUST TRUE
+
+-- JURAL the transferee company: right to the property and the burden of the liabilities | the transferor company: disability (the property passes without further act)
+-- src:12303 | (3) If an order under this section provides for the transfer of property or liabilities—
+-- src:12304 | (a) the property is by virtue of the order transferred to, and vests in, the transferee company, and
+-- src:12305 | (b) the liabilities are, by virtue of the order, transferred to and become liabilities of that company.
+@ref s 900(3) The transfer of property or liabilities takes effect by virtue of the order (src:12303-12305)
+GIVEN `an order under section 900 provides for the transfer of property or liabilities` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 900(3) the property vests in, and the liabilities become liabilities of, the transferee company by virtue of the order` MEANS
+    IF `an order under section 900 provides for the transfer of property or liabilities`
+    THEN JUST TRUE
+    ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "If an order under this section provides for the transfer of property or liabilities" (an unmet "if": marginal reading (a))
+
+-- src:12306 | (4) The property (if the order so directs) vests freed from any charge that is by virtue of the compromise or arrangement to cease to have effect.
+@ref s 900(4) The property vests freed from a charge if the order so directs (src:12306)
+GIVEN `the order so directs` IS A BOOLEAN
+      `the charge is by virtue of the compromise or arrangement to cease to have effect` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 900(4) the property vests freed from the charge` MEANS
+    IF `the order so directs` AND `the charge is by virtue of the compromise or arrangement to cease to have effect`
+    THEN JUST TRUE
+    ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "The property (if the order so directs) vests freed from any charge that is by virtue of the compromise or arrangement to cease to have effect"
+
+-- src:12307 | (5) In this section—
+-- src:12308 | “property” includes property, rights and powers of every description; and
+-- src:12309 | “liabilities” includes duties.
+@ref s 900(5) "property" includes property, rights and powers of every description; "liabilities" includes duties (src:12307-12309)
+GIVEN `the thing is property, a right or a power of any description` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 900(5) the thing is property` MEANS
+    IF `the thing is property, a right or a power of any description` THEN JUST TRUE
+    ELSE NOTHING -- NOTHING-kind (includes): "“property” includes property, rights and powers of every description"
+
+GIVEN `the thing is a duty` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 900(5) the thing is a liability` MEANS
+    IF `the thing is a duty` THEN JUST TRUE
+    ELSE NOTHING -- NOTHING-kind (includes): "“liabilities” includes duties"
+
+-- "within seven days after its making": the seventh day after the order is made is the last day (day 0 is the day of the order).
+-- date of delivery NOTHING means not yet delivered; today is the day the question is asked.
+-- JURAL the registrar (receipt) | every company in relation to which an order is made: duty to cause a copy to be delivered within seven days
+-- src:12310 | (6) Every company in relation to which an order is made under this section must cause a copy of the order to be delivered to the registrar within seven days after its making.
+@ref s 900(6) The company must cause a copy of the order to be delivered to the registrar within seven days after its making (src:12310)
+GIVEN `date the order was made` IS A DATE
+      `date a copy was delivered to the registrar` IS A MAYBE DATE
+      today IS A DATE
+GIVETH A MAYBE BOOLEAN
+`s 900(6) the company delivered a copy of the order to the registrar in time` MEANS
+    CONSIDER `date a copy was delivered to the registrar`
+    WHEN JUST delivered THEN
+        IF delivered AT LEAST `date the order was made` AND delivered AT MOST (`date the order was made` PLUS 7)
+        THEN JUST TRUE
+        ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "within seven days after its making"
+    WHEN NOTHING THEN
+        IF today AT MOST (`date the order was made` PLUS 7)
+        THEN NOTHING -- NOTHING-kind (silent): the seven days have not run out and no copy has been delivered yet
+        ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "within seven days after its making" (no copy was delivered, and the period has ended)
+
+@ref s 900(6) The duty as a regulative rule (src:12310)
+GIVETH A DEONTIC Party `Action of a party`
+`s 900(6) the company's duty to deliver a copy of the order` MEANS
+    PARTY Company
+    MUST `Action of a party` Company Registrar "deliver a copy of the order to the registrar"
+    WITHIN 7
+    HENCE FULFILLED
+    LEST BREACH BY Company BECAUSE "a copy of the order was not delivered to the registrar within seven days after its making (s 900(6))"
+
+-- The offence: the company, and every officer of the company who is in default (s 900(7)); no defence in this section.
+-- JURAL the State | the company and every officer in default: liability to conviction
+-- src:12311 | (7) If default is made in complying with subsection (6) an offence is committed by—
+-- src:12312 | (a) the company, and
+-- src:12313 | (b) every officer of the company who is in default.
+@ref s 900(7) Offence if default is made in complying with subsection (6) (src:12311-12313)
+GIVEN `default is made in complying with section 900(6)` IS A BOOLEAN
+      person IS A `s 897(5) person charged with the default`
+      `s 1121 the officer is in default` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 900(7) the person is guilty of an offence under section 900(7)` MEANS
+    BRANCH
+        IF NOT (`default is made in complying with section 900(6)`)
+            THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "If default is made in complying with subsection (6) an offence is committed by"
+        IF person EQUALS `s 897(5) the company` THEN JUST TRUE
+        IF person EQUALS `s 897(5) any other person`
+            THEN NOTHING -- NOTHING-kind (list not closed): the offence is committed by "(a) the company, and (b) every officer of the company who is in default"
+        OTHERWISE `s 1121 the officer is in default`
+
+-- src:12314 | (8) A person guilty of an offence under subsection (7) is liable on summary conviction to a fine not exceeding level 3 on the standard scale and, for continued contravention, a daily default fine not exceeding one-tenth of level 3 on the standard scale.
+@ref s 900(8) The penalty: level 3 and, for continued contravention, a daily default fine of one-tenth of level 3 (src:12314)
+GIVEN mode IS A `Mode of conviction`
+GIVETH A MAYBE Penalty
+`s 900(8) the penalty on conviction` MEANS
+    IF `s 897(8) the conviction is a summary conviction` mode
+    THEN JUST (`s 900(8) a penalty of a fine and a daily default fine for continued contravention` mode (`a fine not exceeding a level on the standard scale` 3 1) (`a fine not exceeding a level on the standard scale` 3 0.1))
+    ELSE NOTHING -- NOTHING-kind (silent): "is liable on summary conviction to a fine" says nothing of conviction on indictment
+
+§§ `Obligations of company with respect to articles etc (s 901)`
+
+-- JURAL none (a rule fixing when the section applies)
+-- src:12317 | (1) This section applies—
+-- src:12318 | (a) to any order under section 899 (order sanctioning compromise or arrangement), and
+-- src:12319 | (b) to any order under section 900 (order facilitating reconstruction or amalgamation) that alters the company's constitution.
+@ref s 901(1) The section applies to an order under section 899 and to an order under section 900 that alters the constitution (src:12317-12319)
+GIVEN `the order is an order under section 899` IS A BOOLEAN
+      `the order is an order under section 900 that alters the company's constitution` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 901(1) this section applies to the order` MEANS
+    IF `the order is an order under section 899` OR `the order is an order under section 900 that alters the company's constitution`
+    THEN JUST TRUE
+    ELSE NOTHING -- NOTHING-kind (limited by its own wording): "This section applies— (a) to any order under section 899 ..., and (b) to any order under section 900 ... that alters the company's constitution"
+
+-- JURAL the registrar (receipt) | the company: duty to accompany the copy of the order with the amended articles, resolution or agreement
+-- src:12320 | (2) If the order amends—
+-- src:12321 | (a) the company's articles, or
+-- src:12322 | (b) any resolution or agreement to which Chapter 3 of Part 3 applies (resolution or agreement affecting a company's constitution),
+-- src:12323 | the copy of the order delivered to the registrar by the company under section 899(4) or section 900(6) must be accompanied by a copy of the company's articles, or the resolution or agreement in question, as amended.
+@ref s 901(2) The copy of the order delivered to the registrar must be accompanied by the amended articles, resolution or agreement (src:12320-12323)
+GIVEN `s 901(1) this section applies to the order` IS A MAYBE BOOLEAN
+      `the order amends the company's articles or a resolution or agreement to which Chapter 3 of Part 3 applies` IS A BOOLEAN
+      `the copy delivered to the registrar is accompanied by a copy of the articles, or the resolution or agreement, as amended` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 901(2) the copy of the order is accompanied as the section requires` MEANS
+    CONSIDER `s 901(1) this section applies to the order`
+    WHEN NOTHING THEN NOTHING -- NOTHING-kind (points outside the text): whether the section applies to the order is not known
+    WHEN JUST FALSE THEN NOTHING -- NOTHING-kind (limited by its own wording): the duty is in a section that applies only to the orders it names
+    WHEN JUST TRUE THEN
+        IF NOT (`the order amends the company's articles or a resolution or agreement to which Chapter 3 of Part 3 applies`)
+        THEN NOTHING -- NOTHING-kind (limited by its own wording): "If the order amends" the articles or a Chapter 3 resolution or agreement
+        ELSE IF `the copy delivered to the registrar is accompanied by a copy of the articles, or the resolution or agreement, as amended`
+             THEN JUST TRUE
+             ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "must be accompanied by a copy of the company's articles, or the resolution or agreement in question, as amended" (a bare "must" not done: fork F3)
+
+-- JURAL anyone to whom the company issues a copy of its articles: claim to a copy of the order | the company: duty to accompany each copy of the articles
+-- src:12324 | (3) Every copy of the company's articles issued by the company after the order is made must be accompanied by a copy of the order, unless the effect of the order has been incorporated into the articles by amendment.
+@ref s 901(3) Every copy of the articles issued after the order is made must be accompanied by a copy of the order (src:12324)
+GIVEN `s 901(1) this section applies to the order` IS A MAYBE BOOLEAN
+      `the copy of the articles is issued by the company after the order is made` IS A BOOLEAN
+      `the effect of the order has been incorporated into the articles by amendment` IS A BOOLEAN
+      `the copy of the articles is accompanied by a copy of the order` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 901(3) the copy of the articles is accompanied as the section requires` MEANS
+    CONSIDER `s 901(1) this section applies to the order`
+    WHEN NOTHING THEN NOTHING -- NOTHING-kind (points outside the text): whether the section applies to the order is not known
+    WHEN JUST FALSE THEN NOTHING -- NOTHING-kind (limited by its own wording): the duty is in a section that applies only to the orders it names
+    WHEN JUST TRUE THEN
+        BRANCH
+            IF NOT (`the copy of the articles is issued by the company after the order is made`)
+                THEN NOTHING -- NOTHING-kind (limited by its own wording): "Every copy of the company's articles issued by the company after the order is made"
+            IF `the effect of the order has been incorporated into the articles by amendment`
+                THEN JUST TRUE -- "unless the effect of the order has been incorporated into the articles by amendment": the exception is met, so nothing more is required and the copy is as the section requires (an "unless" once met: fork F10)
+            IF `the copy of the articles is accompanied by a copy of the order`
+                THEN JUST TRUE
+            OTHERWISE JUST FALSE -- FALSE-kind (the text says no in its own words): "must be accompanied by a copy of the order" (a bare "must" not done: fork F3)
+
+DECLARE `s 901(4) what an article reference means` IS ONE OF
+    `s 901(4)(a) a reference to the effect of the order`
+    `s 901(4)(b) a reference to the articles of a company not having articles`
+
+-- Rules of reading (s 901(4)): the second argument is what the reference points at.
+-- src:12325 | (4) In this section—
+-- src:12326 | (a) references to the effect of the order include the effect of the compromise or arrangement to which the order relates; and
+-- src:12327 | (b) in the case of a company not having articles, references to its articles shall be read as references to the instrument constituting the company or defining its constitution.
+@ref s 901(4) References to the effect of the order, and to the articles of a company not having articles (src:12325-12327)
+GIVEN reference IS A `s 901(4) what an article reference means`
+      `the thing is the effect of the compromise or arrangement to which the order relates` IS A BOOLEAN
+      `the thing is the instrument constituting the company or defining its constitution` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 901(4) the thing is within the reference` MEANS
+    CONSIDER reference
+    WHEN `s 901(4)(a) a reference to the effect of the order` THEN
+        IF `the thing is the effect of the compromise or arrangement to which the order relates` THEN JUST TRUE
+        ELSE NOTHING -- NOTHING-kind (includes): "references to the effect of the order include the effect of the compromise or arrangement"
+    WHEN `s 901(4)(b) a reference to the articles of a company not having articles` THEN
+        IF `the thing is the instrument constituting the company or defining its constitution` THEN JUST TRUE
+        ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "in the case of a company not having articles, references to its articles shall be read as references to the instrument constituting the company or defining its constitution"
+
+-- JURAL the State | the company and every officer in default: liability to conviction (s 901(5)); the penalty (s 901(6))
+-- src:12328 | (5) If a company makes default in complying with this section an offence is committed by—
+-- src:12329 | (a) the company, and
+-- src:12330 | (b) every officer of the company who is in default.
+@ref s 901(5) Offence if a company makes default in complying with the section (src:12328-12330)
+GIVEN `a company makes default in complying with section 901` IS A BOOLEAN
+      person IS A `s 897(5) person charged with the default`
+      `s 1121 the officer is in default` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 901(5) the person is guilty of an offence under section 901` MEANS
+    BRANCH
+        IF NOT (`a company makes default in complying with section 901`)
+            THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "If a company makes default in complying with this section an offence is committed by"
+        IF person EQUALS `s 897(5) the company` THEN JUST TRUE
+        IF person EQUALS `s 897(5) any other person`
+            THEN NOTHING -- NOTHING-kind (list not closed): the offence is committed by "(a) the company, and (b) every officer of the company who is in default"
+        OTHERWISE `s 1121 the officer is in default`
+
+-- src:12331 | (6) A person guilty of an offence under this section is liable on summary conviction to a fine not exceeding level 3 on the standard scale.
+@ref s 901(6) The penalty: level 3 on the standard scale (src:12331)
+GIVEN mode IS A `Mode of conviction`
+GIVETH A MAYBE Penalty
+`s 901(6) the penalty on conviction` MEANS
+    IF `s 897(8) the conviction is a summary conviction` mode
+    THEN JUST (`s 897(8) a penalty of a fine only` mode (`a fine not exceeding a level on the standard scale` 3 1))
+    ELSE NOTHING -- NOTHING-kind (silent): "is liable on summary conviction to a fine" says nothing of conviction on indictment
+

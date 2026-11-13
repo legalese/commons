@@ -1,0 +1,779 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `coa-core`
+IMPORT `coa-definitions`
+
+-- coa21-ch3-squeeze-out.l4: the Companies Act 2006 (United Kingdom), Part 28, Chapter 3 -- "Squeeze-out" (ss 979 to 982).
+-- LAYER 1: the law, objectively. Reading a result: see the header of coa21-ch1-panel.l4 (JUST TRUE / JUST FALSE / NOTHING).
+-- The shares are modelled as BLOCKS (a class, a value, the votes it carries, how the offeror stands to it), because section 979 counts them
+-- differently by status (acceptances, other acquisitions, associates, conditional contracts) and by date. 90% is compared by cross-multiplication.
+-- Months: "beginning with D" ends the day before the corresponding date, or on the last day of the month where there is none (fork F3 in NOTES.md); "from D" uses `add months`; six weeks are 42 days.
+
+§ `Part 28, Chapter 3: "Squeeze-out" and "Sell-out"`
+
+§§ `The right of the offeror to buy out a minority shareholder (s 979)`
+
+-- How the offeror stands to a block of the shares to which the offer relates.
+DECLARE `s 979 acquisition status` IS ONE OF
+    `s 979 acquired or unconditionally contracted to be acquired by virtue of acceptances of the offer`
+    `s 979 acquired or unconditionally contracted to be acquired by the offeror otherwise than by virtue of acceptances`
+    `s 979 acquired or unconditionally contracted to be acquired by an associate of the offeror`
+    `s 979 contracted to be acquired subject to conditions, not yet unconditional`
+    `s 979 not acquired or contracted to be acquired`
+
+-- src:13614 | (2) If the offeror has, by virtue of acceptances of the offer, acquired or unconditionally contracted to acquire—
+-- src:13615 | (a) not less than 90% in value of the shares to which the offer relates, and
+-- src:13616 | (b) in a case where the shares to which the offer relates are voting shares, not less than 90% of the voting rights carried by those shares,
+-- src:13617 | he may give notice to the holder of any shares to which the offer relates which the offeror has not acquired or unconditionally contracted to acquire that he desires to acquire those shares.
+-- src:13618 | (3) Subsection (4) applies in a case where a takeover offer relates to shares of different classes.
+-- src:13619 | (4) If the offeror has, by virtue of acceptances of the offer, acquired or unconditionally contracted to acquire—
+-- src:13620 | (a) not less than 90% in value of the shares of any class to which the offer relates, and
+-- src:13621 | (b) in a case where the shares of that class are voting shares, not less than 90% of the voting rights carried by those shares,
+-- src:13622 | he may give notice to the holder of any shares of that class to which the offer relates which the offeror has not acquired or unconditionally contracted to acquire that he desires to acquire those shares.
+-- src:13623 | (5) In the case of a takeover offer which includes among the shares to which it relates—
+-- src:13624 | (a) shares that are allotted after the date of the offer, or
+-- src:13625 | (b) relevant treasury shares (within the meaning of section 974) that cease to be held as treasury shares after the date of the offer,
+-- src:13626 | the offeror's entitlement to give a notice under subsection (2) or (4) on any particular date shall be determined as if the shares to which the offer relates did not include any allotted, or ceasing to be held as treasury shares, on or after that date.
+-- src:13627 | (6) Subsection (7) applies where—
+-- src:13628 | (a) the requirements for the giving of a notice under subsection (2) or (4) are satisfied, and
+-- src:13629 | (b) there are shares in the company which the offeror, or an associate of his, has contracted to acquire subject to conditions being met, and in relation to which the contract has not become unconditional.
+-- src:13630 | (7) The offeror's entitlement to give a notice under subsection (2) or (4) shall be determined as if—
+-- src:13631 | (a) the shares to which the offer relates included shares falling within paragraph (b) of subsection (6), and
+-- src:13632 | (b) in relation to shares falling within that paragraph, the words “by virtue of acceptances of the offer” in subsection (2) or (4) were omitted.
+-- src:13633 | (8) Where—
+-- src:13634 | (a) a takeover offer is made,
+-- src:13635 | (b) during the period beginning with the date of the offer and ending when the offer can no longer be accepted, the offeror—
+-- src:13636 | (i) acquires or unconditionally contracts to acquire any of the shares to which the offer relates, but
+-- src:13637 | (ii) does not do so by virtue of acceptances of the offer, and
+-- src:13638 | (c) subsection (10) applies,
+-- src:13639 | then for the purposes of this section those shares are not excluded by section 977(1) from those to which the offer relates, and the offeror is treated as having acquired or contracted to acquire them by virtue of acceptances of the offer.
+-- src:13640 | (9) Where—
+-- src:13641 | (a) a takeover offer is made,
+-- src:13642 | (b) during the period beginning with the date of the offer and ending when the offer can no longer be accepted, an associate of the offeror acquires or unconditionally contracts to acquire any of the shares to which the offer relates, and
+-- src:13643 | (c) subsection (10) applies,
+-- src:13644 | then for the purposes of this section those shares are not excluded by section 977(2) from those to which the offer relates.
+@ref s 979(2), (4), (8) and (9) The shares counted, by how the offeror stands to them (src:13614-13644)
+DECLARE `s 979 block of shares` HAS
+    `s 979 class of the shares` IS A STRING
+    `s 979 value of the block` IS A NUMBER
+    `s 979 voting rights carried by the block` IS A NUMBER
+    `s 979 date the block was allotted after the date of the offer, or ceased to be held as treasury shares after it` IS A MAYBE DATE
+    `s 979 status of the block` IS A `s 979 acquisition status`
+    `s 979 subsection (10) applies to the acquisition of the block` IS A BOOLEAN
+
+DECLARE `s 979 treatment of a block` IS ONE OF
+    `s 979 counts as shares to which the offer relates, acquired by virtue of acceptances`
+    `s 979 counts as shares to which the offer relates only`
+    `s 979 does not count as shares to which the offer relates`
+
+-- s 979(10): this subsection applies if the acquisition consideration does not exceed the value of the consideration in the terms of the offer, or the terms are revised so that it no longer does.
+-- src:13645 | (10) This subsection applies if—
+-- src:13646 | (a) at the time the shares are acquired or contracted to be acquired as mentioned in subsection (8) or (9) (as the case may be), the value of the consideration for which they are acquired or contracted to be acquired (“the acquisition consideration”) does not exceed the value of the consideration specified in the terms of the offer, or
+-- src:13647 | (b) those terms are subsequently revised so that when the revision is announced the value of the acquisition consideration, at the time mentioned in paragraph (a), no longer exceeds the value of the consideration specified in those terms.
+@ref s 979(10) Right of offeror to buy out minority shareholder (src:13645-13647)
+GIVEN `the value of the consideration for which the shares are acquired or contracted to be acquired (the acquisition consideration)` IS A NUMBER
+      `the value of the consideration specified in the terms of the offer` IS A NUMBER
+      `the terms are subsequently revised` IS A BOOLEAN
+      `the value of the consideration specified in the revised terms when the revision is announced` IS A NUMBER
+GIVETH A MAYBE BOOLEAN
+`s 979(10) this subsection applies` MEANS
+    IF `the value of the consideration for which the shares are acquired or contracted to be acquired (the acquisition consideration)` AT MOST `the value of the consideration specified in the terms of the offer`
+       OR (`the terms are subsequently revised` AND `the value of the consideration for which the shares are acquired or contracted to be acquired (the acquisition consideration)` AT MOST `the value of the consideration specified in the revised terms when the revision is announced`)
+    THEN JUST TRUE
+    ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "This subsection applies if— (a) at the time the shares are acquired or contracted to be acquired as mentioned in subsection (8) or (9) (as the case may be), the value of the consideration for which they are acquired or contracted to be acquired (“the acquisition consideration”) does not exceed the value of the consideration specified in the terms of the offer"
+
+-- s 979(8): shares the offeror acquires during the offer otherwise than by acceptances are not excluded by section 977(1), and are treated as acquired by acceptances, where subsection (10) applies.
+-- src:13633 | (8) Where—
+-- src:13634 | (a) a takeover offer is made,
+-- src:13635 | (b) during the period beginning with the date of the offer and ending when the offer can no longer be accepted, the offeror—
+-- src:13636 | (i) acquires or unconditionally contracts to acquire any of the shares to which the offer relates, but
+-- src:13637 | (ii) does not do so by virtue of acceptances of the offer, and
+-- src:13638 | (c) subsection (10) applies,
+-- src:13639 | then for the purposes of this section those shares are not excluded by section 977(1) from those to which the offer relates, and the offeror is treated as having acquired or contracted to acquire them by virtue of acceptances of the offer.
+@ref s 979(8) Right of offeror to buy out minority shareholder (src:13633-13639)
+GIVEN `s 979(10) this subsection applies` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 979(8) the shares are not excluded by section 977(1) and are treated as acquired by virtue of acceptances` MEANS
+    CONSIDER `s 979(10) this subsection applies`
+    WHEN JUST TRUE THEN JUST TRUE
+    WHEN JUST FALSE THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "Where— (a) a takeover offer is made, (b) during the period beginning with the date of the offer and ending when the offer can no longer be accepted, the offeror— (i) acquires or unconditionally contracts to acquire any of the shares to which the offer relates, but (ii) does not do so by virtue of acceptances of the offer, and (c) subsection (10) applies"
+    WHEN NOTHING THEN NOTHING -- NOTHING-kind (points outside the text): whether subsection (10) applies is not known
+
+-- s 979(9): shares an associate acquires during the offer are not excluded by section 977(2), where subsection (10) applies.
+-- src:13640 | (9) Where—
+-- src:13641 | (a) a takeover offer is made,
+-- src:13642 | (b) during the period beginning with the date of the offer and ending when the offer can no longer be accepted, an associate of the offeror acquires or unconditionally contracts to acquire any of the shares to which the offer relates, and
+-- src:13643 | (c) subsection (10) applies,
+-- src:13644 | then for the purposes of this section those shares are not excluded by section 977(2) from those to which the offer relates.
+@ref s 979(9) Right of offeror to buy out minority shareholder (src:13640-13644)
+GIVEN `s 979(10) this subsection applies` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 979(9) the shares are not excluded by section 977(2)` MEANS
+    CONSIDER `s 979(10) this subsection applies`
+    WHEN JUST TRUE THEN JUST TRUE
+    WHEN JUST FALSE THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "Where— (a) a takeover offer is made, (b) during the period beginning with the date of the offer and ending when the offer can no longer be accepted, an associate of the offeror acquires or unconditionally contracts to acquire any of the shares to which the offer relates, and (c) subsection (10) applies"
+    WHEN NOTHING THEN NOTHING -- NOTHING-kind (points outside the text): whether subsection (10) applies is not known
+
+-- s 979(5): the offeror's entitlement on a date is determined as if the shares to which the offer relates did not include shares allotted, or ceasing to be treasury shares, on or after that date.
+-- src:13623 | (5) In the case of a takeover offer which includes among the shares to which it relates—
+-- src:13624 | (a) shares that are allotted after the date of the offer, or
+-- src:13625 | (b) relevant treasury shares (within the meaning of section 974) that cease to be held as treasury shares after the date of the offer,
+-- src:13626 | the offeror's entitlement to give a notice under subsection (2) or (4) on any particular date shall be determined as if the shares to which the offer relates did not include any allotted, or ceasing to be held as treasury shares, on or after that date.
+@ref s 979(5) Right of offeror to buy out minority shareholder (src:13623-13626)
+GIVEN block IS A `s 979 block of shares`
+      `the date on which the entitlement is determined` IS A DATE
+GIVETH A MAYBE BOOLEAN
+`s 979(5) the block is among the shares to which the offer relates on the date` MEANS
+    CONSIDER block's `s 979 date the block was allotted after the date of the offer, or ceased to be held as treasury shares after it`
+    WHEN NOTHING THEN JUST TRUE
+    WHEN JUST d THEN
+        IF d AT LEAST `the date on which the entitlement is determined`
+        THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "the offeror's entitlement to give a notice under subsection (2) or (4) on any particular date shall be determined as if the shares to which the offer relates did not include any allotted, or ceasing to be held as treasury shares, on or after that date"
+        ELSE JUST TRUE
+
+-- How a block counts when the entitlement is determined (sections 977, 979(5), (7), (8) and (9) together).
+-- src:13623 | (5) In the case of a takeover offer which includes among the shares to which it relates—
+-- src:13624 | (a) shares that are allotted after the date of the offer, or
+-- src:13625 | (b) relevant treasury shares (within the meaning of section 974) that cease to be held as treasury shares after the date of the offer,
+-- src:13626 | the offeror's entitlement to give a notice under subsection (2) or (4) on any particular date shall be determined as if the shares to which the offer relates did not include any allotted, or ceasing to be held as treasury shares, on or after that date.
+-- src:13627 | (6) Subsection (7) applies where—
+-- src:13628 | (a) the requirements for the giving of a notice under subsection (2) or (4) are satisfied, and
+-- src:13629 | (b) there are shares in the company which the offeror, or an associate of his, has contracted to acquire subject to conditions being met, and in relation to which the contract has not become unconditional.
+-- src:13630 | (7) The offeror's entitlement to give a notice under subsection (2) or (4) shall be determined as if—
+-- src:13631 | (a) the shares to which the offer relates included shares falling within paragraph (b) of subsection (6), and
+-- src:13632 | (b) in relation to shares falling within that paragraph, the words “by virtue of acceptances of the offer” in subsection (2) or (4) were omitted.
+-- src:13633 | (8) Where—
+-- src:13634 | (a) a takeover offer is made,
+-- src:13635 | (b) during the period beginning with the date of the offer and ending when the offer can no longer be accepted, the offeror—
+-- src:13636 | (i) acquires or unconditionally contracts to acquire any of the shares to which the offer relates, but
+-- src:13637 | (ii) does not do so by virtue of acceptances of the offer, and
+-- src:13638 | (c) subsection (10) applies,
+-- src:13639 | then for the purposes of this section those shares are not excluded by section 977(1) from those to which the offer relates, and the offeror is treated as having acquired or contracted to acquire them by virtue of acceptances of the offer.
+-- src:13640 | (9) Where—
+-- src:13641 | (a) a takeover offer is made,
+-- src:13642 | (b) during the period beginning with the date of the offer and ending when the offer can no longer be accepted, an associate of the offeror acquires or unconditionally contracts to acquire any of the shares to which the offer relates, and
+-- src:13643 | (c) subsection (10) applies,
+-- src:13644 | then for the purposes of this section those shares are not excluded by section 977(2) from those to which the offer relates.
+@ref s 979(5), (7), (8) and (9) How a block of the shares counts (src:13623-13644)
+GIVEN block IS A `s 979 block of shares`
+      `the date on which the entitlement is determined` IS A DATE
+      `conditional contracts are counted among the shares to which the offer relates (subsection (7))` IS A BOOLEAN
+GIVETH A `s 979 treatment of a block`
+`s 979 how the block counts` MEANS
+    IF `s 979(5) the block is among the shares to which the offer relates on the date` block `the date on which the entitlement is determined` EQUALS JUST FALSE
+    THEN `s 979 does not count as shares to which the offer relates`
+    ELSE CONSIDER block's `s 979 status of the block`
+         WHEN `s 979 acquired or unconditionally contracted to be acquired by virtue of acceptances of the offer` THEN `s 979 counts as shares to which the offer relates, acquired by virtue of acceptances`
+         WHEN `s 979 acquired or unconditionally contracted to be acquired by the offeror otherwise than by virtue of acceptances` THEN
+             IF `s 979(8) the shares are not excluded by section 977(1) and are treated as acquired by virtue of acceptances` `the answer under subsection (10)` EQUALS JUST TRUE
+             THEN `s 979 counts as shares to which the offer relates, acquired by virtue of acceptances`
+             ELSE `s 979 does not count as shares to which the offer relates`
+         WHEN `s 979 acquired or unconditionally contracted to be acquired by an associate of the offeror` THEN
+             IF `s 979(9) the shares are not excluded by section 977(2)` `the answer under subsection (10)` EQUALS JUST TRUE
+             THEN `s 979 counts as shares to which the offer relates only`
+             ELSE `s 979 does not count as shares to which the offer relates`
+         WHEN `s 979 contracted to be acquired subject to conditions, not yet unconditional` THEN
+             IF `conditional contracts are counted among the shares to which the offer relates (subsection (7))`
+             THEN `s 979 counts as shares to which the offer relates only`
+             ELSE `s 979 does not count as shares to which the offer relates`
+         WHEN `s 979 not acquired or contracted to be acquired` THEN `s 979 counts as shares to which the offer relates only`
+    WHERE
+        `the answer under subsection (10)` MEANS IF block's `s 979 subsection (10) applies to the acquisition of the block` THEN JUST TRUE ELSE JUST FALSE
+
+-- s 979(2)(a)-(b) and (4)(a)-(b): not less than 90% in value of the shares, and (for voting shares) not less than 90% of the voting rights carried by them.
+-- src:13614 | (2) If the offeror has, by virtue of acceptances of the offer, acquired or unconditionally contracted to acquire—
+-- src:13615 | (a) not less than 90% in value of the shares to which the offer relates, and
+-- src:13616 | (b) in a case where the shares to which the offer relates are voting shares, not less than 90% of the voting rights carried by those shares,
+-- src:13617 | he may give notice to the holder of any shares to which the offer relates which the offeror has not acquired or unconditionally contracted to acquire that he desires to acquire those shares.
+-- src:13618 | (3) Subsection (4) applies in a case where a takeover offer relates to shares of different classes.
+-- src:13619 | (4) If the offeror has, by virtue of acceptances of the offer, acquired or unconditionally contracted to acquire—
+-- src:13620 | (a) not less than 90% in value of the shares of any class to which the offer relates, and
+-- src:13621 | (b) in a case where the shares of that class are voting shares, not less than 90% of the voting rights carried by those shares,
+-- src:13622 | he may give notice to the holder of any shares of that class to which the offer relates which the offeror has not acquired or unconditionally contracted to acquire that he desires to acquire those shares.
+@ref s 979(2)(a)-(b) and (4)(a)-(b) The 90% requirements (src:13614-13622)
+GIVEN blocks IS A LIST OF `s 979 block of shares`
+      `the date on which the entitlement is determined` IS A DATE
+      `conditional contracts are counted among the shares to which the offer relates (subsection (7))` IS A BOOLEAN
+      `the shares are voting shares` IS A BOOLEAN
+GIVETH A BOOLEAN
+`s 979(2)(a)-(b) the 90% requirements are met` MEANS
+        `the value of the shares to which the offer relates` GREATER THAN 0
+    AND `the value acquired or unconditionally contracted to be acquired by virtue of acceptances` TIMES 10 AT LEAST `the value of the shares to which the offer relates` TIMES 9
+    AND ((NOT (`the shares are voting shares`)) OR (`the voting rights carried by the shares to which the offer relates` GREATER THAN 0 AND `the voting rights carried by the shares acquired by virtue of acceptances` TIMES 10 AT LEAST `the voting rights carried by the shares to which the offer relates` TIMES 9))
+    WHERE
+        `how a block counts` b MEANS `s 979 how the block counts` b `the date on which the entitlement is determined` `conditional contracts are counted among the shares to which the offer relates (subsection (7))`
+        `the value of the shares to which the offer relates` MEANS
+            sum (map (GIVEN b YIELD IF `how a block counts` b EQUALS `s 979 does not count as shares to which the offer relates` THEN 0 ELSE b's `s 979 value of the block`) blocks)
+        `the value acquired or unconditionally contracted to be acquired by virtue of acceptances` MEANS
+            sum (map (GIVEN b YIELD IF `how a block counts` b EQUALS `s 979 counts as shares to which the offer relates, acquired by virtue of acceptances` THEN b's `s 979 value of the block` ELSE 0) blocks)
+        `the voting rights carried by the shares to which the offer relates` MEANS
+            sum (map (GIVEN b YIELD IF `how a block counts` b EQUALS `s 979 does not count as shares to which the offer relates` THEN 0 ELSE b's `s 979 voting rights carried by the block`) blocks)
+        `the voting rights carried by the shares acquired by virtue of acceptances` MEANS
+            sum (map (GIVEN b YIELD IF `how a block counts` b EQUALS `s 979 counts as shares to which the offer relates, acquired by virtue of acceptances` THEN b's `s 979 voting rights carried by the block` ELSE 0) blocks)
+
+-- s 979(6): subsection (7) applies where the requirements for giving a notice are satisfied and shares are contracted for subject to conditions not yet unconditional.
+-- src:13627 | (6) Subsection (7) applies where—
+-- src:13628 | (a) the requirements for the giving of a notice under subsection (2) or (4) are satisfied, and
+-- src:13629 | (b) there are shares in the company which the offeror, or an associate of his, has contracted to acquire subject to conditions being met, and in relation to which the contract has not become unconditional.
+@ref s 979(6) Right of offeror to buy out minority shareholder (src:13627-13629)
+GIVEN `the requirements for the giving of a notice under subsection (2) or (4) are satisfied` IS A BOOLEAN
+      `there are shares which the offeror, or an associate of his, has contracted to acquire subject to conditions being met, and the contract has not become unconditional` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 979(6) subsection (7) applies` MEANS
+    IF `the requirements for the giving of a notice under subsection (2) or (4) are satisfied` AND `there are shares which the offeror, or an associate of his, has contracted to acquire subject to conditions being met, and the contract has not become unconditional`
+    THEN JUST TRUE
+    ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "Subsection (7) applies where— (a) the requirements for the giving of a notice under subsection (2) or (4) are satisfied, and (b) there are shares in the company which the offeror, or an associate of his, has contracted to acquire subject to conditions being met"
+
+-- s 979(1): subsection (2) applies in a case where the offer does not relate to shares of different classes; s 979(3): subsection (4) applies where it does.
+-- src:13613 | (1) Subsection (2) applies in a case where a takeover offer does not relate to shares of different classes.
+@ref s 979(1) Right of offeror to buy out minority shareholder (src:13613-13613)
+GIVEN `the takeover offer relates to shares of different classes` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 979(1) subsection (2) applies` MEANS
+    IF NOT (`the takeover offer relates to shares of different classes`)
+    THEN JUST TRUE
+    ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "Subsection (2) applies in a case where a takeover offer does not relate to shares of different classes."
+
+-- src:13618 | (3) Subsection (4) applies in a case where a takeover offer relates to shares of different classes.
+@ref s 979(3) Right of offeror to buy out minority shareholder (src:13618-13618)
+GIVEN `the takeover offer relates to shares of different classes` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 979(3) subsection (4) applies` MEANS
+    IF `the takeover offer relates to shares of different classes`
+    THEN JUST TRUE
+    ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "Subsection (4) applies in a case where a takeover offer relates to shares of different classes."
+
+-- s 979(2) and (4): the offeror may give notice to the holder of shares not acquired that he desires to acquire them.
+-- src:13614 | (2) If the offeror has, by virtue of acceptances of the offer, acquired or unconditionally contracted to acquire—
+-- src:13615 | (a) not less than 90% in value of the shares to which the offer relates, and
+-- src:13616 | (b) in a case where the shares to which the offer relates are voting shares, not less than 90% of the voting rights carried by those shares,
+-- src:13617 | he may give notice to the holder of any shares to which the offer relates which the offeror has not acquired or unconditionally contracted to acquire that he desires to acquire those shares.
+-- src:13618 | (3) Subsection (4) applies in a case where a takeover offer relates to shares of different classes.
+-- src:13619 | (4) If the offeror has, by virtue of acceptances of the offer, acquired or unconditionally contracted to acquire—
+-- src:13620 | (a) not less than 90% in value of the shares of any class to which the offer relates, and
+-- src:13621 | (b) in a case where the shares of that class are voting shares, not less than 90% of the voting rights carried by those shares,
+-- src:13622 | he may give notice to the holder of any shares of that class to which the offer relates which the offeror has not acquired or unconditionally contracted to acquire that he desires to acquire those shares.
+-- src:13623 | (5) In the case of a takeover offer which includes among the shares to which it relates—
+-- src:13624 | (a) shares that are allotted after the date of the offer, or
+-- src:13625 | (b) relevant treasury shares (within the meaning of section 974) that cease to be held as treasury shares after the date of the offer,
+-- src:13626 | the offeror's entitlement to give a notice under subsection (2) or (4) on any particular date shall be determined as if the shares to which the offer relates did not include any allotted, or ceasing to be held as treasury shares, on or after that date.
+-- src:13627 | (6) Subsection (7) applies where—
+-- src:13628 | (a) the requirements for the giving of a notice under subsection (2) or (4) are satisfied, and
+-- src:13629 | (b) there are shares in the company which the offeror, or an associate of his, has contracted to acquire subject to conditions being met, and in relation to which the contract has not become unconditional.
+-- src:13630 | (7) The offeror's entitlement to give a notice under subsection (2) or (4) shall be determined as if—
+-- src:13631 | (a) the shares to which the offer relates included shares falling within paragraph (b) of subsection (6), and
+-- src:13632 | (b) in relation to shares falling within that paragraph, the words “by virtue of acceptances of the offer” in subsection (2) or (4) were omitted.
+@ref s 979(2) and (7) The offeror's right to give notice (one class) (src:13614-13632)
+GIVEN `s 979(1) subsection (2) applies` IS A MAYBE BOOLEAN
+      blocks IS A LIST OF `s 979 block of shares`
+      `the date on which the entitlement is determined` IS A DATE
+      `the shares to which the offer relates are voting shares` IS A BOOLEAN
+      `the holder's shares are shares to which the offer relates which the offeror has not acquired or unconditionally contracted to acquire` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 979(2) the offeror may give notice to the holder of the shares` MEANS
+    IF NOT (`s 979(1) subsection (2) applies` EQUALS JUST TRUE)
+    THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "Subsection (2) applies in a case where a takeover offer does not relate to shares of different classes."
+    ELSE IF NOT (`the holder's shares are shares to which the offer relates which the offeror has not acquired or unconditionally contracted to acquire`)
+         THEN NOTHING -- NOTHING-kind (limited by its own wording): the notice is to "the holder of any shares to which the offer relates which the offeror has not acquired or unconditionally contracted to acquire"
+         ELSE IF NOT (`s 979(2)(a)-(b) the 90% requirements are met` blocks `the date on which the entitlement is determined` FALSE `the shares to which the offer relates are voting shares`)
+              THEN NOTHING -- NOTHING-kind (limited by its own wording): the power is given "If the offeror has, by virtue of acceptances of the offer, acquired or unconditionally contracted to acquire" not less than 90% in value (and, for voting shares, in voting rights), and the text does not say "may not" (fork F14)
+              ELSE IF `s 979(6) subsection (7) applies` TRUE (any (GIVEN b YIELD b's `s 979 status of the block` EQUALS `s 979 contracted to be acquired subject to conditions, not yet unconditional`) blocks) EQUALS JUST TRUE AND NOT (`s 979(2)(a)-(b) the 90% requirements are met` blocks `the date on which the entitlement is determined` TRUE `the shares to which the offer relates are voting shares`)
+                   THEN NOTHING -- NOTHING-kind (limited by its own wording): the entitlement "shall be determined as if" conditional contracts were counted, which is the same "If ... not less than 90%" gate of the grant, and the text does not say "may not" (fork F14)
+                   ELSE JUST TRUE
+
+-- s 979(4): the same, class by class.
+-- src:13619 | (4) If the offeror has, by virtue of acceptances of the offer, acquired or unconditionally contracted to acquire—
+-- src:13620 | (a) not less than 90% in value of the shares of any class to which the offer relates, and
+-- src:13621 | (b) in a case where the shares of that class are voting shares, not less than 90% of the voting rights carried by those shares,
+-- src:13622 | he may give notice to the holder of any shares of that class to which the offer relates which the offeror has not acquired or unconditionally contracted to acquire that he desires to acquire those shares.
+-- src:13623 | (5) In the case of a takeover offer which includes among the shares to which it relates—
+-- src:13624 | (a) shares that are allotted after the date of the offer, or
+-- src:13625 | (b) relevant treasury shares (within the meaning of section 974) that cease to be held as treasury shares after the date of the offer,
+-- src:13626 | the offeror's entitlement to give a notice under subsection (2) or (4) on any particular date shall be determined as if the shares to which the offer relates did not include any allotted, or ceasing to be held as treasury shares, on or after that date.
+-- src:13627 | (6) Subsection (7) applies where—
+-- src:13628 | (a) the requirements for the giving of a notice under subsection (2) or (4) are satisfied, and
+-- src:13629 | (b) there are shares in the company which the offeror, or an associate of his, has contracted to acquire subject to conditions being met, and in relation to which the contract has not become unconditional.
+-- src:13630 | (7) The offeror's entitlement to give a notice under subsection (2) or (4) shall be determined as if—
+-- src:13631 | (a) the shares to which the offer relates included shares falling within paragraph (b) of subsection (6), and
+-- src:13632 | (b) in relation to shares falling within that paragraph, the words “by virtue of acceptances of the offer” in subsection (2) or (4) were omitted.
+@ref s 979(4) and (7) The offeror's right to give notice (a class) (src:13619-13632)
+GIVEN `s 979(3) subsection (4) applies` IS A MAYBE BOOLEAN
+      blocks IS A LIST OF `s 979 block of shares`
+      `the class of the holder's shares` IS A STRING
+      `the date on which the entitlement is determined` IS A DATE
+      `the shares of that class are voting shares` IS A BOOLEAN
+      `the holder's shares are shares of that class to which the offer relates which the offeror has not acquired or unconditionally contracted to acquire` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 979(4) the offeror may give notice to the holder of the shares of the class` MEANS
+    IF NOT (`s 979(3) subsection (4) applies` EQUALS JUST TRUE)
+    THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "Subsection (4) applies in a case where a takeover offer relates to shares of different classes."
+    ELSE IF NOT (`the holder's shares are shares of that class to which the offer relates which the offeror has not acquired or unconditionally contracted to acquire`)
+         THEN NOTHING -- NOTHING-kind (limited by its own wording): the notice is to "the holder of any shares of that class to which the offer relates which the offeror has not acquired or unconditionally contracted to acquire"
+         ELSE IF NOT (`s 979(2)(a)-(b) the 90% requirements are met` (filter (GIVEN b YIELD b's `s 979 class of the shares` EQUALS `the class of the holder's shares`) blocks) `the date on which the entitlement is determined` FALSE `the shares of that class are voting shares`)
+              THEN NOTHING -- NOTHING-kind (limited by its own wording): the power is given "If the offeror has, by virtue of acceptances of the offer, acquired or unconditionally contracted to acquire" not less than 90% in value (and, for voting shares, in voting rights), and the text does not say "may not" (fork F15)
+              ELSE IF NOT (`s 979(2)(a)-(b) the 90% requirements are met` (filter (GIVEN b YIELD b's `s 979 class of the shares` EQUALS `the class of the holder's shares`) blocks) `the date on which the entitlement is determined` TRUE `the shares of that class are voting shares`)
+                   THEN NOTHING -- NOTHING-kind (limited by its own wording): the entitlement "shall be determined as if" conditional contracts were counted, which is the same "If ... not less than 90%" gate of the grant, and the text does not say "may not" (fork F15)
+                   ELSE JUST TRUE
+
+-- ---------------------------------------------------------------------------------------------------------
+§§ `Further provision about notices (s 980)`
+
+-- s 980(1): a notice under section 979 must be given in the prescribed manner.
+-- src:13649 | (1) A notice under section 979 must be given in the prescribed manner.
+@ref s 980(1) Further provision about notices given under section 979 (src:13649-13649)
+GIVEN `the notice was given in the manner prescribed (by order or regulations) by the Secretary of State` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 980(1) the notice was given in the prescribed manner` MEANS
+    IF `the notice was given in the manner prescribed (by order or regulations) by the Secretary of State`
+    THEN JUST TRUE
+    ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "A notice under section 979 must be given in the prescribed manner."
+
+-- s 980(3): subsection (3) applies to an offer if the time allowed for acceptance is not governed by rules under section 943(1) made under paragraph 13 or 14 of Schedule 1C (a seam).
+-- src:13653 | (3) This subsection applies to an offer if the time allowed for acceptance of the offer is not governed by rules under section 943(1) made in accordance with paragraph 13 or 14 of Schedule 1C.
+@ref s 980(3) Further provision about notices given under section 979 (src:13653-13653)
+GIVEN `sch 1C paras 13 and 14 the time allowed for acceptance of the offer is governed by rules under section 943(1)` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 980(3) this subsection applies to the offer` MEANS
+    CONSIDER `sch 1C paras 13 and 14 the time allowed for acceptance of the offer is governed by rules under section 943(1)`
+    WHEN JUST FALSE THEN JUST TRUE
+    WHEN JUST TRUE THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "This subsection applies to an offer if the time allowed for acceptance of the offer is not governed by rules under section 943(1) made in accordance with paragraph 13 or 14 of Schedule 1C."
+    WHEN NOTHING THEN NOTHING -- NOTHING-kind (points outside the text): the rules and Schedule 1C paragraphs 13 and 14 are not among the sources
+
+-- Counting "N months beginning with D" (s 980(2)(a) and (b)): the period ends the day before the corresponding date N months later; where that month has no such date (31 August plus six months) it ends on the last day of that month (fork F3 in NOTES.md).
+-- src:13650 | (2) No notice may be given under section 979(2) or (4) after the end of—
+-- src:13651 | (a) the period of three months beginning with the day after the last day on which the offer can be accepted, or
+-- src:13652 | (b) the period of six months beginning with the date of the offer, where that period ends earlier and the offer is one to which subsection (3) below applies.
+@ref s 980(2) Further provision about notices given under section 979 (src:13650-13652)
+GIVEN `the first day of the period` IS A DATE
+      `the number of months` IS A NUMBER
+GIVETH A DATE
+`s 980(2) the last day of a period of months beginning with the day` MEANS
+    IF DATE_DAY (`add months` `the first day of the period` `the number of months`) EQUALS DATE_DAY `the first day of the period`
+    THEN (`add months` `the first day of the period` `the number of months`) MINUS 1
+    ELSE `add months` `the first day of the period` `the number of months`
+
+-- s 980(2)(a): the period of three months beginning with the day after the last day on which the offer can be accepted.
+-- src:13650 | (2) No notice may be given under section 979(2) or (4) after the end of—
+-- src:13651 | (a) the period of three months beginning with the day after the last day on which the offer can be accepted, or
+-- src:13652 | (b) the period of six months beginning with the date of the offer, where that period ends earlier and the offer is one to which subsection (3) below applies.
+@ref s 980(2) Further provision about notices given under section 979 (src:13650-13652)
+GIVEN `the last day on which the offer can be accepted` IS A DATE
+GIVETH A DATE
+`s 980(2)(a) the last day of the three-month period` MEANS
+    `s 980(2) the last day of a period of months beginning with the day` (`the last day on which the offer can be accepted` PLUS 1) 3
+
+-- s 980(2)(b): the period of six months beginning with the date of the offer.
+-- src:13650 | (2) No notice may be given under section 979(2) or (4) after the end of—
+-- src:13651 | (a) the period of three months beginning with the day after the last day on which the offer can be accepted, or
+-- src:13652 | (b) the period of six months beginning with the date of the offer, where that period ends earlier and the offer is one to which subsection (3) below applies.
+@ref s 980(2) Further provision about notices given under section 979 (src:13650-13652)
+GIVEN `the date of the offer` IS A DATE
+GIVETH A DATE
+`s 980(2)(b) the last day of the six-month period` MEANS
+    `s 980(2) the last day of a period of months beginning with the day` `the date of the offer` 6
+
+-- s 980(2): no notice may be given after the end of (a) the three-month period, or (b) where that ends earlier and subsection (3) applies, the six-month period.
+-- src:13650 | (2) No notice may be given under section 979(2) or (4) after the end of—
+-- src:13651 | (a) the period of three months beginning with the day after the last day on which the offer can be accepted, or
+-- src:13652 | (b) the period of six months beginning with the date of the offer, where that period ends earlier and the offer is one to which subsection (3) below applies.
+@ref s 980(2) Further provision about notices given under section 979 (src:13650-13652)
+GIVEN `the last day on which the offer can be accepted` IS A DATE
+      `the date of the offer` IS A DATE
+      `s 980(3) this subsection applies to the offer` IS A MAYBE BOOLEAN
+GIVETH A MAYBE DATE
+`s 980(2) the last day on which a notice may be given` MEANS
+    CONSIDER `s 980(3) this subsection applies to the offer`
+    WHEN JUST FALSE THEN JUST (`s 980(2)(a) the last day of the three-month period` `the last day on which the offer can be accepted`)
+    WHEN JUST TRUE THEN
+        IF `s 980(2)(b) the last day of the six-month period` `the date of the offer` LESS THAN `s 980(2)(a) the last day of the three-month period` `the last day on which the offer can be accepted`
+        THEN JUST (`s 980(2)(b) the last day of the six-month period` `the date of the offer`)
+        ELSE JUST (`s 980(2)(a) the last day of the three-month period` `the last day on which the offer can be accepted`)
+    WHEN NOTHING THEN NOTHING -- NOTHING-kind (points outside the text): whether subsection (3) applies, and so which period ends first, depends on Schedule 1C
+
+-- src:13650 | (2) No notice may be given under section 979(2) or (4) after the end of—
+-- src:13651 | (a) the period of three months beginning with the day after the last day on which the offer can be accepted, or
+-- src:13652 | (b) the period of six months beginning with the date of the offer, where that period ends earlier and the offer is one to which subsection (3) below applies.
+@ref s 980(2) Further provision about notices given under section 979 (src:13650-13652)
+GIVEN `the day the notice is given` IS A DATE
+      `the last day on which a notice may be given` IS A MAYBE DATE
+GIVETH A MAYBE BOOLEAN
+`s 980(2) the notice is given in time` MEANS
+    CONSIDER `the last day on which a notice may be given`
+    WHEN NOTHING THEN NOTHING -- NOTHING-kind (points outside the text): the last day depends on Schedule 1C through subsection (3)
+    WHEN JUST d THEN
+        IF `the day the notice is given` AT MOST d
+        THEN JUST TRUE
+        ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "No notice may be given under section 979(2) or (4) after the end of"
+
+-- s 980(4): when the offeror first gives a notice he must send the company a copy and a statutory declaration in the prescribed form.
+-- src:13654 | (4) At the time when the offeror first gives a notice under section 979 in relation to an offer, he must send to the company—
+-- src:13655 | (a) a copy of the notice, and
+-- src:13656 | (b) a statutory declaration by him in the prescribed form, stating that the conditions for the giving of the notice are satisfied.
+@ref s 980(4) Further provision about notices given under section 979 (src:13654-13656)
+GIVEN `the notice is the first notice the offeror gives in relation to the offer` IS A BOOLEAN
+      `the offeror sent the company a copy of the notice` IS A BOOLEAN
+      `the offeror sent the company a statutory declaration in the prescribed form stating that the conditions for the giving of the notice are satisfied` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 980(4) the offeror has sent the company what the subsection requires` MEANS
+    IF NOT (`the notice is the first notice the offeror gives in relation to the offer`)
+    THEN NOTHING -- NOTHING-kind (limited by its own wording): the duty arises "At the time when the offeror first gives a notice under section 979 in relation to an offer"
+    ELSE IF `the offeror sent the company a copy of the notice` AND `the offeror sent the company a statutory declaration in the prescribed form stating that the conditions for the giving of the notice are satisfied`
+         THEN JUST TRUE
+         ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "he must send to the company— (a) a copy of the notice, and (b) a statutory declaration by him in the prescribed form, stating that the conditions for the giving of the notice are satisfied"
+
+-- s 980(5): where the offeror is a company the statutory declaration must be signed by a director.
+-- src:13657 | (5) Where the offeror is a company (whether or not a company within the meaning of this Act) the statutory declaration must be signed by a director.
+@ref s 980(5) Further provision about notices given under section 979 (src:13657-13657)
+GIVEN `the offeror is a company (whether or not a company within the meaning of this Act)` IS A BOOLEAN
+      `the statutory declaration is signed by a director` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 980(5) the statutory declaration is signed as the subsection requires` MEANS
+    IF NOT (`the offeror is a company (whether or not a company within the meaning of this Act)`)
+    THEN NOTHING -- NOTHING-kind (silent): the subsection is for an offeror that is a company
+    ELSE IF `the statutory declaration is signed by a director`
+         THEN JUST TRUE
+         ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "Where the offeror is a company (whether or not a company within the meaning of this Act) the statutory declaration must be signed by a director."
+
+-- s 980(6): a person commits an offence if he fails to send a copy or declaration as required, or makes a declaration knowing it false or without reasonable grounds for believing it true.
+-- src:13658 | (6) A person commits an offence if—
+-- src:13659 | (a) he fails to send a copy of a notice or a statutory declaration as required by subsection (4), or
+-- src:13660 | (b) he makes such a declaration for the purposes of that subsection knowing it to be false or without having reasonable grounds for believing it to be true.
+@ref s 980(6) Further provision about notices given under section 979 (src:13658-13660)
+GIVEN `the person fails to send a copy of a notice or a statutory declaration as required by subsection (4)` IS A BOOLEAN
+      `the person makes such a declaration knowing it to be false` IS A BOOLEAN
+      `the person makes such a declaration without having reasonable grounds for believing it to be true` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 980(6) the person commits an offence` MEANS
+    IF `the person fails to send a copy of a notice or a statutory declaration as required by subsection (4)` OR `the person makes such a declaration knowing it to be false` OR `the person makes such a declaration without having reasonable grounds for believing it to be true`
+    THEN JUST TRUE
+    ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "A person commits an offence if— (a) he fails to send a copy of a notice or a statutory declaration as required by subsection (4), or (b) he makes such a declaration for the purposes of that subsection knowing it to be false or without having reasonable grounds for believing it to be true."
+
+-- s 980(7): a defence to a charge of failing to send a copy of a notice: proving reasonable steps for securing compliance.
+-- src:13661 | (7) It is a defence for a person charged with an offence for failing to send a copy of a notice as required by subsection (4) to prove that he took reasonable steps for securing compliance with that subsection.
+@ref s 980(7) Further provision about notices given under section 979 (src:13661-13661)
+GIVEN `the person is charged with an offence for failing to send a copy of a notice as required by subsection (4)` IS A BOOLEAN
+      `the person proves that he took reasonable steps for securing compliance with that subsection` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 980(7) the section gives the person a defence` MEANS
+    IF NOT (`the person is charged with an offence for failing to send a copy of a notice as required by subsection (4)`)
+    THEN NOTHING -- NOTHING-kind (limited by its own wording): the defence is "for a person charged with an offence for failing to send a copy of a notice as required by subsection (4)"
+    ELSE IF `the person proves that he took reasonable steps for securing compliance with that subsection`
+         THEN JUST TRUE
+         ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "It is a defence for a person charged with an offence for failing to send a copy of a notice as required by subsection (4) to prove that he took reasonable steps for securing compliance with that subsection."
+    -- this section gives no defence on these facts (ruling of 2026-11-05 (b)); that is not to say the person has no defence at all
+
+-- s 980(6)-(7) together: the offence, unless the defence is made out.
+-- src:13658 | (6) A person commits an offence if—
+-- src:13659 | (a) he fails to send a copy of a notice or a statutory declaration as required by subsection (4), or
+-- src:13660 | (b) he makes such a declaration for the purposes of that subsection knowing it to be false or without having reasonable grounds for believing it to be true.
+-- src:13661 | (7) It is a defence for a person charged with an offence for failing to send a copy of a notice as required by subsection (4) to prove that he took reasonable steps for securing compliance with that subsection.
+@ref s 980(6)-(7) The offence and the defence (src:13658-13661)
+GIVEN `s 980(6) the person commits an offence` IS A MAYBE BOOLEAN
+      `s 980(7) the section gives the person a defence` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 980(6)-(7) the person is guilty of the offence` MEANS
+    IF `s 980(7) the section gives the person a defence` EQUALS JUST TRUE
+    THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "It is a defence for a person charged with an offence for failing to send a copy of a notice as required by subsection (4) to prove that he took reasonable steps for securing compliance with that subsection."
+    ELSE `s 980(6) the person commits an offence`
+
+-- s 980(8) and s 984(7): the daily default fine is one-fiftieth of the statutory maximum, or (the substituted words) one-fiftieth of the greater of 5,000 pounds or the level 4 amount (fork F2 in NOTES.md: the converted text shows both).
+-- src:13662 | (8) A person guilty of an offence under this section is liable—
+-- src:13663 | (a) on conviction on indictment, to imprisonment for a term not exceeding two years or a fine (or both);
+-- src:13664 | (b) on summary conviction—
+-- src:13665 | (i) in England and Wales, to imprisonment for a term not exceeding twelve months or to a fine not exceeding the statutory maximum (or both) and, for continued contravention, a daily default fine not exceeding one-fiftieth of the statutory maximumone-fiftieth of the greater of £5,000 or the amount corresponding to level 4 on the standard scale for summary offences;
+-- src:13666 | (ii) in Scotland or Northern Ireland, to imprisonment for a term not exceeding six months, or to a fine not exceeding the statutory maximum (or both) and, for continued contravention, a daily default fine not exceeding one-fiftieth of the statutory maximum.
+@ref s 980(8) Further provision about notices given under section 979 (src:13662-13666)
+DECLARE `s 980(8) daily default fine limit` IS ONE OF
+    `s 980(8) a fraction of the statutory maximum` HAS `s 980(8) fraction of the statutory maximum` IS A NUMBER
+    `s 980(8) a fraction of the greater of an amount in pounds and a level on the standard scale for summary offences` HAS `s 980(8) fraction` IS A NUMBER, `s 980(8) pounds` IS A NUMBER, `s 980(8) level` IS A NUMBER
+
+-- src:13662 | (8) A person guilty of an offence under this section is liable—
+-- src:13663 | (a) on conviction on indictment, to imprisonment for a term not exceeding two years or a fine (or both);
+-- src:13664 | (b) on summary conviction—
+-- src:13665 | (i) in England and Wales, to imprisonment for a term not exceeding twelve months or to a fine not exceeding the statutory maximum (or both) and, for continued contravention, a daily default fine not exceeding one-fiftieth of the statutory maximumone-fiftieth of the greater of £5,000 or the amount corresponding to level 4 on the standard scale for summary offences;
+-- src:13666 | (ii) in Scotland or Northern Ireland, to imprisonment for a term not exceeding six months, or to a fine not exceeding the statutory maximum (or both) and, for continued contravention, a daily default fine not exceeding one-fiftieth of the statutory maximum.
+@ref s 980(8) Further provision about notices given under section 979 (src:13662-13666)
+DECLARE `s 980(8) penalty` HAS
+    `s 980(8) how convicted` IS A `Mode of conviction`
+    `s 980(8) imprisonment not exceeding` IS A MAYBE Period
+    `s 980(8) fine not exceeding` IS A MAYBE `Fine limit`
+    `s 980(8) daily default fine for continued contravention` IS A MAYBE `s 980(8) daily default fine limit`
+    `s 980(8) imprisonment and fine together` IS A BOOLEAN
+
+-- src:13662 | (8) A person guilty of an offence under this section is liable—
+-- src:13663 | (a) on conviction on indictment, to imprisonment for a term not exceeding two years or a fine (or both);
+-- src:13664 | (b) on summary conviction—
+-- src:13665 | (i) in England and Wales, to imprisonment for a term not exceeding twelve months or to a fine not exceeding the statutory maximum (or both) and, for continued contravention, a daily default fine not exceeding one-fiftieth of the statutory maximumone-fiftieth of the greater of £5,000 or the amount corresponding to level 4 on the standard scale for summary offences;
+-- src:13666 | (ii) in Scotland or Northern Ireland, to imprisonment for a term not exceeding six months, or to a fine not exceeding the statutory maximum (or both) and, for continued contravention, a daily default fine not exceeding one-fiftieth of the statutory maximum.
+@ref s 980(8) Further provision about notices given under section 979 (src:13662-13666)
+GIVEN `how convicted` IS A `Mode of conviction`
+      `the substituted words apply (the greater of 5,000 pounds or the level 4 amount)` IS A BOOLEAN
+GIVETH A MAYBE `s 980(8) penalty`
+`s 980(8) the penalty` MEANS
+    CONSIDER `how convicted`
+    WHEN `on conviction on indictment` THEN JUST (`s 980(8) penalty` OF `on conviction on indictment`, JUST (Period OF 2, Years), JUST `a fine without a stated limit`, NOTHING, TRUE)
+    WHEN `on summary conviction in England and Wales` THEN
+        JUST (`s 980(8) penalty` OF `on summary conviction in England and Wales`, JUST (Period OF 12, Months), JUST (`a fine not exceeding the statutory maximum` 1), JUST `the daily fine in England and Wales`, TRUE)
+    WHEN `on summary conviction in Scotland` THEN JUST (`s 980(8) penalty` OF `on summary conviction in Scotland`, JUST (Period OF 6, Months), JUST (`a fine not exceeding the statutory maximum` 1), JUST (`s 980(8) a fraction of the statutory maximum` 0.02), TRUE)
+    WHEN `on summary conviction in Northern Ireland` THEN JUST (`s 980(8) penalty` OF `on summary conviction in Northern Ireland`, JUST (Period OF 6, Months), JUST (`a fine not exceeding the statutory maximum` 1), JUST (`s 980(8) a fraction of the statutory maximum` 0.02), TRUE)
+    WHEN `on summary conviction` THEN NOTHING -- NOTHING-kind (silent): the text gives one penalty for England and Wales and another for Scotland or Northern Ireland, so a conviction not placed is not covered
+    WHERE
+        `the daily fine in England and Wales` MEANS
+            IF `the substituted words apply (the greater of 5,000 pounds or the level 4 amount)`
+            THEN `s 980(8) a fraction of the greater of an amount in pounds and a level on the standard scale for summary offences` 0.02 5000 4
+            ELSE `s 980(8) a fraction of the statutory maximum` 0.02
+
+-- ---------------------------------------------------------------------------------------------------------
+§§ `Effect of a notice under section 979 (ss 981 and 982)`
+
+-- s 981(2): the offeror is entitled and bound to acquire the shares on the terms of the offer (subject to section 986).
+-- src:13669 | (2) The offeror is entitled and bound to acquire the shares to which the notice relates on the terms of the offer.
+@ref s 981(2) Effect of notice under section 979 (src:13669-13669)
+GIVEN `the offeror has given the shareholder a notice under section 979` IS A BOOLEAN
+      `s 986 the court has made an order about the notice or the terms` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 981(2) the offeror is entitled and bound to acquire the shares on the terms of the offer` MEANS
+    IF NOT (`the offeror has given the shareholder a notice under section 979`)
+    THEN NOTHING -- NOTHING-kind (limited by its own wording): the section "applies where the offeror gives a shareholder a notice under section 979"
+    ELSE IF `s 986 the court has made an order about the notice or the terms` EQUALS JUST TRUE
+         THEN NOTHING -- NOTHING-kind (limited by its own wording): the section is "Subject to section 986 (applications to the court)", whose order governs
+         ELSE JUST TRUE
+
+-- s 981(3): where the terms give the shareholder a choice of consideration the notice must give particulars and state the six-week right and the default consideration.
+-- src:13670 | (3) Where the terms of an offer are such as to give the shareholder a choice of consideration, the notice must give particulars of the choice and state—
+-- src:13671 | (a) that the shareholder may, within six weeks from the date of the notice, indicate his choice by a written communication sent to the offeror at an address specified in the notice, and
+-- src:13672 | (b) which consideration specified in the offer will apply if he does not indicate a choice.
+-- src:13673 | The reference in subsection (2) to the terms of the offer is to be read accordingly.
+@ref s 981(3) Effect of notice under section 979 (src:13670-13673)
+GIVEN `the terms of the offer give the shareholder a choice of consideration` IS A BOOLEAN
+      `the notice gives particulars of the choice` IS A BOOLEAN
+      `the notice states that the shareholder may, within six weeks from the date of the notice, indicate his choice by a written communication sent to the offeror at an address specified in the notice` IS A BOOLEAN
+      `the notice states which consideration specified in the offer will apply if he does not indicate a choice` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 981(3) the notice is as the subsection requires` MEANS
+    IF NOT (`the terms of the offer give the shareholder a choice of consideration`)
+    THEN NOTHING -- NOTHING-kind (limited by its own wording): the subsection is for terms that "give the shareholder a choice of consideration"
+    ELSE IF `the notice gives particulars of the choice` AND `the notice states that the shareholder may, within six weeks from the date of the notice, indicate his choice by a written communication sent to the offeror at an address specified in the notice` AND `the notice states which consideration specified in the offer will apply if he does not indicate a choice`
+         THEN JUST TRUE
+         ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "the notice must give particulars of the choice and state—"
+
+-- s 981(3)(a): six weeks from the date of the notice (42 days).
+-- src:13670 | (3) Where the terms of an offer are such as to give the shareholder a choice of consideration, the notice must give particulars of the choice and state—
+-- src:13671 | (a) that the shareholder may, within six weeks from the date of the notice, indicate his choice by a written communication sent to the offeror at an address specified in the notice, and
+-- src:13672 | (b) which consideration specified in the offer will apply if he does not indicate a choice.
+-- src:13673 | The reference in subsection (2) to the terms of the offer is to be read accordingly.
+@ref s 981(3) Effect of notice under section 979 (src:13670-13673)
+GIVEN `the date of the notice` IS A DATE
+GIVETH A DATE
+`s 981(3)(a) the last day for the shareholder to indicate his choice` MEANS `the date of the notice` PLUS 42
+
+-- s 981(4): subsection (3) applies whether or not any time-limit or other conditions applicable to the choice can still be complied with.
+-- src:13674 | (4) Subsection (3) applies whether or not any time-limit or other conditions applicable to the choice under the terms of the offer can still be complied with.
+@ref s 981(4) Effect of notice under section 979 (src:13674-13674)
+GIVEN `a time-limit or other condition applicable to the choice under the terms of the offer can still be complied with` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 981(4) subsection (3) applies` MEANS
+    IF `a time-limit or other condition applicable to the choice under the terms of the offer can still be complied with`
+    THEN JUST TRUE
+    ELSE JUST TRUE -- the subsection applies in either case: "whether or not"
+
+-- s 981(5): where the consideration is not cash and cannot be provided, or was to come from a third party who is no longer bound or able, it is the cash equivalent at the date of the notice.
+-- src:13675 | (5) If the consideration offered to or (as the case may be) chosen by the shareholder—
+-- src:13676 | (a) is not cash and the offeror is no longer able to provide it, or
+-- src:13677 | (b) was to have been provided by a third party who is no longer bound or able to provide it,
+-- src:13678 | the consideration is to be taken to consist of an amount of cash, payable by the offeror, which at the date of the notice is equivalent to the consideration offered or (as the case may be) chosen.
+@ref s 981(5) Effect of notice under section 979 (src:13675-13678)
+GIVEN `the consideration offered or chosen is not cash and the offeror is no longer able to provide it` IS A BOOLEAN
+      `the consideration was to have been provided by a third party who is no longer bound or able to provide it` IS A BOOLEAN
+      `the cash amount equivalent to the consideration at the date of the notice` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`s 981(5) the cash consideration the offeror must pay` MEANS
+    IF `the consideration offered or chosen is not cash and the offeror is no longer able to provide it` OR `the consideration was to have been provided by a third party who is no longer bound or able to provide it`
+    THEN JUST `the cash amount equivalent to the consideration at the date of the notice`
+    ELSE NOTHING -- NOTHING-kind (limited by its own wording): the cash equivalent applies only if the consideration is "not cash and the offeror is no longer able to provide it" or "was to have been provided by a third party who is no longer bound or able to provide it"
+
+-- s 981(6): at the end of six weeks from the date of the notice the offeror must immediately send a copy to the company and pay or transfer the consideration to it.
+-- src:13679 | (6) At the end of six weeks from the date of the notice the offeror must immediately—
+-- src:13680 | (a) send a copy of the notice to the company, and
+-- src:13681 | (b) pay or transfer to the company the consideration for the shares to which the notice relates.
+-- src:13682 | Where the consideration consists of shares or securities to be allotted by the offeror, the reference in paragraph (b) to the transfer of the consideration is to be read as a reference to the allotment of the shares or securities to the company.
+@ref s 981(6) Effect of notice under section 979 (src:13679-13682)
+GIVEN `the date of the notice` IS A DATE
+      `the day` IS A DATE
+GIVETH A MAYBE BOOLEAN
+`s 981(6) the offeror's duty has arisen` MEANS
+    IF `the day` AT LEAST (`s 981(3)(a) the last day for the shareholder to indicate his choice` `the date of the notice`)
+    THEN JUST TRUE
+    ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "At the end of six weeks from the date of the notice the offeror must immediately"
+
+-- src:13679 | (6) At the end of six weeks from the date of the notice the offeror must immediately—
+-- src:13680 | (a) send a copy of the notice to the company, and
+-- src:13681 | (b) pay or transfer to the company the consideration for the shares to which the notice relates.
+-- src:13682 | Where the consideration consists of shares or securities to be allotted by the offeror, the reference in paragraph (b) to the transfer of the consideration is to be read as a reference to the allotment of the shares or securities to the company.
+@ref s 981(6) Effect of notice under section 979 (src:13679-13682)
+GIVEN `s 981(6) the offeror's duty has arisen` IS A MAYBE BOOLEAN
+      `the offeror sent a copy of the notice to the company` IS A BOOLEAN
+      `the offeror paid or transferred the consideration for the shares to the company (or, for shares or securities to be allotted, allotted them to the company)` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 981(6) the offeror has done what the subsection requires` MEANS
+    IF NOT (`s 981(6) the offeror's duty has arisen` EQUALS JUST TRUE)
+    THEN NOTHING -- NOTHING-kind (limited by its own wording): the duty arises "At the end of six weeks from the date of the notice"
+    ELSE IF `the offeror sent a copy of the notice to the company` AND `the offeror paid or transferred the consideration for the shares to the company (or, for shares or securities to be allotted, allotted them to the company)`
+         THEN JUST TRUE
+         ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "the offeror must immediately— (a) send a copy of the notice to the company, and (b) pay or transfer to the company the consideration for the shares to which the notice relates"
+
+-- s 981(6) as a regulative rule: counted from the end of the six weeks, the offeror must act immediately (a deadline of 0 days from that moment).
+DECLARE `s 981 party` IS ONE OF
+    `s 981 the offeror`
+
+DECLARE `s 981 act` IS ONE OF
+    `s 981(6) send a copy of the notice to the company and pay or transfer the consideration to it`
+
+-- src:13679 | (6) At the end of six weeks from the date of the notice the offeror must immediately—
+-- src:13680 | (a) send a copy of the notice to the company, and
+-- src:13681 | (b) pay or transfer to the company the consideration for the shares to which the notice relates.
+-- src:13682 | Where the consideration consists of shares or securities to be allotted by the offeror, the reference in paragraph (b) to the transfer of the consideration is to be read as a reference to the allotment of the shares or securities to the company.
+@ref s 981(6) Effect of notice under section 979 (src:13679-13682)
+GIVETH A DEONTIC `s 981 party` `s 981 act`
+`s 981(6) the offeror's duty to send a copy of the notice and pay the company` MEANS
+    PARTY `s 981 the offeror`
+    MUST `s 981(6) send a copy of the notice to the company and pay or transfer the consideration to it`
+    WITHIN 0
+    HENCE FULFILLED
+    LEST BREACH BY `s 981 the offeror` BECAUSE "the copy of the notice was not sent, and the consideration not paid or transferred, immediately at the end of the six weeks"
+
+-- s 981(7): if the shares are registered, the copy must be accompanied by an instrument of transfer; on receipt the company must register the offeror as the holder.
+-- src:13683 | (7) If the shares to which the notice relates are registered, the copy of the notice sent to the company under subsection (6)(a) must be accompanied by an instrument of transfer executed on behalf of the holder of the shares by a person appointed by the offeror.
+-- src:13684 | On receipt of that instrument the company must register the offeror as the holder of those shares.
+@ref s 981(7) Effect of notice under section 979 (src:13683-13684)
+GIVEN `the shares to which the notice relates are registered` IS A BOOLEAN
+      `the copy of the notice is accompanied by an instrument of transfer executed on behalf of the holder by a person appointed by the offeror` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 981(7) the company must register the offeror as the holder of the shares` MEANS
+    IF `the shares to which the notice relates are registered` AND `the copy of the notice is accompanied by an instrument of transfer executed on behalf of the holder by a person appointed by the offeror`
+    THEN JUST TRUE
+    ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "If the shares to which the notice relates are registered, the copy of the notice sent to the company under subsection (6)(a) must be accompanied by an instrument of transfer"
+
+-- s 981(8): if the shares are transferable by delivery of warrants, the copy must be accompanied by a statement; on receipt the company must issue warrants and those in issue become void.
+-- src:13685 | (8) If the shares to which the notice relates are transferable by the delivery of warrants or other instruments, the copy of the notice sent to the company under subsection (6)(a) must be accompanied by a statement to that effect.
+-- src:13686 | On receipt of that statement the company must issue the offeror with warrants or other instruments in respect of the shares, and those already in issue in respect of the shares become void.
+@ref s 981(8) Effect of notice under section 979 (src:13685-13686)
+GIVEN `the shares to which the notice relates are transferable by the delivery of warrants or other instruments` IS A BOOLEAN
+      `the copy of the notice is accompanied by a statement to that effect` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 981(8) the company must issue the offeror with warrants and those already in issue become void` MEANS
+    IF `the shares to which the notice relates are transferable by the delivery of warrants or other instruments` AND `the copy of the notice is accompanied by a statement to that effect`
+    THEN JUST TRUE
+    ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "If the shares to which the notice relates are transferable by the delivery of warrants or other instruments, the copy of the notice sent to the company under subsection (6)(a) must be accompanied by a statement to that effect."
+
+-- s 981(9): the company must hold money or other consideration received under (6)(b) on trust for the person entitled to the shares before the offeror acquired them.
+-- src:13687 | (9) The company must hold any money or other consideration received by it under subsection (6)(b) on trust for the person who, before the offeror acquired them, was entitled to the shares in respect of which the money or other consideration was received.
+-- src:13688 | Section 982 contains further provision about how the company should deal with such money or other consideration.
+@ref s 981(9) Effect of notice under section 979 (src:13687-13688)
+GIVEN `the company received the money or other consideration under subsection (6)(b)` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 981(9) the company holds the consideration on trust for the person who was entitled to the shares` MEANS
+    IF `the company received the money or other consideration under subsection (6)(b)`
+    THEN JUST TRUE
+    ELSE NOTHING -- NOTHING-kind (limited by its own wording): the trust is of "any money or other consideration received by it under subsection (6)(b)"
+
+-- s 982(2) and (3): the company must pay money received, and dividends accruing from other consideration, into a separate interest-bearing account that can be withdrawn by appropriate notice.
+-- src:13694 | (3) A bank account complies with this subsection if the balance on the account—
+-- src:13695 | (a) bears interest at an appropriate rate, and
+-- src:13696 | (b) can be withdrawn by such notice (if any) as is appropriate.
+@ref s 982(3) Further provision about consideration held on trust under section 981(9) (src:13694-13696)
+GIVEN `the balance on the account bears interest at an appropriate rate` IS A BOOLEAN
+      `the balance can be withdrawn by such notice (if any) as is appropriate` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 982(3) the bank account complies with the subsection` MEANS
+    IF `the balance on the account bears interest at an appropriate rate` AND `the balance can be withdrawn by such notice (if any) as is appropriate`
+    THEN JUST TRUE
+    ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "A bank account complies with this subsection if the balance on the account— (a) bears interest at an appropriate rate, and (b) can be withdrawn by such notice (if any) as is appropriate."
+
+-- src:13691 | (2) The company must pay into a separate bank account that complies with subsection (3)—
+-- src:13692 | (a) any money it receives under paragraph (b) of section 981(6), and
+-- src:13693 | (b) any dividend or other sum accruing from any other consideration it receives under that paragraph.
+@ref s 982(2) Further provision about consideration held on trust under section 981(9) (src:13691-13693)
+GIVEN `the account is a separate bank account` IS A BOOLEAN
+      `s 982(3) the bank account complies with the subsection` IS A MAYBE BOOLEAN
+      `the company paid into it any money received under section 981(6)(b), and any dividend or other sum accruing from other consideration received under that paragraph` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 982(2) the company has paid into the account as the subsection requires` MEANS
+    IF `the account is a separate bank account` AND `s 982(3) the bank account complies with the subsection` EQUALS JUST TRUE AND `the company paid into it any money received under section 981(6)(b), and any dividend or other sum accruing from other consideration received under that paragraph`
+    THEN JUST TRUE
+    ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "The company must pay into a separate bank account that complies with subsection (3)"
+
+-- s 982(5): subsection (5) applies where reasonable enquiries have been made at reasonable intervals and twelve years have elapsed since the consideration was received, or the company is wound up.
+-- src:13701 | (5) This subsection applies where—
+-- src:13702 | (a) reasonable enquiries have been made at reasonable intervals to find the person, and
+-- src:13703 | (b) twelve years have elapsed since the consideration was received, or the company is wound up.
+@ref s 982(5) Further provision about consideration held on trust under section 981(9) (src:13701-13703)
+GIVEN `reasonable enquiries have been made at reasonable intervals to find the person` IS A BOOLEAN
+      `the day the consideration was received` IS A DATE
+      `the day` IS A DATE
+      `the company is wound up` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 982(5) this subsection applies` MEANS
+    IF `reasonable enquiries have been made at reasonable intervals to find the person` AND (`the day` AT LEAST (`add years` `the day the consideration was received` 12) OR `the company is wound up`)
+    THEN JUST TRUE
+    ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "This subsection applies where— (a) reasonable enquiries have been made at reasonable intervals to find the person, and (b) twelve years have elapsed since the consideration was received, or the company is wound up."
+
+-- s 982(4): if the person entitled cannot be found and subsection (5) applies, the consideration must be paid into court (not for a company registered in Scotland, where (7) and (8) apply instead).
+-- src:13697 | (4) If—
+-- src:13698 | (a) the person entitled to the consideration held on trust by virtue of section 981(9) cannot be found, and
+-- src:13699 | (b) subsection (5) applies,
+-- src:13700 | the consideration (together with any interest, dividend or other benefit that has accrued from it) must be paid into court.
+-- src:13701 | (5) This subsection applies where—
+-- src:13702 | (a) reasonable enquiries have been made at reasonable intervals to find the person, and
+-- src:13703 | (b) twelve years have elapsed since the consideration was received, or the company is wound up.
+-- src:13704 | (6) In relation to a company registered in Scotland, subsections (7) and (8) apply instead of subsection (4).
+@ref s 982(4) and (6) Payment into court, or for Scotland subsections (7) and (8) (src:13697-13704)
+GIVEN `the person entitled to the consideration held on trust by virtue of section 981(9) cannot be found` IS A BOOLEAN
+      `s 982(5) this subsection applies` IS A MAYBE BOOLEAN
+      place IS A `Place of registration`
+GIVETH A MAYBE BOOLEAN
+`s 982(4) the consideration must be paid into court` MEANS
+    IF place EQUALS `Scotland`
+    THEN NOTHING -- NOTHING-kind (limited by its own wording): "In relation to a company registered in Scotland, subsections (7) and (8) apply instead of subsection (4)."
+    ELSE IF `the person entitled to the consideration held on trust by virtue of section 981(9) cannot be found` AND `s 982(5) this subsection applies` EQUALS JUST TRUE
+         THEN JUST TRUE
+         ELSE JUST FALSE -- FALSE-kind (the text says no in its own words): "If— (a) the person entitled to the consideration held on trust by virtue of section 981(9) cannot be found, and (b) subsection (5) applies"
+
+-- s 982(7): for a company registered in Scotland, the trust terminates, the company or liquidator must sell non-cash consideration, and the sum must be deposited in the name of the Accountant of Court.
+-- src:13705 | (7) If the person entitled to the consideration held on trust by virtue of section 981(9) cannot be found and subsection (5) applies—
+-- src:13706 | (a) the trust terminates,
+-- src:13707 | (b) the company or (if the company is wound up) the liquidator must sell any consideration other than cash and any benefit other than cash that has accrued from the consideration, and
+-- src:13708 | (c) a sum representing—
+-- src:13709 | (i) the consideration so far as it is cash,
+-- src:13710 | (ii) the proceeds of any sale under paragraph (b), and
+-- src:13711 | (iii) any interest, dividend or other benefit that has accrued from the consideration,
+-- src:13712 | must be deposited in the name of the Accountant of Court in a separate bank account complying with subsection (3) and the receipt for the deposit must be transmitted to the Accountant of Court.
+@ref s 982(7) Further provision about consideration held on trust under section 981(9) (src:13705-13712)
+GIVEN `the person entitled to the consideration held on trust by virtue of section 981(9) cannot be found` IS A BOOLEAN
+      `s 982(5) this subsection applies` IS A MAYBE BOOLEAN
+      place IS A `Place of registration`
+GIVETH A MAYBE BOOLEAN
+`s 982(7) the trust terminates and the sum must be deposited in the name of the Accountant of Court` MEANS
+    IF place EQUALS `Scotland` AND `the person entitled to the consideration held on trust by virtue of section 981(9) cannot be found` AND `s 982(5) this subsection applies` EQUALS JUST TRUE
+    THEN JUST TRUE
+    ELSE NOTHING -- NOTHING-kind (limited by its own wording): subsections (7) and (8) apply "In relation to a company registered in Scotland", where the person cannot be found and subsection (5) applies
+
+-- s 982(8): section 150 of the Bankruptcy (Scotland) Act 2016 applies, so far as consistent with this Act, to sums deposited under subsection (7).
+-- src:13713 | (8) Section 150 of the Bankruptcy (Scotland) Act 2016 (so far as consistent with this Act) applies (with any necessary modifications) to sums deposited under subsection (7) as it applies to sums deposited under section 148(3) of that Act.
+@ref s 982(8) Further provision about consideration held on trust under section 981(9) (src:13713-13713)
+GIVEN `s 982(7) the trust terminates and the sum must be deposited in the name of the Accountant of Court` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 982(8) section 150 of the Bankruptcy (Scotland) Act 2016 applies to the sum` MEANS
+    IF `s 982(7) the trust terminates and the sum must be deposited in the name of the Accountant of Court` EQUALS JUST TRUE
+    THEN JUST TRUE -- (so far as consistent with this Act, and with any necessary modifications)
+    ELSE NOTHING -- NOTHING-kind (limited by its own wording): the section applies to "sums deposited under subsection (7)"
+
+-- s 982(9): the expenses of the enquiries may be paid out of the money or other property held on trust for the person to whom the enquiry relates.
+-- src:13714 | (9) The expenses of any such enquiries as are mentioned in subsection (5) may be paid out of the money or other property held on trust for the person to whom the enquiry relates.
+@ref s 982(9) Further provision about consideration held on trust under section 981(9) (src:13714-13714)
+GIVEN `the expenses are of the enquiries mentioned in subsection (5)` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 982(9) the expenses may be paid out of the money or other property held on trust` MEANS
+    IF `the expenses are of the enquiries mentioned in subsection (5)`
+    THEN JUST TRUE
+    ELSE NOTHING -- NOTHING-kind (limited by its own wording): the power is for "The expenses of any such enquiries as are mentioned in subsection (5)"
