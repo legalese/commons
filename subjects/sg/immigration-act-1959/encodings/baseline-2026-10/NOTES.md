@@ -21,12 +21,13 @@ informal consolidation in force from 1 January 2026, deposited at
 `../../registers/source-bundle/IA1959-RG1.txt` (used for reg 6(1), reg 12(1)
 to (1B) and Sixth Schedule items 1 and 2).
 
-**Checks:** two case files, 57 assertions satisfied, 0 errors, 0 warnings
-(39 in `imm-cases-entry-and-stay.l4`, 18 in `imm-cases-offences.l4`), plus two
+**Checks:** two case files, 59 assertions satisfied on `l4` 1.6.110, 0 errors, 0 warnings
+(41 in `imm-cases-entry-and-stay.l4`, 18 in `imm-cases-offences.l4`), plus two
 `#TRACE`s of the re-entry duty (applying on day 179 is `FULFILLED`; on day 200
 it is `BREACHED`). Fixtures are built by a generator script
 (`gen_immigration-act-1959_baseline.py`, scratchpad) with expected values
-written by hand from the text.
+written by hand from the text. 2 cases, with their 2 fixtures, were added by hand to
+`imm-cases-entry-and-stay.l4` after the script ran.
 
 ## Seat
 

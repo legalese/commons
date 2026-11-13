@@ -50,8 +50,8 @@ The Taxation Administration Act is brought in because both Acts are tax laws und
 
 | Modules | Case file | Assertions |
 |---|---|---|
-| `rates-shared.l4`, `rates-core.l4`, `landtax-core.l4`, `rates-seat.l4` | `rates-cases-owner.l4` | 116 written, 116 satisfied |
-| `rates-shared.l4`, `landtax-core.l4`, `rates-seat.l4` | `landtax-cases-owner.l4` | 100 written, 100 satisfied |
+| `rates-shared.l4`, `rates-core.l4`, `landtax-core.l4`, `rates-seat.l4` | `rates-cases-owner.l4` | 116 written, 116 satisfied on 1.6.110 |
+| `rates-shared.l4`, `landtax-core.l4`, `rates-seat.l4` | `landtax-cases-owner.l4` | 101 written, 101 satisfied on 1.6.110 |
 
 In addition, 7 `#TRACE`s carry an `-- expect:` line. Six are breaches by the owner: not paying by the payment date or the 1st instalment; missing the 2nd instalment; not giving the s 67 notice; not paying the deferred debt the day after revocation; not telling the Commissioner under Land Tax Act s 14; not paying land tax by the payment date. The seventh is an obligation still pending: the Commissioner's duty under s 46(2) to make the deferral determination, for which no period is stated. Each was read and matches its expectation.
 

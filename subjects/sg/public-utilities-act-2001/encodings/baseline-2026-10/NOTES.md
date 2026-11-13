@@ -11,17 +11,17 @@ pass, no human gate. Not for public use as advice.
 `../../registers/source-bundle/PUA2001.txt`.
 
 **Checks:** two modules (`pua-my-supply.l4`, `pua-offences.l4`) and two case files, run with
-the stable `l4` of VS Code extension 1.6.98: `pua-cases-my-supply.l4` 28 assertions,
-`pua-cases-offences.l4` 32; 60 satisfied, 0 errors, 0 warnings. The case files are generated
+`l4` 1.6.110: `pua-cases-my-supply.l4` 28 assertions,
+`pua-cases-offences.l4` 33; 61 satisfied, 0 errors, 0 warnings. The case files are generated
 by `gen_public-utilities-act-2001_baseline.py` (scratchpad) with expected values written by
-hand from the text.
+hand from the text. 1 case was added by hand to `pua-cases-offences.l4` after the script ran.
 
 This encoding replaces the one moved to solutions on 2026-10-19 and the first-pass encoding
 `naive-2026-10`. The first pass was read for scope and pitfalls, and everything it covered is
 covered here: Part 5 penalties, the due-diligence defence and s 56A, s 45A, ss 40G and 40H,
 s 57, ss 44E and 44J, s 59, s 25 and s 68B. Its hand-checked values were re-read against the
 text and kept where still right (the 300 mm tier, the s 50(6) split, the 7-day and 14-day
-windows, the composition sums). With 60 assertions against its 92, it tests fewer cases of
+windows, the composition sums). With 61 assertions against its 92, it tests fewer cases of
 each.
 
 ## Seat

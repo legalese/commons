@@ -935,7 +935,7 @@ The "until" rows below (s 16, Rule 2, Rule 3, s 19(1), s 29(4), s 35(2)) describ
 
 ## Findings: what the text turns out to say
 
-1. An unbracketed `NOT` covers everything to its right in the main binary: `NOT a OR b` is `NOT (a OR b)`. The run exits 0 with no message. Every `NOT` in layer 1 is bracketed. Asserted (soga-cases-findings.l4: four probe functions, `TRUE TRUE` and `TRUE FALSE` inputs, on 1.6.109 and 1.6.108).
+1. An unbracketed `NOT` covers everything to its right in the main binary: `NOT a OR b` is `NOT (a OR b)`. The run exits 0 with no message. Every `NOT` in layer 1 is bracketed. The unstable build refuses that spelling at check, so soga-cases-findings.l4 does not carry it: its four probe functions write the reading main gives with brackets, `NOT (a OR b)` and `NOT (a AND b)`, beside `(NOT a) OR b` and `(NOT a) AND b`, and assert what each answers on `TRUE TRUE` and `TRUE FALSE` inputs. They do not assert how a build parses the unbracketed text.
 
 2. `Date d m y` rolls an impossible day or month forward with no error: `Date 31 2 2025` is 3 March 2025, `Date 15 14 2025` is February 2026. Asserted (soga-cases-findings.l4: `DATE_DAY (Date 31 2 2025) EQUALS 3` and three more).
 
@@ -979,7 +979,7 @@ The first six of these are `NOTHING` in the encoding, each with a case that asse
 
 Version tested: `l4-main-109` (1.6.109, sha256 `eeb12f1e9d0ec646b6196d53a4b83c41160ada7f3959211aa50b0115652b73cb`) and `l4-main-108` (1.6.108), which read every module the same way (`check.sh`, "main" columns).
 **Silent failures (exit 0, no warning, a wrong answer) come first, because they are the ones that cost.**
-1. **An unbracketed `NOT` covers everything to its right.** `NOT a OR b` is `NOT (a OR b)`, and `NOT a AND b` is `NOT (a AND b)`. Found when the test for `sch para 5 s 14(5)` failed with a wrong answer and no error; fixed by writing `(NOT a) OR b`. Asserted: finding 1.
+1. **An unbracketed `NOT` covers everything to its right.** `NOT a OR b` is `NOT (a OR b)`, and `NOT a AND b` is `NOT (a AND b)`. Found when the test for `sch para 5 s 14(5)` failed with a wrong answer and no error; fixed by writing `(NOT a) OR b`. The probes of finding 1 write the wide reading with brackets, because the unstable build refuses the unbracketed spelling.
 2. **`Date d m y` accepts any day and month number and rolls forward.** `Date 31 2 2025` is 3 March 2025 and `Date 15 14 2025` is 15 February 2026, with no error. Month arithmetic written as `Date d (m PLUS n) y` therefore gives a wrong date for 31 January plus one month. `s 10(3)` compares the day of the result with the day it started from and answers `NOTHING` when they differ. Asserted: finding 2.
 3. **Two enum constructors with the same name in two imported modules** make the name unusable in the module that imports both, and the clash can sit unnoticed until a later module imports both (five clashes of `some other matter` and two of `a sale` were found this way and renamed). `work/dups.py` (not shipped) checks the import closure of the seat; 0 duplicates on the final run.
 4. **`#TRACE` is not an assertion.** A `DEONTIC` value cannot be compared with `EQUALS` in `#ASSERT` (the brief says so; not re-tested here), so each regulative rule in `soga-duties.l4` has a decision-function twin in its Part module, and the twin is what is asserted. `check.sh` counts no assertion for `soga-duties.l4`, which is its row of zeros, not a defect.

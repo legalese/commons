@@ -31,10 +31,10 @@ Act's numbers and dates, and both deposited: the Central Provident Fund
 (`CPFA1953-OR10.txt`), and the Central Provident Fund (Self-Employed Persons)
 Regulations 1992, version in force from 1 January 2026 (`CPFA1953-RG25.txt`).
 
-**Checks:** with the stable `l4` of VS Code extension 1.6.98,
+**Checks:** with `l4` 1.6.110,
 `l4 run cpf-cases-withdrawal.l4` (23 assertions),
 `l4 run cpf-cases-contributions.l4` (22) and
-`l4 run cpf-cases-self-employed.l4` (15): 60 assertions satisfied, 0 errors,
+`l4 run cpf-cases-self-employed.l4` (16): 61 assertions satisfied, 0 errors,
 0 warnings. Each module also runs clean on its own.
 
 | file | what it holds |
@@ -42,7 +42,7 @@ Regulations 1992, version in force from 1 January 2026 (`CPFA1953-RG25.txt`).
 | `cpf-withdrawal.l4` | s 2 "applicable person", s 15(1), (2), (3), (6), s 16(1), s 24(2), (3A), (3B), s 25(1), (3), (5) |
 | `cpf-contributions.l4` | s 7(1) to (6A), First Schedule paras 1 and 5, s 13(4), Exemption Order paras 2 to 5 and the Schedule |
 | `cpf-self-employed.l4` | s 9A, s 8A(9), s 9(2) and (3), s 58(1)(e), s 61(1), and the Self-Employed Persons Regulations |
-| `cpf-cases-*.l4` | generated fixtures, hand-written expected values |
+| `cpf-cases-*.l4` | generated fixtures, hand-written expected values; 1 case added by hand to `cpf-cases-self-employed.l4` after the script ran |
 
 ## Seat
 
