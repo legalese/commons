@@ -14,7 +14,7 @@ pass, no human gate. Not for public use as advice.
 `l4` 1.6.110: `pua-cases-my-supply.l4` 28 assertions,
 `pua-cases-offences.l4` 33; 61 satisfied, 0 errors, 0 warnings. The case files are generated
 by `gen_public-utilities-act-2001_baseline.py` (scratchpad) with expected values written by
-hand from the text.
+hand from the text. 1 case was added by hand to `pua-cases-offences.l4` after the script ran.
 
 This encoding replaces the one moved to solutions on 2026-10-19 and the first-pass encoding
 `naive-2026-10`. The first pass was read for scope and pitfalls, and everything it covered is

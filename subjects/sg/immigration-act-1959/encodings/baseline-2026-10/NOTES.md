@@ -26,7 +26,8 @@ to (1B) and Sixth Schedule items 1 and 2).
 `#TRACE`s of the re-entry duty (applying on day 179 is `FULFILLED`; on day 200
 it is `BREACHED`). Fixtures are built by a generator script
 (`gen_immigration-act-1959_baseline.py`, scratchpad) with expected values
-written by hand from the text.
+written by hand from the text. 2 cases, with their 2 fixtures, were added by hand to
+`imm-cases-entry-and-stay.l4` after the script ran.
 
 ## Seat
 
