@@ -69,7 +69,7 @@ These follow CLAUDE.md, ruled 2026-10-18:
 
 ## 5. Writing L4 that the stable binary accepts
 
-- **No `REFUSE`, `#ASSERT REFUSED` or `BECAUSE`** (except `LEST BREACH … BECAUSE`, which is accepted). For a case outside the encoding, return an explicit "not covered" value, either a constructor or `NOTHING`, and assert it.
+- **`REFUSE`, `#ASSERT REFUSED` and `BECAUSE` are accepted** by the current `l4` (`REFUSE` reached `main` with l4-ide #762 on 2026-11-03; the builds `1.6.109` and `1.6.110` both run l4-ide's `jl4/examples/ok/refuse.l4` without error), but they are not the convention here. For a case outside the encoding, return an explicit "not covered" value, either a constructor or `NOTHING`, and assert it. (`LEST BREACH … BECAUSE` is accepted too.)
 - **Parenthesise every `NOT`.** `NOT a AND b` parses as `NOT (a AND b)`.
 - **Keep each `#ASSERT` on one line.** A continuation line is rejected.
 - **Bracket arithmetic that crosses a line break.** `x DIVIDED BY w` at the end of a line, followed by `TIMES 100` on the next, divides by `w × 100`. Chained `MINUS` is left-associative.
