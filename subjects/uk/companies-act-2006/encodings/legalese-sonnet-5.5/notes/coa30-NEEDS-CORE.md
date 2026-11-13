@@ -1,0 +1,10 @@
+# NEEDS-CORE (coa30)
+
+Types and constructors `coa-core.l4` lacks that this part needed. Each is declared in `coa30-regulative.l4` under this part's own prefix; the lead may hoist them into the core at the merge (a `DEONTIC` takes one party type, the core's `Party` has no constructor for the supervisory body, the registered third country auditor, the delegated body or a person within paragraph 3(6), and a part cannot extend a core type; the core does have `Secretary of State`, which is therefore re-declared here under this part's prefix beside those actors rather than mixed with `Party`).
+
+| what | where declared | constructors or fields | sections that need it |
+| --- | --- | --- | --- |
+| `Party` constructors for the supervisory-body Schedules | `sch 10 para 2(4) party` in `coa30-regulative.l4` | the Secretary of State (the core has this one: it is repeated so that one party type serves every rule); the recognised supervisory body; a person within paragraph 3(6); the registered third country auditor; the body designated by the delegation order; the person who wishes to cite an instrument | Schedule 10 paras 2(4), 3(3), 3(5), 3(11), 13(12), 20ZA; Schedule 12 para 4; Schedule 13 paras 8(1), 9(3), 10(1), 10(3) |
+| an action type for those duties | `sch 10 para 2(4) act` in `coa30-regulative.l4` | one nullary constructor per duty (give written notice of refusal; give written notice of the intention to revoke; take reasonably practicable steps; publish the notice; make representations; give notice of the making of the order; deliver a summary of inspections; pay the costs; print and make available; endorse a copy; make a report; lay the report) | the same |
+
+Proposed for the core, if the lead wants a shared version: `Party` constructors `Supervisory body`, `Recognised qualifying body`, `Registered third country auditor`, `Delegated body`. Not needed by this part: a `Fine limit`, `Penalty` or `Mode of conviction` (Schedules 10 to 16 create no offence and fix no fine; the core names expected for them in PLAN.md section 6 were not used).
