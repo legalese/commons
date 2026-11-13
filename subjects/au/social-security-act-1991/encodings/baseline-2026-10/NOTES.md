@@ -37,11 +37,11 @@ of the later compilation C2026C00449 (the Register no longer serves C2026C00336 
 its latest); the words around each formula were checked identical to the deposit.
 
 **Checks:** two modules (`ssa-claims.l4`, and `ssa-formulas.l4` added 2026-10-24) and two
-case files (`ssa-cases-claims.l4`, 70 assertions, built by the scratchpad generator
-`gen_social-security-act-1991_baseline.py`; `ssa-cases-formulas.l4`, 29 assertions, written by
-hand). Result: 99 assertions satisfied, 0 errors, 0 warnings in every file, with the stable `l4`
-of VS Code extension 1.6.98 (2026-10-24). A deliberately wrong assertion, added to a scratch
-copy, was reported as failed.
+case files (`ssa-cases-claims.l4`, 74 assertions, 70 built by the scratchpad generator
+`gen_social-security-act-1991_baseline.py` and 4 added by hand; `ssa-cases-formulas.l4`, 30
+assertions, written by hand). Result on `l4` 1.6.110: 104 assertions satisfied, 0 errors,
+0 warnings in every file. A deliberately wrong assertion, added to a scratch copy, was reported
+as failed.
 
 ## Seat
 

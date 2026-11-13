@@ -31,10 +31,10 @@ Act's numbers and dates, and both deposited: the Central Provident Fund
 (`CPFA1953-OR10.txt`), and the Central Provident Fund (Self-Employed Persons)
 Regulations 1992, version in force from 1 January 2026 (`CPFA1953-RG25.txt`).
 
-**Checks:** with the stable `l4` of VS Code extension 1.6.98,
+**Checks:** with `l4` 1.6.110,
 `l4 run cpf-cases-withdrawal.l4` (23 assertions),
 `l4 run cpf-cases-contributions.l4` (22) and
-`l4 run cpf-cases-self-employed.l4` (15): 60 assertions satisfied, 0 errors,
+`l4 run cpf-cases-self-employed.l4` (16): 61 assertions satisfied, 0 errors,
 0 warnings. Each module also runs clean on its own.
 
 | file | what it holds |
