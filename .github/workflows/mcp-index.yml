@@ -1,14 +1,18 @@
-# Rebuild the search index behind the L4 Commons MCP server
-# (https://commons.utility.workers.dev/mcp) whenever main changes.
+# Keep the search index behind the L4 Commons MCP server
+# (https://commons.utility.workers.dev/mcp) in step with main.
 #
-# .github/mcp-index/build-index.mjs reads subjects/ and writes one SQL file;
-# wrangler loads it into the server's Cloudflare D1 database, replacing the
-# previous index. The server reads files from GitHub at the commit recorded in
-# the index, so it always matches the line numbers it hands out.
+# Incremental: .github/mcp-index/build-index.mjs compares a hash of each law's
+# rows with the hashes the database holds (law_state) and writes only the laws
+# that changed. It keeps to a daily budget of D1 rows written (the free plan
+# allows 100,000 a day per account); changes that don't fit wait for the next
+# run, and the daily scheduled run picks them up after D1's counter resets at
+# midnight UTC.
 #
 # Needs two repository secrets:
 #   CLOUDFLARE_API_TOKEN   an API token with Account › D1 › Edit
 #   CLOUDFLARE_ACCOUNT_ID  the account that holds the l4-commons-index database
+# and takes its budget from the MCP_INDEX_DAILY_WRITES repository variable
+# (default 50000), or the `budget` input when run by hand.
 
 name: mcp-index
 
@@ -19,10 +23,16 @@ on:
       - 'subjects/**'
       - '.github/mcp-index/**'
       - '.github/workflows/mcp-index.yml'
+  schedule:
+    - cron: '30 0 * * *' # just after D1's daily counter resets
   workflow_dispatch:
+    inputs:
+      budget:
+        description: 'D1 rows this run may bring today’s total up to (default: MCP_INDEX_DAILY_WRITES, or 50000)'
+        required: false
 
-# One load at a time; a push that lands mid-run queues behind it, and a newer
-# push replaces any run still waiting.
+# One sync at a time, each reading the state the previous one left; a newer
+# trigger replaces any run still waiting.
 concurrency:
   group: mcp-index
   cancel-in-progress: false
@@ -30,11 +40,25 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  DB: l4-commons-index
+  WRANGLER: npx --yes wrangler@4.163.0
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  BUDGET: ${{ inputs.budget || vars.MCP_INDEX_DAILY_WRITES || '50000' }}
+
 jobs:
-  index:
+  sync:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
+      - name: Check the secrets
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::Set the CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID repository secrets."
+            exit 1
+          fi
+
       - uses: actions/checkout@v7
         with:
           fetch-depth: 1
@@ -43,16 +67,16 @@ jobs:
         with:
           node-version: 22
 
-      - name: Build the index
-        run: node .github/mcp-index/build-index.mjs . "$RUNNER_TEMP/index.sql"
-
-      - name: Load it into D1
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Read what the index holds
         run: |
-          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
-            echo "::error::Set the CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID repository secrets."
-            exit 1
-          fi
-          npx --yes wrangler@4.163.0 d1 execute l4-commons-index --remote --file "$RUNNER_TEMP/index.sql" --yes
+          $WRANGLER d1 execute "$DB" --remote --json \
+            --command "SELECT id, hash, commit_sha, writes FROM law_state; SELECT key, value FROM meta" \
+            > "$RUNNER_TEMP/state.json"
+
+      - name: Work out what changed
+        id: plan
+        run: node .github/mcp-index/build-index.mjs . "$RUNNER_TEMP/changes.sql" --sync "$RUNNER_TEMP/state.json" --budget "$BUDGET"
+
+      - name: Write the changes
+        if: steps.plan.outputs.load == 'true'
+        run: $WRANGLER d1 execute "$DB" --remote --file "$RUNNER_TEMP/changes.sql" --yes

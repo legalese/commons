@@ -1,37 +1,81 @@
 #!/usr/bin/env node
 /**
- * build-index.mjs — turn a checkout of legalese/commons into a SQL file
- * that loads the D1 search index the L4 Commons MCP server queries
- * (https://commons.utility.workers.dev/mcp). Run by .github/workflows/mcp-index.yml.
- * Nothing under subjects/ depends on it.
+ * build-index.mjs — turn a checkout of legalese/commons into SQL for the D1
+ * search index behind the L4 Commons MCP server (https://commons.utility.workers.dev/mcp).
  *
- *   node .github/mcp-index/build-index.mjs . index.sql
+ * The same file lives at .github/mcp-index/build-index.mjs in legalese/commons
+ * (run by .github/workflows/mcp-index.yml) and at scripts/build-index.mjs in the
+ * worker's project. Keep the two identical. Nothing under subjects/ depends on it.
+ *
+ *   node build-index.mjs <commons> <out.sql> --full
+ *       The whole schema and every row, for an empty database. Costs about
+ *       170,000 D1 rows written, more than the free plan's 100,000 a day.
+ *
+ *   node build-index.mjs <commons> <out.sql> --sync <state.json> [--budget 50000]
+ *       Only what changed. state.json is the output of
+ *         wrangler d1 execute <db> --remote --json --command \
+ *           "SELECT id, hash, commit_sha, writes FROM law_state; SELECT key, value FROM meta"
+ *       Each law carries a hash of its rows; a law whose hash changed is deleted
+ *       and re-inserted, with its full-text entries, and nothing else is touched.
+ *       Writes are counted per UTC day in meta (`writes:YYYY-MM-DD`). Changes that
+ *       would take today's count past --budget wait for a later run; the laws
+ *       they belong to keep their old rows and the commit those rows came from,
+ *       so line numbers stay right in the meantime.
+ *
+ *   node build-index.mjs <commons> <out.sql> --adopt
+ *       Declare that the database already holds exactly this checkout: write
+ *       law_state from it and nothing else. For a database loaded before
+ *       law_state existed, or to recover one whose law_state was lost.
  *
  * What gets indexed:
- *   laws        one row per subject (a directory holding subject.json)
+ *   laws        one row per subject (a directory holding subject.json), with its
+ *               encodings' seats, scopes and NOTES.md folded in for search
  *   encodings   one row per encoding of a subject (encoding.json, seat, scope, NOTES.md)
  *   decisions   one row per `@export`ed L4 function: the question it answers,
  *               its parameters (with their @desc), what it returns, where it lives
  *   provisions  one row per `§` / `§§` heading in a non-test .l4 file, with the
  *               comment text under it (usually the quoted statutory text)
+ *   law_state   per law: the hash of its rows, the commit they were built from,
+ *               and what writing them costs
+ * Laws, decisions and provisions each have an FTS5 table (porter stemming).
+ * File contents are not stored: the worker reads them from GitHub at the
+ * law's commit.
  *
- * Laws, decisions and provisions each get an FTS5 table (porter stemming)
- * for ranked search; a law's row also carries its encodings' seats, scopes
- * and NOTES.md, so one law-level hit covers "is this encoded, and how".
- * File contents themselves are not stored: the worker reads them from
- * raw.githubusercontent.com at the commit recorded in `meta`.
+ * When the step runs inside GitHub Actions it also writes `load=true|false`
+ * to $GITHUB_OUTPUT and a summary to $GITHUB_STEP_SUMMARY.
  *
  * No dependencies; Node >= 18.
  */
 
-import { readFileSync, readdirSync, statSync, writeFileSync, existsSync } from 'node:fs'
+import { readFileSync, readdirSync, statSync, writeFileSync, existsSync, appendFileSync } from 'node:fs'
 import { join, relative, dirname, basename, sep } from 'node:path'
 import { execFileSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 
-const root = process.argv[2]
-const out = process.argv[3] ?? 'build/index.sql'
-if (!root || !existsSync(join(root, 'subjects'))) {
-  console.error('usage: node .github/mcp-index/build-index.mjs <commons-checkout> [out.sql]')
+// ── arguments ────────────────────────────────────────────────────────
+
+const argv = process.argv.slice(2)
+const flag = (name) => {
+  const i = argv.indexOf(name)
+  if (i < 0) return undefined
+  const v = argv[i + 1]
+  argv.splice(i, v === undefined || v.startsWith('--') ? 1 : 2)
+  return v === undefined || v.startsWith('--') ? true : v
+}
+const MODE_FULL = flag('--full')
+const MODE_ADOPT = flag('--adopt')
+const SYNC_STATE = flag('--sync')
+const BUDGET = Number(flag('--budget') ?? 50_000)
+const TODAY = String(flag('--today') ?? new Date().toISOString().slice(0, 10)) // for tests
+const [root, out] = argv
+
+const modes = [MODE_FULL, MODE_ADOPT, SYNC_STATE].filter(Boolean).length
+if (!root || !out || !existsSync(join(root, 'subjects')) || modes !== 1 || !Number.isFinite(BUDGET)) {
+  console.error(
+    'usage: build-index.mjs <commons> <out.sql> --full\n' +
+      '       build-index.mjs <commons> <out.sql> --sync <state.json> [--budget N]\n' +
+      '       build-index.mjs <commons> <out.sql> --adopt'
+  )
   process.exit(2)
 }
 
@@ -41,13 +85,18 @@ const CONTEXT_MAX = 1200 // chars of comment kept above an @export
 const PROVISION_MAX = 1500 // chars of comment text kept under a § heading
 const DECISION_MAX_LINES = 250
 
+// D1 counts a row written for every table row and every index entry a
+// statement touches, and one per row inserted into or deleted from an FTS5
+// table. A law row: laws (row, id, jurisdiction) + law_state + laws_fts.
+const COST = { law: 5, encoding: 3, decision: 3, provision: 3 }
+
 // ── walk ─────────────────────────────────────────────────────────────
 
 const repoPath = (abs) => relative(root, abs).split(sep).join('/')
 
-/** All files under `dir`, skipping dot-directories. */
+/** All files under `dir` in a stable order, skipping dot-directories. */
 function walk(dir, acc = []) {
-  for (const name of readdirSync(dir)) {
+  for (const name of readdirSync(dir).sort()) {
     if (name.startsWith('.')) continue
     const p = join(dir, name)
     const st = statSync(p)
@@ -65,7 +114,7 @@ const fileSet = new Set(files)
 const subjectDirs = files
   .filter((f) => basename(f) === 'subject.json')
   .map(dirname)
-  .sort((a, b) => a.length - b.length)
+  .sort((a, b) => a.length - b.length || (a < b ? -1 : 1))
 const subjectSet = new Set()
 for (const d of subjectDirs) {
   if (![...ancestors(d)].some((a) => subjectSet.has(a))) subjectSet.add(d)
@@ -358,18 +407,74 @@ for (const f of files) {
   if (basename(f) !== 'encoding.json') continue
   const subjectDir = subjectOf(f)
   if (!subjectDir) continue
-  const law = lawFor(subjectDir)
-  encodingFor(encodingDirOf(f, subjectDir), law, subjectDir)
+  encodingFor(encodingDirOf(f, subjectDir), lawFor(subjectDir), subjectDir)
 }
 
-// ── emit SQL ─────────────────────────────────────────────────────────
+// ── per-law rows, hash and cost ─────────────────────────────────────
+
+const COLS = {
+  laws: ['id', 'jurisdiction', 'jurisdiction_label', 'name', 'citation', 'source_url', 'status', 'encodings', 'decisions', 'files', 'summary', 'notes'],
+  encodings: ['id', 'law_id', 'row', 'dir', 'seat', 'scope', 'status', 'version', 'edition', 'method', 'modules', 'cases', 'notes', 'decisions'],
+  decisions: ['law_id', 'encoding_id', 'file', 'line', 'start_line', 'end_line', 'name', 'question', 'ref', 'params', 'param_text', 'returns', 'is_default', 'is_test', 'context'],
+  provisions: ['law_id', 'encoding_id', 'file', 'line', 'end_line', 'level', 'heading', 'text'],
+}
+
+const byLaw = new Map()
+for (const l of laws.values()) byLaw.set(l.id, { law: l, encodings: [], decisions: [], provisions: [] })
+for (const e of encodings.values()) byLaw.get(e.law_id).encodings.push(e)
+for (const d of decisions) byLaw.get(d.law_id).decisions.push(d)
+for (const p of provisions) byLaw.get(p.law_id).provisions.push(p)
+
+const byPos = (a, b) => (a.file < b.file ? -1 : a.file > b.file ? 1 : a.line - b.line)
+for (const g of byLaw.values()) {
+  g.encodings.sort((a, b) => (a.id < b.id ? -1 : 1))
+  g.decisions.sort(byPos)
+  g.provisions.sort(byPos)
+  // Each law also carries its encodings' seats, scopes and notes, so one FTS
+  // row answers "is this law encoded, and does the encoding cover X?".
+  const l = g.law
+  g.law = {
+    ...l,
+    files: JSON.stringify([...l.files].sort()),
+    summary: clip(g.encodings.map((e) => [e.seat && `Seat: ${e.seat}.`, e.scope].filter(Boolean).join(' ')).filter(Boolean).join(' | '), 4000),
+    notes: clip(g.encodings.map((e) => e.notes).filter(Boolean).join('\n\n'), 8000),
+  }
+  const pick = (cols, r) => cols.map((c) => r[c] ?? null)
+  g.hash = createHash('sha256')
+    .update(
+      JSON.stringify([
+        pick(COLS.laws, g.law),
+        g.encodings.map((r) => pick(COLS.encodings, r)),
+        g.decisions.map((r) => pick(COLS.decisions, r)),
+        g.provisions.map((r) => pick(COLS.provisions, r)),
+      ])
+    )
+    .digest('hex')
+    .slice(0, 32)
+  g.writes = COST.law + COST.encoding * g.encodings.length + COST.decision * g.decisions.length + COST.provision * g.provisions.length
+}
+
+let commit = null
+let committed = null
+try {
+  commit = execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
+  committed = execFileSync('git', ['-C', root, 'log', '-1', '--format=%cI'], { encoding: 'utf8' }).trim()
+} catch {
+  if (!MODE_FULL) {
+    console.error('error: <commons> must be a git checkout, so each law can record the commit it was built from')
+    process.exit(2)
+  }
+  console.warn('warning: not a git checkout; file reads will use the branch, not a pinned commit')
+}
+
+// ── SQL ──────────────────────────────────────────────────────────────
 
 const q = (v) =>
   v == null ? 'NULL' : typeof v === 'number' ? String(v) : `'${String(v).replace(/'/g, "''").replace(/\u0000/g, '')}'`
 
 const sql = []
-const emitRows = (table, cols, rows) => {
-  // D1 caps a statement at 100 KB; stay well under it.
+/** Multi-row INSERTs, each well under D1's 100 KB statement limit. */
+function emitRows(table, cols, rows) {
   let batch = []
   let size = 0
   const flush = () => {
@@ -386,28 +491,68 @@ const emitRows = (table, cols, rows) => {
   }
   flush()
 }
-
-let commit = null
-let committed = null
-try {
-  commit = execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
-  committed = execFileSync('git', ['-C', root, 'log', '-1', '--format=%cI'], { encoding: 'utf8' }).trim()
-} catch {
-  console.warn('warning: not a git checkout; file reads will use the branch, not a pinned commit')
+/** One statement per chunk of law ids: `make(list)` gets "('a', 'b', …)". */
+function emitForLaws(ids, make) {
+  for (let i = 0; i < ids.length; i += 200) sql.push(make(`(${ids.slice(i, i + 200).map(q).join(', ')})`))
 }
 
-sql.push(`-- generated by build-index.mjs from legalese/commons ${commit ?? '(unknown commit)'}`)
-sql.push(`
+const FTS = {
+  laws: { cols: 'name, citation, summary, notes', key: 'rid', where: 'id' },
+  decisions: { cols: 'question, name, ref, param_text, context', key: 'id', where: 'law_id' },
+  provisions: { cols: 'heading, text', key: 'id', where: 'law_id' },
+}
+
+const LAW_STATE_DDL = `CREATE TABLE IF NOT EXISTS law_state (
+  id TEXT PRIMARY KEY,
+  hash TEXT NOT NULL,
+  commit_sha TEXT,
+  writes INTEGER NOT NULL
+) WITHOUT ROWID;`
+
+function emitLawRows(groups) {
+  emitRows('laws', COLS.laws, groups.map((g) => g.law))
+  emitRows('encodings', COLS.encodings, groups.flatMap((g) => g.encodings))
+  emitRows('decisions', COLS.decisions, groups.flatMap((g) => g.decisions))
+  emitRows('provisions', COLS.provisions, groups.flatMap((g) => g.provisions))
+  emitRows('law_state', ['id', 'hash', 'commit_sha', 'writes'], groups.map((g) => ({ id: g.law.id, hash: g.hash, commit_sha: commit, writes: g.writes })))
+}
+
+function emitMeta(writes, pending) {
+  const rows = { commit, committed_at: committed, indexed_at: new Date().toISOString(), pending: String(pending) }
+  sql.push(
+    `INSERT INTO meta (key, value) VALUES ${Object.entries(rows)
+      .map(([k, v]) => `(${q(k)}, ${q(v)})`)
+      .join(', ')}\n  ON CONFLICT (key) DO UPDATE SET value = excluded.value;`
+  )
+  sql.push(
+    `INSERT INTO meta (key, value) VALUES (${q(`writes:${TODAY}`)}, ${q(String(writes))})\n` +
+      `  ON CONFLICT (key) DO UPDATE SET value = CAST(CAST(value AS INTEGER) + CAST(excluded.value AS INTEGER) AS TEXT);`
+  )
+  const weekAgo = new Date(Date.parse(TODAY) - 7 * 864e5).toISOString().slice(0, 10)
+  sql.push(`DELETE FROM meta WHERE key LIKE 'writes:%' AND key < ${q(`writes:${weekAgo}`)};`)
+}
+
+const groups = [...byLaw.values()]
+const fmt = (n) => n.toLocaleString('en-US')
+let summary
+let load = true
+
+if (MODE_FULL) {
+  sql.push(`-- full index of legalese/commons ${commit ?? '(unknown commit)'}`)
+  sql.push(`
 DROP TABLE IF EXISTS laws_fts;
 DROP TABLE IF EXISTS decisions_fts;
 DROP TABLE IF EXISTS provisions_fts;
+DROP TABLE IF EXISTS encodings_fts;
 DROP TABLE IF EXISTS provisions;
 DROP TABLE IF EXISTS decisions;
 DROP TABLE IF EXISTS encodings;
 DROP TABLE IF EXISTS laws;
+DROP TABLE IF EXISTS law_state;
 DROP TABLE IF EXISTS meta;
 
 CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);
+${LAW_STATE_DDL}
 
 CREATE TABLE laws (
   rid INTEGER PRIMARY KEY,
@@ -457,7 +602,6 @@ CREATE TABLE decisions (
   context TEXT
 );
 CREATE INDEX decisions_law ON decisions (law_id);
-CREATE INDEX decisions_encoding ON decisions (encoding_id);
 
 CREATE TABLE provisions (
   id INTEGER PRIMARY KEY,
@@ -472,67 +616,125 @@ CREATE TABLE provisions (
 );
 CREATE INDEX provisions_law ON provisions (law_id);
 `)
-
-sql.push(
-  `INSERT INTO meta (key, value) VALUES ('commit', ${q(commit)}), ('committed_at', ${q(committed)}), ('indexed_at', ${q(new Date().toISOString())});`
-)
-
-// Each law also carries its encodings' seats, scopes and notes, so one FTS
-// row answers "is this law encoded, and does the encoding cover X?".
-const encodingsByLaw = new Map()
-for (const e of encodings.values()) {
-  if (!encodingsByLaw.has(e.law_id)) encodingsByLaw.set(e.law_id, [])
-  encodingsByLaw.get(e.law_id).push(e)
-}
-const lawRows = [...laws.values()].map((l) => {
-  const encs = encodingsByLaw.get(l.id) ?? []
-  return {
-    ...l,
-    files: JSON.stringify(l.files.sort()),
-    summary: clip(encs.map((e) => [e.seat && `Seat: ${e.seat}.`, e.scope].filter(Boolean).join(' ')).filter(Boolean).join(' | '), 4000),
-    notes: clip(encs.map((e) => e.notes).filter(Boolean).join('\n\n'), 8000),
+  emitLawRows(groups)
+  // External-content FTS tables: the text lives once, in the base tables.
+  for (const [t, f] of Object.entries(FTS)) {
+    sql.push(
+      `CREATE VIRTUAL TABLE ${t}_fts USING fts5(${f.cols}, content='${t}', content_rowid='${f.key}', tokenize='porter unicode61 remove_diacritics 2');\n` +
+        `INSERT INTO ${t}_fts (${t}_fts) VALUES ('rebuild');`
+    )
   }
-})
-emitRows(
-  'laws',
-  ['id', 'jurisdiction', 'jurisdiction_label', 'name', 'citation', 'source_url', 'status', 'encodings', 'decisions', 'files', 'summary', 'notes'],
-  lawRows
-)
-emitRows(
-  'encodings',
-  ['id', 'law_id', 'row', 'dir', 'seat', 'scope', 'status', 'version', 'edition', 'method', 'modules', 'cases', 'notes', 'decisions'],
-  [...encodings.values()]
-)
-emitRows(
-  'decisions',
-  ['law_id', 'encoding_id', 'file', 'line', 'start_line', 'end_line', 'name', 'question', 'ref', 'params', 'param_text', 'returns', 'is_default', 'is_test', 'context'],
-  decisions
-)
-emitRows('provisions', ['law_id', 'encoding_id', 'file', 'line', 'end_line', 'level', 'heading', 'text'], provisions)
+  // A bulk load fills the FTS tables with one 'rebuild' each, which D1 counts
+  // as a handful of rows, so only table rows and index entries count here.
+  const writes = groups.reduce(
+    (n, g) => n + 4 + 3 * g.encodings.length + 2 * g.decisions.length + 2 * g.provisions.length,
+    100
+  )
+  emitMeta(writes, 0)
+  summary = `full index: ${fmt(groups.length)} laws, about ${fmt(writes)} rows written`
+} else if (MODE_ADOPT) {
+  sql.push(`-- adopt legalese/commons ${commit}: the database already holds these rows`)
+  sql.push(LAW_STATE_DDL)
+  sql.push(`DROP INDEX IF EXISTS decisions_encoding;`) // no query uses it; it cost a write per decision
+  sql.push(`DELETE FROM law_state;`)
+  emitRows('law_state', ['id', 'hash', 'commit_sha', 'writes'], groups.map((g) => ({ id: g.law.id, hash: g.hash, commit_sha: commit, writes: g.writes })))
+  const writes = groups.length + 20
+  emitMeta(writes, 0)
+  summary = `adopted ${fmt(groups.length)} laws at ${commit.slice(0, 12)}: about ${fmt(writes)} rows written`
+} else {
+  // ── sync: only what changed, within today's budget
+  let state
+  try {
+    state = JSON.parse(readFileSync(SYNC_STATE, 'utf8'))
+  } catch (err) {
+    console.error(`error: cannot read ${SYNC_STATE}: ${err.message}`)
+    process.exit(2)
+  }
+  const sets = Array.isArray(state) ? state.map((s) => s.results ?? s) : [state]
+  const old = new Map((sets[0] ?? []).map((r) => [r.id, r]))
+  const meta = Object.fromEntries((sets[1] ?? []).map((r) => [r.key, r.value]))
+  if (!old.size && !meta.commit) {
+    console.error('error: the database has no law_state and no meta: load it with --full first')
+    process.exit(2)
+  }
+  if (!old.size) {
+    console.error('error: the database has no law_state. If it holds an index built before law_state existed, run --adopt once with the commit it was built from.')
+    process.exit(2)
+  }
 
-// Full-text indexes. External-content tables keep the text once, in the base
-// tables, and let snippet() highlight matches.
-sql.push(`
-CREATE VIRTUAL TABLE laws_fts USING fts5(
-  name, citation, summary, notes, content='laws', content_rowid='rid', tokenize='porter unicode61 remove_diacritics 2'
-);
-INSERT INTO laws_fts (laws_fts) VALUES ('rebuild');
+  const now = new Map(groups.map((g) => [g.law.id, g]))
+  const changes = []
+  for (const [id, o] of old) if (!now.has(id)) changes.push({ id, kind: 'removed', cost: o.writes })
+  for (const [id, g] of now) {
+    const o = old.get(id)
+    if (!o) changes.push({ id, kind: 'added', cost: g.writes, g })
+    else if (o.hash !== g.hash) changes.push({ id, kind: 'changed', cost: o.writes + g.writes, g })
+  }
+  // Removals first, then cheapest first, so one huge law cannot hold up the rest.
+  changes.sort((a, b) => (b.kind === 'removed') - (a.kind === 'removed') || a.cost - b.cost)
 
-CREATE VIRTUAL TABLE decisions_fts USING fts5(
-  question, name, ref, param_text, context, content='decisions', content_rowid='id', tokenize='porter unicode61 remove_diacritics 2'
-);
-INSERT INTO decisions_fts (decisions_fts) VALUES ('rebuild');
+  const OVERHEAD = 40 // meta upserts, the writes counter, schema no-ops
+  const used = Number(meta[`writes:${TODAY}`] ?? 0)
+  let room = BUDGET - used - OVERHEAD
+  const apply = []
+  const deferred = []
+  for (const c of changes) {
+    if (c.cost <= room) {
+      apply.push(c)
+      room -= c.cost
+    } else deferred.push(c)
+  }
 
-CREATE VIRTUAL TABLE provisions_fts USING fts5(
-  heading, text, content='provisions', content_rowid='id', tokenize='porter unicode61 remove_diacritics 2'
-);
-INSERT INTO provisions_fts (provisions_fts) VALUES ('rebuild');
-`)
+  const writes = apply.reduce((n, c) => n + c.cost, 0) + (apply.length ? OVERHEAD : 0)
+  const lines = [
+    `commons ${commit.slice(0, 12)}: ${fmt(changes.length)} of ${fmt(now.size)} laws differ from the index` +
+      (changes.length ? ` (${['added', 'changed', 'removed'].map((k) => `${changes.filter((c) => c.kind === k).length} ${k}`).join(', ')})` : ''),
+    `budget ${fmt(BUDGET)} rows written a day; ${fmt(used)} already used today (${TODAY} UTC)`,
+    apply.length ? `applying ${fmt(apply.length)}: about ${fmt(writes)} rows written` : 'nothing to write',
+  ]
+  for (const c of apply.slice(0, 40)) lines.push(`  ${c.kind.padEnd(7)} ${c.id} (${fmt(c.cost)})`)
+  if (apply.length > 40) lines.push(`  … and ${apply.length - 40} more`)
+  if (deferred.length) {
+    lines.push(`deferred to a later run (over today's budget): ${fmt(deferred.length)}, about ${fmt(deferred.reduce((n, c) => n + c.cost, 0))} rows`)
+    for (const c of deferred.slice(0, 40)) lines.push(`  ${c.kind.padEnd(7)} ${c.id} (${fmt(c.cost)})`)
+    const never = deferred.filter((c) => c.cost > BUDGET - OVERHEAD)
+    if (never.length) {
+      lines.push(
+        `::warning::${never.map((c) => c.id).join(', ')} need${never.length === 1 ? 's' : ''} more than the whole daily budget; ` +
+          'run the workflow by hand with a larger budget once, on a day with room.'
+      )
+    }
+  }
+  summary = lines.join('\n')
 
-writeFileSync(out, sql.join('\n') + '\n')
-const mb = (statSync(out).size / 1e6).toFixed(1)
-console.log(
-  `commons ${commit?.slice(0, 12) ?? '?'}: ${laws.size} laws, ${encodings.size} encodings, ` +
-    `${decisions.length} decisions, ${provisions.length} provisions` +
-    ` → ${out} (${mb} MB)`
-)
+  if (!apply.length) {
+    load = false
+  } else {
+    sql.push(`-- sync to legalese/commons ${commit}`)
+    sql.push(LAW_STATE_DDL)
+    const gone = apply.filter((c) => c.kind !== 'added').map((c) => c.id)
+    const fresh = apply.filter((c) => c.kind !== 'removed')
+    // FTS entries go first, while the rows they index still exist.
+    for (const [t, f] of Object.entries(FTS)) {
+      emitForLaws(gone, (ids) => `INSERT INTO ${t}_fts (${t}_fts, rowid, ${f.cols}) SELECT 'delete', ${f.key}, ${f.cols} FROM ${t} WHERE ${f.where} IN ${ids};`)
+    }
+    for (const t of ['decisions', 'provisions', 'encodings']) emitForLaws(gone, (ids) => `DELETE FROM ${t} WHERE law_id IN ${ids};`)
+    emitForLaws(gone, (ids) => `DELETE FROM laws WHERE id IN ${ids};`)
+    emitForLaws(gone, (ids) => `DELETE FROM law_state WHERE id IN ${ids};`)
+    emitLawRows(fresh.map((c) => c.g))
+    const freshIds = fresh.map((c) => c.id)
+    for (const [t, f] of Object.entries(FTS)) {
+      emitForLaws(freshIds, (ids) => `INSERT INTO ${t}_fts (rowid, ${f.cols}) SELECT ${f.key}, ${f.cols} FROM ${t} WHERE ${f.where} IN ${ids};`)
+    }
+    emitMeta(writes, deferred.length)
+  }
+}
+
+if (load) writeFileSync(out, sql.join('\n') + '\n')
+else writeFileSync(out, '')
+console.log(summary + (load ? `\n→ ${out} (${(statSync(out).size / 1e6).toFixed(1)} MB)` : ''))
+
+if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `load=${load}\n`)
+if (process.env.GITHUB_STEP_SUMMARY) {
+  appendFileSync(process.env.GITHUB_STEP_SUMMARY, '### MCP index\n\n```\n' + summary.replace(/^::warning::/gm, 'warning: ') + '\n```\n')
+}
