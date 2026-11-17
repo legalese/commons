@@ -19,6 +19,11 @@ What was tried on **2026-10-24**, with the User-Agent `legalese-commons-source-f
   That notice licenses "content owned by the EU on this website", meaning commission.europa.eu.
   The Official Journal is published by the Publications Office, not on that website, so the notice is not relied on for these two texts.
 
+## Publications Office consolidated version: UNDETERMINED
+
+`registers/source-bundle/eu-ai-act-2024-1689-consolidated-20260727.txt` is a plain-text rendering, made by `xhtml_to_text.py`, of the Publications Office consolidated version of Regulation (EU) 2024/1689 (CELEX `02024R1689-20260727`); its sha256 values are in `eu-ai-act-2024-1689-consolidated-20260727.meta.json`.
+No reuse grant that covers it has been read, so it has the same status as the two Official Journal texts above.
+
 This deposit follows the precedent of `subjects/comparative/ai-content-labelling/`, which deposits the same two texts under the same UNDETERMINED status.
 To keep the reproduction no larger than the encoding needs, only the plain-text extractions are deposited here, not the XHTML originals; their sha256 values are in the `.meta.json` files.
 **A person with authority to decide should settle the terms before this subject is relied on as redistributable.**

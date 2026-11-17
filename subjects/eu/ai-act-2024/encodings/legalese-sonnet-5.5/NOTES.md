@@ -332,7 +332,7 @@ The readers' GAP lists are in their triage files (`notes/independent/g1-triage.m
 
 ### 6. The licence of the source
 
-`SOURCE-LICENSE.md` of this folder follows the TFEU row's reading (Commission Decision 2011/833/EU, Articles 4 and 6(2)) and says that EUR-Lex's own notice could not be read. **The subject-level `SOURCE-LICENSE.md` (`../../SOURCE-LICENSE.md`) says the Official Journal texts are UNDETERMINED, and the two are not reconciled here;** which governs is a question for the maintainer, and the subject-level file was left alone.
+`SOURCE-LICENSE.md` of this folder records the source texts as UNDETERMINED, as the subject-level `SOURCE-LICENSE.md` (`../../SOURCE-LICENSE.md`) does for the Official Journal texts, and adds the Publications Office consolidated version under the same status. The TFEU row's reading of Commission Decision 2011/833/EU is not adopted; the terms remain a question for the maintainer.
 
 ## What each part's notes hold
 
