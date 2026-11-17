@@ -17,8 +17,6 @@ used no `REFUSE`.
 Every question is published with `@export` and a plain-words description, and
 every input carries an `@desc`, so the module can be deployed to Legalese Cloud as
 it stands.
-The one exception is the regulative rule `my duty to file the inventory and accounts`:
-its `@export` is commented out ahead of legalese/l4-ide#779 (not landed), which refuses an `@export` whose result is a DEONTIC.
 
 ## Edition
 
@@ -342,7 +340,7 @@ Each is the second input, straight after `my role`, with one name, type and `@de
 - **QA-2. One estate situation with three values.** Whether there is a will and whether it disposes of everything settles three different sets of questions (intestacy, s 25, s 71 and s 37), so one input serves all of them and the form asks it once.
 - **QA-3. Two s 71 and two Part V questions.** The family member and the executor each ask whether the will can be used in evidence and whether duty is payable; each role gets its own question, calling the same baseline rule.
 - **QA-4. The creditor's questions call the baseline's rules.** s 25(1)(b) for a creditor is `May I be granted administration` with `I am entitled in distribution` FALSE (an adult creditor qualifies only if no entitled person is resident and fit, or one cited fails to appear). s 37 for a creditor is the baseline's executor-delay rule, asked about the executor's facts.
-- **QA-5. Left out of the layer.** The baseline's three line-count exports (`the lines of issue`, `the sibling lines`, `the uncle and aunt lines`) are counts of the family facts the form already asks and feed `How much do I take`; they are not asked as questions. The s 43(1)(b) duty is a DEONTIC (its `@export` is commented out in the baseline) and is not asked; s 44, what follows from it, is.
+- **QA-5. Left out of the layer.** The baseline's three line-count exports (`the lines of issue`, `the sibling lines`, `the uncle and aunt lines`) are counts of the family facts the form already asks and feed `How much do I take`; they are not asked as questions. The s 43(1)(b) duty is a DEONTIC and is not asked; s 44, what follows from it, is.
 - **QA-6. The home is asked as one fact where the Fourth Schedule reads two together (fix of 6 November 2026).** The site's form drops a question for a role it is not about only by trying every combination of its open yes/no and choice inputs, at most 1,024 of them. The family member's Fourth Schedule question took the estate situation (3 values), `who I am` (8), the family's two yes/no facts and the baseline's `The home` with four yes/no facts: 1,536 combinations, so the executor, the beneficiary and the creditor were shown it, with some 30 inputs. cl 1 needs both that "the intestate property includes an interest in a dwelling-house" and that the partner "was ordinarily resident" there at the death, and the baseline's rule reads them only together (either false: `I may not elect`). The layer asks them as one fact, in its own record `My home`, and `the home as the Act puts it` gives that fact to both of the baseline's fields, so the answer is the baseline's: since the rule reads only whether both hold, the baseline gives the same answer for either one false as for the one fact false. The question now has 768 combinations. A scratchpad script (`probe.py`) counts them for every question of the layer.
 
 ### Not covered for the new roles
