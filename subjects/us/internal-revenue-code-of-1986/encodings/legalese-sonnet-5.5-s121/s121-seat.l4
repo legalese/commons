@@ -1,0 +1,676 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `s121-nouns`
+IMPORT `s121-support`
+IMPORT `s121-a-exclusion`
+IMPORT `s121-b-limitations`
+IMPORT `s121-c-reduced`
+IMPORT `s121-d1-special`
+IMPORT `s121-d9-service`
+IMPORT `s121-efg`
+IMPORT `s121-whole`
+
+-- 26 U.S.C. section 121 (exclusion of gain from sale of principal residence), as in force at the OLRC release point Public Law 119-142 (current through 2026-11-10).
+-- LAYER 2: THE SEAT.
+--
+-- SEAT: an individual taxpayer who has sold, or is thinking of selling, a home (or whose home was destroyed, stolen, condemned or taken),
+-- asking on facts they can state whether the gain is left out of gross income, how much of it, and what stops or reduces the exclusion.
+--
+-- Every question takes plain inputs, one for each fact the taxpayer can state, each with an @desc worded as they would be asked, and calls the layer-1 rule.
+-- The records the layer-1 modules expect are built inside each question, from those answers, by the constructors of s121-whole.l4 and the small helpers below.
+-- No rule of the section is restated here and no layer-1 module changes to suit this layer.
+--
+-- The questions in the first groups assume the taxpayer has none of the special facts that the later groups ask about:
+-- no service abroad that suspends the 5-year period (the one question on the 5-year period asks about it, and whose it is), no like-kind acquisition, no remainder interest, no section 877(a)(1) treatment,
+-- no property received from a spouse or former spouse, no co-operative stock, no earlier residence rolled over under section 1034, no temporary absence
+-- (the one question on nonqualified use asks about a temporary absence), and no death of a spouse apart from the question on surviving spouses.
+-- Three of those facts are also asked by the questions that give an amount, so that a surviving spouse, a taxpayer who has elected under (f) and a taxpayer in a nursing home can ask them:
+--   the surviving spouse and the stay in a care facility (one stay) by the four filing-alone questions (left out, still taxed, what stops or reduces it, and the most I can leave out);
+--   the election under (f) by the three of them that give an amount of the gain, and by the two joint-return questions, which also ask the taxpayer's stay in a care facility;
+--   a joint return is not an unmarried individual's, so the joint-return questions do not ask about a surviving spouse.
+-- The two-year tests, the reduced exclusion, the limit on a joint return, depreciation and nonqualified use keep the narrower assumption, and so does the service of a taxpayer who asks an amount: use the layer-1 module that takes the whole record.
+-- Where such a fact is true, the later group's question, or the layer-1 module that takes the whole record, is the one to use.
+--
+-- Where a question needs the facts of a spouse, it asks them only in the joint-return form of the question.
+-- A date the taxpayer cannot state because the fact does not apply (a second stay, an earlier sale) is "enter any date": the answer to the yes/no question before it decides whether the date is read.
+-- Not covered answers, as layer 1 gives them, are NOTHING: a "no result" of a question in this layer is never a "no".
+
+-- Helpers that build the records. They are not rules and carry no @export.
+
+-- The periods a person lived in the home as their main home: the first stay, and the second if there was one.
+GIVEN first IS A DATE
+      last IS A DATE
+      `a second stay` IS A BOOLEAN
+      `second first` IS A DATE
+      `second last` IS A DATE
+GIVETH A LIST OF Span
+`the stays a taxpayer states` MEANS
+    append (LIST Span OF first, last) (IF `a second stay` THEN LIST Span OF `second first`, `second last` ELSE EMPTY)
+
+-- The date of the most recent earlier sale, as a list (none if there was none).
+GIVEN `an earlier sale` IS A BOOLEAN
+      `its date` IS A DATE
+GIVETH A LIST OF DATE
+`the earlier sales a taxpayer states` MEANS
+    IF `an earlier sale` THEN LIST `its date` ELSE EMPTY
+
+-- The taxpayer, who owned the home from the date they became an owner to the sale.
+GIVEN sale IS A DATE
+      bought IS A DATE
+      first IS A DATE
+      last IS A DATE
+      `a second stay` IS A BOOLEAN
+      `second first` IS A DATE
+      `second last` IS A DATE
+      `an earlier sale` IS A BOOLEAN
+      `its date` IS A DATE
+GIVETH AN `Individual facts`
+`the taxpayer who owned and lived in the home` MEANS
+    `an individual who only owned and used the property` (LIST Span OF bought, sale) (`the stays a taxpayer states` first last `a second stay` `second first` `second last`) (`the earlier sales a taxpayer states` `an earlier sale` `its date`)
+
+-- The spouse, who may not have owned or lived in the home at all.
+GIVEN sale IS A DATE
+      owns IS A BOOLEAN
+      bought IS A DATE
+      lives IS A BOOLEAN
+      first IS A DATE
+      last IS A DATE
+      `an earlier sale` IS A BOOLEAN
+      `its date` IS A DATE
+GIVETH AN `Individual facts`
+`the spouse who may have owned or lived in the home` MEANS
+    `an individual who only owned and used the property` (IF owns THEN LIST Span OF bought, sale ELSE EMPTY) (IF lives THEN LIST Span OF first, last ELSE EMPTY) (`the earlier sales a taxpayer states` `an earlier sale` `its date`)
+
+-- The depreciation the taxpayer states is attributable to periods after May 6, 1997.
+-- Placeholder: the rule reads the period only to tell whether it is after May 6, 1997, so the record's period is the sale date alone.
+GIVEN sale IS A DATE
+      amount IS A NUMBER
+GIVETH A LIST OF `Depreciation adjustment`
+`the depreciation a taxpayer states` MEANS
+    LIST `Depreciation adjustment` WITH
+        `amount` IS amount
+        `period it is attributable to` IS (Span OF sale, sale)
+
+-- A person with no part in the property, as the spouse of one who files alone.
+`no spouse` MEANS `an individual who only owned and used the property` EMPTY EMPTY EMPTY
+
+-- One stay in a facility, if the taxpayer has become incapable of self-care (s 121(d)(7)); none otherwise.
+GIVEN incapable IS A BOOLEAN
+      `moved in` IS A DATE
+      `moved out` IS A DATE
+      licensed IS A BOOLEAN
+GIVETH A LIST OF `Stay in a facility`
+`the stays in a care facility a taxpayer states` MEANS
+    IF incapable
+    THEN LIST `Stay in a facility` WITH
+        `days` IS (Span OF `moved in`, `moved out`)
+        `facility licensed by a State or political subdivision to care for an individual in the taxpayer's condition` IS licensed
+    ELSE EMPTY
+
+-- The taxpayer who owned and lived in the home, who may have become incapable of self-care and spent one stay in a licensed facility (s 121(d)(7)).
+GIVEN sale IS A DATE
+      bought IS A DATE
+      first IS A DATE
+      last IS A DATE
+      `a second stay` IS A BOOLEAN
+      `second first` IS A DATE
+      `second last` IS A DATE
+      `an earlier sale` IS A BOOLEAN
+      `its date` IS A DATE
+      incapable IS A BOOLEAN
+      `moved in` IS A DATE
+      `moved out` IS A DATE
+      licensed IS A BOOLEAN
+GIVETH AN `Individual facts`
+`the taxpayer who owned and lived in the home, and may be in a care facility` MEANS
+    `the facts of an individual` (Holding OF (LIST Span OF bought, sale), (`the stays a taxpayer states` first last `a second stay` `second first` `second last`)) FALSE (Holding OF EMPTY, EMPTY) (Date 1 1 1900) EMPTY FALSE EMPTY EMPTY FALSE EMPTY EMPTY FALSE (Holding OF EMPTY, EMPTY) incapable (`the stays in a care facility a taxpayer states` incapable `moved in` `moved out` licensed) FALSE 0 EMPTY FALSE FALSE FALSE (`the earlier sales a taxpayer states` `an earlier sale` `its date`) FALSE
+
+-- The same taxpayer, who may instead be an unmarried individual whose spouse died before the sale (s 121(b)(4), (d)(2)):
+-- then the late spouse's holding runs from the date the late spouse became an owner to the date of death, and the dates of the late spouse's own earlier sale are read.
+-- Where the taxpayer is not such an individual the late spouse's answers are not read.
+GIVEN sale IS A DATE
+      bought IS A DATE
+      first IS A DATE
+      last IS A DATE
+      `a second stay` IS A BOOLEAN
+      `second first` IS A DATE
+      `second last` IS A DATE
+      `an earlier sale` IS A BOOLEAN
+      `its date` IS A DATE
+      incapable IS A BOOLEAN
+      `moved in` IS A DATE
+      `moved out` IS A DATE
+      licensed IS A BOOLEAN
+      widowed IS A BOOLEAN
+      `the date of death` IS A DATE
+      `the late spouse owned it` IS A BOOLEAN
+      `the late spouse became an owner` IS A DATE
+      `the late spouse lived in it` IS A BOOLEAN
+      `the late spouse's stay began` IS A DATE
+      `the late spouse's stay ended` IS A DATE
+      `the late spouse sold earlier` IS A BOOLEAN
+      `the late spouse's earlier sale` IS A DATE
+GIVETH AN `Individual facts`
+`the taxpayer who may be a surviving spouse or in a care facility` MEANS
+    IF widowed
+    THEN `the facts of an individual` (Holding OF (LIST Span OF bought, sale), (`the stays a taxpayer states` first last `a second stay` `second first` `second last`)) TRUE late `the date of death` (`the earlier sales a taxpayer states` `the late spouse sold earlier` `the late spouse's earlier sale`) FALSE EMPTY EMPTY FALSE EMPTY EMPTY FALSE (Holding OF EMPTY, EMPTY) incapable (`the stays in a care facility a taxpayer states` incapable `moved in` `moved out` licensed) FALSE 0 EMPTY FALSE FALSE FALSE (`the earlier sales a taxpayer states` `an earlier sale` `its date`) FALSE
+    ELSE `the taxpayer who owned and lived in the home, and may be in a care facility` sale bought first last `a second stay` `second first` `second last` `an earlier sale` `its date` incapable `moved in` `moved out` licensed
+    WHERE
+        late MEANS Holding OF (IF `the late spouse owned it` THEN LIST Span OF `the late spouse became an owner`, `the date of death` ELSE EMPTY), (IF `the late spouse lived in it` THEN LIST Span OF `the late spouse's stay began`, `the late spouse's stay ended` ELSE EMPTY)
+
+-- A sale of a home by one taxpayer, or by a couple on a joint return, where the taxpayer may have elected under (f) not to have the section apply.
+GIVEN sale IS A DATE
+      gain IS A NUMBER
+      `joint return` IS A BOOLEAN
+      taxpayer IS AN `Individual facts`
+      spouse IS AN `Individual facts`
+      adjustments IS A LIST OF `Depreciation adjustment`
+      employment IS A BOOLEAN
+      health IS A BOOLEAN
+      unforeseen IS A BOOLEAN
+      `elects not under (f)` IS A BOOLEAN
+GIVETH A `Sale facts`
+`the facts of a sale of a home, with the election under (f)` MEANS
+    `the facts of a sale` sale `sale or exchange` gain `joint return` taxpayer spouse EMPTY `elects not under (f)` FALSE FALSE (Date 1 1 1900) FALSE FALSE FALSE FALSE adjustments EMPTY employment health unforeseen
+
+§ `The two-year tests (subsection (a))`
+
+-- (a), with (d)(2)-(d)(7) and (g) not engaged.
+@export Have I owned my home, and lived in it as my main home, for 2 years of the last 5 before I sold it (s 121(a))?
+GIVEN `the date I sold the home` IS A DATE @desc On what date did you sell (or exchange) your home?
+      `the date I became an owner` IS A DATE @desc On what date did you become an owner of the home? You are taken to have owned it from then until the sale.
+      `the date my first stay began` IS A DATE @desc On what date did you first start to live in the home as your main home?
+      `the date my first stay ended` IS A DATE @desc On what date did your first stay in the home as your main home end? If you were still living there when you sold, enter the date of the sale.
+      `I lived in it as my main home a second time` IS A BOOLEAN @desc After leaving, did you come back and live in the home as your main home a second time?
+      `the date my second stay began` IS A DATE @desc On what date did your second stay begin? If you had no second stay, enter any date.
+      `the date my second stay ended` IS A DATE @desc On what date did your second stay end? If you had no second stay, enter any date.
+GIVETH A MAYBE BOOLEAN
+DECIDE `Have I owned and lived in my home long enough` IS
+    `s 121(a) the individual meets the ownership and use requirements` me `no spouse` `the date I sold the home`
+    WHERE
+        me MEANS `the taxpayer who owned and lived in the home` `the date I sold the home` `the date I became an owner` `the date my first stay began` `the date my first stay ended` `I lived in it as my main home a second time` `the date my second stay began` `the date my second stay ended` FALSE `the date I sold the home`
+
+-- (d)(9), (d)(12): the 5-year period is suspended during qualifying service, at the taxpayer's election.
+-- Only the first day of the extended period is returned: the last day is always the date of the sale.
+@export On what date does my 5-year period begin, if I elect to suspend it while I serve abroad or away (s 121(d)(9), (d)(12))?
+GIVEN `the date I sold the home` IS A DATE @desc On what date did you sell (or exchange) your home?
+      `the service is my spouse's, not my own` IS A BOOLEAN @desc Is the period of service you describe below your spouse's rather than your own? Section 121(d)(9)(A) suspends the 5-year period while you or your spouse is serving. If you answer yes, read "you" and "your" in the questions about the service below as your spouse. The election to suspend is yours either way.
+      `I elect to suspend the 5-year period` IS A BOOLEAN @desc Do you elect to have the running of the 5-year period suspended while you serve?
+      `an election is in effect for another property` IS A BOOLEAN @desc Is an election to suspend the 5-year period already in effect for any other property of yours?
+      `I have revoked the election` IS A BOOLEAN @desc Have you revoked the election?
+      `the first day of my service` IS A DATE @desc On what date did your service begin?
+      `the last day of my service` IS A DATE @desc On what date did your service end? If it was still going on when you sold, enter the date of the sale.
+      `the capacity in which I serve` IS A `Capacity of service` @desc In what capacity do you serve?
+      `I serve outside the United States` IS A BOOLEAN @desc Do you serve outside the United States? (This matters only for the Peace Corps.)
+      `miles from my duty station to the home` IS A NUMBER @desc How many miles is your duty station from the home?
+      `I live under Government orders in Government quarters` IS A BOOLEAN @desc Do you live under Government orders in Government quarters?
+      `I am on active duty pursuant to a call or order` IS A BOOLEAN @desc Are you on active duty pursuant to a call or order?
+      `the days my call or order is for` IS A NUMBER @desc For how many days is the call or order? (0 if it is for no stated number of days.)
+      `my call or order is for an indefinite period` IS A BOOLEAN @desc Is the call or order for an indefinite period?
+      `I am a member of the uniformed services under section 101(a)(5) of title 10` IS A BOOLEAN @desc Are you a member of the uniformed services as section 101(a)(5) of title 10 of the United States Code defines that? (Title 10 is not among our sources.)
+      `I am a member of the Service under section 103 of the Foreign Service Act of 1980` IS A BOOLEAN @desc Are you a member of the Service as paragraph (1), (2), (3), (4) or (5) of section 103 of the Foreign Service Act of 1980 defines that? (The Act is not among our sources.)
+      `I am an employee as section 2105 of title 5 defines` IS A BOOLEAN @desc Are you an employee as section 2105 of title 5 of the United States Code defines that? (Title 5 is not among our sources.)
+      `the office of the intelligence community I work for` IS AN `Office of the intelligence community` @desc For which office of the intelligence community do you work? (Choose "some other office" if none is named.)
+      `I am an enrolled volunteer under section 5 of the Peace Corps Act` IS A BOOLEAN @desc Are you an enrolled volunteer under section 5 of the Peace Corps Act?
+      `I am a volunteer leader under section 6 of the Peace Corps Act` IS A BOOLEAN @desc Are you a volunteer leader under section 6 of the Peace Corps Act?
+GIVETH A DATE
+DECIDE `On what date does my 5-year period begin` IS
+    (`s 121(a), (d)(9) and (d)(12) the period for the individual, as extended by an election that holds` me partner `the date I sold the home`)'s `first day`
+    WHERE
+        service MEANS `Period of service` WITH
+            `days` IS (Span OF `the first day of my service`, `the last day of my service`)
+            `capacity` IS `the capacity in which I serve`
+            `serving outside the United States` IS `I serve outside the United States`
+            `miles from the duty station to the property` IS `miles from my duty station to the home`
+            `residing under Government orders in Government quarters` IS `I live under Government orders in Government quarters`
+            `on active duty pursuant to a call or order` IS `I am on active duty pursuant to a call or order`
+            `days the call or order is for` IS `the days my call or order is for`
+            `the call or order is for an indefinite period` IS `my call or order is for an indefinite period`
+            `a member of the uniformed services under section 101(a)(5) of title 10` IS `I am a member of the uniformed services under section 101(a)(5) of title 10`
+            `a member of the Service under section 103(1) to (5) of the Foreign Service Act of 1980` IS `I am a member of the Service under section 103 of the Foreign Service Act of 1980`
+            `an employee as defined by section 2105 of title 5` IS `I am an employee as section 2105 of title 5 defines`
+            `office of the intelligence community` IS `the office of the intelligence community I work for`
+            `an enrolled volunteer under section 5 of the Peace Corps Act` IS `I am an enrolled volunteer under section 5 of the Peace Corps Act`
+            `a volunteer leader under section 6 of the Peace Corps Act` IS `I am a volunteer leader under section 6 of the Peace Corps Act`
+        -- The election is the taxpayer's own, so it is read from `me`; the service is read from whichever of the two it belongs to.
+        me MEANS `the facts of an individual` (Holding OF EMPTY, EMPTY) FALSE (Holding OF EMPTY, EMPTY) (Date 1 1 1900) EMPTY FALSE EMPTY EMPTY FALSE EMPTY EMPTY FALSE (Holding OF EMPTY, EMPTY) FALSE EMPTY FALSE 0 (IF `the service is my spouse's, not my own` THEN EMPTY ELSE LIST service) `I elect to suspend the 5-year period` `an election is in effect for another property` `I have revoked the election` EMPTY FALSE
+        partner MEANS `the facts of an individual` (Holding OF EMPTY, EMPTY) FALSE (Holding OF EMPTY, EMPTY) (Date 1 1 1900) EMPTY FALSE EMPTY EMPTY FALSE EMPTY EMPTY FALSE (Holding OF EMPTY, EMPTY) FALSE EMPTY FALSE 0 (IF `the service is my spouse's, not my own` THEN LIST service ELSE EMPTY) FALSE FALSE FALSE EMPTY FALSE
+
+§ `Joint returns, an earlier sale, and a surviving spouse (subsections (b)(2) to (b)(4), (d)(1) to (d)(2))`
+
+-- (b)(3)
+@export Does a sale I made in the last 2 years stop me leaving this gain out (s 121(b)(3))?
+GIVEN `the date I sold the home` IS A DATE @desc On what date did you sell (or exchange) your home?
+      `I sold another home earlier and left its gain out of my gross income` IS A BOOLEAN @desc Before this sale, did you sell or exchange another home and leave its gain out of your gross income under this section?
+      `the date of my most recent earlier sale` IS A DATE @desc On what date was your most recent earlier sale of that kind? If you had none, enter any date.
+GIVETH A MAYBE BOOLEAN
+DECIDE `Does an earlier sale stop me leaving this gain out` IS
+    `s 121(b)(3) subsection (a) shall not apply because of another sale or exchange within 2 years` `the date I sold the home` (`the earlier sales a taxpayer states` `I sold another home earlier and left its gain out of my gross income` `the date of my most recent earlier sale`)
+
+-- (b)(4): "In the case of a sale ... by an unmarried individual whose spouse is deceased on the date of such sale".
+-- The late spouse's periods are asked up to the date of death; the rule reads only the days before it.
+@export I am a widow or widower: is my limit $500,000 instead of $250,000 (s 121(b)(4))?
+GIVEN `the date I sold the home` IS A DATE @desc On what date did you sell (or exchange) your home?
+      `the date my spouse died` IS A DATE @desc On what date did your spouse die?
+      `the date I became an owner` IS A DATE @desc On what date did you become an owner of the home? You are taken to have owned it from then until the sale.
+      `the date my first stay began` IS A DATE @desc On what date did you first start to live in the home as your main home?
+      `the date my first stay ended` IS A DATE @desc On what date did your first stay in the home as your main home end? If you were still living there when you sold, enter the date of the sale.
+      `I sold another home earlier and left its gain out of my gross income` IS A BOOLEAN @desc Before this sale, did you sell or exchange another home and leave its gain out of your gross income under this section?
+      `the date of my most recent earlier sale` IS A DATE @desc On what date was your most recent earlier sale of that kind? If you had none, enter any date.
+      `the date my spouse became an owner` IS A DATE @desc On what date did your spouse become an owner? If your spouse did not own it, enter any date.
+      `the date my spouse's stay began` IS A DATE @desc On what date did your spouse's stay in the home as their main home begin? If none, enter any date.
+      `the date my spouse's stay ended` IS A DATE @desc On what date did your spouse's stay in the home as their main home end? If none, enter any date.
+      `my spouse sold another home earlier and left its gain out of gross income` IS A BOOLEAN @desc Before this sale, did your spouse sell or exchange another home and leave its gain out of gross income under this section?
+      `the date of my spouse's most recent earlier sale` IS A DATE @desc On what date was your spouse's most recent earlier sale of that kind? If none, enter any date.
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is my limit 500,000 as a surviving spouse` IS
+    `s 121(b)(4) paragraph (1) is applied by substituting $500,000 for $250,000` TRUE `the date I sold the home` `the date my spouse died` requirements
+    WHERE
+        survivor MEANS `the taxpayer who owned and lived in the home` `the date I sold the home` `the date I became an owner` `the date my first stay began` `the date my first stay ended` FALSE `the date I sold the home` `the date I sold the home` `I sold another home earlier and left its gain out of my gross income` `the date of my most recent earlier sale`
+        late MEANS Holding OF (LIST Span OF `the date my spouse became an owner`, `the date my spouse died`), (LIST Span OF `the date my spouse's stay began`, `the date my spouse's stay ended`)
+        requirements MEANS `s 121(b)(4) the requirements of paragraph (2)(A) were met immediately before the date of death` (survivor's `holding of the property`) late `the date my spouse died` (survivor's `dates of other sales or exchanges to which subsection (a) applied`) (`the earlier sales a taxpayer states` `my spouse sold another home earlier and left its gain out of gross income` `the date of my spouse's most recent earlier sale`)
+
+-- (b)(1), (b)(2), (b)(4): the limit when filing jointly. Ask this before the amount of the gain is known.
+@export If my spouse and I file a joint return, what is the most of our gain we can leave out (s 121(b)(1), (b)(2))?
+GIVEN `the date I sold the home` IS A DATE @desc On what date did you sell (or exchange) your home?
+      `the date I became an owner` IS A DATE @desc On what date did you become an owner of the home? You are taken to have owned it from then until the sale.
+      `the date my first stay began` IS A DATE @desc On what date did you first start to live in the home as your main home?
+      `the date my first stay ended` IS A DATE @desc On what date did your first stay in the home as your main home end? If you were still living there when you sold, enter the date of the sale.
+      `I lived in it as my main home a second time` IS A BOOLEAN @desc After leaving, did you come back and live in the home as your main home a second time?
+      `the date my second stay began` IS A DATE @desc On what date did your second stay begin? If you had no second stay, enter any date.
+      `the date my second stay ended` IS A DATE @desc On what date did your second stay end? If you had no second stay, enter any date.
+      `I sold another home earlier and left its gain out of my gross income` IS A BOOLEAN @desc Before this sale, did you sell or exchange another home and leave its gain out of your gross income under this section?
+      `the date of my most recent earlier sale` IS A DATE @desc On what date was your most recent earlier sale of that kind? If you had none, enter any date.
+      `my spouse owned the home` IS A BOOLEAN @desc Did your spouse own the home?
+      `the date my spouse became an owner` IS A DATE @desc On what date did your spouse become an owner? If your spouse did not own it, enter any date.
+      `my spouse lived in it as their main home` IS A BOOLEAN @desc Did your spouse live in the home as their main home?
+      `the date my spouse's stay began` IS A DATE @desc On what date did your spouse's stay in the home as their main home begin? If none, enter any date.
+      `the date my spouse's stay ended` IS A DATE @desc On what date did your spouse's stay in the home as their main home end? If none, enter any date.
+      `my spouse sold another home earlier and left its gain out of gross income` IS A BOOLEAN @desc Before this sale, did your spouse sell or exchange another home and leave its gain out of gross income under this section?
+      `the date of my spouse's most recent earlier sale` IS A DATE @desc On what date was your spouse's most recent earlier sale of that kind? If none, enter any date.
+GIVETH A MAYBE NUMBER
+DECIDE `What is the most of our gain we can leave out filing jointly` IS
+    `s 121(b) the limitation before any reduction under (c)(1)` facts
+    WHERE
+        me MEANS `the taxpayer who owned and lived in the home` `the date I sold the home` `the date I became an owner` `the date my first stay began` `the date my first stay ended` `I lived in it as my main home a second time` `the date my second stay began` `the date my second stay ended` `I sold another home earlier and left its gain out of my gross income` `the date of my most recent earlier sale`
+        spouse MEANS `the spouse who may have owned or lived in the home` `the date I sold the home` `my spouse owned the home` `the date my spouse became an owner` `my spouse lived in it as their main home` `the date my spouse's stay began` `the date my spouse's stay ended` `my spouse sold another home earlier and left its gain out of gross income` `the date of my spouse's most recent earlier sale`
+        facts MEANS `the usual facts of a sale of a home` `the date I sold the home` 0 TRUE me spouse EMPTY FALSE FALSE FALSE
+
+§ `If I fall short of the two-year tests: the reduced exclusion (subsection (c))`
+
+-- (c)(2): the test of whether the subsection applies. The gain plays no part, so it is a placeholder of 0 in the facts handed to the rule.
+@export Does the reduced exclusion apply to my sale (s 121(c)(2))?
+GIVEN `the date I sold the home` IS A DATE @desc On what date did you sell (or exchange) your home?
+      `the date I became an owner` IS A DATE @desc On what date did you become an owner of the home? You are taken to have owned it from then until the sale.
+      `the date my first stay began` IS A DATE @desc On what date did you first start to live in the home as your main home?
+      `the date my first stay ended` IS A DATE @desc On what date did your first stay in the home as your main home end? If you were still living there when you sold, enter the date of the sale.
+      `I lived in it as my main home a second time` IS A BOOLEAN @desc After leaving, did you come back and live in the home as your main home a second time?
+      `the date my second stay began` IS A DATE @desc On what date did your second stay begin? If you had no second stay, enter any date.
+      `the date my second stay ended` IS A DATE @desc On what date did your second stay end? If you had no second stay, enter any date.
+      `I sold another home earlier and left its gain out of my gross income` IS A BOOLEAN @desc Before this sale, did you sell or exchange another home and leave its gain out of your gross income under this section?
+      `the date of my most recent earlier sale` IS A DATE @desc On what date was your most recent earlier sale of that kind? If you had none, enter any date.
+      `I sold because my place of employment changed` IS A BOOLEAN @desc Did you sell because your place of employment changed?
+      `I sold by reason of health` IS A BOOLEAN @desc Did you sell by reason of health?
+      `I sold by reason of unforeseen circumstances that the regulations count` IS A BOOLEAN @desc Did you sell because of unforeseen circumstances? Answer yes only if the regulations under section 121(c) count those circumstances; the section leaves that to the regulations, which are not among our sources.
+GIVETH A MAYBE BOOLEAN
+DECIDE `Does the reduced exclusion apply to my sale` IS
+    (`s 121 the treatment of the gain from the sale or exchange` facts)'s `subsection (c) applies`
+    WHERE
+        me MEANS `the taxpayer who owned and lived in the home` `the date I sold the home` `the date I became an owner` `the date my first stay began` `the date my first stay ended` `I lived in it as my main home a second time` `the date my second stay began` `the date my second stay ended` `I sold another home earlier and left its gain out of my gross income` `the date of my most recent earlier sale`
+        facts MEANS `the usual facts of a sale of a home` `the date I sold the home` 0 FALSE me `no spouse` EMPTY `I sold because my place of employment changed` `I sold by reason of health` `I sold by reason of unforeseen circumstances that the regulations count`
+
+-- (c)(1): the limitation as reduced, or the full limitation where (a) applies. Placeholder gain 0, as above.
+@export What is the most of my gain I can leave out, filing alone, including the reduced exclusion (s 121(b)(1), (c)(1))?
+GIVEN `the date I sold the home` IS A DATE @desc On what date did you sell (or exchange) your home?
+      `the date I became an owner` IS A DATE @desc On what date did you become an owner of the home? You are taken to have owned it from then until the sale.
+      `the date my first stay began` IS A DATE @desc On what date did you first start to live in the home as your main home?
+      `the date my first stay ended` IS A DATE @desc On what date did your first stay in the home as your main home end? If you were still living there when you sold, enter the date of the sale.
+      `I lived in it as my main home a second time` IS A BOOLEAN @desc After leaving, did you come back and live in the home as your main home a second time?
+      `the date my second stay began` IS A DATE @desc On what date did your second stay begin? If you had no second stay, enter any date.
+      `the date my second stay ended` IS A DATE @desc On what date did your second stay end? If you had no second stay, enter any date.
+      `I sold another home earlier and left its gain out of my gross income` IS A BOOLEAN @desc Before this sale, did you sell or exchange another home and leave its gain out of your gross income under this section?
+      `the date of my most recent earlier sale` IS A DATE @desc On what date was your most recent earlier sale of that kind? If you had none, enter any date.
+      `I sold because my place of employment changed` IS A BOOLEAN @desc Did you sell because your place of employment changed?
+      `I sold by reason of health` IS A BOOLEAN @desc Did you sell by reason of health?
+      `I sold by reason of unforeseen circumstances that the regulations count` IS A BOOLEAN @desc Did you sell because of unforeseen circumstances? Answer yes only if the regulations under section 121(c) count those circumstances; the section leaves that to the regulations, which are not among our sources.
+      `my spouse died before the sale and I have not remarried` IS A BOOLEAN @desc Was your spouse dead on the date of the sale, and are you unmarried now? Answer no if your spouse is alive or if you have remarried.
+      `the date my spouse died` IS A DATE @desc On what date did your spouse die? If your spouse is not dead, enter any date.
+      `my late spouse owned the home` IS A BOOLEAN @desc If your spouse is dead: did your late spouse own the home? Answer no if your spouse is not dead.
+      `the date my late spouse became an owner` IS A DATE @desc On what date did your late spouse become an owner? Your late spouse is taken to have owned it from then until death. If none, enter any date.
+      `my late spouse lived in it as their main home` IS A BOOLEAN @desc Did your late spouse live in the home as their main home? Answer no if your spouse is not dead.
+      `the date my late spouse's stay began` IS A DATE @desc On what date did your late spouse's stay in the home as their main home begin? If none, enter any date.
+      `the date my late spouse's stay ended` IS A DATE @desc On what date did your late spouse's stay in the home as their main home end? If none, enter any date.
+      `my late spouse sold another home earlier and left its gain out of gross income` IS A BOOLEAN @desc Before this sale, did your late spouse sell or exchange another home and leave its gain out of gross income under this section? Answer no if your spouse is not dead.
+      `the date of my late spouse's most recent earlier sale` IS A DATE @desc On what date was your late spouse's most recent earlier sale of that kind? If none, enter any date.
+      `I have become physically or mentally incapable of self-care` IS A BOOLEAN @desc Have you become physically or mentally incapable of self-care?
+      `the date I moved into the facility` IS A DATE @desc On what date did you move into the facility? If you were in none, enter any date.
+      `the date I left the facility` IS A DATE @desc On what date did you leave it? If you were still there when you sold, enter the date of the sale. If you were in none, enter any date.
+      `the facility is licensed to care for someone in my condition` IS A BOOLEAN @desc Is the facility licensed by a State or political subdivision to care for an individual in your condition? (A nursing home counts.) Answer no if you were in none.
+GIVETH A MAYBE NUMBER
+DECIDE `What is the most of my gain I can leave out filing alone` IS
+    (`s 121 the treatment of the gain from the sale or exchange` facts)'s `the limitation applied`
+    WHERE
+        me MEANS `the taxpayer who may be a surviving spouse or in a care facility` `the date I sold the home` `the date I became an owner` `the date my first stay began` `the date my first stay ended` `I lived in it as my main home a second time` `the date my second stay began` `the date my second stay ended` `I sold another home earlier and left its gain out of my gross income` `the date of my most recent earlier sale` `I have become physically or mentally incapable of self-care` `the date I moved into the facility` `the date I left the facility` `the facility is licensed to care for someone in my condition` `my spouse died before the sale and I have not remarried` `the date my spouse died` `my late spouse owned the home` `the date my late spouse became an owner` `my late spouse lived in it as their main home` `the date my late spouse's stay began` `the date my late spouse's stay ended` `my late spouse sold another home earlier and left its gain out of gross income` `the date of my late spouse's most recent earlier sale`
+        facts MEANS `the usual facts of a sale of a home` `the date I sold the home` 0 FALSE me `no spouse` EMPTY `I sold because my place of employment changed` `I sold by reason of health` `I sold by reason of unforeseen circumstances that the regulations count`
+
+§ `Part of the time not my home, and depreciation (subsections (b)(5), (d)(6))`
+
+-- (d)(6)
+@export How much of my gain is taxed because of depreciation taken after May 6, 1997 (s 121(d)(6))?
+GIVEN `the date I sold the home` IS A DATE @desc On what date did you sell (or exchange) your home?
+      `my gain on the sale` IS A NUMBER @desc What was your gain on the sale, in dollars? Enter a gain, not a loss (0 if there was no gain). The section does not say how to work the gain out, so state it as you work it out for tax.
+      `the depreciation taken for periods after May 6, 1997` IS A NUMBER @desc How much depreciation was taken, or was allowable, on the home for periods after May 6, 1997, in dollars? Enter 0 if none. (Section 1250(b)(3) says what counts; it is not among our sources.)
+GIVETH A MAYBE NUMBER
+DECIDE `How much of my gain is taxed because of depreciation` IS
+    `s 121(d)(6) the gain to which subsection (a) shall not apply` `my gain on the sale` (`the depreciation a taxpayer states` `the date I sold the home` `the depreciation taken for periods after May 6, 1997`)
+
+-- (b)(5): nonqualified use, with the exceptions of (C)(ii)(I) and (III). A temporary absence is one stretch with the reasons for it.
+@export How much of my gain is taxed because part of the time I owned the home it was not my main home (s 121(b)(5))?
+GIVEN `the date I sold the home` IS A DATE @desc On what date did you sell (or exchange) your home?
+      `my gain on the sale` IS A NUMBER @desc What was your gain on the sale, in dollars? Enter a gain, not a loss (0 if there was no gain). The section does not say how to work the gain out, so state it as you work it out for tax.
+      `the date I became an owner` IS A DATE @desc On what date did you become an owner of the home? You are taken to have owned it from then until the sale.
+      `the date my first stay began` IS A DATE @desc On what date did you first start to live in the home as your main home?
+      `the date my first stay ended` IS A DATE @desc On what date did your first stay in the home as your main home end? If you were still living there when you sold, enter the date of the sale.
+      `I lived in it as my main home a second time` IS A BOOLEAN @desc After leaving, did you come back and live in the home as your main home a second time?
+      `the date my second stay began` IS A DATE @desc On what date did your second stay begin? If you had no second stay, enter any date.
+      `the date my second stay ended` IS A DATE @desc On what date did your second stay end? If you had no second stay, enter any date.
+      `the depreciation taken for periods after May 6, 1997` IS A NUMBER @desc How much depreciation was taken, or was allowable, on the home for periods after May 6, 1997, in dollars? Enter 0 if none. (Section 1250(b)(3) says what counts; it is not among our sources.)
+      `I was away for a time` IS A BOOLEAN @desc Were you away from the home for one stretch of time that was temporary?
+      `the date my absence began` IS A DATE @desc On what date did your temporary absence begin? If you had none, enter any date.
+      `the date my absence ended` IS A DATE @desc On what date did your temporary absence end? If you had none, enter any date.
+      `my absence was due to a change of employment` IS A BOOLEAN @desc Was the absence due to a change of employment?
+      `my absence was due to health conditions` IS A BOOLEAN @desc Was the absence due to health conditions?
+      `my absence was due to other unforeseen circumstances the Secretary has specified` IS A BOOLEAN @desc Was the absence due to other unforeseen circumstances that the Secretary has specified? (The Secretary's specification is not among our sources.)
+GIVETH A MAYBE NUMBER
+DECIDE `How much of my gain is taxed because of nonqualified use` IS
+    (`s 121 the treatment of the gain from the sale or exchange` facts)'s `the gain allocated to periods of nonqualified use`
+    WHERE
+        me MEANS `the taxpayer who owned and lived in the home` `the date I sold the home` `the date I became an owner` `the date my first stay began` `the date my first stay ended` `I lived in it as my main home a second time` `the date my second stay began` `the date my second stay ended` FALSE `the date I sold the home`
+        absences MEANS
+            IF `I was away for a time`
+            THEN LIST `Temporary absence` WITH
+                `days` IS (Span OF `the date my absence began`, `the date my absence ended`)
+                `change of employment` IS `my absence was due to a change of employment`
+                `health conditions` IS `my absence was due to health conditions`
+                `unforeseen circumstances as may be specified by the Secretary` IS `my absence was due to other unforeseen circumstances the Secretary has specified`
+            ELSE EMPTY
+        facts MEANS `the facts of a sale` `the date I sold the home` `sale or exchange` `my gain on the sale` FALSE me `no spouse` EMPTY FALSE FALSE FALSE (Date 1 1 1900) FALSE FALSE FALSE FALSE (`the depreciation a taxpayer states` `the date I sold the home` `the depreciation taken for periods after May 6, 1997`) absences FALSE FALSE FALSE
+
+§ `How much of my gain is left out (subsections (a) and (b), with (c) and (d)(6))`
+
+-- The whole of section 121 for a taxpayer who files alone and has none of the special facts the later groups ask about.
+@export Filing alone, how much of my gain is left out of my gross income (s 121)?
+GIVEN `the date I sold the home` IS A DATE @desc On what date did you sell (or exchange) your home?
+      `my gain on the sale` IS A NUMBER @desc What was your gain on the sale, in dollars? Enter a gain, not a loss (0 if there was no gain). The section does not say how to work the gain out, so state it as you work it out for tax.
+      `the date I became an owner` IS A DATE @desc On what date did you become an owner of the home? You are taken to have owned it from then until the sale.
+      `the date my first stay began` IS A DATE @desc On what date did you first start to live in the home as your main home?
+      `the date my first stay ended` IS A DATE @desc On what date did your first stay in the home as your main home end? If you were still living there when you sold, enter the date of the sale.
+      `I lived in it as my main home a second time` IS A BOOLEAN @desc After leaving, did you come back and live in the home as your main home a second time?
+      `the date my second stay began` IS A DATE @desc On what date did your second stay begin? If you had no second stay, enter any date.
+      `the date my second stay ended` IS A DATE @desc On what date did your second stay end? If you had no second stay, enter any date.
+      `I sold another home earlier and left its gain out of my gross income` IS A BOOLEAN @desc Before this sale, did you sell or exchange another home and leave its gain out of your gross income under this section?
+      `the date of my most recent earlier sale` IS A DATE @desc On what date was your most recent earlier sale of that kind? If you had none, enter any date.
+      `I sold because my place of employment changed` IS A BOOLEAN @desc Did you sell because your place of employment changed?
+      `I sold by reason of health` IS A BOOLEAN @desc Did you sell by reason of health?
+      `I sold by reason of unforeseen circumstances that the regulations count` IS A BOOLEAN @desc Did you sell because of unforeseen circumstances? Answer yes only if the regulations under section 121(c) count those circumstances; the section leaves that to the regulations, which are not among our sources.
+      `the depreciation taken for periods after May 6, 1997` IS A NUMBER @desc How much depreciation was taken, or was allowable, on the home for periods after May 6, 1997, in dollars? Enter 0 if none. (Section 1250(b)(3) says what counts; it is not among our sources.)
+      `I elect not to have section 121 apply` IS A BOOLEAN @desc Do you elect not to have section 121 apply to this sale? (Answer no unless you have chosen to leave the whole gain in your gross income.)
+      `my spouse died before the sale and I have not remarried` IS A BOOLEAN @desc Was your spouse dead on the date of the sale, and are you unmarried now? Answer no if your spouse is alive or if you have remarried.
+      `the date my spouse died` IS A DATE @desc On what date did your spouse die? If your spouse is not dead, enter any date.
+      `my late spouse owned the home` IS A BOOLEAN @desc If your spouse is dead: did your late spouse own the home? Answer no if your spouse is not dead.
+      `the date my late spouse became an owner` IS A DATE @desc On what date did your late spouse become an owner? Your late spouse is taken to have owned it from then until death. If none, enter any date.
+      `my late spouse lived in it as their main home` IS A BOOLEAN @desc Did your late spouse live in the home as their main home? Answer no if your spouse is not dead.
+      `the date my late spouse's stay began` IS A DATE @desc On what date did your late spouse's stay in the home as their main home begin? If none, enter any date.
+      `the date my late spouse's stay ended` IS A DATE @desc On what date did your late spouse's stay in the home as their main home end? If none, enter any date.
+      `my late spouse sold another home earlier and left its gain out of gross income` IS A BOOLEAN @desc Before this sale, did your late spouse sell or exchange another home and leave its gain out of gross income under this section? Answer no if your spouse is not dead.
+      `the date of my late spouse's most recent earlier sale` IS A DATE @desc On what date was your late spouse's most recent earlier sale of that kind? If none, enter any date.
+      `I have become physically or mentally incapable of self-care` IS A BOOLEAN @desc Have you become physically or mentally incapable of self-care?
+      `the date I moved into the facility` IS A DATE @desc On what date did you move into the facility? If you were in none, enter any date.
+      `the date I left the facility` IS A DATE @desc On what date did you leave it? If you were still there when you sold, enter the date of the sale. If you were in none, enter any date.
+      `the facility is licensed to care for someone in my condition` IS A BOOLEAN @desc Is the facility licensed by a State or political subdivision to care for an individual in your condition? (A nursing home counts.) Answer no if you were in none.
+GIVETH A MAYBE NUMBER
+DECIDE `How much of my gain is left out filing alone` IS
+    `s 121 the amount of the gain excluded from gross income` facts
+    WHERE
+        me MEANS `the taxpayer who may be a surviving spouse or in a care facility` `the date I sold the home` `the date I became an owner` `the date my first stay began` `the date my first stay ended` `I lived in it as my main home a second time` `the date my second stay began` `the date my second stay ended` `I sold another home earlier and left its gain out of my gross income` `the date of my most recent earlier sale` `I have become physically or mentally incapable of self-care` `the date I moved into the facility` `the date I left the facility` `the facility is licensed to care for someone in my condition` `my spouse died before the sale and I have not remarried` `the date my spouse died` `my late spouse owned the home` `the date my late spouse became an owner` `my late spouse lived in it as their main home` `the date my late spouse's stay began` `the date my late spouse's stay ended` `my late spouse sold another home earlier and left its gain out of gross income` `the date of my late spouse's most recent earlier sale`
+        facts MEANS `the facts of a sale of a home, with the election under (f)` `the date I sold the home` `my gain on the sale` FALSE me `no spouse` (`the depreciation a taxpayer states` `the date I sold the home` `the depreciation taken for periods after May 6, 1997`) `I sold because my place of employment changed` `I sold by reason of health` `I sold by reason of unforeseen circumstances that the regulations count` `I elect not to have section 121 apply`
+
+@export Filing alone, how much of my gain is still taxed (s 121)?
+GIVEN `the date I sold the home` IS A DATE @desc On what date did you sell (or exchange) your home?
+      `my gain on the sale` IS A NUMBER @desc What was your gain on the sale, in dollars? Enter a gain, not a loss (0 if there was no gain). The section does not say how to work the gain out, so state it as you work it out for tax.
+      `the date I became an owner` IS A DATE @desc On what date did you become an owner of the home? You are taken to have owned it from then until the sale.
+      `the date my first stay began` IS A DATE @desc On what date did you first start to live in the home as your main home?
+      `the date my first stay ended` IS A DATE @desc On what date did your first stay in the home as your main home end? If you were still living there when you sold, enter the date of the sale.
+      `I lived in it as my main home a second time` IS A BOOLEAN @desc After leaving, did you come back and live in the home as your main home a second time?
+      `the date my second stay began` IS A DATE @desc On what date did your second stay begin? If you had no second stay, enter any date.
+      `the date my second stay ended` IS A DATE @desc On what date did your second stay end? If you had no second stay, enter any date.
+      `I sold another home earlier and left its gain out of my gross income` IS A BOOLEAN @desc Before this sale, did you sell or exchange another home and leave its gain out of your gross income under this section?
+      `the date of my most recent earlier sale` IS A DATE @desc On what date was your most recent earlier sale of that kind? If you had none, enter any date.
+      `I sold because my place of employment changed` IS A BOOLEAN @desc Did you sell because your place of employment changed?
+      `I sold by reason of health` IS A BOOLEAN @desc Did you sell by reason of health?
+      `I sold by reason of unforeseen circumstances that the regulations count` IS A BOOLEAN @desc Did you sell because of unforeseen circumstances? Answer yes only if the regulations under section 121(c) count those circumstances; the section leaves that to the regulations, which are not among our sources.
+      `the depreciation taken for periods after May 6, 1997` IS A NUMBER @desc How much depreciation was taken, or was allowable, on the home for periods after May 6, 1997, in dollars? Enter 0 if none. (Section 1250(b)(3) says what counts; it is not among our sources.)
+      `I elect not to have section 121 apply` IS A BOOLEAN @desc Do you elect not to have section 121 apply to this sale? (Answer no unless you have chosen to leave the whole gain in your gross income.)
+      `my spouse died before the sale and I have not remarried` IS A BOOLEAN @desc Was your spouse dead on the date of the sale, and are you unmarried now? Answer no if your spouse is alive or if you have remarried.
+      `the date my spouse died` IS A DATE @desc On what date did your spouse die? If your spouse is not dead, enter any date.
+      `my late spouse owned the home` IS A BOOLEAN @desc If your spouse is dead: did your late spouse own the home? Answer no if your spouse is not dead.
+      `the date my late spouse became an owner` IS A DATE @desc On what date did your late spouse become an owner? Your late spouse is taken to have owned it from then until death. If none, enter any date.
+      `my late spouse lived in it as their main home` IS A BOOLEAN @desc Did your late spouse live in the home as their main home? Answer no if your spouse is not dead.
+      `the date my late spouse's stay began` IS A DATE @desc On what date did your late spouse's stay in the home as their main home begin? If none, enter any date.
+      `the date my late spouse's stay ended` IS A DATE @desc On what date did your late spouse's stay in the home as their main home end? If none, enter any date.
+      `my late spouse sold another home earlier and left its gain out of gross income` IS A BOOLEAN @desc Before this sale, did your late spouse sell or exchange another home and leave its gain out of gross income under this section? Answer no if your spouse is not dead.
+      `the date of my late spouse's most recent earlier sale` IS A DATE @desc On what date was your late spouse's most recent earlier sale of that kind? If none, enter any date.
+      `I have become physically or mentally incapable of self-care` IS A BOOLEAN @desc Have you become physically or mentally incapable of self-care?
+      `the date I moved into the facility` IS A DATE @desc On what date did you move into the facility? If you were in none, enter any date.
+      `the date I left the facility` IS A DATE @desc On what date did you leave it? If you were still there when you sold, enter the date of the sale. If you were in none, enter any date.
+      `the facility is licensed to care for someone in my condition` IS A BOOLEAN @desc Is the facility licensed by a State or political subdivision to care for an individual in your condition? (A nursing home counts.) Answer no if you were in none.
+GIVETH A MAYBE NUMBER
+DECIDE `How much of my gain is still taxed filing alone` IS
+    `s 121 the amount of the gain that stays in gross income` facts
+    WHERE
+        me MEANS `the taxpayer who may be a surviving spouse or in a care facility` `the date I sold the home` `the date I became an owner` `the date my first stay began` `the date my first stay ended` `I lived in it as my main home a second time` `the date my second stay began` `the date my second stay ended` `I sold another home earlier and left its gain out of my gross income` `the date of my most recent earlier sale` `I have become physically or mentally incapable of self-care` `the date I moved into the facility` `the date I left the facility` `the facility is licensed to care for someone in my condition` `my spouse died before the sale and I have not remarried` `the date my spouse died` `my late spouse owned the home` `the date my late spouse became an owner` `my late spouse lived in it as their main home` `the date my late spouse's stay began` `the date my late spouse's stay ended` `my late spouse sold another home earlier and left its gain out of gross income` `the date of my late spouse's most recent earlier sale`
+        facts MEANS `the facts of a sale of a home, with the election under (f)` `the date I sold the home` `my gain on the sale` FALSE me `no spouse` (`the depreciation a taxpayer states` `the date I sold the home` `the depreciation taken for periods after May 6, 1997`) `I sold because my place of employment changed` `I sold by reason of health` `I sold by reason of unforeseen circumstances that the regulations count` `I elect not to have section 121 apply`
+
+@export Filing alone, what stops or reduces the exclusion of my gain (s 121)?
+GIVEN `the date I sold the home` IS A DATE @desc On what date did you sell (or exchange) your home?
+      `my gain on the sale` IS A NUMBER @desc What was your gain on the sale, in dollars? Enter a gain, not a loss (0 if there was no gain). The section does not say how to work the gain out, so state it as you work it out for tax.
+      `the date I became an owner` IS A DATE @desc On what date did you become an owner of the home? You are taken to have owned it from then until the sale.
+      `the date my first stay began` IS A DATE @desc On what date did you first start to live in the home as your main home?
+      `the date my first stay ended` IS A DATE @desc On what date did your first stay in the home as your main home end? If you were still living there when you sold, enter the date of the sale.
+      `I lived in it as my main home a second time` IS A BOOLEAN @desc After leaving, did you come back and live in the home as your main home a second time?
+      `the date my second stay began` IS A DATE @desc On what date did your second stay begin? If you had no second stay, enter any date.
+      `the date my second stay ended` IS A DATE @desc On what date did your second stay end? If you had no second stay, enter any date.
+      `I sold another home earlier and left its gain out of my gross income` IS A BOOLEAN @desc Before this sale, did you sell or exchange another home and leave its gain out of your gross income under this section?
+      `the date of my most recent earlier sale` IS A DATE @desc On what date was your most recent earlier sale of that kind? If you had none, enter any date.
+      `I sold because my place of employment changed` IS A BOOLEAN @desc Did you sell because your place of employment changed?
+      `I sold by reason of health` IS A BOOLEAN @desc Did you sell by reason of health?
+      `I sold by reason of unforeseen circumstances that the regulations count` IS A BOOLEAN @desc Did you sell because of unforeseen circumstances? Answer yes only if the regulations under section 121(c) count those circumstances; the section leaves that to the regulations, which are not among our sources.
+      `the depreciation taken for periods after May 6, 1997` IS A NUMBER @desc How much depreciation was taken, or was allowable, on the home for periods after May 6, 1997, in dollars? Enter 0 if none. (Section 1250(b)(3) says what counts; it is not among our sources.)
+      `I elect not to have section 121 apply` IS A BOOLEAN @desc Do you elect not to have section 121 apply to this sale? (Answer no unless you have chosen to leave the whole gain in your gross income.)
+      `my spouse died before the sale and I have not remarried` IS A BOOLEAN @desc Was your spouse dead on the date of the sale, and are you unmarried now? Answer no if your spouse is alive or if you have remarried.
+      `the date my spouse died` IS A DATE @desc On what date did your spouse die? If your spouse is not dead, enter any date.
+      `my late spouse owned the home` IS A BOOLEAN @desc If your spouse is dead: did your late spouse own the home? Answer no if your spouse is not dead.
+      `the date my late spouse became an owner` IS A DATE @desc On what date did your late spouse become an owner? Your late spouse is taken to have owned it from then until death. If none, enter any date.
+      `my late spouse lived in it as their main home` IS A BOOLEAN @desc Did your late spouse live in the home as their main home? Answer no if your spouse is not dead.
+      `the date my late spouse's stay began` IS A DATE @desc On what date did your late spouse's stay in the home as their main home begin? If none, enter any date.
+      `the date my late spouse's stay ended` IS A DATE @desc On what date did your late spouse's stay in the home as their main home end? If none, enter any date.
+      `my late spouse sold another home earlier and left its gain out of gross income` IS A BOOLEAN @desc Before this sale, did your late spouse sell or exchange another home and leave its gain out of gross income under this section? Answer no if your spouse is not dead.
+      `the date of my late spouse's most recent earlier sale` IS A DATE @desc On what date was your late spouse's most recent earlier sale of that kind? If none, enter any date.
+      `I have become physically or mentally incapable of self-care` IS A BOOLEAN @desc Have you become physically or mentally incapable of self-care?
+      `the date I moved into the facility` IS A DATE @desc On what date did you move into the facility? If you were in none, enter any date.
+      `the date I left the facility` IS A DATE @desc On what date did you leave it? If you were still there when you sold, enter the date of the sale. If you were in none, enter any date.
+      `the facility is licensed to care for someone in my condition` IS A BOOLEAN @desc Is the facility licensed by a State or political subdivision to care for an individual in your condition? (A nursing home counts.) Answer no if you were in none.
+GIVETH A LIST OF STRING
+DECIDE `What stops or reduces the exclusion of my gain filing alone` IS
+    `s 121 what stops or reduces the exclusion` facts
+    WHERE
+        me MEANS `the taxpayer who may be a surviving spouse or in a care facility` `the date I sold the home` `the date I became an owner` `the date my first stay began` `the date my first stay ended` `I lived in it as my main home a second time` `the date my second stay began` `the date my second stay ended` `I sold another home earlier and left its gain out of my gross income` `the date of my most recent earlier sale` `I have become physically or mentally incapable of self-care` `the date I moved into the facility` `the date I left the facility` `the facility is licensed to care for someone in my condition` `my spouse died before the sale and I have not remarried` `the date my spouse died` `my late spouse owned the home` `the date my late spouse became an owner` `my late spouse lived in it as their main home` `the date my late spouse's stay began` `the date my late spouse's stay ended` `my late spouse sold another home earlier and left its gain out of gross income` `the date of my late spouse's most recent earlier sale`
+        facts MEANS `the facts of a sale of a home, with the election under (f)` `the date I sold the home` `my gain on the sale` FALSE me `no spouse` (`the depreciation a taxpayer states` `the date I sold the home` `the depreciation taken for periods after May 6, 1997`) `I sold because my place of employment changed` `I sold by reason of health` `I sold by reason of unforeseen circumstances that the regulations count` `I elect not to have section 121 apply`
+
+@export On a joint return, how much of our gain is left out of our gross income (s 121)?
+GIVEN `the date I sold the home` IS A DATE @desc On what date did you sell (or exchange) your home?
+      `my gain on the sale` IS A NUMBER @desc What was your gain on the sale, in dollars? Enter a gain, not a loss (0 if there was no gain). The section does not say how to work the gain out, so state it as you work it out for tax.
+      `the date I became an owner` IS A DATE @desc On what date did you become an owner of the home? You are taken to have owned it from then until the sale.
+      `the date my first stay began` IS A DATE @desc On what date did you first start to live in the home as your main home?
+      `the date my first stay ended` IS A DATE @desc On what date did your first stay in the home as your main home end? If you were still living there when you sold, enter the date of the sale.
+      `I lived in it as my main home a second time` IS A BOOLEAN @desc After leaving, did you come back and live in the home as your main home a second time?
+      `the date my second stay began` IS A DATE @desc On what date did your second stay begin? If you had no second stay, enter any date.
+      `the date my second stay ended` IS A DATE @desc On what date did your second stay end? If you had no second stay, enter any date.
+      `I sold another home earlier and left its gain out of my gross income` IS A BOOLEAN @desc Before this sale, did you sell or exchange another home and leave its gain out of your gross income under this section?
+      `the date of my most recent earlier sale` IS A DATE @desc On what date was your most recent earlier sale of that kind? If you had none, enter any date.
+      `my spouse owned the home` IS A BOOLEAN @desc Did your spouse own the home?
+      `the date my spouse became an owner` IS A DATE @desc On what date did your spouse become an owner? If your spouse did not own it, enter any date.
+      `my spouse lived in it as their main home` IS A BOOLEAN @desc Did your spouse live in the home as their main home?
+      `the date my spouse's stay began` IS A DATE @desc On what date did your spouse's stay in the home as their main home begin? If none, enter any date.
+      `the date my spouse's stay ended` IS A DATE @desc On what date did your spouse's stay in the home as their main home end? If none, enter any date.
+      `my spouse sold another home earlier and left its gain out of gross income` IS A BOOLEAN @desc Before this sale, did your spouse sell or exchange another home and leave its gain out of gross income under this section?
+      `the date of my spouse's most recent earlier sale` IS A DATE @desc On what date was your spouse's most recent earlier sale of that kind? If none, enter any date.
+      `I sold because my place of employment changed` IS A BOOLEAN @desc Did you sell because your place of employment changed?
+      `I sold by reason of health` IS A BOOLEAN @desc Did you sell by reason of health?
+      `I sold by reason of unforeseen circumstances that the regulations count` IS A BOOLEAN @desc Did you sell because of unforeseen circumstances? Answer yes only if the regulations under section 121(c) count those circumstances; the section leaves that to the regulations, which are not among our sources.
+      `the depreciation taken for periods after May 6, 1997` IS A NUMBER @desc How much depreciation was taken, or was allowable, on the home for periods after May 6, 1997, in dollars? Enter 0 if none. (Section 1250(b)(3) says what counts; it is not among our sources.)
+      `I elect not to have section 121 apply` IS A BOOLEAN @desc Do you elect not to have section 121 apply to this sale? (Answer no unless you have chosen to leave the whole gain in your gross income.)
+      `I have become physically or mentally incapable of self-care` IS A BOOLEAN @desc Have you become physically or mentally incapable of self-care?
+      `the date I moved into the facility` IS A DATE @desc On what date did you move into the facility? If you were in none, enter any date.
+      `the date I left the facility` IS A DATE @desc On what date did you leave it? If you were still there when you sold, enter the date of the sale. If you were in none, enter any date.
+      `the facility is licensed to care for someone in my condition` IS A BOOLEAN @desc Is the facility licensed by a State or political subdivision to care for an individual in your condition? (A nursing home counts.) Answer no if you were in none.
+GIVETH A MAYBE NUMBER
+DECIDE `How much of our gain is left out on a joint return` IS
+    `s 121 the amount of the gain excluded from gross income` facts
+    WHERE
+        me MEANS `the taxpayer who owned and lived in the home, and may be in a care facility` `the date I sold the home` `the date I became an owner` `the date my first stay began` `the date my first stay ended` `I lived in it as my main home a second time` `the date my second stay began` `the date my second stay ended` `I sold another home earlier and left its gain out of my gross income` `the date of my most recent earlier sale` `I have become physically or mentally incapable of self-care` `the date I moved into the facility` `the date I left the facility` `the facility is licensed to care for someone in my condition`
+        spouse MEANS `the spouse who may have owned or lived in the home` `the date I sold the home` `my spouse owned the home` `the date my spouse became an owner` `my spouse lived in it as their main home` `the date my spouse's stay began` `the date my spouse's stay ended` `my spouse sold another home earlier and left its gain out of gross income` `the date of my spouse's most recent earlier sale`
+        facts MEANS `the facts of a sale of a home, with the election under (f)` `the date I sold the home` `my gain on the sale` TRUE me spouse (`the depreciation a taxpayer states` `the date I sold the home` `the depreciation taken for periods after May 6, 1997`) `I sold because my place of employment changed` `I sold by reason of health` `I sold by reason of unforeseen circumstances that the regulations count` `I elect not to have section 121 apply`
+
+@export On a joint return, how much of our gain is still taxed (s 121)?
+GIVEN `the date I sold the home` IS A DATE @desc On what date did you sell (or exchange) your home?
+      `my gain on the sale` IS A NUMBER @desc What was your gain on the sale, in dollars? Enter a gain, not a loss (0 if there was no gain). The section does not say how to work the gain out, so state it as you work it out for tax.
+      `the date I became an owner` IS A DATE @desc On what date did you become an owner of the home? You are taken to have owned it from then until the sale.
+      `the date my first stay began` IS A DATE @desc On what date did you first start to live in the home as your main home?
+      `the date my first stay ended` IS A DATE @desc On what date did your first stay in the home as your main home end? If you were still living there when you sold, enter the date of the sale.
+      `I lived in it as my main home a second time` IS A BOOLEAN @desc After leaving, did you come back and live in the home as your main home a second time?
+      `the date my second stay began` IS A DATE @desc On what date did your second stay begin? If you had no second stay, enter any date.
+      `the date my second stay ended` IS A DATE @desc On what date did your second stay end? If you had no second stay, enter any date.
+      `I sold another home earlier and left its gain out of my gross income` IS A BOOLEAN @desc Before this sale, did you sell or exchange another home and leave its gain out of your gross income under this section?
+      `the date of my most recent earlier sale` IS A DATE @desc On what date was your most recent earlier sale of that kind? If you had none, enter any date.
+      `my spouse owned the home` IS A BOOLEAN @desc Did your spouse own the home?
+      `the date my spouse became an owner` IS A DATE @desc On what date did your spouse become an owner? If your spouse did not own it, enter any date.
+      `my spouse lived in it as their main home` IS A BOOLEAN @desc Did your spouse live in the home as their main home?
+      `the date my spouse's stay began` IS A DATE @desc On what date did your spouse's stay in the home as their main home begin? If none, enter any date.
+      `the date my spouse's stay ended` IS A DATE @desc On what date did your spouse's stay in the home as their main home end? If none, enter any date.
+      `my spouse sold another home earlier and left its gain out of gross income` IS A BOOLEAN @desc Before this sale, did your spouse sell or exchange another home and leave its gain out of gross income under this section?
+      `the date of my spouse's most recent earlier sale` IS A DATE @desc On what date was your spouse's most recent earlier sale of that kind? If none, enter any date.
+      `I sold because my place of employment changed` IS A BOOLEAN @desc Did you sell because your place of employment changed?
+      `I sold by reason of health` IS A BOOLEAN @desc Did you sell by reason of health?
+      `I sold by reason of unforeseen circumstances that the regulations count` IS A BOOLEAN @desc Did you sell because of unforeseen circumstances? Answer yes only if the regulations under section 121(c) count those circumstances; the section leaves that to the regulations, which are not among our sources.
+      `the depreciation taken for periods after May 6, 1997` IS A NUMBER @desc How much depreciation was taken, or was allowable, on the home for periods after May 6, 1997, in dollars? Enter 0 if none. (Section 1250(b)(3) says what counts; it is not among our sources.)
+      `I elect not to have section 121 apply` IS A BOOLEAN @desc Do you elect not to have section 121 apply to this sale? (Answer no unless you have chosen to leave the whole gain in your gross income.)
+      `I have become physically or mentally incapable of self-care` IS A BOOLEAN @desc Have you become physically or mentally incapable of self-care?
+      `the date I moved into the facility` IS A DATE @desc On what date did you move into the facility? If you were in none, enter any date.
+      `the date I left the facility` IS A DATE @desc On what date did you leave it? If you were still there when you sold, enter the date of the sale. If you were in none, enter any date.
+      `the facility is licensed to care for someone in my condition` IS A BOOLEAN @desc Is the facility licensed by a State or political subdivision to care for an individual in your condition? (A nursing home counts.) Answer no if you were in none.
+GIVETH A MAYBE NUMBER
+DECIDE `How much of our gain is still taxed on a joint return` IS
+    `s 121 the amount of the gain that stays in gross income` facts
+    WHERE
+        me MEANS `the taxpayer who owned and lived in the home, and may be in a care facility` `the date I sold the home` `the date I became an owner` `the date my first stay began` `the date my first stay ended` `I lived in it as my main home a second time` `the date my second stay began` `the date my second stay ended` `I sold another home earlier and left its gain out of my gross income` `the date of my most recent earlier sale` `I have become physically or mentally incapable of self-care` `the date I moved into the facility` `the date I left the facility` `the facility is licensed to care for someone in my condition`
+        spouse MEANS `the spouse who may have owned or lived in the home` `the date I sold the home` `my spouse owned the home` `the date my spouse became an owner` `my spouse lived in it as their main home` `the date my spouse's stay began` `the date my spouse's stay ended` `my spouse sold another home earlier and left its gain out of gross income` `the date of my spouse's most recent earlier sale`
+        facts MEANS `the facts of a sale of a home, with the election under (f)` `the date I sold the home` `my gain on the sale` TRUE me spouse (`the depreciation a taxpayer states` `the date I sold the home` `the depreciation taken for periods after May 6, 1997`) `I sold because my place of employment changed` `I sold by reason of health` `I sold by reason of unforeseen circumstances that the regulations count` `I elect not to have section 121 apply`
+
+§ `Things that take my sale out of the section (subsections (d)(5), (d)(8), (d)(10), (e), (f))`
+
+@export Does section 121 reach my sale at all (s 121(d)(5)(A), (d)(8), (d)(10), (e), (f))?
+GIVEN `the date I sold the home` IS A DATE @desc On what date did you sell (or exchange) your home?
+      `what happened to my home` IS AN `Event in respect of the property` @desc What happened to your home?
+      `I elect not to have section 121 apply` IS A BOOLEAN @desc Do you elect not to have section 121 apply to this sale?
+      `section 877(a)(1) treatment applies to me` IS A BOOLEAN @desc Does the treatment provided by section 877(a)(1) apply to you? (Section 877 is not among our sources.)
+      `I got the home in a like-kind exchange` IS A BOOLEAN @desc Did you get the home in an exchange in which gain was not recognized under section 1031(a) or (b)? (Section 1031 is not among our sources.)
+      `the seller in that exchange was me or someone whose basis follows mine` IS A BOOLEAN @desc Are you the person who made the exchange, or someone whose basis in the home is worked out from the basis of the person who did? Answer no if you got no home in a like-kind exchange.
+      `the date I got the home in the exchange` IS A DATE @desc On what date did you get the home in that exchange? If you did not, enter any date.
+      `the interest I sold is a remainder interest` IS A BOOLEAN @desc Is the interest you sold a remainder interest in the home?
+      `I elect that section 121 not fail to apply to a remainder interest` IS A BOOLEAN @desc If it is a remainder interest, do you elect that section 121 not fail to apply because of that?
+      `another interest in the home was sold separately` IS A BOOLEAN @desc Was another interest in the home sold or exchanged separately from the one you sold?
+      `I sold to a related person` IS A BOOLEAN @desc Did you sell to, or exchange with, a person related to you as described in section 267(b) or 707(b)? (Those sections are not among our sources.)
+GIVETH A MAYBE BOOLEAN
+DECIDE `Does section 121 reach my sale at all` IS
+    CONSIDER `s 121 whether the section reaches the sale or exchange` facts
+    WHEN `Section 121 applies` THEN JUST TRUE
+    -- FALSE-kind (the text says no in its own words): layer 1's "does not apply" is the text's own flat negative: "This section shall not apply ..." ((d)(8)(A), (d)(10), (e), (f)).
+    WHEN `Section 121 does not apply because` why THEN JUST FALSE
+    -- NOTHING-kind (as layer 1 gives it: silent, or limited by its own wording): the event is not listed, or a remainder interest has no election or was sold to a related person.
+    WHEN `Not covered because` why THEN NOTHING
+    WHERE
+        me MEANS `the facts of an individual` (Holding OF EMPTY, EMPTY) FALSE (Holding OF EMPTY, EMPTY) (Date 1 1 1900) EMPTY FALSE EMPTY EMPTY FALSE EMPTY EMPTY FALSE (Holding OF EMPTY, EMPTY) FALSE EMPTY FALSE 0 EMPTY FALSE FALSE FALSE EMPTY `section 877(a)(1) treatment applies to me`
+        facts MEANS `the facts of a sale` `the date I sold the home` `what happened to my home` 0 FALSE me `no spouse` EMPTY `I elect not to have section 121 apply` `I got the home in a like-kind exchange` `the seller in that exchange was me or someone whose basis follows mine` `the date I got the home in the exchange` `the interest I sold is a remainder interest` `I elect that section 121 not fail to apply to a remainder interest` `another interest in the home was sold separately` `I sold to a related person` EMPTY EMPTY FALSE FALSE FALSE
+
+-- (d)(5)(A)
+@export Is what happened to my home treated as a sale of it (s 121(d)(5)(A))?
+GIVEN `what happened to my home` IS AN `Event in respect of the property` @desc What happened to your home?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is what happened to my home treated as a sale` IS
+    `s 121(d)(5)(A) the event counts as a sale or exchange for this section` `what happened to my home`
+
+-- (d)(5)(B)
+@export For a home that was destroyed, stolen, seized or condemned, what is the amount realized when section 1033 is applied (s 121(d)(5)(B))?
+GIVEN `the amount realized, determined without regard to section 121` IS A NUMBER @desc What was the amount realized, in dollars, determined without regard to section 121?
+      `the gain not included in my gross income by reason of section 121` IS A NUMBER @desc How much gain, in dollars, is not included in your gross income pursuant to section 121?
+GIVETH A NUMBER
+DECIDE `What is the amount realized for section 1033` IS
+    `s 121(d)(5)(B) the amount realized in applying section 1033` `the amount realized, determined without regard to section 121` `the gain not included in my gross income by reason of section 121`
+
+§ `Counting time as owned or lived in: care, divorce and earlier homes (subsections (d)(3), (d)(7), (g))`
+
+-- (d)(7): only if the taxpayer has become physically or mentally incapable of self-care.
+@export For how many days does my stay in a care facility count as living in my home (s 121(d)(7))?
+GIVEN `the date I sold the home` IS A DATE @desc On what date did you sell (or exchange) your home?
+      `the date I became an owner` IS A DATE @desc On what date did you become an owner of the home? You are taken to have owned it from then until the sale.
+      `the date my first stay began` IS A DATE @desc On what date did you first start to live in the home as your main home?
+      `the date my first stay ended` IS A DATE @desc On what date did your first stay in the home as your main home end? If you were still living there when you sold, enter the date of the sale.
+      `I have become physically or mentally incapable of self-care` IS A BOOLEAN @desc Have you become physically or mentally incapable of self-care?
+      `the date I moved into the facility` IS A DATE @desc On what date did you move into the facility?
+      `the date I left the facility` IS A DATE @desc On what date did you leave it? If you were still there when you sold, enter the date of the sale.
+      `the facility is licensed to care for someone in my condition` IS A BOOLEAN @desc Is the facility licensed by a State or political subdivision to care for an individual in your condition? (A nursing home counts.)
+GIVETH A MAYBE NUMBER
+DECIDE `For how many days does my stay in a care facility count` IS
+    CONSIDER `s 121(d)(7) the taxpayer is treated as using the property as the principal residence while residing in a licensed facility` `I have become physically or mentally incapable of self-care` (Holding OF (LIST Span OF `the date I became an owner`, `the date I sold the home`), (LIST Span OF `the date my first stay began`, `the date my first stay ended`)) (`s 121(a) the 5-year period ending on the date of the sale or exchange` `the date I sold the home`) `the date I sold the home` stays
+    -- NOTHING-kind (limited by its own wording): "In the case of a taxpayer who (A) becomes physically or mentally incapable of self-care, and (B) owns property and uses such property ... for periods aggregating at least 1 year"
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST deemed THEN JUST (`the days in the spans of a list` deemed)
+    WHERE
+        stays MEANS LIST `Stay in a facility` WITH
+            `days` IS (Span OF `the date I moved into the facility`, `the date I left the facility`)
+            `facility licensed by a State or political subdivision to care for an individual in the taxpayer's condition` IS `the facility is licensed to care for someone in my condition`
+
+-- (g): section 1034 is repealed; the question is for a home bought under it.
+@export How many days of my earlier homes count toward the 2 years, where I bought this home under section 1034 (s 121(g))?
+GIVEN `I bought this home in a rollover that left part of the gain on my earlier home unrecognized under section 1034` IS A BOOLEAN @desc Did you buy this home in a rollover under section 1034, as it stood on the day before section 121 was enacted, that left part of the gain on your earlier home unrecognized? (Section 1034 is repealed and is not among our sources.)
+      `the days my earlier home and each home before it were owned and used as my main home` IS A NUMBER @desc For how many days in all were your earlier home, and each home before it, owned and used by you as your main home?
+GIVETH A MAYBE NUMBER
+DECIDE `How many days of my earlier homes count` IS
+    `s 121(g) the days the other residence was owned and used are included` `I bought this home in a rollover that left part of the gain on my earlier home unrecognized under section 1034` `the days my earlier home and each home before it were owned and used as my main home`
+
+-- (d)(3)(B), (d)(3)(C): a former spouse is granted use of the home under a divorce or separation instrument.
+-- The answer is a number of days, so the question asks for days: where the text does not speak (no divorce or separation instrument), the answer is NOTHING, not 0 and not a "no".
+@export For how many days while my spouse or former spouse is granted the use of the home under our divorce or separation do I count as living in it (s 121(d)(3))?
+GIVEN `the date I sold the home` IS A DATE @desc On what date did you sell (or exchange) your home?
+      `the date I became an owner` IS A DATE @desc On what date did you become an owner of the home? You are taken to have owned it from then until the sale.
+      `the date my spouse or former spouse was granted use` IS A DATE @desc On what date was your spouse or former spouse granted use of the home?
+      `the date that use ended` IS A DATE @desc On what date did that use end? If it was still going when you sold, enter the date of the sale.
+      `a decree of divorce or separate maintenance` IS A BOOLEAN @desc Was the use granted under a decree of divorce or separate maintenance?
+      `a written instrument incident to such a decree` IS A BOOLEAN @desc Was it granted under a written instrument incident to such a decree?
+      `a written separation agreement` IS A BOOLEAN @desc Was it granted under a written separation agreement?
+      `a decree requiring support payments` IS A BOOLEAN @desc Was it granted under a decree that requires one spouse to make payments for the support or maintenance of the other?
+GIVETH A MAYBE NUMBER
+DECIDE `For how many days do I count as living in my home while my former spouse has the use` IS
+    CONSIDER `s 121(d)(3)(B) the individual is treated as using the property as the principal residence while a spouse or former spouse is granted use` (LIST Span OF `the date I became an owner`, `the date I sold the home`) (LIST grant)
+    -- NOTHING-kind (limited by its own wording): "during any period of ownership while such individual's spouse or former spouse is granted use of the property under a divorce or separation instrument"
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST deemed THEN JUST (`the days in the spans of a list` deemed)
+    WHERE
+        grant MEANS `Use granted` WITH
+            `days` IS (Span OF `the date my spouse or former spouse was granted use`, `the date that use ended`)
+            `instrument` IS (Instrument WITH
+                `a decree of divorce or separate maintenance` IS `a decree of divorce or separate maintenance`
+                `a written instrument incident to such a decree` IS `a written instrument incident to such a decree`
+                `a written separation agreement` IS `a written separation agreement`
+                `a decree requiring a spouse to make payments for the support or maintenance of the other spouse` IS `a decree requiring support payments`)
