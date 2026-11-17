@@ -299,8 +299,7 @@ design D2, D4 and D8). The layer is `sta-qa.l4`, with cases in `sta-qa-cases.l4`
 (`@desc Which of these describes you`) and answers `does not arise for you`, reading nothing else, for a role it is not
 about. Every answer type carries that value: `Yes or no`, `Amount`, `Days`, `Working days`, `Vote answer` (wrapping
 the baseline's `Who casts my lot's vote`), `Variation answer` (wrapping `Notifiable variation`) and `Notice deadline`.
-No exported question takes a DEONTIC or EVENT input. The baseline's s 110 duty is a DEONTIC, and its `@export` was
-already commented out; it is not used here.
+No exported question takes a DEONTIC or EVENT input. The baseline's s 110 duty is a DEONTIC; it is not used here.
 
 ### Roles
 
