@@ -1,0 +1,6 @@
+# NEEDS-CORE.md -- ccc9 (Criminal Code, lines 5032-5568: ss 270 to 278.31)
+
+Each item is a type or constructor the core (`ccc-core.l4`) lacks and this range could use. None blocks the encoding: each has a stated workaround, in use.
+
+1. **`Party` has no constructor for an unnamed person** ("every one", "a person", "no person", "any person"). Sections 273.3(1), 276.03(1), 276.07(1), 276.11(1), 278.18(1), 278.27(1) ("A person shall not publish ...", "No person shall ...") and 278.16(6), 278.25(5) ("must not be used in any other proceedings") bind anyone, not only the accused. The regulative rules name `the accused` as the bearer (`PARTY \`the accused\` SHANT ...`) and the seat asks the question of the person in the seat, so a rule that binds a journalist reads as binding the accused. A constructor such as `a person` (or `any person`) would let a part name the bearer the text names.
+2. **`Party` has no constructor for "the judge, provincial court judge or justice" taken together.** The range names that trio 38 times (on 32 lines; grep of lines 5032-5568) (the application procedure of ss 276.01 to 276.1 and 278.3). The rules take the presiding officer as an input of type `Party` (`PARTY presiding`, fork F24) and the traces use `a judge`. A constant for the trio, or a constructor `the presiding officer`, would let the rules name the bearer without an input.
