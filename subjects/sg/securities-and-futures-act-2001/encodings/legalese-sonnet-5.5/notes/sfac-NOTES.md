@@ -87,9 +87,9 @@ A row names the L4 functions that encode it (all in the module shown; tests are 
 | s 239(3) | src:37727-37728 | encoded | sfac-239 | `s 239(3)(a) the invitation is deemed to be an offer of debentures of the entity` |
 | s 239(3)(a) | src:37729-37735 | encoded | sfac-239 | in the function(s) of s 239(3) |
 | s 239(3)(b) | src:37736-37742 | encoded | sfac-239 | `s 239(3)(b) the document is deemed to be a debenture` |
-| s 239(3A) | src:37743-37744 | encoded | sfac-239 | `s 239(3A)(a) the invitation by the prescribed entity is not an offer of debentures`, `s 239(3) and (3A) the invitation to deposit or lend is an offer of debentures` |
-| s 239(3A)(a) | src:37745-37748 | encoded | sfac-239 | `s 239(3A)(a) the invitation by the prescribed entity is not an offer of debentures` |
-| s 239(3A)(b) | src:37749-37751 | encoded | sfac-239 | `s 239(3A)(b) the document issued by the prescribed entity is not a debenture` |
+| s 239(3A) | src:37743-37744 | encoded | sfac-239 | `s 239(3A)(a) the invitation by the prescribed entity is an offer of debentures`, `s 239(3) and (3A) the invitation to deposit or lend is an offer of debentures` |
+| s 239(3A)(a) | src:37745-37748 | encoded | sfac-239 | `s 239(3A)(a) the invitation by the prescribed entity is an offer of debentures` |
+| s 239(3A)(b) | src:37749-37751 | encoded | sfac-239 | `s 239(3A)(b) the document issued by the prescribed entity is a debenture` |
 | s 239(3A)(b)(i) | src:37752-37753 | encoded | sfac-239 | in the function(s) of s 239(3A)(b) |
 | s 239(3A)(b)(ii) | src:37754-37758 | encoded | sfac-239 | in the function(s) of s 239(3A)(b) |
 | s 239(4) | src:37759-37760 | encoded | sfac-239 | `s 239(4) "deposit" the thing is a deposit` |

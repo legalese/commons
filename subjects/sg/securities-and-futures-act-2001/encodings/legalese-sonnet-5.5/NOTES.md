@@ -67,7 +67,7 @@ Briefs are shipped verbatim except for lines about tooling.
 - **NEEDS-CORE: nothing hoisted.** None of the four parts wrote a `NEEDS-CORE.md`. The keel's one item (`Period unit` is declared in `sfa-periods.l4`, not in `sfa-core.l4`) is a placement choice, not a gap, and nothing depends on where it lives; it is left where it is.
 - **One keel module was edited, by one import line.** `sfa-cases-earlier-pass.l4` imported `sfa-seat-keel`, which the merge folds into `sfa-seat.l4`; the line now imports `sfa-seat`. No rule or assertion changed. The first merged gate, run before this edit, showed 31 errors in that one module and none elsewhere.
 - **Part-local types and helper names stay where they are.** Every top-level name carries the label of its provision, so no two modules define the same name, and the merged gate compiles them together. One part-local type, `Subdivision (4) an exemption relied on` in `sfad-exemption-summary.l4`, is named for a Subdivision and not for a section.
-- **The merge lost nothing:** the merged folder was gated as it stands: 99 modules, 6,290 assertions satisfied (below), which is the sum of the keel's own gate and the four parts' own gates.
+- **The merge lost nothing:** the merged folder was gated as it stands: 100 modules, 6,293 assertions satisfied (below), which is the sum of the keel's own gate (1,069) and the four parts' own gates (1,218, 1,175, 1,683 and 1,145), plus the 3 assertions of `sfac-tests-reader.l4`, added after the readers (below).
 
 ## Where things are
 
@@ -76,7 +76,7 @@ Briefs are shipped verbatim except for lines about tooling.
 | keel | 12 | 956 | 0 | 31 | 209 (199 / 3 / 7 / 0) |
 | sfaa | 12 | 1087 | 92 | 40 | 525 (199 / 308 / 18 / 0) |
 | sfab | 7 | 1055 | 53 | 50 | 670 (321 / 265 / 76 / 8) |
-| sfac | 10 | 1608 | 77 | 21 | 808 (616 / 147 / 39 / 6) |
+| sfac | 10 | 1611 | 77 | 21 | 808 (616 / 147 / 39 / 6) |
 | sfad | 7 | 1011 | 47 | 40 | 273 (137 / 107 / 27 / 2) |
 | seat cases, all agents | | 573 (`sfa-cases-seat.l4`) | | | |
 
@@ -124,8 +124,8 @@ The readers' test modules and answer files are not shipped, so a line number in 
 
 ### The `ENCODER` lines (15)
 
-**None of these was applied.** 13 of the 15 are a `where` or `if` gate read the other way from the part that wrote the function (group 3: 12 lines; group 1: `s 276(7)(a)`), which is the open split-site question (above) and not a defect the text settles; group 1's `s 4(10)(f)` is a scope limit read the other way.
-**One is a different kind: group 4's `s 239(3A)(b)` is a naming defect.** The function is named "the document issued by the prescribed entity is not a debenture" and answers `JUST FALSE` for a certificate of deposit, where `JUST FALSE` means "it is a debenture: no"; so its name and its value read in opposite directions, and `s 239(3A)(a)` ("the invitation by the prescribed entity is not an offer of debentures") has the same shape. The lead read both functions and the text (`sfac-239.l4`) and agrees the name and the value disagree. **Proposed, not landed:** rename the two functions, and their uses in the tests and the seat, so that each name asks what its value answers; the combined function `s 239(3) and (3A)` already reads them that way.
+**Fourteen of these were not applied.** 13 of the 15 are a `where` or `if` gate read the other way from the part that wrote the function (group 3: 12 lines; group 1: `s 276(7)(a)`), which is the open split-site question (above) and not a defect the text settles; group 1's `s 4(10)(f)` is a scope limit read the other way.
+**One is a different kind: group 4's `s 239(3A)(b)` is a naming defect.** The function is named "the document issued by the prescribed entity is not a debenture" and answers `JUST FALSE` for a certificate of deposit, where `JUST FALSE` means "it is a debenture: no"; so its name and its value read in opposite directions, and `s 239(3A)(a)` ("the invitation by the prescribed entity is not an offer of debentures") has the same shape. The lead read both functions and the text (`sfac-239.l4`) and agreed the name and the value disagreed. **Changed, in its own commit (assumed, not ruled):** the two functions are renamed `s 239(3A)(a) the invitation by the prescribed entity is an offer of debentures` and `s 239(3A)(b) the document issued by the prescribed entity is a debenture`, so that each name asks what its value answers; the values are unchanged (the combined function `s 239(3) and (3A)` already read them that way), the tests and the notes follow, nothing else in the folder called them, and the reader's scenarios #51 to #53, recast to the new names, are kept in `sfac-tests-reader.l4`.
 
 Each line below is in the reader's own words.
 
@@ -449,6 +449,7 @@ sfac-tests-249.l4                              0       296       0        0     
 sfac-tests-253.l4                              0       168       0        0         0 |      0       168       0        0  same
 sfac-tests-257.l4                              0       213       0        0         0 |      0       213       0        0  same
 sfac-tests-duties.l4                           0         0       0        0         0 |      0         0       0        0  same
+sfac-tests-reader.l4                           0         3       0        0         0 |      0         3       0        0  same
 sfad-circumstances.l4                          0         0       0        0         0 |      0         0       0        0  same
 sfad-debentures.l4                             0         0       0        0         0 |      0         0       0        0  same
 sfad-directions.l4                             0         0       0        0         0 |      0         0       0        0  same
@@ -463,12 +464,12 @@ sfad-tests-exemption-summary.l4                0        12       0        0     
 sfad-tests-investor-exemptions.l4              0       121       0        0         0 |      0       121       0        0  same
 sfad-tests-nocons-small-private.l4             0       193       0        0         0 |      0       193       0        0  same
 sfad-tests-ois-intl-gov-atm.l4                 0       179       0        0         0 |      0       179       0        0  same
-TOTAL (99 modules)                             0      6290       0        0           |      0      6290       0        0
+TOTAL (100 modules)                            0      6293       0        0           |      0      6293       0        0
 (a failed assertion is also an error; any other error, or any refused assertion, makes the run red)
 (target main: every module has the same four counts on the main build. That rules out a module main rejects and a difference an assertion shows; it does not see a different TRACE outcome, or any difference no assertion exercises)
 ```
 
-The total is 6,290 assertions satisfied over 99 modules, with 0 errors, 0 failed and 0 refused, identical on the main build.
+The total is 6,293 assertions satisfied over 100 modules, with 0 errors, 0 failed and 0 refused, identical on the main build.
 `check.sh` does not see a `#TRACE` outcome, because a trace prints no assertion line; each agent read its own traces on both builds, and the lead re-read every part's traces against their `-- EXPECT` words and compared the outcomes of the two builds.
 
 ## What would need doing before the encoding is worth relying on
