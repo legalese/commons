@@ -71,3 +71,20 @@ Terms were re-read on 2026-10-19 between 18:07 and 18:08 UTC. Requests identifie
   11 sections, 121,989 characters. All notes are dropped. The note under s 3304 that sets out the Federal-State Extended Unemployment Compensation Act of 1970 is deposited as its own subject, `../federal-state-extended-unemployment-compensation-act-of-1970/`, because that Act is not classified to the Code and the note is its only Code text.
 
 Chapter 23A (Railroad Unemployment Repayment Tax) is not deposited.
+
+## Third deposit of 2026-11-17 (UTC): section 121, exclusion of gain from sale of principal residence
+
+Terms were re-read on 2026-11-17 at about 15:58 UTC. Requests identified themselves as `legalese-commons-source-fetcher/1.0 (+https://github.com/legalese/commons)`, at least 3 seconds apart.
+
+- **https://uscode.house.gov/robots.txt** (read 2026-11-17): two lines, `User-agent: Slurp` / `Disallow: /`. Nothing restricts any other client.
+- **https://uscode.house.gov/download.html** (read 2026-11-17): "All files are current through Public Law 119-142 (November 10, 2026)." The page still carries the notice that the site "is currently operating in a temporary format".
+- **https://uscode.house.gov/about_code.html** (read 2026-11-17): "Under 1 U.S.C. 204, the matter set forth in a main edition of the Code (together with its current supplement) establishes the law prima facie, except that the text of titles enacted into positive law is legal evidence of the law." Title 26 is not enacted into positive law, so the Code text is prima facie evidence of the law.
+- **Copyright**: none. 17 U.S.C. 105 (as in the earlier deposits). The pages read above state no licence or restriction on reuse of the statute text.
+
+`xml_usc26@119-142.zip` was downloaded once (sha256 `b40641a81745aa8a60f5e0ee595d3c792a75165a6924b14f0468a36f516945e5`, 8,296,138 bytes). It is not kept in the repository.
+
+**Statute text added**: `registers/source-bundle/usc26-s121.txt`, 26 U.S.C. section 121, with its source credit (the last entry is Pub. L. 115-97, title I, section 11051(b)(3)(A), December 22, 2017).
+Its editorial, statutory and amendment notes are in `registers/source-bundle/usc26-s121-notes.txt`.
+The converter is `registers/source-bundle/uslm_section_to_text.py`; the deposit's metadata, with the checksums of both text files, is in `usc26-s121.meta.json`.
+
+- **Attribution required**: none. A courtesy line: "Source: United States Code, Office of the Law Revision Counsel, release point Public Law 119-142."
