@@ -69,6 +69,7 @@ One **keel** agent first wrote the shared vocabulary (`sg-core.l4`, the keel mod
 The lead verified each part by itself (`check.sh` on both builds, `srcrefs.py check --refs` and `--strict`, the NOT-precedence sweep, the keel's files identical to the keel's, every trace read against its `-- EXPECT` word) and then merged them with a script; the part modules are copied unchanged except as the merge decisions below say, and the merge edited no rule.
 No independent test pass and no seat audit has been run on this wave. The tests are the agents' own, written from the text.
 Every note a part wrote is kept, with names and local paths replaced by placeholders, as `notes/<part>-NOTES.md`, with its `PROGRESS.md` and `NEEDS-CORE.md` where it wrote them; the keel's are `notes/keel-*.md`, and the brief each agent was given is `notes/<agent>-BRIEF.md`.
+Briefs are shipped verbatim except for lines about tooling.
 **A part's NOTES.md is where its coverage table, fork register, marginal readings, jural relations and findings are.** They are not repeated or summed here, except as the sections below say.
 
 ## Merge decisions (assumed, not ruled)
@@ -78,6 +79,7 @@ Every note a part wrote is kept, with names and local paths replaced by placehol
 - **NEEDS-CORE requests are not hoisted.** They are gathered in `NEEDS-CORE.md` (proposed, not landed); the core is the keel's, unchanged.
 - **Part-local types and helper names stay where they are.** Every top-level name carries the label of its provision, so no two modules define the same name; the merged seat module imports all part modules at once and compiles.
 - **Eleven trace comments were reworded in place** (`sgb2-tests-s161.l4` lines 17, 21, 25; `sgb2-tests-s162.l4` lines 110, 114, 118, 122; `sgb2-tests-s163.l4` lines 167, 171, 175, 179): the agent had written the expected word at the end of the comment ("... EXPECT BREACH"), and the line now begins `-- EXPECT <word>.`, so the checker that reads the word at the start of the line sees it. No line was added or removed, and no expected word was changed.
+- **Two traces a strict checker misreads, and are not defects.** `sgd-tests-acquisition.l4` line 384 and `sgd-tests-compromise.l4` line 400 print `FULFILLED AND PARTY ... MUST ...` (the first limb done, the second still owed), which is a residual duty and what their `-- EXPECT RESIDUAL` says; a checker that reads only a result beginning `PARTY` as residual calls them `OTHER`.
 - **The merge lost nothing:** the merged folder was gated as it stands: 173 modules, 10,470 assertions satisfied (below).
 
 ## Where things are

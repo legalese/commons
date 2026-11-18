@@ -180,10 +180,9 @@ Run the check as `L4=<L4_BIN> L4_MAIN=<scratchpad>/bin/l4-main-109 ./check.sh` (
 ## Independence
 
 - Do not read any existing encoding of any law, except what is placed in `inputs/NAIVE-EVIDENCE/` (if that folder exists in your sandbox: see its section above). Nothing under `<local path>` (the whole tree: `commons`, `<local worktrees>`, `canon`, `l4-ide`, `l4wt`), nothing under `<local path>`, no directory under `<scratchpad>/runs` other than your own `dst-sg-k/`, and nothing under `<local tool>` (no `memory/`, no `projects/`, no `state/`, no `tmp`). Do not search the web or fetch anything from a network, for an existing encoding or for anything else: the text you need is in `INPUTS_DIR`, and the two skills and their references are in `<scratchpad>/skills`.
-- Do not call an advisor tool, a reviewer tool, a "second opinion" tool or any tool that sends your conversation to another model, even if one appears in your tool list. If you did so by accident, say so under `advisor-calls` in your final report (what, when, why); do not hide it.
 - You may read `INPUTS_DIR`, the two skills and their references, and the Commons guide copies in `inputs/`. Your context may contain an index of someone's notes that mentions other encodings; do not follow it. If you open a forbidden file by accident, stop reading it and say so under `peeked`.
 
 ## Final report (your last message; the report is your final response, not a file)
 
-Return: (1) the files you wrote; (2) exactly what `check.sh` printed; (3) the core's contents in one line per type; (4) the seams you listed, one line each; (5) the defined terms and provisions you encoded, with the counts of coverage rows by disposition; (6) any difficulty the parts will meet; (7) `peeked`: nothing, or what you opened by accident; (8) `advisor-calls`: none, or what you called and why.
+Return: (1) the files you wrote; (2) exactly what `check.sh` printed; (3) the core's contents in one line per type; (4) the seams you listed, one line each; (5) the defined terms and provisions you encoded, with the counts of coverage rows by disposition; (6) any difficulty the parts will meet; (7) `peeked`: nothing, or what you opened by accident.
 Subagents cannot write report-named files such as `FINDINGS.md`; `PLAN.md`, `NOTES.md`, `PROGRESS.md` and `.l4` files are fine.
