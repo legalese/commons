@@ -119,6 +119,18 @@ From the keel's notes:
 A part cannot import another part, so the part that depends on another's answer takes it as an input named for the fact. The keel's plan lists every seam, with the input's name and type and whether the keel read the citing lines or only saw them in the cross-reference list: `notes/keel-PLAN.md`, section 4 (table A: the keel asks and a part answers; table B: a part asks and the keel answers; C: cross-reference hits that are not seams; D: the one seam the keel could not close, s 5(3)(b)(ii)).
 **One seam the plan lacks, found by `sga3`:** the keel's `sg-interests` asks, as a plain `BOOLEAN`, the fact that an interest is a company's interest in its own shares bought in accordance with ss 76B to 76G, and `sga3`'s own function for that answers a `MAYBE BOOLEAN` (`JUST TRUE`, or `NOTHING` when a condition fails, fork F-B11 in `notes/sga3-NOTES.md`). The merge does not wire it, because carrying a `NOTHING` into a `BOOLEAN` as `FALSE` would turn "not covered" into "no".
 
+## Changes made after the independent review (assumed, not ruled)
+
+Each item below is its own commit, so each can be reverted alone.
+None is a ruling by the maintainer; the answer taken is the one the text's own words support under any outcome of the open split-site question below.
+
+- **`s 78 the company may pay interest on the paid-up share capital and charge it to capital as part of the cost`** (`sga3-77-78.l4`).
+  When the shares were issued for the purpose the section names and a limit the text closes in its own words is not met, the function now answers `JUST FALSE`; it answered `NOTHING`.
+  The three limits are "(a) no such payment may be made unless it is authorised ... and is approved by the Court", "(c) the payment is to be made only for such period as is determined by the Court" and "(d) the rate of interest must in no case exceed 5% per annum", and the grant rule of 2026-11-12 keeps `JUST FALSE` where the text closes the gate itself.
+  For shares not issued for that purpose the function still answers `NOTHING`: the section describes the shares it is about and does not say interest may not be paid on others.
+  Five assertions in `sga3-tests-77-78.l4` and one in `sg-cases-seat.l4` changed from `NOTHING` to `JUST FALSE` with it.
+  The fork register entry is F-S4 in `notes/sga3-NOTES.md`.
+
 ## Split sites (not harmonised)
 
 Each agent was asked to record, site by site and without harmonising with the others, two questions the Guide leaves to the encoder: (i) an unmet element of an offence or a contravention, `JUST FALSE` or `NOTHING`; (ii) a "may" gated by "where", "when", "upon", "on application" or "with the consent of", `JUST FALSE` (the periods ruling) or `NOTHING` (the grant ruling).
