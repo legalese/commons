@@ -130,6 +130,11 @@ None is a ruling by the maintainer; the answer taken is the one the text's own w
   For shares not issued for that purpose the function still answers `NOTHING`: the section describes the shares it is about and does not say interest may not be paid on others.
   Five assertions in `sga3-tests-77-78.l4` and one in `sg-cases-seat.l4` changed from `NOTHING` to `JUST FALSE` with it.
   The fork register entry is F-S4 in `notes/sga3-NOTES.md`.
+- **`s 205B(5) the company remains exempt in relation to the accounts for the financial year`** (`sgc2-s205a-exemption.l4`).
+  The function took one input, whether the company was dormant throughout the year, and answered `NOTHING` when it was not, so it could not give the answer the text gives for a year in which the company ceased to be dormant: "it thereupon ceases to be so exempt; but it remains so exempt in relation to accounts for the financial year in which it was dormant throughout".
+  It now takes a second input, `the company ceased to be dormant during the financial year`, and answers `JUST FALSE` for such a year, `JUST TRUE` for a year of dormancy throughout, and `NOTHING` for a year that is neither.
+  `sgc2-tests-s205a.l4` has three assertions in place of two; the function is not asked by any seat question.
+  An independent reader triaged this as an encoder gap.
 
 ## Split sites (not harmonised)
 
