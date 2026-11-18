@@ -117,7 +117,8 @@ From the keel's notes:
 ## Seams between parts
 
 A part cannot import another part, so the part that depends on another's answer takes it as an input named for the fact. The keel's plan lists every seam, with the input's name and type and whether the keel read the citing lines or only saw them in the cross-reference list: `notes/keel-PLAN.md`, section 4 (table A: the keel asks and a part answers; table B: a part asks and the keel answers; C: cross-reference hits that are not seams; D: the one seam the keel could not close, s 5(3)(b)(ii)).
-**One seam the plan lacks, found by `sga3`:** the keel's `sg-interests` asks, as a plain `BOOLEAN`, the fact that an interest is a company's interest in its own shares bought in accordance with ss 76B to 76G, and `sga3`'s own function for that answers a `MAYBE BOOLEAN` (`JUST TRUE`, or `NOTHING` when a condition fails, fork F-B11 in `notes/sga3-NOTES.md`). The merge does not wire it, because carrying a `NOTHING` into a `BOOLEAN` as `FALSE` would turn "not covered" into "no".
+**One seam the plan lacks, found by `sga3`:** the keel's `sg-interests` asks, as a plain `BOOLEAN`, the fact that an interest is a company's interest in its own shares bought in accordance with ss 76B to 76G. `sga3`'s own function for that answered a `MAYBE BOOLEAN` (`JUST TRUE`, or `NOTHING` when a condition fails, fork F-B11 in `notes/sga3-NOTES.md`), and the merge did not wire it, because carrying a `NOTHING` into a `BOOLEAN` as `FALSE` would turn "not covered" into "no".
+After the independent review that function answers `JUST FALSE` when a condition fails, and a second function turns its answer into the `BOOLEAN` (see "Changes made after the independent review" below). **The seam is still not wired in the tree:** no module calls the second function, because the keel cannot import a later part, and the seat asks the field as a question of its own; the three other consumers of the same fact (`s 76(9)(c)`, `s 76H(1)` and `s 78A`) take their own inputs.
 
 ## Changes made after the independent review (assumed, not ruled)
 
@@ -135,6 +136,13 @@ None is a ruling by the maintainer; the answer taken is the one the text's own w
   It now takes a second input, `the company ceased to be dormant during the financial year`, and answers `JUST FALSE` for such a year, `JUST TRUE` for a year of dormancy throughout, and `NOTHING` for a year that is neither.
   `sgc2-tests-s205a.l4` has three assertions in place of two; the function is not asked by any seat question.
   An independent reader triaged this as an encoder gap.
+- **`s 76B(1) the interest is a company's interest in its own shares purchased or otherwise acquired in accordance with sections 76B to 76G`** (`sga3-76b.l4`), the seam to `s 7(9)(ca)`.
+  The function answered `JUST TRUE` when its four inputs held and `NOTHING` otherwise, so a real no, such as the 20% cap exceeded, reached the keel as "not covered".
+  It now answers `JUST FALSE` when one of the four fails, because (ca) is introduced by "if" and the sections say what a failure is: s 76B(3) "must not exceed 20% ... unless", s 76E(1) "must not make a purchase or acquisition ... unless ... authorised in advance", and s 76F(2) "no purchase or acquisition ... is lawful".
+  That contradicts the premise on which the part took `NOTHING` (fork F-B11: that the sections never say what a failed acquisition is called), so the register entry says it was overridden.
+  A second function, `s 76B(1) the keel's s 7(9)(ca) field: the interest is in accordance with sections 76B to 76G`, is that answer `EQUALS JUST TRUE`, a `BOOLEAN` with no `NOTHING` to convert; the keel's field is unchanged.
+  Four assertions of `sga3-tests-76b.l4` changed from `NOTHING` to `JUST FALSE` and five were added for the second function.
+  **A caveat that stays:** the function asks four conditions and not all the conditions of ss 76B to 76G. Lodging with the Registrar (s 76B(7)) and the consent of 75% of the holders of the class (s 76D(2A)) are procedural, and the text does not say what a breach of either does to the purchase, so a caller who has not met them can still get `JUST TRUE`. An independent reader noted this.
 
 ## Split sites (not harmonised)
 
