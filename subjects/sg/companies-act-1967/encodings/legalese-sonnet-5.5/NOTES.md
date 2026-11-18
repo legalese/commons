@@ -67,7 +67,7 @@ This is a statement about the encoded ranges only: this encoding has not looked 
 One **keel** agent first wrote the shared vocabulary (`sg-core.l4`, the keel modules and their tests) and a plan (`notes/keel-PLAN.md`) that gives each part a range of the text and says what it must take from the others.
 11 **part** agents then encoded their ranges in parallel, each against the same core, none reading another's work: `sga1` (lines 6135 to 7320, 28514 to 28876), `sga2` (lines 7321 to 8311), `sga3` (lines 8312 to 9881), `sgb1` (lines 11592 to 13354), `sgb2` (lines 13355 to 15410), `sgc1` (lines 17849 to 19068, 28897 to 29012), `sgc2` (lines 19069 to 20182, 29013 to 29310), `sgd` (lines 20183 to 21697), `sgf` (lines 21698 to 21885), `sge` (lines 23148 to 23607), `sgg` (lines 23608 to 25371).
 The lead verified each part by itself (`check.sh` on both builds, `srcrefs.py check --refs` and `--strict`, the NOT-precedence sweep, the keel's files identical to the keel's, every trace read against its `-- EXPECT` word) and then merged them with a script; the part modules are copied unchanged except as the merge decisions below say, and the merge edited no rule.
-No independent test pass and no seat audit has been run on this wave. The tests are the agents' own, written from the text.
+An independent test pass has been run on this wave (the readers' files are `notes/reader-*.md`, described in `notes/reader-README.md`); no seat audit has. The tests in this folder are the agents' own, written from the text; the readers' own test modules are not shipped.
 Every note a part wrote is kept, with names and local paths replaced by placeholders, as `notes/<part>-NOTES.md`, with its `PROGRESS.md` and `NEEDS-CORE.md` where it wrote them; the keel's are `notes/keel-*.md`, and the brief each agent was given is `notes/<agent>-BRIEF.md`.
 Briefs are shipped verbatim except for lines about tooling.
 **A part's NOTES.md is where its coverage table, fork register, marginal readings, jural relations and findings are.** They are not repeated or summed here, except as the sections below say.
@@ -80,7 +80,7 @@ Briefs are shipped verbatim except for lines about tooling.
 - **Part-local types and helper names stay where they are.** Every top-level name carries the label of its provision, so no two modules define the same name; the merged seat module imports all part modules at once and compiles.
 - **Eleven trace comments were reworded in place** (`sgb2-tests-s161.l4` lines 17, 21, 25; `sgb2-tests-s162.l4` lines 110, 114, 118, 122; `sgb2-tests-s163.l4` lines 167, 171, 175, 179): the agent had written the expected word at the end of the comment ("... EXPECT BREACH"), and the line now begins `-- EXPECT <word>.`, so the checker that reads the word at the start of the line sees it. No line was added or removed, and no expected word was changed.
 - **Two traces a strict checker misreads, and are not defects.** `sgd-tests-acquisition.l4` line 384 and `sgd-tests-compromise.l4` line 400 print `FULFILLED AND PARTY ... MUST ...` (the first limb done, the second still owed), which is a residual duty and what their `-- EXPECT RESIDUAL` says; a checker that reads only a result beginning `PARTY` as residual calls them `OTHER`.
-- **The merge lost nothing:** the merged folder was gated as it stands: 173 modules, 10,470 assertions satisfied (below).
+- **The merge lost nothing:** the merged folder was gated as it stands: 173 modules, 10,470 assertions satisfied (below); after the three changes made since, 10,476 (see "What check.sh prints").
 
 ## Where things are
 
@@ -89,11 +89,11 @@ Briefs are shipped verbatim except for lines about tooling.
 | keel | 8 | 799 | 12 | 37 | 235 (169 / 39 / 23 / 4) |
 | sga1 | 7 | 687 | 44 | 72 | 299 (227 / 35 / 30 / 7) |
 | sga2 | 7 | 492 | 19 | 106 | 199 (61 / 136 / 2 / 0) |
-| sga3 | 7 | 674 | 46 | 74 | 385 (71 / 284 / 27 / 3) |
+| sga3 | 7 | 679 | 46 | 74 | 385 (71 / 284 / 27 / 3) |
 | sgb1 | 7 | 651 | 47 | 197 | 319 (207 / 75 / 29 / 8) |
 | sgb2 | 11 | 798 | 106 | 84 | 403 (267 / 101 / 26 / 9) |
 | sgc1 | 11 | 558 | 54 | 144 | 223 (126 / 68 / 22 / 7) |
-| sgc2 | 7 | 741 | 70 | 66 | 302 (100 / 178 / 19 / 5) |
+| sgc2 | 7 | 742 | 70 | 66 | 302 (100 / 178 / 19 / 5) |
 | sgd | 4 | 664 | 95 | 150 | 295 (158 / 112 / 19 / 6) |
 | sgf | 3 | 181 | 11 | 39 | 42 (8 / 31 / 3 / 0) |
 | sge | 8 | 307 | 36 | 68 | 86 (49 / 32 / 5 / 0) |
@@ -119,6 +119,14 @@ From the keel's notes:
 A part cannot import another part, so the part that depends on another's answer takes it as an input named for the fact. The keel's plan lists every seam, with the input's name and type and whether the keel read the citing lines or only saw them in the cross-reference list: `notes/keel-PLAN.md`, section 4 (table A: the keel asks and a part answers; table B: a part asks and the keel answers; C: cross-reference hits that are not seams; D: the one seam the keel could not close, s 5(3)(b)(ii)).
 **One seam the plan lacks, found by `sga3`:** the keel's `sg-interests` asks, as a plain `BOOLEAN`, the fact that an interest is a company's interest in its own shares bought in accordance with ss 76B to 76G. `sga3`'s own function for that answered a `MAYBE BOOLEAN` (`JUST TRUE`, or `NOTHING` when a condition fails, fork F-B11 in `notes/sga3-NOTES.md`), and the merge did not wire it, because carrying a `NOTHING` into a `BOOLEAN` as `FALSE` would turn "not covered" into "no".
 After the independent review that function answers `JUST FALSE` when a condition fails, and a second function turns its answer into the `BOOLEAN` (see "Changes made after the independent review" below). **The seam is still not wired in the tree:** no module calls the second function, because the keel cannot import a later part, and the seat asks the field as a question of its own; the three other consumers of the same fact (`s 76(9)(c)`, `s 76H(1)` and `s 78A`) take their own inputs.
+
+## Independent readers
+
+Three reader groups wrote tests from the text alone and ran them against this encoding: 1,969 assertions, 1,884 satisfied, 85 failed, 0 refused, and 122 triage lines (`ENCODER` 2, `SCENARIO` 38, `AMBIGUOUS` 46, `GAP` 36).
+Their files, and what is not shipped with them, are in `notes/reader-README.md`.
+**Read the failures as findings, not defects left open:** of the 122 triage lines, 84 are `SCENARIO` (the reader's expectation was wrong) or `AMBIGUOUS` (the text and the Guide read both ways).
+The two `ENCODER` lines: `s 205B(5)` (changed, below) and `s 149A(3)` (the defence "proves (a) and (b)": the reader reads `JUST FALSE` when only (a) is proved, the encoding answers `NOTHING`; not changed, it turns on the same ruling as the split sites).
+The `GAP` lines name rows with no function or no input: repealed rows, duties stated only as deontics, missing penalty functions, `s 201B(2)(b)` (the kind of relative), `s 171(2)`, `s 202(4)` (the hearing duty), `s 145` (citizenship), `s 164` (a secretary's register), `s 76E(3)`, `s 76D(2A)`, `s 78B(5)`, `s 78J`, the Sixth Schedule years count, `s 10(1)` and `(3)` ("is it prohibited"), `s 64(2)` and `s 71(1A)`; they are not repaired.
 
 ## Changes made after the independent review (assumed, not ruled)
 
@@ -213,7 +221,7 @@ sga3-76h-76k.l4                                0         0       0        0     
 sga3-77-78.l4                                  0         0       0        0         0 |      0         0       0        0  same
 sga3-78a-78c.l4                                0         0       0        0         0 |      0         0       0        0  same
 sga3-78d-78k.l4                                0         0       0        0         0 |      0         0       0        0  same
-sga3-tests-76b.l4                              0        87       0        0         0 |      0        87       0        0  same
+sga3-tests-76b.l4                              0        92       0        0         0 |      0        92       0        0  same
 sga3-tests-76c-76e.l4                          0       160       0        0         0 |      0       160       0        0  same
 sga3-tests-76f-76g.l4                          0        38       0        0         0 |      0        38       0        0  same
 sga3-tests-76h-76k.l4                          0        87       0        0         0 |      0        87       0        0  same
@@ -286,7 +294,7 @@ sgc2-s206-208a-duties.l4                       0         0       0        0     
 sgc2-s209-interpretation.l4                    0         0       0        0         0 |      0         0       0        0  same
 sgc2-sch13-small.l4                            0         0       0        0         0 |      0         0       0        0  same
 sgc2-tests-s205.l4                             0       114       0        0         0 |      0       114       0        0  same
-sgc2-tests-s205a.l4                            0       142       0        0         0 |      0       142       0        0  same
+sgc2-tests-s205a.l4                            0       143       0        0         0 |      0       143       0        0  same
 sgc2-tests-s205aa.l4                           0       134       0        0         0 |      0       134       0        0  same
 sgc2-tests-s206-208a.l4                        0       181       0        0         0 |      0       181       0        0  same
 sgc2-tests-s209.l4                             0        54       0        0         0 |      0        54       0        0  same
@@ -335,12 +343,12 @@ sgg-tests-names.l4                             0       118       0        0     
 sgg-tests-registers.l4                         0        79       0        0         0 |      0        79       0        0  same
 sgg-tests-returns.l4                           0       132       0        0         0 |      0       132       0        0  same
 sgg-tests-scope.l4                             0        38       0        0         0 |      0        38       0        0  same
-TOTAL (173 modules)                            0     10470       0        0           |      0     10470       0        0
+TOTAL (173 modules)                            0     10476       0        0           |      0     10476       0        0
 (a failed assertion is also an error; any other error, or any refused assertion, makes the run red)
 (target main: every module has the same four counts on the main build. That rules out a module main rejects and a difference an assertion shows; it does not see a different TRACE outcome, or any difference no assertion exercises)
 ```
 
-The total is 10,470 assertions satisfied over 173 modules, with 0 errors, 0 failed and 0 refused, identical on the main build.
+The total is 10,476 assertions satisfied over 173 modules (10,470 when the folder was merged; the three changes in "Changes made after the independent review" added six), with 0 errors, 0 failed and 0 refused, identical on the main build.
 `check.sh` does not see a `#TRACE` outcome, because a trace prints no assertion line; each agent read its own traces on both builds, and the lead re-read every trace against its `-- EXPECT` word.
 
 ## What would need doing before the encoding is worth relying on
@@ -348,7 +356,7 @@ The total is 10,470 assertions satisfied over 173 modules, with 0 errors, 0 fail
 - A lawyer's reading of the fork registers and the marginal readings in `notes/<agent>-NOTES.md`; none has been ruled.
 - The later waves above, and a decision on the `NEEDS-CORE.md` requests.
 - A check of this edition against the current consolidation, if one later than the version in force to 20 October 2026 exists.
-- Independent test authors and a seat audit, neither of which has been run on this wave.
+- A seat audit, which has not been run on this wave, and a ruling on the split-site question below, on which the independent readers did not agree among themselves.
 
 ## Source not official
 
