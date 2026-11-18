@@ -1,0 +1,1398 @@
+# Securities and Futures Act 2001 (Singapore): Part 7 (disclosure of interests) and Part 8 (Securities Industry Council and take-over offers): encoding notes (sfaa)
+
+This file covers the ranges of agent `sfaa` only: lines 27938-31051 (Part 7, Divisions 1 to 4, sections 130 to 137ZG) and lines 31359-31514 (Part 8, sections 138 to 140) of `inputs/SFA2001.txt`.
+Where `inputs/PLAN.md` and the brief differ, the brief governs (PLAN section 8 says the same of itself).
+
+## Edition encoded
+
+The Securities and Futures Act 2001, 2020 Revised Edition, in the Singapore Statutes Online informal consolidation "version in force from 29/6/2026 to 20/10/2026", retrieved 2026-10-09, carrying the amendments its amendment marks show.
+The title page says the revised edition "incorporates all amendments up to and including 1 December 2021 and comes into operation on 31 December 2021" (lines 6-7 of the text); the consolidation line is line 15.
+A later consolidation may exist and was not read. The encoding is of that text only.
+It is a rendering, not the official text. Page furniture and amendment marks (for example "[2/2009]") are not quoted.
+Every `-- src:N | text` line in a layer-1 module is a raw line of the ranges, and every `@ref` locator equals the lowest and highest line quoted (`srcrefs.py check --refs` and `--strict` report 0 problems on every `sfaa-` file).
+
+## What this encoding is
+
+**Layer 1, the law** (12 modules, each with a `sfaa-tests-` file): `sfaa-div1-interpretation` (ss 130-132), `sfaa-div1-directors` (133-134), `sfaa-div1-shareholders` (135-137B), `sfaa-div1-register` (137C), `sfaa-div1-penalties-court` (137D-137E), `sfaa-div1-beneficial-disclosure` (137F-137G), `sfaa-div2-trust` (137H-137M), `sfaa-div2-officers` (137N-137R), `sfaa-div3-reit` (137S-137X), `sfaa-div3-officers` (137Y-137ZC), `sfaa-div4-civil-penalty` (137ZD-137ZG), `sfaa-part8` (138-140).
+Divisions 2 and 3 repeat Division 1 for business trusts and real estate investment trusts. Each section that Division 2 or 3 writes out in full is encoded in its own module with that Division's own raw lines quoted, and tested.
+Sections 137J(1) and 137U(1) apply sections 135 to 137B "as though" the trustee-manager or responsible person were the corporation; that is modelled by calling the Division 1 functions with the unitholder's facts (fork D1).
+
+**Layer 2, the seat:** `sfaa-seat.l4` (40 questions in 9 `§` groups, each named `Under section N, ...`, with `@export` and a `@desc` on every input) and `sfaa-cases-seat.l4` (131 assertions: facts a real person could state for each question, and mirror cases that put a seat answer beside the layer-1 third-person answer, or Division 1 beside Division 2 or 3, on the same facts).
+The seat is the individual to whom Part 7 and Part 8 apply: a director, officer or chief executive officer, a substantial shareholder or unitholder, a person with a beneficial interest, a person the Authority may sue for a civil penalty, a person the Securities Industry Council may summon, or a person who announces or makes a take-over offer.
+There is no seat for the Authority, the Minister, the Council or the court: their powers appear only as what they mean to the individual (a summons, an order, an action for a civil penalty, an extension of time).
+
+**The Singapore Code on Take-overs and Mergers is not in this Act and is not encoded.** Part 8 provides for the Council and refers to the Code; this part covers only the Council's statutory part (sections 138 to 140). See `## What the text does not answer (sfaa)`.
+
+## Coverage (sfaa)
+
+The rows were derived by script (`work/cov.py`, not shipped) from the text itself: a row starts at each section, subsection, paragraph and sub-paragraph marker, and a section's row also takes the Part, Division and cross-heading lines above it.
+The rows partition the two ranges: every one of the 3,270 lines (27938-31051 and 31359-31514, blank lines and amendment marks included) is in exactly one row, checked by the same script, so every non-blank line is in some row.
+**Audit counts.** Text units counted by the script: 525. Rows in this table: 525 (the same). The partition check passed on the final rows.
+The rendering repeats a paragraph tag on the words that follow a list of sub-paragraphs (for example "(a) which he or she holds ..." on lines 28136-28137 is the tail of s 133(1)(a), not a new paragraph). Those are the 6 rows marked `[tail]`; each takes the disposition of the paragraph it belongs to.
+
+**Dispositions.** encoded 199, fork 308, inert 18 (all reason 2, machinery: s 132, s 137IA, s 137TA and s 137ZG with their paragraphs), repealed or blank 0. Headings and cross-headings are inert (reason 1, not operative) and sit inside the rows of the sections they head: 46 such blocks are marked in the table.
+`fork (X)` points at a fork line: `A1` to `D2` and `C1` are in the fork register below; `SS(i)` and `SS(ii)` are the split sites (one row each under `## Split sites (sfaa)`); `G` is a function named for a grant or a power (one row each in the table under the fork register). A row inherits the fork ids of the provisions above it, so a paragraph of a forked subsection reads `fork` too.
+"within the functions of s N" means the paragraph is encoded inside the function of its subsection (the paragraph's words are quoted there and tested through it); an enumerated alternative is a constructor of the subsection's type.
+
+| Provision | Lines | Disposition | L4 name |
+| --- | --- | --- | --- |
+| s 130(1) | 27938-27950 | encoded | `s 130(1) section 130 has effect for the purposes of Division 1 and does not affect any other provision`; headings and cross-headings on lines 27938-27945 are inert (reason 1: not operative), inside this row |
+| s 130(2) | 27951-27952 | encoded | `s 130(2) the body is a corporation for the purposes of Division 1` |
+| s 130(2)(a) | 27953-27955 | encoded | `s 130(2)(a) the body is a company listed on an approved exchange` |
+| s 130(2)(b) | 27956-27963 | encoded | `s 130(2)(b) the body is a corporation other than a company with a primary listing` |
+| s 130(3) | 27964-27973 | encoded | `s 130(3) the person's interest in stock is deemed to be an interest in an issued share` |
+| s 130(4) | 27974-27975 | encoded | `s 130(4) the person is a member of the corporation` |
+| s 130(4)(a) | 27976-27979 | encoded | `s 130(4)(a) the person is a member of the company` |
+| s 130(4)(b) | 27980-27984 | encoded | `s 130(4)(b) the person is a member of a corporation other than a company` |
+| s 130(5) | 27985-27990 | encoded | `s 130(5) the person has an interest in the securities or securities-based derivatives contracts under Division 1` |
+| s 130(6) | 27991-27994 | fork (A1) | `s 130(6) kind of person`, `s 130(6) the person is conclusively presumed to have been aware of the fact or occurrence`, `s 130(6) the day from which the person is taken to have been aware` |
+| s 130(6)(a) | 27995-27998 | fork (A1) | within the functions of s 130(6) |
+| s 130(6)(b) | 27999-28003 | fork (A1) | within the functions of s 130(6) |
+| s 130(6)(c) | 28004-28008 | fork (A1) | within the functions of s 130(6) |
+| s 130(6)(d) | 28009-28014 | fork (A1) | within the functions of s 130(6) |
+| s 130(7) | 28015-28018 | encoded | `s 130(7) "officer" (a) the person is an officer of a body corporate`, `s 130(7) "officer" (b) the person is an officer of an unincorporated association`, `s 130(7) "partner" the person is a partner` |
+| s 130(7)(a) | 28019-28028 | encoded | within the functions of s 130(7) |
+| s 130(7)(b) | 28029-28040 | encoded | within the functions of s 130(7) |
+| s 131(1) | 28041-28050 | encoded | `s 131(1) the obligation to comply with Division 1 extends to the person`; headings and cross-headings on lines 28041-28043 are inert (reason 1: not operative), inside this row |
+| s 131(2) | 28051-28055 | encoded | `s 131(2) Division 1 extends to the act or omission` |
+| s 131(3) | 28056-28060 | encoded | `s 131(3) the person is exempt from the provision of Division 1` |
+| s 131(4) | 28061-28068 | encoded | `s 131(4) the exempted person must comply with the condition or restriction`, `s 131(4) and (5) the exempted person shall not contravene a condition or restriction` |
+| s 131(5) | 28069-28081 | fork (SS(i)) | `s 131(5) the person is guilty of an offence of contravening a condition or restriction`, `s 131(5) the penalty on conviction` |
+| s 131(6) | 28082-28087 | fork (B2, G, SS(ii)) | `s 131(6) the Authority has power to extend, or further extend, the time for giving the notice`, `s 131(6) the last day for giving the notice, as extended on the person's application` |
+| s 132 | 28088-28095 | inert (reason 2: machinery) | no L4 name: machinery, the Authority's power to make regulations extending the Division (an official's rule-making power; it gives the individual no right or duty); headings and cross-headings on lines 28088-28090 are inert (reason 1: not operative), inside this row |
+| s 132(a) | 28096-28098 | inert (reason 2: machinery) | no L4 name: a paragraph of s 132, machinery |
+| s 132(aa) | 28099-28103 | inert (reason 2: machinery) | no L4 name: a paragraph of s 132, machinery |
+| s 132(ab) | 28104-28109 | inert (reason 2: machinery) | no L4 name: a paragraph of s 132, machinery |
+| s 132(b) | 28110-28119 | inert (reason 2: machinery) | no L4 name: a paragraph of s 132, machinery |
+| s 133(1) | 28120-28129 | encoded | `s 133(1) matter`, `s 133(1) the director or chief executive officer must give the corporation written notice of the matter`, `s 133(1) and (3) the director or chief executive officer must give written notice within 2 business days`; headings and cross-headings on lines 28120-28125 are inert (reason 1: not operative), inside this row |
+| s 133(1)(a) | 28130-28131 | encoded | within the functions of s 133(1) |
+| s 133(1)(a)(i) | 28132-28133 | encoded | within the functions of s 133(1) |
+| s 133(1)(a)(ii) | 28134-28135 | encoded | within the functions of s 133(1) |
+| s 133(1)(a) [tail] | 28136-28138 | encoded | within the functions of s 133(1) |
+| s 133(1)(b) | 28139-28140 | encoded | within the functions of s 133(1) |
+| s 133(1)(b)(i) | 28141-28142 | encoded | within the functions of s 133(1) |
+| s 133(1)(b)(ii) | 28143-28144 | encoded | within the functions of s 133(1) |
+| s 133(1)(b) [tail] | 28145-28147 | encoded | within the functions of s 133(1) |
+| s 133(1)(c) | 28148-28151 | encoded | within the functions of s 133(1) |
+| s 133(1)(c)(i) | 28152-28153 | encoded | within the functions of s 133(1) |
+| s 133(1)(c)(ii) | 28154-28155 | encoded | within the functions of s 133(1) |
+| s 133(1)(d) | 28156-28160 | encoded | within the functions of s 133(1) |
+| s 133(1)(d)(i) | 28161-28162 | encoded | within the functions of s 133(1) |
+| s 133(1)(d)(ii) | 28163-28164 | encoded | within the functions of s 133(1) |
+| s 133(1)(e) | 28165-28166 | encoded | within the functions of s 133(1) |
+| s 133(1)(e)(i) | 28167-28171 | encoded | within the functions of s 133(1) |
+| s 133(1)(e)(ii) | 28172-28173 | encoded | within the functions of s 133(1) |
+| s 133(1)(e) [tail] | 28174-28176 | encoded | within the functions of s 133(1) |
+| s 133(1)(f) | 28177-28182 | encoded | within the functions of s 133(1) |
+| s 133(1)(g) | 28183-28187 | encoded | within the functions of s 133(1) |
+| s 133(2) | 28188-28194 | encoded | `s 133(2) the paragraph applies to a director of a corporation which is a company`, `s 133(2) the person is a director of a company` |
+| s 133(3) | 28195-28196 | encoded | within the functions of s 133 |
+| s 133(3)(a) | 28197-28199 | encoded | `s 133(3)(a) the notice is in the form and contains the information the Authority prescribes` |
+| s 133(3)(b) | 28200-28201 | fork (A3) | `s 133(3)(b) the notice is given in time` |
+| s 133(3)(b)(i) | 28202-28205 | fork (A3) | `s 133(3)(b)(i) the last day for the notice of a change` |
+| s 133(3)(b)(ii) | 28206-28222 | fork (A3) | `s 133(3)(b)(ii) the last day for any other notice` |
+| s 133(3)(b)(ii) [tail] | 28223-28223 | fork (A3) | `s 133(3)(b)(ii) the last day for any other notice` |
+| s 133(4) | 28224-28225 | encoded | within the functions of s 133 |
+| s 133(4)(a) | 28226-28234 | encoded | `s 133(4)(a) the director or chief executive officer is deemed to have the family member's interest` |
+| s 133(4)(b) | 28235-28244 | encoded | `s 133(4)(b) the family member's contract, assignment, right of subscription or grant is deemed to be the director's or chief executive officer's` |
+| s 133(5) | 28245-28246 | encoded | within the functions of s 133 |
+| s 133(5)(a) | 28247-28249 | encoded | `s 133(5)(a) the thing is a participatory interest` |
+| s 133(5)(b) | 28250-28266 | encoded | `s 133(5)(b) the person who under an option holds or acquires a right is included among those who hold or acquire` |
+| s 133(6) | 28267-28272 | fork (A2) | `s 133(6) "family member" the person is a family member`, `s 133(6) the child is below the age of 21 years` |
+| s 134(1) | 28273-28277 | fork (SS(i)) | `s 134(1) the matter is one that subsection (1) names`, `s 134(1) the director or chief executive officer is guilty of an offence under subsection (1)`, `s 134(1) the penalty on conviction`; headings and cross-headings on lines 28273-28274 are inert (reason 1: not operative), inside this row |
+| s 134(1)(a) | 28278-28287 | fork (SS(i)) | `s 134(1)(a) the director or chief executive officer intentionally or recklessly contravened section 133(1)` |
+| s 134(1)(b) | 28288-28292 | fork (SS(i)) | `s 134(1)(b) the director or chief executive officer intentionally or recklessly contravened section 133(3)` |
+| s 134(1)(c) | 28293-28308 | fork (SS(i)) | `s 134(1)(c) the director or chief executive officer in purported compliance provided information known to be false or misleading` |
+| s 134(2) | 28309-28310 | fork (SS(i)) | `s 134(2) the director or chief executive officer is guilty of an offence under subsection (2)`, `s 134(2) the penalty on conviction` |
+| s 134(2)(a) | 28311-28312 | fork (SS(i)) | within the functions of s 134(2) |
+| s 134(2)(b) | 28313-28327 | fork (SS(i)) | within the functions of s 134(2) |
+| s 134(3) | 28328-28330 | encoded | `s 134(3) no proceedings may be instituted for an offence under section 134` |
+| s 134(3)(a) | 28331-28334 | encoded | within the functions of s 134(3) |
+| s 134(3)(b) | 28335-28341 | encoded | within the functions of s 134(3) |
+| s 135(1) | 28342-28355 | encoded | `s 135(1) the person must give the corporation written notice of particulars of the voting shares`, `s 135(1) and (2)(b) the substantial shareholder must give written notice within 2 business days`; headings and cross-headings on lines 28342-28347 are inert (reason 1: not operative), inside this row |
+| s 135(2) | 28356-28357 | encoded | within the functions of s 135 |
+| s 135(2)(a) | 28358-28360 | encoded | `s 135(2)(a) the notice is in the form and contains the information the Authority prescribes` |
+| s 135(2)(b) | 28361-28367 | fork (A3) | `s 135(2)(b) the last day for the notice`, `s 135(2)(b) the notice is given in time` |
+| s 135(2)(c) | 28368-28373 | encoded | `s 135(2)(c) the notice must be given although the person has ceased to be a substantial shareholder within the period` |
+| s 136(1) | 28374-28384 | fork (A3) | `s 136(1) the substantial shareholder must give the corporation written notice of the change in the percentage level`, `s 136(1) the last day for the notice`, `s 136(1) the notice is given in time`, `s 136(1) the substantial shareholder must give written notice of the change within 2 business days`; headings and cross-headings on lines 28374-28376 are inert (reason 1: not operative), inside this row |
+| s 136(2) | 28385-28389 | encoded | `s 136(2) the notice is in the form and contains the information the Authority prescribes` |
+| s 136(3) | 28390-28396 | fork (A4) | `s 136(3) the percentage level of the substantial shareholder's interests` |
+| s 136(3)(a) | 28397-28399 | fork (A4) | within the functions of s 136(3) |
+| s 136(3)(b) | 28400-28408 | fork (A4) | within the functions of s 136(3) |
+| s 137(1) | 28409-28422 | fork (A3) | `s 137(1) the person who ceases to be a substantial shareholder must give the corporation written notice`, `s 137(1) the last day for the notice`, `s 137(1) the notice is given in time`, `s 137(1) the person who ceases to be a substantial shareholder must give written notice within 2 business days`; headings and cross-headings on lines 28409-28411 are inert (reason 1: not operative), inside this row |
+| s 137(2) | 28423-28427 | encoded | `s 137(2) the notice is in the form and contains the information the Authority prescribes` |
+| s 137A | 28428-28441 | fork (A3, A5) | `s 137A the person must take reasonable steps to ensure that the other person notifies the person`, `s 137A the person has taken reasonable steps`, `s 137A the last day for the notice`, `s 137A the notice is given in time` (+2); headings and cross-headings on lines 28428-28430 are inert (reason 1: not operative), inside this row |
+| s 137B | 28442-28453 | fork (A3) | `s 137B the person must give the other person a notice of the acquisition or disposal`, `s 137B the last day for the notice`, `s 137B the notice is given in time`, `s 137B the notice is in the form the Authority prescribes` (+2); headings and cross-headings on lines 28442-28444 are inert (reason 1: not operative), inside this row |
+| s 137C(1) | 28454-28458 | fork (A6) | `s 137C(1) the corporation must keep a register`, `s 137C(1) the corporation must immediately enter the names and information in the register`, `s 137C(1) the corporation must immediately enter the names and information in the register`; headings and cross-headings on lines 28454-28455 are inert (reason 1: not operative), inside this row |
+| s 137C(1)(a) | 28459-28461 | fork (A6) | within the functions of s 137C(1) |
+| s 137C(1)(b) | 28462-28470 | fork (A6) | within the functions of s 137C(1) |
+| s 137C(2) | 28471-28479 | encoded | `s 137C(2) the register is kept at the place the subsection requires`, `s 137C(2) the most the corporation may charge for each inspection of the register, in Singapore dollars` |
+| s 137C(3) | 28480-28489 | fork (A3) | `s 137C(3) the most the corporation may charge in advance for each page copied, in Singapore dollars`, `s 137C(3) the last day for the corporation to send the copy`, `s 137C(3) the copy is sent in time`, `s 137C(3) the corporation must send the copy within 14 days` |
+| s 137C(4) | 28490-28497 | encoded | `s 137C(4) the corporation must send the Authority a copy of the register`, `s 137C(4) the last day for the corporation to send the copy to the Authority`, `s 137C(4) the copy is sent to the Authority in time`, `s 137C(4) the corporation must send the Authority the copy within 7 days` |
+| s 137C(5) | 28498-28505 | fork (SS(i)) | `s 137C(5) the corporation is guilty of an offence of failing to comply with the register provisions`, `s 137C(5) the penalty on conviction` |
+| s 137C(6) | 28506-28508 | encoded | `s 137C(6) the corporation is not taken to have notice of, or to be put upon inquiry as to, a right in a share by reason of the thing done` |
+| s 137C(6)(a) | 28509-28511 | encoded | within the functions of s 137C(6) |
+| s 137C(6)(b) | 28512-28520 | encoded | within the functions of s 137C(6) |
+| s 137D(1) | 28521-28524 | fork (SS(i)) | `s 137D(1) the person is guilty of an offence under subsection (1)`, `s 137D(1) the penalty on conviction`; headings and cross-headings on lines 28521-28522 are inert (reason 1: not operative), inside this row |
+| s 137D(1)(a) | 28525-28527 | fork (SS(i)) | within the functions of s 137D(1) |
+| s 137D(1)(b) | 28528-28534 | fork (SS(i)) | within the functions of s 137D(1) |
+| s 137D(1)(c) | 28535-28541 | fork (SS(i)) | within the functions of s 137D(1) |
+| s 137D(1)(d) | 28542-28549 | fork (SS(i)) | within the functions of s 137D(1) |
+| s 137D(2) | 28550-28551 | fork (SS(i)) | `s 137D(2) the person is guilty of an offence under subsection (2)`, `s 137D(2) the penalty on conviction` |
+| s 137D(2)(a) | 28552-28554 | fork (SS(i)) | within the functions of s 137D(2) |
+| s 137D(2)(b) | 28555-28569 | fork (SS(i)) | within the functions of s 137D(2) |
+| s 137D(3) | 28570-28572 | encoded | `s 137D(3) no proceedings may be instituted for an offence under section 137D` |
+| s 137D(3)(a) | 28573-28576 | encoded | within the functions of s 137D(3) |
+| s 137D(3)(b) | 28577-28583 | encoded | within the functions of s 137D(3) |
+| s 137E(1) | 28584-28591 | fork (B3, G, SS(ii)) | `s 137E(1) kind of order`, `s 137E(1) the court has power to make one or more of the orders listed in the subsection`; headings and cross-headings on lines 28584-28586 are inert (reason 1: not operative), inside this row |
+| s 137E(1)(a) | 28592-28596 | fork (B3, G, SS(ii)) | within the functions of s 137E(1) |
+| s 137E(1)(b) | 28597-28600 | fork (B3, G, SS(ii)) | within the functions of s 137E(1) |
+| s 137E(1)(c) | 28601-28605 | fork (B3, G, SS(ii)) | within the functions of s 137E(1) |
+| s 137E(1)(d) | 28606-28610 | fork (B3, G, SS(ii)) | within the functions of s 137E(1) |
+| s 137E(1)(e) | 28611-28617 | fork (B3, G, SS(ii)) | within the functions of s 137E(1) |
+| s 137E(1)(f) | 28618-28621 | fork (B3, G, SS(ii)) | within the functions of s 137E(1) |
+| s 137E(1)(g) | 28622-28627 | fork (B3, G, SS(ii)) | within the functions of s 137E(1) |
+| s 137E(1)(h) | 28628-28632 | fork (B3, G, SS(ii)) | within the functions of s 137E(1) |
+| s 137E(1)(i) | 28633-28639 | fork (B3, G, SS(ii)) | within the functions of s 137E(1) |
+| s 137E(2) | 28640-28644 | fork (G) | `s 137E(2) the order may include ancillary or consequential provisions the court thinks just` |
+| s 137E(3) | 28645-28653 | encoded | `s 137E(3) the sale to the buyer is barred by the court's condition` |
+| s 137E(4) | 28654-28660 | fork (B4, G, SS(ii)) | `s 137E(4) the Authority may apply to the court for directions on the unsold share` |
+| s 137E(5) | 28661-28670 | encoded | `s 137E(5) the court must first satisfy itself that the order would not unfairly prejudice any person` |
+| s 137E(6) | 28671-28673 | fork (A7, B5) | `s 137E(6) the court is not to make the order` |
+| s 137E(6)(a) | 28674-28679 | fork (A7, B5) | within the functions of s 137E(6) |
+| s 137E(6)(b) | 28680-28684 | fork (A7, B5) | within the functions of s 137E(6) |
+| s 137E(7) | 28685-28691 | fork (B6, G, SS(ii)) | `s 137E(7) the court may direct that notice of the application be given or published` |
+| s 137E(8) | 28692-28696 | fork (G) | `s 137E(8) the court may rescind, vary, discharge or suspend the order` |
+| s 137E(9) | 28697-28705 | fork (SS(i)) | `s 137E(9) the person is guilty of an offence of contravening an order of the court`, `s 137E(9) the penalty on conviction`, `s 137E(9) the person shall not contravene an order of the court` |
+| s 137E(10) | 28706-28710 | encoded | `s 137E(10) subsection (9) does not affect the court's powers in relation to the punishment of contempt` |
+| s 137F(1) | 28711-28717 | fork (G) | `s 137F(1) the corporation may require the member to give the information`; headings and cross-headings on lines 28711-28713 are inert (reason 1: not operative), inside this row |
+| s 137F(1)(a) | 28718-28723 | fork (G) | `s 137F(1)(a) the corporation may require the member to inform it whether the member holds voting shares as beneficial owner or as trustee` |
+| s 137F(1)(b) | 28724-28731 | fork (G) | `s 137F(1)(b) the corporation may require the member who holds the shares as trustee to indicate the persons for whom the member holds them` |
+| s 137F(2) | 28732-28737 | fork (B7, G, SS(ii)) | `s 137F(2) the corporation may require the other person to give the information` |
+| s 137F(2)(a) | 28738-28740 | fork (B7, G, SS(ii)) | `s 137F(2)(a) the corporation may require the other person to inform it whether the person holds the interest as beneficial owner or as trustee` |
+| s 137F(2)(b) | 28741-28748 | fork (B7, G, SS(ii)) | `s 137F(2)(b) the corporation may require the other person who holds the interest as trustee to indicate the persons for whom it is held` |
+| s 137F(3) | 28749-28758 | fork (G) | `s 137F(3) the corporation may require the member to inform it whether the voting rights are subject to an agreement or arrangement`, `s 137F(3) the corporation may require the member to give particulars of the agreement or arrangement and the parties to it` |
+| s 137F(4) | 28759-28765 | fork (B8) | `s 137F(4) the notice contains the other information the Authority prescribes and is delivered as it prescribes` |
+| s 137F(5) | 28766-28770 | fork (B8) | `s 137F(5) the person must comply with the notice`, `s 137F(5) the person must comply with the notice within the time it specifies` |
+| s 137F(6) | 28771-28780 | encoded | `s 137F(6) the corporation must inscribe the fact of the requirement, its date and the information in a separate part of the register` |
+| s 137F(6)(a) | 28781-28783 | encoded | within the functions of s 137F(6) |
+| s 137F(6)(b) | 28784-28787 | encoded | within the functions of s 137F(6) |
+| s 137F(7) | 28788-28794 | encoded | `s 137F(7) section 137C applies to the separate part of the register` |
+| s 137F(8) | 28795-28796 | fork (SS(i)) | `s 137F(8) the person is guilty of an offence under subsection (8)`, `s 137F(8) the penalty on conviction` |
+| s 137F(8)(a) | 28797-28798 | fork (SS(i)) | within the functions of s 137F(8) |
+| s 137F(8)(b) | 28799-28804 | fork (SS(i)) | within the functions of s 137F(8) |
+| s 137F(8)(c) | 28805-28811 | fork (SS(i)) | within the functions of s 137F(8) |
+| s 137F(8)(d) | 28812-28819 | fork (SS(i)) | within the functions of s 137F(8) |
+| s 137F(9) | 28820-28821 | fork (SS(i)) | `s 137F(9) the person is guilty of an offence under subsection (9)`, `s 137F(9) the penalty on conviction` |
+| s 137F(9)(a) | 28822-28826 | fork (SS(i)) | within the functions of s 137F(9) |
+| s 137F(9)(b) | 28827-28838 | fork (SS(i)) | within the functions of s 137F(9) |
+| s 137F(10) | 28839-28845 | encoded | `s 137F(10) the person is not guilty of an offence under subsection (8)(a) or (9)(a)` |
+| s 137F(11) | 28846-28848 | encoded | `s 137F(11) no proceedings may be instituted for an offence under section 137F` |
+| s 137F(11)(a) | 28849-28852 | encoded | within the functions of s 137F(11) |
+| s 137F(11)(b) | 28853-28859 | encoded | within the functions of s 137F(11) |
+| s 137G(1) | 28860-28865 | fork (A3, B9) | `s 137G(1) the corporation must announce or disseminate the information stated in the notice`, `s 137G(1) the last day for the announcement`, `s 137G(1) the announcement is made in time`, `s 137G(1) the corporation must announce or disseminate the information by the end of the next business day`; headings and cross-headings on lines 28860-28863 are inert (reason 1: not operative), inside this row |
+| s 137G(1)(a) | 28866-28875 | fork (A3, B9) | `s 137G(1)(a) the matter is one the paragraph names` |
+| s 137G(1)(b) | 28876-28888 | fork (A3, B9) | within the functions of s 137G(1) |
+| s 137G(2) | 28889-28893 | encoded | `s 137G(2) the corporation announces or disseminates the information in the form and manner the Authority prescribes` |
+| s 137G(3) | 28894-28895 | fork (SS(i)) | `s 137G(3) the person is guilty of an offence under subsection (3)`, `s 137G(3) the penalty on conviction` |
+| s 137G(3)(a) | 28896-28898 | fork (SS(i)) | within the functions of s 137G(3) |
+| s 137G(3)(b) | 28899-28910 | fork (SS(i)) | within the functions of s 137G(3) |
+| s 137G(4) | 28911-28912 | fork (SS(i)) | `s 137G(4) the person is guilty of an offence under subsection (4)`, `s 137G(4) the penalty on conviction` |
+| s 137G(4)(a) | 28913-28914 | fork (SS(i)) | within the functions of s 137G(4) |
+| s 137G(4)(b) | 28915-28930 | fork (SS(i)) | within the functions of s 137G(4) |
+| s 137G(5) | 28931-28933 | fork (B10, SS(i)) | `s 137G(5) the officer is within the subsection` |
+| s 137G(5)(a) | 28934-28935 | fork (B10, SS(i)) | within the functions of s 137G(5) |
+| s 137G(5)(b) | 28936-28939 | fork (B10, SS(i)) | within the functions of s 137G(5) |
+| s 137G(5)(c) | 28940-28945 | fork (B10, SS(i)) | within the functions of s 137G(5) |
+| s 137G(5)(d) | 28946-28953 | fork (B10, SS(i)) | `s 137G(5)(d) the officer is guilty of an offence for acting intentionally or recklessly`, `s 137G(5)(d) the penalty on conviction` |
+| s 137G(5)(e) | 28954-28959 | fork (B10, SS(i)) | `s 137G(5)(e) the officer is guilty of an offence for acting negligently`, `s 137G(5)(e) the penalty on conviction` |
+| s 137G(6) | 28960-28966 | encoded | `s 137G(6) the person is an officer of the corporation` |
+| s 137G(7) | 28967-28969 | encoded | `s 137G(7) no proceedings may be instituted for an offence under section 137G` |
+| s 137G(7)(a) | 28970-28976 | encoded | within the functions of s 137G(7) |
+| s 137G(7)(b) | 28977-28983 | encoded | within the functions of s 137G(7) |
+| s 137H(1) | 28984-28993 | encoded | `s 137H(1) section 137H has effect for the purposes of Division 2 and does not affect any other provision`; headings and cross-headings on lines 28984-28988 are inert (reason 1: not operative), inside this row |
+| s 137H(2) | 28994-28999 | encoded | `s 137H(2) the trust is a registered business trust for the purposes of Division 2` |
+| s 137H(3) | 29000-29006 | encoded | `s 137H(3) the trust is a recognised business trust for the purposes of Division 2` |
+| s 137H(4) | 29007-29012 | encoded | `s 137H(4) the person has an interest in the securities or securities-based derivatives contracts under Division 2` |
+| s 137H(5) | 29013-29014 | encoded | `s 137H(5) section 130(6) and (7) apply to the provision` |
+| s 137H(5)(a) | 29015-29017 | encoded | within the functions of s 137H(5) |
+| s 137H(5)(b) | 29018-29027 | encoded | within the functions of s 137H(5) |
+| s 137I(1) | 29028-29037 | encoded | `s 137I(1) the obligation to comply with Division 2 extends to the person`; headings and cross-headings on lines 29028-29030 are inert (reason 1: not operative), inside this row |
+| s 137I(2) | 29038-29042 | encoded | `s 137I(2) Division 2 extends to the act or omission` |
+| s 137I(3) | 29043-29047 | encoded | `s 137I(3) the person is exempt from the provision of Division 2` |
+| s 137I(4) | 29048-29055 | encoded | `s 137I(4) the exempted person must comply with the condition or restriction`, `s 137I(4) and (5) the exempted person shall not contravene a condition or restriction` |
+| s 137I(5) | 29056-29064 | fork (SS(i)) | `s 137I(5) the person is guilty of an offence of contravening a condition or restriction`, `s 137I(5) the penalty on conviction` |
+| s 137I(6) | 29065-29070 | fork (B2, G, SS(ii)) | `s 137I(6) the Authority has power to extend, or further extend, the time for giving the notice`, `s 137I(6) the last day for giving the notice, as extended on the person's application` |
+| s 137IA | 29071-29081 | inert (reason 2: machinery) | no L4 name: machinery, the Authority's power to make regulations extending the Division (an official's rule-making power; it gives the individual no right or duty); headings and cross-headings on lines 29071-29073 are inert (reason 1: not operative), inside this row |
+| s 137IA(a) | 29082-29084 | inert (reason 2: machinery) | no L4 name: a paragraph of s 137IA, machinery |
+| s 137IA(b) | 29085-29089 | inert (reason 2: machinery) | no L4 name: a paragraph of s 137IA, machinery |
+| s 137IA(c) | 29090-29095 | inert (reason 2: machinery) | no L4 name: a paragraph of s 137IA, machinery |
+| s 137IA(d) | 29096-29103 | inert (reason 2: machinery) | no L4 name: a paragraph of s 137IA, machinery |
+| s 137J(1) | 29104-29114 | fork (D1) | `s 137J(1) sections 135 to 137B apply to the substantial unitholder`; headings and cross-headings on lines 29104-29109 are inert (reason 1: not operative), inside this row |
+| s 137J(1)(a) | 29115-29118 | fork (D1) | within the functions of s 137J(1) |
+| s 137J(1)(b) | 29119-29122 | fork (D1) | within the functions of s 137J(1) |
+| s 137J(1)(c) | 29123-29133 | fork (D1) | within the functions of s 137J(1) |
+| s 137J(2) | 29134-29135 | fork (SS(i)) | `s 137J(2) the person is guilty of an offence under subsection (2)`, `s 137J(2) the penalty on conviction` |
+| s 137J(2)(a) | 29136-29138 | fork (SS(i)) | within the functions of s 137J(2) |
+| s 137J(2)(b) | 29139-29146 | fork (SS(i)) | within the functions of s 137J(2) |
+| s 137J(2)(c) | 29147-29153 | fork (SS(i)) | within the functions of s 137J(2) |
+| s 137J(2)(d) | 29154-29161 | fork (SS(i)) | within the functions of s 137J(2) |
+| s 137J(3) | 29162-29163 | fork (SS(i)) | `s 137J(3) the person is guilty of an offence under subsection (3)`, `s 137J(3) the penalty on conviction` |
+| s 137J(3)(a) | 29164-29166 | fork (SS(i)) | within the functions of s 137J(3) |
+| s 137J(3)(b) | 29167-29183 | fork (SS(i)) | within the functions of s 137J(3) |
+| s 137J(4) | 29184-29186 | encoded | `s 137J(4) no proceedings may be instituted for an offence under section 137J` |
+| s 137J(4)(a) | 29187-29190 | encoded | within the functions of s 137J(4) |
+| s 137J(4)(b) | 29191-29197 | encoded | within the functions of s 137J(4) |
+| s 137K(1) | 29198-29203 | fork (A6) | `s 137K(1) the trustee-manager must keep a register`, `s 137K(1) the trustee-manager must immediately enter the names and information in the register`, `s 137K(1) the trustee-manager must immediately enter the names and information in the register`; headings and cross-headings on lines 29198-29199 are inert (reason 1: not operative), inside this row |
+| s 137K(1)(a) | 29204-29206 | fork (A6) | within the functions of s 137K(1) |
+| s 137K(1)(b) | 29207-29213 | fork (A6) | within the functions of s 137K(1) |
+| s 137K(2) | 29214-29222 | encoded | `s 137K(2) the register is kept at the place the subsection requires`, `s 137K(2) the most the trustee-manager may charge for each inspection of the register, in Singapore dollars` |
+| s 137K(3) | 29223-29236 | fork (A3) | `s 137K(3) the most the trustee-manager may charge in advance for each page copied, in Singapore dollars`, `s 137K(3) the last day for the trustee-manager to send the copy`, `s 137K(3) the copy is sent in time`, `s 137K(3) the trustee-manager must send the copy within 14 days` |
+| s 137K(4) | 29237-29244 | encoded | `s 137K(4) the trustee-manager must send the Authority a copy of the register`, `s 137K(4) the last day for the trustee-manager to send the copy to the Authority`, `s 137K(4) the copy is sent to the Authority in time`, `s 137K(4) the trustee-manager must send the Authority the copy within 7 days` |
+| s 137K(5) | 29245-29253 | fork (SS(i)) | `s 137K(5) the trustee-manager is guilty of an offence of failing to comply with the register provisions`, `s 137K(5) the penalty on conviction` |
+| s 137L(1) | 29254-29263 | fork (B3, G, SS(ii)) | `s 137L(1) kind of order`, `s 137L(1) the court has power to make one or more of the orders listed in the subsection`; headings and cross-headings on lines 29254-29256 are inert (reason 1: not operative), inside this row |
+| s 137L(1)(a) | 29264-29267 | fork (B3, G, SS(ii)) | within the functions of s 137L(1) |
+| s 137L(1)(b) | 29268-29271 | fork (B3, G, SS(ii)) | within the functions of s 137L(1) |
+| s 137L(1)(c) | 29272-29279 | fork (B3, G, SS(ii)) | within the functions of s 137L(1) |
+| s 137L(1)(d) | 29280-29285 | fork (B3, G, SS(ii)) | within the functions of s 137L(1) |
+| s 137L(1)(e) | 29286-29289 | fork (B3, G, SS(ii)) | within the functions of s 137L(1) |
+| s 137L(1)(f) | 29290-29294 | fork (B3, G, SS(ii)) | within the functions of s 137L(1) |
+| s 137L(1)(g) | 29295-29300 | fork (B3, G, SS(ii)) | within the functions of s 137L(1) |
+| s 137L(1)(h) | 29301-29305 | fork (B3, G, SS(ii)) | within the functions of s 137L(1) |
+| s 137L(1)(i) | 29306-29312 | fork (B3, G, SS(ii)) | within the functions of s 137L(1) |
+| s 137L(2) | 29313-29317 | fork (G) | `s 137L(2) the order may include ancillary or consequential provisions the court thinks just` |
+| s 137L(3) | 29318-29329 | encoded | `s 137L(3) the sale to the buyer is barred by the court's condition` |
+| s 137L(4) | 29330-29335 | fork (B4, G, SS(ii)) | `s 137L(4) the Authority may apply to the court for directions on the unsold unit` |
+| s 137L(5) | 29336-29342 | encoded | `s 137L(5) the court must first satisfy itself that the order would not unfairly prejudice any person` |
+| s 137L(6) | 29343-29345 | fork (A7, B5) | `s 137L(6) the court is not to make the order` |
+| s 137L(6)(a) | 29346-29351 | fork (A7, B5) | within the functions of s 137L(6) |
+| s 137L(6)(b) | 29352-29356 | fork (A7, B5) | within the functions of s 137L(6) |
+| s 137L(7) | 29357-29363 | fork (B6, G, SS(ii)) | `s 137L(7) the court may direct that notice of the application be given or published` |
+| s 137L(8) | 29364-29368 | fork (G) | `s 137L(8) the court may rescind, vary, discharge or suspend the order` |
+| s 137L(9) | 29369-29377 | fork (SS(i)) | `s 137L(9) the person is guilty of an offence of contravening an order of the court`, `s 137L(9) the penalty on conviction`, `s 137L(9) the person shall not contravene an order of the court` |
+| s 137L(10) | 29378-29385 | encoded | `s 137L(10) subsection (9) does not affect the court's powers in relation to the punishment of contempt` |
+| s 137M(1) | 29386-29393 | fork (G) | `s 137M(1) the trustee-manager may require the unitholder to give the information`; headings and cross-headings on lines 29386-29388 are inert (reason 1: not operative), inside this row |
+| s 137M(1)(a) | 29394-29396 | fork (G) | `s 137M(1)(a) the trustee-manager may require the unitholder to inform it whether the unitholder holds voting units as beneficial owner or as trustee` |
+| s 137M(1)(b) | 29397-29404 | fork (G) | `s 137M(1)(b) the trustee-manager may require the unitholder who holds the units as trustee to indicate the persons for whom the unitholder holds them` |
+| s 137M(2) | 29405-29411 | fork (B7, G, SS(ii)) | `s 137M(2) the trustee-manager may require the other person to give the information` |
+| s 137M(2)(a) | 29412-29414 | fork (B7, G, SS(ii)) | `s 137M(2)(a) the trustee-manager may require the other person to inform it whether the person holds the interest as beneficial owner or as trustee` |
+| s 137M(2)(b) | 29415-29422 | fork (B7, G, SS(ii)) | `s 137M(2)(b) the trustee-manager may require the other person who holds the interest as trustee to indicate the persons for whom it is held` |
+| s 137M(3) | 29423-29437 | fork (G) | `s 137M(3) the trustee-manager may require the unitholder to inform it whether the voting rights are subject to an agreement or arrangement`, `s 137M(3) the trustee-manager may require the unitholder to give particulars of the agreement or arrangement and the parties to it` |
+| s 137M(4) | 29438-29444 | fork (B8) | `s 137M(4) the notice contains the other information the Authority prescribes and is delivered as it prescribes` |
+| s 137M(5) | 29445-29449 | fork (B8) | `s 137M(5) the person must comply with the notice`, `s 137M(5) the person must comply with the notice within the time it specifies` |
+| s 137M(6) | 29450-29456 | encoded | `s 137M(6) the trustee-manager must inscribe the fact of the requirement, its date and the information in a separate part of the register` |
+| s 137M(6)(a) | 29457-29459 | encoded | within the functions of s 137M(6) |
+| s 137M(6)(b) | 29460-29463 | encoded | within the functions of s 137M(6) |
+| s 137M(7) | 29464-29470 | encoded | `s 137M(7) section 137K applies to the separate part of the register` |
+| s 137M(8) | 29471-29472 | fork (SS(i)) | `s 137M(8) the person is guilty of an offence under subsection (8)`, `s 137M(8) the penalty on conviction` |
+| s 137M(8)(a) | 29473-29474 | fork (SS(i)) | within the functions of s 137M(8) |
+| s 137M(8)(b) | 29475-29480 | fork (SS(i)) | within the functions of s 137M(8) |
+| s 137M(8)(c) | 29481-29491 | fork (SS(i)) | within the functions of s 137M(8) |
+| s 137M(8)(d) | 29492-29499 | fork (SS(i)) | within the functions of s 137M(8) |
+| s 137M(9) | 29500-29501 | fork (SS(i)) | `s 137M(9) the person is guilty of an offence under subsection (9)`, `s 137M(9) the penalty on conviction` |
+| s 137M(9)(a) | 29502-29503 | fork (SS(i)) | within the functions of s 137M(9) |
+| s 137M(9)(b) | 29504-29515 | fork (SS(i)) | within the functions of s 137M(9) |
+| s 137M(10) | 29516-29523 | encoded | `s 137M(10) the person is not guilty of an offence under subsection (8)(a) or (9)(a)` |
+| s 137M(11) | 29524-29526 | encoded | `s 137M(11) no proceedings may be instituted for an offence under section 137M` |
+| s 137M(11)(a) | 29527-29530 | encoded | within the functions of s 137M(11) |
+| s 137M(11)(b) | 29531-29540 | encoded | within the functions of s 137M(11) |
+| s 137N(1) | 29541-29551 | encoded | `s 137N(1) the director or chief executive officer must give the trustee-manager written notice of the matter`, `s 137N(1) and (2) the director or chief executive officer must give written notice within 2 business days`; headings and cross-headings on lines 29541-29546 are inert (reason 1: not operative), inside this row |
+| s 137N(1)(a) | 29552-29556 | encoded | within the functions of s 137N(1) |
+| s 137N(1)(b) | 29557-29560 | encoded | within the functions of s 137N(1) |
+| s 137N(1)(c) | 29561-29566 | encoded | within the functions of s 137N(1) |
+| s 137N(1)(d) | 29567-29571 | encoded | within the functions of s 137N(1) |
+| s 137N(2) | 29572-29573 | encoded | within the functions of s 137N |
+| s 137N(2)(a) | 29574-29576 | encoded | `s 137N(2)(a) the notice is in the form and contains the information the Authority prescribes` |
+| s 137N(2)(b) | 29577-29578 | fork (A3) | `s 137N(2)(b) the notice is given in time` |
+| s 137N(2)(b)(i) | 29579-29582 | fork (A3) | `s 137N(2)(b)(i) the last day for the notice of a change` |
+| s 137N(2)(b)(ii) | 29583-29598 | fork (A3) | `s 137N(2)(b)(ii) the last day for any other notice` |
+| s 137N(2)(b)(ii) [tail] | 29599-29602 | fork (A3) | `s 137N(2)(b)(ii) the last day for any other notice` |
+| s 137N(3) | 29603-29612 | encoded | `s 137N(3) the director or chief executive officer is deemed to have the family member's interest` |
+| s 137N(4) | 29613-29625 | fork (A2) | `s 137N(4) "family member" the person is a family member`, `s 137N(4) the child is below the age of 21 years`, `s 137N(4) "unit" in relation to a debenture the thing is a unit` |
+| s 137O(1) | 29626-29631 | fork (SS(i)) | `s 137O(1) the person is guilty of an offence under subsection (1)`, `s 137O(1) the penalty on conviction`; headings and cross-headings on lines 29626-29627 are inert (reason 1: not operative), inside this row |
+| s 137O(1)(a) | 29632-29634 | fork (SS(i)) | within the functions of s 137O(1) |
+| s 137O(1)(b) | 29635-29649 | fork (SS(i)) | within the functions of s 137O(1) |
+| s 137O(2) | 29650-29652 | fork (SS(i)) | `s 137O(2) the person is guilty of an offence under subsection (2)`, `s 137O(2) the penalty on conviction` |
+| s 137O(2)(a) | 29653-29654 | fork (SS(i)) | within the functions of s 137O(2) |
+| s 137O(2)(b) | 29655-29666 | fork (SS(i)) | within the functions of s 137O(2) |
+| s 137O(3) | 29667-29669 | encoded | `s 137O(3) no proceedings may be instituted for an offence under section 137O` |
+| s 137O(3)(a) | 29670-29673 | encoded | within the functions of s 137O(3) |
+| s 137O(3)(b) | 29674-29680 | encoded | within the functions of s 137O(3) |
+| s 137P(1) | 29681-29699 | fork (A3, B11) | `s 137P(1) the percentage of interest reaches, crosses or falls below 15%, 30%, 50% or 75%`, `s 137P(1) the person must give the trustee-manager written notice of the change in the percentage of interest`, `s 137P(1) the last day for the notice`, `s 137P(1) the notice is given in time` (+1); headings and cross-headings on lines 29681-29686 are inert (reason 1: not operative), inside this row |
+| s 137P(2) | 29700-29704 | encoded | `s 137P(2) the notice is in the form and contains the information the Authority prescribes` |
+| s 137P(3) | 29705-29711 | fork (A4) | `s 137P(3) the percentage of interest of the person in the voting shares` |
+| s 137P(3)(a) | 29712-29714 | fork (A4) | within the functions of s 137P(3) |
+| s 137P(3)(b) | 29715-29723 | fork (A4) | within the functions of s 137P(3) |
+| s 137Q(1) | 29724-29727 | fork (SS(i)) | `s 137Q(1) the person is guilty of an offence under subsection (1)`, `s 137Q(1) the penalty on conviction`; headings and cross-headings on lines 29724-29725 are inert (reason 1: not operative), inside this row |
+| s 137Q(1)(a) | 29728-29730 | fork (SS(i)) | within the functions of s 137Q(1) |
+| s 137Q(1)(b) | 29731-29736 | fork (SS(i)) | within the functions of s 137Q(1) |
+| s 137Q(1)(c) | 29737-29747 | fork (SS(i)) | within the functions of s 137Q(1) |
+| s 137Q(1)(d) | 29748-29755 | fork (SS(i)) | within the functions of s 137Q(1) |
+| s 137Q(2) | 29756-29757 | fork (SS(i)) | `s 137Q(2) the person is guilty of an offence under subsection (2)`, `s 137Q(2) the penalty on conviction` |
+| s 137Q(2)(a) | 29758-29759 | fork (SS(i)) | within the functions of s 137Q(2) |
+| s 137Q(2)(b) | 29760-29771 | fork (SS(i)) | within the functions of s 137Q(2) |
+| s 137Q(3) | 29772-29774 | encoded | `s 137Q(3) no proceedings may be instituted for an offence under section 137Q` |
+| s 137Q(3)(a) | 29775-29778 | encoded | within the functions of s 137Q(3) |
+| s 137Q(3)(b) | 29779-29785 | encoded | within the functions of s 137Q(3) |
+| s 137R(1) | 29786-29795 | fork (A3, B9) | `s 137R(1) the trustee-manager must announce or disseminate the particulars or the information stated in the notice`, `s 137R(1) the last day for the announcement`, `s 137R(1) the announcement is made in time`, `s 137R(1) the trustee-manager must announce or disseminate the information by the end of the next business day`; headings and cross-headings on lines 29786-29789 are inert (reason 1: not operative), inside this row |
+| s 137R(1)(a) | 29796-29799 | fork (A3, B9) | within the functions of s 137R(1) |
+| s 137R(1)(aa) | 29800-29804 | fork (A3, B9) | within the functions of s 137R(1) |
+| s 137R(1)(b) | 29805-29806 | fork (A3, B9) | within the functions of s 137R(1) |
+| s 137R(1)(b)(i) | 29807-29811 | fork (A3, B9) | within the functions of s 137R(1) |
+| s 137R(1)(b)(ii) | 29812-29815 | fork (A3, B9) | within the functions of s 137R(1) |
+| s 137R(1)(b)(iii) | 29816-29831 | fork (A3, B9) | within the functions of s 137R(1) |
+| s 137R(2) | 29832-29837 | encoded | `s 137R(2) the trustee-manager announces or disseminates the information in the form and manner the Authority prescribes` |
+| s 137R(3) | 29838-29843 | fork (SS(i)) | `s 137R(3) the person is guilty of an offence under subsection (3)`, `s 137R(3) the penalty on conviction` |
+| s 137R(3)(a) | 29844-29846 | fork (SS(i)) | within the functions of s 137R(3) |
+| s 137R(3)(b) | 29847-29858 | fork (SS(i)) | within the functions of s 137R(3) |
+| s 137R(4) | 29859-29861 | fork (SS(i)) | `s 137R(4) the person is guilty of an offence under subsection (4)`, `s 137R(4) the penalty on conviction` |
+| s 137R(4)(a) | 29862-29863 | fork (SS(i)) | within the functions of s 137R(4) |
+| s 137R(4)(b) | 29864-29875 | fork (SS(i)) | within the functions of s 137R(4) |
+| s 137R(5) | 29876-29878 | fork (B10, SS(i)) | `s 137R(5) the officer is within the subsection` |
+| s 137R(5)(a) | 29879-29880 | fork (B10, SS(i)) | within the functions of s 137R(5) |
+| s 137R(5)(b) | 29881-29884 | fork (B10, SS(i)) | within the functions of s 137R(5) |
+| s 137R(5)(c) | 29885-29893 | fork (B10, SS(i)) | within the functions of s 137R(5) |
+| s 137R(5)(d) | 29894-29901 | fork (B10, SS(i)) | `s 137R(5)(d) the officer is guilty of an offence for acting intentionally or recklessly`, `s 137R(5)(d) the penalty on conviction` |
+| s 137R(5)(e) | 29902-29907 | fork (B10, SS(i)) | `s 137R(5)(e) the officer is guilty of an offence for acting negligently`, `s 137R(5)(e) the penalty on conviction` |
+| s 137R(6) | 29908-29914 | encoded | `s 137R(6) the person is an officer of the trustee-manager` |
+| s 137R(7) | 29915-29917 | encoded | `s 137R(7) no proceedings may be instituted for an offence under section 137R` |
+| s 137R(7)(a) | 29918-29921 | encoded | within the functions of s 137R(7) |
+| s 137R(7)(b) | 29922-29928 | encoded | within the functions of s 137R(7) |
+| s 137S(1) | 29929-29941 | encoded | `s 137S(1) section 137S has effect for the purposes of Division 3 and does not affect any other provision`; headings and cross-headings on lines 29929-29933 are inert (reason 1: not operative), inside this row |
+| s 137S(2) | 29942-29952 | encoded | `s 137S(2) the scheme is a real estate investment trust`, `s 137S(2) "trustee" (a) the person is the trustee of an authorised real estate investment trust`, `s 137S(2) "trustee" (b) the person is the trustee of any other real estate investment trust`, `s 137S(2) "trustee" the person is the trustee of the real estate investment trust` |
+| s 137S(2)(a) | 29953-29956 | encoded | within the functions of s 137S(2) |
+| s 137S(2)(b) | 29957-29962 | encoded | within the functions of s 137S(2) |
+| s 137S(3) | 29963-29969 | encoded | `s 137S(3) the person has an interest in the securities, securities-based derivatives contracts or units under Division 3` |
+| s 137S(4) | 29970-29971 | encoded | `s 137S(4) section 130(6) and (7) apply to the provision` |
+| s 137S(4)(a) | 29972-29974 | encoded | within the functions of s 137S(4) |
+| s 137S(4)(b) | 29975-29982 | encoded | within the functions of s 137S(4) |
+| s 137T(1) | 29983-29996 | encoded | `s 137T(1) the obligation to comply with Division 3 extends to the person`; headings and cross-headings on lines 29983-29985 are inert (reason 1: not operative), inside this row |
+| s 137T(2) | 29997-30001 | encoded | `s 137T(2) Division 3 extends to the act or omission` |
+| s 137T(3) | 30002-30006 | encoded | `s 137T(3) the person is exempt from the provision of Division 3` |
+| s 137T(4) | 30007-30014 | encoded | `s 137T(4) the exempted person must comply with the condition or restriction`, `s 137T(4) and (5) the exempted person shall not contravene a condition or restriction` |
+| s 137T(5) | 30015-30023 | fork (SS(i)) | `s 137T(5) the person is guilty of an offence of contravening a condition or restriction`, `s 137T(5) the penalty on conviction` |
+| s 137T(6) | 30024-30029 | fork (B2, G, SS(ii)) | `s 137T(6) the Authority has power to extend, or further extend, the time for giving the notice`, `s 137T(6) the last day for giving the notice, as extended on the person's application` |
+| s 137TA | 30030-30038 | inert (reason 2: machinery) | no L4 name: machinery, the Authority's power to make regulations extending the Division (an official's rule-making power; it gives the individual no right or duty); headings and cross-headings on lines 30030-30032 are inert (reason 1: not operative), inside this row |
+| s 137TA(a) | 30039-30044 | inert (reason 2: machinery) | no L4 name: a paragraph of s 137TA, machinery |
+| s 137TA(b) | 30045-30052 | inert (reason 2: machinery) | no L4 name: a paragraph of s 137TA, machinery |
+| s 137TA(c) | 30053-30060 | inert (reason 2: machinery) | no L4 name: a paragraph of s 137TA, machinery |
+| s 137TA(d) | 30061-30069 | inert (reason 2: machinery) | no L4 name: a paragraph of s 137TA, machinery |
+| s 137U(1) | 30070-30079 | fork (D1) | `s 137U(1) sections 135 to 137B apply to the substantial unitholder`; headings and cross-headings on lines 30070-30075 are inert (reason 1: not operative), inside this row |
+| s 137U(1)(a) | 30080-30082 | fork (D1) | within the functions of s 137U(1) |
+| s 137U(1)(a)(i) | 30083-30084 | fork (D1) | within the functions of s 137U(1) |
+| s 137U(1)(a)(ii) | 30085-30090 | fork (D1) | within the functions of s 137U(1) |
+| s 137U(1)(b) | 30091-30094 | fork (D1) | within the functions of s 137U(1) |
+| s 137U(1)(c) | 30095-30102 | fork (D1) | within the functions of s 137U(1) |
+| s 137U(2) | 30103-30104 | fork (SS(i)) | `s 137U(2) the person is guilty of an offence under subsection (2)`, `s 137U(2) the penalty on conviction` |
+| s 137U(2)(a) | 30105-30107 | fork (SS(i)) | within the functions of s 137U(2) |
+| s 137U(2)(b) | 30108-30115 | fork (SS(i)) | within the functions of s 137U(2) |
+| s 137U(2)(c) | 30116-30122 | fork (SS(i)) | within the functions of s 137U(2) |
+| s 137U(2)(d) | 30123-30130 | fork (SS(i)) | within the functions of s 137U(2) |
+| s 137U(3) | 30131-30132 | fork (SS(i)) | `s 137U(3) the person is guilty of an offence under subsection (3)`, `s 137U(3) the penalty on conviction` |
+| s 137U(3)(a) | 30133-30135 | fork (SS(i)) | within the functions of s 137U(3) |
+| s 137U(3)(b) | 30136-30152 | fork (SS(i)) | within the functions of s 137U(3) |
+| s 137U(4) | 30153-30155 | encoded | `s 137U(4) no proceedings may be instituted for an offence under section 137U` |
+| s 137U(4)(a) | 30156-30159 | encoded | within the functions of s 137U(4) |
+| s 137U(4)(b) | 30160-30166 | encoded | within the functions of s 137U(4) |
+| s 137V(1) | 30167-30171 | fork (A6) | `s 137V(1) the trustee must keep a register`, `s 137V(1) the trustee must immediately enter the names and information in the register`, `s 137V(1) the trustee must immediately enter the names and information in the register`; headings and cross-headings on lines 30167-30168 are inert (reason 1: not operative), inside this row |
+| s 137V(1)(a) | 30172-30174 | fork (A6) | within the functions of s 137V(1) |
+| s 137V(1)(b) | 30175-30181 | fork (A6) | within the functions of s 137V(1) |
+| s 137V(2) | 30182-30193 | encoded | `s 137V(2) the register is kept at the place the subsection requires`, `s 137V(2) the most the trustee may charge for each inspection of the register, in Singapore dollars` |
+| s 137V(3) | 30194-30203 | fork (A3) | `s 137V(3) the most the trustee may charge in advance for each page copied, in Singapore dollars`, `s 137V(3) the last day for the trustee to send the copy`, `s 137V(3) the copy is sent in time`, `s 137V(3) the trustee must send the copy within 14 days` |
+| s 137V(4) | 30204-30210 | encoded | `s 137V(4) the trustee must send the Authority a copy of the register`, `s 137V(4) the last day for the trustee to send the copy to the Authority`, `s 137V(4) the copy is sent to the Authority in time`, `s 137V(4) the trustee must send the Authority the copy within 7 days` |
+| s 137V(5) | 30211-30218 | fork (SS(i)) | `s 137V(5) the trustee is guilty of an offence of failing to comply with the register provisions`, `s 137V(5) the penalty on conviction` |
+| s 137W(1) | 30219-30227 | fork (B3, G, SS(ii)) | `s 137W(1) kind of order`, `s 137W(1) the court has power to make one or more of the orders listed in the subsection`; headings and cross-headings on lines 30219-30221 are inert (reason 1: not operative), inside this row |
+| s 137W(1)(a) | 30228-30232 | fork (B3, G, SS(ii)) | within the functions of s 137W(1) |
+| s 137W(1)(b) | 30233-30236 | fork (B3, G, SS(ii)) | within the functions of s 137W(1) |
+| s 137W(1)(c) | 30237-30245 | fork (B3, G, SS(ii)) | within the functions of s 137W(1) |
+| s 137W(1)(d) | 30246-30251 | fork (B3, G, SS(ii)) | within the functions of s 137W(1) |
+| s 137W(1)(e) | 30252-30255 | fork (B3, G, SS(ii)) | within the functions of s 137W(1) |
+| s 137W(1)(f) | 30256-30260 | fork (B3, G, SS(ii)) | within the functions of s 137W(1) |
+| s 137W(1)(g) | 30261-30266 | fork (B3, G, SS(ii)) | within the functions of s 137W(1) |
+| s 137W(1)(h) | 30267-30271 | fork (B3, G, SS(ii)) | within the functions of s 137W(1) |
+| s 137W(1)(i) | 30272-30279 | fork (B3, G, SS(ii)) | within the functions of s 137W(1) |
+| s 137W(2) | 30280-30284 | fork (G) | `s 137W(2) the order may include ancillary or consequential provisions the court thinks just` |
+| s 137W(3) | 30285-30297 | encoded | `s 137W(3) the sale to the buyer is barred by the court's condition` |
+| s 137W(4) | 30298-30303 | fork (B4, G, SS(ii)) | `s 137W(4) the Authority may apply to the court for directions on the unsold unit` |
+| s 137W(5) | 30304-30310 | encoded | `s 137W(5) the court must first satisfy itself that the order would not unfairly prejudice any person` |
+| s 137W(6) | 30311-30313 | fork (A7, B5) | `s 137W(6) the court is not to make the order` |
+| s 137W(6)(a) | 30314-30319 | fork (A7, B5) | within the functions of s 137W(6) |
+| s 137W(6)(b) | 30320-30324 | fork (A7, B5) | within the functions of s 137W(6) |
+| s 137W(7) | 30325-30331 | fork (B6, G, SS(ii)) | `s 137W(7) the court may direct that notice of the application be given or published` |
+| s 137W(8) | 30332-30336 | fork (G) | `s 137W(8) the court may rescind, vary, discharge or suspend the order` |
+| s 137W(9) | 30337-30349 | fork (SS(i)) | `s 137W(9) the person is guilty of an offence of contravening an order of the court`, `s 137W(9) the penalty on conviction`, `s 137W(9) the person shall not contravene an order of the court` |
+| s 137W(10) | 30350-30354 | encoded | `s 137W(10) subsection (9) does not affect the court's powers in relation to the punishment of contempt` |
+| s 137X(1) | 30355-30361 | fork (G) | `s 137X(1) the trustee may require the unitholder to give the information`; headings and cross-headings on lines 30355-30357 are inert (reason 1: not operative), inside this row |
+| s 137X(1)(a) | 30362-30364 | fork (G) | `s 137X(1)(a) the trustee may require the unitholder to inform it whether the unitholder holds voting units as beneficial owner or as trustee` |
+| s 137X(1)(b) | 30365-30372 | fork (G) | `s 137X(1)(b) the trustee may require the unitholder who holds the units as trustee to indicate the persons for whom the unitholder holds them` |
+| s 137X(2) | 30373-30379 | fork (B7, G, SS(ii)) | `s 137X(2) the trustee may require the other person to give the information` |
+| s 137X(2)(a) | 30380-30382 | fork (B7, G, SS(ii)) | `s 137X(2)(a) the trustee may require the other person to inform it whether the person holds the interest as beneficial owner or as trustee` |
+| s 137X(2)(b) | 30383-30390 | fork (B7, G, SS(ii)) | `s 137X(2)(b) the trustee may require the other person who holds the interest as trustee to indicate the persons for whom it is held` |
+| s 137X(3) | 30391-30405 | fork (G) | `s 137X(3) the trustee may require the unitholder to inform it whether the voting rights are subject to an agreement or arrangement`, `s 137X(3) the trustee may require the unitholder to give particulars of the agreement or arrangement and the parties to it` |
+| s 137X(4) | 30406-30412 | fork (B8) | `s 137X(4) the notice contains the other information the Authority prescribes and is delivered as it prescribes` |
+| s 137X(5) | 30413-30417 | fork (B8) | `s 137X(5) the person must comply with the notice`, `s 137X(5) the person must comply with the notice within the time it specifies` |
+| s 137X(6) | 30418-30424 | encoded | `s 137X(6) the trustee must inscribe the fact of the requirement, its date and the information in a separate part of the register` |
+| s 137X(6)(a) | 30425-30427 | encoded | within the functions of s 137X(6) |
+| s 137X(6)(b) | 30428-30431 | encoded | within the functions of s 137X(6) |
+| s 137X(7) | 30432-30438 | encoded | `s 137X(7) section 137V applies to the separate part of the register` |
+| s 137X(8) | 30439-30440 | fork (SS(i)) | `s 137X(8) the person is guilty of an offence under subsection (8)`, `s 137X(8) the penalty on conviction` |
+| s 137X(8)(a) | 30441-30442 | fork (SS(i)) | within the functions of s 137X(8) |
+| s 137X(8)(b) | 30443-30451 | fork (SS(i)) | within the functions of s 137X(8) |
+| s 137X(8)(c) | 30452-30458 | fork (SS(i)) | within the functions of s 137X(8) |
+| s 137X(8)(d) | 30459-30466 | fork (SS(i)) | within the functions of s 137X(8) |
+| s 137X(9) | 30467-30468 | fork (SS(i)) | `s 137X(9) the person is guilty of an offence under subsection (9)`, `s 137X(9) the penalty on conviction` |
+| s 137X(9)(a) | 30469-30470 | fork (SS(i)) | within the functions of s 137X(9) |
+| s 137X(9)(b) | 30471-30482 | fork (SS(i)) | within the functions of s 137X(9) |
+| s 137X(10) | 30483-30490 | encoded | `s 137X(10) the person is not guilty of an offence under subsection (8)(a) or (9)(a)` |
+| s 137X(11) | 30491-30493 | encoded | `s 137X(11) no proceedings may be instituted for an offence under section 137X` |
+| s 137X(11)(a) | 30494-30500 | encoded | within the functions of s 137X(11) |
+| s 137X(11)(b) | 30501-30507 | encoded | within the functions of s 137X(11) |
+| s 137Y(1) | 30508-30517 | encoded | `s 137Y(1) the director or chief executive officer must give the responsible person written notice of the matter`, `s 137Y(1) and (2) the director or chief executive officer must give written notice within 2 business days`; headings and cross-headings on lines 30508-30513 are inert (reason 1: not operative), inside this row |
+| s 137Y(1)(a) | 30518-30521 | encoded | within the functions of s 137Y(1) |
+| s 137Y(1)(b) | 30522-30525 | encoded | within the functions of s 137Y(1) |
+| s 137Y(1)(c) | 30526-30531 | encoded | within the functions of s 137Y(1) |
+| s 137Y(1)(d) | 30532-30536 | encoded | within the functions of s 137Y(1) |
+| s 137Y(2) | 30537-30538 | encoded | within the functions of s 137Y |
+| s 137Y(2)(a) | 30539-30541 | encoded | `s 137Y(2)(a) the notice is in the form and contains the information the Authority prescribes` |
+| s 137Y(2)(b) | 30542-30543 | fork (A3) | `s 137Y(2)(b) the notice is given in time` |
+| s 137Y(2)(b)(i) | 30544-30550 | fork (A3) | `s 137Y(2)(b)(i) the last day for the notice of a change` |
+| s 137Y(2)(b)(ii) | 30551-30564 | fork (A3) | `s 137Y(2)(b)(ii) the last day for any other notice` |
+| s 137Y(2)(b)(ii) [tail] | 30565-30568 | fork (A3) | `s 137Y(2)(b)(ii) the last day for any other notice` |
+| s 137Y(3) | 30569-30580 | encoded | `s 137Y(3) the director or chief executive officer is deemed to have the family member's interest` |
+| s 137Y(4) | 30581-30593 | fork (A2) | `s 137Y(4) "family member" the person is a family member`, `s 137Y(4) the child is below the age of 21 years`, `s 137Y(4) "unit" in relation to a debenture the thing is a unit` |
+| s 137Z(1) | 30594-30601 | fork (SS(i)) | `s 137Z(1) the person is guilty of an offence under subsection (1)`, `s 137Z(1) the penalty on conviction`; headings and cross-headings on lines 30594-30595 are inert (reason 1: not operative), inside this row |
+| s 137Z(1)(a) | 30602-30604 | fork (SS(i)) | within the functions of s 137Z(1) |
+| s 137Z(1)(b) | 30605-30616 | fork (SS(i)) | within the functions of s 137Z(1) |
+| s 137Z(2) | 30617-30619 | fork (SS(i)) | `s 137Z(2) the person is guilty of an offence under subsection (2)`, `s 137Z(2) the penalty on conviction` |
+| s 137Z(2)(a) | 30620-30621 | fork (SS(i)) | within the functions of s 137Z(2) |
+| s 137Z(2)(b) | 30622-30633 | fork (SS(i)) | within the functions of s 137Z(2) |
+| s 137Z(3) | 30634-30636 | encoded | `s 137Z(3) no proceedings may be instituted for an offence under section 137Z` |
+| s 137Z(3)(a) | 30637-30640 | encoded | within the functions of s 137Z(3) |
+| s 137Z(3)(b) | 30641-30650 | encoded | within the functions of s 137Z(3) |
+| s 137ZA(1) | 30651-30664 | fork (A3, B11) | `s 137ZA(1) the percentage of interest reaches, crosses or falls below 15%, 30%, 50% or 75%`, `s 137ZA(1) the person must give the responsible person written notice of the change in the percentage of interest`, `s 137ZA(1) the last day for the notice`, `s 137ZA(1) the notice is given in time` (+1); headings and cross-headings on lines 30651-30656 are inert (reason 1: not operative), inside this row |
+| s 137ZA(2) | 30665-30669 | encoded | `s 137ZA(2) the notice is in the form and contains the information the Authority prescribes` |
+| s 137ZA(3) | 30670-30676 | fork (A4) | `s 137ZA(3) the percentage of interest of the person in the voting shares` |
+| s 137ZA(3)(a) | 30677-30679 | fork (A4) | within the functions of s 137ZA(3) |
+| s 137ZA(3)(b) | 30680-30688 | fork (A4) | within the functions of s 137ZA(3) |
+| s 137ZB(1) | 30689-30692 | fork (SS(i)) | `s 137ZB(1) the person is guilty of an offence under subsection (1)`, `s 137ZB(1) the penalty on conviction`; headings and cross-headings on lines 30689-30690 are inert (reason 1: not operative), inside this row |
+| s 137ZB(1)(a) | 30693-30695 | fork (SS(i)) | within the functions of s 137ZB(1) |
+| s 137ZB(1)(b) | 30696-30704 | fork (SS(i)) | within the functions of s 137ZB(1) |
+| s 137ZB(1)(c) | 30705-30711 | fork (SS(i)) | within the functions of s 137ZB(1) |
+| s 137ZB(1)(d) | 30712-30719 | fork (SS(i)) | within the functions of s 137ZB(1) |
+| s 137ZB(2) | 30720-30721 | fork (SS(i)) | `s 137ZB(2) the person is guilty of an offence under subsection (2)`, `s 137ZB(2) the penalty on conviction` |
+| s 137ZB(2)(a) | 30722-30723 | fork (SS(i)) | within the functions of s 137ZB(2) |
+| s 137ZB(2)(b) | 30724-30735 | fork (SS(i)) | within the functions of s 137ZB(2) |
+| s 137ZB(3) | 30736-30738 | encoded | `s 137ZB(3) no proceedings may be instituted for an offence under section 137ZB` |
+| s 137ZB(3)(a) | 30739-30742 | encoded | within the functions of s 137ZB(3) |
+| s 137ZB(3)(b) | 30743-30752 | encoded | within the functions of s 137ZB(3) |
+| s 137ZC(1) | 30753-30760 | fork (A3, B9) | `s 137ZC(1) the responsible person must announce or disseminate the particulars or the information stated in the notice`, `s 137ZC(1) the last day for the announcement`, `s 137ZC(1) the announcement is made in time`, `s 137ZC(1) the responsible person must announce or disseminate the information by the end of the next business day`; headings and cross-headings on lines 30753-30757 are inert (reason 1: not operative), inside this row |
+| s 137ZC(1)(a) | 30761-30763 | fork (A3, B9) | within the functions of s 137ZC(1) |
+| s 137ZC(1)(aa) | 30764-30769 | fork (A3, B9) | within the functions of s 137ZC(1) |
+| s 137ZC(1)(b) | 30770-30771 | fork (A3, B9) | within the functions of s 137ZC(1) |
+| s 137ZC(1)(b)(i) | 30772-30776 | fork (A3, B9) | within the functions of s 137ZC(1) |
+| s 137ZC(1)(b)(ii) | 30777-30780 | fork (A3, B9) | within the functions of s 137ZC(1) |
+| s 137ZC(1)(b)(iii) | 30781-30799 | fork (A3, B9) | within the functions of s 137ZC(1) |
+| s 137ZC(2) | 30800-30805 | encoded | `s 137ZC(2) the responsible person announces or disseminates the information in the form and manner the Authority prescribes` |
+| s 137ZC(3) | 30806-30807 | fork (SS(i)) | `s 137ZC(3) the person is guilty of an offence under subsection (3)`, `s 137ZC(3) the penalty on conviction` |
+| s 137ZC(3)(a) | 30808-30810 | fork (SS(i)) | within the functions of s 137ZC(3) |
+| s 137ZC(3)(b) | 30811-30822 | fork (SS(i)) | within the functions of s 137ZC(3) |
+| s 137ZC(4) | 30823-30824 | fork (SS(i)) | `s 137ZC(4) the person is guilty of an offence under subsection (4)`, `s 137ZC(4) the penalty on conviction` |
+| s 137ZC(4)(a) | 30825-30826 | fork (SS(i)) | within the functions of s 137ZC(4) |
+| s 137ZC(4)(b) | 30827-30838 | fork (SS(i)) | within the functions of s 137ZC(4) |
+| s 137ZC(5) | 30839-30842 | fork (B10, SS(i)) | `s 137ZC(5) the officer is within the subsection` |
+| s 137ZC(5)(a) | 30843-30844 | fork (B10, SS(i)) | within the functions of s 137ZC(5) |
+| s 137ZC(5)(b) | 30845-30851 | fork (B10, SS(i)) | within the functions of s 137ZC(5) |
+| s 137ZC(5)(c) | 30852-30857 | fork (B10, SS(i)) | within the functions of s 137ZC(5) |
+| s 137ZC(5)(d) | 30858-30865 | fork (B10, SS(i)) | `s 137ZC(5)(d) the officer is guilty of an offence for acting intentionally or recklessly`, `s 137ZC(5)(d) the penalty on conviction` |
+| s 137ZC(5)(e) | 30866-30871 | fork (B10, SS(i)) | `s 137ZC(5)(e) the officer is guilty of an offence for acting negligently`, `s 137ZC(5)(e) the penalty on conviction` |
+| s 137ZC(6) | 30872-30878 | encoded | `s 137ZC(6) the person is an officer of the responsible person` |
+| s 137ZC(7) | 30879-30881 | encoded | `s 137ZC(7) no proceedings may be instituted for an offence under section 137ZC` |
+| s 137ZC(7)(a) | 30882-30885 | encoded | within the functions of s 137ZC(7) |
+| s 137ZC(7)(b) | 30886-30892 | encoded | within the functions of s 137ZC(7) |
+| s 137ZD(1) | 30893-30902 | fork (B12, B13, D2, G, SS(ii)) | `s 137ZD(1) the Authority may bring an action in a court for an order for a civil penalty`; headings and cross-headings on lines 30893-30896 are inert (reason 1: not operative), inside this row |
+| s 137ZD(1)(a) | 30903-30905 | fork (B12, B13, D2, G, SS(i), SS(ii)) | `s 137ZD(1)(a) provision`, `s 137ZD(1)(a) the person intentionally or recklessly contravened a provision the paragraph lists` |
+| s 137ZD(1)(a)(i) | 30906-30910 | fork (B12, B13, D2, G, SS(i), SS(ii)) | within the functions of s 137ZD(1)(a) |
+| s 137ZD(1)(a)(ii) | 30911-30913 | fork (B12, B13, D2, G, SS(i), SS(ii)) | within the functions of s 137ZD(1)(a) |
+| s 137ZD(1)(a)(iii) | 30914-30916 | fork (B12, B13, D2, G, SS(i), SS(ii)) | within the functions of s 137ZD(1)(a) |
+| s 137ZD(1)(b) | 30917-30922 | fork (B12, B13, D2, G, SS(i), SS(ii)) | `s 137ZD(1)(b) provision`, `s 137ZD(1)(b) the person gave false or misleading information in purported compliance with a provision the paragraph lists` |
+| s 137ZD(1)(b)(i) | 30923-30926 | fork (B12, B13, D2, G, SS(i), SS(ii)) | within the functions of s 137ZD(1)(b) |
+| s 137ZD(1)(b)(ii) | 30927-30929 | fork (B12, B13, D2, G, SS(i), SS(ii)) | within the functions of s 137ZD(1)(b) |
+| s 137ZD(1)(b)(iii) | 30930-30932 | fork (B12, B13, D2, G, SS(i), SS(ii)) | within the functions of s 137ZD(1)(b) |
+| s 137ZD(1)(c) | 30933-30950 | fork (B12, B13, D2, G, SS(i), SS(ii)) | `s 137ZD(1)(c) the officer intentionally or recklessly committed an act referred to in the paragraph` |
+| s 137ZD(2) | 30951-30957 | fork (G) | `s 137ZD(2) the court may make an order against the person for the payment of a civil penalty`, `s 137ZD(2) the amount of the civil penalty is within the limits` |
+| s 137ZD(3) | 30958-30967 | fork (G) | `s 137ZD(3) the court may make an order on the terms agreed between the Authority and the person` |
+| s 137ZD(4) | 30968-30975 | encoded | `s 137ZD(4) nothing in section 137ZD prevents the Authority from entering into the agreement` |
+| s 137ZD(5) | 30976-30982 | encoded | `s 137ZD(5) the civil penalty is paid into the Consolidated Fund and is a debt due to the Government` |
+| s 137ZD(6) | 30983-30990 | fork (G) | `s 137ZD(6) the Authority may recover the civil penalty as a judgment debt due to the Authority` |
+| s 137ZD(7) | 30991-30999 | encoded | `s 137ZD(7) the defence is also available to the person against whom the action is brought` |
+| s 137ZE(1) | 31000-31006 | encoded | `s 137ZE(1) the action must not be commenced`; headings and cross-headings on lines 31000-31002 are inert (reason 1: not operative), inside this row |
+| s 137ZE(1)(a) | 31007-31008 | encoded | `s 137ZE(1)(a) the action must not be commenced because 6 years from the date of the act have expired` |
+| s 137ZE(1)(b) | 31009-31015 | encoded | `s 137ZE(1)(b) the action must not be commenced because the person has been convicted or acquitted` |
+| s 137ZE(2) | 31016-31020 | encoded | `s 137ZE(2) the action must be stayed`, `s 137ZE(2) the stayed action may be continued` |
+| s 137ZE(2)(a) | 31021-31023 | encoded | within the functions of s 137ZE(2) |
+| s 137ZE(2)(b) | 31024-31028 | encoded | within the functions of s 137ZE(2) |
+| s 137ZF | 31029-31035 | encoded | `s 137ZF a District Court has jurisdiction to hear and determine the action regardless of the monetary amount`; headings and cross-headings on lines 31029-31030 are inert (reason 1: not operative), inside this row |
+| s 137ZG | 31036-31039 | inert (reason 2: machinery) | no L4 name: machinery, the power to make Rules of Court (an official's rule-making power; it gives the individual no right or duty); headings and cross-headings on lines 31036-31037 are inert (reason 1: not operative), inside this row |
+| s 137ZG(a) | 31040-31043 | inert (reason 2: machinery) | no L4 name: a paragraph of s 137ZG, machinery |
+| s 137ZG(b) | 31044-31051 | inert (reason 2: machinery) | no L4 name: a paragraph of s 137ZG, machinery |
+| s 138(1) | 31359-31370 | encoded | `s 138(1) the body is the Securities Industry Council referred to in section 138`; headings and cross-headings on lines 31359-31365 are inert (reason 1: not operative), inside this row |
+| s 138(2) | 31371-31374 | encoded | `s 138(2) the Securities Industry Council has the function of advising the Minister on the matter` |
+| s 138(3) | 31375-31379 | encoded | `s 138(3) the person serves on the Securities Industry Council` |
+| s 138(4) | 31380-31385 | fork (G) | `s 138(4) the Securities Industry Council may summon the person to give evidence on oath or affirmation or produce a document or material` |
+| s 138(5) | 31386-31397 | encoded | `s 138(5) the document is protected from production and from the taking of possession under subsection (4)` |
+| s 138(6) | 31398-31405 | fork (B18) | `s 138(6) the person must give the name and address of the person to whom or by or on behalf of whom the communication was made`, `s 138(6) the lawyer must give the name and address` |
+| s 138(7) | 31406-31408 | fork (G) | `s 138(7) the Authority may consult the Securities Industry Council` |
+| s 138(8) | 31409-31411 | encoded | within the functions of s 138 |
+| s 138(8)(a) | 31412-31414 | encoded | `s 138(8)(a) the member is deemed to be a public servant within the meaning of the Penal Code 1871` |
+| s 138(8)(b) | 31415-31420 | encoded | `s 138(8)(b) the member has the like protection and privileges as are by law given to a Judge` |
+| s 138(9) | 31421-31424 | encoded | `s 138(9) the Securities Industry Council must have regard to the matter in the exercise of its functions` |
+| s 138(10) | 31425-31428 | fork (G) | `s 138(10) the Securities Industry Council may regulate its own procedure and is not bound by the rules of evidence` |
+| s 139(1) | 31429-31436 | encoded | `s 139(1) sections 139 and 140 apply to the person and extend to acts done outside Singapore`; headings and cross-headings on lines 31429-31430 are inert (reason 1: not operative), inside this row |
+| s 139(2) | 31437-31445 | encoded | `s 139(2) the document is the Singapore Code on Take-overs and Mergers referred to in section 139 and issued by the Authority under section 321(1)` |
+| s 139(3) | 31446-31448 | encoded | `s 139(3) the Take-over Code is deemed not to be subsidiary legislation` |
+| s 139(4) | 31449-31452 | encoded | `s 139(4) the Take-over Code applies to the thing`, `s 139(4) the person must comply with the provisions of the Take-over Code`, `s 139(4) the party concerned must comply with the Take-over Code` |
+| s 139(5) | 31453-31455 | encoded | `s 139(5) the body administers and enforces the Take-over Code` |
+| s 139(6) | 31456-31459 | fork (B14, G, SS(ii)) | `s 139(6) the Authority may revise the Take-over Code by deleting, amending or adding to its provisions` |
+| s 139(7) | 31460-31465 | fork (G) | `s 139(7) the Securities Industry Council may issue a ruling or lay down the practice on the matter`, `s 139(7) the ruling or practice is final` |
+| s 139(8) | 31466-31473 | encoded | `s 139(8) the failure of itself renders the party liable to criminal proceedings`, `s 139(8) the failure may be relied upon in proceedings as tending to establish or to negate a liability` |
+| s 139(9) | 31474-31479 | encoded | `s 139(9) subsection (8) does not prevent the Securities Industry Council from invoking the sanction` |
+| s 139(10) | 31480-31491 | fork (B15, G, SS(ii)) | `s 139(10) the Securities Industry Council has power to enquire into the suspected breach or misconduct` |
+| s 139(11) | 31492-31496 | fork (G) | `s 139(11) the Securities Industry Council may summon the person to give evidence on oath or affirmation or produce a document or material` |
+| s 140(1) | 31497-31502 | fork (B17) | `s 140(1) the person must not give notice or publicly announce that the person intends to make a take-over offer`, `s 140(1) the person with no intention shall not give notice or publicly announce an intention to make a take-over offer`; headings and cross-headings on lines 31497-31498 are inert (reason 1: not operative), inside this row |
+| s 140(2) | 31503-31508 | fork (B17) | `s 140(2) the person must not make a take-over offer or give notice or publicly announce that the person intends to make one`, `s 140(2) the person with no grounds shall not make a take-over offer or announce an intention to make one` |
+| s 140(3) | 31509-31514 | fork (B16, SS(i)) | `s 140(3) the person is guilty of an offence under section 140`, `s 140(3) the officer of the corporation is guilty of an offence under section 140`, `s 140(3) the penalty on conviction` |
+
+## Fork register (sfaa)
+
+Each entry: the provision, the question the text leaves open, the readings, the one taken (TAKEN), the text that licenses it (each quotation is machine-checked against the raw text), and the L4 rule. These are assumed, not ruled.
+Split sites (i) and (ii) are one row each under `## Split sites (sfaa)`; a function named for a grant or a power has one row in the table at the end of this section.
+
+### A1. s 130(6); the counting in ss 133(3)(b)(i), 135(2)(b), 136(1), 137(1) and 137E(6) and their Division 2 and 3 counterparts
+
+- **Question.** From which day do the 2 business days run when the person did not know, but would have known with reasonable diligence?
+- **Reading 1.** TAKEN: the person is taken to have been aware from the earlier of the day of actual awareness and the day awareness would have come with reasonable diligence.
+- **Reading 2.** Only the actual day counts (the presumption adds nothing).
+- **Reading 3.** Only the diligence day counts.
+- **Text that licenses it.** "a person is conclusively presumed to have been aware of a fact or occurrence at a particular time — (a) of which he or she would, if he had acted with reasonable diligence in the conduct of his or her affairs, have been aware at that time"
+- **Rule.** `s 130(6) the day from which the person is taken to have been aware`; every `... the last day for the notice` function passes both days to it.
+
+### A2. s 133(6); s 137N(4); s 137Y(4) ("family member")
+
+- **Question.** Does "below the age of 21 years" qualify the spouse as well as the children?
+- **Reading 1.** TAKEN: it qualifies the children only; a spouse of any age is a family member.
+- **Reading 2.** It qualifies every person in the list, so a spouse of 21 or over is not a family member.
+- **Text that licenses it.** "means a spouse, or a son, adopted son, stepson, daughter, adopted daughter or stepdaughter below the age of 21 years"
+- **Rule.** `s 133(6) "family member" the person is a family member` and `s 133(6) the child is below the age of 21 years`
+
+### A3. every notice that must be given "within 2 business days after", "within 14 days" or "within 7 days" (ss 133(3)(b), 135(2)(b), 136(1), 137(1), 137A, 137B, 137C(3) and (4), 137G(1), and their Division 2 and 3 counterparts)
+
+- **Question.** Is a notice given on the very day of the event, or on the last day, in time?
+- **Reading 1.** TAKEN: a notice given on or before the last day is in time (the last day is compared with AT MOST).
+- **Reading 2.** The window opens the day after the event, so a notice given on the day of the event is outside it (the keel's `period: the date is within a number of business days after`).
+- **Text that licenses it.** "within 2 business days after the substantial shareholder becomes aware of the change"
+- **Rule.** every `... is given in time`, `... is sent in time` and `... is made in time` function; the regulative rules count the trace clock in days
+
+### A4. s 136(3) ("percentage level")
+
+- **Question.** Is the numerator the votes of all the voting shares the person has an interest in, or only those of the class concerned?
+- **Reading 1.** TAKEN: the numerator is read as written, the total votes attached to all the voting shares in which the substantial shareholder has an interest, whatever the class; only the denominator changes with the class.
+- **Reading 2.** The numerator is limited to the class concerned.
+- **Text that licenses it.** "the total votes attached to all the voting shares in which the substantial shareholder has an interest or interests immediately before or (as the case may be) immediately after the relevant time"
+- **Rule.** `s 136(3) the percentage level of the substantial shareholder's interests`
+
+### A5. s 137A
+
+- **Question.** Whose notice does the 2-business-day limit govern, A's or B's?
+- **Reading 1.** TAKEN: the limit is for B's notice to A; A's duty is to take reasonable steps to ensure B gives it, so the regulative rule asks A to have taken the steps within the 2 business days after the acquisition or disposal.
+- **Reading 2.** A must itself give notice within 2 business days (that is the duty of s 135 to 137, not of s 137A).
+- **Text that licenses it.** "A must take reasonable steps to ensure that B notifies A as soon as practicable and, in any case, no later than 2 business days after any acquisition or disposal"
+- **Rule.** `s 137A the person must take reasonable steps to ensure that the other person notifies the person`; `s 137A the beneficial owner must take reasonable steps within 2 business days of the acquisition or disposal`
+
+### A6. s 137C(1); s 137K(1); s 137V(1) ("immediately enter")
+
+- **Question.** How long is "immediately"?
+- **Reading 1.** TAKEN: immediately is a window of nought days; an entry on the day of receipt is in time, one a day later is not.
+- **Reading 2.** A short reasonable time, which the text does not measure.
+- **Text that licenses it.** "A corporation must keep a register in which it must immediately enter"
+- **Rule.** `s 137C(1) the corporation must immediately enter the names and information in the register`
+
+### A7. s 137E(1)(h) and s 137E(6); s 137L; s 137W
+
+- **Question.** Is an order that the exercise of voting rights be disregarded (paragraph (h)) "an order restraining the exercise of voting rights" (the carve-out of subsection (6))?
+- **Reading 1.** TAKEN: no; only paragraph (c) is the carve-out.
+- **Reading 2.** Yes; paragraph (h) is within the carve-out.
+- **Text that licenses it.** "other than an order restraining the exercise of voting rights"
+- **Rule.** `s 137E(1) kind of order`; `s 137E(6) the court is not to make the order`
+
+### B2. s 131(6); s 137I(6); s 137T(6)
+
+- **Question.** The Authority "may, on the application of a person required to give a notice" extend the time: when no one has applied, is the answer "may not" or "the text does not say"?
+- **Reading 1.** TAKEN: NOTHING (SPLIT-SITE (ii), the grant ruling of 2026-11-12).
+- **Reading 2.** JUST FALSE (the periods ruling of 2026-11-05, rule (b)): the Authority may not.
+- **Text that licenses it.** "may, on the application of a person required to give a notice under this Division"
+- **Rule.** `s 131(6) the Authority has power to extend, or further extend, the time for giving the notice`
+
+### B3. s 137E(1); s 137L(1); s 137W(1)
+
+- **Question.** "Where a person is or has been a substantial shareholder ... and has failed to comply ... the court may, on the application of the Authority": when the gate fails, "may not" or "the text does not say"?
+- **Reading 1.** TAKEN: NOTHING (SPLIT-SITE (ii)).
+- **Reading 2.** JUST FALSE.
+- **Text that licenses it.** "Where a person is or has been a substantial shareholder in a corporation and has failed to comply with section 135, 136 or 137"
+- **Rule.** `s 137E(1) the court has power to make one or more of the orders listed in the subsection`
+
+### B4. s 137E(4); s 137L(4); s 137W(4)
+
+- **Question.** "Where a share has not been sold": the Authority's power to apply for directions.
+- **Reading 1.** TAKEN: NOTHING (SPLIT-SITE (ii)).
+- **Reading 2.** JUST FALSE.
+- **Text that licenses it.** the opening "Where" of the subsection
+- **Rule.** `s 137E(4) the Authority may apply to the court for directions on the unsold share`
+
+### B5. s 137E(6); s 137L(6); s 137W(6)
+
+- **Question.** "The court is not to make an order ... other than an order restraining the exercise of voting rights": for the carve-out order, is the answer "the bar does not apply" (JUST FALSE) or "the text does not say"?
+- **Reading 1.** TAKEN: JUST FALSE, the text's own no (the carve-out is written into the bar).
+- **Reading 2.** NOTHING.
+- **Text that licenses it.** "other than an order restraining the exercise of voting rights"
+- **Rule.** `s 137E(6) the court is not to make the order`
+
+### B6. s 137E(7); s 137L(7); s 137W(7)
+
+- **Question.** The court's power to direct notice "before making an order": a gate on a function named for a power.
+- **Reading 1.** TAKEN: NOTHING (SPLIT-SITE (ii)).
+- **Reading 2.** JUST FALSE.
+- **Text that licenses it.** the opening words of the subsection
+- **Rule.** `s 137E(7) the court may direct that notice of the application be given or published`
+
+### B7. s 137F(2); s 137M(2); s 137X(2)
+
+- **Question.** "Where a corporation is informed pursuant to a notice given to any person ... that any other person has an interest ... the corporation may require": when the gate fails.
+- **Reading 1.** TAKEN: NOTHING (SPLIT-SITE (ii)).
+- **Reading 2.** JUST FALSE.
+- **Text that licenses it.** "Where a corporation is informed pursuant to a notice given to"
+- **Rule.** `s 137F(2) the corporation may require the other person to give the information`
+
+### B8. s 137F(4) and (5); s 137M(4) and (5); s 137X(4) and (5)
+
+- **Question.** Does a notice that fails subsection (4) (the prescribed content and delivery) still bind the person who receives it?
+- **Reading 1.** TAKEN: the duty to comply is triggered by the issue of the notice (the text does not answer whether a defective notice binds).
+- **Reading 2.** A notice that fails subsection (4) binds no one.
+- **Text that licenses it.** "Any person to whom a notice is issued under subsection (1), (2) or (3) must comply"
+- **Rule.** `s 137F(5) the person must comply with the notice`
+
+### B9. s 137G(1); s 137R(1); s 137ZC(1)
+
+- **Question.** "as soon as practicable and in any case, no later than the end of the business day following": is "as soon as practicable" a separate limit?
+- **Reading 1.** TAKEN: no; it is a judgment the text does not measure, so the functions answer on the hard limit (the end of the next business day) only.
+- **Reading 2.** It adds an earlier, unmeasured limit.
+- **Text that licenses it.** "as soon as practicable and in any case, no later than the end of the business day following the day on which the corporation received the notice"
+- **Rule.** `s 137G(1) the last day for the announcement`; `s 137G(1) the announcement is made in time`
+
+### B10. s 137G(5); s 137R(5); s 137ZC(5)
+
+- **Question.** The officer's offence has a class limit ("any officer ... who") and two grades: when an element is unmet, JUST FALSE or NOTHING?
+- **Reading 1.** TAKEN: NOTHING for an unmet element of the chapeau (SPLIT-SITE (i)); JUST FALSE for the grade whose own "if" fails (marginal reading (a)).
+- **Reading 2.** JUST FALSE for every unmet element.
+- **Text that licenses it.** "any officer of the corporation who"
+- **Rule.** `s 137G(5) the officer is within the subsection`; `s 137G(5)(d)`; `s 137G(5)(e)`
+
+### B11. s 137P(1); s 137ZA(1)
+
+- **Question.** What are "reaches, crosses or falls below 15%, 30%, 50% or 75%"?
+- **Reading 1.** TAKEN: a rise reaches or crosses a threshold when the percentage was below it and is now at or above it; a fall falls below it when it was at or above it and is now below it.
+- **Reading 2.** A threshold is reached only when the percentage equals it.
+- **Text that licenses it.** "reaches, crosses or falls below"
+- **Rule.** `s 137P(1) the percentage of interest reaches, crosses or falls below 15%, 30%, 50% or 75%`
+
+### B12. s 137ZD(1)
+
+- **Question.** "Whenever it appears to the Authority": a gate on the Authority's "may".
+- **Reading 1.** TAKEN: NOTHING when it does not appear to the Authority (SPLIT-SITE (ii)).
+- **Reading 2.** JUST FALSE.
+- **Text that licenses it.** "Whenever it appears to the Authority that any person has"
+- **Rule.** `s 137ZD(1) the Authority may bring an action in a court for an order for a civil penalty`
+
+### B13. s 137ZD(1)
+
+- **Question.** "the Authority may, with the consent of the Public Prosecutor, bring an action": when there is no consent.
+- **Reading 1.** TAKEN: NOTHING (SPLIT-SITE (ii)).
+- **Reading 2.** JUST FALSE.
+- **Text that licenses it.** "the Authority may, with the consent of the Public Prosecutor, bring an action in a court"
+- **Rule.** `s 137ZD(1) the Authority may bring an action in a court for an order for a civil penalty`
+
+### B14. s 139(6)
+
+- **Question.** "The Authority may, on the advice of the Securities Industry Council, revise the Take-over Code": when the Council has not advised.
+- **Reading 1.** TAKEN: NOTHING (SPLIT-SITE (ii); "on the advice of" is read like "with the consent of").
+- **Reading 2.** JUST FALSE.
+- **Text that licenses it.** "The Authority may, on the advice of the Securities Industry Council, revise the Take-over Code"
+- **Rule.** `s 139(6) the Authority may revise the Take-over Code by deleting, amending or adding to its provisions`
+
+### B15. s 139(10)
+
+- **Question.** "Where the Securities Industry Council has reason to believe ... the Securities Industry Council has power to enquire": when the gate fails.
+- **Reading 1.** TAKEN: NOTHING (SPLIT-SITE (ii)).
+- **Reading 2.** JUST FALSE.
+- **Text that licenses it.** "Where the Securities Industry Council has reason to believe"
+- **Rule.** `s 139(10) the Securities Industry Council has power to enquire into the suspected breach or misconduct`
+
+### B16. s 140(3)
+
+- **Question.** "Where a person contravenes subsection (1) or (2), the person ... shall be guilty of an offence": a person who contravenes neither.
+- **Reading 1.** TAKEN: NOTHING (SPLIT-SITE (i)).
+- **Reading 2.** JUST FALSE.
+- **Text that licenses it.** "Where a person contravenes subsection (1) or (2), the person and, where the person is a corporation, every officer of the corporation who is in default shall be guilty of an offence"
+- **Rule.** `s 140(3) the person is guilty of an offence under section 140`; `s 140(3) the officer of the corporation is guilty of an offence under section 140`
+
+### B17. s 140(1); s 140(2)
+
+- **Question.** "A person who has no intention ... must not"; "A person must not ... if the person has no reasonable or probable grounds": a person outside the class.
+- **Reading 1.** TAKEN: NOTHING (the Guide's "limits a grant or prohibition in its own wording and the case falls outside the limit").
+- **Reading 2.** JUST FALSE (a bar is the provision's own question, limit 2 of the grant ruling).
+- **Text that licenses it.** "A person who has no intention to make an offer in the nature of a take-over offer must not give notice or publicly announce"
+- **Rule.** `s 140(1) the person must not give notice or publicly announce that the person intends to make a take-over offer`; `s 140(2)`
+
+### B18. s 138(6)
+
+- **Question.** "is nevertheless obliged to give the name and address (if he or she knows them)": a lawyer who refuses to produce the document and does not know them.
+- **Reading 1.** TAKEN: JUST FALSE (marginal reading (a): a failed "if" counted as the text's no).
+- **Reading 2.** NOTHING.
+- **Text that licenses it.** "(if he or she knows them)"
+- **Rule.** `s 138(6) the person must give the name and address of the person to whom or by or on behalf of whom the communication was made`
+
+### D1. s 137J(1); s 137U(1)
+
+- **Question.** The "as though" modifications (references to the corporation read as the trustee-manager or responsible person, shares as units, a substantial shareholder as a substantial unitholder): re-encode sections 135 to 137B for each, or reuse them?
+- **Reading 1.** TAKEN: reuse the Division 1 functions by input substitution (the unitholder's facts are passed to the Division 1 function); a Division 2 or 3 question calls `s 135(1)` and its siblings with the unitholder's facts.
+- **Reading 2.** Clone every function with the words changed (done for the provisions the Division writes out in full: ss 137K to 137R, 137V to 137ZC).
+- **Text that licenses it.** "as though — (a) references to the corporation to which notification should be given were references to the trustee-manager of the business trust"
+- **Rule.** `s 137J(1) sections 135 to 137B apply to the substantial unitholder`; `s 137U(1) sections 135 to 137B apply to the substantial unitholder`
+
+### D2. s 137ZD(1)(a) and (b)
+
+- **Question.** Are the provisions listed in 137ZD(1)(a) and (b) a closed list?
+- **Reading 1.** TAKEN: a provision outside the list is NOTHING ("any of the following provisions" names them; the paragraph does not say that nothing else founds an action).
+- **Reading 2.** A provision outside the list is JUST FALSE.
+- **Text that licenses it.** "contravened any of the following provisions"
+- **Rule.** `s 137ZD(1)(a) the person intentionally or recklessly contravened a provision the paragraph lists`; `s 137ZD(1)(b) the person gave false or misleading information in purported compliance with a provision the paragraph lists`
+
+### C1. the seat questions under s 137J(1) and s 137U(1)
+
+- **Question.** Does the seat ask whether the person has ceased to be a substantial unitholder?
+- **Reading 1.** TAKEN: no; section 137J(1) reaches only "a person who is a substantial unitholder", so the seat calls the section 135 function for a person who is one now (the "ceased" argument is FALSE) and a former unitholder gets NOTHING.
+- **Reading 2.** Ask it, and pass section 135(2)(c) through (it would apply to a unitholder who has just ceased).
+- **Text that licenses it.** "to a person who is a substantial unitholder of a registered business trust or recognised business trust"
+- **Rule.** `Under section 137J(1), must I give the trustee-manager written notice of particulars of my voting units`
+
+### Functions named for a grant or a power (the ruling of 2026-11-12, limit 1: one fork line each)
+
+53 functions are named for a grant or a power ("may", "has power to"). Each answers `NOTHING` when its gate fails; the other reading is `JUST FALSE`, which would read as "may not", a grant turned into a bar. Each row is that function's fork line: the function, the words its answer rests on, the answer taken, the other reading.
+The Guide's three limits, word for word (section 5, lines 96-99): **Functions named for a grant or a power (ruled by the coordinating session of the UK and Canada encodings on 2026-11-12; not confirmed by the maintainer).** A function named for a grant or a power ("the court may ...", "the registrar may ...") that answers `JUST FALSE` because an `if` gate failed reads as "may not": a grant turned into a bar. The ruling sets three limits: 1. answer `NOTHING`, with one fork line each, only for a function named for a grant or a power ("may", "is permitted to", "has power to") whose `if` gate failed; 2. keep `JUST FALSE` where the text closes the gate itself ("only if", "only where", "may not ... unless", a list closed with "only"), and for a bar, a duty or the provision's own question; 3. do not change, but list in the row's fork register for the maintainer or a lawyer, a "may" function whose gate is "where", "when" or "upon" (ruling (b) of the periods ruling above says `JUST FALSE`, and the "In short" line on grants points the other way), and an "entitled"-named function (an entitlement is a claim, not a power, and this guide does not settle it).
+Bars, duties and the provision's own question keep `JUST FALSE` (limit 2). The "may" functions whose gate is "where", "when" or "upon" (limit 3) are not changed by this ruling and are listed under `## Split sites (sfaa)` as split sites (ii). No function in these ranges is named for an entitlement.
+
+| Function | File:line | The words the answer rests on (from the branch) | Answer taken | Other reading |
+| --- | --- | --- | --- | --- |
+| `s 137F(1) the corporation may require the member to give the information` | sfaa-div1-beneficial-disclosure:27 | "Any corporation may by written notice require any member of the corporation within such reasonable time as is specified in the notice" | NOTHING | JUST FALSE, read as "may not" |
+| `s 137F(1)(a) the corporation may require the member to inform it whether the member holds voting shares as beneficial owner or as trustee` | sfaa-div1-beneficial-disclosure:41 | answered through `s 137F(1) the corporation may require the member to give the information` | NOTHING | JUST FALSE, read as "may not" |
+| `s 137F(1)(b) the corporation may require the member who holds the shares as trustee to indicate the persons for whom the member holds them` | sfaa-div1-beneficial-disclosure:57 | "if the member holds them as trustee"; a function named for a power whose "if" gate failed (the grant ruling of 2026-11-12, limit 1) | NOTHING | JUST FALSE, read as "may not" |
+| `s 137F(2) the corporation may require the other person to give the information` | sfaa-div1-beneficial-disclosure:77 | SPLIT-SITE (ii) "Where a corporation is informed pursuant to a notice given to any person under subsection (1) or under this subsection that any other person has an interest in any of the voting shares in the corporation, the corporation may by written noti... | NOTHING (also split site (ii): see Split sites) | JUST FALSE, read as "may not" |
+| `s 137F(2)(a) the corporation may require the other person to inform it whether the person holds the interest as beneficial owner or as trustee` | sfaa-div1-beneficial-disclosure:91 | answered through `s 137F(2) the corporation may require the other person to give the information` | NOTHING | JUST FALSE, read as "may not" |
+| `s 137F(2)(b) the corporation may require the other person who holds the interest as trustee to indicate the persons for whom it is held` | sfaa-div1-beneficial-disclosure:107 | "if that other person holds it as trustee"; a function named for a power whose "if" gate failed (the grant ruling of 2026-11-12, limit 1) | NOTHING | JUST FALSE, read as "may not" |
+| `s 137F(3) the corporation may require the member to inform it whether the voting rights are subject to an agreement or arrangement` | sfaa-div1-beneficial-disclosure:128 | "Any corporation may by written notice require any member of the corporation to inform it, within such reasonable time as is specified in the notice" | NOTHING | JUST FALSE, read as "may not" |
+| `s 137F(3) the corporation may require the member to give particulars of the agreement or arrangement and the parties to it` | sfaa-div1-beneficial-disclosure:148 | "and, if so, to give particulars of the agreement or arrangement and the parties to it"; a function named for a power whose "if" gate failed (the grant ruling of 2026-11-12, limit 1) | NOTHING | JUST FALSE, read as "may not" |
+| `s 131(6) the Authority has power to extend, or further extend, the time for giving the notice` | sfaa-div1-interpretation:384 | SPLIT-SITE (ii) "may, on the application of a person required to give a notice under this Division"; the gate is not a "where" and the function is named for a power | NOTHING (also split site (ii): see Split sites) | JUST FALSE, read as "may not" |
+| `s 137E(1) the court has power to make one or more of the orders listed in the subsection` | sfaa-div1-penalties-court:136 | SPLIT-SITE (ii) "Where a person is or has been a substantial shareholder in a corporation and has failed to comply with section 135, 136 or 137, a court may, on the application of the Authority" | NOTHING (also split site (ii): see Split sites) | JUST FALSE, read as "may not" |
+| `s 137E(2) the order may include ancillary or consequential provisions the court thinks just` | sfaa-div1-penalties-court:147 | "Any order made under this section may include such ancillary or consequential provisions as the court thinks just" | NOTHING | JUST FALSE, read as "may not" |
+| `s 137E(4) the Authority may apply to the court for directions on the unsold share` | sfaa-div1-penalties-court:179 | SPLIT-SITE (ii) "Where a share is not sold in accordance with an order of the court under this section, the Authority may apply to the court for directions" | NOTHING (also split site (ii): see Split sites) | JUST FALSE, read as "may not" |
+| `s 137E(7) the court may direct that notice of the application be given or published` | sfaa-div1-penalties-court:233 | SPLIT-SITE (ii) "The court may, before making an order under this section, direct that notice of the application be given to such persons as it thinks fit" | NOTHING (also split site (ii): see Split sites) | JUST FALSE, read as "may not" |
+| `s 137E(8) the court may rescind, vary, discharge or suspend the order` | sfaa-div1-penalties-court:244 | "an order made by it under this section" | NOTHING | JUST FALSE, read as "may not" |
+| `s 137I(6) the Authority has power to extend, or further extend, the time for giving the notice` | sfaa-div2-trust:228 | SPLIT-SITE (ii) "may, on the application of a person required to give a notice under this Division"; the gate is not a "where" and the function is named for a power | NOTHING (also split site (ii): see Split sites) | JUST FALSE, read as "may not" |
+| `s 137L(1) the court has power to make one or more of the orders listed in the subsection` | sfaa-div2-trust:644 | SPLIT-SITE (ii) "Where a person is or has been a substantial unitholder of a registered business trust or recognised business trust and has failed to comply with section 135, 136 or 137 as applied by section 137J(1), a court may, on the application of the A... | NOTHING (also split site (ii): see Split sites) | JUST FALSE, read as "may not" |
+| `s 137L(2) the order may include ancillary or consequential provisions the court thinks just` | sfaa-div2-trust:655 | "Any order made under this section may include such ancillary or consequential provisions as the court thinks just" | NOTHING | JUST FALSE, read as "may not" |
+| `s 137L(4) the Authority may apply to the court for directions on the unsold unit` | sfaa-div2-trust:686 | SPLIT-SITE (ii) "Where a unit is not sold in accordance with an order of the court under this section, the Authority may apply to the court for directions" | NOTHING (also split site (ii): see Split sites) | JUST FALSE, read as "may not" |
+| `s 137L(7) the court may direct that notice of the application be given or published` | sfaa-div2-trust:740 | SPLIT-SITE (ii) "The court may, before making an order under this section, direct that notice of the application be given to such persons as it thinks fit" | NOTHING (also split site (ii): see Split sites) | JUST FALSE, read as "may not" |
+| `s 137L(8) the court may rescind, vary, discharge or suspend the order` | sfaa-div2-trust:751 | "an order made by it under this section" | NOTHING | JUST FALSE, read as "may not" |
+| `s 137M(1) the trustee-manager may require the unitholder to give the information` | sfaa-div2-trust:827 | "The trustee-manager of a registered business trust or recognised business trust may by written notice require any unitholder of the business trust within such reasonable time as is specified in the notice" | NOTHING | JUST FALSE, read as "may not" |
+| `s 137M(1)(a) the trustee-manager may require the unitholder to inform it whether the unitholder holds voting units as beneficial owner or as trustee` | sfaa-div2-trust:841 | answered through `s 137M(1) the trustee-manager may require the unitholder to give the information` | NOTHING | JUST FALSE, read as "may not" |
+| `s 137M(1)(b) the trustee-manager may require the unitholder who holds the units as trustee to indicate the persons for whom the unitholder holds them` | sfaa-div2-trust:857 | "if the unitholder holds them as trustee"; a function named for a power whose "if" gate failed (the grant ruling of 2026-11-12, limit 1) | NOTHING | JUST FALSE, read as "may not" |
+| `s 137M(2) the trustee-manager may require the other person to give the information` | sfaa-div2-trust:878 | SPLIT-SITE (ii) "Where the trustee-manager of a registered business trust or recognised business trust is informed pursuant to a notice given to any person under subsection (1) or under this subsection that any other person has an interest in any of the vot... | NOTHING (also split site (ii): see Split sites) | JUST FALSE, read as "may not" |
+| `s 137M(2)(a) the trustee-manager may require the other person to inform it whether the person holds the interest as beneficial owner or as trustee` | sfaa-div2-trust:892 | answered through `s 137M(2) the trustee-manager may require the other person to give the information` | NOTHING | JUST FALSE, read as "may not" |
+| `s 137M(2)(b) the trustee-manager may require the other person who holds the interest as trustee to indicate the persons for whom it is held` | sfaa-div2-trust:908 | "if that other person holds it as trustee"; a function named for a power whose "if" gate failed (the grant ruling of 2026-11-12, limit 1) | NOTHING | JUST FALSE, read as "may not" |
+| `s 137M(3) the trustee-manager may require the unitholder to inform it whether the voting rights are subject to an agreement or arrangement` | sfaa-div2-trust:930 | "The trustee-manager of a registered business trust or recognised business trust may by written notice require any unitholder of the business trust to inform it, within such reasonable time as is specified in the notice" | NOTHING | JUST FALSE, read as "may not" |
+| `s 137M(3) the trustee-manager may require the unitholder to give particulars of the agreement or arrangement and the parties to it` | sfaa-div2-trust:951 | "and, if so, to give particulars of the agreement or arrangement and the parties to it"; a function named for a power whose "if" gate failed (the grant ruling of 2026-11-12, limit 1) | NOTHING | JUST FALSE, read as "may not" |
+| `s 137T(6) the Authority has power to extend, or further extend, the time for giving the notice` | sfaa-div3-reit:250 | SPLIT-SITE (ii) "may, on the application of a person required to give a notice under this Division"; the gate is not a "where" and the function is named for a power | NOTHING (also split site (ii): see Split sites) | JUST FALSE, read as "may not" |
+| `s 137W(1) the court has power to make one or more of the orders listed in the subsection` | sfaa-div3-reit:653 | SPLIT-SITE (ii) "Where a person is or has been a substantial unitholder of a real estate investment trust and has failed to comply with section 135, 136 or 137 as applied by section 137U(1), a court may, on the application of the Authority" | NOTHING (also split site (ii): see Split sites) | JUST FALSE, read as "may not" |
+| `s 137W(2) the order may include ancillary or consequential provisions the court thinks just` | sfaa-div3-reit:664 | "Any order made under this section may include such ancillary or consequential provisions as the court thinks just" | NOTHING | JUST FALSE, read as "may not" |
+| `s 137W(4) the Authority may apply to the court for directions on the unsold unit` | sfaa-div3-reit:695 | SPLIT-SITE (ii) "Where a unit is not sold in accordance with an order of the court under this section, the Authority may apply to the court for directions" | NOTHING (also split site (ii): see Split sites) | JUST FALSE, read as "may not" |
+| `s 137W(7) the court may direct that notice of the application be given or published` | sfaa-div3-reit:749 | SPLIT-SITE (ii) "The court may, before making an order under this section, direct that notice of the application be given to such persons as it thinks fit" | NOTHING (also split site (ii): see Split sites) | JUST FALSE, read as "may not" |
+| `s 137W(8) the court may rescind, vary, discharge or suspend the order` | sfaa-div3-reit:760 | "an order made by it under this section" | NOTHING | JUST FALSE, read as "may not" |
+| `s 137X(1) the trustee may require the unitholder to give the information` | sfaa-div3-reit:835 | "The trustee of a real estate investment trust may by written notice require any unitholder of the trust within such reasonable time as is specified in the notice" | NOTHING | JUST FALSE, read as "may not" |
+| `s 137X(1)(a) the trustee may require the unitholder to inform it whether the unitholder holds voting units as beneficial owner or as trustee` | sfaa-div3-reit:849 | answered through `s 137X(1) the trustee may require the unitholder to give the information` | NOTHING | JUST FALSE, read as "may not" |
+| `s 137X(1)(b) the trustee may require the unitholder who holds the units as trustee to indicate the persons for whom the unitholder holds them` | sfaa-div3-reit:865 | "if the unitholder holds them as trustee"; a function named for a power whose "if" gate failed (the grant ruling of 2026-11-12, limit 1) | NOTHING | JUST FALSE, read as "may not" |
+| `s 137X(2) the trustee may require the other person to give the information` | sfaa-div3-reit:886 | SPLIT-SITE (ii) "Where the trustee of a real estate investment trust is informed pursuant to a notice given to any person under subsection (1) or under this subsection that any other person has an interest in any of the voting units in the trust, the truste... | NOTHING (also split site (ii): see Split sites) | JUST FALSE, read as "may not" |
+| `s 137X(2)(a) the trustee may require the other person to inform it whether the person holds the interest as beneficial owner or as trustee` | sfaa-div3-reit:900 | answered through `s 137X(2) the trustee may require the other person to give the information` | NOTHING | JUST FALSE, read as "may not" |
+| `s 137X(2)(b) the trustee may require the other person who holds the interest as trustee to indicate the persons for whom it is held` | sfaa-div3-reit:916 | "if that other person holds it as trustee"; a function named for a power whose "if" gate failed (the grant ruling of 2026-11-12, limit 1) | NOTHING | JUST FALSE, read as "may not" |
+| `s 137X(3) the trustee may require the unitholder to inform it whether the voting rights are subject to an agreement or arrangement` | sfaa-div3-reit:938 | "The trustee of a real estate investment trust may by written notice require any unitholder of the trust to inform it, within such reasonable time as is specified in the notice" | NOTHING | JUST FALSE, read as "may not" |
+| `s 137X(3) the trustee may require the unitholder to give particulars of the agreement or arrangement and the parties to it` | sfaa-div3-reit:959 | "and, if so, to give particulars of the agreement or arrangement and the parties to it"; a function named for a power whose "if" gate failed (the grant ruling of 2026-11-12, limit 1) | NOTHING | JUST FALSE, read as "may not" |
+| `s 137ZD(1) the Authority may bring an action in a court for an order for a civil penalty` | sfaa-div4-civil-penalty:170 | SPLIT-SITE (ii) "Whenever it appears to the Authority that any person has" ... "the Authority may, with the consent of the Public Prosecutor, bring an action in a court against the person to seek an order for a civil penalty in respect of that act" | NOTHING (also split site (ii): see Split sites) | JUST FALSE, read as "may not" |
+| `s 137ZD(2) the court may make an order against the person for the payment of a civil penalty` | sfaa-div4-civil-penalty:183 | "If the court is satisfied on a balance of probabilities that subsection (1)(a), (b) or (c) (as the case may be) has been proved, the court may make an order" | NOTHING | JUST FALSE, read as "may not" |
+| `s 137ZD(3) the court may make an order on the terms agreed between the Authority and the person` | sfaa-div4-civil-penalty:214 | "the court may make an order against a person against whom an action has been brought under this section if the Authority, with the consent of the Public Prosecutor, has agreed to allow the person to consent to the order" | NOTHING | JUST FALSE, read as "may not" |
+| `s 137ZD(6) the Authority may recover the civil penalty as a judgment debt due to the Authority` | sfaa-div4-civil-penalty:258 | "If the person fails to pay the civil penalty imposed on the person within the time specified in the court order referred to in subsection (3) or specified under the agreement referred to in subsection (4), the Authority may recover" | NOTHING | JUST FALSE, read as "may not" |
+| `s 138(4) the Securities Industry Council may summon the person to give evidence on oath or affirmation or produce a document or material` | sfaa-part8:64 | "in the exercise of its functions, to enquire into any matter or thing related to the securities industry and may, for this purpose, summon any person" "necessary for the purpose of the enquiry" | NOTHING | JUST FALSE, read as "may not" |
+| `s 138(7) the Authority may consult the Securities Industry Council` | sfaa-part8:133 | "may consult the Securities Industry Council for the proper and effective implementation of this Act" | NOTHING | JUST FALSE, read as "may not" |
+| `s 138(10) the Securities Industry Council may regulate its own procedure and is not bound by the rules of evidence` | sfaa-part8:190 | "Subject to the provisions of this Act"; the provision that provides otherwise decides | NOTHING | JUST FALSE, read as "may not" |
+| `s 139(6) the Authority may revise the Take-over Code by deleting, amending or adding to its provisions` | sfaa-part8:298 | SPLIT-SITE (ii) "The Authority may, on the advice of the Securities Industry Council, revise the Take-over Code by deleting, amending or adding to the provisions thereof" | NOTHING (also split site (ii): see Split sites) | JUST FALSE, read as "may not" |
+| `s 139(7) the Securities Industry Council may issue a ruling or lay down the practice on the matter` | sfaa-part8:311 | "rulings on the interpretation of the general principles and rules in the Take-over Code and lay down the practice to be followed by parties concerned in a take-over offer or a matter connected therewith" | NOTHING | JUST FALSE, read as "may not" |
+| `s 139(10) the Securities Industry Council has power to enquire into the suspected breach or misconduct` | sfaa-part8:387 | SPLIT-SITE (ii) "Where the Securities Industry Council has reason to believe that any party concerned in a take-over offer or a matter connected therewith, or any person advising on a take-over offer or a matter connected therewith" "the Securities Industry... | NOTHING (also split site (ii): see Split sites) | JUST FALSE, read as "may not" |
+| `s 139(11) the Securities Industry Council may summon the person to give evidence on oath or affirmation or produce a document or material` | sfaa-part8:401 | "For the purpose of subsection (10)" "necessary for the purpose of the enquiry" | NOTHING | JUST FALSE, read as "may not" |
+
+## Jural relations (sfaa)
+
+One row per section or subsection that creates a relation between two parties, named neutrally and once (not from each side); a provision that creates none (a definition, a deeming, an extent or counting rule, or machinery) is one row marked `none`.
+175 rows create a relation and 52 create none. The seat is the individual; the Authority, the Minister, the Council and the court appear as parties to a relation but are never a seat.
+Where the text names no holder of the right (the register of s 137C(1); the announcement of s 137G(1)), the holder column says "none named" rather than inventing one. Divisions 2 and 3 read as Division 1 with the trustee-manager or the responsible person for the corporation and the substantial unitholder for the substantial shareholder.
+
+| Provision | Holder (right, privilege, power or immunity) | Bearer (duty, no-right, liability or disability) | Relation | L4 rule |
+| --- | --- | --- | --- | --- |
+| s 130(1) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 130(1) section 130 has effect for the purposes of Division 1 and does not affect any other provision` |
+| s 130(2) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 130(2) the body is a corporation for the purposes of Division 1` |
+| s 130(3) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 130(3) the person's interest in stock is deemed to be an interest in an issued share` |
+| s 130(4) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 130(4) the person is a member of the corporation` |
+| s 130(5) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 130(5) the person has an interest in the securities or securities-based derivatives contracts under Division 1` |
+| s 130(6) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 130(6) kind of person`, `s 130(6) the person is conclusively presumed to have been aware of the fact or occurrence`, `s 130(6) the day from which the person is taken to have been aware` |
+| s 130(7) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 130(7) "officer" (a) the person is an officer of a body corporate`, `s 130(7) "officer" (b) the person is an officer of an unincorporated association`, `s 130(7) "partner" the person is a partner` |
+| s 131(1) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 131(1) the obligation to comply with Division 1 extends to the person` |
+| s 131(2) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 131(2) Division 1 extends to the act or omission` |
+| s 131(3) | the Authority (power to exempt); the exempted person (immunity from the provision) | any person or class the Authority may exempt (liability); the Authority (disability, once it has exempted) | power/liability; immunity/disability | `s 131(3) the person is exempt from the provision of Division 1` |
+| s 131(4) | the Authority | the exempted person | claim/duty (to comply with the conditions or restrictions) | `s 131(4) the exempted person must comply with the condition or restriction`, `s 131(4) and (5) the exempted person shall not contravene a condition or restriction` |
+| s 131(5) | the State (prosecution) | the person who contravenes a condition or restriction | claim/duty; liability to conviction | `s 131(5) the person is guilty of an offence of contravening a condition or restriction`, `s 131(5) the penalty on conviction` |
+| s 131(6) | the Authority (power to extend the time) | the person required to give a notice who applies (liability to have the time extended) | power/liability | `s 131(6) the Authority has power to extend, or further extend, the time for giving the notice`, `s 131(6) the last day for giving the notice, as extended on the person's application` |
+| s 132 | none | none | none (machinery (inert)) |  |
+| s 133(1) | the corporation | a director or chief executive officer of the corporation | claim/duty (written notice of particulars of the securities held or in which there is an interest) | `s 133(1) matter`, `s 133(1) the director or chief executive officer must give the corporation written notice of the matter`, `s 133(1) and (3) the director or chief executive officer must give written notice within 2 business days` |
+| s 133(2) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 133(2) the paragraph applies to a director of a corporation which is a company`, `s 133(2) the person is a director of a company` |
+| s 133(3) | the corporation | a director or chief executive officer of the corporation | claim/duty (the notice in the prescribed form and within 2 business days) | within the functions of s 133 |
+| s 133(4) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | within the functions of s 133 |
+| s 133(5) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | within the functions of s 133 |
+| s 133(6) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 133(6) "family member" the person is a family member`, `s 133(6) the child is below the age of 21 years` |
+| s 134(1) | the State (prosecution) | a director or chief executive officer of the corporation | claim/duty (not to contravene section 133 intentionally or recklessly or give false information); liability to conviction | `s 134(1) the matter is one that subsection (1) names`, `s 134(1) the director or chief executive officer is guilty of an offence under subsection (1)`, `s 134(1) the penalty on conviction` |
+| s 134(2) | the State (prosecution) | a director or chief executive officer of the corporation | claim/duty; liability to conviction (the lesser offence) | `s 134(2) the director or chief executive officer is guilty of an offence under subsection (2)`, `s 134(2) the penalty on conviction` |
+| s 134(3) | a person who has paid or agreed a civil penalty for the same contravention | the prosecutor (disability to institute proceedings) | immunity/disability | `s 134(3) no proceedings may be instituted for an offence under section 134` |
+| s 135(1) | the corporation | the substantial shareholder | claim/duty (written notice of particulars of the voting shares) | `s 135(1) the person must give the corporation written notice of particulars of the voting shares`, `s 135(1) and (2)(b) the substantial shareholder must give written notice within 2 business days` |
+| s 135(2) | the corporation | the substantial shareholder | claim/duty (form, content and the 2 business days; the duty survives ceasing within the period) | within the functions of s 135 |
+| s 136(1) | the corporation | the substantial shareholder | claim/duty (written notice of a change in the percentage level within 2 business days) | `s 136(1) the substantial shareholder must give the corporation written notice of the change in the percentage level`, `s 136(1) the last day for the notice`, `s 136(1) the notice is given in time`, `s 136(1) the substantial shareholder must give written notice of the change within 2 business days` |
+| s 136(2) | the corporation | the substantial shareholder | claim/duty (form and content) | `s 136(2) the notice is in the form and contains the information the Authority prescribes` |
+| s 136(3) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 136(3) the percentage level of the substantial shareholder's interests` |
+| s 137(1) | the corporation | the person who ceases to be the substantial shareholder | claim/duty (written notice within 2 business days) | `s 137(1) the person who ceases to be a substantial shareholder must give the corporation written notice`, `s 137(1) the last day for the notice`, `s 137(1) the notice is given in time`, `s 137(1) the person who ceases to be a substantial shareholder must give written notice within 2 business days` |
+| s 137(2) | the corporation | the person who ceases to be the substantial shareholder | claim/duty (form and content) | `s 137(2) the notice is in the form and contains the information the Authority prescribes` |
+| s 137A | none named (the duty serves the notice regime; the Authority enforces it) | a person (A) who authorises another to hold, acquire or dispose of voting shares for A | duty (reasonable steps to ensure the other notifies A within 2 business days) | `s 137A the person must take reasonable steps to ensure that the other person notifies the person`, `s 137A the person has taken reasonable steps`, `s 137A the last day for the notice`, `s 137A the notice is given in time` (+2) |
+| s 137B | a person (A) for whom shares are held | the person (B) who holds voting shares on A's behalf and acquires or disposes of them | claim/duty (a notice of the acquisition or disposal within 2 business days) | `s 137B the person must give the other person a notice of the acquisition or disposal`, `s 137B the last day for the notice`, `s 137B the notice is given in time`, `s 137B the notice is in the form the Authority prescribes` (+2) |
+| s 137C(1) | none named (the register serves members and the Authority) | the corporation | duty (keep a register; immediately enter the names and information) | `s 137C(1) the corporation must keep a register`, `s 137C(1) the corporation must immediately enter the names and information in the register`, `s 137C(1) the corporation must immediately enter the names and information in the register` |
+| s 137C(2) | any member (free) and any other person (up to $2 an inspection) | the corporation | claim/duty (inspection of the register) | `s 137C(2) the register is kept at the place the subsection requires`, `s 137C(2) the most the corporation may charge for each inspection of the register, in Singapore dollars` |
+| s 137C(3) | a person who asks for a copy | the corporation | claim/duty (a copy within 14 days, at not more than $1 a page) | `s 137C(3) the most the corporation may charge in advance for each page copied, in Singapore dollars`, `s 137C(3) the last day for the corporation to send the copy`, `s 137C(3) the copy is sent in time`, `s 137C(3) the corporation must send the copy within 14 days` |
+| s 137C(4) | the Authority | the corporation | claim/duty (a copy of the register within 7 days of a written requirement) | `s 137C(4) the corporation must send the Authority a copy of the register`, `s 137C(4) the last day for the corporation to send the copy to the Authority`, `s 137C(4) the copy is sent to the Authority in time`, `s 137C(4) the corporation must send the Authority the copy within 7 days` |
+| s 137C(5) | the State (prosecution) | the corporation | claim/duty; liability to conviction | `s 137C(5) the corporation is guilty of an offence of failing to comply with the register provisions`, `s 137C(5) the penalty on conviction` |
+| s 137C(6) | the corporation | anyone who would impute notice or inquiry to the corporation | immunity/disability | `s 137C(6) the corporation is not taken to have notice of, or to be put upon inquiry as to, a right in a share by reason of the thing done` |
+| s 137D(1) | the State (prosecution) | the person who contravenes sections 135 to 137B intentionally or recklessly or gives false information | claim/duty; liability to conviction | `s 137D(1) the person is guilty of an offence under subsection (1)`, `s 137D(1) the penalty on conviction` |
+| s 137D(2) | the State (prosecution) | the person who contravenes sections 135 to 137B otherwise (the lesser offence) | claim/duty; liability to conviction | `s 137D(2) the person is guilty of an offence under subsection (2)`, `s 137D(2) the penalty on conviction` |
+| s 137D(3) | a person who has paid or agreed a civil penalty for the same contravention | the prosecutor (disability) | immunity/disability | `s 137D(3) no proceedings may be instituted for an offence under section 137D` |
+| s 137E(1) | the court (on the Authority's application) | the substantial shareholder (or former) who failed to comply | power/liability | `s 137E(1) kind of order`, `s 137E(1) the court has power to make one or more of the orders listed in the subsection` |
+| s 137E(2) | the court | the person subject to an order | power/liability (ancillary provisions) | `s 137E(2) the order may include ancillary or consequential provisions the court thinks just` |
+| s 137E(3) | a seller whose sale the court has not restricted | the court's condition (disability on a sale to a substantial shareholder) | disability | `s 137E(3) the sale to the buyer is barred by the court's condition` |
+| s 137E(4) | the Authority (power to apply for directions) | the court (liability to be applied to) | power/liability | `s 137E(4) the Authority may apply to the court for directions on the unsold share` |
+| s 137E(5) | any person who would be unfairly prejudiced | the court (it must first satisfy itself) | claim/duty | `s 137E(5) the court must first satisfy itself that the order would not unfairly prejudice any person` |
+| s 137E(6) | a person who failed to comply through inadvertence or mistake and ought to be excused | the court (disability to make the order) | immunity/disability | `s 137E(6) the court is not to make the order` |
+| s 137E(7) | the court (power to direct notice) | the applicant | power/liability | `s 137E(7) the court may direct that notice of the application be given or published` |
+| s 137E(8) | the court (power to rescind, vary, discharge or suspend) | the person subject to the order | power/liability | `s 137E(8) the court may rescind, vary, discharge or suspend the order` |
+| s 137E(9) | the State (prosecution) | the person to whom an order applies | claim/duty (not to contravene); liability to conviction | `s 137E(9) the person is guilty of an offence of contravening an order of the court`, `s 137E(9) the penalty on conviction`, `s 137E(9) the person shall not contravene an order of the court` |
+| s 137E(10) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 137E(10) subsection (9) does not affect the court's powers in relation to the punishment of contempt` |
+| s 137F(1) | the corporation (power to require information by written notice) | a member of the corporation (liability) | power/liability | `s 137F(1) the corporation may require the member to give the information` |
+| s 137F(2) | the corporation (power to require information) | a person the corporation has been informed has an interest in its voting shares (liability) | power/liability | `s 137F(2) the corporation may require the other person to give the information` |
+| s 137F(3) | the corporation (power to require information about voting agreements) | a member (liability) | power/liability | `s 137F(3) the corporation may require the member to inform it whether the voting rights are subject to an agreement or arrangement`, `s 137F(3) the corporation may require the member to give particulars of the agreement or arrangement and the parties to it` |
+| s 137F(4) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 137F(4) the notice contains the other information the Authority prescribes and is delivered as it prescribes` |
+| s 137F(5) | the corporation | a person to whom a notice is issued | claim/duty (to comply within the time the notice specifies) | `s 137F(5) the person must comply with the notice`, `s 137F(5) the person must comply with the notice within the time it specifies` |
+| s 137F(6) | none named (the register serves members and the Authority) | the corporation | duty (to inscribe the requirement in a separate part of the register) | `s 137F(6) the corporation must inscribe the fact of the requirement, its date and the information in a separate part of the register` |
+| s 137F(7) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 137F(7) section 137C applies to the separate part of the register` |
+| s 137F(8) | the State (prosecution) | the person who contravenes subsection (5) intentionally or recklessly or gives false information | claim/duty; liability to conviction | `s 137F(8) the person is guilty of an offence under subsection (8)`, `s 137F(8) the penalty on conviction` |
+| s 137F(9) | the State (prosecution) | the person who contravenes subsection (5) otherwise | claim/duty; liability to conviction | `s 137F(9) the person is guilty of an offence under subsection (9)`, `s 137F(9) the penalty on conviction` |
+| s 137F(10) | a person who proves the information was already in the corporation's possession, or the requirement was frivolous or vexatious | the prosecutor (disability) | immunity/disability (a defence) | `s 137F(10) the person is not guilty of an offence under subsection (8)(a) or (9)(a)` |
+| s 137F(11) | a person who has paid or agreed a civil penalty for the same contravention | the prosecutor (disability) | immunity/disability | `s 137F(11) no proceedings may be instituted for an offence under section 137F` |
+| s 137G(1) | none named (the market and the Authority are served by the announcement) | the corporation | duty (announce or disseminate by the end of the next business day) | `s 137G(1) the corporation must announce or disseminate the information stated in the notice`, `s 137G(1) the last day for the announcement`, `s 137G(1) the announcement is made in time`, `s 137G(1) the corporation must announce or disseminate the information by the end of the next business day` |
+| s 137G(2) | none named | the corporation | duty (in the form and manner the Authority prescribes) | `s 137G(2) the corporation announces or disseminates the information in the form and manner the Authority prescribes` |
+| s 137G(3) | the State (prosecution) | the corporation and persons who contravene subsection (1) or (2) intentionally or recklessly | claim/duty; liability to conviction | `s 137G(3) the person is guilty of an offence under subsection (3)`, `s 137G(3) the penalty on conviction` |
+| s 137G(4) | the State (prosecution) | the corporation and persons who contravene subsection (1) or (2) otherwise | claim/duty; liability to conviction | `s 137G(4) the person is guilty of an offence under subsection (4)`, `s 137G(4) the penalty on conviction` |
+| s 137G(5) | the State (prosecution) | an officer of the corporation who caused or permitted the contravention | claim/duty; liability to conviction | `s 137G(5) the officer is within the subsection` |
+| s 137G(6) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 137G(6) the person is an officer of the corporation` |
+| s 137G(7) | a person who has paid or agreed a civil penalty for the same contravention | the prosecutor (disability) | immunity/disability | `s 137G(7) no proceedings may be instituted for an offence under section 137G` |
+| s 137H(1) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 137H(1) section 137H has effect for the purposes of Division 2 and does not affect any other provision` |
+| s 137H(2) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 137H(2) the trust is a registered business trust for the purposes of Division 2` |
+| s 137H(3) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 137H(3) the trust is a recognised business trust for the purposes of Division 2` |
+| s 137H(4) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 137H(4) the person has an interest in the securities or securities-based derivatives contracts under Division 2` |
+| s 137H(5) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 137H(5) section 130(6) and (7) apply to the provision` |
+| s 137I(1) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 137I(1) the obligation to comply with Division 2 extends to the person` |
+| s 137I(2) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 137I(2) Division 2 extends to the act or omission` |
+| s 137I(3) | the Authority (power to exempt); the exempted person (immunity from the provision) | any person or class the Authority may exempt (liability); the Authority (disability, once it has exempted) | power/liability; immunity/disability | `s 137I(3) the person is exempt from the provision of Division 2` |
+| s 137I(4) | the Authority | the exempted person | claim/duty (to comply with the conditions or restrictions) | `s 137I(4) the exempted person must comply with the condition or restriction`, `s 137I(4) and (5) the exempted person shall not contravene a condition or restriction` |
+| s 137I(5) | the State (prosecution) | the person who contravenes a condition or restriction | claim/duty; liability to conviction | `s 137I(5) the person is guilty of an offence of contravening a condition or restriction`, `s 137I(5) the penalty on conviction` |
+| s 137I(6) | the Authority (power to extend the time) | the person required to give a notice who applies (liability to have the time extended) | power/liability | `s 137I(6) the Authority has power to extend, or further extend, the time for giving the notice`, `s 137I(6) the last day for giving the notice, as extended on the person's application` |
+| s 137IA | none | none | none (machinery (inert)) |  |
+| s 137J(1) | the trustee-manager | a substantial unitholder of a registered or recognised business trust | claim/duty (sections 135 to 137B apply to the unitholder as though the trustee-manager were the corporation) | `s 137J(1) sections 135 to 137B apply to the substantial unitholder` |
+| s 137J(2) | the State (prosecution) | the person who contravenes sections 135 to 137B intentionally or recklessly or gives false information | claim/duty; liability to conviction | `s 137J(2) the person is guilty of an offence under subsection (2)`, `s 137J(2) the penalty on conviction` |
+| s 137J(3) | the State (prosecution) | the person who contravenes sections 135 to 137B otherwise (the lesser offence) | claim/duty; liability to conviction | `s 137J(3) the person is guilty of an offence under subsection (3)`, `s 137J(3) the penalty on conviction` |
+| s 137J(4) | a person who has paid or agreed a civil penalty for the same contravention | the prosecutor (disability) | immunity/disability | `s 137J(4) no proceedings may be instituted for an offence under section 137J` |
+| s 137K(1) | none named (the register serves members and the Authority) | the trustee-manager | duty (keep a register; immediately enter the names and information) | `s 137K(1) the trustee-manager must keep a register`, `s 137K(1) the trustee-manager must immediately enter the names and information in the register`, `s 137K(1) the trustee-manager must immediately enter the names and information in the register` |
+| s 137K(2) | any member (free) and any other person (up to $2 an inspection) | the trustee-manager | claim/duty (inspection of the register) | `s 137K(2) the register is kept at the place the subsection requires`, `s 137K(2) the most the trustee-manager may charge for each inspection of the register, in Singapore dollars` |
+| s 137K(3) | a person who asks for a copy | the trustee-manager | claim/duty (a copy within 14 days, at not more than $1 a page) | `s 137K(3) the most the trustee-manager may charge in advance for each page copied, in Singapore dollars`, `s 137K(3) the last day for the trustee-manager to send the copy`, `s 137K(3) the copy is sent in time`, `s 137K(3) the trustee-manager must send the copy within 14 days` |
+| s 137K(4) | the Authority | the trustee-manager | claim/duty (a copy of the register within 7 days of a written requirement) | `s 137K(4) the trustee-manager must send the Authority a copy of the register`, `s 137K(4) the last day for the trustee-manager to send the copy to the Authority`, `s 137K(4) the copy is sent to the Authority in time`, `s 137K(4) the trustee-manager must send the Authority the copy within 7 days` |
+| s 137K(5) | the State (prosecution) | the trustee-manager | claim/duty; liability to conviction | `s 137K(5) the trustee-manager is guilty of an offence of failing to comply with the register provisions`, `s 137K(5) the penalty on conviction` |
+| s 137L(1) | the court (on the Authority's application) | the substantial unitholder (or former) who failed to comply | power/liability | `s 137L(1) kind of order`, `s 137L(1) the court has power to make one or more of the orders listed in the subsection` |
+| s 137L(2) | the court | the person subject to an order | power/liability (ancillary provisions) | `s 137L(2) the order may include ancillary or consequential provisions the court thinks just` |
+| s 137L(3) | a seller whose sale the court has not restricted | the court's condition (disability on a sale to a substantial shareholder) | disability | `s 137L(3) the sale to the buyer is barred by the court's condition` |
+| s 137L(4) | the Authority (power to apply for directions) | the court (liability to be applied to) | power/liability | `s 137L(4) the Authority may apply to the court for directions on the unsold unit` |
+| s 137L(5) | any person who would be unfairly prejudiced | the court (it must first satisfy itself) | claim/duty | `s 137L(5) the court must first satisfy itself that the order would not unfairly prejudice any person` |
+| s 137L(6) | a person who failed to comply through inadvertence or mistake and ought to be excused | the court (disability to make the order) | immunity/disability | `s 137L(6) the court is not to make the order` |
+| s 137L(7) | the court (power to direct notice) | the applicant | power/liability | `s 137L(7) the court may direct that notice of the application be given or published` |
+| s 137L(8) | the court (power to rescind, vary, discharge or suspend) | the person subject to the order | power/liability | `s 137L(8) the court may rescind, vary, discharge or suspend the order` |
+| s 137L(9) | the State (prosecution) | the person to whom an order applies | claim/duty (not to contravene); liability to conviction | `s 137L(9) the person is guilty of an offence of contravening an order of the court`, `s 137L(9) the penalty on conviction`, `s 137L(9) the person shall not contravene an order of the court` |
+| s 137L(10) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 137L(10) subsection (9) does not affect the court's powers in relation to the punishment of contempt` |
+| s 137M(1) | the trustee-manager (power to require information by written notice) | a member of the trustee-manager (liability) | power/liability | `s 137M(1) the trustee-manager may require the unitholder to give the information` |
+| s 137M(2) | the trustee-manager (power to require information) | a person the trustee-manager has been informed has an interest in its voting shares (liability) | power/liability | `s 137M(2) the trustee-manager may require the other person to give the information` |
+| s 137M(3) | the trustee-manager (power to require information about voting agreements) | a member (liability) | power/liability | `s 137M(3) the trustee-manager may require the unitholder to inform it whether the voting rights are subject to an agreement or arrangement`, `s 137M(3) the trustee-manager may require the unitholder to give particulars of the agreement or arrangement and the parties to it` |
+| s 137M(4) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 137M(4) the notice contains the other information the Authority prescribes and is delivered as it prescribes` |
+| s 137M(5) | the trustee-manager | a person to whom a notice is issued | claim/duty (to comply within the time the notice specifies) | `s 137M(5) the person must comply with the notice`, `s 137M(5) the person must comply with the notice within the time it specifies` |
+| s 137M(6) | none named (the register serves members and the Authority) | the trustee-manager | duty (to inscribe the requirement in a separate part of the register) | `s 137M(6) the trustee-manager must inscribe the fact of the requirement, its date and the information in a separate part of the register` |
+| s 137M(7) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 137M(7) section 137K applies to the separate part of the register` |
+| s 137M(8) | the State (prosecution) | the person who contravenes subsection (5) intentionally or recklessly or gives false information | claim/duty; liability to conviction | `s 137M(8) the person is guilty of an offence under subsection (8)`, `s 137M(8) the penalty on conviction` |
+| s 137M(9) | the State (prosecution) | the person who contravenes subsection (5) otherwise | claim/duty; liability to conviction | `s 137M(9) the person is guilty of an offence under subsection (9)`, `s 137M(9) the penalty on conviction` |
+| s 137M(10) | a person who proves the information was already in the corporation's possession, or the requirement was frivolous or vexatious | the prosecutor (disability) | immunity/disability (a defence) | `s 137M(10) the person is not guilty of an offence under subsection (8)(a) or (9)(a)` |
+| s 137M(11) | a person who has paid or agreed a civil penalty for the same contravention | the prosecutor (disability) | immunity/disability | `s 137M(11) no proceedings may be instituted for an offence under section 137M` |
+| s 137N(1) | the trustee-manager | a director or chief executive officer of the trustee-manager | claim/duty (written notice of particulars of the securities held or in which there is an interest) | `s 137N(1) the director or chief executive officer must give the trustee-manager written notice of the matter`, `s 137N(1) and (2) the director or chief executive officer must give written notice within 2 business days` |
+| s 137N(2) | the trustee-manager | a director or chief executive officer of the trustee-manager | claim/duty (the notice in the prescribed form and within 2 business days) | within the functions of s 137N |
+| s 137N(3) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 137N(3) the director or chief executive officer is deemed to have the family member's interest` |
+| s 137N(4) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 137N(4) "family member" the person is a family member`, `s 137N(4) the child is below the age of 21 years`, `s 137N(4) "unit" in relation to a debenture the thing is a unit` |
+| s 137O(1) | the State (prosecution) | a director or chief executive officer of the trustee-manager | claim/duty (not to contravene section 133 intentionally or recklessly or give false information); liability to conviction | `s 137O(1) the person is guilty of an offence under subsection (1)`, `s 137O(1) the penalty on conviction` |
+| s 137O(2) | the State (prosecution) | a director or chief executive officer of the trustee-manager | claim/duty; liability to conviction (the lesser offence) | `s 137O(2) the person is guilty of an offence under subsection (2)`, `s 137O(2) the penalty on conviction` |
+| s 137O(3) | a person who has paid or agreed a civil penalty for the same contravention | the prosecutor (disability to institute proceedings) | immunity/disability | `s 137O(3) no proceedings may be instituted for an offence under section 137O` |
+| s 137P(1) | the trustee-manager | the substantial unitholder | claim/duty (written notice of a change in the percentage level within 2 business days) | `s 137P(1) the percentage of interest reaches, crosses or falls below 15%, 30%, 50% or 75%`, `s 137P(1) the person must give the trustee-manager written notice of the change in the percentage of interest`, `s 137P(1) the last day for the notice`, `s 137P(1) the notice is given in time` (+1) |
+| s 137P(2) | the trustee-manager | the substantial unitholder | claim/duty (form and content) | `s 137P(2) the notice is in the form and contains the information the Authority prescribes` |
+| s 137P(3) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 137P(3) the percentage of interest of the person in the voting shares` |
+| s 137Q(1) | the State (prosecution) | a director or chief executive officer of the trustee-manager | claim/duty (not to contravene section 133 intentionally or recklessly or give false information); liability to conviction | `s 137Q(1) the person is guilty of an offence under subsection (1)`, `s 137Q(1) the penalty on conviction` |
+| s 137Q(2) | the State (prosecution) | a director or chief executive officer of the trustee-manager | claim/duty; liability to conviction (the lesser offence) | `s 137Q(2) the person is guilty of an offence under subsection (2)`, `s 137Q(2) the penalty on conviction` |
+| s 137Q(3) | a person who has paid or agreed a civil penalty for the same contravention | the prosecutor (disability to institute proceedings) | immunity/disability | `s 137Q(3) no proceedings may be instituted for an offence under section 137Q` |
+| s 137R(1) | none named (the market and the Authority are served by the announcement) | the trustee-manager | duty (announce or disseminate by the end of the next business day) | `s 137R(1) the trustee-manager must announce or disseminate the particulars or the information stated in the notice`, `s 137R(1) the last day for the announcement`, `s 137R(1) the announcement is made in time`, `s 137R(1) the trustee-manager must announce or disseminate the information by the end of the next business day` |
+| s 137R(2) | none named | the trustee-manager | duty (in the form and manner the Authority prescribes) | `s 137R(2) the trustee-manager announces or disseminates the information in the form and manner the Authority prescribes` |
+| s 137R(3) | the State (prosecution) | the trustee-manager and persons who contravene subsection (1) or (2) intentionally or recklessly | claim/duty; liability to conviction | `s 137R(3) the person is guilty of an offence under subsection (3)`, `s 137R(3) the penalty on conviction` |
+| s 137R(4) | the State (prosecution) | the trustee-manager and persons who contravene subsection (1) or (2) otherwise | claim/duty; liability to conviction | `s 137R(4) the person is guilty of an offence under subsection (4)`, `s 137R(4) the penalty on conviction` |
+| s 137R(5) | the State (prosecution) | an officer of the trustee-manager who caused or permitted the contravention | claim/duty; liability to conviction | `s 137R(5) the officer is within the subsection` |
+| s 137R(6) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 137R(6) the person is an officer of the trustee-manager` |
+| s 137R(7) | a person who has paid or agreed a civil penalty for the same contravention | the prosecutor (disability) | immunity/disability | `s 137R(7) no proceedings may be instituted for an offence under section 137R` |
+| s 137S(1) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 137S(1) section 137S has effect for the purposes of Division 3 and does not affect any other provision` |
+| s 137S(2) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 137S(2) the scheme is a real estate investment trust`, `s 137S(2) "trustee" (a) the person is the trustee of an authorised real estate investment trust`, `s 137S(2) "trustee" (b) the person is the trustee of any other real estate investment trust`, `s 137S(2) "trustee" the person is the trustee of the real estate investment trust` |
+| s 137S(3) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 137S(3) the person has an interest in the securities, securities-based derivatives contracts or units under Division 3` |
+| s 137S(4) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 137S(4) section 130(6) and (7) apply to the provision` |
+| s 137T(1) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 137T(1) the obligation to comply with Division 3 extends to the person` |
+| s 137T(2) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 137T(2) Division 3 extends to the act or omission` |
+| s 137T(3) | the Authority (power to exempt); the exempted person (immunity from the provision) | any person or class the Authority may exempt (liability); the Authority (disability, once it has exempted) | power/liability; immunity/disability | `s 137T(3) the person is exempt from the provision of Division 3` |
+| s 137T(4) | the Authority | the exempted person | claim/duty (to comply with the conditions or restrictions) | `s 137T(4) the exempted person must comply with the condition or restriction`, `s 137T(4) and (5) the exempted person shall not contravene a condition or restriction` |
+| s 137T(5) | the State (prosecution) | the person who contravenes a condition or restriction | claim/duty; liability to conviction | `s 137T(5) the person is guilty of an offence of contravening a condition or restriction`, `s 137T(5) the penalty on conviction` |
+| s 137T(6) | the Authority (power to extend the time) | the person required to give a notice who applies (liability to have the time extended) | power/liability | `s 137T(6) the Authority has power to extend, or further extend, the time for giving the notice`, `s 137T(6) the last day for giving the notice, as extended on the person's application` |
+| s 137TA | none | none | none (machinery (inert)) |  |
+| s 137U(1) | the responsible person | a substantial unitholder of a real estate investment trust | claim/duty (sections 135 to 137B apply as though the responsible person were the corporation) | `s 137U(1) sections 135 to 137B apply to the substantial unitholder` |
+| s 137U(2) | the State (prosecution) | the person who contravenes sections 135 to 137B intentionally or recklessly or gives false information | claim/duty; liability to conviction | `s 137U(2) the person is guilty of an offence under subsection (2)`, `s 137U(2) the penalty on conviction` |
+| s 137U(3) | the State (prosecution) | the person who contravenes sections 135 to 137B otherwise (the lesser offence) | claim/duty; liability to conviction | `s 137U(3) the person is guilty of an offence under subsection (3)`, `s 137U(3) the penalty on conviction` |
+| s 137U(4) | a person who has paid or agreed a civil penalty for the same contravention | the prosecutor (disability) | immunity/disability | `s 137U(4) no proceedings may be instituted for an offence under section 137U` |
+| s 137V(1) | none named (the register serves members and the Authority) | the responsible person | duty (keep a register; immediately enter the names and information) | `s 137V(1) the trustee must keep a register`, `s 137V(1) the trustee must immediately enter the names and information in the register`, `s 137V(1) the trustee must immediately enter the names and information in the register` |
+| s 137V(2) | any member (free) and any other person (up to $2 an inspection) | the responsible person | claim/duty (inspection of the register) | `s 137V(2) the register is kept at the place the subsection requires`, `s 137V(2) the most the trustee may charge for each inspection of the register, in Singapore dollars` |
+| s 137V(3) | a person who asks for a copy | the responsible person | claim/duty (a copy within 14 days, at not more than $1 a page) | `s 137V(3) the most the trustee may charge in advance for each page copied, in Singapore dollars`, `s 137V(3) the last day for the trustee to send the copy`, `s 137V(3) the copy is sent in time`, `s 137V(3) the trustee must send the copy within 14 days` |
+| s 137V(4) | the Authority | the responsible person | claim/duty (a copy of the register within 7 days of a written requirement) | `s 137V(4) the trustee must send the Authority a copy of the register`, `s 137V(4) the last day for the trustee to send the copy to the Authority`, `s 137V(4) the copy is sent to the Authority in time`, `s 137V(4) the trustee must send the Authority the copy within 7 days` |
+| s 137V(5) | the State (prosecution) | the responsible person | claim/duty; liability to conviction | `s 137V(5) the trustee is guilty of an offence of failing to comply with the register provisions`, `s 137V(5) the penalty on conviction` |
+| s 137W(1) | the court (on the Authority's application) | the substantial unitholder (or former) who failed to comply | power/liability | `s 137W(1) kind of order`, `s 137W(1) the court has power to make one or more of the orders listed in the subsection` |
+| s 137W(2) | the court | the person subject to an order | power/liability (ancillary provisions) | `s 137W(2) the order may include ancillary or consequential provisions the court thinks just` |
+| s 137W(3) | a seller whose sale the court has not restricted | the court's condition (disability on a sale to a substantial shareholder) | disability | `s 137W(3) the sale to the buyer is barred by the court's condition` |
+| s 137W(4) | the Authority (power to apply for directions) | the court (liability to be applied to) | power/liability | `s 137W(4) the Authority may apply to the court for directions on the unsold unit` |
+| s 137W(5) | any person who would be unfairly prejudiced | the court (it must first satisfy itself) | claim/duty | `s 137W(5) the court must first satisfy itself that the order would not unfairly prejudice any person` |
+| s 137W(6) | a person who failed to comply through inadvertence or mistake and ought to be excused | the court (disability to make the order) | immunity/disability | `s 137W(6) the court is not to make the order` |
+| s 137W(7) | the court (power to direct notice) | the applicant | power/liability | `s 137W(7) the court may direct that notice of the application be given or published` |
+| s 137W(8) | the court (power to rescind, vary, discharge or suspend) | the person subject to the order | power/liability | `s 137W(8) the court may rescind, vary, discharge or suspend the order` |
+| s 137W(9) | the State (prosecution) | the person to whom an order applies | claim/duty (not to contravene); liability to conviction | `s 137W(9) the person is guilty of an offence of contravening an order of the court`, `s 137W(9) the penalty on conviction`, `s 137W(9) the person shall not contravene an order of the court` |
+| s 137W(10) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 137W(10) subsection (9) does not affect the court's powers in relation to the punishment of contempt` |
+| s 137X(1) | the responsible person (power to require information by written notice) | a member of the responsible person (liability) | power/liability | `s 137X(1) the trustee may require the unitholder to give the information` |
+| s 137X(2) | the responsible person (power to require information) | a person the responsible person has been informed has an interest in its voting shares (liability) | power/liability | `s 137X(2) the trustee may require the other person to give the information` |
+| s 137X(3) | the responsible person (power to require information about voting agreements) | a member (liability) | power/liability | `s 137X(3) the trustee may require the unitholder to inform it whether the voting rights are subject to an agreement or arrangement`, `s 137X(3) the trustee may require the unitholder to give particulars of the agreement or arrangement and the parties to it` |
+| s 137X(4) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 137X(4) the notice contains the other information the Authority prescribes and is delivered as it prescribes` |
+| s 137X(5) | the responsible person | a person to whom a notice is issued | claim/duty (to comply within the time the notice specifies) | `s 137X(5) the person must comply with the notice`, `s 137X(5) the person must comply with the notice within the time it specifies` |
+| s 137X(6) | none named (the register serves members and the Authority) | the responsible person | duty (to inscribe the requirement in a separate part of the register) | `s 137X(6) the trustee must inscribe the fact of the requirement, its date and the information in a separate part of the register` |
+| s 137X(7) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 137X(7) section 137V applies to the separate part of the register` |
+| s 137X(8) | the State (prosecution) | the person who contravenes subsection (5) intentionally or recklessly or gives false information | claim/duty; liability to conviction | `s 137X(8) the person is guilty of an offence under subsection (8)`, `s 137X(8) the penalty on conviction` |
+| s 137X(9) | the State (prosecution) | the person who contravenes subsection (5) otherwise | claim/duty; liability to conviction | `s 137X(9) the person is guilty of an offence under subsection (9)`, `s 137X(9) the penalty on conviction` |
+| s 137X(10) | a person who proves the information was already in the corporation's possession, or the requirement was frivolous or vexatious | the prosecutor (disability) | immunity/disability (a defence) | `s 137X(10) the person is not guilty of an offence under subsection (8)(a) or (9)(a)` |
+| s 137X(11) | a person who has paid or agreed a civil penalty for the same contravention | the prosecutor (disability) | immunity/disability | `s 137X(11) no proceedings may be instituted for an offence under section 137X` |
+| s 137Y(1) | the responsible person | a director or chief executive officer of the responsible person | claim/duty (written notice of particulars of the securities held or in which there is an interest) | `s 137Y(1) the director or chief executive officer must give the responsible person written notice of the matter`, `s 137Y(1) and (2) the director or chief executive officer must give written notice within 2 business days` |
+| s 137Y(2) | the responsible person | a director or chief executive officer of the responsible person | claim/duty (the notice in the prescribed form and within 2 business days) | within the functions of s 137Y |
+| s 137Y(3) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 137Y(3) the director or chief executive officer is deemed to have the family member's interest` |
+| s 137Y(4) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 137Y(4) "family member" the person is a family member`, `s 137Y(4) the child is below the age of 21 years`, `s 137Y(4) "unit" in relation to a debenture the thing is a unit` |
+| s 137Z(1) | the State (prosecution) | a director or chief executive officer of the responsible person | claim/duty (not to contravene section 133 intentionally or recklessly or give false information); liability to conviction | `s 137Z(1) the person is guilty of an offence under subsection (1)`, `s 137Z(1) the penalty on conviction` |
+| s 137Z(2) | the State (prosecution) | a director or chief executive officer of the responsible person | claim/duty; liability to conviction (the lesser offence) | `s 137Z(2) the person is guilty of an offence under subsection (2)`, `s 137Z(2) the penalty on conviction` |
+| s 137Z(3) | a person who has paid or agreed a civil penalty for the same contravention | the prosecutor (disability to institute proceedings) | immunity/disability | `s 137Z(3) no proceedings may be instituted for an offence under section 137Z` |
+| s 137ZA(1) | the responsible person | the substantial unitholder | claim/duty (written notice of a change in the percentage level within 2 business days) | `s 137ZA(1) the percentage of interest reaches, crosses or falls below 15%, 30%, 50% or 75%`, `s 137ZA(1) the person must give the responsible person written notice of the change in the percentage of interest`, `s 137ZA(1) the last day for the notice`, `s 137ZA(1) the notice is given in time` (+1) |
+| s 137ZA(2) | the responsible person | the substantial unitholder | claim/duty (form and content) | `s 137ZA(2) the notice is in the form and contains the information the Authority prescribes` |
+| s 137ZA(3) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 137ZA(3) the percentage of interest of the person in the voting shares` |
+| s 137ZB(1) | the State (prosecution) | a director or chief executive officer of the responsible person | claim/duty (not to contravene section 133 intentionally or recklessly or give false information); liability to conviction | `s 137ZB(1) the person is guilty of an offence under subsection (1)`, `s 137ZB(1) the penalty on conviction` |
+| s 137ZB(2) | the State (prosecution) | a director or chief executive officer of the responsible person | claim/duty; liability to conviction (the lesser offence) | `s 137ZB(2) the person is guilty of an offence under subsection (2)`, `s 137ZB(2) the penalty on conviction` |
+| s 137ZB(3) | a person who has paid or agreed a civil penalty for the same contravention | the prosecutor (disability to institute proceedings) | immunity/disability | `s 137ZB(3) no proceedings may be instituted for an offence under section 137ZB` |
+| s 137ZC(1) | none named (the market and the Authority are served by the announcement) | the responsible person | duty (announce or disseminate by the end of the next business day) | `s 137ZC(1) the responsible person must announce or disseminate the particulars or the information stated in the notice`, `s 137ZC(1) the last day for the announcement`, `s 137ZC(1) the announcement is made in time`, `s 137ZC(1) the responsible person must announce or disseminate the information by the end of the next business day` |
+| s 137ZC(2) | none named | the responsible person | duty (in the form and manner the Authority prescribes) | `s 137ZC(2) the responsible person announces or disseminates the information in the form and manner the Authority prescribes` |
+| s 137ZC(3) | the State (prosecution) | the responsible person and persons who contravene subsection (1) or (2) intentionally or recklessly | claim/duty; liability to conviction | `s 137ZC(3) the person is guilty of an offence under subsection (3)`, `s 137ZC(3) the penalty on conviction` |
+| s 137ZC(4) | the State (prosecution) | the responsible person and persons who contravene subsection (1) or (2) otherwise | claim/duty; liability to conviction | `s 137ZC(4) the person is guilty of an offence under subsection (4)`, `s 137ZC(4) the penalty on conviction` |
+| s 137ZC(5) | the State (prosecution) | an officer of the responsible person who caused or permitted the contravention | claim/duty; liability to conviction | `s 137ZC(5) the officer is within the subsection` |
+| s 137ZC(6) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 137ZC(6) the person is an officer of the responsible person` |
+| s 137ZC(7) | a person who has paid or agreed a civil penalty for the same contravention | the prosecutor (disability) | immunity/disability | `s 137ZC(7) no proceedings may be instituted for an offence under section 137ZC` |
+| s 137ZD(1) | the Authority, with the consent of the Public Prosecutor (power to bring an action) | a person who has done an act in paragraph (a), (b) or (c) (liability) | power/liability | `s 137ZD(1) the Authority may bring an action in a court for an order for a civil penalty` |
+| s 137ZD(2) | the court (power to order a civil penalty of $50,000 to $2 million) | the person against whom the action is brought (liability) | power/liability | `s 137ZD(2) the court may make an order against the person for the payment of a civil penalty`, `s 137ZD(2) the amount of the civil penalty is within the limits` |
+| s 137ZD(3) | the court (power to order on the terms agreed) | the person who consents (liability) | power/liability | `s 137ZD(3) the court may make an order on the terms agreed between the Authority and the person` |
+| s 137ZD(4) | the Authority and the person (privilege to agree a penalty within the limits) | none (no one may complain: "Nothing in this section is to be construed to prevent") | privilege/no-right | `s 137ZD(4) nothing in section 137ZD prevents the Authority from entering into the agreement` |
+| s 137ZD(5) | the Government (Consolidated Fund) | the person ordered or agreed to pay | claim/duty (the penalty is a debt due to the Government) | `s 137ZD(5) the civil penalty is paid into the Consolidated Fund and is a debt due to the Government` |
+| s 137ZD(6) | the Authority (power to recover as a judgment debt) | the person who fails to pay (liability) | power/liability | `s 137ZD(6) the Authority may recover the civil penalty as a judgment debt due to the Authority` |
+| s 137ZD(7) | the person against whom the action is brought (the defences available in a prosecution) | the Authority | privilege/no-right | `s 137ZD(7) the defence is also available to the person against whom the action is brought` |
+| s 137ZE(1) | the person (no action after 6 years from the date of the act, or after conviction or acquittal) | the Authority (disability to commence) | immunity/disability | `s 137ZE(1) the action must not be commenced` |
+| s 137ZE(2) | the person (the action is stayed once criminal proceedings are commenced) | the Authority and the court (disability to continue except as the subsection allows) | immunity/disability | `s 137ZE(2) the action must be stayed`, `s 137ZE(2) the stayed action may be continued` |
+| s 137ZF | the District Court (jurisdiction regardless of the monetary amount) | a party to an action under section 137ZD (liability) | power/liability | `s 137ZF a District Court has jurisdiction to hear and determine the action regardless of the monetary amount` |
+| s 137ZG | none | none | none (machinery (inert)) |  |
+| s 138(1) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 138(1) the body is the Securities Industry Council referred to in section 138` |
+| s 138(2) | the Minister | the Securities Industry Council (to advise on all matters relating to the securities industry) | claim/duty | `s 138(2) the Securities Industry Council has the function of advising the Minister on the matter` |
+| s 138(3) | the Minister (power to appoint and to determine periods) | the representatives appointed (liability) | power/liability | `s 138(3) the person serves on the Securities Industry Council` |
+| s 138(4) | the Securities Industry Council (power to enquire and to summon) | any person summoned to give evidence or produce a document or material (liability) | power/liability | `s 138(4) the Securities Industry Council may summon the person to give evidence on oath or affirmation or produce a document or material` |
+| s 138(5) | an advocate and solicitor, or a legal counsel, holding a privileged document | the Securities Industry Council (disability to compel production or take possession) | immunity/disability | `s 138(5) the document is protected from production and from the taking of possession under subsection (4)` |
+| s 138(6) | the Securities Industry Council | the lawyer who refuses to produce (to give the name and address if known) | claim/duty | `s 138(6) the person must give the name and address of the person to whom or by or on behalf of whom the communication was made`, `s 138(6) the lawyer must give the name and address` |
+| s 138(7) | the Authority (privilege to consult the Council) | the Securities Industry Council (no-right to refuse) | privilege/no-right | `s 138(7) the Authority may consult the Securities Industry Council` |
+| s 138(8) | each member of the Council (immunity in the execution of duty, like a Judge) | anyone who sues a member (disability) | immunity/disability (the deeming as a public servant is none) | within the functions of s 138 |
+| s 138(9) | none named (the public) | the Securities Industry Council (must have regard to the interests of the public, the protection of investors and the safeguarding of sources of information) | duty | `s 138(9) the Securities Industry Council must have regard to the matter in the exercise of its functions` |
+| s 138(10) | the Securities Industry Council (privilege to regulate its own procedure; not bound by the rules of evidence) | persons before it (no-right) | privilege/no-right | `s 138(10) the Securities Industry Council may regulate its own procedure and is not bound by the rules of evidence` |
+| s 139(1) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 139(1) sections 139 and 140 apply to the person and extend to acts done outside Singapore` |
+| s 139(2) | none named | the Authority (must issue the Code on the Council's advice) | duty | `s 139(2) the document is the Singapore Code on Take-overs and Mergers referred to in section 139 and issued by the Authority under section 321(1)` |
+| s 139(3) | none | none | none (a definition, deeming, extent or counting rule: it creates no relation) | `s 139(3) the Take-over Code is deemed not to be subsidiary legislation` |
+| s 139(4) | the Securities Industry Council (which administers and enforces the Code) | all parties concerned in a take-over offer or a matter connected with one (must comply) | claim/duty | `s 139(4) the Take-over Code applies to the thing`, `s 139(4) the person must comply with the provisions of the Take-over Code`, `s 139(4) the party concerned must comply with the Take-over Code` |
+| s 139(5) | the Securities Industry Council (power to administer and enforce) | parties concerned in a take-over offer (liability) | power/liability | `s 139(5) the body administers and enforces the Take-over Code` |
+| s 139(6) | the Authority (power to revise the Code on the Council's advice) | parties concerned (liability to the revised Code) | power/liability | `s 139(6) the Authority may revise the Take-over Code by deleting, amending or adding to its provisions` |
+| s 139(7) | the Securities Industry Council (power to issue rulings and lay down practice; final) | parties concerned (liability) | power/liability | `s 139(7) the Securities Industry Council may issue a ruling or lay down the practice on the matter`, `s 139(7) the ruling or practice is final` |
+| s 139(8) | a party concerned (not of itself liable to criminal proceedings); any party to proceedings (privilege to rely on the failure) | the prosecutor (disability); the party who failed (no-right against reliance) | immunity/disability; privilege/no-right | `s 139(8) the failure of itself renders the party liable to criminal proceedings`, `s 139(8) the failure may be relied upon in proceedings as tending to establish or to negate a liability` |
+| s 139(9) | the Securities Industry Council (power to invoke sanctions, including public censure) | a party concerned who breaches the Code (liability) | power/liability | `s 139(9) subsection (8) does not prevent the Securities Industry Council from invoking the sanction` |
+| s 139(10) | the Securities Industry Council (power to enquire) | a party concerned, or a person advising on a take-over offer (liability) | power/liability | `s 139(10) the Securities Industry Council has power to enquire into the suspected breach or misconduct` |
+| s 139(11) | the Securities Industry Council (power to summon) | any person summoned (liability) | power/liability | `s 139(11) the Securities Industry Council may summon the person to give evidence on oath or affirmation or produce a document or material` |
+| s 140(1) | the State (prosecution) | a person who has no intention to make a take-over offer (must not give notice or announce one) | claim/duty | `s 140(1) the person must not give notice or publicly announce that the person intends to make a take-over offer`, `s 140(1) the person with no intention shall not give notice or publicly announce an intention to make a take-over offer` |
+| s 140(2) | the State (prosecution) | a person with no reasonable or probable grounds for believing the obligations can be performed | claim/duty | `s 140(2) the person must not make a take-over offer or give notice or publicly announce that the person intends to make one`, `s 140(2) the person with no grounds shall not make a take-over offer or announce an intention to make one` |
+| s 140(3) | the State (prosecution) | the person, and a corporation's officer in default (liability on conviction: a fine of up to $250,000 or up to 7 years, or both) | claim/duty; liability | `s 140(3) the person is guilty of an offence under section 140`, `s 140(3) the officer of the corporation is guilty of an offence under section 140`, `s 140(3) the penalty on conviction` |
+
+## Marginal readings for a lawyer (sfaa)
+
+Three groups are left to a lawyer or the maintainer, with the answer taken and the other reading. Each is tagged on the very line of its branch, so one search finds it and a ruling is applied by flipping that branch.
+
+1. **A failed "if" counted as the text's no (marginal reading (a)): 7 sites.** The text introduces a deeming, bar or duty with "if"; when it fails the answer is `JUST FALSE`. The other reading is `NOTHING`. None of these functions is named for a grant or a power (the grant ruling, limit 1, does not reach them).
+2. **A bar limited by its own wording (marginal reading (b)): 17 sites.** A "no proceedings may be instituted ... after" bar, or an action that "must not be commenced", answers `JUST FALSE` outside its trigger (the grant ruling, limit 2: "keep `JUST FALSE` ... for a bar"). The other reading is `NOTHING` (the Guide's "limits a grant or prohibition in its own wording and the case falls outside the limit", line 87).
+3. **A "may" gated by "where", "when", "upon", "on application", "before" or "on the advice of" (split site (ii)): 18 sites**, answered `NOTHING`; the other reading is `JUST FALSE` (the periods ruling of 2026-11-05, item (b), and line 94, item (c)). They are rows of the table under `## Split sites (sfaa)`; `s 139(6)` ("on the advice of") is one of them, a gate the Guide's list does not name, and has its own fork line (B14).
+
+| Kind | Function | File:line | Answer taken | Other reading | Why (from the branch comment) |
+| --- | --- | --- | --- | --- | --- |
+| (b) a bar limited by its own wording | `s 137F(11) no proceedings may be instituted for an offence under section 137F` | sfaa-div1-beneficial-disclosure:362 | JUST FALSE | NOTHING | the bar is limited by its own wording ("after"); outside the limit the other reading is NOTHING. |
+| (b) a bar limited by its own wording | `s 137G(7) no proceedings may be instituted for an offence under section 137G` | sfaa-div1-beneficial-disclosure:587 | JUST FALSE | NOTHING | the bar is limited by its own wording ("after"); outside the limit the other reading is NOTHING. |
+| (a) a failed "if" counted as the text's no | `s 133(4)(a) the director or chief executive officer is deemed to have the family member's interest` | sfaa-div1-directors:268 | JUST FALSE | NOTHING | the deeming rule is introduced with "if"; a failed "if" is taken as the text's no. The other reading is NOTHING. |
+| (b) a bar limited by its own wording | `s 134(3) no proceedings may be instituted for an offence under section 134` | sfaa-div1-directors:572 | JUST FALSE | NOTHING | the bar is limited by its own wording ("after"); outside the limit the other reading is NOTHING. |
+| (b) a bar limited by its own wording | `s 137D(3) no proceedings may be instituted for an offence under section 137D` | sfaa-div1-penalties-court:107 | JUST FALSE | NOTHING | the bar is limited by its own wording ("after"); outside the limit the other reading is NOTHING. |
+| (a) a failed "if" counted as the text's no | `s 137E(6) the court is not to make the order` | sfaa-div1-penalties-court:222 | JUST FALSE | NOTHING | the bar is introduced with "if"; a failed "if" is taken as the text's no. The other reading is NOTHING. |
+| (a) a failed "if" counted as the text's no | `s 137N(3) the director or chief executive officer is deemed to have the family member's interest` | sfaa-div2-officers:193 | JUST FALSE | NOTHING | the deeming rule is introduced with "if"; a failed "if" is taken as the text's no. The other reading is NOTHING. |
+| (b) a bar limited by its own wording | `s 137O(3) no proceedings may be instituted for an offence under section 137O` | sfaa-div2-officers:349 | JUST FALSE | NOTHING | the bar is limited by its own wording ("after"); outside the limit the other reading is NOTHING. |
+| (b) a bar limited by its own wording | `s 137Q(3) no proceedings may be instituted for an offence under section 137Q` | sfaa-div2-officers:582 | JUST FALSE | NOTHING | the bar is limited by its own wording ("after"); outside the limit the other reading is NOTHING. |
+| (b) a bar limited by its own wording | `s 137R(7) no proceedings may be instituted for an offence under section 137R` | sfaa-div2-officers:802 | JUST FALSE | NOTHING | the bar is limited by its own wording ("after"); outside the limit the other reading is NOTHING. |
+| (b) a bar limited by its own wording | `s 137J(4) no proceedings may be instituted for an offence under section 137J` | sfaa-div2-trust:375 | JUST FALSE | NOTHING | the bar is limited by its own wording ("after"); outside the limit the other reading is NOTHING. |
+| (a) a failed "if" counted as the text's no | `s 137L(6) the court is not to make the order` | sfaa-div2-trust:729 | JUST FALSE | NOTHING | the bar is introduced with "if"; a failed "if" is taken as the text's no. The other reading is NOTHING. |
+| (b) a bar limited by its own wording | `s 137M(11) no proceedings may be instituted for an offence under section 137M` | sfaa-div2-trust:1169 | JUST FALSE | NOTHING | the bar is limited by its own wording ("after"); outside the limit the other reading is NOTHING. |
+| (a) a failed "if" counted as the text's no | `s 137Y(3) the director or chief executive officer is deemed to have the family member's interest` | sfaa-div3-officers:195 | JUST FALSE | NOTHING | the deeming rule is introduced with "if"; a failed "if" is taken as the text's no. The other reading is NOTHING. |
+| (b) a bar limited by its own wording | `s 137Z(3) no proceedings may be instituted for an offence under section 137Z` | sfaa-div3-officers:349 | JUST FALSE | NOTHING | the bar is limited by its own wording ("after"); outside the limit the other reading is NOTHING. |
+| (b) a bar limited by its own wording | `s 137ZB(3) no proceedings may be instituted for an offence under section 137ZB` | sfaa-div3-officers:579 | JUST FALSE | NOTHING | the bar is limited by its own wording ("after"); outside the limit the other reading is NOTHING. |
+| (b) a bar limited by its own wording | `s 137ZC(7) no proceedings may be instituted for an offence under section 137ZC` | sfaa-div3-officers:797 | JUST FALSE | NOTHING | the bar is limited by its own wording ("after"); outside the limit the other reading is NOTHING. |
+| (b) a bar limited by its own wording | `s 137U(4) no proceedings may be instituted for an offence under section 137U` | sfaa-div3-reit:395 | JUST FALSE | NOTHING | the bar is limited by its own wording ("after"); outside the limit the other reading is NOTHING. |
+| (a) a failed "if" counted as the text's no | `s 137W(6) the court is not to make the order` | sfaa-div3-reit:738 | JUST FALSE | NOTHING | the bar is introduced with "if"; a failed "if" is taken as the text's no. The other reading is NOTHING. |
+| (b) a bar limited by its own wording | `s 137X(11) no proceedings may be instituted for an offence under section 137X` | sfaa-div3-reit:1176 | JUST FALSE | NOTHING | the bar is limited by its own wording ("after"); outside the limit the other reading is NOTHING. |
+| (b) a bar limited by its own wording | `s 137ZE(1)(a) the action must not be commenced because 6 years from the date of the act have expired` | sfaa-div4-civil-penalty:293 | JUST FALSE | NOTHING | the bar is limited by its own wording ("after the expiration of 6 years"); outside the limit the other reading is NOTHING. |
+| (b) a bar limited by its own wording | `s 137ZE(1)(b) the action must not be commenced because the person has been convicted or acquitted` | sfaa-div4-civil-penalty:311 | JUST FALSE | NOTHING | the bar is limited by its own wording ("if", "except"); outside the limit the other reading is NOTHING. |
+| (b) a bar limited by its own wording | `s 137ZE(1) the action must not be commenced` | sfaa-div4-civil-penalty:333 | JUST FALSE | NOTHING | see paragraphs (a) and (b). |
+| (a) a failed "if" counted as the text's no | `s 138(6) the person must give the name and address of the person to whom or by or on behalf of whom the communication was made` | sfaa-part8:108 | JUST FALSE | NOTHING | the duty is introduced with "if he or she knows them"; a failed "if" is taken as the text's no. The other reading is NOTHING. |
+
+### Reading a result: FALSE and NOTHING (sfaa)
+
+A caller must never turn `NOTHING` into `FALSE`.
+`JUST TRUE` is yes. `JUST FALSE` is no **in the text's own words**: a defined term the text closes ("means"), a condition introduced with "if", "only if" or "unless", a list closed with "only", a flat negative ("does not", "shall not"), a bar the text states, a period the text fixes. `NOTHING` is "the text does not say": the case is outside a class or a limit the provision writes into its own wording, or the provision is silent, or the list is not closed, or it points outside the text.
+Every branch carries `-- FALSE-kind (the text says no in its own words): "<quote>"` or `-- NOTHING-kind (<why>): ...`, and `work/verify.py` checks every quoted fragment against the raw text (26 files, 0 fragments not found).
+In the 12 layer-1 modules: 123 `FALSE-kind` branches and 259 `NOTHING-kind` branches; by reason, limited by its own wording 168, silent 66, points outside the text 19, list not closed 4, includes 2.
+The rulings this encoding follows, word for word from `inputs/ENCODING-GUIDE.md` section 5:
+
+> line 86: In short, a function answers `JUST FALSE` only where the text itself says no to the case in its own words: a "means" definition, a condition the text introduces with "if", "only if", "as long as" or "unless" (and plain variants such as "while", "until" and "except"), a list the text closes with "only", a flat negative ("does not", "shall not", "may not").
+
+> line 87: Everywhere else it answers `NOTHING`: where the text lists without closing the list, says "includes", leaves a term undefined, is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit.
+
+> line 92: **N2** (bench `commons-negation-1030`; does a flat negative count as the text's no?): option A as printed: flat negatives count as a no, and where the text names the bearer the prohibition (`SHANT`) is derived from that answer; the Hohfeld kinds stay in each row's "Jural relations" table; option C's wording (the kind typed in the person-facing answer) comes only after a lawyer confirms the typing, decided together with the S/E choice for how "not covered" is said. The maintainer's lean, verbatim: "Why are we even trying to do this work? Some of these rules are metatextual and require more homoiconicity than we currently have in L4." the maintainer's note: none written. Marked 2026-11-03T23:22:49.971Z, ruled 2026-11-04. Bench: https://claude.ai/artifact/49q6k2H5xtuJqy5ttkwZ23
+
+> line 93: **Periods, "where" and scope limits** (a question raised on 2026-11-05 while checking an encoding of the Retirement and Re-employment Act 1993, not a bench): (a) a period the text fixes in its own words ("within one month", "begins from ... until the employee attains the age", "on the last day of employment"): outside the period the answer is `JUST FALSE`; (b) a "where ..." condition: when it fails the answer is `JUST FALSE`; (c) a scope limit with no "only" (for example "below" the minimum age): outside the scope the answer is `NOTHING`. The maintainer's words, verbatim apart from the trigger word that ended the message: "i agree with your lean: no for a and b; nothing for c." Typed 2026-11-05T04:30:00.322Z, ruled 2026-11-05.
+
+> line 94: **Delegated definitions, defences and "until" bars** (questions raised on 2026-11-05 while checking encodings of the Proceeds of Crime Act 2002, the Terrorism Act 2000 and the Singapore Sale of Goods Act 1979, not a bench): (a) a definition the text itself hands to a list ("Schedule 9 has effect for determining what is a business in the regulated sector"): when no head in the list holds, the answer is `JUST FALSE`; a bare list with no such hand-off still answers `NOTHING`; (b) "it is a defence ... to prove that X": when X is not proved, the answer is `JUST FALSE` for that provision's defence, worded "this section gives no defence on these facts" and never "no defence at all"; (c) "when", "upon" and "whenever" count as "where" under rule (b) of the periods ruling above; (d) "the property does not pass until X": encode the bar ("the property cannot yet pass": `JUST TRUE` before X, `JUST FALSE` after X) and never claim that the property has passed. The maintainer approved these four readings as put to him by the general-manager session, in the word NOTHINGBURGER; his note on (d), verbatim apart from the bracket and the trigger word that ended the message: "in the case of Q5 [the "until" bar] i hope we are using the deontic mechanisms to examine a trace." The note is a request about how (d) is modelled, not part of the ruling. Typed 2026-11-05T06:04:54.553Z, ruled 2026-11-05.
+
+> line 95: **Questions with no convention: decide case by case (the maintainer, typed 2026-11-05T10:25:24Z).** Six questions the rulings above leave open are decided site by site, at encoding time, on the text's own words and the encoder's best judgment: an "unless" or "except" once it is met; a bare "must" not done; "listed in Schedule N"; a duty whose "if" or "where" is unmet; "(other than X)"; a missing event in the state ledger. Each such site gets one fork line (the provision, the function, the answer taken, the other reading) for the human reviewer to overrule, and the rulings above still govern whatever they cover. The maintainer's words, asked of the session "Encodings": "re Encoding Conventions I believe I had a short discussion with the coordinator where I basically said I agreed with its \"lean\"s -- does that mean we can retire the bench card or should I go over it still? In short I feel like these decisions need to be made case-by-case at encoding time, and you should go with your gut most of the time; and if the encoding turns out to be wrong, well, that's where the human review comes in." The bench that carried the six questions ("Encoding Conventions", artifact Hpg2k9HqExJN5zdtBYiJ72, collection `encodings-conventions-1105`) was retired unmarked, so it holds no marks.
+
+> line 96: **Functions named for a grant or a power (ruled by the coordinating session of the UK and Canada encodings on 2026-11-12; not confirmed by the maintainer).** A function named for a grant or a power ("the court may ...", "the registrar may ...") that answers `JUST FALSE` because an `if` gate failed reads as "may not": a grant turned into a bar. The ruling sets three limits:
+
+> line 97: 1. answer `NOTHING`, with one fork line each, only for a function named for a grant or a power ("may", "is permitted to", "has power to") whose `if` gate failed;
+
+> line 98: 2. keep `JUST FALSE` where the text closes the gate itself ("only if", "only where", "may not ... unless", a list closed with "only"), and for a bar, a duty or the provision's own question;
+
+> line 99: 3. do not change, but list in the row's fork register for the maintainer or a lawyer, a "may" function whose gate is "where", "when" or "upon" (ruling (b) of the periods ruling above says `JUST FALSE`, and the "In short" line on grants points the other way), and an "entitled"-named function (an entitlement is a claim, not a power, and this guide does not settle it).
+
+How they were applied, with one example each: a period the text fixes gives `JUST FALSE` outside it (rule (a): `s 136(1) the notice is given in time`); a "where" gate on a duty gives `JUST FALSE` when it fails (rule (b): `s 137A the person must take reasonable steps ...` when the person has authorised no one); a scope limit with no "only" gives `NOTHING` (rule (c): `s 136(1)` for a person who is not a substantial shareholder, `s 140(1)` for a person who has an intention); a flat negative gives `JUST FALSE` (ruling N2: `s 139(8)`, "does not of itself render that party liable to criminal proceedings") and the `SHANT` rule is derived where the text names the bearer (ss 131(4) and (5), 137E(9), 140(1), 140(2) and the Division 2 and 3 counterparts); a defence not proved gives `JUST FALSE` worded "this section gives no defence on these facts" (`s 137F(10)` and its counterparts); a function named for a grant or a power whose "if" gate fails gives `NOTHING` (the grant ruling, limit 1).
+
+## Seams (sfaa)
+
+**S1 (the keel asks).** `s 2(1) "Securities Industry Council" the body is the Securities Industry Council` (`sfa-definitions-markets.l4:136`) takes the input `the body is the Securities Industry Council referred to in section 138`.
+The answer is `s 138(1) the body is the Securities Industry Council referred to in section 138` (`sfaa-part8.l4:21`), which takes `the body is the advisory body known as the Securities Industry Council referred to in section 14 of the repealed Securities Industry Act (Cap. 289, 1985 Revised Edition)` and answers `JUST TRUE` or `NOTHING`.
+The lead wires the keel's BOOLEAN input as `(s 138(1) ... <that input>) EQUALS JUST TRUE`. The text (lines 31366-31369): the advisory body "continues in existence as if it had been established under this Act".
+**S2 (the keel asks).** `s 2(1) "Take-over Code" the document is the Take-over Code` (`sfa-definitions-markets.l4:148`) takes the input `the document is the Singapore Code on Take-overs and Mergers referred to in section 139 and issued by the Authority under section 321(1)`.
+The answer is `s 139(2) the document is the Singapore Code on Take-overs and Mergers referred to in section 139 and issued by the Authority under section 321(1)` (`sfaa-part8.l4:224`), which takes `the document is the code known as the Singapore Code on Take-overs and Mergers` and `the Authority issued the document on the advice of the Securities Industry Council and under section 321`. Section 321 is a later wave, so its half is an input. Wire it the same way (`EQUALS JUST TRUE`).
+**Seams found that the plan lacks.** None between parts. The sections of other waves that these ranges cite are taken as inputs named for the fact and the section: s 286 and s 289 are the inputs `the real estate investment trust is authorised under section 286` and `the person is the trustee approved under section 289 for the trust` of `s 137S(2)` (`sfaa-div3-reit.l4:55-56`, text lines 29954-29955); s 321 is half of S2; s 341 is named in `s 137R(1)`'s paragraph (aa) (text line 29803) and is the input `the trustee-manager has acquired or disposed of interests ... that the regulations prescribe` (`sfaa-div2-officers.l4:620`), with its Division 3 counterpart (`sfaa-div3-officers.l4:617`); s 81SF appears only inside the wording of the `s 137E(1)(g)` order (text line 28623) and no function needs it.
+The keel's `s 4` is called, not restated, from `s 130(5)`, `s 137H(4)` and `s 137S(3)` (text lines 27985, 29007, 29963); the routes of s 4 are inputs of those functions. The Evidence Act 1893 (s 128A), the Penal Code 1871 and the repealed Securities Industry Act (s 14) cited by Part 8 are inputs or deemings (`s 138(1)`, `s 138(5)`, `s 138(8)`).
+
+## Split sites (sfaa)
+
+**Counts.** Split site (i), an unmet element of an offence or a contravention: **62 sites, each answered `NOTHING`**. Split site (ii), a "may" gated by "where", "when", "upon", "on application", "before" or "on the advice of": **18 sites, each answered `NOTHING`**.
+Each site is one row below: the function, the line of its branch, the text's own words that the branch quotes, the answer taken, the Guide line it relies on (quoted), and the other reading with its Guide line. A row is that site's fork line; where the site also has an entry in the fork register, the last column names it. Each site is tagged `-- SPLIT-SITE (i)` or `(ii)` on the very line of the branch that answers it, so one search finds every site and a ruling is applied by flipping that branch; the test files assert the answer on both the unmet-element or failed-gate inputs and the met ones.
+The brief forbids a blanket rule, and none is adopted here: each row quotes the words of its own site. All 62 (i) sites are offence, contravention or element functions whose text states who is guilty (or what the guilty act is) and says nothing about anyone else; all 18 (ii) sites are functions named for a power, gated by words the text writes into the power. The sites came out the same way because they have the same shape, and a reviewer who reads either shape the other way flips the tagged branches.
+
+| Kind | Provision | Function | File:line | The text's own words (from the branch line) | Answer taken | Guide line it relies on | Other reading and its Guide line | Fork register |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| (ii) | s 137F(2) | `s 137F(2) the corporation may require the other person to give the information` | sfaa-div1-beneficial-disclosure:80 | "Where a corporation is informed pursuant to a notice given to any person under subsection (1) or under this subsection that any other person has an interest in any of the voting shares in the corporation, the corporation may by written notice require that ... | NOTHING | grant ruling of 2026-11-12, Guide line 97: “answer `NOTHING`, with one fork line each, only for a function named for a grant or a power”; and line 87: “limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on the periods ruling of 2026-11-05, Guide line 93, item (b): “a "where ..." condition: when it fails the answer is `JUST FALSE`”, and line 94, item (c): “"when", "upon" and "whenever" count as "where" under rule (b) of the periods ruling above” | B7 |
+| (i) | s 137F(8) | `s 137F(8) the person is guilty of an offence under subsection (8)` | sfaa-div1-beneficial-disclosure:298 | the text says who is guilty ("intentionally or recklessly contravenes subsection (5)" or "provides any information which the person knows is false or misleading in a material particular or is reckless as to whether it is"), not that anyone else is innocent | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137F(9) | `s 137F(9) the person is guilty of an offence under subsection (9)` | sfaa-div1-beneficial-disclosure:333 | the text says who is guilty ("contravenes subsection (5)"), not that anyone else is innocent | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137F(9) | `s 137F(9) the person is guilty of an offence under subsection (9)` | sfaa-div1-beneficial-disclosure:335 | "in circumstances other than as set out in subsection (8)": a case within subsection (8) is carved out of this one (a named complement) | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137G(3) | `s 137G(3) the person is guilty of an offence under subsection (3)` | sfaa-div1-beneficial-disclosure:531 | the text says who is guilty ("intentionally or recklessly contravenes subsection (1) or (2)" or "in purported compliance with this section, announces or disseminates any information knowing that it is false or misleading in a material particular or reckless... | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137G(4) | `s 137G(4) the person is guilty of an offence under subsection (4)` | sfaa-div1-beneficial-disclosure:559 | the text says who is guilty ("contravenes subsection (1) or (2)"), not that anyone else is innocent | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137G(4) | `s 137G(4) the person is guilty of an offence under subsection (4)` | sfaa-div1-beneficial-disclosure:561 | "in circumstances other than as set out in subsection (3)": a case within subsection (3) is carved out of this one (a named complement) | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137G(5) | `s 137G(5) the officer is within the subsection` | sfaa-div1-beneficial-disclosure:638 | the text says who is guilty ("any officer of the corporation who" "causes the corporation to contravene subsection (1)"), not that anyone else is innocent | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | B10 |
+| (i) | s 134(1)(a) | `s 134(1)(a) the director or chief executive officer intentionally or recklessly contravened section 133(1)` | sfaa-div1-directors:430 | the text says who is guilty ("intentionally or recklessly contravenes section 133(1)(a)(i), (b)(i), (c)(i), (d)(i) or (f)"), not that anyone else is innocent | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 134(1)(b) | `s 134(1)(b) the director or chief executive officer intentionally or recklessly contravened section 133(3)` | sfaa-div1-directors:445 | the text says who is guilty ("intentionally or recklessly contravenes section 133(3) in respect of a notice of the particulars of any matter referred to in section 133(1)(a)(i)"), not that anyone else is innocent | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 134(1)(c) | `s 134(1)(c) the director or chief executive officer in purported compliance provided information known to be false or misleading` | sfaa-div1-directors:463 | the text says who is guilty ("provides any information which he or she knows is false or misleading in a material particular or is reckless as to whether it is"), not that anyone else is innocent | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 134(1) | `s 134(1) the director or chief executive officer is guilty of an offence under subsection (1)` | sfaa-div1-directors:501 | no paragraph of subsection (1) is met on these facts; subsection (2) may still apply | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 134(2) | `s 134(2) the director or chief executive officer is guilty of an offence under subsection (2)` | sfaa-div1-directors:536 | the text says who is guilty ("contravenes section 133(1) or (3)" or provides false or misleading information), not that anyone else is innocent | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 134(2) | `s 134(2) the director or chief executive officer is guilty of an offence under subsection (2)` | sfaa-div1-directors:538 | "in circumstances other than as set out in subsection (1)": a case within subsection (1) is carved out of this one (a named complement) | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 131(5) | `s 131(5) the person is guilty of an offence of contravening a condition or restriction` | sfaa-div1-interpretation:361 | the text says who is guilty ("Any person who contravenes any condition or restriction"), not that a person who does not is innocent | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (ii) | s 131(6) | `s 131(6) the Authority has power to extend, or further extend, the time for giving the notice` | sfaa-div1-interpretation:387 | "may, on the application of a person required to give a notice under this Division"; the gate is not a "where" and the function is named for a power | NOTHING | grant ruling of 2026-11-12, Guide line 97: “answer `NOTHING`, with one fork line each, only for a function named for a grant or a power”; and line 87: “limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on the periods ruling of 2026-11-05, Guide line 93, item (b): “a "where ..." condition: when it fails the answer is `JUST FALSE`”, and line 94, item (c): “"when", "upon" and "whenever" count as "where" under rule (b) of the periods ruling above” | B2 |
+| (i) | s 137D(1) | `s 137D(1) the person is guilty of an offence under subsection (1)` | sfaa-div1-penalties-court:42 | the text says who is guilty ("intentionally or recklessly contravenes section 135, 136(1) or (2), 137, 137A or 137B" or "provides any information which the person knows is false or misleading in a material particular or is reckless as to whether it is"), no... | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137D(2) | `s 137D(2) the person is guilty of an offence under subsection (2)` | sfaa-div1-penalties-court:78 | the text says who is guilty ("contravenes section 135, 136(1) or (2), 137, 137A or 137B"), not that anyone else is innocent | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137D(2) | `s 137D(2) the person is guilty of an offence under subsection (2)` | sfaa-div1-penalties-court:80 | "in circumstances other than as set out in subsection (1)": a case within subsection (1) is carved out of this one (a named complement) | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (ii) | s 137E(1) | `s 137E(1) the court has power to make one or more of the orders listed in the subsection` | sfaa-div1-penalties-court:139 | "Where a person is or has been a substantial shareholder in a corporation and has failed to comply with section 135, 136 or 137, a court may, on the application of the Authority" | NOTHING | grant ruling of 2026-11-12, Guide line 97: “answer `NOTHING`, with one fork line each, only for a function named for a grant or a power”; and line 87: “limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on the periods ruling of 2026-11-05, Guide line 93, item (b): “a "where ..." condition: when it fails the answer is `JUST FALSE`”, and line 94, item (c): “"when", "upon" and "whenever" count as "where" under rule (b) of the periods ruling above” | B3 |
+| (ii) | s 137E(4) | `s 137E(4) the Authority may apply to the court for directions on the unsold share` | sfaa-div1-penalties-court:182 | "Where a share is not sold in accordance with an order of the court under this section, the Authority may apply to the court for directions" | NOTHING | grant ruling of 2026-11-12, Guide line 97: “answer `NOTHING`, with one fork line each, only for a function named for a grant or a power”; and line 87: “limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on the periods ruling of 2026-11-05, Guide line 93, item (b): “a "where ..." condition: when it fails the answer is `JUST FALSE`”, and line 94, item (c): “"when", "upon" and "whenever" count as "where" under rule (b) of the periods ruling above” | B4 |
+| (ii) | s 137E(7) | `s 137E(7) the court may direct that notice of the application be given or published` | sfaa-div1-penalties-court:236 | "The court may, before making an order under this section, direct that notice of the application be given to such persons as it thinks fit" | NOTHING | grant ruling of 2026-11-12, Guide line 97: “answer `NOTHING`, with one fork line each, only for a function named for a grant or a power”; and line 87: “limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on the periods ruling of 2026-11-05, Guide line 93, item (b): “a "where ..." condition: when it fails the answer is `JUST FALSE`”, and line 94, item (c): “"when", "upon" and "whenever" count as "where" under rule (b) of the periods ruling above” | B6 |
+| (i) | s 137E(9) | `s 137E(9) the person is guilty of an offence of contravening an order of the court` | sfaa-div1-penalties-court:262 | the text says who is guilty ("Any person who contravenes an order made under this section that is applicable to the person"), not that anyone else is innocent | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137C(5) | `s 137C(5) the corporation is guilty of an offence of failing to comply with the register provisions` | sfaa-div1-register:228 | the text says who is guilty ("Any corporation which fails to comply with subsection (1), (2), (3) or (4)"), not that a corporation that complies is innocent | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137O(1) | `s 137O(1) the person is guilty of an offence under subsection (1)` | sfaa-div2-officers:291 | the text says who is guilty ("intentionally or recklessly contravenes section 137N(1) or (2)" or "provides any information which he or she knows is false or misleading in a material particular or is reckless as to whether it is"), not that anyone else is in... | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137O(2) | `s 137O(2) the person is guilty of an offence under subsection (2)` | sfaa-div2-officers:320 | the text says who is guilty ("contravenes section 137N(1) or (2)"), not that anyone else is innocent | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137O(2) | `s 137O(2) the person is guilty of an offence under subsection (2)` | sfaa-div2-officers:322 | "in circumstances other than as set out in subsection (1)": a case within subsection (1) is carved out of this one (a named complement) | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137Q(1) | `s 137Q(1) the person is guilty of an offence under subsection (1)` | sfaa-div2-officers:518 | the text says who is guilty ("intentionally or recklessly contravenes section 137P(1) or (2)" or "in purported compliance with section 137P, provides any information which the person knows is false or misleading in a material particular or is reckless as to... | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137Q(2) | `s 137Q(2) the person is guilty of an offence under subsection (2)` | sfaa-div2-officers:553 | the text says who is guilty ("contravenes section 137P(1) or (2)"), not that anyone else is innocent | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137Q(2) | `s 137Q(2) the person is guilty of an offence under subsection (2)` | sfaa-div2-officers:555 | "in circumstances other than as set out in subsection (1)": a case within subsection (1) is carved out of this one (a named complement) | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137R(3) | `s 137R(3) the person is guilty of an offence under subsection (3)` | sfaa-div2-officers:744 | the text says who is guilty ("intentionally or recklessly contravenes subsection (1) or (2)" or "in purported compliance with this section, announces or disseminates any information which the trustee-manager knows is false or misleading in a material partic... | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137R(4) | `s 137R(4) the person is guilty of an offence under subsection (4)` | sfaa-div2-officers:773 | the text says who is guilty ("contravenes subsection (1) or (2)"), not that anyone else is innocent | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137R(4) | `s 137R(4) the person is guilty of an offence under subsection (4)` | sfaa-div2-officers:775 | "in circumstances other than as set out in subsection (3)": a case within subsection (3) is carved out of this one (a named complement) | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137R(5) | `s 137R(5) the officer is within the subsection` | sfaa-div2-officers:853 | the text says who is guilty ("any officer of the trustee-manager who" "causes the trustee-manager to contravene subsection (1)"), not that anyone else is innocent | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | B10 |
+| (i) | s 137I(5) | `s 137I(5) the person is guilty of an offence of contravening a condition or restriction` | sfaa-div2-trust:205 | the text says who is guilty ("Any person who contravenes any condition or restriction"), not that a person who does not is innocent | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (ii) | s 137I(6) | `s 137I(6) the Authority has power to extend, or further extend, the time for giving the notice` | sfaa-div2-trust:231 | "may, on the application of a person required to give a notice under this Division"; the gate is not a "where" and the function is named for a power | NOTHING | grant ruling of 2026-11-12, Guide line 97: “answer `NOTHING`, with one fork line each, only for a function named for a grant or a power”; and line 87: “limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on the periods ruling of 2026-11-05, Guide line 93, item (b): “a "where ..." condition: when it fails the answer is `JUST FALSE`”, and line 94, item (c): “"when", "upon" and "whenever" count as "where" under rule (b) of the periods ruling above” | B2 |
+| (i) | s 137J(2) | `s 137J(2) the person is guilty of an offence under subsection (2)` | sfaa-div2-trust:309 | the text says who is guilty ("intentionally or recklessly contravenes section 135, 136(1) or (2), 137, 137A or 137B as applied by subsection (1)" or "provides any information which the person knows is false or misleading in a material particular or is reckl... | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137J(3) | `s 137J(3) the person is guilty of an offence under subsection (3)` | sfaa-div2-trust:346 | the text says who is guilty ("contravenes section 135, 136(1) or (2), 137, 137A or 137B as applied by subsection (1)"), not that anyone else is innocent | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137J(3) | `s 137J(3) the person is guilty of an offence under subsection (3)` | sfaa-div2-trust:348 | "in circumstances other than as set out in subsection (2)": a case within subsection (2) is carved out of this one (a named complement) | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137K(5) | `s 137K(5) the trustee-manager is guilty of an offence of failing to comply with the register provisions` | sfaa-div2-trust:600 | the text says who is guilty ("Any trustee-manager which fails to comply with subsection (1), (2), (3) or (4)"), not that a trustee-manager that complies is innocent | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (ii) | s 137L(1) | `s 137L(1) the court has power to make one or more of the orders listed in the subsection` | sfaa-div2-trust:647 | "Where a person is or has been a substantial unitholder of a registered business trust or recognised business trust and has failed to comply with section 135, 136 or 137 as applied by section 137J(1), a court may, on the application of the Authority" | NOTHING | grant ruling of 2026-11-12, Guide line 97: “answer `NOTHING`, with one fork line each, only for a function named for a grant or a power”; and line 87: “limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on the periods ruling of 2026-11-05, Guide line 93, item (b): “a "where ..." condition: when it fails the answer is `JUST FALSE`”, and line 94, item (c): “"when", "upon" and "whenever" count as "where" under rule (b) of the periods ruling above” | B3 |
+| (ii) | s 137L(4) | `s 137L(4) the Authority may apply to the court for directions on the unsold unit` | sfaa-div2-trust:689 | "Where a unit is not sold in accordance with an order of the court under this section, the Authority may apply to the court for directions" | NOTHING | grant ruling of 2026-11-12, Guide line 97: “answer `NOTHING`, with one fork line each, only for a function named for a grant or a power”; and line 87: “limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on the periods ruling of 2026-11-05, Guide line 93, item (b): “a "where ..." condition: when it fails the answer is `JUST FALSE`”, and line 94, item (c): “"when", "upon" and "whenever" count as "where" under rule (b) of the periods ruling above” | B4 |
+| (ii) | s 137L(7) | `s 137L(7) the court may direct that notice of the application be given or published` | sfaa-div2-trust:743 | "The court may, before making an order under this section, direct that notice of the application be given to such persons as it thinks fit" | NOTHING | grant ruling of 2026-11-12, Guide line 97: “answer `NOTHING`, with one fork line each, only for a function named for a grant or a power”; and line 87: “limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on the periods ruling of 2026-11-05, Guide line 93, item (b): “a "where ..." condition: when it fails the answer is `JUST FALSE`”, and line 94, item (c): “"when", "upon" and "whenever" count as "where" under rule (b) of the periods ruling above” | B6 |
+| (i) | s 137L(9) | `s 137L(9) the person is guilty of an offence of contravening an order of the court` | sfaa-div2-trust:769 | the text says who is guilty ("Any person who contravenes an order made under this section that is applicable to the person"), not that anyone else is innocent | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (ii) | s 137M(2) | `s 137M(2) the trustee-manager may require the other person to give the information` | sfaa-div2-trust:881 | "Where the trustee-manager of a registered business trust or recognised business trust is informed pursuant to a notice given to any person under subsection (1) or under this subsection that any other person has an interest in any of the voting units in the... | NOTHING | grant ruling of 2026-11-12, Guide line 97: “answer `NOTHING`, with one fork line each, only for a function named for a grant or a power”; and line 87: “limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on the periods ruling of 2026-11-05, Guide line 93, item (b): “a "where ..." condition: when it fails the answer is `JUST FALSE`”, and line 94, item (c): “"when", "upon" and "whenever" count as "where" under rule (b) of the periods ruling above” | B7 |
+| (i) | s 137M(8) | `s 137M(8) the person is guilty of an offence under subsection (8)` | sfaa-div2-trust:1105 | the text says who is guilty ("intentionally or recklessly contravenes subsection (5)" or "provides any information which the person knows is false or misleading in a material particular or is reckless as to whether it is"), not that anyone else is innocent | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137M(9) | `s 137M(9) the person is guilty of an offence under subsection (9)` | sfaa-div2-trust:1140 | the text says who is guilty ("contravenes subsection (5)"), not that anyone else is innocent | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137M(9) | `s 137M(9) the person is guilty of an offence under subsection (9)` | sfaa-div2-trust:1142 | "in circumstances other than as set out in subsection (8)": a case within subsection (8) is carved out of this one (a named complement) | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137Z(1) | `s 137Z(1) the person is guilty of an offence under subsection (1)` | sfaa-div3-officers:291 | the text says who is guilty ("intentionally or recklessly contravenes section 137Y(1) or (2)" or "provides any information which he or she knows is false or misleading in a material particular or is reckless as to whether it is"), not that anyone else is in... | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137Z(2) | `s 137Z(2) the person is guilty of an offence under subsection (2)` | sfaa-div3-officers:320 | the text says who is guilty ("contravenes section 137Y(1) or (2)"), not that anyone else is innocent | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137Z(2) | `s 137Z(2) the person is guilty of an offence under subsection (2)` | sfaa-div3-officers:322 | "in circumstances other than as set out in subsection (1)": a case within subsection (1) is carved out of this one (a named complement) | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137ZB(1) | `s 137ZB(1) the person is guilty of an offence under subsection (1)` | sfaa-div3-officers:515 | the text says who is guilty ("intentionally or recklessly contravenes section 137ZA(1) or (2)" or "in purported compliance with section 137ZA, provides any information which the person knows is false or misleading in a material particular or is reckless as ... | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137ZB(2) | `s 137ZB(2) the person is guilty of an offence under subsection (2)` | sfaa-div3-officers:550 | the text says who is guilty ("contravenes section 137ZA(1) or (2)"), not that anyone else is innocent | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137ZB(2) | `s 137ZB(2) the person is guilty of an offence under subsection (2)` | sfaa-div3-officers:552 | "in circumstances other than as set out in subsection (1)": a case within subsection (1) is carved out of this one (a named complement) | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137ZC(3) | `s 137ZC(3) the person is guilty of an offence under subsection (3)` | sfaa-div3-officers:740 | the text says who is guilty ("intentionally or recklessly contravenes subsection (1) or (2)" or "in purported compliance with this section, announces or disseminates any information which the responsible person knows is false or misleading in a material par... | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137ZC(4) | `s 137ZC(4) the person is guilty of an offence under subsection (4)` | sfaa-div3-officers:768 | the text says who is guilty ("contravenes subsection (1) or (2)"), not that anyone else is innocent | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137ZC(4) | `s 137ZC(4) the person is guilty of an offence under subsection (4)` | sfaa-div3-officers:770 | "in circumstances other than as set out in subsection (3)": a case within subsection (3) is carved out of this one (a named complement) | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137ZC(5) | `s 137ZC(5) the officer is within the subsection` | sfaa-div3-officers:849 | the text says who is guilty ("any officer of the responsible person who" "causes the responsible person to contravene subsection (1)"), not that anyone else is innocent | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | B10 |
+| (i) | s 137T(5) | `s 137T(5) the person is guilty of an offence of contravening a condition or restriction` | sfaa-div3-reit:227 | the text says who is guilty ("Any person who contravenes any condition or restriction"), not that a person who does not is innocent | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (ii) | s 137T(6) | `s 137T(6) the Authority has power to extend, or further extend, the time for giving the notice` | sfaa-div3-reit:253 | "may, on the application of a person required to give a notice under this Division"; the gate is not a "where" and the function is named for a power | NOTHING | grant ruling of 2026-11-12, Guide line 97: “answer `NOTHING`, with one fork line each, only for a function named for a grant or a power”; and line 87: “limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on the periods ruling of 2026-11-05, Guide line 93, item (b): “a "where ..." condition: when it fails the answer is `JUST FALSE`”, and line 94, item (c): “"when", "upon" and "whenever" count as "where" under rule (b) of the periods ruling above” | B2 |
+| (i) | s 137U(2) | `s 137U(2) the person is guilty of an offence under subsection (2)` | sfaa-div3-reit:329 | the text says who is guilty ("intentionally or recklessly contravenes section 135, 136(1) or (2), 137, 137A or 137B as applied by subsection (1)" or "provides any information which the person knows is false or misleading in a material particular or is reckl... | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137U(3) | `s 137U(3) the person is guilty of an offence under subsection (3)` | sfaa-div3-reit:366 | the text says who is guilty ("contravenes section 135, 136(1) or (2), 137, 137A or 137B as applied by subsection (1)"), not that anyone else is innocent | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137U(3) | `s 137U(3) the person is guilty of an offence under subsection (3)` | sfaa-div3-reit:368 | "in circumstances other than as set out in subsection (2)": a case within subsection (2) is carved out of this one (a named complement) | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137V(5) | `s 137V(5) the trustee is guilty of an offence of failing to comply with the register provisions` | sfaa-div3-reit:611 | the text says who is guilty ("Any trustee which fails to comply with subsection (1), (2), (3) or (4)"), not that a trustee that complies is innocent | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (ii) | s 137W(1) | `s 137W(1) the court has power to make one or more of the orders listed in the subsection` | sfaa-div3-reit:656 | "Where a person is or has been a substantial unitholder of a real estate investment trust and has failed to comply with section 135, 136 or 137 as applied by section 137U(1), a court may, on the application of the Authority" | NOTHING | grant ruling of 2026-11-12, Guide line 97: “answer `NOTHING`, with one fork line each, only for a function named for a grant or a power”; and line 87: “limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on the periods ruling of 2026-11-05, Guide line 93, item (b): “a "where ..." condition: when it fails the answer is `JUST FALSE`”, and line 94, item (c): “"when", "upon" and "whenever" count as "where" under rule (b) of the periods ruling above” | B3 |
+| (ii) | s 137W(4) | `s 137W(4) the Authority may apply to the court for directions on the unsold unit` | sfaa-div3-reit:698 | "Where a unit is not sold in accordance with an order of the court under this section, the Authority may apply to the court for directions" | NOTHING | grant ruling of 2026-11-12, Guide line 97: “answer `NOTHING`, with one fork line each, only for a function named for a grant or a power”; and line 87: “limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on the periods ruling of 2026-11-05, Guide line 93, item (b): “a "where ..." condition: when it fails the answer is `JUST FALSE`”, and line 94, item (c): “"when", "upon" and "whenever" count as "where" under rule (b) of the periods ruling above” | B4 |
+| (ii) | s 137W(7) | `s 137W(7) the court may direct that notice of the application be given or published` | sfaa-div3-reit:752 | "The court may, before making an order under this section, direct that notice of the application be given to such persons as it thinks fit" | NOTHING | grant ruling of 2026-11-12, Guide line 97: “answer `NOTHING`, with one fork line each, only for a function named for a grant or a power”; and line 87: “limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on the periods ruling of 2026-11-05, Guide line 93, item (b): “a "where ..." condition: when it fails the answer is `JUST FALSE`”, and line 94, item (c): “"when", "upon" and "whenever" count as "where" under rule (b) of the periods ruling above” | B6 |
+| (i) | s 137W(9) | `s 137W(9) the person is guilty of an offence of contravening an order of the court` | sfaa-div3-reit:778 | the text says who is guilty ("Any person who contravenes an order made under this section that is applicable to the person"), not that anyone else is innocent | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (ii) | s 137X(2) | `s 137X(2) the trustee may require the other person to give the information` | sfaa-div3-reit:889 | "Where the trustee of a real estate investment trust is informed pursuant to a notice given to any person under subsection (1) or under this subsection that any other person has an interest in any of the voting units in the trust, the trustee may by written... | NOTHING | grant ruling of 2026-11-12, Guide line 97: “answer `NOTHING`, with one fork line each, only for a function named for a grant or a power”; and line 87: “limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on the periods ruling of 2026-11-05, Guide line 93, item (b): “a "where ..." condition: when it fails the answer is `JUST FALSE`”, and line 94, item (c): “"when", "upon" and "whenever" count as "where" under rule (b) of the periods ruling above” | B7 |
+| (i) | s 137X(8) | `s 137X(8) the person is guilty of an offence under subsection (8)` | sfaa-div3-reit:1112 | the text says who is guilty ("intentionally or recklessly contravenes subsection (5)" or "provides any information which the person knows is false or misleading in a material particular or is reckless as to whether it is"), not that anyone else is innocent | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137X(9) | `s 137X(9) the person is guilty of an offence under subsection (9)` | sfaa-div3-reit:1147 | the text says who is guilty ("contravenes subsection (5)"), not that anyone else is innocent | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137X(9) | `s 137X(9) the person is guilty of an offence under subsection (9)` | sfaa-div3-reit:1149 | "in circumstances other than as set out in subsection (8)": a case within subsection (8) is carved out of this one (a named complement) | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137ZD(1)(a) | `s 137ZD(1)(a) the person intentionally or recklessly contravened a provision the paragraph lists` | sfaa-div4-civil-penalty:79 | the text says which contraventions found a civil action ("intentionally or recklessly, contravened"), not that any other contravention is free of one | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137ZD(1)(b) | `s 137ZD(1)(b) the person gave false or misleading information in purported compliance with a provision the paragraph lists` | sfaa-div4-civil-penalty:105 | the text says which false or misleading information founds a civil action ("which the person knows is false or misleading in a material particular or is reckless as to whether it is"), not that any other is free of one | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (i) | s 137ZD(1)(c) | `s 137ZD(1)(c) the officer intentionally or recklessly committed an act referred to in the paragraph` | sfaa-div4-civil-penalty:124 | the text says who founds a civil action ("being an officer of a corporation to which Division 1 applies ... intentionally or recklessly committed an act"), not that anyone else is free of one | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | this row |
+| (ii) | s 137ZD(1) | `s 137ZD(1) the Authority may bring an action in a court for an order for a civil penalty` | sfaa-div4-civil-penalty:173 | "Whenever it appears to the Authority that any person has" ... "the Authority may, with the consent of the Public Prosecutor, bring an action in a court against the person to seek an order for a civil penalty in respect of that act" | NOTHING | grant ruling of 2026-11-12, Guide line 97: “answer `NOTHING`, with one fork line each, only for a function named for a grant or a power”; and line 87: “limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on the periods ruling of 2026-11-05, Guide line 93, item (b): “a "where ..." condition: when it fails the answer is `JUST FALSE`”, and line 94, item (c): “"when", "upon" and "whenever" count as "where" under rule (b) of the periods ruling above” | B12, B13 |
+| (ii) | s 139(6) | `s 139(6) the Authority may revise the Take-over Code by deleting, amending or adding to its provisions` | sfaa-part8:301 | "The Authority may, on the advice of the Securities Industry Council, revise the Take-over Code by deleting, amending or adding to the provisions thereof" | NOTHING | grant ruling of 2026-11-12, Guide line 97: “answer `NOTHING`, with one fork line each, only for a function named for a grant or a power”; and line 87: “limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on the periods ruling of 2026-11-05, Guide line 93, item (b): “a "where ..." condition: when it fails the answer is `JUST FALSE`”, and line 94, item (c): “"when", "upon" and "whenever" count as "where" under rule (b) of the periods ruling above” | B14 |
+| (ii) | s 139(10) | `s 139(10) the Securities Industry Council has power to enquire into the suspected breach or misconduct` | sfaa-part8:390 | "Where the Securities Industry Council has reason to believe that any party concerned in a take-over offer or a matter connected therewith, or any person advising on a take-over offer or a matter connected therewith" "the Securities Industry Council has pow... | NOTHING | grant ruling of 2026-11-12, Guide line 97: “answer `NOTHING`, with one fork line each, only for a function named for a grant or a power”; and line 87: “limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on the periods ruling of 2026-11-05, Guide line 93, item (b): “a "where ..." condition: when it fails the answer is `JUST FALSE`”, and line 94, item (c): “"when", "upon" and "whenever" count as "where" under rule (b) of the periods ruling above” | B15 |
+| (i) | s 140(3) | `s 140(3) the person is guilty of an offence under section 140` | sfaa-part8:480 | the text says who is guilty ("Where a person contravenes subsection (1) or (2), the person"), not that a person who does not is innocent | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | B16 |
+| (i) | s 140(3) | `s 140(3) the officer of the corporation is guilty of an offence under section 140` | sfaa-part8:497 | the text says who is guilty ("where the person is a corporation, every officer of the corporation who is in default"), not that an officer not in default is innocent | NOTHING | Guide line 87: “is silent, points outside the sources, or limits a grant or prohibition in its own wording and the case falls outside the limit” | JUST FALSE, relying on Guide line 86: “a function answers `JUST FALSE` only where the text itself says no to the case in its own words” | B16 |
+
+## Rules with no breach path (sfaa)
+
+A `MUST` with no time limit and no stated consequence cannot read `BREACH`: a late act reads `FULFILLED`. Two regulative rules are of that kind, each written as a `MUST` with `HENCE FULFILLED` and no `WITHIN` and no `LEST`:
+
+- `s 138(6) the lawyer must give the name and address` (the lawyer "is nevertheless obliged to give the name and address (if he or she knows them)": no time, no consequence). Traces: `FULFILLED` when the lawyer gives them on any day (the test gives them at day 30), `RESIDUAL` while they are not given (`sfaa-tests-part8.l4:42-45`).
+- `s 139(4) the party concerned must comply with the Take-over Code` ("must comply with its provisions": no time; subsection (8) says a failure "does not of itself render that party liable to criminal proceedings"). Traces as above (`sfaa-tests-part8.l4:84-87`).
+
+The other 33 regulative rules reach `BREACH`: 25 `MUST` rules have a window (2 business days, 14 days, 7 days, the end of the next business day, "immediately" read as no days, or the time a notice specifies) and a trace that misses it, and the 8 `SHANT` rules (`s 131(4) and (5)`, `s 137E(9)`, `s 140(1)`, `s 140(2)` and the Division 2 and 3 counterparts of the first two) have a trace in which the forbidden act occurs.
+The test files hold 92 traces, each preceded by `-- EXPECT <word>`; `work/traces.py` ran every one on both stable builds and compared the outcome with the `EXPECT` word: 184 checks, 0 mismatches. (`check.sh` cannot see a trace outcome, so this is a separate check.) The regulative rules count the trace clock in days (fork A3), so the business-day count is made by the `... the last day for the notice` functions, not by the traces.
+
+## What the text does not answer (sfaa)
+
+- **The Singapore Code on Take-overs and Mergers is not encoded.** Part 8 provides for the Council and refers to the Code; this part covers only the Council's statutory part (ss 138 to 140). What the Code requires, who is a "party concerned" in a take-over offer, and what a ruling of the Council says ("such rulings or practice is final", s 139(7)) are inputs. `s 139(4)` says the parties concerned "must comply with its provisions"; the provisions are not answered.
+- **What follows if a person summoned under s 138(4) or s 139(11) does not give evidence or produce the document.** Part 8 does not say; whether another Part does is outside these ranges.
+- **"business day".** The Act does not define it (the keel's finding, `sfa-periods.l4:7-9`); the count is the keel's P8, which skips weekends and the public holidays the caller supplies.
+- **"as soon as practicable"** (ss 137A, 137B and 137G(1) and their Division 2 and 3 counterparts) is a judgment the text does not measure: the functions answer on the hard limit only (fork B9 for s 137G(1), s 137R(1) and s 137ZC(1)), and whether the steps taken under s 137A were "reasonable" is an input.
+- **Whether a notice that fails the prescribed content or delivery of s 137F(4) still binds** (fork B8).
+- **"in default"** (the officer of s 140(3)) is not defined in these ranges: it is the input `the officer of the corporation is in default`.
+- **What the Authority has prescribed** (the form and content of every notice, other information in a s 137F notice, the form and manner of an announcement, the matters of s 133(1)(f), and what regulations under section 341 prescribe): inputs, each named for the fact. The seat does not ask whether a notice's form was right, only whether one is owed and by when.
+- **How much the court orders within $50,000 to $2 million** (s 137ZD(2)) and what is a "reasonable time" (s 137F): inputs.
+- **Whether a person who has ceased to be a substantial unitholder still owes the notice under s 137J(1) or s 137U(1)** (fork C1): the seat answers `NOTHING`.
+- **A penalty for contravening s 138(6) or s 139(4):** none is stated in Part 8.
+
+## What the text turns out to say (numbered findings)
+
+1. **The presumption of awareness (s 130(6)) reaches five provisions, not the Division.** It applies "for the purposes of sections 133(3)(b)(i), 135(2)(b), 136(1), 137(1) and 137E(6)" (lines 27991-27992). Other clocks run from other events: s 133(3)(b)(ii) from the date the person becomes a director or chief executive officer or becomes a holder (lines 28206-28223); ss 137A and 137B from the acquisition or disposal (lines 28431-28438 and 28445-28450); s 137C(1) from receipt of a notice (lines 28456-28464).
+2. **The 2 business days run from awareness for a change and from the later of two events for a first notice.** s 133(3)(b)(i) counts from when the person "becomes aware of the change"; s 133(3)(b)(ii) counts from "whichever last occurs" of the date of becoming a director or chief executive officer and the date of becoming a holder (lines 28202-28223).
+3. **s 137A's 2 business days govern B's notice to A, not A's own duty** (fork A5): "A must take reasonable steps to ensure that B notifies A as soon as practicable and, in any case, no later than 2 business days after any acquisition or disposal" (lines 28431-28438).
+4. **The percentage level counts every voting share the person has an interest in, whatever the class, and is rounded down.** The numerator is "the total votes attached to all the voting shares in which the substantial shareholder has an interest"; only the denominator changes with the class ("all the voting shares ... in the class concerned"); "rounding that figure down to the next whole number" (s 136(3), lines 28390-28405; fork A4).
+5. **Divisions 2 and 3 use a different trigger from s 136(1) for a holder of voting shares in the trustee-manager or responsible person.** ss 137P(1) and 137ZA(1) are about the percentage of interest that "reaches, crosses or falls below 15%, 30%, 50% or 75%" (lines 29687-29696 and 30657-30661), where s 136(1) is about any change in the percentage level (fork B11).
+6. **The rendering repeats a paragraph tag on the words that follow a list of sub-paragraphs** ("(a) which he or she holds ...", "(ii) whichever last occurs."): 6 `[tail]` rows in the coverage table.
+7. **"Below the age of 21 years" can attach to the children only or to the whole list of s 133(6)** ("a spouse, or a son, adopted son, stepson, daughter, adopted daughter or stepdaughter below the age of 21 years", lines 28267-28269). Fork A2 records the reading taken; the same words recur in ss 137N(4) and 137Y(4) (lines 29615 and 30583).
+8. **Penalties come in tiers.** For a director or chief executive officer (s 134) and for any person who contravenes ss 135 to 137B (s 137D): an intentional or reckless contravention, or giving information the person knows to be false or misleading or is reckless as to whether it is, is a fine up to $250,000 or imprisonment up to 2 years or both (for s 134 and for an individual under s 137D(1)), and a further fine up to $25,000 for each day or part of a day the offence continues after conviction; any other contravention is a fine up to $25,000 and a further $2,500 a day (lines 28301-28305, 28320-28324, 28533-28546, 28559-28563). A corporation convicted under s 137D(1) faces the same fine and no imprisonment (lines 28542-28546). Breach of an exemption condition (s 131(5)), of the register duties (s 137C(5)) and of a court order (s 137E(9)) is a fine up to $50,000 and a further $5,000 a day (lines 28069-28078, 28498-28502, 28697-28702). s 140(3) is a fine up to $250,000 or imprisonment up to 7 years or both (lines 31509-31513).
+9. **The civil penalty (s 137ZD) is $50,000 to $2 million**, paid into the Consolidated Fund and treated as a debt due to the Government (lines 30951-30954, 30976-30979); the Authority may recover it as a judgment debt (lines 30983-30987). An action "must not be commenced" after 6 years from the date of the act, or if the person has been convicted or acquitted for that act, unless the acquittal was because the charge was withdrawn (s 137ZE(1), lines 31003-31012); it "must be stayed" once criminal proceedings begin and may continue only if the person was discharged without acquittal or the charge was withdrawn (s 137ZE(2), lines 31016-31025).
+10. **A criminal prosecution is barred once a civil penalty has been ordered or agreed for the same contravention** ("No proceedings shall be instituted ... after", ss 134(3), 137D(3), 137F(11) and 137G(7), lines 28328-28338, 28570-28580, 28846-28856, 28967-28980, and their Division 2 and 3 counterparts); the converse bar is s 137ZE(1)(b).
+11. **Part 8 has no sanction for ignoring a summons, and a failure to observe the Code is not of itself criminal.** s 139(8): a failure "does not of itself render that party liable to criminal proceedings" but may be relied on in any proceedings (lines 31466-31472); s 139(9): the Council may invoke "such sanctions (including public censure) as it may decide" (lines 31474-31478). The only offence in Part 8 is s 140(3).
+12. **A lawyer's privilege does not shield the client's name.** s 138(5) protects a privileged document from compulsion, and s 138(6) still obliges the lawyer to give "the name and address (if he or she knows them)" of the person for whom or by whom the communication was made (lines 31386-31402).
+13. **The Guide's rulings pull in two directions at 18 "may" provisions** (the split sites of kind (ii)): the periods ruling's item (b), with line 94's item (c), says `JUST FALSE` for a failed "where", "when", "upon" or "whenever", and the grant ruling says `NOTHING` for a function named for a power; each site is a row under `## Split sites (sfaa)`.
+
+## What the stable binary does not accept
+
+Each of the first three was run on both stable builds (1.6.110 and 1.6.109) and read the same on both:
+
+- Two `GIVEN` items on one line (`GIVEN `a` IS A BOOLEAN `b` IS A BOOLEAN`): `parse/unexpected-IS`. Write `GIVEN` and then one indented line for each item.
+- A record field read with a dot after a parenthesised call, `(mk 3).one`: `parse/unexpected-dot`. Write `` `one` OF (mk 3) ``.
+- A trace that only waits, `#TRACE <rule> "x" AT 0 WITH (WAITUNTIL 5)`, over a regulative rule whose party is a `STRING`: `eval/unsupported-equality` ("Trying to check equality on types that do not support it", comparing `"x"` with `NEVERMATCHESPARTY`). A trace in which the string party acts evaluates normally. The rules here take their party as a `GIVEN` of the core's `Party`, which a waiting trace can compare.
+- An `#ASSERT` whose arguments continue on the following lines: `parse/unexpected-identifier` at the first continued line. Every `#ASSERT` here is on one line.
+- From the brief and the Guide, not re-tested here: `NOT` is parenthesised; no `YMD` (dates are `Date d m y`); no `REFUSE`; `BECAUSE` only in `LEST BREACH ... BECAUSE`; lists are written `(LIST (Date 6 11 2026))` or `(LIST)`; `JL4_LIBRARY_PATH` is left unset.
+
+## Seat questions and the direction audit
+
+The seat has 40 questions (the cap is about 40), in 9 `§` groups in the text's order. The input names fixed by PLAN sections 7.1 and 7.2 are used word for word where a question asks the same fact (`the person is an individual`, `the person is a corporation`, `I am a director of the corporation`, `I am an officer of the corporation`, `I am a chief executive officer of the corporation`, `I am a substantial shareholder in the corporation`, `I am a substantial unitholder in the business trust`, `the corporation is listed on an approved exchange`); `I have an interest in the securities` is not asked by any question of these ranges, so no question uses it. A question that needs the answer of an earlier one (whether Division 1 reaches the corporation) takes it as a plain fact with the earlier question's name in its `@desc`.
+**Direction audit.** For every question the name and the layer-1 body were read together (the table's last column is that reading). Each question asks in the direction its function answers ("must I" against "must"; "am I guilty" against "is guilty"; "is ... barred" against the bar "must not be commenced"; "may the court ... against me" against "the court has power to"; "what is the last day" against the date) and about the same subject (the person who asks, or the body asked about). No question's name and body differ in direction or subject, so none was changed.
+Not asked in the seat (layer 1 only): the exemption power of s 131(3); the lesser offences of ss 134(2), 137D(2) and 137F(9); the register of s 137C; the corporation's own announcement of s 137G(1); the court's later powers of s 137E(2) to (10); the defences and bars of ss 134(3), 137D(3), 137F(10), 137F(11) and 137G(7); the "in time" functions; and the Division 2 and Division 3 counterparts of the Division 1 offence, register, court and information provisions, which the Division 1 questions stand for.
+
+| # | Question | Inputs | Answer | Layer-1 function called | Direction |
+| --- | --- | --- | --- | --- | --- |
+| 1 | Under section 130(2), is this corporation one to which Division 1 applies? | 4 | MAYBE BOOLEAN | `s 130(2) the body is a corporation for the purposes of Division 1`, `s 130(2)(a) the body is a company listed on an approved exchange` (+1) | same direction and subject |
+| 2 | Under section 131(6), what is the last day for my notice, if the Authority has extended the time on my application? | 3 | DATE | `s 131(6) the last day for giving the notice, as extended on the person's application` | same direction and subject |
+| 3 | Under section 133(1), must I give the corporation written notice of my interests as a director or chief executive officer? | 6 | MAYBE BOOLEAN | `s 133(1) the director or chief executive officer must give the corporation written notice of the matter` | same direction and subject |
+| 4 | Under section 133(3)(b)(i), what is the last day for my notice of a change in my interests? | 3 | DATE | `s 133(3)(b)(i) the last day for the notice of a change` | same direction and subject |
+| 5 | Under section 133(3)(b)(ii), what is the last day for my first notice of my interests? | 3 | DATE | `s 133(3)(b)(ii) the last day for any other notice` | same direction and subject |
+| 6 | Under section 133(4)(a), am I deemed to have my family member's interest in securities or securities-based derivatives contracts? | 4 | MAYBE BOOLEAN | `s 133(4)(a) the director or chief executive officer is deemed to have the family member's interest`, `s 133(6) "family member" the person is a family member` | same direction and subject |
+| 7 | Under section 134(1), am I guilty of an offence for failing to notify the corporation, or for giving it false or misleading information? | 6 | MAYBE BOOLEAN | `s 134(1) the director or chief executive officer is guilty of an offence under subsection (1)` | same direction and subject |
+| 8 | Under section 135(1), must I give the corporation written notice of particulars of my voting shares? | 3 | MAYBE BOOLEAN | `s 135(1) the person must give the corporation written notice of particulars of the voting shares` | same direction and subject |
+| 9 | Under section 135(2)(b), what is the last day for my notice of particulars of my voting shares? | 3 | DATE | `s 135(2)(b) the last day for the notice` | same direction and subject |
+| 10 | Under section 136(1), must I give the corporation written notice of a change in the percentage level of my interests? | 4 | MAYBE BOOLEAN | `s 136(1) the substantial shareholder must give the corporation written notice of the change in the percentage level` | same direction and subject |
+| 11 | Under section 136(1), what is the last day for my notice of a change in the percentage level of my interests? | 3 | DATE | `s 136(1) the last day for the notice` | same direction and subject |
+| 12 | Under section 137(1), must I give the corporation written notice that I have ceased to be a substantial shareholder? | 2 | MAYBE BOOLEAN | `s 137(1) the person who ceases to be a substantial shareholder must give the corporation written notice` | same direction and subject |
+| 13 | Under section 137(1), what is the last day for my notice that I have ceased to be a substantial shareholder? | 3 | DATE | `s 137(1) the last day for the notice` | same direction and subject |
+| 14 | Under section 137A, must I take reasonable steps to ensure that the person acting for me gives me notice of an acquisition or disposal? | 2 | MAYBE BOOLEAN | `s 137A the person must take reasonable steps to ensure that the other person notifies the person` | same direction and subject |
+| 15 | Under section 137B, must I give the other person notice of my acquisition or disposal of voting shares? | 2 | MAYBE BOOLEAN | `s 137B the person must give the other person a notice of the acquisition or disposal` | same direction and subject |
+| 16 | Under section 137D(1), am I guilty of an offence for failing to notify as a substantial shareholder, or for giving false or misleading information? | 4 | MAYBE BOOLEAN | `s 137D(1) the person is guilty of an offence under subsection (1)` | same direction and subject |
+| 17 | Under section 137D(1), what is the most I can be fined on conviction? | 2 | MAYBE NUMBER | `s 137D(1) the penalty on conviction` | same direction and subject |
+| 18 | Under section 137E(1), may the court make an order against me for failing to notify as a substantial shareholder? | 3 | MAYBE BOOLEAN | `s 137E(1) the court has power to make one or more of the orders listed in the subsection` | same direction and subject |
+| 19 | Under section 137F(5), must I comply with the corporation's notice asking about my interest in its voting shares? | 1 | MAYBE BOOLEAN | `s 137F(5) the person must comply with the notice` | same direction and subject |
+| 20 | Under section 137F(8), am I guilty of an offence for not complying with the corporation's notice, or for giving false or misleading information? | 4 | MAYBE BOOLEAN | `s 137F(8) the person is guilty of an offence under subsection (8)` | same direction and subject |
+| 21 | Under section 137F(8), what is the most I can be fined on conviction? | 2 | MAYBE NUMBER | `s 137F(8) the penalty on conviction` | same direction and subject |
+| 22 | Under section 137G(5)(d), am I, as an officer, guilty of an offence because the corporation failed to announce a notice, or announced false information, intentionally or recklessly? | 7 | MAYBE BOOLEAN | `s 137G(5)(d) the officer is guilty of an offence for acting intentionally or recklessly` | same direction and subject |
+| 23 | Under section 137H, is this business trust one to which Division 2 applies? | 4 | MAYBE BOOLEAN | `s 137H the trust is a business trust within Division 2`, `s 137H(2) the trust is a registered business trust for the purposes of Division 2` (+1) | same direction and subject |
+| 24 | Under section 137J(1), must I give the trustee-manager written notice of particulars of my voting units? | 2 | MAYBE BOOLEAN | `s 137J(1) sections 135 to 137B apply to the substantial unitholder`, `s 135(1) the person must give the corporation written notice of particulars of the voting shares` | same direction and subject |
+| 25 | Under section 137J(1), what is the last day for my notice to the trustee-manager of particulars of my voting units? | 3 | DATE | `s 135(2)(b) the last day for the notice` | same direction and subject |
+| 26 | Under section 137N(1), must I give the trustee-manager written notice of my interests as a director or chief executive officer? | 4 | MAYBE BOOLEAN | `s 137N(1) the director or chief executive officer must give the trustee-manager written notice of the matter` | same direction and subject |
+| 27 | Under section 137P(1), must I give the trustee-manager written notice of the change in the percentage of my interest in its voting shares? | 3 | MAYBE BOOLEAN | `s 137P(1) the person must give the trustee-manager written notice of the change in the percentage of interest` | same direction and subject |
+| 28 | Under section 137S(2), is this scheme a real estate investment trust for the purposes of Division 3? | 3 | MAYBE BOOLEAN | `s 137S(2) the scheme is a real estate investment trust` | same direction and subject |
+| 29 | Under section 137U(1), must I give the responsible person written notice of particulars of my voting units? | 2 | MAYBE BOOLEAN | `s 137U(1) sections 135 to 137B apply to the substantial unitholder`, `s 135(1) the person must give the corporation written notice of particulars of the voting shares` | same direction and subject |
+| 30 | Under section 137Y(1), must I give the responsible person written notice of my interests as a director or chief executive officer? | 4 | MAYBE BOOLEAN | `s 137Y(1) the director or chief executive officer must give the responsible person written notice of the matter` | same direction and subject |
+| 31 | Under section 137ZA(1), must I give the responsible person written notice of the change in the percentage of my interest in its voting shares? | 3 | MAYBE BOOLEAN | `s 137ZA(1) the person must give the responsible person written notice of the change in the percentage of interest` | same direction and subject |
+| 32 | Under section 137ZD(1), may the Authority, with the consent of the Public Prosecutor, bring an action against me for a civil penalty? | 10 | MAYBE BOOLEAN | `s 137ZD(1) the Authority may bring an action in a court for an order for a civil penalty`, `s 137ZD(1)(a) the person intentionally or recklessly contravened a provision the paragraph lists` (+2) | same direction and subject |
+| 33 | Under section 137ZD(2), is a civil penalty of this amount within the limits the section sets? | 1 | MAYBE BOOLEAN | `s 137ZD(2) the amount of the civil penalty is within the limits` | same direction and subject |
+| 34 | Under section 137ZE(1), is an action against me for a civil penalty barred? | 5 | MAYBE BOOLEAN | `s 137ZE(1) the action must not be commenced` | same direction and subject |
+| 35 | Under section 138(4), may the Securities Industry Council summon me to give evidence on oath or affirmation or to produce a document or material? | 2 | MAYBE BOOLEAN | `s 138(4) the Securities Industry Council may summon the person to give evidence on oath or affirmation or produce a document or material` | same direction and subject |
+| 36 | Under section 138(5), is my document protected from production and from the taking of possession under section 138(4)? | 2 | MAYBE BOOLEAN | `s 138(5) the document is protected from production and from the taking of possession under subsection (4)` | same direction and subject |
+| 37 | Under section 138(6), must I give the name and address of the person for whom or by whom the privileged communication was made? | 3 | MAYBE BOOLEAN | `s 138(6) the person must give the name and address of the person to whom or by or on behalf of whom the communication was made` | same direction and subject |
+| 38 | Under section 139(4), must I comply with the provisions of the Take-over Code? | 1 | MAYBE BOOLEAN | `s 139(4) the person must comply with the provisions of the Take-over Code` | same direction and subject |
+| 39 | Under section 139(8), does my failure to observe the Take-over Code of itself make me liable to criminal proceedings? | 1 | MAYBE BOOLEAN | `s 139(8) the failure of itself renders the party liable to criminal proceedings` | same direction and subject |
+| 40 | Under section 140(3), am I guilty of an offence for announcing, or making, a take-over offer I do not intend or cannot perform? | 4 | MAYBE BOOLEAN | `s 140(3) the person is guilty of an offence under section 140`, `s 140(1) the person must not give notice or publicly announce that the person intends to make a take-over offer` (+1) | same direction and subject |
+
+## What check.sh prints
+
+Command, in the deposit folder: `L4=<build 1.6.110> L4_MAIN=<build 1.6.109> ./check.sh`.
+
+```
+target: main. Each module is run with your l4 and with the main build below; the main columns must match.
+main build: 1.6.109 (main, 4c887e0, 2026-11-04)
+module                                    errors satisfied  failed  refused  expected | errors satisfied  failed  refused  main
+sfa-application.l4                             0         0       0        0         0 |      0         0       0        0  same
+sfa-associates.l4                              0         0       0        0         0 |      0         0       0        0  same
+sfa-core.l4                                    0         0       0        0         0 |      0         0       0        0  same
+sfa-definitions-benchmarks.l4                  0         0       0        0         0 |      0         0       0        0  same
+sfa-definitions-markets.l4                     0         0       0        0         0 |      0         0       0        0  same
+sfa-definitions-persons.l4                     0         0       0        0         0 |      0         0       0        0  same
+sfa-definitions-products.l4                    0         0       0        0         0 |      0         0       0        0  same
+sfa-definitions-rest.l4                        0         0       0        0         0 |      0         0       0        0  same
+sfa-definitions-schemes.l4                     0         0       0        0         0 |      0         0       0        0  same
+sfa-interests.l4                               0         0       0        0         0 |      0         0       0        0  same
+sfa-investors.l4                               0         0       0        0         0 |      0         0       0        0  same
+sfa-periods.l4                                 0         0       0        0         0 |      0         0       0        0  same
+sfaa-cases-seat.l4                             0       131       0        0         0 |      0       131       0        0  same
+sfaa-div1-beneficial-disclosure.l4             0         0       0        0         0 |      0         0       0        0  same
+sfaa-div1-directors.l4                         0         0       0        0         0 |      0         0       0        0  same
+sfaa-div1-interpretation.l4                    0         0       0        0         0 |      0         0       0        0  same
+sfaa-div1-penalties-court.l4                   0         0       0        0         0 |      0         0       0        0  same
+sfaa-div1-register.l4                          0         0       0        0         0 |      0         0       0        0  same
+sfaa-div1-shareholders.l4                      0         0       0        0         0 |      0         0       0        0  same
+sfaa-div2-officers.l4                          0         0       0        0         0 |      0         0       0        0  same
+sfaa-div2-trust.l4                             0         0       0        0         0 |      0         0       0        0  same
+sfaa-div3-officers.l4                          0         0       0        0         0 |      0         0       0        0  same
+sfaa-div3-reit.l4                              0         0       0        0         0 |      0         0       0        0  same
+sfaa-div4-civil-penalty.l4                     0         0       0        0         0 |      0         0       0        0  same
+sfaa-part8.l4                                  0         0       0        0         0 |      0         0       0        0  same
+sfaa-seat.l4                                   0         0       0        0         0 |      0         0       0        0  same
+sfaa-tests-div1-beneficial-disclosure.l4       0        86       0        0         0 |      0        86       0        0  same
+sfaa-tests-div1-directors.l4                   0        86       0        0         0 |      0        86       0        0  same
+sfaa-tests-div1-interpretation.l4              0        69       0        0         0 |      0        69       0        0  same
+sfaa-tests-div1-penalties-court.l4             0        45       0        0         0 |      0        45       0        0  same
+sfaa-tests-div1-register.l4                    0        30       0        0         0 |      0        30       0        0  same
+sfaa-tests-div1-shareholders.l4                0        57       0        0         0 |      0        57       0        0  same
+sfaa-tests-div2-officers.l4                    0       127       0        0         0 |      0       127       0        0  same
+sfaa-tests-div2-trust.l4                       0       158       0        0         0 |      0       158       0        0  same
+sfaa-tests-div3-officers.l4                    0       127       0        0         0 |      0       127       0        0  same
+sfaa-tests-div3-reit.l4                        0       160       0        0         0 |      0       160       0        0  same
+sfaa-tests-div4-civil-penalty.l4               0        64       0        0         0 |      0        64       0        0  same
+sfaa-tests-part8.l4                            0        78       0        0         0 |      0        78       0        0  same
+TOTAL (38 modules)                             0      1218       0        0           |      0      1218       0        0
+```
+
+Baseline it replaced: the folder as supplied held the 12 keel modules only (0 errors, 0 assertions satisfied, 0 failed, 0 refused on both builds); it now holds 38 modules.
+`srcrefs.py check --refs` and `--strict`: 0 problems on every `sfaa-` file. `work/verify.py`: every quoted fragment of every `FALSE-kind` and `NOTHING-kind` comment is in the raw text. `work/traces.py`: 184 trace checks across both builds, 0 mismatches.
+
