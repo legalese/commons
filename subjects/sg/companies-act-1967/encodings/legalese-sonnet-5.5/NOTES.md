@@ -156,6 +156,11 @@ None is a ruling by the maintainer; the answer taken is the one the text's own w
   The grant is limited to "a disposition of book-entry securities" and says nothing of another disposition, a scope limit with no "only", and the periods ruling of 2026-11-05, item (c), gives `NOTHING` outside such a limit.
   The other two gates of the same sentence, "on being satisfied" and "on the application of the Registrar or any other person", still answer `JUST FALSE` when they fail: they are the open split-site question below.
   One assertion in `sga2-tests-s76a.l4` changed from `JUST FALSE` to `NOTHING`.
+- **`s 76A(4) the Court may make an order against the person`** (`sga2-s76a-consequences.l4`).
+  For a person who is none of a party to the contract or transaction, the company, or a person who aided, abetted, counselled or procured the contravention, the function now answers `NOTHING`; it answered `JUST FALSE`.
+  The subsection names the persons an order may be made against and does not close the list with "only", so for any other person the text says nothing (the periods ruling of 2026-11-05, item (c), and Example 2).
+  The "Where (a) ...; (b) ...; and (c) the Court is satisfied" limbs still answer `JUST FALSE` when they fail, for a person in the named class: they are the open split-site question below.
+  One assertion in `sga2-tests-s76a.l4` and one in `sg-cases-seat.l4` changed from `JUST FALSE` to `NOTHING`.
 
 ## Split sites (not harmonised)
 
