@@ -276,7 +276,7 @@ Each entry gives the provision, the function, the answer taken, the other readin
 The ids are labels: **C** a defined term of s 4(1); **D** s 4 outside its list of terms; **G** a reading in ss 5 to 7A; **S** the sites the brief asks to be recorded one by one (section "Split sites (keel)"); **P** the counting of periods.
 There is no F-D1: the id was never used.
 
-### Periods (sg-periods.l4): P1 to P9, assumed, not ruled
+### Periods (sg-periods.l4): P1 to P10, assumed, not ruled
 
 The Act counts days in one place only, s 4(1) "business day" (implemented in `sg-periods.l4`), and has no rule for "within N days after", "not less than N days before", a week or a month.
 The Interpretation Act 1965 is not among the sources, and no number is read from memory, so the convention below is the keel's assumption.
@@ -291,6 +291,7 @@ Every other function that counts a period calls these; no part writes its own da
 - **P7** (`sg-periods.l4`, header, line 23). Taken: "N clear days" excludes both the day of the event and the day of the act (offered as the alternative to P1 and P5). Other reading: it is the default for every "N days", in place of P1 and P5.
 - **P8** (`sg-periods.l4`, header, line 24). Taken: business days are counted from the day after the event, skipping weekends and the supplied public holidays. Other reading: the day of the event counts when it is itself a business day.
 - **P9** (`sg-periods.l4`, header, line 25). Taken: a count that is not a whole non-negative number is not checked here: the caller supplies N from the Act's own words. Other reading: a validating function that refuses a negative or fractional count.
+- **P10** (`sg-periods.l4`, header; added 2026-11-18 from sga3's request in `sga3-NEEDS-CORE.md`). Taken: "N units beginning with D" counts D as day 1, so it ends the day before the same date N units on; where stepping D forward N months clamped to a short month's last day (P4), the period ends on the clamped date itself (the round trip decides). "N units ending with D" counts D as the last day and begins on the same date N units before the day after D. The Act does not say how such a period is counted and the Interpretation Act 1965 is not among the sources. Other reading: "N months beginning with D" always ends the day before the same date, even when the step clamped (31 August plus 6 months less 1 day is 27 February, not 28). Functions: `period: the last day of a period beginning with`, `period: the first day of a period ending with`; 12 assertions in `sg-periods-tests.l4`.
 
 ### Defined terms (C)
 
@@ -449,7 +450,7 @@ Guide line 87 puts these on `NOTHING`: "Everywhere else it answers `NOTHING`: wh
 | s 5B(c), (d): one level of "wholly owned" | a nested subsidiary fails (c) | "wholly owned" is carried up a chain | F-G5 |
 | s 7(4A): "apart from this subsection" | stops (4A) repeating | (4A) applies tier by tier | F-G7 |
 | s 7A(2)(b): the auditor's report | an alternative to unanimity | in addition to a declaration | F-G10 |
-| all counting of periods | P1 to P9 | other conventions in the same table | P1-P9 |
+| all counting of periods | P1 to P10 | other conventions in the same table | P1-P10 |
 
 The remaining `JUST FALSE` branches of `sg-definitions.l4` (75 in all; the delegated ones, the s 4(2) negative and the foreign cooperative society are listed above) answer a "means" definition that a body or thing falls outside, or a "does not include" the text states; Guide line 86 names both ("a "means" definition").
 

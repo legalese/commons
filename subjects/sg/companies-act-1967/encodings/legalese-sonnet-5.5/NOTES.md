@@ -80,13 +80,13 @@ Briefs are shipped verbatim except for lines about tooling.
 - **Part-local types and helper names stay where they are.** Every top-level name carries the label of its provision, so no two modules define the same name; the merged seat module imports all part modules at once and compiles.
 - **Eleven trace comments were reworded in place** (`sgb2-tests-s161.l4` lines 17, 21, 25; `sgb2-tests-s162.l4` lines 110, 114, 118, 122; `sgb2-tests-s163.l4` lines 167, 171, 175, 179): the agent had written the expected word at the end of the comment ("... EXPECT BREACH"), and the line now begins `-- EXPECT <word>.`, so the checker that reads the word at the start of the line sees it. No line was added or removed, and no expected word was changed.
 - **Two traces a strict checker misreads, and are not defects.** `sgd-tests-acquisition.l4` line 384 and `sgd-tests-compromise.l4` line 400 print `FULFILLED AND PARTY ... MUST ...` (the first limb done, the second still owed), which is a residual duty and what their `-- EXPECT RESIDUAL` says; a checker that reads only a result beginning `PARTY` as residual calls them `OTHER`.
-- **The merge lost nothing:** the merged folder was gated as it stands: 173 modules, 10,470 assertions satisfied (below); after the three changes made since, 10,476 (see "What check.sh prints").
+- **The merge lost nothing:** the merged folder was gated as it stands: 173 modules, 10,470 assertions satisfied (below); after the changes made since, 10,476, and 10,488 once the core additions below were gated (see "What check.sh prints").
 
 ## Where things are
 
 | agent | modules (layer 1) | assertions in its test modules | `#TRACE` blocks | seat questions | coverage rows (encoded / fork / inert / repealed) |
 | --- | --- | --- | --- | --- | --- |
-| keel | 8 | 799 | 12 | 37 | 235 (169 / 39 / 23 / 4) |
+| keel | 8 | 811 | 12 | 37 | 235 (169 / 39 / 23 / 4) |
 | sga1 | 7 | 687 | 44 | 72 | 299 (227 / 35 / 30 / 7) |
 | sga2 | 7 | 492 | 19 | 106 | 199 (61 / 136 / 2 / 0) |
 | sga3 | 7 | 679 | 46 | 74 | 385 (71 / 284 / 27 / 3) |
@@ -172,6 +172,12 @@ A reader who compares this encoding with another jurisdiction's should treat (ii
 
 `NEEDS-CORE.md` gathers the requests of the parts that found the core lacking something (proposed, not landed).
 
+**Hoisted into the keel on 2026-11-18** (before wave 2; assumed, not ruled), from the four `notes/*-NEEDS-CORE.md` files:
+- `sg-core.l4`, `Party`: five new constructors, `Official Receiver` (no name), `Board of directors`, `Foreign corporate entity`, `Foreign company` and `Authorised representative` (each with a name), and a record `Penalty` (highest fine in dollars, longest imprisonment in months, whether both may be imposed, whether a default penalty also applies; the amount of a default penalty is not encoded).
+- `sg-periods.l4`: `period: the last day of a period beginning with` and `period: the first day of a period ending with`, convention P10, 12 assertions.
+- Not hoisted: the role type for offence provisions that sgg proposed ("proposed, not landed" in `notes/sgg-NEEDS-CORE.md`), and the `s 4(1) "private company"` limb for a company registered by transfer that sge raised (a keel question, still an input).
+- The four wave-1 parts that asked (sga3, sgd, sge, sgg) still declare their own copies and still answer as before: dropping them would change four gated parts and about 70 rules without changing an answer, so it is left as a separate step. The parts of wave 2 use the core names.
+
 ## What check.sh prints
 
 Run as `L4=<stable 1.6.110> L4_MAIN=<main 1.6.109> ./check.sh` on the merged folder, exit 0:
@@ -192,7 +198,7 @@ sg-interests-tests.l4                          0        76       0        0     
 sg-interests.l4                                0         0       0        0         0 |      0         0       0        0  same
 sg-interpretation-tests.l4                     0        81       0        0         0 |      0        81       0        0  same
 sg-interpretation.l4                           0         0       0        0         0 |      0         0       0        0  same
-sg-periods-tests.l4                            0        70       0        0         0 |      0        70       0        0  same
+sg-periods-tests.l4                            0        82       0        0         0 |      0        82       0        0  same
 sg-periods.l4                                  0         0       0        0         0 |      0         0       0        0  same
 sg-seat.l4                                     0         0       0        0         0 |      0         0       0        0  same
 sg-solvency-tests.l4                           0        48       0        0         0 |      0        48       0        0  same
@@ -353,12 +359,12 @@ sgg-tests-names.l4                             0       118       0        0     
 sgg-tests-registers.l4                         0        79       0        0         0 |      0        79       0        0  same
 sgg-tests-returns.l4                           0       132       0        0         0 |      0       132       0        0  same
 sgg-tests-scope.l4                             0        38       0        0         0 |      0        38       0        0  same
-TOTAL (173 modules)                            0     10476       0        0           |      0     10476       0        0
+TOTAL (173 modules)                            0     10488       0        0           |      0     10488       0        0
 (a failed assertion is also an error; any other error, or any refused assertion, makes the run red)
 (target main: every module has the same four counts on the main build. That rules out a module main rejects and a difference an assertion shows; it does not see a different TRACE outcome, or any difference no assertion exercises)
 ```
 
-The total is 10,476 assertions satisfied over 173 modules (10,470 when the folder was merged; the three changes in "Changes made after the independent review" added six), with 0 errors, 0 failed and 0 refused, identical on the main build.
+The total is 10,488 assertions satisfied over 173 modules (10,470 when the folder was merged; the three changes in "Changes made after the independent review" added six; the keel's period functions of convention P10 added twelve), with 0 errors, 0 failed and 0 refused, identical on the main build.
 `check.sh` does not see a `#TRACE` outcome, because a trace prints no assertion line; each agent read its own traces on both builds, and the lead re-read every trace against its `-- EXPECT` word.
 
 ## What would need doing before the encoding is worth relying on
