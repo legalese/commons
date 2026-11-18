@@ -151,6 +151,11 @@ None is a ruling by the maintainer; the answer taken is the one the text's own w
   A second function, `s 76B(1) the keel's s 7(9)(ca) field: the interest is in accordance with sections 76B to 76G`, is that answer `EQUALS JUST TRUE`, a `BOOLEAN` with no `NOTHING` to convert; the keel's field is unchanged.
   Four assertions of `sga3-tests-76b.l4` changed from `NOTHING` to `JUST FALSE` and five were added for the second function.
   **A caveat that stays:** the function asks four conditions and not all the conditions of ss 76B to 76G. Lodging with the Registrar (s 76B(7)) and the consent of 75% of the holders of the class (s 76D(2A)) are procedural, and the text does not say what a breach of either does to the purchase, so a caller who has not met them can still get `JUST TRUE`. An independent reader noted this.
+- **`s 76A(1A) the Court may order the transfer of the shares acquired in contravention of subsection (1)`** (`sga2-s76a-consequences.l4`).
+  For a disposition that is not of book-entry securities the function now answers `NOTHING`; it answered `JUST FALSE`.
+  The grant is limited to "a disposition of book-entry securities" and says nothing of another disposition, a scope limit with no "only", and the periods ruling of 2026-11-05, item (c), gives `NOTHING` outside such a limit.
+  The other two gates of the same sentence, "on being satisfied" and "on the application of the Registrar or any other person", still answer `JUST FALSE` when they fail: they are the open split-site question below.
+  One assertion in `sga2-tests-s76a.l4` changed from `JUST FALSE` to `NOTHING`.
 
 ## Split sites (not harmonised)
 
