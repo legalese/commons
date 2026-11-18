@@ -1053,6 +1053,10 @@ The cases (`sgm-cases-seat.l4`) are the layer-1 tests re-asked through the seat 
 - What s 344D(4) means for an application received before the dissolution (finding 3).
 - Whether a company within s 197(1A) lodges "the annual return" of s 4(1) (finding 5).
 - The 30-year step of s 194(4) from 29 February (F-P4).
+- The amount payable for a copy under s 192(3) trusts its input (found by the independent wave-2 reader for parts sgm, sgn and sgo, scenario 625, and recorded here on the coordinator's ruling of 2026-11-18, assumed, not ruled).
+  `s 192(3) the amount payable in advance for the copy, in dollars` multiplies the number of pages by the sum the company says it requires for a page and does not cap that sum at $1 (7 pages at a stated $2 a page give 14); the Act allows "$1 or such less sum", so a stated sum above $1 is itself outside the Act.
+  Whether a stated sum is one the subsection allows is answered by the separate `s 192(3) the sum required in advance for a page is one the subsection allows` (JUST TRUE up to $1, JUST FALSE above it; `sgm-tests-part5-div4.l4` lines 289 to 291).
+  There is no clamp, because a clamp would turn an invalid input into a lawful-looking amount; the amount is a NUMBER and cannot answer NOTHING, so a caller who is unsure of the sum asks the companion function first.
 
 ## NEEDS-CORE (sgm)
 
