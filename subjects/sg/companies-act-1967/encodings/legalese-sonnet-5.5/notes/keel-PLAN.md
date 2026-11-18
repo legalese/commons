@@ -612,6 +612,14 @@ A rule such as "is the company private?" is not in the core: it is a rule (`s 4(
 **sg-seat-keel.l4** and **sg-cases-seat-keel.l4**: the keel's own seat, 37 questions (section 7). Parts do not import them.
 
 
+## 3A. Core additions after wave 1 (2026-11-18): names you may use and never define
+
+Wave 1 (the keel and parts sga1 to sgg) is encoded and gated; you cannot see its modules. Since then the keel has gained, from the NEEDS-CORE requests of wave 1:
+- **`Party`** (`sg-core.l4`) has five more constructors: `Official Receiver` (no name); `Board of directors` (field `the name of the company whose board it is`, a STRING); `Foreign corporate entity` (`the name of the foreign corporate entity`); `Foreign company` (`the name of the foreign company`); `Authorised representative` (`the name of the authorised representative`). Use them; never declare a type of your own for the same body.
+- **`Penalty`** (`sg-core.l4`), a record with four fields: `penalty: the highest fine, in Singapore dollars` (NUMBER), `penalty: the longest imprisonment, in months` (NUMBER), `penalty: the text allows both the fine and the imprisonment` (BOOLEAN), `penalty: the person is also liable to a default penalty` (BOOLEAN; the default penalty's amount is not encoded here). Every offence provision's penalty function returns a `Penalty` where the text states one.
+- **`sg-periods.l4`** has two more functions, convention P10: `period: the last day of a period beginning with` (a day, a count, a unit: the day given is day 1) and `period: the first day of a period ending with` (a day, a count, a unit: the day given is the last day). Use them for "N days beginning with" and "N days ending with"; never write your own date arithmetic.
+A role type for offence provisions is NOT in the core (proposed by a wave-1 part, not landed): if you need one, declare it under your own label and record it in `NEEDS-CORE.md`.
+
 ## 4. Seams
 
 A part cannot import another part (separate sandboxes until the merge), so the dependent part takes the other part's answer as an INPUT fact, named for the fact and the section it comes from. A part may import the keel. Each seam below is: asking provision, answering provision, input (name and type). **Confirmed in the text** means the keel read the citing lines in the other part's range; **seen only from XREFS and headings** means the part must check it against the text.
@@ -683,7 +691,7 @@ A part cannot import another part (separate sandboxes until the merge), so the d
 
 ## 6. One row per part
 
-One row per part. Ranges are copied unchanged from `inputs/PARTS.md`. "Keel names" are the functions and types you should expect to use; "seams" are what you take or give, with the table of section 4.
+One row per wave-2 part (wave 1's rows are left out; its ranges are in `PARTS.md`). Ranges are copied unchanged from `inputs/PARTS.md`. "Keel names" are the functions and types you should expect to use; "seams" are what you take or give, with the table of section 4.
 
 ### sga1
 
@@ -751,6 +759,54 @@ One row per part. Ranges are copied unchanged from `inputs/PARTS.md`. "Keel name
 - **Keel names:** `s 4(1) "foreign company" the body is a foreign company` and `s 4(1) "corporation" the body is a corporation` over the `s 4(1) body` record (a foreign cooperative society is excluded: fork F-C1); `s 6` / `s 4(1) "related corporation"` (line 24382: a company deemed related to the foreign company); `"director"`, `"officer"`, `"chief executive officer"` (line 25925 in the later wave modifies it for a foreign company), `"residential address"`, `"Court"`, `"Registrar"`, `"company"`; the `period:` functions.
 - **Seams:** Takes: the foreign-company and corporation functions; the related-corporation function. XREFS only for the `s 4(1) body` use; check it against the text.
 
+
+### sgh
+
+- **Ranges:** 2390-2735, 2802-4174 (h administration of the Act, registers and rectification, incorporation (Part 2, ss 12-16A, Part 3 Division 1))
+- **Keel names:** the `s 4(1) "TERM"` functions of the terms your ranges use ("company", "private company", "constitution", "Registrar", "Authority", "prescribed", "lodged"); the core's `Party`, including `Registrar`, `Minister` and `Authority`; the `period:` functions.
+- **Seams:** Gives (table A): ss 17(6), 18, 19 (the constitution registered under s 19) and s 12A; s 4(8)'s list (ss 8A, 8C, 8D). Takes the keel's definitions; asks later parts nothing.
+
+### sgi
+
+- **Ranges:** 4175-6134 (i capacity and powers, constitution, names, conversion, seal (Part 3 Division 2))
+- **Keel names:** `s 4(1) "constitution"`, `"private company"`, `"public company"`, `"limited company"`, `"company limited by guarantee"`; the core's `Kind of resolution` and `Liability of members`; the `period:` functions.
+- **Seams:** Gives (table A): ss 31 and 32 (a private company converted, or ceased to be private). Takes: the kind of resolution from the core; what a general meeting is (sgl) as an input named for the fact.
+
+### sgj
+
+- **Ranges:** 9882-11038, 11493-11591 (j substantial shareholdings, debentures, title and transfers, office and name (Part 4 Divisions 4-7A, Part 5 Division 1))
+- **Keel names:** `s 7 ...` of `sg-interests.l4` (whether a person has an interest in a share, the substantial-shareholding test); `s 4(1) "share"`, `"debenture"`, `"voting share"`; the core's `Party` (`Member`, `Registrar`); the `period:` functions.
+- **Seams:** Gives (table A): s 93 (the principal register of debenture holders). Takes: `s 7` functions; the registered office and name rules of Part 5 Division 1 are yours.
+
+### sgk
+
+- **Ranges:** 11039-11492, 21886-22626 (k registration of charges, judicial management (Part 4 Division 8, Parts 8, 8A, 9))
+- **Keel names:** `s 4(1) "charge"`-type terms if the keel defines them (read `inputs/KEEL-NOTES.md`); `s 4(1) "Court"`, `"Registrar"`, `"prescribed"`; the core's `Party`, including `Court`, `Registrar`, `Minister`; the `period:` functions.
+- **Seams:** Gives (table A): s 4(8)'s reference to Part 9. Takes: the Insolvency, Restructuring and Dissolution Act 2018 as inputs named for the fact.
+
+### sgl
+
+- **Ranges:** 15411-17092 (l meetings and proceedings (Part 5 Division 3))
+- **Keel names:** the core's `Kind of meeting`, `Kind of resolution`; `s 4(1) "special resolution"`-type definitions if the keel defines them; `s 4(1) "member"`, `"annual general meeting"` input; the `period:` functions (clear days of notice, the periods before a meeting).
+- **Seams:** Gives (table A): ss 174 (statutory meeting, statutory report) and 175 (annual general meeting). Takes: the register of members (sgm) as an input.
+
+### sgm
+
+- **Ranges:** 17093-17848, 22627-23147, 28877-28896, 29311-30828 (m registers of members, annual return, Part 10, the other Schedules, Legislative History (Part 5 Divisions 4-5, Part 10, Schedules 7-11, 14-16))
+- **Keel names:** `s 4(1) "member"`, `"public company"`, `"financial year"` (an input the keel asks of you); the core's `Party`; the `period:` functions.
+- **Seams:** Gives (table A): ss 196 (branch register), 197 (annual return) and 198 (financial year). The Legislative History is inert.
+
+### sgn
+
+- **Ranges:** 25372-27069 (n Part 11A)
+- **Keel names:** `s 4(1) "company"`, `"foreign company"`, `"corporation"`, `"nominee director"`-type terms if the keel defines them; the core's `Party`, including the new `Foreign company`; `s 7` (interest in shares) and `s 5` (subsidiary and holding company) where the text calls them; the `period:` functions.
+- **Seams:** Takes the keel's group and interest functions. Asks later parts nothing.
+
+### sgo
+
+- **Ranges:** 27070-28513 (o enforcement, offences, miscellaneous, First to Fifth Schedules (Part 12))
+- **Keel names:** `s 4(1) "Court"`, `"Registrar"`, `"prescribed"`, `"company"`; the core's `Party`, `Penalty` and the offence-related shapes in `sg-core.l4`; the `period:` functions.
+- **Seams:** Gives (table A): s 402 (the reference list of s 4(8)) and s 408 (default penalty). Takes: other parts' offences are theirs; your penalty provisions are called by them as inputs.
 
 ## 7. The seat layer
 

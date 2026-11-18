@@ -1,8 +1,8 @@
-# NOTES: Companies Act 1967 (Singapore), wave 1 of a whole-Act encoding with an individual seat
+# NOTES: Companies Act 1967 (Singapore), waves 1 and 2: a whole-Act encoding with an individual seat
 
 Status: draft. No lawyer or other domain expert has read this encoding against the text, and it has not been checked against the official text.
-**This is wave 1 only.** It encodes the interpretation section and the definitional core, Part 4's share capital, Part 5's directors, Part 6's accounts and audit, Part 7, minority remedies, Part 10A and Part 11; the later waves (listed below) are not encoded.
-Written 2026-11-18 by Sonnet 5.5 agents (`claude-sonnet-5-5`) working in parallel, and merged by the lead agent of the session that ran them.
+**This folder encodes every line of the deposited text, in two waves.** Wave 1 is the interpretation section and the definitional core, Part 4's share capital, Part 5's directors, Part 6's accounts and audit, Part 7, minority remedies, Part 10A and Part 11. Wave 2 is the rest: Parts 2 and 3, the rest of Parts 4 and 5, Parts 8, 8A and 9, what remains of Part 10, Parts 11A and 12, and the Schedules, with repealed text as repealed rows and the Legislative History as inert rows.
+Written 2026-11-18 by Sonnet 5.5 agents (`claude-sonnet-5-5`) working in parallel, in two waves, and merged by the lead agent of the session that ran them.
 Built with the `l4` 1.6.110 (main, e51181d, 2026-11-11) and compared with 1.6.109 (main, 4c887e0, 2026-11-04); every module has the same four counts on both builds.
 
 ## Edition encoded
@@ -15,7 +15,9 @@ Nothing here was compared with any other version of the Act, or with an amendmen
 
 ## What this folder covers
 
-The deposited text has 30,828 lines and 186,847 words. Wave 1 encodes 102,252 of those words (54.7%), in 12 agents' ranges.
+The deposited text has 30,828 lines and 186,847 words. Wave 1 encoded 102,252 of those words (54.7%), in 12 agents' ranges; wave 2 encodes the other 84,595 (45.3%), in 8 agents' ranges. Every line of the file is in exactly one agent's range (checked by script when this folder was assembled).
+
+**Wave 1**
 
 | agent | text (lines of `CoA1967.txt`) | words | what |
 | --- | --- | --- | --- |
@@ -32,27 +34,27 @@ The deposited text has 30,828 lines and 186,847 words. Wave 1 encodes 102,252 of
 | sge | 23148 to 23607 | 2,391 | Part 10A, transfer of registration into Singapore (ss 355 to 364A) |
 | sgg | 23608 to 25371 | 10,207 | Part 11, foreign companies |
 
-**Not encoded in wave 1**, by range of the text:
+**Wave 2**
 
-| lines | words | Parts they fall in |
-| --- | --- | --- |
-| 2390 to 2735 | 2,555 | Part 2 |
-| 2802 to 6134 | 20,287 | Part 2, Part 3 |
-| 9882 to 11591 | 11,659 | Part 4, Part 5 |
-| 15411 to 17848 | 15,957 | Part 5 |
-| 21886 to 23147 | 8,663 | Part 8, Part 8A, Part 9, Part 10 |
-| 25372 to 28513 | 18,790 | Part 11A, Part 12 |
-| 28877 to 28896 | 38 | front matter, schedules or the index |
-| 29311 to 30828 | 6,646 | front matter, schedules or the index |
+| agent | text (lines of `CoA1967.txt`) | words | what |
+| --- | --- | --- | --- |
+| sgh | 2390 to 2735, 2802 to 4174 | 10,843 | administration of the Act, registers and rectification, incorporation (Part 2, ss 12-16A, Part 3 Division 1) |
+| sgi | 4175 to 6134 | 11,999 | capacity and powers, constitution, names, conversion, seal (Part 3 Division 2) |
+| sgj | 9882 to 11038, 11493 to 11591 | 8,511 | substantial shareholdings, debentures, title and transfers, office and name (Part 4 Divisions 4-7A, Part 5 Division 1) |
+| sgk | 11039 to 11492, 21886 to 22626 | 8,710 | registration of charges, judicial management (Part 4 Division 8, Parts 8, 8A, 9) |
+| sgl | 15411 to 17092 | 11,270 | meetings and proceedings (Part 5 Division 3) |
+| sgm | 17093 to 17848, 22627 to 23147, 28877 to 28896, 29311 to 30828 | 14,472 | registers of members, annual return, Part 10, the other Schedules, Legislative History (Part 5 Divisions 4-5, Part 10, Schedules 7-11, 14-16) |
+| sgn | 25372 to 27069 | 9,783 | Part 11A |
+| sgo | 27070 to 28513 | 9,007 | enforcement, offences, miscellaneous, First to Fifth Schedules (Part 12) |
 
-Those ranges include Part 2 (administration) and Part 3 (constitution of companies), the rest of Part 4 (shares, debentures and charges), the rest of Part 5 (management and administration), Part 8 and Part 8A (which the text shows as repealed by Act 40 of 2018), Part 9 (investigations), Part 10 (dissolution), Part 11A and Part 12, and every Schedule except the Sixth, the Twelfth and the Thirteenth.
-Cross-references from an encoded provision into one of them are taken as inputs, named for the fact (see the seams section).
+Nothing in the deposited text is left unassigned. What is not encoded as a rule is marked in each agent's coverage table: `inert` (headings, the Legislative History, regulation-making and rule-making powers, with the reason in the table), and `repealed` (text the consolidation shows as repealed or blank). Each agent's own audit counts the text lines of its range that fall in no row; its notes say what the count was.
+Cross-references from a provision of one agent's range into another's are taken as inputs named for the fact (see the seams section); wave 2 did not wire them either.
 
 ## Winding up
 
 Winding up has moved out of this Act to the Insolvency, Restructuring and Dissolution Act 2018, and that Act is not a source here.
 What remains in the deposited text is Part 10, headed "DISSOLUTION" (lines 22627 to 23147): Divisions 1, 2, 3, 5 and 6 and most of Division 4 are "[Repealed by Act 40 of 2018]", and what survives is Division 4, Subdivision (5), the Registrar's power to strike a defunct company off the register, striking off on application, objections, administrative restoration, restoration by mistake, the effect of restoration and the retention of books (ss 344 to 344H, lines 22700 to 23134), with ss 343 and 345 to 349 repealed.
-**Part 10 is not encoded in wave 1** (it falls in the range of lines 21886 to 23147 above). Where an encoded provision turns on a winding up (for example the commencement of winding up in s 4(1), or a liquidator's appointment notified under Part 11), the outcome of the winding up under the 2018 Act is taken as an input.
+**Part 10 is encoded in wave 2** (`sgm`, lines 22627 to 23147: what survives of Division 4, the Registrar's striking off and restoration, ss 344 to 344H, with the repealed Divisions as repealed rows). Where an encoded provision turns on a winding up (for example the commencement of winding up in s 4(1), or a liquidator's appointment notified under Part 11), the outcome of the winding up under the 2018 Act is taken as an input.
 
 ## Part 10A: a transfer of registration in only
 
@@ -60,7 +62,8 @@ Part 10A provides for a foreign corporate entity to transfer its registration to
 **Finding: nothing in ss 355 to 364A or elsewhere in the encoded ranges provides for a transfer of registration out of Singapore.**
 The Part 10A agent read the whole Part (lines 23148 to 23607) and searched it for "transfer", "outside Singapore", "deregist" and "domicile" (`notes/sge-NOTES.md`, finding 1).
 The lead then searched every encoded range of the text for "transfer of registration", "outside Singapore", "deregist", "domicile" and "discontinu": outside Part 10A the hits are the table of contents, securities exchanges, offerees, contracts, registers and bodies incorporated outside Singapore, and the restoration of a company deregistered by mistake (s 344F, not encoded in wave 1), and none is a transfer of registration out of Singapore.
-This is a statement about the encoded ranges only: this encoding has not looked at the rest of the Act, and says nothing about whether any other provision or Act provides an outward route. No provision is invented for one.
+Wave 2 repeated the search over its ranges (the body of the text, line 973 on): the same five terms, and "transfer of its registration", give no transfer of registration out of Singapore either; the hits are branch registers, official seals for use outside Singapore, securities exchanges outside Singapore, a foreign company's registration, and s 344F's restoration of a company deregistered by mistake.
+This is a statement about the text of this Act only, and says nothing about whether any other Act provides an outward route. No provision is invented for one.
 
 ## How this folder was made
 
@@ -71,6 +74,7 @@ An independent test pass has been run on this wave (the readers' files are `note
 Every note a part wrote is kept, with names and local paths replaced by placeholders, as `notes/<part>-NOTES.md`, with its `PROGRESS.md` and `NEEDS-CORE.md` where it wrote them; the keel's are `notes/keel-*.md`, and the brief each agent was given is `notes/<agent>-BRIEF.md`.
 Briefs are shipped verbatim except for lines about tooling.
 **A part's NOTES.md is where its coverage table, fork register, marginal readings, jural relations and findings are.** They are not repeated or summed here, except as the sections below say.
+**Wave 2.** 8 further **part** agents encoded the remaining ranges in the same way, against the keel after its hoist (the eight keel modules in each part's folder byte-identical to the keel's), each given the current `docs/ENCODING-GUIDE.md` and a brief that told it to give every "may" gated by "where", "when", "upon" or "on application" a fork line: `sgh` (lines 2390 to 2735, 2802 to 4174), `sgi` (lines 4175 to 6134), `sgj` (lines 9882 to 11038, 11493 to 11591), `sgk` (lines 11039 to 11492, 21886 to 22626), `sgl` (lines 15411 to 17092), `sgm` (lines 17093 to 17848, 22627 to 23147, 28877 to 28896, 29311 to 30828), `sgn` (lines 25372 to 27069), `sgo` (lines 27070 to 28513). The lead verified each part by itself as in wave 1 and merged them into the wave-1 folder with a script (`merge_sg2.py`, not shipped). The keel's plan, `notes/keel-PLAN.md`, is the wave-2 version (section 3A and the wave-2 rows are added to the wave-1 text).
 
 ## Merge decisions (assumed, not ruled)
 
@@ -81,6 +85,10 @@ Briefs are shipped verbatim except for lines about tooling.
 - **Eleven trace comments were reworded in place** (`sgb2-tests-s161.l4` lines 17, 21, 25; `sgb2-tests-s162.l4` lines 110, 114, 118, 122; `sgb2-tests-s163.l4` lines 167, 171, 175, 179): the agent had written the expected word at the end of the comment ("... EXPECT BREACH"), and the line now begins `-- EXPECT <word>.`, so the checker that reads the word at the start of the line sees it. No line was added or removed, and no expected word was changed.
 - **Two traces a strict checker misreads, and are not defects.** `sgd-tests-acquisition.l4` line 384 and `sgd-tests-compromise.l4` line 400 print `FULFILLED AND PARTY ... MUST ...` (the first limb done, the second still owed), which is a residual duty and what their `-- EXPECT RESIDUAL` says; a checker that reads only a result beginning `PARTY` as residual calls them `OTHER`.
 - **The merge lost nothing:** the merged folder was gated as it stands: 173 modules, 10,470 assertions satisfied (below); after the changes made since, 10,476, and 10,488 once the core additions below were gated (see "What check.sh prints").
+- **Wave 2 was appended to the same seat module.** The 8 parts' seat questions are appended to `sg-seat.l4` and their cases to `sg-cases-seat.l4`, each under its own banner, the agent's text unchanged; the cases files' import of the part's own seat module is rewritten to `sg-seat`.
+- **Wave 2's NEEDS-CORE is not hoisted.** `NEEDS-CORE.md` has a wave-2 section; `sgk` asked for two `Party` constructors (an inspector; an officer or agent) and meets them with its own party type, so its modules compile as they stand. Taking them into the core would mean editing and re-gating the part, and a new constructor can change a function that matches on `Party`.
+- **The wave-1 and wave-2 parts were not harmonised.** Where two parts read the same words differently, the folder keeps both and says so in "Split sites" and in the parts' notes. One departure from a keel convention is recorded: `sgh` reads "within N days after X" with X itself in time (fork F-H-P2), against the keel's P2.
+- **The merge lost nothing:** the merged folder was gated as it stands: 292 modules, 19,642 assertions satisfied ("What check.sh prints").
 
 ## Where things are
 
@@ -98,9 +106,17 @@ Briefs are shipped verbatim except for lines about tooling.
 | sgf | 3 | 181 | 11 | 39 | 42 (8 / 31 / 3 / 0) |
 | sge | 8 | 307 | 36 | 68 | 86 (49 / 32 / 5 / 0) |
 | sgg | 7 | 656 | 79 | 177 | 329 (222 / 68 / 29 / 10) |
-| seat cases, all agents | | 3,262 (`sg-cases-seat.l4`) | | | |
+| sgh | 11 | 750 | 102 | 206 | 327 (195 / 72 / 51 / 9) |
+| sgi | 10 | 834 | 43 | 232 | 380 (129 / 204 / 29 / 18) |
+| sgj | 6 | 680 | 95 | 59 | 283 (112 / 115 / 43 / 13) |
+| sgk | 7 | 626 | 83 | 93 | 230 (128 / 65 / 34 / 3) |
+| sgl | 9 | 945 | 65 | 214 | 331 (223 / 79 / 29 / 0) |
+| sgm | 5 | 776 | 82 | 218 | 424 (95 / 133 / 144 / 52) |
+| sgn | 6 | 666 | 138 | 58 | 210 (33 / 149 / 23 / 5) |
+| sgo | 5 | 576 | 45 | 120 | 243 (144 / 60 / 28 / 11) |
+| seat cases, all agents | | 6,563 (`sg-cases-seat.l4`) | | | |
 
-The seat layer is `sg-seat.l4` (1,214 `@export` questions in all) and `sg-cases-seat.l4`; every other module is layer 1, with a tests module beside it.
+The seat layer is `sg-seat.l4` (2,414 `@export` questions in all) and `sg-cases-seat.l4`; every other module is layer 1, with a tests module beside it.
 **The coverage columns are each agent's own count of its own table and are not comparable across agents as a measure of how contestable the text is.** In particular `sga3` marks a row `fork` whenever the rule that encodes it carries at least one entry in its fork register (its coverage section says so), which is why 284 of its 385 rows are `fork`; read each agent's own coverage section for what it counts as `fork`.
 
 ## The source
@@ -119,6 +135,7 @@ From the keel's notes:
 A part cannot import another part, so the part that depends on another's answer takes it as an input named for the fact. The keel's plan lists every seam, with the input's name and type and whether the keel read the citing lines or only saw them in the cross-reference list: `notes/keel-PLAN.md`, section 4 (table A: the keel asks and a part answers; table B: a part asks and the keel answers; C: cross-reference hits that are not seams; D: the one seam the keel could not close, s 5(3)(b)(ii)).
 **One seam the plan lacks, found by `sga3`:** the keel's `sg-interests` asks, as a plain `BOOLEAN`, the fact that an interest is a company's interest in its own shares bought in accordance with ss 76B to 76G. `sga3`'s own function for that answered a `MAYBE BOOLEAN` (`JUST TRUE`, or `NOTHING` when a condition fails, fork F-B11 in `notes/sga3-NOTES.md`), and the merge did not wire it, because carrying a `NOTHING` into a `BOOLEAN` as `FALSE` would turn "not covered" into "no".
 After the independent review that function answers `JUST FALSE` when a condition fails, and a second function turns its answer into the `BOOLEAN` (see "Changes made after the independent review" below). **The seam is still not wired in the tree:** no module calls the second function, because the keel cannot import a later part, and the seat asks the field as a question of its own; the three other consumers of the same fact (`s 76(9)(c)`, `s 76H(1)` and `s 78A`) take their own inputs.
+Wave 2 has the same rule: a part of wave 2 that needs an answer from a wave-1 part, or from another wave-2 part, takes it as an input named for the fact; none is wired.
 
 ## Independent readers
 
@@ -127,6 +144,7 @@ Their files, and what is not shipped with them, are in `notes/reader-README.md`.
 **Read the failures as findings, not defects left open:** of the 122 triage lines, 84 are `SCENARIO` (the reader's expectation was wrong) or `AMBIGUOUS` (the text and the Guide read both ways).
 The two `ENCODER` lines: `s 205B(5)` (changed, below) and `s 149A(3)` (the defence "proves (a) and (b)": the reader reads `JUST FALSE` when only (a) is proved, the encoding answers `NOTHING`; not changed, it turns on the same ruling as the split sites).
 The `GAP` lines name rows with no function or no input: repealed rows, duties stated only as deontics, missing penalty functions, `s 201B(2)(b)` (the kind of relative), `s 171(2)`, `s 202(4)` (the hearing duty), `s 145` (citizenship), `s 164` (a secretary's register), `s 76E(3)`, `s 76D(2A)`, `s 78B(5)`, `s 78J`, the Sixth Schedule years count, `s 10(1)` and `(3)` ("is it prohibited"), `s 64(2)` and `s 71(1A)`; they are not repaired.
+**The readers read wave 1 only.** No independent test pass has been run on wave 2; its tests are its agents' own, and no seat audit has been run on either wave.
 
 ## Changes made after the independent review (assumed, not ruled)
 
@@ -167,6 +185,20 @@ None is a ruling by the maintainer; the answer taken is the one the text's own w
 Each agent was asked to record, site by site and without harmonising with the others, two questions the Guide leaves to the encoder: (i) an unmet element of an offence or a contravention, `JUST FALSE` or `NOTHING`; (ii) a "may" gated by "where", "when", "upon", "on application" or "with the consent of", `JUST FALSE` (the periods ruling) or `NOTHING` (the grant ruling).
 Each agent's count and answer at each site is in its `## Split sites (<id>)` section (`notes/<agent>-NOTES.md`). **The agents did not answer (ii) alike:** the keel took `NOTHING` at its three sites, `sga1` at its four, and `sgb1` took `JUST FALSE` at all 19 of its sites.
 A reader who compares this encoding with another jurisdiction's should treat (ii) as a place where the answer comes from the agent and not from the text.
+**Wave 2 (counts as each part states them in its `## Split sites` section; a site may carry both a `where` gate and an `on application` gate):**
+
+| part | type (i) sites (an unmet element of an offence) | answer | type (ii) sites answered `JUST FALSE` | type (ii) sites answered `NOTHING` |
+| --- | --- | --- | --- | --- |
+| sgh | 7 (plus the s 8A(7) defence) | `JUST FALSE` | 13 | 5 |
+| sgi | 6 | `JUST FALSE` | 0 | 12 |
+| sgj | 13 | `JUST FALSE` | 6 | 3 |
+| sgk | 9 | `JUST FALSE` | 11 | 4 |
+| sgl | 10 | `JUST FALSE` | 6 | 1 |
+| sgm | 12 | `JUST FALSE` | 9 | 1 |
+| sgn | 21 | `JUST FALSE` | 1 | 0 |
+| sgo | 20 | `NOTHING` | 13 | 2 |
+
+The parts of wave 2 did not answer alike either: for type (i), `sgo` answered `NOTHING` where the other parts answered `JUST FALSE`; for type (ii), `sgi` answered `NOTHING` at every one of its twelve sites where the others answered `JUST FALSE` at a failed `where`. Each site has a fork line quoting the Guide, so a ruling on either question can be applied site by site. The same caution holds as for wave 1: these are places where the answer comes from the agent and not from the text.
 
 ## NEEDS-CORE
 
@@ -177,6 +209,7 @@ A reader who compares this encoding with another jurisdiction's should treat (ii
 - `sg-periods.l4`: `period: the last day of a period beginning with` and `period: the first day of a period ending with`, convention P10, 12 assertions.
 - Not hoisted: the role type for offence provisions that sgg proposed ("proposed, not landed" in `notes/sgg-NEEDS-CORE.md`), and the `s 4(1) "private company"` limb for a company registered by transfer that sge raised (a keel question, still an input).
 - The four wave-1 parts that asked (sga3, sgd, sge, sgg) still declare their own copies and still answer as before: dropping them would change four gated parts and about 70 rules without changing an answer, so it is left as a separate step. The parts of wave 2 use the core names.
+**Wave 2 (proposed, not landed):** see the wave-2 section of `NEEDS-CORE.md`. Of the parts of wave 2 only `sgk` made requests (two `Party` constructors, an inspector and an officer or agent); the rest used the hoisted core as it stands.
 
 ## What check.sh prints
 
@@ -188,7 +221,7 @@ main build: 1.6.109 (main, 4c887e0, 2026-11-04)
 module                                    errors satisfied  failed  refused  expected | errors satisfied  failed  refused  main
 sg-auditors-tests.l4                           0        32       0        0         0 |      0        32       0        0  same
 sg-auditors.l4                                 0         0       0        0         0 |      0         0       0        0  same
-sg-cases-seat.l4                               0      3262       0        0         0 |      0      3262       0        0  same
+sg-cases-seat.l4                               0      6563       0        0         0 |      0      6563       0        0  same
 sg-core.l4                                     0         0       0        0         0 |      0         0       0        0  same
 sg-definitions-tests.l4                        0       399       0        0         0 |      0       399       0        0  same
 sg-definitions.l4                              0         0       0        0         0 |      0         0       0        0  same
@@ -359,20 +392,139 @@ sgg-tests-names.l4                             0       118       0        0     
 sgg-tests-registers.l4                         0        79       0        0         0 |      0        79       0        0  same
 sgg-tests-returns.l4                           0       132       0        0         0 |      0       132       0        0  same
 sgg-tests-scope.l4                             0        38       0        0         0 |      0        38       0        0  same
-TOTAL (173 modules)                            0     10488       0        0           |      0     10488       0        0
+sgh-address.l4                                 0         0       0        0         0 |      0         0       0        0  same
+sgh-constitution.l4                            0         0       0        0         0 |      0         0       0        0  same
+sgh-formation.l4                               0         0       0        0         0 |      0         0       0        0  same
+sgh-holding-company.l4                         0         0       0        0         0 |      0         0       0        0  same
+sgh-incorporation.l4                           0         0       0        0         0 |      0         0       0        0  same
+sgh-part2-administration.l4                    0         0       0        0         0 |      0         0       0        0  same
+sgh-part2-inspection.l4                        0         0       0        0         0 |      0         0       0        0  same
+sgh-part2-savings.l4                           0         0       0        0         0 |      0         0       0        0  same
+sgh-rectification.l4                           0         0       0        0         0 |      0         0       0        0  same
+sgh-registers.l4                               0         0       0        0         0 |      0         0       0        0  same
+sgh-returns.l4                                 0         0       0        0         0 |      0         0       0        0  same
+sgh-tests-address.l4                           0        56       0        0         0 |      0        56       0        0  same
+sgh-tests-constitution.l4                      0        72       0        0         0 |      0        72       0        0  same
+sgh-tests-formation.l4                         0        72       0        0         0 |      0        72       0        0  same
+sgh-tests-holding-company.l4                   0       138       0        0         0 |      0       138       0        0  same
+sgh-tests-incorporation.l4                     0        69       0        0         0 |      0        69       0        0  same
+sgh-tests-part2-administration.l4              0        15       0        0         0 |      0        15       0        0  same
+sgh-tests-part2-inspection.l4                  0        95       0        0         0 |      0        95       0        0  same
+sgh-tests-part2-savings.l4                     0        33       0        0         0 |      0        33       0        0  same
+sgh-tests-rectification.l4                     0        55       0        0         0 |      0        55       0        0  same
+sgh-tests-registers.l4                         0        76       0        0         0 |      0        76       0        0  same
+sgh-tests-returns.l4                           0        69       0        0         0 |      0        69       0        0  same
+sgi-alteration.l4                              0         0       0        0         0 |      0         0       0        0  same
+sgi-capacity.l4                                0         0       0        0         0 |      0         0       0        0  same
+sgi-constitution.l4                            0         0       0        0         0 |      0         0       0        0  same
+sgi-contracts-seal.l4                          0         0       0        0         0 |      0         0       0        0  same
+sgi-conversion.l4                              0         0       0        0         0 |      0         0       0        0  same
+sgi-director-transactions.l4                   0         0       0        0         0 |      0         0       0        0  same
+sgi-name-changes.l4                            0         0       0        0         0 |      0         0       0        0  same
+sgi-names.l4                                   0         0       0        0         0 |      0         0       0        0  same
+sgi-objects.l4                                 0         0       0        0         0 |      0         0       0        0  same
+sgi-tests-alteration.l4                        0        58       0        0         0 |      0        58       0        0  same
+sgi-tests-capacity.l4                          0        20       0        0         0 |      0        20       0        0  same
+sgi-tests-constitution.l4                      0        65       0        0         0 |      0        65       0        0  same
+sgi-tests-contracts-seal.l4                    0        93       0        0         0 |      0        93       0        0  same
+sgi-tests-conversion.l4                        0       116       0        0         0 |      0       116       0        0  same
+sgi-tests-director-transactions.l4             0        78       0        0         0 |      0        78       0        0  same
+sgi-tests-name-changes.l4                      0       153       0        0         0 |      0       153       0        0  same
+sgi-tests-names.l4                             0       130       0        0         0 |      0       130       0        0  same
+sgi-tests-objects.l4                           0        73       0        0         0 |      0        73       0        0  same
+sgi-tests-ultra-vires.l4                       0        48       0        0         0 |      0        48       0        0  same
+sgi-ultra-vires.l4                             0         0       0        0         0 |      0         0       0        0  same
+sgj-div4-substantial-shareholdings.l4          0         0       0        0         0 |      0         0       0        0  same
+sgj-div5-debentures.l4                         0         0       0        0         0 |      0         0       0        0  same
+sgj-div7-private-transfers.l4                  0         0       0        0         0 |      0         0       0        0  same
+sgj-div7-public-transfers.l4                   0         0       0        0         0 |      0         0       0        0  same
+sgj-div7-title.l4                              0         0       0        0         0 |      0         0       0        0  same
+sgj-part5-office-name.l4                       0         0       0        0         0 |      0         0       0        0  same
+sgj-tests-div4-substantial-shareholdings.l4       0       223       0        0         0 |      0       223       0        0  same
+sgj-tests-div5-debentures.l4                   0        98       0        0         0 |      0        98       0        0  same
+sgj-tests-div7-private-transfers.l4            0        70       0        0         0 |      0        70       0        0  same
+sgj-tests-div7-public-transfers.l4             0       151       0        0         0 |      0       151       0        0  same
+sgj-tests-div7-title.l4                        0        71       0        0         0 |      0        71       0        0  same
+sgj-tests-part5-office-name.l4                 0        67       0        0         0 |      0        67       0        0  same
+sgk-div8-application.l4                        0         0       0        0         0 |      0         0       0        0  same
+sgk-div8-register.l4                           0         0       0        0         0 |      0         0       0        0  same
+sgk-div8-registration.l4                       0         0       0        0         0 |      0         0       0        0  same
+sgk-part9-consequences.l4                      0         0       0        0         0 |      0         0       0        0  same
+sgk-part9-declared.l4                          0         0       0        0         0 |      0         0       0        0  same
+sgk-part9-inspectors.l4                        0         0       0        0         0 |      0         0       0        0  same
+sgk-part9-ownership.l4                         0         0       0        0         0 |      0         0       0        0  same
+sgk-tests-div8-application.l4                  0        24       0        0         0 |      0        24       0        0  same
+sgk-tests-div8-register.l4                     0        93       0        0         0 |      0        93       0        0  same
+sgk-tests-div8-registration.l4                 0       135       0        0         0 |      0       135       0        0  same
+sgk-tests-part9-consequences.l4                0        77       0        0         0 |      0        77       0        0  same
+sgk-tests-part9-declared.l4                    0        66       0        0         0 |      0        66       0        0  same
+sgk-tests-part9-inspectors.l4                  0       127       0        0         0 |      0       127       0        0  same
+sgk-tests-part9-ownership.l4                   0       104       0        0         0 |      0       104       0        0  same
+sgl-agm.l4                                     0         0       0        0         0 |      0         0       0        0  same
+sgl-arrangements.l4                            0         0       0        0         0 |      0         0       0        0  same
+sgl-calling.l4                                 0         0       0        0         0 |      0         0       0        0  same
+sgl-circulation.l4                             0         0       0        0         0 |      0         0       0        0  same
+sgl-minutes.l4                                 0         0       0        0         0 |      0         0       0        0  same
+sgl-resolutions.l4                             0         0       0        0         0 |      0         0       0        0  same
+sgl-statutory.l4                               0         0       0        0         0 |      0         0       0        0  same
+sgl-tests-agm.l4                               0       101       0        0         0 |      0       101       0        0  same
+sgl-tests-arrangements.l4                      0        83       0        0         0 |      0        83       0        0  same
+sgl-tests-calling.l4                           0        89       0        0         0 |      0        89       0        0  same
+sgl-tests-circulation.l4                       0        82       0        0         0 |      0        82       0        0  same
+sgl-tests-minutes.l4                           0        80       0        0         0 |      0        80       0        0  same
+sgl-tests-resolutions.l4                       0       103       0        0         0 |      0       103       0        0  same
+sgl-tests-statutory.l4                         0        95       0        0         0 |      0        95       0        0  same
+sgl-tests-voting.l4                            0       191       0        0         0 |      0       191       0        0  same
+sgl-tests-written.l4                           0       121       0        0         0 |      0       121       0        0  same
+sgl-voting.l4                                  0         0       0        0         0 |      0         0       0        0  same
+sgl-written.l4                                 0         0       0        0         0 |      0         0       0        0  same
+sgm-part10.l4                                  0         0       0        0         0 |      0         0       0        0  same
+sgm-part5-div4.l4                              0         0       0        0         0 |      0         0       0        0  same
+sgm-part5-div4a.l4                             0         0       0        0         0 |      0         0       0        0  same
+sgm-part5-div5.l4                              0         0       0        0         0 |      0         0       0        0  same
+sgm-schedules.l4                               0         0       0        0         0 |      0         0       0        0  same
+sgm-tests-part10.l4                            0       188       0        0         0 |      0       188       0        0  same
+sgm-tests-part5-div4.l4                        0       235       0        0         0 |      0       235       0        0  same
+sgm-tests-part5-div4a.l4                       0       122       0        0         0 |      0       122       0        0  same
+sgm-tests-part5-div5.l4                        0       136       0        0         0 |      0       136       0        0  same
+sgm-tests-schedules.l4                         0        95       0        0         0 |      0        95       0        0  same
+sgn-application.l4                             0         0       0        0         0 |      0         0       0        0  same
+sgn-evidence.l4                                0         0       0        0         0 |      0         0       0        0  same
+sgn-nominees.l4                                0         0       0        0         0 |      0         0       0        0  same
+sgn-notices.l4                                 0         0       0        0         0 |      0         0       0        0  same
+sgn-register.l4                                0         0       0        0         0 |      0         0       0        0  same
+sgn-registrar.l4                               0         0       0        0         0 |      0         0       0        0  same
+sgn-tests-application.l4                       0        83       0        0         0 |      0        83       0        0  same
+sgn-tests-evidence.l4                          0        42       0        0         0 |      0        42       0        0  same
+sgn-tests-nominees-rules.l4                    0         0       0        0         0 |      0         0       0        0  same
+sgn-tests-nominees.l4                          0       130       0        0         0 |      0       130       0        0  same
+sgn-tests-notices.l4                           0       166       0        0         0 |      0       166       0        0  same
+sgn-tests-register.l4                          0       138       0        0         0 |      0       138       0        0  same
+sgn-tests-registrar.l4                         0       107       0        0         0 |      0       107       0        0  same
+sgo-court.l4                                   0         0       0        0         0 |      0         0       0        0  same
+sgo-offences.l4                                0         0       0        0         0 |      0         0       0        0  same
+sgo-penalties.l4                               0         0       0        0         0 |      0         0       0        0  same
+sgo-records.l4                                 0         0       0        0         0 |      0         0       0        0  same
+sgo-service.l4                                 0         0       0        0         0 |      0         0       0        0  same
+sgo-tests-court.l4                             0       145       0        0         0 |      0       145       0        0  same
+sgo-tests-offences.l4                          0       149       0        0         0 |      0       149       0        0  same
+sgo-tests-penalties.l4                         0        78       0        0         0 |      0        78       0        0  same
+sgo-tests-records.l4                           0       107       0        0         0 |      0       107       0        0  same
+sgo-tests-service.l4                           0        97       0        0         0 |      0        97       0        0  same
+TOTAL (292 modules)                            0     19642       0        0           |      0     19642       0        0
 (a failed assertion is also an error; any other error, or any refused assertion, makes the run red)
 (target main: every module has the same four counts on the main build. That rules out a module main rejects and a difference an assertion shows; it does not see a different TRACE outcome, or any difference no assertion exercises)
 ```
 
-The total is 10,488 assertions satisfied over 173 modules (10,470 when the folder was merged; the three changes in "Changes made after the independent review" added six; the keel's period functions of convention P10 added twelve), with 0 errors, 0 failed and 0 refused, identical on the main build.
-`check.sh` does not see a `#TRACE` outcome, because a trace prints no assertion line; each agent read its own traces on both builds, and the lead re-read every trace against its `-- EXPECT` word.
+The total is 19,642 assertions satisfied over 292 modules, with 0 errors, 0 failed and 0 refused, identical on the main build; the wave-1 folder alone was 10,488 over 173 modules.
+`check.sh` does not see a `#TRACE` outcome, because a trace prints no assertion line; each agent read its own traces on both builds, and the lead re-read every trace of wave 2 against its `-- EXPECT` word (every one matched on both builds).
 
 ## What would need doing before the encoding is worth relying on
 
 - A lawyer's reading of the fork registers and the marginal readings in `notes/<agent>-NOTES.md`; none has been ruled.
-- The later waves above, and a decision on the `NEEDS-CORE.md` requests.
+- A decision on the `NEEDS-CORE.md` requests, and on dropping the wave-1 parts' own copies of what the core now holds.
 - A check of this edition against the current consolidation, if one later than the version in force to 20 October 2026 exists.
-- A seat audit, which has not been run on this wave, and a ruling on the split-site question below, on which the independent readers did not agree among themselves.
+- Independent test authors for wave 2, a seat audit of either wave, and a ruling on the split-site questions below, on which the independent readers of wave 1 did not agree among themselves.
 
 ## Source not official
 
