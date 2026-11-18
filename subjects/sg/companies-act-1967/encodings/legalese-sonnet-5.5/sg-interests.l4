@@ -1,0 +1,319 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `sg-core`
+
+-- Companies Act 1967 (Singapore): s 7 -- interests in shares.
+--
+-- HOW IT IS MODELLED. One person and one share (or block of shares) at a time. The facts about the person are one record,
+-- `s 7 interest facts`: the direct limbs (authority to dispose, the trust, the contract, the option, the right to have the share
+-- transferred, the right to control the exercise of rights attached), the facts that take an interest out ((3) the collective
+-- investment scheme unit, (9) the disregards), and the LIST of bodies corporate through which the person may be deemed to
+-- have the interest (s 7(4) and (4A)). Each body corporate carries its own `s 7 interest facts`, so the chain of s 7(4) is
+-- followed by recursion over the data, which is finite.
+-- s 7(4A) is applied to a body corporate's interest "apart from this subsection" (its words), and s 7(4) to its interest
+-- "by the provisions of this section" (all of it, (4A) included); the two functions below keep that difference.
+-- The earlier pass read (4A) as repeating tier by tier (a 20% stake in a 20% stake in a 20% stake); this module reads
+-- "apart from this subsection" as stopping that (NOTES.md, Compared with the earlier pass).
+--
+-- Not decided here (supplied as facts): whether an offer is an offer of units under s 283 of the Securities and Futures Act 2001;
+-- what offices and interests regulations prescribe under s 7(9)(c) and (d); whether a person "knows, or has reasonable grounds
+-- for believing" (s 7(2)); whether a person has "a controlling interest" (s 7(4)(b), not defined in s 7).
+
+§ `Types`
+
+-- s 7(1): the provisions each group of subsections has effect for.
+DECLARE `s 7(1) purpose` IS ONE OF
+    `s 7(1) Division 4 of Part 4`
+    `s 7(1) section 163`
+    `s 7(1) section 164`
+    `s 7(1) section 165`
+    `s 7(1) section 244`
+    `s 7(1) some other provision`
+
+DECLARE `s 7 interest facts` HAS
+    `the person has authority (formal or informal, express or implied) to dispose of, or to exercise control over the disposal of, the shares` IS A BOOLEAN
+    `property held in trust consists of or includes the shares and the person has an interest under the trust` IS A BOOLEAN
+    `the person knows, or has reasonable grounds for believing, that the person has that interest under the trust` IS A BOOLEAN
+    `the person has entered into a contract to purchase a share` IS A BOOLEAN
+    `the person has a right, otherwise than by reason of having an interest under a trust, to have a share transferred to the person or to the person's order` IS A BOOLEAN
+    `the person has the right to acquire a share, or an interest in a share, under an option` IS A BOOLEAN
+    `the person is entitled, otherwise than as a proxy or representative at a meeting, to exercise or control the exercise of a right attached to a share of which the person is not the registered holder` IS A BOOLEAN
+    `the thing is a unit in a collective investment scheme that has been subscribed or purchased on an offer of units, or is issued for such an offer and held by the scheme's manager` IS A BOOLEAN
+    `the person holds the share as bare trustee` IS A BOOLEAN
+    `the person's ordinary business includes the lending of money` IS A BOOLEAN
+    `the person holds the interest only by way of security for a transaction entered into in the ordinary course of business in connection with the lending of money` IS A BOOLEAN
+    `the person holds the interest by reason of holding a prescribed office` IS A BOOLEAN
+    `the interest is a company's interest in its own shares purchased or otherwise acquired in accordance with sections 76B to 76G (including treasury shares)` IS A BOOLEAN
+    `the interest is a prescribed interest of a prescribed person or class of persons` IS A BOOLEAN
+    `the bodies corporate through which the person may be deemed to have the interest` IS A LIST OF `s 7(4) body corporate`
+
+DECLARE `s 7(4) body corporate` HAS
+    `its own interest in the share` IS A `s 7 interest facts`
+    `it is, or its directors are, accustomed or under an obligation, formal or informal, to act in accordance with the directions, instructions or wishes of the person` IS A BOOLEAN
+    `the person has a controlling interest in it` IS A BOOLEAN
+    `the percentage of the voting power in it that the person is entitled to exercise or control` IS A NUMBER
+    `the percentage of the voting power in it that the person's associates are entitled to exercise or control` IS A NUMBER
+    `the percentage of the voting power in it that the person and the person's associates together are entitled to exercise or control` IS A NUMBER
+
+§ `Section 7(1): which provisions the subsections serve`
+
+-- src:2115 | 7.—(1) The following subsections have effect for the purposes of
+-- src:2116 | Division 4 of Part 4 and sections 163, 164 and 165 and
+-- src:2117 | subsection (6A), in addition, also has effect for the purposes of
+-- src:2118 | section 244.
+@ref s 7(1) (src:2115-2118)
+GIVEN purpose IS A `s 7(1) purpose`
+GIVETH A MAYBE BOOLEAN
+`s 7(1) the subsections other than (6A) have effect for the purposes of` MEANS
+    CONSIDER purpose
+    WHEN `s 7(1) Division 4 of Part 4` THEN JUST TRUE
+    WHEN `s 7(1) section 163` THEN JUST TRUE
+    WHEN `s 7(1) section 164` THEN JUST TRUE
+    WHEN `s 7(1) section 165` THEN JUST TRUE
+    WHEN `s 7(1) section 244` THEN NOTHING          -- NOTHING-kind (limited by its own wording): "subsection (6A), in addition, also has effect for the purposes of section 244" names (6A) alone for s 244 and does not say the others do not apply there
+    OTHERWISE NOTHING                               -- NOTHING-kind (silent): the subsection lists the provisions it serves, and does not say "only"
+
+@ref s 7(1) (src:2115-2118)
+GIVEN purpose IS A `s 7(1) purpose`
+GIVETH A MAYBE BOOLEAN
+`s 7(1) subsection (6A) has effect for the purposes of` MEANS
+    CONSIDER purpose
+    WHEN `s 7(1) Division 4 of Part 4` THEN JUST TRUE
+    WHEN `s 7(1) section 163` THEN JUST TRUE
+    WHEN `s 7(1) section 164` THEN JUST TRUE
+    WHEN `s 7(1) section 165` THEN JUST TRUE
+    WHEN `s 7(1) section 244` THEN JUST TRUE        -- "in addition, also has effect for the purposes of section 244"
+    OTHERWISE NOTHING                               -- NOTHING-kind (silent): another provision is not named
+
+§ `Section 7(1A) and (1B): authority to dispose of the shares`
+
+-- (1B) says restraint or restriction on the authority is immaterial. The facts of `s 7 interest facts` carry no restraint field,
+-- because the restraint changes nothing; this function states it where a caller asks.
+-- src:2122 | (1A) Subject to this section, a person has an interest in shares if the
+-- src:2123 | person has authority (whether formal or informal, or express or
+-- src:2124 | implied) to dispose of, or to exercise control over the disposal of,
+-- src:2125 | those shares.
+-- src:2129 | (1B) For the purposes of subsection (1A), it is immaterial that the
+-- src:2130 | authority of a person to dispose of, or to exercise control over the
+-- src:2131 | disposal of, particular shares is, or is capable of being made, subject
+-- src:2132 | to restraint or restriction.
+@ref s 7(1A) and (1B) (src:2122-2132)
+GIVEN `the authority is, or is capable of being made, subject to restraint or restriction` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 7(1B) the restraint on the authority matters to whether the person has authority` MEANS
+    IF `the authority is, or is capable of being made, subject to restraint or restriction`
+    THEN JUST FALSE   -- FALSE-kind (the text says no in its own words): "it is immaterial ... that the authority ... is, or is capable of being made, subject to restraint or restriction"
+    ELSE NOTHING      -- NOTHING-kind (silent): with no restraint the subsection says nothing
+
+§ `Section 7(3): units in a collective investment scheme`
+
+-- src:2147 | (3) A unit in a collective investment scheme within the meaning of
+-- src:2148 | section 2 of the Securities and Futures Act 2001 —
+-- src:2150 | (a) that is the subject of an offer of units within the meaning of
+-- src:2151 | section 283 of that Act and that has been so subscribed or
+-- src:2152 | purchased; or
+-- src:2154 | (b) that is issued for the purpose of an offer of units within the
+-- src:2155 | meaning of section 283 of that Act and is held by the
+-- src:2156 | manager of the collective investment scheme concerned,
+-- src:2158 | does not constitute an interest in a share.
+@ref s 7(3) (src:2147-2158)
+GIVEN facts IS A `s 7 interest facts`
+GIVETH A BOOLEAN
+`s 7(3) the thing is a unit that does not constitute an interest in a share` MEANS
+    facts's `the thing is a unit in a collective investment scheme that has been subscribed or purchased on an offer of units, or is issued for such an offer and held by the scheme's manager`
+
+§ `Section 7(9) and (10): interests to be disregarded`
+
+-- src:2250 | (9) There is to be disregarded —
+-- src:2252 | (a) an interest in a share if the interest is that of a person who
+-- src:2253 | holds the share as bare trustee;
+-- src:2255 | (b) an interest in a share if the interest is that of a person whose
+-- src:2256 | ordinary business includes the lending of money if the
+-- src:2257 | person holds the interest only by way of security for the
+-- src:2258 | purposes of a transaction entered into in the ordinary
+-- src:2259 | course of business in connection with the lending of
+-- src:2260 | money;
+-- src:2262 | (c) an interest of a person in a share, if that interest is an
+-- src:2263 | interest held by the person by reason of the person holding
+-- src:2264 | a prescribed office;
+-- src:2266 | (ca) an interest of a company in its own shares if that interest is
+-- src:2267 | purchased or otherwise acquired in accordance with
+-- src:2268 | sections 76B to 76G (including treasury shares); and
+-- src:2270 | (d) a prescribed interest in a share, being an interest of such
+-- src:2271 | person, or of the persons included in such class of persons,
+-- src:2272 | as is prescribed.
+@ref s 7(9) (src:2250-2272)
+GIVEN facts IS A `s 7 interest facts`
+GIVETH A BOOLEAN
+`s 7(9) the interest is to be disregarded` MEANS
+       facts's `the person holds the share as bare trustee`                                                  -- (a)
+    OR (   facts's `the person's ordinary business includes the lending of money`                            -- (b)
+       AND facts's `the person holds the interest only by way of security for a transaction entered into in the ordinary course of business in connection with the lending of money`)
+    OR facts's `the person holds the interest by reason of holding a prescribed office`                      -- (c)
+    OR facts's `the interest is a company's interest in its own shares purchased or otherwise acquired in accordance with sections 76B to 76G (including treasury shares)`   -- (ca)
+    OR facts's `the interest is a prescribed interest of a prescribed person or class of persons`            -- (d)
+
+-- (10): an interest is not to be disregarded by reason only of remoteness, the manner in which it arose, or restraint.
+-- src:2276 | (10) An interest in a share is not to be disregarded by reason only
+-- src:2277 | of —
+-- src:2279 | (a) its remoteness;
+-- src:2281 | (b) the manner in which it arose; or
+-- src:2283 | (c) the fact that the exercise of a right conferred by the interest
+-- src:2284 | is, or is capable of being made, subject to restraint or
+-- src:2285 | restriction.
+@ref s 7(10) (src:2276-2285)
+GIVEN `the only ground for disregarding the interest is its remoteness, the manner in which it arose, or a restraint on exercising a right it confers` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 7(10) the ground is a reason to disregard the interest` MEANS
+    IF `the only ground for disregarding the interest is its remoteness, the manner in which it arose, or a restraint on exercising a right it confers`
+    THEN JUST FALSE   -- FALSE-kind (the text says no in its own words): "An interest in a share is not to be disregarded by reason only of (a) its remoteness; (b) the manner in which it arose; or (c) the fact that the exercise of a right ... is, or is capable of being made, subject to restraint or restriction"
+    ELSE NOTHING      -- NOTHING-kind (silent): any other ground is not addressed by this subsection
+
+§ `Section 7(5): associates`
+
+-- src:2188 | (5) For the purposes of subsection (4A), a person is an associate of
+-- src:2189 | another person if the firstmentioned person is —
+-- src:2191 | (a) a subsidiary of that other person;
+-- src:2196 | (b) a person who is accustomed or is under an obligation
+-- src:2197 | whether formal or informal to act in accordance with the
+-- src:2198 | directions, instructions or wishes of that other person in
+-- src:2199 | relation to the share mentioned in subsection (4A); or
+-- src:2201 | (c) a body corporate that is, or a majority of the directors of
+-- src:2202 | which are, accustomed or under an obligation whether
+-- src:2203 | formal or informal to act in accordance with the directions,
+-- src:2204 | instructions or wishes of that other person in relation to the
+-- src:2205 | share mentioned in subsection (4A).
+@ref s 7(5) (src:2188-2205)
+GIVEN `the firstmentioned person is a subsidiary of the other person` IS A BOOLEAN
+      `the firstmentioned person is accustomed or under an obligation, formal or informal, to act in accordance with the directions, instructions or wishes of the other person in relation to the share` IS A BOOLEAN
+      `the firstmentioned person is a body corporate that is, or a majority of the directors of which are, accustomed or under an obligation, formal or informal, to act in accordance with the directions, instructions or wishes of the other person in relation to the share` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 7(5) the firstmentioned person is an associate of the other person` MEANS
+    IF    `the firstmentioned person is a subsidiary of the other person`
+       OR `the firstmentioned person is accustomed or under an obligation, formal or informal, to act in accordance with the directions, instructions or wishes of the other person in relation to the share`
+       OR `the firstmentioned person is a body corporate that is, or a majority of the directors of which are, accustomed or under an obligation, formal or informal, to act in accordance with the directions, instructions or wishes of the other person in relation to the share`
+    THEN JUST TRUE
+    ELSE JUST FALSE   -- FALSE-kind (the text says no in its own words): "a person is an associate of another person if the firstmentioned person is (a) ...; (b) ...; or (c) ..." (a failed "if", marginal reading (a))
+
+§ `Section 7(1A), (2), (4), (4A) and (6): having an interest, directly and through bodies corporate`
+
+-- The direct limbs: (1A) authority; (2) a trust interest the person knows of; (6)(a) to (d).
+-- src:2122 | (1A) Subject to this section, a person has an interest in shares if the
+-- src:2123 | person has authority (whether formal or informal, or express or
+-- src:2124 | implied) to dispose of, or to exercise control over the disposal of,
+-- src:2125 | those shares.
+@ref s 7(1A) (src:2122-2125)
+GIVEN facts IS A `s 7 interest facts`
+GIVETH A BOOLEAN
+`s 7 the direct limbs give the person an interest` MEANS
+       facts's `the person has authority (formal or informal, express or implied) to dispose of, or to exercise control over the disposal of, the shares`    -- (1A)
+    OR (   facts's `property held in trust consists of or includes the shares and the person has an interest under the trust`
+       AND facts's `the person knows, or has reasonable grounds for believing, that the person has that interest under the trust`)                         -- (2)
+    OR facts's `the person has entered into a contract to purchase a share`                                                                                 -- (6)(a)
+    OR facts's `the person has a right, otherwise than by reason of having an interest under a trust, to have a share transferred to the person or to the person's order`   -- (6)(b)
+    OR facts's `the person has the right to acquire a share, or an interest in a share, under an option`                                                    -- (6)(c)
+    OR facts's `the person is entitled, otherwise than as a proxy or representative at a meeting, to exercise or control the exercise of a right attached to a share of which the person is not the registered holder`   -- (6)(d)
+
+-- s 7(4): the person is deemed to have the interest a body corporate has (or is deemed by this section, (4A) included, to have)
+-- when the body corporate follows the person's directions or the person has a controlling interest in it.
+-- s 7(4A): the person is deemed to have the interest a body corporate has (or is deemed, apart from (4A), to have)
+-- when the person, the person's associates, or both together, are entitled to 20% or more of its voting power.
+-- The three functions are mutually recursive over the chain of bodies corporate; the data are finite, so they end.
+-- src:2160 | (4) Where a body corporate has, or is by the provisions of this
+-- src:2161 | section deemed to have, an interest in a share and —
+-- src:2163 | (a) the body corporate is, or its directors are, accustomed or
+-- src:2164 | under an obligation whether formal or informal to act in
+-- src:2165 | accordance with the directions, instructions or wishes of a
+-- src:2166 | person; or
+-- src:2168 | (b) a person has a controlling interest in the body corporate,
+-- src:2170 | that person is deemed to have an interest in that share.
+-- src:2172 | (4A) Where a body corporate has, or is by the provisions of this
+-- src:2173 | section (apart from this subsection) deemed to have, an interest in a
+-- src:2174 | share and —
+-- src:2176 | (a) a person is;
+-- src:2178 | (b) the associates of a person are; or
+-- src:2180 | (c) a person and the person’s associates are,
+-- src:2182 | entitled to exercise or control the exercise of not less than 20% of the
+-- src:2183 | voting power in the body corporate, that person is deemed to have an
+-- src:2184 | interest in that share.
+@ref s 7(4) and (4A) (src:2160-2184)
+GIVEN facts IS A `s 7 interest facts`
+GIVETH A BOOLEAN
+`s 7 the person has an interest apart from subsection (4A)` MEANS
+        (NOT `s 7(3) the thing is a unit that does not constitute an interest in a share` facts)
+    AND (NOT `s 7(9) the interest is to be disregarded` facts)
+    AND (   `s 7 the direct limbs give the person an interest` facts
+         OR any (GIVEN body YIELD
+                       `s 7 the person has an interest` (body's `its own interest in the share`)
+                   AND (   body's `it is, or its directors are, accustomed or under an obligation, formal or informal, to act in accordance with the directions, instructions or wishes of the person`
+                        OR body's `the person has a controlling interest in it`))
+                 (facts's `the bodies corporate through which the person may be deemed to have the interest`))
+
+@ref s 7(4) and (4A) (src:2160-2184)
+GIVEN facts IS A `s 7 interest facts`
+GIVETH A BOOLEAN
+`s 7 the person has an interest` MEANS
+        (NOT `s 7(3) the thing is a unit that does not constitute an interest in a share` facts)
+    AND (NOT `s 7(9) the interest is to be disregarded` facts)
+    AND (   `s 7 the person has an interest apart from subsection (4A)` facts
+         OR any (GIVEN body YIELD
+                       `s 7 the person has an interest apart from subsection (4A)` (body's `its own interest in the share`)
+                   AND (   body's `the percentage of the voting power in it that the person is entitled to exercise or control` AT LEAST 20
+                        OR body's `the percentage of the voting power in it that the person's associates are entitled to exercise or control` AT LEAST 20
+                        OR body's `the percentage of the voting power in it that the person and the person's associates together are entitled to exercise or control` AT LEAST 20))
+                 (facts's `the bodies corporate through which the person may be deemed to have the interest`))
+
+-- The answer, in the Act's terms. For s 7(1)'s purposes: the deeming subsections apply for Division 4 of Part 4 and ss 163 to 165;
+-- for s 244 only (6A) applies, so the other subsections give no answer there.
+-- src:2115 | 7.—(1) The following subsections have effect for the purposes of
+-- src:2116 | Division 4 of Part 4 and sections 163, 164 and 165 and
+-- src:2117 | subsection (6A), in addition, also has effect for the purposes of
+-- src:2118 | section 244.
+@ref s 7(1) (src:2115-2118)
+GIVEN purpose IS A `s 7(1) purpose`
+      facts IS A `s 7 interest facts`
+GIVETH A MAYBE BOOLEAN
+`s 7 the person has an interest in the shares` MEANS
+    IF (`s 7(1) the subsections other than (6A) have effect for the purposes of` purpose) EQUALS JUST TRUE
+    THEN (IF `s 7 the person has an interest` facts
+          THEN JUST TRUE
+          ELSE JUST FALSE)   -- FALSE-kind (the text says no in its own words): "(3) ... does not constitute an interest in a share"; "(9) There is to be disregarded ..."; for the other limbs a failed "if"/"where" (marginal reading (a))
+    ELSE NOTHING             -- NOTHING-kind (limited by its own wording): s 7(1) names the provisions the subsections serve; for s 244 only (6A) is named, and for any other provision the section is silent
+
+§ `Section 7(6A): book-entry securities`
+
+-- src:2233 | (6A) For the purposes of Division 4 of Part 4 and sections 163 to
+-- src:2234 | 165 and 244, a book‑entry security is to be treated as if it were an
+-- src:2235 | interest in a share.
+@ref s 7(6A) (src:2233-2235)
+GIVEN purpose IS A `s 7(1) purpose`
+      `the thing is a book-entry security` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 7(6A) the book-entry security is treated as an interest in a share` MEANS
+    IF (`s 7(1) subsection (6A) has effect for the purposes of` purpose EQUALS JUST TRUE) AND `the thing is a book-entry security`
+    THEN JUST TRUE
+    ELSE NOTHING   -- NOTHING-kind (limited by its own wording): "For the purposes of Division 4 of Part 4 and sections 163 to 165 and 244, a book-entry security is to be treated as if it were an interest in a share" says nothing of another purpose, or of a thing that is not a book-entry security
+
+§ `Section 7(7) and (8): what does not matter`
+
+-- src:2239 | (7) A person is not to be deemed not to have an interest in a share by
+-- src:2240 | reason only that the person has the interest in the share jointly with
+-- src:2241 | another person.
+@ref s 7(7) (src:2239-2241)
+GIVEN `the person has the interest jointly with another person` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 7(7) the joint holding is a reason to find that the person has no interest` MEANS
+    IF `the person has the interest jointly with another person`
+    THEN JUST FALSE   -- FALSE-kind (the text says no in its own words): "A person is not to be deemed not to have an interest in a share by reason only that the person has the interest in the share jointly with another person"
+    ELSE NOTHING      -- NOTHING-kind (silent): an interest that is not joint is not addressed
+
+-- src:2246 | (8) It is immaterial, for the purposes of determining whether a
+-- src:2247 | person has an interest in a share, that the interest cannot be related to a
+-- src:2248 | particular share.
+@ref s 7(8) (src:2246-2248)
+GIVEN `the interest cannot be related to a particular share` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 7(8) that the interest cannot be related to a particular share matters` MEANS
+    IF `the interest cannot be related to a particular share`
+    THEN JUST FALSE   -- FALSE-kind (the text says no in its own words): "It is immaterial, for the purposes of determining whether a person has an interest in a share, that the interest cannot be related to a particular share"
+    ELSE NOTHING      -- NOTHING-kind (silent): an interest that can be related to a particular share is not addressed

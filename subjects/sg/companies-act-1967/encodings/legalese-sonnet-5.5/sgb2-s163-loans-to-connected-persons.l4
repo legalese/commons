@@ -1,0 +1,700 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `sg-core`
+IMPORT `sg-periods`
+IMPORT `sg-interests`
+
+-- Companies Act 1967 (Singapore), 2020 Revised Edition: ss 163, 163A and 163B -- approval of the company required for loans and quasi-loans to,
+-- and credit transactions for the benefit of, persons connected with the directors of the lending company; the exceptions for the cost of
+-- defending proceedings and of regulatory action. Layer 1 (the law, objectively). Part sgb2.
+--
+-- HOW IT READS. A company (other than an exempt private company) must not make a loan, give a guarantee and so on to another company, a limited
+-- liability partnership or a VCC in which its directors are interested in 20% or more of the voting power, unless the company in general meeting
+-- approved it beforehand with those directors abstaining (s 163(1)); s 163(2) and (3) carry the rule to a body formed outside Singapore, and s 163(3A)
+-- to arrangements. The terms of s 162(11) ("credit transaction", "quasi-loan", "creditor", "borrower") are the ones s 163 uses (s 162(11) says "In this
+-- section and section 163"), so this module takes the dealing's kind as an input and does not repeat them.
+-- Whether the other body is the company's subsidiary, holding company or a subsidiary of its holding company is s 6's question (sg-groups.l4); it is
+-- a fact here. Whether a person has an interest in shares is s 7's (sg-interests.l4), called with the purpose `s 7(1) section 163`.
+-- A function that asks whether a thing done is within an exception is named for the exception, so that JUST FALSE reads as "not within it" and never as
+-- a bar (fork F-163-0 in NOTES.md).
+
+§ `Section 163(5): the family of a director`
+
+DECLARE `s 163(5)(b) relationship to the director` IS ONE OF
+    `s 163(5)(b) the director's spouse`
+    `s 163(5)(b) the director's son`
+    `s 163(5)(b) the director's adopted son`
+    `s 163(5)(b) the director's stepson`
+    `s 163(5)(b) the director's daughter`
+    `s 163(5)(b) the director's adopted daughter`
+    `s 163(5)(b) the director's stepdaughter`
+    `s 163(5)(b) another person`
+
+-- src:13843 | (b) a reference to a member of a director’s family includes the
+-- src:13844 | director’s spouse, son, adopted son, stepson, daughter,
+-- src:13845 | adopted daughter and stepdaughter.
+@ref s 163(5)(b) (src:13843-13845)
+GIVEN relationship IS A `s 163(5)(b) relationship to the director`
+GIVETH A MAYBE BOOLEAN
+`s 163(5)(b) the person is a member of the director's family` MEANS
+    CONSIDER relationship
+    WHEN `s 163(5)(b) another person` THEN NOTHING   -- NOTHING-kind (includes): "a reference to a member of a director's family includes the director's spouse, son, adopted son, stepson, daughter, adopted daughter and stepdaughter" does not say that no other relative is included
+    OTHERWISE JUST TRUE
+
+-- src:13840 | (a) an interest of a member of a director’s family is treated as
+-- src:13841 | the interest of the director; and
+@ref s 163(5)(a) (src:13840-13841)
+GIVEN `the person is a member of the director's family` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 163(5)(a) the interest of the person is treated as the interest of the director` MEANS
+    IF `the person is a member of the director's family`
+    THEN JUST TRUE
+    ELSE NOTHING   -- NOTHING-kind (limited by its own wording): "an interest of a member of a director's family is treated as the interest of the director" says nothing of the interest of any other person
+
+§ `Section 163(3D) and (3B): how interests, voting power and approvals are counted`
+
+-- (3D)(a): not taken to have an interest by reason only that the lending company has an interest in the other company's shares and the director has one in the lending company.
+-- src:13778 | (a) where a company makes a loan or quasi‑loan to another
+-- src:13779 | company or VCC, enters into a credit transaction for the
+-- src:13780 | benefit of another company or VCC, gives a guarantee or
+-- src:13781 | provides security in connection with a loan, quasi‑loan or
+-- src:13782 | credit transaction made to or entered into for the benefit of
+-- src:13783 | another company or VCC, or enters into an arrangement
+-- src:13784 | referred to in subsection (3A), a director or directors of the
+-- src:13785 | firstmentioned company are not to be taken to have an
+-- src:13786 | interest in shares in that other company or VCC by reason
+-- src:13787 | only that the firstmentioned company has an interest in
+-- src:13788 | shares in that other company or VCC and a director or
+-- src:13789 | directors have an interest in shares in the firstmentioned
+-- src:13790 | company;
+@ref s 163(3D)(a) (src:13778-13790)
+GIVEN `the only reason is that the lending company has an interest in shares in the other company or VCC and a director or directors have an interest in shares in the lending company` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 163(3D)(a) the director is taken to have an interest in shares in the other company or VCC` MEANS
+    IF `the only reason is that the lending company has an interest in shares in the other company or VCC and a director or directors have an interest in shares in the lending company`
+    THEN JUST FALSE   -- FALSE-kind (the text says no in its own words): "a director or directors of the firstmentioned company are not to be taken to have an interest in shares in that other company or VCC by reason only that the firstmentioned company has an interest in shares in that other company or VCC and a director or directors have an interest in shares in the firstmentioned company"
+    ELSE NOTHING      -- NOTHING-kind (limited by its own wording): the subsection excludes an interest taken "by reason only" of that route and says nothing of an interest taken another way
+
+-- (3D)(b): "interest in shares" has the meaning in section 7 (the purpose `s 7(1) section 163`); for a VCC, section 7 as applied by s 2(6) of the VCC Act and
+-- read with s 2(7) of that Act (another Act: a supplied fact).
+-- src:13792 | (b) the expression “interest in shares”, in relation to a
+-- src:13793 | company, has the meaning assigned to it in section 7
+-- src:13794 | and, in relation to a VCC, has the meaning assigned to it in
+-- src:13795 | section 7 as applied by section 2(6) of the VCC Act and
+-- src:13796 | read with section 2(7) of that Act;
+@ref s 163(3D)(b) (src:13792-13796)
+GIVEN `the other body is a VCC` IS A BOOLEAN
+      `the person has an interest in shares of the VCC as section 7 applies to a VCC by section 2(6) of the VCC Act and read with section 2(7) of that Act` IS A BOOLEAN
+      facts IS A `s 7 interest facts`
+GIVETH A MAYBE BOOLEAN
+`s 163(3D)(b) the person has an interest in shares of the other company or VCC` MEANS
+    IF `the other body is a VCC`
+    THEN JUST `the person has an interest in shares of the VCC as section 7 applies to a VCC by section 2(6) of the VCC Act and read with section 2(7) of that Act`
+    ELSE `s 7 the person has an interest in the shares` `s 7(1) section 163` facts
+
+-- (3D)(c): a person with an interest in a share is treated as having an interest in the voting power the share confers on its holder.
+-- src:13798 | (c) a person who has an interest in a share of a company or a
+-- src:13799 | VCC is to be treated as having an interest in the voting
+-- src:13800 | power conferred on the holder by that share;
+@ref s 163(3D)(c) (src:13798-13800)
+GIVEN `the person has an interest in a share of a company or a VCC` IS A BOOLEAN
+      `the voting power conferred on the holder by that share` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`s 163(3D)(c) the voting power the person is treated as having an interest in` MEANS
+    IF `the person has an interest in a share of a company or a VCC`
+    THEN JUST `the voting power conferred on the holder by that share`
+    ELSE NOTHING   -- NOTHING-kind (limited by its own wording): "a person who has an interest in a share of a company or a VCC is to be treated as having an interest in the voting power conferred on the holder by that share" says nothing of a person with no interest in the share
+
+-- (3D)(d) and (3B), (3D)(e): an approval given after the dealing does not count as prior approval.
+-- src:13802 | (d) a reference to prior approval of the company in
+-- src:13803 | subsection (1) does not include any approval of the
+-- src:13804 | company that is given after the loan, quasi‑loan, credit
+-- src:13805 | transaction, guarantee or security mentioned in that
+-- src:13806 | subsection has been made, provided for or entered into
+-- src:13807 | (as the case may be); and
+@ref s 163(3D)(d) (src:13802-13807)
+GIVEN `the date the company gave its approval` IS A DATE
+      `the date the loan, quasi-loan, credit transaction, guarantee or security was made, provided for or entered into` IS A DATE
+GIVETH A MAYBE BOOLEAN
+`s 163(3D)(d) the approval counts as prior approval for subsection (1)` MEANS
+    IF `the date the company gave its approval` GREATER THAN `the date the loan, quasi-loan, credit transaction, guarantee or security was made, provided for or entered into`
+    THEN JUST FALSE   -- FALSE-kind (the text says no in its own words): "a reference to prior approval of the company in subsection (1) does not include any approval of the company that is given after the loan, quasi‑loan, credit transaction, guarantee or security mentioned in that subsection has been made, provided for or entered into"
+    ELSE NOTHING      -- NOTHING-kind (silent): the paragraph says which approvals are not prior; it does not say what an earlier approval must contain (same-day approvals: fork F-162-10, read the same way)
+
+-- src:13809 | (e) a reference to prior approval of the company in
+-- src:13810 | subsection (3A) does not include any approval of the
+-- src:13811 | company that is given after the arrangement referred to in
+-- src:13812 | that subsection has been entered into.
+@ref s 163(3D)(e) (src:13809-13812)
+GIVEN `the date the company gave its approval` IS A DATE
+      `the date the arrangement was entered into` IS A DATE
+GIVETH A MAYBE BOOLEAN
+`s 163(3D)(e) the approval counts as prior approval for subsection (3A)` MEANS
+    IF `the date the company gave its approval` GREATER THAN `the date the arrangement was entered into`
+    THEN JUST FALSE   -- FALSE-kind (the text says no in its own words): "a reference to prior approval of the company in subsection (3A) does not include any approval of the company that is given after the arrangement referred to in that subsection has been entered into"
+    ELSE NOTHING      -- NOTHING-kind (silent): the paragraph says which approvals are not prior, not which are
+
+-- src:13758 | (3B) In determining for the purposes of subsection (3A) whether a
+-- src:13759 | transaction is one that would have required approval under this
+-- src:13760 | section if it had been entered into by the company, the transaction is to
+-- src:13761 | be treated as having been entered into on the date of the arrangement.
+@ref s 163(3B) (src:13758-13761)
+GIVEN `the question is whether the transaction is one that would have required approval under section 163 if it had been entered into by the company` IS A BOOLEAN
+      `the date of the arrangement` IS A DATE
+GIVETH A MAYBE DATE
+`s 163(3B) the date on which the transaction is treated as entered into` MEANS
+    IF `the question is whether the transaction is one that would have required approval under section 163 if it had been entered into by the company`
+    THEN JUST `the date of the arrangement`
+    ELSE NOTHING   -- NOTHING-kind (limited by its own wording): the subsection fixes the date "in determining for the purposes of subsection (3A)" and says nothing for any other question
+
+§ `Section 163(3C): the abstention requirement`
+
+-- src:13765 | (3C) The requirement in subsections (1) and (3A) that the interested
+-- src:13766 | director or directors, or his, her or their family members, abstain from
+-- src:13767 | voting at the general meeting of the company does not apply where all
+-- src:13768 | the shareholders of the company have each voted to approve the
+-- src:13769 | arrangement.
+@ref s 163(3C) (src:13765-13769)
+GIVEN `all the shareholders of the company have each voted to approve the arrangement` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 163(3C) the requirement that the interested director or directors abstain from voting applies` MEANS
+    IF `all the shareholders of the company have each voted to approve the arrangement`
+    THEN JUST FALSE   -- FALSE-kind (the text says no in its own words): "The requirement in subsections (1) and (3A) that the interested director or directors, or his, her or their family members, abstain from voting at the general meeting of the company does not apply where all the shareholders of the company have each voted to approve the arrangement"
+    ELSE NOTHING      -- NOTHING-kind (silent): where not all the shareholders voted to approve, subsection (3C) says nothing and the requirement stands as subsections (1) and (3A) state it
+
+-- The prior approval subsections (1) and (3A) require: approved beforehand in general meeting, the interested director or directors and their family members
+-- abstaining, unless (3C) lifts the abstention because every shareholder voted to approve.
+-- src:13664 | may be), unless there is prior approval by the company in general
+-- src:13665 | meeting for the making of, provision for or entering into the loan,
+-- src:13666 | quasi‑loan, credit transaction, guarantee or security (as the case may
+-- src:13667 | be) at which the interested director or directors, and his, her or their
+-- src:13668 | family members, abstained from voting.
+-- src:13750 | unless there is prior approval by the company in general meeting for
+-- src:13751 | taking part in such an arrangement or for arranging the assignment or
+-- src:13752 | assumption of rights, obligations or liabilities under such a
+-- src:13753 | transaction at which the interested director or directors, or his, her
+-- src:13754 | or their family members, abstained from voting.
+@ref s 163(1) and (3A) (src:13664-13754)
+GIVEN `the company approved the dealing in general meeting before it was made, provided for or entered into` IS A BOOLEAN
+      `the interested director or directors, and his, her or their family members, abstained from voting at that meeting` IS A BOOLEAN
+      `all the shareholders of the company have each voted to approve the dealing` IS A BOOLEAN
+GIVETH A BOOLEAN
+`s 163(1) and (3A) the prior approval the section requires has been given` MEANS
+        `the company approved the dealing in general meeting before it was made, provided for or entered into`
+    AND (   `the interested director or directors, and his, her or their family members, abstained from voting at that meeting`
+         OR `all the shareholders of the company have each voted to approve the dealing`)
+
+§ `Section 163(1) and (3): the interest condition`
+
+-- "if a director or directors of the firstmentioned company is or together are interested in 20% or more of the total voting power in the other company,
+-- the limited liability partnership or the VCC". Written without division: votes x 100 is at least total x 20.
+-- src:13661 | if a director or directors of the firstmentioned company is or together
+-- src:13662 | are interested in 20% or more of the total voting power in the other
+-- src:13663 | company, the limited liability partnership or the VCC (as the case
+-- src:13664 | may be), unless there is prior approval by the company in general
+@ref s 163(1) (src:13661-13664)
+GIVEN `the total voting power in the other company, the limited liability partnership or the VCC` IS A NUMBER
+      `the voting power in which the director or directors are interested` IS A NUMBER
+GIVETH A BOOLEAN
+`s 163(1) the director or directors are interested in 20% or more of the total voting power` MEANS
+        `the total voting power in the other company, the limited liability partnership or the VCC` GREATER THAN 0
+    AND (`the voting power in which the director or directors are interested` TIMES 100) AT LEAST (`the total voting power in the other company, the limited liability partnership or the VCC` TIMES 20)
+
+DECLARE `s 163(3) kind of body` IS ONE OF
+    `s 163(3)(a)(i) a company with a share capital`
+    `s 163(3)(a)(ii) a company without a share capital`
+    `s 163(3)(b) a limited liability partnership`
+    `s 163(3) some other body`
+
+-- src:13702 | (3) For the purposes of subsection (2), a director or directors of a
+-- src:13703 | company —
+-- src:13705 | (a) have an interest in the other company if —
+-- src:13707 | (i) in the case of a company with a share capital — the
+-- src:13708 | director or directors is or together are interested in
+-- src:13709 | 20% or more of the total voting power in the other
+-- src:13710 | company; or
+-- src:13712 | (ii) in the case of a company without a share capital —
+-- src:13713 | the director or directors exercises or together
+-- src:13714 | exercise control over the other company (whether
+-- src:13715 | by reason of having the power to appoint directors or
+-- src:13716 | otherwise); or
+-- src:13718 | (b) have an interest in a limited liability partnership if the
+-- src:13719 | director or directors is or together are interested in 20% or
+-- src:13724 | more of the total voting power in the limited liability
+-- src:13725 | partnership.
+@ref s 163(3) (src:13702-13725)
+GIVEN kind IS A `s 163(3) kind of body`
+      `the director or directors are together interested in 20% or more of the total voting power` IS A BOOLEAN
+      `the director or directors exercise control over the other company, whether by reason of having the power to appoint directors or otherwise` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 163(3) the director or directors have an interest in the other company or limited liability partnership` MEANS
+    CONSIDER kind
+    WHEN `s 163(3)(a)(i) a company with a share capital` THEN
+        (IF `the director or directors are together interested in 20% or more of the total voting power` THEN JUST TRUE ELSE JUST FALSE)   -- FALSE-kind (the text says no in its own words): "have an interest in the other company if — (i) in the case of a company with a share capital — the director or directors is or together are interested in 20% or more of the total voting power in the other company" (a failed "if": marginal reading (a))
+    WHEN `s 163(3)(a)(ii) a company without a share capital` THEN
+        (IF `the director or directors exercise control over the other company, whether by reason of having the power to appoint directors or otherwise` THEN JUST TRUE ELSE JUST FALSE)   -- FALSE-kind (the text says no in its own words): "(ii) in the case of a company without a share capital — the director or directors exercises or together exercise control over the other company (whether by reason of having the power to appoint directors or otherwise)" (a failed "if": marginal reading (a))
+    WHEN `s 163(3)(b) a limited liability partnership` THEN
+        (IF `the director or directors are together interested in 20% or more of the total voting power` THEN JUST TRUE ELSE JUST FALSE)   -- FALSE-kind (the text says no in its own words): "have an interest in a limited liability partnership if the director or directors is or together are interested in 20% or more of the total voting power in the limited liability partnership" (a failed "if": marginal reading (a))
+    OTHERWISE NOTHING   -- NOTHING-kind (silent): subsection (3) says when directors have an interest in a company or a limited liability partnership and says nothing of any other body
+
+§ `Section 163(1): the bar on dealings with a connected company, partnership or VCC`
+
+DECLARE `s 163(1) kind of dealing` IS ONE OF
+    `s 163(1)(a) the company makes a loan or quasi-loan to another company, a limited liability partnership or a VCC`
+    `s 163(1)(b) the company enters into a guarantee or provides security in connection with a loan or quasi-loan made to another company, a limited liability partnership or a VCC by a person other than the company`
+    `s 163(1)(c) the company enters into a credit transaction as creditor for the benefit of another company, a limited liability partnership or a VCC`
+    `s 163(1)(d) the company enters into a guarantee or provides security in connection with a credit transaction entered into by any person for the benefit of another company, a limited liability partnership or a VCC`
+    `s 163(1) some other dealing`
+
+DECLARE `s 163(1) act` IS ONE OF
+    `s 163(1) make a dealing of a kind in paragraphs (a) to (d) without the prior approval`
+    `s 163(3A) take part in an arrangement, or arrange an assignment or assumption, without the prior approval`
+
+-- The unlawfulness of (1). Order of the answers:
+--   an exempt private company: NOTHING ("other than": a scope limit with no "only");
+--   a dealing of no kind in (a) to (d): NOTHING (silent);
+--   within section 163(4), 163A or 163B ("This section does not apply", "do not apply"): JUST FALSE (flat negatives);
+--   the interest condition not met ("if a director ... is or together are interested in 20% or more"): JUST FALSE (a failed "if", marginal reading (a));
+--   prior approval given as required ("unless there is prior approval ..."): JUST FALSE (an "unless" once met: fork F-163-1);
+--   otherwise JUST TRUE ("it is not lawful").
+-- src:13641 | 163.—(1) Subject to this section and sections 163A and 163B, it is
+-- src:13642 | not lawful for a company (other than an exempt private company) —
+-- src:13644 | (a) to make a loan or quasi‑loan to another company, a limited
+-- src:13645 | liability partnership or a VCC;
+-- src:13647 | (b) to enter into any guarantee or provide any security in
+-- src:13648 | connection with a loan or quasi‑loan made to another
+-- src:13649 | company, a limited liability partnership or a VCC by a
+-- src:13650 | person other than the firstmentioned company;
+-- src:13652 | (c) to enter into a credit transaction as creditor for the benefit
+-- src:13653 | of another company, a limited liability partnership or a
+-- src:13654 | VCC; or
+-- src:13656 | (d) to enter into any guarantee or provide any security in
+-- src:13657 | connection with a credit transaction entered into by any
+-- src:13658 | person for the benefit of another company, a limited
+-- src:13659 | liability partnership or a VCC,
+-- src:13661 | if a director or directors of the firstmentioned company is or together
+-- src:13662 | are interested in 20% or more of the total voting power in the other
+-- src:13663 | company, the limited liability partnership or the VCC (as the case
+-- src:13664 | may be), unless there is prior approval by the company in general
+-- src:13665 | meeting for the making of, provision for or entering into the loan,
+-- src:13666 | quasi‑loan, credit transaction, guarantee or security (as the case may
+-- src:13667 | be) at which the interested director or directors, and his, her or their
+-- src:13668 | family members, abstained from voting.
+@ref s 163(1) (src:13641-13668)
+GIVEN kind IS A `s 163(1) kind of dealing`
+      `the company is an exempt private company` IS A BOOLEAN
+      `the interest condition of subsection (1) or of subsections (2) and (3) is met` IS A BOOLEAN
+      `the thing done is within an exception in subsection (4) or in section 163A or 163B` IS A BOOLEAN
+      `the prior approval the section requires has been given` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 163(1) the subsection makes the dealing unlawful` MEANS
+    IF `the company is an exempt private company`
+    THEN NOTHING   -- NOTHING-kind (limited by its own wording): "it is not lawful for a company (other than an exempt private company)" does not reach an exempt private company; a scope limit with no "only" (periods ruling of 2026-11-05, item (c); fork F-162-2, read the same way)
+    ELSE IF kind EQUALS `s 163(1) some other dealing`
+         THEN NOTHING   -- NOTHING-kind (silent): the subsection makes unlawful the four kinds of dealing in paragraphs (a) to (d) and says nothing of any other
+         ELSE IF `the thing done is within an exception in subsection (4) or in section 163A or 163B`
+              THEN JUST FALSE   -- FALSE-kind (the text says no in its own words): "This section does not apply" (s 163(4)); "Sections 162 and 163 do not apply to anything done by a company" (s 163A(1)); "Sections 162, 163 and 172 do not apply to anything done by a company" (s 163B)
+              ELSE IF (NOT `the interest condition of subsection (1) or of subsections (2) and (3) is met`)
+                   THEN JUST FALSE   -- FALSE-kind (the text says no in its own words): "it is not lawful ... if a director or directors of the firstmentioned company is or together are interested in 20% or more of the total voting power in the other company" (a failed "if": marginal reading (a); fork F-163-1)
+                   ELSE IF `the prior approval the section requires has been given`
+                        THEN JUST FALSE   -- FALSE-kind (the text says no in its own words): "unless there is prior approval by the company in general meeting for the making of, provision for or entering into the loan, quasi‑loan, credit transaction, guarantee or security (as the case may be) at which the interested director or directors, and his, her or their family members, abstained from voting" (an "unless" once met: fork F-163-1)
+                        ELSE JUST TRUE   -- the text bars it in its own words (a flat negative, ruling N2): "it is not lawful for a company (other than an exempt private company) —"
+
+-- (2): the rule of (1) also reaches a body formed outside Singapore, on the interest test of (3).
+-- src:13675 | (2) Subsection (1) also applies to —
+-- src:13677 | (a) a loan or quasi‑loan made by a company (other than an
+-- src:13678 | exempt private company) to another company or a limited
+-- src:13679 | liability partnership;
+-- src:13681 | (b) a credit transaction made by a company (other than an
+-- src:13682 | exempt private company) for the benefit of another
+-- src:13683 | company or to a limited liability partnership; and
+-- src:13685 | (c) a guarantee entered into or security provided by a company
+-- src:13686 | (other than an exempt private company) in connection with
+-- src:13687 | a loan or quasi‑loan made to another company or a limited
+-- src:13688 | liability partnership by a person other than the
+-- src:13689 | firstmentioned company or with a credit transaction
+-- src:13690 | made for the benefit of another company or a limited
+-- src:13691 | liability partnership entered into by a person other than the
+-- src:13692 | firstmentioned company,
+-- src:13694 | where such other company or such limited liability partnership is
+-- src:13695 | incorporated or formed (as the case may be) outside Singapore, if a
+-- src:13696 | director or directors of the firstmentioned company have an interest in
+-- src:13697 | the other company or the limited liability partnership, as the case may
+-- src:13698 | be.
+@ref s 163(2) (src:13675-13698)
+GIVEN kind IS A `s 163(1) kind of dealing`
+      `the other body is a company or a limited liability partnership incorporated or formed outside Singapore` IS A BOOLEAN
+      `a director or directors of the company have an interest in the other company or limited liability partnership under subsection (3)` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 163(2) subsection (1) also applies to the dealing` MEANS
+    IF kind EQUALS `s 163(1) some other dealing`
+    THEN NOTHING   -- NOTHING-kind (silent): subsection (2) names a loan, quasi-loan, credit transaction, guarantee or security
+    ELSE IF `the other body is a company or a limited liability partnership incorporated or formed outside Singapore` AND `a director or directors of the company have an interest in the other company or limited liability partnership under subsection (3)`
+         THEN JUST TRUE
+         ELSE NOTHING   -- NOTHING-kind (limited by its own wording): "Subsection (1) also applies to ... where such other company or such limited liability partnership is incorporated or formed (as the case may be) outside Singapore, if a director or directors of the firstmentioned company have an interest in the other company" extends subsection (1) and does not say that (1) fails to apply to another body (fork F-163-2 in NOTES.md)
+
+§ `Section 163(3A): arrangements and assignments`
+
+DECLARE `s 163(3A) kind of dealing` IS ONE OF
+    `s 163(3A)(a) the company takes part in an arrangement`
+    `s 163(3A)(b) the company arranges the assignment to it or assumption by it of rights, obligations or liabilities`
+    `s 163(3A) some other dealing`
+
+-- src:13729 | (3A) Subject to this section and sections 163A and 163B, a
+-- src:13730 | company (other than an exempt private company) must not —
+-- src:13732 | (a) take part in an arrangement under which —
+-- src:13734 | (i) another person enters into a transaction that, if it had
+-- src:13735 | been entered into by the company, would have
+-- src:13736 | required approval under this section; and
+-- src:13738 | (ii) that person, pursuant to the arrangement, obtains a
+-- src:13739 | benefit from the company or a company that is
+-- src:13740 | deemed to be related to the company by virtue of
+-- src:13741 | section 6; or
+-- src:13745 | (b) arrange the assignment to it, or assumption by it, of any
+-- src:13746 | rights, obligations or liabilities under a transaction that, if it
+-- src:13747 | had been entered into by the company, would have
+-- src:13748 | required such approval,
+-- src:13750 | unless there is prior approval by the company in general meeting for
+-- src:13751 | taking part in such an arrangement or for arranging the assignment or
+-- src:13752 | assumption of rights, obligations or liabilities under such a
+-- src:13753 | transaction at which the interested director or directors, or his, her
+-- src:13754 | or their family members, abstained from voting.
+@ref s 163(3A) (src:13729-13754)
+GIVEN kind IS A `s 163(3A) kind of dealing`
+      `the company is an exempt private company` IS A BOOLEAN
+      `the other person's transaction would have required approval under section 163 if the company had entered into it` IS A BOOLEAN
+      `the other person, pursuant to the arrangement, obtains a benefit from the company or a company that is deemed to be related to the company by virtue of section 6` IS A BOOLEAN
+      `the thing done is within an exception in subsection (4) or in section 163A or 163B` IS A BOOLEAN
+      `the prior approval the section requires has been given` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 163(3A) the subsection makes the arrangement or assignment unlawful` MEANS
+    IF `the company is an exempt private company`
+    THEN NOTHING   -- NOTHING-kind (limited by its own wording): "a company (other than an exempt private company) must not" does not reach an exempt private company (fork F-162-2, read the same way)
+    ELSE IF kind EQUALS `s 163(3A) some other dealing`
+         THEN NOTHING   -- NOTHING-kind (silent): the subsection names taking part in an arrangement and arranging an assignment or assumption
+         ELSE IF `the thing done is within an exception in subsection (4) or in section 163A or 163B`
+              THEN JUST FALSE   -- FALSE-kind (the text says no in its own words): "This section does not apply" (s 163(4)); "Sections 162 and 163 do not apply to anything done by a company" (s 163A(1)); "Sections 162, 163 and 172 do not apply to anything done by a company" (s 163B)
+              ELSE IF (kind EQUALS `s 163(3A)(a) the company takes part in an arrangement`) AND (NOT (`the other person's transaction would have required approval under section 163 if the company had entered into it` AND `the other person, pursuant to the arrangement, obtains a benefit from the company or a company that is deemed to be related to the company by virtue of section 6`))
+                   THEN NOTHING   -- NOTHING-kind (limited by its own wording): paragraph (a) bars taking part in an arrangement "under which (i) another person enters into a transaction that, if it had been entered into by the company, would have required approval under this section; and (ii) that person ... obtains a benefit"; an arrangement without both limbs is outside the prohibition's own words
+                   ELSE IF (kind EQUALS `s 163(3A)(b) the company arranges the assignment to it or assumption by it of rights, obligations or liabilities`) AND (NOT `the other person's transaction would have required approval under section 163 if the company had entered into it`)
+                        THEN NOTHING   -- NOTHING-kind (limited by its own wording): paragraph (b) bars arranging the assignment or assumption of rights "under a transaction that, if it had been entered into by the company, would have required such approval"; a transaction that would not have required approval is outside the prohibition's own words
+                        ELSE IF `the prior approval the section requires has been given`
+                             THEN JUST FALSE   -- FALSE-kind (the text says no in its own words): "unless there is prior approval by the company in general meeting for taking part in such an arrangement or for arranging the assignment or assumption of rights, obligations or liabilities under such a transaction at which the interested director or directors, or his, her or their family members, abstained from voting" (an "unless" once met: fork F-163-1)
+                             ELSE JUST TRUE   -- the text bars it in its own words (a flat negative, ruling N2): "a company (other than an exempt private company) must not —"
+
+-- The two prohibitions as a regulative rule (N2): the party is the company. With an exemption, an exception, an unmet interest condition or the prior approval in hand
+-- the rule has nothing left to forbid (FULFILLED); otherwise the dealing is the breach.
+-- src:13641 | 163.—(1) Subject to this section and sections 163A and 163B, it is
+-- src:13642 | not lawful for a company (other than an exempt private company) —
+-- src:13644 | (a) to make a loan or quasi‑loan to another company, a limited
+-- src:13645 | liability partnership or a VCC;
+-- src:13647 | (b) to enter into any guarantee or provide any security in
+-- src:13648 | connection with a loan or quasi‑loan made to another
+-- src:13649 | company, a limited liability partnership or a VCC by a
+-- src:13650 | person other than the firstmentioned company;
+-- src:13652 | (c) to enter into a credit transaction as creditor for the benefit
+-- src:13653 | of another company, a limited liability partnership or a
+-- src:13654 | VCC; or
+-- src:13656 | (d) to enter into any guarantee or provide any security in
+-- src:13657 | connection with a credit transaction entered into by any
+-- src:13658 | person for the benefit of another company, a limited
+-- src:13659 | liability partnership or a VCC,
+-- src:13661 | if a director or directors of the firstmentioned company is or together
+-- src:13662 | are interested in 20% or more of the total voting power in the other
+-- src:13663 | company, the limited liability partnership or the VCC (as the case
+-- src:13664 | may be), unless there is prior approval by the company in general
+-- src:13665 | meeting for the making of, provision for or entering into the loan,
+-- src:13666 | quasi‑loan, credit transaction, guarantee or security (as the case may
+-- src:13667 | be) at which the interested director or directors, and his, her or their
+-- src:13668 | family members, abstained from voting.
+-- src:13729 | (3A) Subject to this section and sections 163A and 163B, a
+-- src:13730 | company (other than an exempt private company) must not —
+-- src:13732 | (a) take part in an arrangement under which —
+-- src:13734 | (i) another person enters into a transaction that, if it had
+-- src:13735 | been entered into by the company, would have
+-- src:13736 | required approval under this section; and
+-- src:13738 | (ii) that person, pursuant to the arrangement, obtains a
+-- src:13739 | benefit from the company or a company that is
+-- src:13740 | deemed to be related to the company by virtue of
+-- src:13741 | section 6; or
+-- src:13745 | (b) arrange the assignment to it, or assumption by it, of any
+-- src:13746 | rights, obligations or liabilities under a transaction that, if it
+-- src:13747 | had been entered into by the company, would have
+-- src:13748 | required such approval,
+-- src:13750 | unless there is prior approval by the company in general meeting for
+-- src:13751 | taking part in such an arrangement or for arranging the assignment or
+-- src:13752 | assumption of rights, obligations or liabilities under such a
+-- src:13753 | transaction at which the interested director or directors, or his, her
+-- src:13754 | or their family members, abstained from voting.
+@ref s 163(1) and (3A) (src:13641-13754)
+GIVEN `the name of the company` IS A STRING
+      `the company is an exempt private company` IS A BOOLEAN
+      `the interest condition of subsection (1) or of subsections (2) and (3) is met` IS A BOOLEAN
+      `the thing done is within an exception in subsection (4) or in section 163A or 163B` IS A BOOLEAN
+      `the prior approval the section requires has been given` IS A BOOLEAN
+GIVETH A DEONTIC Party `s 163(1) act`
+`s 163(1) and (3A) a company other than an exempt private company must not make the dealing without the prior approval` MEANS
+    IF    `the company is an exempt private company`
+       OR (NOT `the interest condition of subsection (1) or of subsections (2) and (3) is met`)
+       OR `the thing done is within an exception in subsection (4) or in section 163A or 163B`
+       OR `the prior approval the section requires has been given`
+    THEN FULFILLED
+    ELSE PARTY Company `the name of the company`
+         SHANT `s 163(1) make a dealing of a kind in paragraphs (a) to (d) without the prior approval`
+         HENCE FULFILLED
+         LEST BREACH BY Company `the name of the company` BECAUSE "a company that is not an exempt private company made a dealing with a connected company, partnership or VCC without the prior approval of the company in general meeting"
+
+§ `Section 163(4): where the section does not apply`
+
+-- (4)(a): the other company or VCC is the company's subsidiary or holding company, or a subsidiary of its holding company (s 6's three relations, a fact here).
+-- (4)(b): a lender's own business, in the ordinary course, if regulated or supervised.
+-- src:13816 | (4) This section does not apply —
+-- src:13818 | (a) to anything done by a company where the other company
+-- src:13819 | (whether that company is incorporated in Singapore or
+-- src:13824 | otherwise) or VCC is its subsidiary or holding company or
+-- src:13825 | a subsidiary of its holding company; or
+-- src:13827 | (b) to a company, whose ordinary business includes the
+-- src:13828 | lending of money or the giving of guarantees in
+-- src:13829 | connection with loans made by other persons, to
+-- src:13830 | anything done by the company in the ordinary course of
+-- src:13831 | that business if the activities of that company are regulated
+-- src:13832 | by any written law relating to banking, finance companies
+-- src:13833 | or insurance or are subject to supervision by the Monetary
+-- src:13834 | Authority of Singapore.
+@ref s 163(4) (src:13816-13834)
+GIVEN `the other company or VCC is the company's subsidiary or holding company or a subsidiary of the company's holding company` IS A BOOLEAN
+      `the company's ordinary business includes the lending of money or the giving of guarantees in connection with loans made by other persons` IS A BOOLEAN
+      `the thing done was done in the ordinary course of that business` IS A BOOLEAN
+      `the company's activities are regulated by a written law relating to banking, finance companies or insurance or are subject to supervision by the Monetary Authority of Singapore` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 163(4) the thing done is within an exception in subsection (4)` MEANS
+    IF `the other company or VCC is the company's subsidiary or holding company or a subsidiary of the company's holding company`
+    THEN JUST TRUE
+    ELSE IF    `the company's ordinary business includes the lending of money or the giving of guarantees in connection with loans made by other persons`
+           AND `the thing done was done in the ordinary course of that business`
+           AND `the company's activities are regulated by a written law relating to banking, finance companies or insurance or are subject to supervision by the Monetary Authority of Singapore`
+         THEN JUST TRUE
+         ELSE JUST FALSE   -- FALSE-kind (the text says no in its own words): "This section does not apply — (a) to anything done by a company where the other company ... or VCC is its subsidiary or holding company or a subsidiary of its holding company; or (b) to a company, whose ordinary business includes the lending of money or the giving of guarantees ..., to anything done by the company in the ordinary course of that business if the activities of that company are regulated by any written law ... or are subject to supervision by the Monetary Authority of Singapore" (failed "where" and "if" gates: periods ruling of 2026-11-05, item (b); marginal reading (a))
+
+§ `Section 163(6) and (7): recovery and the offence`
+
+DECLARE `s 163(7) penalty` HAS
+    `s 163(7) the highest fine, in Singapore dollars` IS A NUMBER
+    `s 163(7) the longest imprisonment, in years` IS A NUMBER
+
+-- src:13849 | (6) Nothing in this section operates to prevent the recovery of the
+-- src:13850 | amount of any loan, quasi‑loan, credit transaction or arrangement or
+-- src:13851 | the enforcement of any guarantee or security whether made or given
+-- src:13852 | by the company or any other person.
+@ref s 163(6) (src:13849-13852)
+GIVEN `the amount is owed under a loan, quasi-loan, credit transaction or arrangement, or is secured by a guarantee or security, made or given by the company or any other person` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 163(6) section 163 operates to prevent the recovery of the amount or the enforcement of the guarantee or security` MEANS
+    IF `the amount is owed under a loan, quasi-loan, credit transaction or arrangement, or is secured by a guarantee or security, made or given by the company or any other person`
+    THEN JUST FALSE   -- FALSE-kind (the text says no in its own words): "Nothing in this section operates to prevent the recovery of the amount of any loan, quasi‑loan, credit transaction or arrangement or the enforcement of any guarantee or security whether made or given by the company or any other person" (a flat negative)
+    ELSE NOTHING      -- NOTHING-kind (limited by its own wording): the subsection speaks of the recovery of an amount and the enforcement of a guarantee or security
+
+-- src:13856 | (7) Where a company contravenes this section, any director who
+-- src:13857 | authorises the making of any loan or quasi‑loan, the entering into of
+-- src:13858 | any credit transaction, the entering into of any guarantee, the
+-- src:13859 | providing of any security or the entering into of any arrangement
+-- src:13860 | contrary to this section shall be guilty of an offence and shall be liable
+-- src:13861 | on conviction to a fine not exceeding $20,000 or to imprisonment for
+-- src:13862 | a term not exceeding 2 years.
+@ref s 163(7) (src:13856-13862)
+GIVEN `the company contravened section 163` IS A BOOLEAN
+      `the director authorised the making of the loan or quasi-loan, the entering into of the credit transaction, guarantee or arrangement, or the providing of the security, contrary to section 163` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 163(7) the director is guilty of the offence` MEANS
+    IF (NOT `the company contravened section 163`)
+    THEN JUST FALSE   -- FALSE-kind (the text says no in its own words): "Where a company contravenes this section, any director who authorises the making of any loan or quasi‑loan ... contrary to this section shall be guilty of an offence" (a failed "where": periods ruling of 2026-11-05, item (b); split site (i), fork F-163-7)
+    ELSE IF `the director authorised the making of the loan or quasi-loan, the entering into of the credit transaction, guarantee or arrangement, or the providing of the security, contrary to section 163`
+         THEN JUST TRUE
+         ELSE NOTHING   -- NOTHING-kind (limited by its own wording): "any director who authorises the making of any loan or quasi‑loan, the entering into of any credit transaction ... contrary to this section" describes the directors it reaches, with no "only" (periods ruling of 2026-11-05, item (c); split site (i))
+
+-- src:13856 | (7) Where a company contravenes this section, any director who
+-- src:13857 | authorises the making of any loan or quasi‑loan, the entering into of
+-- src:13858 | any credit transaction, the entering into of any guarantee, the
+-- src:13859 | providing of any security or the entering into of any arrangement
+-- src:13860 | contrary to this section shall be guilty of an offence and shall be liable
+-- src:13861 | on conviction to a fine not exceeding $20,000 or to imprisonment for
+-- src:13862 | a term not exceeding 2 years.
+@ref s 163(7) (src:13856-13862)
+GIVEN `the company contravened section 163` IS A BOOLEAN
+      `the director authorised the making of the loan or quasi-loan, the entering into of the credit transaction, guarantee or arrangement, or the providing of the security, contrary to section 163` IS A BOOLEAN
+GIVETH A MAYBE `s 163(7) penalty`
+`s 163(7) the most the director may be sentenced to on conviction` MEANS
+    IF `the company contravened section 163` AND `the director authorised the making of the loan or quasi-loan, the entering into of the credit transaction, guarantee or arrangement, or the providing of the security, contrary to section 163`
+    THEN JUST (`s 163(7) penalty` OF 20000, 2)   -- "a fine not exceeding $20,000 or to imprisonment for a term not exceeding 2 years" (the text says "or", not "or both")
+    ELSE NOTHING   -- NOTHING-kind (limited by its own wording): the penalty is that of a director who authorises the dealing "contrary to this section" where "a company contravenes this section"
+
+§ `Section 163A: expenditure on defending proceedings`
+
+DECLARE `s 163A(2) the proceedings concerned` IS ONE OF
+    `s 163A(2)(a)(i) criminal proceedings`
+    `s 163A(2)(a)(ii) civil proceedings`
+    `s 163A(2)(a)(iii) an application for relief`
+
+-- src:13889 | (2) The terms referred to in subsection (1) are —
+-- src:13891 | (a) that the loan is to be repaid, or (as the case may be) any
+-- src:13892 | liability of the company incurred under any transaction
+-- src:13893 | connected with the thing done is to be discharged, in the
+-- src:13894 | event of —
+-- src:13896 | (i) the director being convicted in the proceedings;
+-- src:13898 | (ii) judgment being given against the director in the
+-- src:13899 | proceedings; or
+-- src:13901 | (iii) the court refusing to grant the director relief on the
+-- src:13902 | application; and
+-- src:13904 | (b) that it is to be repaid or discharged not later than 14 days
+-- src:13905 | after —
+-- src:13907 | (i) the date when the conviction becomes final;
+-- src:13909 | (ii) the date when the judgment becomes final; or
+-- src:13911 | (iii) the date when the refusal of relief becomes final.
+@ref s 163A(2) (src:13889-13911)
+GIVEN proceedings IS A `s 163A(2) the proceedings concerned`
+      `the terms require the loan to be repaid, or any liability of the company under a connected transaction to be discharged, if the director is convicted in the proceedings` IS A BOOLEAN
+      `the terms require the loan to be repaid, or any liability of the company under a connected transaction to be discharged, if judgment is given against the director in the proceedings` IS A BOOLEAN
+      `the terms require the loan to be repaid, or any liability of the company under a connected transaction to be discharged, if the court refuses to grant the director relief on the application` IS A BOOLEAN
+      `the terms require repayment or discharge not later than 14 days after the date the conviction, judgment or refusal of relief becomes final` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 163A(2) the terms are the terms the subsection provides` MEANS
+    IF    (CONSIDER proceedings
+           WHEN `s 163A(2)(a)(i) criminal proceedings` THEN `the terms require the loan to be repaid, or any liability of the company under a connected transaction to be discharged, if the director is convicted in the proceedings`
+           WHEN `s 163A(2)(a)(ii) civil proceedings` THEN `the terms require the loan to be repaid, or any liability of the company under a connected transaction to be discharged, if judgment is given against the director in the proceedings`
+           WHEN `s 163A(2)(a)(iii) an application for relief` THEN `the terms require the loan to be repaid, or any liability of the company under a connected transaction to be discharged, if the court refuses to grant the director relief on the application`)
+      AND `the terms require repayment or discharge not later than 14 days after the date the conviction, judgment or refusal of relief becomes final`
+    THEN JUST TRUE
+    ELSE JUST FALSE   -- FALSE-kind (the text says no in its own words): "The terms referred to in subsection (1) are — (a) that the loan is to be repaid, or ... any liability of the company ... is to be discharged, in the event of — (i) the director being convicted in the proceedings; (ii) judgment being given against the director in the proceedings; or (iii) the court refusing to grant the director relief on the application; and (b) that it is to be repaid or discharged not later than 14 days after" the date the conviction, judgment or refusal becomes final (the terms are read as a closed definition, and the event that applies as the one for the kind of proceedings: fork F-163-3 in NOTES.md)
+
+-- src:13904 | (b) that it is to be repaid or discharged not later than 14 days
+-- src:13905 | after —
+-- src:13907 | (i) the date when the conviction becomes final;
+-- src:13909 | (ii) the date when the judgment becomes final; or
+-- src:13911 | (iii) the date when the refusal of relief becomes final.
+@ref s 163A(2)(b) (src:13904-13911)
+GIVEN `the date the conviction, judgment or refusal of relief becomes final` IS A DATE
+GIVETH A DATE
+`s 163A(2)(b) the last day on which the loan must be repaid or the liability discharged` MEANS
+    `period: the last day of a period after` `the date the conviction, judgment or refusal of relief becomes final` 14 Days
+
+-- src:13904 | (b) that it is to be repaid or discharged not later than 14 days
+-- src:13905 | after —
+-- src:13907 | (i) the date when the conviction becomes final;
+-- src:13909 | (ii) the date when the judgment becomes final; or
+-- src:13911 | (iii) the date when the refusal of relief becomes final.
+@ref s 163A(2)(b) (src:13904-13911)
+GIVEN `the date the conviction, judgment or refusal of relief becomes final` IS A DATE
+      `the date the loan was repaid or the liability discharged` IS A DATE
+GIVETH A BOOLEAN
+`s 163A(2)(b) the loan was repaid or the liability discharged not later than 14 days after` MEANS
+    `period: the date is not later than the end of a period after` `the date the conviction, judgment or refusal of relief becomes final` `the date the loan was repaid or the liability discharged` 14 Days
+
+-- (3)(a): when a conviction, judgment or refusal of relief becomes final.
+-- src:13917 | (a) a conviction, judgment or refusal of relief becomes final —
+-- src:13919 | (i) if it is not appealed against, at the end of the period
+-- src:13920 | for bringing an appeal; or
+-- src:13925 | (ii) if it is appealed against, when the appeal (or any
+-- src:13926 | further appeal) is disposed of;
+@ref s 163A(3)(a) (src:13917-13926)
+GIVEN `the conviction, judgment or refusal of relief is appealed against` IS A BOOLEAN
+      `the last day of the period for bringing an appeal` IS A DATE
+      `the date the appeal or any further appeal is disposed of` IS A DATE
+GIVETH A DATE
+`s 163A(3)(a) the date the conviction, judgment or refusal of relief becomes final` MEANS
+    IF `the conviction, judgment or refusal of relief is appealed against`
+    THEN `the date the appeal or any further appeal is disposed of`
+    ELSE `the last day of the period for bringing an appeal`
+
+-- src:13928 | (b) an appeal or further appeal is disposed of —
+-- src:13930 | (i) if it is determined and there is no right of further
+-- src:13931 | appeal, or if there is a right of further appeal, the
+-- src:13932 | period for bringing any further appeal has ended; or
+-- src:13934 | (ii) if it is abandoned or otherwise ceases to have effect;
+-- src:13935 | and
+@ref s 163A(3)(b) (src:13928-13935)
+GIVEN `the appeal is determined and there is no right of further appeal` IS A BOOLEAN
+      `the appeal is determined, there is a right of further appeal, and the period for bringing any further appeal has ended` IS A BOOLEAN
+      `the appeal is abandoned or otherwise ceases to have effect` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 163A(3)(b) the appeal or further appeal is disposed of` MEANS
+    IF    `the appeal is determined and there is no right of further appeal`
+       OR `the appeal is determined, there is a right of further appeal, and the period for bringing any further appeal has ended`
+       OR `the appeal is abandoned or otherwise ceases to have effect`
+    THEN JUST TRUE
+    ELSE JUST FALSE   -- FALSE-kind (the text says no in its own words): "an appeal or further appeal is disposed of — (i) if it is determined and there is no right of further appeal, or if there is a right of further appeal, the period for bringing any further appeal has ended; or (ii) if it is abandoned or otherwise ceases to have effect" (a failed "if": marginal reading (a))
+
+-- src:13937 | (c) a reference to the repayment of a loan includes the payment
+-- src:13938 | of any interest which is chargeable under the terms on
+-- src:13939 | which the loan was given.
+@ref s 163A(3)(c) (src:13937-13939)
+GIVEN `the payment is of interest chargeable under the terms on which the loan was given` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 163A(3)(c) the payment is within the repayment of the loan` MEANS
+    IF `the payment is of interest chargeable under the terms on which the loan was given`
+    THEN JUST TRUE
+    ELSE NOTHING   -- NOTHING-kind (includes): "a reference to the repayment of a loan includes the payment of any interest which is chargeable under the terms on which the loan was given" does not say that nothing else is repayment
+
+-- src:13943 | (4) The reference in this section to an application for relief is to an
+-- src:13944 | application for relief under section 76A(13) or 391.
+@ref s 163A(4) (src:13943-13944)
+GIVEN `the application is an application for relief under section 76A(13)` IS A BOOLEAN
+      `the application is an application for relief under section 391` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 163A(4) the application is an application for relief` MEANS
+    IF `the application is an application for relief under section 76A(13)` OR `the application is an application for relief under section 391`
+    THEN JUST TRUE
+    ELSE JUST FALSE   -- FALSE-kind (the text says no in its own words): "The reference in this section to an application for relief is to an application for relief under section 76A(13) or 391" (read as a closed definition)
+
+-- (1): sections 162 and 163 do not apply to a loan to meet the cost of defending proceedings, or an application for relief, or to avoid such expenditure, if on the (2) terms.
+-- src:13868 | 163A.—(1) Sections 162 and 163 do not apply to anything done by
+-- src:13869 | a company —
+-- src:13874 | (a) to provide a director of the company with funds by way of
+-- src:13875 | any loan to meet expenditure incurred or to be incurred by
+-- src:13876 | the director —
+-- src:13878 | (i) in defending any criminal or civil proceedings in
+-- src:13879 | connection with any alleged negligence, default,
+-- src:13880 | breach of duty or breach of trust by the director in
+-- src:13881 | relation to the company; or
+-- src:13883 | (ii) in connection with an application for relief; or
+-- src:13885 | (b) to enable any such director to avoid incurring such
+-- src:13886 | expenditure,
+-- src:13888 | if it is done on the terms provided in subsection (2). [36/2014]
+@ref s 163A(1) (src:13868-13888)
+GIVEN `the company provided a director of the company with funds by way of a loan to meet expenditure incurred or to be incurred by the director in defending criminal or civil proceedings in connection with an alleged negligence, default, breach of duty or breach of trust by the director in relation to the company` IS A BOOLEAN
+      `the company provided a director of the company with funds by way of a loan to meet expenditure incurred or to be incurred by the director in connection with an application for relief` IS A BOOLEAN
+      `the company did the thing to enable such a director to avoid incurring such expenditure` IS A BOOLEAN
+      `it is done on the terms provided in subsection (2)` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 163A(1) the thing done is within the exception from sections 162 and 163` MEANS
+    IF    `the company provided a director of the company with funds by way of a loan to meet expenditure incurred or to be incurred by the director in defending criminal or civil proceedings in connection with an alleged negligence, default, breach of duty or breach of trust by the director in relation to the company`
+       OR `the company provided a director of the company with funds by way of a loan to meet expenditure incurred or to be incurred by the director in connection with an application for relief`
+       OR `the company did the thing to enable such a director to avoid incurring such expenditure`
+    THEN (IF `it is done on the terms provided in subsection (2)`
+          THEN JUST TRUE
+          ELSE JUST FALSE)   -- FALSE-kind (the text says no in its own words): "Sections 162 and 163 do not apply to anything done by a company — (a) to provide a director ... with funds by way of any loan to meet expenditure ... if it is done on the terms provided in subsection (2)" (a failed "if": marginal reading (a); fork F-163-4 in NOTES.md)
+    ELSE NOTHING   -- NOTHING-kind (limited by its own wording): the subsection names a loan to meet the expenditure described, or a thing done to avoid it, and says nothing of any other dealing
+
+§ `Section 163B: expenditure in connection with regulatory action or investigation`
+
+-- src:13951 | 163B. Sections 162, 163 and 172 do not apply to anything done by a
+-- src:13952 | company —
+-- src:13954 | (a) to provide a director of the company with funds by way of
+-- src:13955 | any loan to meet expenditure incurred or to be incurred by
+-- src:13956 | the director in defending himself or herself —
+-- src:13958 | (i) in an investigation by a regulatory authority; or
+-- src:13960 | (ii) against any action proposed to be taken by a
+-- src:13961 | regulatory authority,
+-- src:13963 | (a) in connection with any alleged negligence, default, breach
+-- src:13964 | of duty or breach of trust by the director in relation to the
+-- src:13965 | company; or
+-- src:13967 | (b) to enable any such director to avoid incurring such
+-- src:13968 | expenditure.
+@ref s 163B (src:13951-13968)
+GIVEN `the company provided a director of the company with funds by way of a loan to meet expenditure incurred or to be incurred by the director in defending himself or herself in an investigation by a regulatory authority or against any action proposed to be taken by a regulatory authority, in connection with an alleged negligence, default, breach of duty or breach of trust by the director in relation to the company` IS A BOOLEAN
+      `the company did the thing to enable such a director to avoid incurring such expenditure` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 163B the thing done is within the exception from sections 162, 163 and 172` MEANS
+    IF    `the company provided a director of the company with funds by way of a loan to meet expenditure incurred or to be incurred by the director in defending himself or herself in an investigation by a regulatory authority or against any action proposed to be taken by a regulatory authority, in connection with an alleged negligence, default, breach of duty or breach of trust by the director in relation to the company`
+       OR `the company did the thing to enable such a director to avoid incurring such expenditure`
+    THEN JUST TRUE
+    ELSE NOTHING   -- NOTHING-kind (list not closed): "Sections 162, 163 and 172 do not apply to anything done by a company — (a) ... ; or (b) to enable any such director to avoid incurring such expenditure" lists two heads without "only"

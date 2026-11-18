@@ -1,0 +1,182 @@
+IMPORT prelude
+IMPORT daydate
+
+-- Companies Act 1967 (Singapore): the ONE place where the Act's periods are counted.
+-- Imports prelude and daydate only. Every part calls these functions; no part writes its own date arithmetic.
+--
+-- WHERE THE ACT COUNTS. The Act has one counting rule of its own in Part 1: s 4(1) "business day"
+-- (any day other than a Saturday, Sunday or public holiday), implemented below. It says nothing else about how a
+-- period is counted: no rule for "within N days after", for "not less than N days before", for a month.
+--
+-- WHERE THE ACT IS SILENT. The Interpretation Act 1965 is not among the sources (and no number is read from memory),
+-- so the counting convention below is an ASSUMPTION, NOT RULED BY A LAWYER, and each choice has a fork line in NOTES.md
+-- (fork register (keel), P1 to P9). The conventions taken:
+--   P1  the day of the event is not counted: day 1 of "N days after X" is the day after X, so the last day is X plus N.
+--   P2  "within N days after X" is a window that opens the day after X: an act on X itself is not "within" the window
+--       (period: the date is within a period after), while an act on any day up to the last day is "not later than"
+--       the last day (period: the date is not later than the end of a period after).
+--   P3  a period of weeks is 7 days a week.
+--   P4  a period of months or years ends on the corresponding date of the last month; where that month has no such
+--       date it ends on the month's last day (31 August plus 6 months is 28 February). daydate's `add months` clamps this way.
+--   P5  "not less than N days before X": the last day on which the act may be done is X minus N (X not counted, the day of the act counted).
+--   P6  "within N months before X" runs from the corresponding date N months earlier up to the day before X.
+--   P7  "N clear days" excludes both the day of the event and the day of the act (offered as the alternative to P1 and P5).
+--   P8  business days are counted from the day after the event, skipping weekends and the supplied public holidays.
+--   P9  a count that is not a whole non-negative number is not checked here: the caller supplies N from the Act's own words.
+-- The first four conventions are the ones a statute counts by when it says nothing; P7 is offered, never defaulted.
+--
+-- A date is written Date day month year. A period count is a NUMBER; the unit is one of the four constructors.
+
+DECLARE `Period unit` IS ONE OF
+    Days
+    Weeks
+    Months
+    Years
+
+§ `The last day of a period after an event`
+
+-- "within N days (weeks, months, years) after X": the last day on which the act may be done.
+-- P1, P3, P4. `add months` and `add years` clamp to the last day of a short month.
+GIVEN `the day of the event` IS A DATE
+      `the number of units` IS A NUMBER
+      `the unit` IS A `Period unit`
+GIVETH A DATE
+`period: the last day of a period after` MEANS
+    CONSIDER `the unit`
+    WHEN Days THEN `the day of the event` PLUS `the number of units`
+    WHEN Weeks THEN `the day of the event` PLUS (7 TIMES `the number of units`)
+    WHEN Months THEN `add months` `the day of the event` `the number of units`
+    WHEN Years THEN `add years` `the day of the event` `the number of units`
+
+-- "within N units after X" as a window that opens the day after X (P2): TRUE from the day after X to the last day.
+GIVEN `the day of the event` IS A DATE
+      `the day the act is done` IS A DATE
+      `the number of units` IS A NUMBER
+      `the unit` IS A `Period unit`
+GIVETH A BOOLEAN
+`period: the date is within a period after` MEANS
+        `the day the act is done` GREATER THAN `the day of the event`
+    AND `the day the act is done` AT MOST
+        `period: the last day of a period after` `the day of the event` `the number of units` `the unit`
+
+-- "not later than N units after X" (P2): TRUE on every day up to and including the last day; an early act is in time.
+GIVEN `the day of the event` IS A DATE
+      `the day the act is done` IS A DATE
+      `the number of units` IS A NUMBER
+      `the unit` IS A `Period unit`
+GIVETH A BOOLEAN
+`period: the date is not later than the end of a period after` MEANS
+    `the day the act is done` AT MOST
+        `period: the last day of a period after` `the day of the event` `the number of units` `the unit`
+
+§ `A period before an event`
+
+-- "not less than N units before X" (P5, P4): the last day on which the act may be done.
+GIVEN `the day of the event` IS A DATE
+      `the number of units` IS A NUMBER
+      `the unit` IS A `Period unit`
+GIVETH A DATE
+`period: the latest day for an act a period before` MEANS
+    CONSIDER `the unit`
+    WHEN Days THEN `the day of the event` MINUS `the number of units`
+    WHEN Weeks THEN `the day of the event` MINUS (7 TIMES `the number of units`)
+    WHEN Months THEN `add months` `the day of the event` (0 MINUS `the number of units`)
+    WHEN Years THEN `add years` `the day of the event` (0 MINUS `the number of units`)
+
+-- "not less than N units before X": TRUE when the act is done on or before the latest day.
+GIVEN `the day the act is done` IS A DATE
+      `the day of the event` IS A DATE
+      `the number of units` IS A NUMBER
+      `the unit` IS A `Period unit`
+GIVETH A BOOLEAN
+`period: the date is at least a period before` MEANS
+    `the day the act is done` AT MOST
+        `period: the latest day for an act a period before` `the day of the event` `the number of units` `the unit`
+
+-- "within N units before X" (P6): from the corresponding date N units earlier up to the day before X.
+GIVEN `the day the act is done` IS A DATE
+      `the day of the event` IS A DATE
+      `the number of units` IS A NUMBER
+      `the unit` IS A `Period unit`
+GIVETH A BOOLEAN
+`period: the date is within a period before` MEANS
+        `the day the act is done` LESS THAN `the day of the event`
+    AND `the day the act is done` AT LEAST
+        `period: the latest day for an act a period before` `the day of the event` `the number of units` `the unit`
+
+§ `Clear days (P7): the alternative, offered and never defaulted`
+
+-- "N clear days" before X: neither the day of the act nor X is counted, so the latest day is X minus N minus 1.
+GIVEN `the day of the event` IS A DATE
+      `the number of clear days` IS A NUMBER
+GIVETH A DATE
+`period: the latest day for an act at least a number of clear days before` MEANS
+    (`the day of the event` MINUS `the number of clear days`) MINUS 1
+
+-- "after N clear days" from X: neither X nor the day of the act is counted, so the earliest day is X plus N plus 1.
+GIVEN `the day of the event` IS A DATE
+      `the number of clear days` IS A NUMBER
+GIVETH A DATE
+`period: the earliest day for an act after a number of clear days from` MEANS
+    (`the day of the event` PLUS `the number of clear days`) PLUS 1
+
+§ `Calendar months`
+
+-- "the last day of the month": the last day of the calendar month the date falls in.
+GIVEN `the date` IS A DATE
+GIVETH A DATE
+`period: the last day of the calendar month containing` MEANS
+    Date (`Days in month` (DATE_MONTH `the date`) (DATE_YEAR `the date`)) (DATE_MONTH `the date`) (DATE_YEAR `the date`)
+
+§ `Business days: the Act's own counting rule, s 4(1) "business day"`
+
+-- The public holidays are supplied: the Act does not list them (they are fixed under another Act, not among the sources).
+-- src:1239 | “business day” means any day other than a Saturday, Sunday or
+-- src:1240 | public holiday;
+@ref s 4(1) "business day" (src:1239-1240)
+GIVEN `the date` IS A DATE
+      `the public holidays` IS A LIST OF DATE
+GIVETH A BOOLEAN
+`period: the date is a business day` MEANS
+    (NOT (`is weekend` `the date`)) AND (NOT (elem `the date` `the public holidays`))
+
+-- s 4(1) "business day", as the Act words it: a "means" definition, so a day that is a Saturday, Sunday or public holiday is not one.
+@ref s 4(1) "business day" (src:1239-1240)
+GIVEN `the date` IS A DATE
+      `the public holidays` IS A LIST OF DATE
+GIVETH A MAYBE BOOLEAN
+`s 4(1) "business day" the date is a business day` MEANS
+    IF `period: the date is a business day` `the date` `the public holidays`
+    THEN JUST TRUE
+    ELSE JUST FALSE  -- FALSE-kind (the text says no in its own words): "means any day other than a Saturday, Sunday or public holiday"
+
+-- P8: walk forward one calendar day at a time, counting only business days, until the count is reached.
+GIVEN `the day counted from` IS A DATE
+      `the business days still to count` IS A NUMBER
+      `the public holidays` IS A LIST OF DATE
+GIVETH A DATE
+`period: the day reached counting business days` MEANS
+    IF `the business days still to count` AT MOST 0
+    THEN `the day counted from`
+    ELSE IF `period: the date is a business day` (`the day counted from` PLUS 1) `the public holidays`
+         THEN `period: the day reached counting business days` (`the day counted from` PLUS 1) (`the business days still to count` MINUS 1) `the public holidays`
+         ELSE `period: the day reached counting business days` (`the day counted from` PLUS 1) `the business days still to count` `the public holidays`
+
+-- "within N business days after X": the last day is the Nth business day after X (P8).
+GIVEN `the day of the event` IS A DATE
+      `the number of business days` IS A NUMBER
+      `the public holidays` IS A LIST OF DATE
+GIVETH A DATE
+`period: the last day of a number of business days after` MEANS
+    `period: the day reached counting business days` `the day of the event` `the number of business days` `the public holidays`
+
+-- The window form (P2): after the event, up to and including the Nth business day.
+GIVEN `the day of the event` IS A DATE
+      `the day the act is done` IS A DATE
+      `the number of business days` IS A NUMBER
+      `the public holidays` IS A LIST OF DATE
+GIVETH A BOOLEAN
+`period: the date is within a number of business days after` MEANS
+        `the day the act is done` GREATER THAN `the day of the event`
+    AND `the day the act is done` AT MOST
+        `period: the last day of a number of business days after` `the day of the event` `the number of business days` `the public holidays`
