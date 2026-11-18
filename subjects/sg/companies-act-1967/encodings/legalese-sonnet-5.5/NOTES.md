@@ -70,7 +70,7 @@ This is a statement about the text of this Act only, and says nothing about whet
 One **keel** agent first wrote the shared vocabulary (`sg-core.l4`, the keel modules and their tests) and a plan (`notes/keel-PLAN.md`) that gives each part a range of the text and says what it must take from the others.
 11 **part** agents then encoded their ranges in parallel, each against the same core, none reading another's work: `sga1` (lines 6135 to 7320, 28514 to 28876), `sga2` (lines 7321 to 8311), `sga3` (lines 8312 to 9881), `sgb1` (lines 11592 to 13354), `sgb2` (lines 13355 to 15410), `sgc1` (lines 17849 to 19068, 28897 to 29012), `sgc2` (lines 19069 to 20182, 29013 to 29310), `sgd` (lines 20183 to 21697), `sgf` (lines 21698 to 21885), `sge` (lines 23148 to 23607), `sgg` (lines 23608 to 25371).
 The lead verified each part by itself (`check.sh` on both builds, `srcrefs.py check --refs` and `--strict`, the NOT-precedence sweep, the keel's files identical to the keel's, every trace read against its `-- EXPECT` word) and then merged them with a script; the part modules are copied unchanged except as the merge decisions below say, and the merge edited no rule.
-An independent test pass has been run on this wave (the readers' files are `notes/reader-*.md`, described in `notes/reader-README.md`); no seat audit has. The tests in this folder are the agents' own, written from the text; the readers' own test modules are not shipped.
+An independent test pass has been run on wave 1 (the readers' files are `notes/reader-*.md`, described in `notes/reader-README.md`) and, later, on wave 2 (`notes/reader-w2-README.md`); no seat audit has been run on either. The tests in this folder are the agents' own, written from the text, plus the few reader assertions that caught a change (`*-tests-reader.l4`); the readers' own test modules are not shipped.
 Every note a part wrote is kept, with names and local paths replaced by placeholders, as `notes/<part>-NOTES.md`, with its `PROGRESS.md` and `NEEDS-CORE.md` where it wrote them; the keel's are `notes/keel-*.md`, and the brief each agent was given is `notes/<agent>-BRIEF.md`.
 Briefs are shipped verbatim except for lines about tooling.
 **A part's NOTES.md is where its coverage table, fork register, marginal readings, jural relations and findings are.** They are not repeated or summed here, except as the sections below say.
@@ -88,7 +88,7 @@ Briefs are shipped verbatim except for lines about tooling.
 - **Wave 2 was appended to the same seat module.** The 8 parts' seat questions are appended to `sg-seat.l4` and their cases to `sg-cases-seat.l4`, each under its own banner, the agent's text unchanged; the cases files' import of the part's own seat module is rewritten to `sg-seat`.
 - **Wave 2's NEEDS-CORE is not hoisted.** `NEEDS-CORE.md` has a wave-2 section; `sgk` asked for two `Party` constructors (an inspector; an officer or agent) and meets them with its own party type, so its modules compile as they stand. Taking them into the core would mean editing and re-gating the part, and a new constructor can change a function that matches on `Party`.
 - **The wave-1 and wave-2 parts were not harmonised.** Where two parts read the same words differently, the folder keeps both and says so in "Split sites" and in the parts' notes. One departure from a keel convention is recorded: `sgh` reads "within N days after X" with X itself in time (fork F-H-P2), against the keel's P2.
-- **The merge lost nothing:** the merged folder was gated as it stands: 292 modules, 19,642 assertions satisfied ("What check.sh prints").
+- **The merge lost nothing:** the merged folder was gated as it stands: 292 modules, 19,642 assertions satisfied; after the four changes that the independent readers of wave 2 led to, 295 modules and 19,648 ("What check.sh prints").
 
 ## Where things are
 
@@ -139,12 +139,12 @@ Wave 2 has the same rule: a part of wave 2 that needs an answer from a wave-1 pa
 
 ## Independent readers
 
-Three reader groups wrote tests from the text alone and ran them against this encoding: 1,969 assertions, 1,884 satisfied, 85 failed, 0 refused, and 122 triage lines (`ENCODER` 2, `SCENARIO` 38, `AMBIGUOUS` 46, `GAP` 36).
+Three reader groups wrote tests from the text alone and ran them against the encoding of wave 1: 1,969 assertions, 1,884 satisfied, 85 failed, 0 refused, and 122 triage lines (`ENCODER` 2, `SCENARIO` 38, `AMBIGUOUS` 46, `GAP` 36).
 Their files, and what is not shipped with them, are in `notes/reader-README.md`.
 **Read the failures as findings, not defects left open:** of the 122 triage lines, 84 are `SCENARIO` (the reader's expectation was wrong) or `AMBIGUOUS` (the text and the Guide read both ways).
 The two `ENCODER` lines: `s 205B(5)` (changed, below) and `s 149A(3)` (the defence "proves (a) and (b)": the reader reads `JUST FALSE` when only (a) is proved, the encoding answers `NOTHING`; not changed, it turns on the same ruling as the split sites).
 The `GAP` lines name rows with no function or no input: repealed rows, duties stated only as deontics, missing penalty functions, `s 201B(2)(b)` (the kind of relative), `s 171(2)`, `s 202(4)` (the hearing duty), `s 145` (citizenship), `s 164` (a secretary's register), `s 76E(3)`, `s 76D(2A)`, `s 78B(5)`, `s 78J`, the Sixth Schedule years count, `s 10(1)` and `(3)` ("is it prohibited"), `s 64(2)` and `s 71(1A)`; they are not repaired.
-**The readers read wave 1 only.** No independent test pass has been run on wave 2; its tests are its agents' own, and no seat audit has been run on either wave.
+**These three groups read wave 1 only.** Wave 2 was read by three further groups, in the section "Independent readers of wave 2" below; no seat audit has been run on either wave.
 
 ## Changes made after the independent review (assumed, not ruled)
 
@@ -179,6 +179,228 @@ None is a ruling by the maintainer; the answer taken is the one the text's own w
   The subsection names the persons an order may be made against and does not close the list with "only", so for any other person the text says nothing (the periods ruling of 2026-11-05, item (c), and Example 2).
   The "Where (a) ...; (b) ...; and (c) the Court is satisfied" limbs still answer `JUST FALSE` when they fail, for a person in the named class: they are the open split-site question below.
   One assertion in `sga2-tests-s76a.l4` and one in `sg-cases-seat.l4` changed from `JUST FALSE` to `NOTHING`.
+
+- **`s 22(1A) the provision is deemed to be deleted, insofar as it relates to those matters`** (`sgh-constitution.l4`, wave 2).
+  A provision then subsisting that states neither the amount of share capital nor its division now answers `NOTHING` (a scope limit with no "only", the periods ruling of 2026-11-05, item (c)); a provision not subsisting on 30 January 2006 still answers `JUST FALSE` (a failed "on" gate, item (b)).
+  One function ended in one `ELSE JUST FALSE` and covered both.
+  One assertion in `sgh-tests-constitution.l4` and one in `sg-cases-seat.l4` changed from `JUST FALSE` to `NOTHING`; the wave-2 reader's assertion is in `sgh-tests-reader.l4`.
+- **`s 33(8) lodging the copy of the resolution on the day is barred`** (`sgi-objects.l4`, wave 2).
+  From the first day lodging is not barred the function now answers `JUST FALSE`; it answered `NOTHING`.
+  "must not be lodged ... before the expiration of 21 days" is an "until" bar, and the Guide's ruling of 2026-11-05, item (d), says an "until" bar is `JUST TRUE` before the day and `JUST FALSE` after it.
+  Two assertions in `sgi-tests-objects.l4` and one in `sg-cases-seat.l4` changed from `NOTHING` to `JUST FALSE`; the reader's assertion is in `sgi-tests-reader.l4`.
+- **`s 144(2) the person is liable to the holder of the instrument for the amount due on it`** (`sgj-part5-office-name.l4`, wave 2).
+  A cheque now takes the branch of "other negotiable instrument": `JUST TRUE` if the company has not paid, `JUST FALSE` if it has.
+  The liability clause names "any bill of exchange, promissory note or other negotiable instrument", and limb (c) of the same subsection writes "cheque or other negotiable instrument".
+  A receipt and a letter of credit still answer `NOTHING`; fork F-j144-4 in `notes/sgj-NOTES.md` says what changed.
+  Two assertions were added to `sgj-tests-part5-office-name.l4`; the reader's two are in `sgj-tests-reader.l4`.
+- **`s 192(3) the amount payable in advance for the copy, in dollars`** (`sgm-part5-div4.l4`, wave 2): no code change, a note.
+  The function multiplies the pages by the sum the company says it requires and does not cap that sum at $1; whether a sum is one the subsection allows is the separate function `s 192(3) the sum required in advance for a page is one the subsection allows`.
+  The note is in `notes/sgm-NOTES.md`, section "What the text does not answer (sgm)"; a clamp was refused because it would turn an invalid input into a lawful-looking amount.
+
+## Independent readers of wave 2 (assumed, not ruled)
+
+Three fresh reader groups, each of which read the text of its parts' ranges before it opened any encoding, wrote their own answers to scenarios taken from the text and ran them against this encoding.
+A failing assertion was left failing and triaged as `ENCODER`, `SCENARIO`, `AMBIGUOUS` or `GAP`, as for wave 1 (`notes/reader-README.md`).
+Their triage files are `notes/reader-w2a-triage.md`, `notes/reader-w2b-triage.md` and `notes/reader-w2c-triage.md`; `notes/reader-w2-README.md` says what is not shipped with them.
+
+| group | parts read | words | assertions | satisfied | failed | refused | `ENCODER` | `SCENARIO` | `AMBIGUOUS` | `GAP` |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| a | sgh, sgi | 22,842 | 676 | 628 | 48 | 0 | 2 | 10 | 35 | 25 |
+| b | sgj, sgk, sgl | 28,491 | 619 | 595 | 24 | 0 | 2 | 11 | 13 | 5 |
+| c | sgm, sgn, sgo | 33,262 | 634 | 607 | 27 | 0 | 1 | 7 | 19 | 35 |
+| all | wave 2 | 84,595 | 1,929 | 1,830 | 99 | 0 | 5 | 28 | 67 | 65 |
+
+The coordinator reran every group's test file on the stable build (1.6.110) and got the same counts.
+The readers' test modules and answer files are not shipped, so a line number in a triage file points at a file you do not have; the provision, the text line and the two answers in each line are enough to rerun the scenario by hand.
+**The `ENCODER` lines (5) and what was done:** `s 22(1A)`, `s 33(8)` and `s 144(2)` (two lines) were changed, each in its own commit (above, "Changes made after the independent review"); `s 192(3)` is a note only: the amount payable trusts its input, and a clamp was refused because it would hide an invalid input.
+**The `SCENARIO` lines (28)** are the readers' own mistakes; the encoding is unchanged by them.
+**Nothing below changes an encoding.** The `AMBIGUOUS` and `GAP` lines are recorded, one line each, so that a lawyer or a later ruling can see where the Guide and the text read both ways.
+
+### A "may" gated by "where", "upon", "on payment" or "on application" (split site (ii)): 15 lines where a reader and the encoding differ
+
+These are the open split-site question (fork lines in the parts' NOTES), not defects: the reader applied one of the two rulings the Guide holds and the encoder the other.
+At 12 of them the reader expected `NOTHING` and the encoding answers `JUST FALSE`; at 3 the reverse.
+Reader group a disagreed with the encoding in both directions and, at s 12B(1), with itself, so its lines are weak evidence either way.
+
+| group | scenario | provision | reader expected | encoding answers | the two readings |
+| --- | --- | --- | --- | --- | --- |
+| a | 94 | s 12(2)(b) (L2809) | JUST FALSE | NOTHING | "Any person may, on payment of the prescribed fee": a "may" gated by payment, split site: JUST FALSE (periods ruling (b)) vs NOTHING (grant ruling) |
+| a | 128 | s 12B(1) (L3056) | NOTHING | JUST FALSE | 12B(1) "Where it appears to the Court, as a result of evidence adduced by an applicant company ... may": the encoding answers JUST FALSE for a failed "where"; I wrote NOTHING for the creditor case but FALSE for #130, so my pair was inconsistent; where-gated "may" split site |
+| a | 198 | s 14(3)(c) (L3442) | NOTHING | JUST FALSE | 14(3) "The Registrar upon being satisfied -- ... may certify": a "may" gated by "upon", split site: mine NOTHING (grant ruling), the encoding JUST FALSE (ruling (c): upon = where) |
+| a | 502 | s 29(1) (L5148) | JUST FALSE | NOTHING | 29(1) "Where it is proved ... the Registrar may approve": where-gated "may", split site: mine JUST FALSE (ruling (b)), the encoding NOTHING; the encoding answers JUST FALSE for a failed "where" in 12B(1), so the two sites are treated differently |
+| a | 566 | s 32(4) (L5604) | JUST FALSE | NOTHING | 32(4) "Where the Court is satisfied ... the Court may": where-gated "may", split site: mine JUST FALSE (ruling (b)), the encoding NOTHING |
+| b | 60 | s 91(1) (text L10188-10191) | NOTHING | JUST FALSE | the Court "may ... on the application of the Minister", applicant is a member: (A) a "may" gated by "on application" is NOTHING under the grant ruling; (B) JUST FALSE under the periods ruling (b); the brief names this a split site |
+| b | 101b | s 125(2) (text L10565-10567) | NOTHING | JUST FALSE | value $500, not "greater than $500": the directors "may ... require" where the value exceeds $500: (A) a "may" gated by "where" is NOTHING under the grant ruling; (B) JUST FALSE under the periods ruling (b); split site |
+| b | 250b | s 241(1) (text L22338-22347) | NOTHING | JUST FALSE | Minister applies to wind up before any inspector's report: (A) a "may" grant gated by "at any time after a report has been made" is NOTHING under the grant ruling; (B) a period fixed in the text's own words, outside it JUST FALSE (periods ruling (a)) |
+| b | 262b | s 245(1) (text L22540-22544) | NOTHING | JUST FALSE | no investigation under s 243 or 244: the Minister "may by order" "where in connection with an investigation under section 243 or 244 it appears ...": (A) NOTHING under the grant ruling; (B) a "where" gate unmet, JUST FALSE (periods ruling (b)); split site |
+| b | 268b | s 246 (text L22611-22625) | NOTHING | JUST FALSE | only the foreign appointment, no Minister's opinion: "Where (a) ... and (b) the Minister is of the opinion ..., the Minister may by notice declare": same split as 262b |
+| b | 289c | s 175(4)(b) (text L15792-15793) | NOTHING | JUST FALSE | applicant is not a member: "the Court may on the application of any member order a general meeting": (A) NOTHING under the grant ruling; (B) JUST FALSE under the periods ruling (b); split site |
+| c | 148 | s344(1) [22700] | NOTHING | JUST FALSE | s344(1) "Where the Registrar has reasonable cause ... may send": (A, encoding) a "where" gate that fails gives JUST FALSE (periods ruling (b)); (B, mine) a grant whose gate fails gives NOTHING (grant ruling). Split site named in the brief. |
+| c | 439 | s387A(1) [27096] | NOTHING | JUST FALSE | s387A(1) "Where any notice ... is ... given ... to (a) a member ... or (b) an officer or auditor ..., that notice may be given ... electronically", to a debenture holder: (A, encoding) a "where" gate that fails gives JUST FALSE (ruling (b)); (B, mine) a grant over a list not closed with "only" gives NOTHING. |
+| c | 466 | s388(1) [27378] | NOTHING | JUST FALSE | s388(1) "Where a corporation is claimant ... the court may require security", claimant an individual: same two readings as 439. |
+| c | 471 | s390(1) [27410] | NOTHING | JUST FALSE | s390(1) "Where ... not less than 10 years ... the company may", 9 years: same two readings as 439 (my comment already flagged it). |
+
+### An unmet element of an offence (split site (i)): 4 lines where a reader and the encoding differ
+
+All four are in `sgo`, which answers `NOTHING` at every one of its 20 sites of this kind while the other seven parts of wave 2 answer `JUST FALSE`; the reader expected `JUST FALSE` at each.
+
+| group | scenario | provision | reader expected | encoding answers | the two readings |
+| --- | --- | --- | --- | --- | --- |
+| c | 516 | s396B(1) [27728] | JUST FALSE | NOTHING | s396B(1) "If, on an investigation ..., it is shown that proper books were not kept ... every officer in default shall be guilty"; books were kept (an unmet element of an offence, a split site): (A, mine) JUST FALSE; (B, encoding) NOTHING. |
+| c | 541 | s401(2A) [27869] | JUST FALSE | NOTHING | s401(2A) offence needs knowledge that the document is false; not known (an unmet element of an offence, a split site): (A, mine) JUST FALSE; (B, encoding) NOTHING. |
+| c | 579 | s408(1) [28114] | JUST FALSE | NOTHING | s408(1) a further offence arises if the offence continues "after the person is so convicted"; not yet convicted (an unmet element of an offence, a split site): (A, mine) JUST FALSE; (B, encoding) NOTHING. |
+| c | 666 | s 396B(1) [27728] | JUST FALSE | NOTHING | seat version of 516: the officer is not "in default" (s408(3)), an unmet element of an offence: JUST FALSE (mine) or NOTHING (encoding). |
+
+### The other `AMBIGUOUS` lines (48)
+
+Each line gives the reader's expectation, what the encoding answers, and the two readings. Nothing was changed.
+
+| group | scenario | provision | reader expected | encoding answers | the two readings |
+| --- | --- | --- | --- | --- | --- |
+| a | 24 | s 8A(3)(a) (L2501) | JUST FALSE | NOTHING | "includes power (a) if the books are produced": mine reads the "if" as closing (JUST FALSE); the encoding reads "includes" as open (NOTHING) |
+| a | 26 | s 8A(3)(b) (L2510) | JUST FALSE | NOTHING | same as #24: "if the books are not produced" (JUST FALSE) against "includes" (NOTHING) |
+| a | 177 | s 12F(6) (L3343) | JUST FALSE | NOTHING | "must be sent to the residential address unless ... in which case it may be sent to any other last known address": mine closes it ("must ... unless"), the encoding takes the "in which case" grant as limited by its own wording (NOTHING) |
+| a | 192 | s 13(1)(a) (L3382) | NOTHING | JUST FALSE | 13(1)(a) "(other than the Insolvency, Restructuring and Dissolution Act 2018)": one of the six case-by-case questions; mine NOTHING, the encoding JUST FALSE |
+| a | 293 | s 21(6) (L3913) | JUST FALSE | NOTHING | 21(6) "does not operate to prevent ... if" an exception unmet: mine JUST FALSE (the allotment is caught by s 21(1)), the encoding NOTHING (the savings clause is silent when its condition fails) |
+| a | 316 | s 22(1AA) (L4120) | JUST FALSE | NOTHING | 22(1AA) "Where a company to which subsection (1)(e) applies changes ...": mine JUST FALSE (a failed "where", ruling (b)); the encoding NOTHING (scope limit, "a company to which (1)(e) applies", ruling (c)) |
+| a | 403 | s 26(5) (L4607) | JUST FALSE | NOTHING | 26(5) "published in such manner (if any) as the Court or the Registrar directs": with no direction, mine JUST FALSE (nothing to publish), the encoding NOTHING (the manner is outside the text) |
+| a | 416 | s 27(1) (L4667) | JUST FALSE | NOTHING | 27(1) "Except with the Minister's consent": an "except" once met, case-by-case: mine JUST FALSE (no duty to refuse), the encoding NOTHING |
+| a | 420 | s 27(1) (L4667) | JUST FALSE | NOTHING | 27(1): no ground for refusal present, a duty whose condition is unmet, case-by-case: mine JUST FALSE, the encoding NOTHING |
+| a | 421 | s 27(1A)(a)(i) (L4696) | JUST FALSE | NOTHING | 27(1A)(a)(i) "unless ... a period of at least 2 years has passed": an "unless" once met, case-by-case; mine JUST FALSE (no duty to refuse), the encoding NOTHING (the 2-year count itself agrees: 2026-05-10 refuses, 2026-05-11 does not) |
+| a | 424 | s 27(1A)(a)(ii) (L4709) | JUST FALSE | NOTHING | 27(1A)(a)(ii) "unless ... 6 years": unless once met, as #421 |
+| a | 427 | s 27(1A)(b) (L4714) | JUST FALSE | NOTHING | 27(1A)(b) "unless ... one year": unless once met, as #421 |
+| a | 429 | s 27(1A)(d)(i) (L4726) | JUST FALSE | NOTHING | 27(1A)(d)(i) "unless ... 2 years": unless once met, as #421 |
+| a | 431 | s 27(1A)(f)(ii) (L4768) | JUST FALSE | NOTHING | 27(1A)(f)(ii) "unless ... 6 years": unless once met, as #421 |
+| a | 445 | s 27(2A) (L4841) | JUST FALSE | NOTHING | 27(2A) "must not consider ... unless the Registrar receives the application within 12 months": unless once met, case-by-case: mine JUST FALSE (not barred), the encoding NOTHING (the 12-month count agrees: the encoding bars from 2026-03-02) |
+| a | 453 | s 27(5) (L4863) | JUST FALSE | NOTHING | 27(5) "decisions ... made on or after 3 January 2016": mine JUST FALSE (a date fixed in the text, ruling (a)), the encoding NOTHING (scope limit, ruling (c)); note the encoding answers JUST FALSE for the same kind of date in 27(1A) and 27(1B) (inconsistent between sites) |
+| a | 469 | s 27(11) (L4925) | JUST FALSE | NOTHING | 27(11) "unless the name ... has been reserved": unless once met, case-by-case: mine JUST FALSE (bar lifted), the encoding NOTHING |
+| a | 490 | s 28(3A) (L5070) | JUST FALSE | NOTHING | 28(3A) "must not consider ... unless ... within 12 months": unless once met, as #445 |
+| a | 497 | s 28(4) (L5118) | JUST FALSE | NOTHING | 28(4) "must not, except with the Minister's approval": except once met, case-by-case: mine JUST FALSE (not barred), the encoding NOTHING |
+| a | 511 | s 29(6) (L5214) | JUST FALSE | NOTHING | 29(6) "before the approval is so revoked the Registrar must give ... notice": a bare "must" not done, case-by-case: mine JUST FALSE (may not revoke), the encoding NOTHING |
+| a | 526 | s 29A(2)(b) (L5314) | JUST FALSE | NOTHING | 29A(2) "must (a) alter ... (b) file ...": a bare "must" not done, case-by-case: mine JUST FALSE (requirements not met), the encoding NOTHING |
+| a | 568 | s 32(5) (L5614) | JUST FALSE | NOTHING | 32(5) "may not convert ... without the permission of the Court": a "without"/"unless" once met, case-by-case: mine JUST FALSE, the encoding NOTHING |
+| a | 580 | s 33(3) (L5654) | JUST FALSE | NOTHING | 33(3) "if there are no trustees ..., to all debenture holders of that class": a duty whose "if" is unmet (the class has a trustee): mine JUST FALSE, the encoding NOTHING (my input could not tell this holder from a stranger: the function has no input for it) |
+| a | 605 | s 36(1) (L5792) | NOTHING | JUST FALSE | 36(1) "(called ... specified companies)": a defined label, closed like "means" (the encoding, JUST FALSE) or an open list, no "only" (mine, NOTHING) |
+| a | 617 | s 39(3) (L5893) | JUST TRUE | NOTHING | 39(3) "no member ... unless ... agrees in writing ... is bound": unless once met, case-by-case: mine JUST TRUE (bound), the encoding NOTHING (the text then says nothing) |
+| a | 621 | s 40(1) (L5906) | NOTHING | JUST FALSE | 40(1) "must, on being so required by any member": a duty whose "on"/"where" is unmet (a non-member asks): mine NOTHING (scope "any member"), the encoding JUST FALSE |
+| a | 624 | s 40(2)(b) (L5918) | JUST FALSE | NOTHING | 40(2) "must not be issued ... unless (a) or (b)": unless once met, case-by-case: mine JUST FALSE, the encoding NOTHING |
+| a | 630 | s 41(2) (L5946) | JUST FALSE | NOTHING | 41(2) "in the absence of express agreement to the contrary": once the agreement exists the text does not say the person is not bound: mine JUST FALSE, the encoding NOTHING |
+| a | 657 | s 41B(3) (L6079) | JUST TRUE | NOTHING | 41B(3) "not considered ... signed ... unless the person signs separately in each capacity": unless once met, case-by-case: mine JUST TRUE (signed), the encoding NOTHING |
+| a | 665 | s 42A(2) (L6119) | JUST FALSE | NOTHING | 42A(2) "that is convicted ... is deemed": an element of the deeming unmet (not convicted): mine JUST FALSE (split site, unmet element), the encoding NOTHING |
+| b | 33 | s 86(1) (text L10056-10062) | NOTHING | JUST FALSE | no non-resident interested: (A) the relative clause "being voting shares in which a non-resident has an interest" is a scope limit with no "only" so NOTHING (periods ruling (c)); (B) a duty whose condition is unmet, one of the six case-by-case questions, so JUST FALSE |
+| b | 65 | s 91(6) (text L10254-10262) | JUST FALSE | NOTHING | inadvertent failure but the Court is not satisfied it should be excused: (A) "must not make an order ... if it is satisfied (a) and (b)" is a bar whose "if" is unmet, so JUST FALSE; (B) a prohibition limited by its own wording says nothing about the case outside it, so NOTHING |
+| b | 73 | s 93(4) (text L10318-10321) | JUST FALSE | NOTHING | register closed 31 days in a year: (A) the register is "duly closed" if closed in accordance with the constitution "not exceeding in the aggregate 30 days", so JUST FALSE over 30 days; (B) a deeming "if" gives a sufficient condition only, so over 30 days the text is silent, NOTHING |
+| b | 153 | s 144(2) liability limb (text L11585-11590) | JUST FALSE | NOTHING | a receipt, name omitted: (A) the liability applies "where he or she has signed ... any bill of exchange, promissory note or other negotiable instrument or ... indorsement ... or order", a "where" condition unmet for a receipt, JUST FALSE (periods ruling (b)); (B) a receipt is simply not named and the list is not closed with "only", NOTHING |
+| b | 274 | s 173J(2) with (7) (text L15429-15434, L15645) | JUST FALSE | NOTHING | virtual-only meeting after the Minister excluded (2)(c) by order: (A) "Unless excluded under subsection (5) or (7), a meeting ... may be held" withdraws the permission once excluded, JUST FALSE; (B) a "may" grant, and "unless once met" is one of the six case-by-case questions, NOTHING |
+| b | 278 | s 174(1) (text L15662-15666) | NOTHING | JUST FALSE | private company: (A) "Every public company that is a limited company and has a share capital must ..." is a scope limit with no "only", NOTHING (periods ruling (c)); (B) a duty whose condition is unmet, case-by-case, JUST FALSE |
+| b | 380 | s 186(1) (text L16952-16962) | NOTHING | JUST FALSE | an ordinary resolution that binds no class: (A) the duty names "(a) every special resolution; and (b) every resolution ... which effectively binds any class", not closed with "only", so NOTHING (scope limit); (B) a duty whose condition is unmet, case-by-case, JUST FALSE |
+| c | 211 | s344H(1) [23120] | NOTHING | JUST FALSE | s344H(1) "Where the name ... struck off ..., a person who was an officer immediately before ... must ensure": (A, encoding, its fork F-W1) the person limb is part of the "Where" gate, so JUST FALSE; (B, mine) it limits who is bound, a scope limit with no "only", so NOTHING (ruling (c)). |
+| c | 220 | 14th Sch para 1(a) [29321] | JUST FALSE | NOTHING | Fourteenth Schedule para 1 "Part 11A does not apply to any of the following companies": (A, mine) s386AA(1) hands the question to the list and no head holds, so JUST FALSE (delegated-definition ruling (a)); (B, encoding) an open list / "listed in Schedule N" (a case-by-case question), so NOTHING. |
+| c | 225 | 14th Sch para 1(e) [29331] | JUST FALSE | NOTHING | same as 220: a 90%-owned subsidiary fails para 1(e) ("wholly-owned"), so no head holds; JUST FALSE under the hand-off reading, NOTHING under the open-list reading. |
+| c | 318 | s386AFA(3) [25844] | JUST FALSE | NOTHING | s386AFA(3) "must enter ... a note", not done (a bare "must" not done, a case-by-case question): (A, mine) the duty exists and is unmet, so JUST FALSE; (B, encoding) the text states no consequence, so NOTHING. I asked it as the compliance question. |
+| c | 323 | s386AG(1) [25955] | JUST FALSE | NOTHING | s386AG(1) "must take reasonable steps", not done: same two readings as 318. |
+| c | 351 | s386AJ(1) [26248] | JUST FALSE | NOTHING | s386AJ(1) "A person who knows or ought reasonably to know ... must", neither holds (a duty whose condition is unmet, a case-by-case question): (A, mine) JUST FALSE; (B, encoding) NOTHING. |
+| c | 497 | s393 [27585] | JUST FALSE | NOTHING | s393 "No inspector may require disclosure ... of any privileged communication ..., except as respects the name and address of the solicitor's client" (an "except" met, a case-by-case question): (A, mine) the name and address are expressly taken out of the bar, JUST FALSE; (B, encoding) the bar is limited to privileged communications and this is not one, so NOTHING. |
+| c | 506 | s396(1) [27657] | JUST TRUE | NOTHING | s396(1) precautions are required "where" records are kept otherwise than in hard copy; here they are hard copy (a duty whose "where" is unmet, a case-by-case question): (A, mine) nothing is required so none is missing, JUST TRUE; (B, encoding) NOTHING. Ruling (b) would give a third answer, JUST FALSE, for the duty question itself. |
+| c | 521 | s397(1) [27778] | JUST TRUE | NOTHING | s397(1) "Where ... not written in the English language, the corporation must lodge a certified translation"; the document is in English (a duty whose "where" is unmet): same readings as 506. |
+| c | 563 | s405(1)(a) [28002] | JUST FALSE | NOTHING | s405(1)(a) "any person (a) other than a foreign company, uses ... 'Limited'": ("(other than X)", a case-by-case question) (A, mine) the text carves foreign companies out, JUST FALSE; (B, encoding) NOTHING, the text is silent on what happens to the excluded person. |
+| c | 656 | s 405(2) [28023] | NOTHING | JUST FALSE | s405(2) "must not use the word Private ... if it does not fulfil the requirements"; it does fulfil them: (A, encoding) a condition introduced with "if" that is unmet gives JUST FALSE (the Guide's "if" sentence); (B, mine) a prohibition limited in its own wording and the case outside the limit gives NOTHING. My comment flagged it. |
+
+### The `GAP` lines (65)
+
+A `GAP` is a scenario the reader could not pose: no function answers it, or the function has no input for the point, or its type cannot say the answer.
+They are grouped by the reason, and none was repaired.
+**Provisions with no function of their own** (operative text left to a regulation, a power the encoding does not model as a function, or one function covering several limbs) are in the first group; the repealed and deleted rows are a separate group because their rows are coverage rows by design.
+
+#### Operative text with no function of its own (inert by design, or one function covers several limbs) (29)
+
+| group | scenario | provision | what the reader found |
+| --- | --- | --- | --- |
+| a | 1 | s 8(1) (L2397) | inert in the encoding (s 8(1): the Authority administers the Act): no function |
+| a | 2 | s 8(1) (L2397) | inert (s 8(1): subject to the Minister's directions): no function |
+| a | 3 | s 8(1A)(a) (L2402) | inert (s 8(1A)(a): appointment of the Registrar): no function |
+| a | 4 | s 8(1A)(a) (L2402) | inert (s 8(1A)(a)): no function |
+| a | 5 | s 8(1A) (L2400) | inert (s 8(1A) "after consultation"): no function |
+| a | 6 | s 8(1A)(b) (L2405) | inert (s 8(1A)(b): appointment of Deputy and Assistant Registrars): no function |
+| a | 7 | s 8(1A)(b) (L2405) | inert (s 8(1A)(b)): no function |
+| a | 8 | s 8(1B) (L2412) | inert (s 8(1B): the Authority's directions to the Registrar): no function |
+| a | 9 | s 8(1B) (L2412) | inert (s 8(1B)): no function |
+| a | 15 | s 8(7)(a) (L2445) | inert (s 8(7): Minister may amend five Schedules): no function |
+| a | 16 | s 8(7) (L2445) | inert (s 8(7)): no function |
+| a | 20 | s 8A(1)(b) (L2478) | s 8A(1)(b) the authorised person's power has no function of its own (only the Minister's power in s 8A(1) is asked) |
+| a | 55 | s 8B(4)(c) (L2592) | no function asks whether the holder may keep the books longer than necessary (s 8B(4) has one function for the powers of (a)-(c)) |
+| a | 156 | s 12D(7) (L3206) | no function for the form of the s 12D(7) request (written notice) |
+| a | 204 | s 15(1) (L3473) | inert (s 15(1): Minister prescribes requirements by regulations): no function |
+| a | 626 | s 40(4) (L5931) | s 40(4) has no penalty function (the text states no amount): nothing to ask |
+| a | 644 | s 41(7) (L6008) | s 41(7) certification duty is a regulative rule only (no yes/no function a #ASSERT can ask) |
+| c | 72 | s196(8) [17421] | no function for the Minister's power to make the order; s196(8) is modelled only as "do the provisions apply, given an order". |
+| c | 73 | s196(8) [17421] | same as 72 (the Registrar's lack of power is not modelled). |
+| c | 340 | s386AH(6) [26110] | s386AH(6) has functions for compliance in time, guilt and penalty only; none asks whether the addressee must provide the information, so a privilege exception (or its absence) cannot be asked. |
+| c | 431 | s386AP [27064] | only the Minister's exemption order is modelled (`s 386AP the person is exempt ...`); no function asks whether the Registrar may exempt. |
+| c | 461 | s387C(4) [27345] | no function for the s387C(4) regulation-making power. |
+| c | 462 | s387C(4) [27345] | same as 461. |
+| c | 603 | s409B(4) [28316] | no function for the s409B(4) power to prescribe compoundable offences. |
+| c | 609 | s410 [28354] | no function for the s410 rule-making power (the Rules Committee). |
+| c | 610 | s410 [28354] | same as 609. |
+| c | 611 | s411(1) [28376] | no function for the s411(1) regulation-making power. |
+| c | 612 | s411(1)(e)(iv) [28434] | same as 611 (s411(1)(e)(iv)). |
+| c | 613 | s411(2) [28478] | same as 611 (s411(2)). |
+
+#### The function exists but has no input for the point asked (9)
+
+| group | scenario | provision | what the reader found |
+| --- | --- | --- | --- |
+| a | 473 | s 27(12A) (L4942) | the function has no input for "as the name of an intended company" (the scope of 27(12A)); I could not ask the scope case, and my forced mapping (both grounds false) answers a different question; mine NOTHING, the encoding JUST FALSE for no ground |
+| a | 248 | s 18(4) (L3642) | no input says whether the alteration removes the restriction (s 18(4)) |
+| a | 366 | s 25C(4) (L4378) | s 25C(4) liability "whether or not it is avoided": the liability function has no input for avoidance |
+| a | 443 | s 27(2) (L4834) | no function for "must the company comply if the Minister annuls the direction" (the compliance function has the input but asks "has complied") |
+| a | 541 | s 30(4)(c)(ii) (L5429) | no input for who made the s 30(4)(c)(ii) declaration |
+| b | 144 | s 143(1) (text L11514-11527) | the joint point is untestable |
+| c | 6 | s190(1)(c) [17126] | s190(1)(c) takes the register's entries as a record field, "the register enters the date for any person who ceased within the previous 7 years"; the 7-year window is not computed from a date, so "ceased 3 years ago" cannot be posed (contrast s196A(2)(a)(v), which takes dates and which I asserted). |
+| c | 7 | s190(1)(c) [17126] | same as 6 ("ceased 8 years ago" cannot be posed). |
+| c | 86 | s196A(2)(b) [17486] | `s 196A(2)(b)` takes the register's contents as a record, with no date input, so "a change on 2 January 2016" cannot be posed. |
+
+#### The function's type cannot say the answer asked (8)
+
+| group | scenario | provision | what the reader found |
+| --- | --- | --- | --- |
+| b | 120 | s 130(3)(b) (text L10778) | the number 50 is not an output of any function |
+| b | 188 | s 134(1)(b)(i) (text L11308-11311) | no date output |
+| c | 29 | s190(7) [17188] | `Penalty` stores "no imprisonment" as 0 months and has no way to say NOTHING (not covered), so my expected NOTHING cannot be asserted. |
+| c | 144 | s198(7) [17832] | the s198(7) anniversary rule lives in `s 198(3)(a)` functions that return a DATE; a DATE cannot be NOTHING, so "not covered for a leap year" cannot be asserted. |
+| c | 213 | s344H(2) [23129] | same as 29 for s344H(2): imprisonment NOTHING cannot be expressed in `Penalty`. |
+| c | 309 | s386AF(12) [25786] | same as 29 for s386AF(12): imprisonment NOTHING cannot be expressed in `Penalty`. |
+| c | 355 | s386AJ(4) [26283] | same as 29 for s386AJ(4): "no default penalty provided" is a flag of `Penalty`, which cannot say NOTHING. |
+| c | 600 | s409B(1) [28273] | `s 409B(1)` returns MAYBE NUMBER, which cannot say JUST FALSE ("no"); for a non-compoundable offence it answers NOTHING (my seat assertion 661 expects NOTHING and is satisfied), the other reading the scenario itself allowed. |
+
+#### A DEONTIC rule: `#ASSERT` cannot compare it (traces are the encoders' own) (2)
+
+| group | scenario | provision | what the reader found |
+| --- | --- | --- | --- |
+| b | DEONTIC | the 102 functions that return a DEONTIC value (counted by `GIVETH ... DEONTIC` lines in the non-seat sgj, sgk and sgl modules: 40, 37 and 25) | the timing and scope of the same duties are asserted through their MAYBE BOOLEAN and date companions, but the deontic wiring itself is untested by me |
+| c | 423 | s386ANA(1) [26939] | s386ANA(1) is a DEONTIC rule (MUST keep the registers); I do not test DEONTIC rules. |
+
+#### Repealed or deleted: a coverage row, no function (by design) (17)
+
+| group | scenario | provision | what the reader found |
+| --- | --- | --- | --- |
+| a | 17 | s 8(5) (L2439) | s 8(5) deleted: nothing to ask (the encoding says so in its header) |
+| a | 214 | s 16 (L3521) | s 16 repealed: nothing to ask |
+| a | 332 | s 23(2) (L4203) | s 23(2) deleted: nothing to ask |
+| b | 212 | Parts 8 and 8A, ss 217-227 and 227AA-227X (text L21887-21890) | nothing to ask |
+| c | 145 | s247-s343 [22633-22696] | repealed provisions have coverage rows only, no function. |
+| c | 146 | s345-s349 [23135] | repealed (s345 to s349), no function. |
+| c | 214 | Seventh Schedule [28877] | repealed Schedule, no function. |
+| c | 215 | Eighth Schedule [28881] | repealed Schedule, no function. |
+| c | 216 | Ninth Schedule [28885] | repealed Schedule, no function. |
+| c | 217 | Tenth Schedule [28889] | repealed Schedule, no function. |
+| c | 218 | Eleventh Schedule [28893] | repealed Schedule, no function. |
+| c | 534 | s400 [27844] | repealed (s400), no function. |
+| c | 560 | s404(1) [27965] | deleted (s404(1)), no function. |
+| c | 618 | Second Schedule [28496] | repealed Schedule, no function. |
+| c | 619 | Third Schedule [28500] | repealed Schedule, no function. |
+| c | 620 | Fourth Schedule [28504] | repealed Schedule, no function. |
+| c | 621 | Fifth Schedule [28508] | repealed Schedule, no function. |
 
 ## Split sites (not harmonised)
 
@@ -411,6 +633,7 @@ sgh-tests-incorporation.l4                     0        69       0        0     
 sgh-tests-part2-administration.l4              0        15       0        0         0 |      0        15       0        0  same
 sgh-tests-part2-inspection.l4                  0        95       0        0         0 |      0        95       0        0  same
 sgh-tests-part2-savings.l4                     0        33       0        0         0 |      0        33       0        0  same
+sgh-tests-reader.l4                            0         1       0        0         0 |      0         1       0        0  same
 sgh-tests-rectification.l4                     0        55       0        0         0 |      0        55       0        0  same
 sgh-tests-registers.l4                         0        76       0        0         0 |      0        76       0        0  same
 sgh-tests-returns.l4                           0        69       0        0         0 |      0        69       0        0  same
@@ -432,6 +655,7 @@ sgi-tests-director-transactions.l4             0        78       0        0     
 sgi-tests-name-changes.l4                      0       153       0        0         0 |      0       153       0        0  same
 sgi-tests-names.l4                             0       130       0        0         0 |      0       130       0        0  same
 sgi-tests-objects.l4                           0        73       0        0         0 |      0        73       0        0  same
+sgi-tests-reader.l4                            0         1       0        0         0 |      0         1       0        0  same
 sgi-tests-ultra-vires.l4                       0        48       0        0         0 |      0        48       0        0  same
 sgi-ultra-vires.l4                             0         0       0        0         0 |      0         0       0        0  same
 sgj-div4-substantial-shareholdings.l4          0         0       0        0         0 |      0         0       0        0  same
@@ -445,7 +669,8 @@ sgj-tests-div5-debentures.l4                   0        98       0        0     
 sgj-tests-div7-private-transfers.l4            0        70       0        0         0 |      0        70       0        0  same
 sgj-tests-div7-public-transfers.l4             0       151       0        0         0 |      0       151       0        0  same
 sgj-tests-div7-title.l4                        0        71       0        0         0 |      0        71       0        0  same
-sgj-tests-part5-office-name.l4                 0        67       0        0         0 |      0        67       0        0  same
+sgj-tests-part5-office-name.l4                 0        69       0        0         0 |      0        69       0        0  same
+sgj-tests-reader.l4                            0         2       0        0         0 |      0         2       0        0  same
 sgk-div8-application.l4                        0         0       0        0         0 |      0         0       0        0  same
 sgk-div8-register.l4                           0         0       0        0         0 |      0         0       0        0  same
 sgk-div8-registration.l4                       0         0       0        0         0 |      0         0       0        0  same
@@ -511,12 +736,13 @@ sgo-tests-offences.l4                          0       149       0        0     
 sgo-tests-penalties.l4                         0        78       0        0         0 |      0        78       0        0  same
 sgo-tests-records.l4                           0       107       0        0         0 |      0       107       0        0  same
 sgo-tests-service.l4                           0        97       0        0         0 |      0        97       0        0  same
-TOTAL (292 modules)                            0     19642       0        0           |      0     19642       0        0
+TOTAL (295 modules)                            0     19648       0        0           |      0     19648       0        0
 (a failed assertion is also an error; any other error, or any refused assertion, makes the run red)
 (target main: every module has the same four counts on the main build. That rules out a module main rejects and a difference an assertion shows; it does not see a different TRACE outcome, or any difference no assertion exercises)
 ```
 
-The total is 19,642 assertions satisfied over 292 modules, with 0 errors, 0 failed and 0 refused, identical on the main build; the wave-1 folder alone was 10,488 over 173 modules.
+The total is 19,648 assertions satisfied over 295 modules, with 0 errors, 0 failed and 0 refused, identical on the main build; the wave-1 folder alone was 10,488 over 173 modules.
+That is 6 assertions and 3 modules more than the merge of the eight wave-2 parts (292 modules, 19,642): the three modules are the `*-tests-reader.l4` files, and the six assertions are four from the readers' scenarios and two cheque tests ("Changes made after the independent review").
 `check.sh` does not see a `#TRACE` outcome, because a trace prints no assertion line; each agent read its own traces on both builds, and the lead re-read every trace of wave 2 against its `-- EXPECT` word (every one matched on both builds).
 
 ## What would need doing before the encoding is worth relying on
@@ -524,7 +750,7 @@ The total is 19,642 assertions satisfied over 292 modules, with 0 errors, 0 fail
 - A lawyer's reading of the fork registers and the marginal readings in `notes/<agent>-NOTES.md`; none has been ruled.
 - A decision on the `NEEDS-CORE.md` requests, and on dropping the wave-1 parts' own copies of what the core now holds.
 - A check of this edition against the current consolidation, if one later than the version in force to 20 October 2026 exists.
-- Independent test authors for wave 2, a seat audit of either wave, and a ruling on the split-site questions below, on which the independent readers of wave 1 did not agree among themselves.
+- A seat audit of either wave, and a ruling on the split-site questions below, on which the independent readers of both waves did not agree among themselves (wave 2: 15 gated-"may" sites and 4 offence-element sites where a reader and the encoding differ).
 
 ## Source not official
 
