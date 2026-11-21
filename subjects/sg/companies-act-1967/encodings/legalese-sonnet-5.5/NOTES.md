@@ -431,6 +431,7 @@ The Guide records this ruling at section 5, in the bullet that begins “Failed 
 This ruling answers split-site question (ii) for the pure gates of this encoding, the functions that stay Boolean after the protocol split.
 The protocol-shaped sites wait for their re-encode as DEONTIC and keep limit 3 of the grant ruling until then, so the question stays open for them.
 The parts that changed a site under it, and the sites, are named at the end of each part's `## The S1b ruling on failed gates (2026S1bC)` section in `notes/<part>-NOTES.md`: sgb1 (s 145(1)), sgb2 (s 173F), sgc1 (s 202A(2)), sgh (s 21(7)), sgi (s 32(4)), sgj (s 130(2)), sgl (s 173J(3), s 179(2)) and sgo (s 387A(1), s 387B(1), s 387D, s 390(1)).
+The seat-level cases of these sites, 13 assertions in `sg-cases-seat.l4`, take the same answers and carry the marker, so a search for `2026S1bC` finds them too.
 
 ## NEEDS-CORE
 
