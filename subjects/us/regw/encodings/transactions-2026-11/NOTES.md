@@ -103,6 +103,10 @@ The text says the value is the lesser of "(1) The total value of the extension o
 If the nonaffiliate collateral is worth more than the extension of credit, the first figure is negative, and the text does not say whether the value is then zero.
 The encoding follows the words and returns the negative figure.
 
+**223.22(a)(1): a reduction larger than the initial value.**
+The text lets the value after the purchase "be reduced to reflect amortization or depreciation of the asset, to the extent that such reductions are consistent with GAAP".
+A reduction cannot take the value below zero, so the encoding stops at zero (assumed).
+
 **223.21(a)(4)(ii): the "principal amount" of a revolving credit facility.**
 The text does not say whether it is the amount drawn or the amount of the facility.
 It does not matter for the printed example, because the sum under (a)(1)(iii) gives $300 on either reading, and the tests state the principal as the amount drawn.
