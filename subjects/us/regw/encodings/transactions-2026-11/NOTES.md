@@ -60,6 +60,10 @@ Dispositions: `done` (encoded and tested), `WIP` (encoded, not yet passing), `no
 It can mean five percentage points of the transaction above the proportional share, or five percent more than the proportional share itself.
 With a proportional share of 25 percent the first allows a share up to 30 and the second up to 26.25; the tests assert both readings at 29 and at 26.25 and 26.3.
 
+**223.12 and a financial subsidiary (the words as printed).**
+223.11 says "(other than a financial subsidiary of the member bank)" and 223.12 has no such words: "any affiliate", "all affiliates".
+223.2(a)(8) makes a financial subsidiary an affiliate, so the encoding counts a loan to one toward the 20 percent limit and not toward the 10 percent limit; a test asserts both.
+
 **Do exempt transactions count toward the aggregate amount? (assumed, not ruled).**
 223.3(a) defines the aggregate amount as the transaction about to be engaged in added to "the current amount of all outstanding covered transactions", and 223.41 and 223.42 say exempt transactions are "not subject to the quantitative limits".
 The text does not say whether an exempt transaction is itself counted among the outstanding covered transactions.
