@@ -167,7 +167,7 @@ A later review found that attribution under (g)(3) stopped at a controller's dir
 
 ## The independent test pass
 
-The independent author, a fresh session given only the text of 223.2 and 223.3, the nouns module and an interface whose function bodies answered FALSE, wrote 541 assertions into `regw-independent-tests.l4` and listed the points where it found the text open in `independent-readings.md` (R1 to R16).
+The independent author, a reader who started with only the text of 223.2 and 223.3, the nouns module and an interface whose function bodies answered FALSE, wrote 541 assertions into `regw-independent-tests.l4` and listed the points where it found the text open in `independent-readings.md` (R1 to R16).
 It did not read the encoding or its tests, and no expectation in the file has been changed since it was written: the header says so, and the edits it made after its first run were syntax fixes and corrections from the text.
 Run against the encoding for the first time, 532 passed and 9 failed.
 Each of the nine was settled from the text; none was a misreading by the author, and four rule defects were fixed, each with tests of its own:
