@@ -84,7 +84,6 @@ The prong does not say "of an affiliate", and a company that is an affiliate onl
 The chain still arises through control: a parent controls the securities its subsidiaries hold (223.3(g)(3)), so a subsidiary of a subsidiary held by securities is a subsidiary of the parent too.
 What the literal reading drops is a company controlled by an (a)(11) affiliate in a way that is not securities, such as by electing its directors.
 The test has F sponsored by the bank, Q held 100 percent by F, and R controlled by Q only through its directors: literal, R is not an affiliate; chaining, it is.
-The coordinating brief assumed a chain; this default departs from it, on the words.
 
 **(a)(3) and (b)(1)(iii)(B): one shareholder at a time.**
 223.2(a)(3) says "shareholders who ... control", and (b)(1)(iii)(B) says "a shareholder ... or a group of shareholders that together control".
