@@ -1,6 +1,8 @@
 # Regulation W (12 CFR Part 223) — the affiliate definition
 
-Status, 2026-11-21: **partial.** The rows marked `done` below are encoded and their tests pass (96 assertions); the rows marked `not started` are not encoded.
+Status, 2026-11-21: **every in-scope row is encoded, and its tests pass (96 assertions).**
+The rows marked `out of scope` are not encoded, and neither is anything else in Part 223.
+No domain expert has read this against the source, and no independent test author has written expectations from the source before reading the encoding (the encoding skill's step 8).
 This file is updated after each section lands; a row moves only when its tests pass.
 
 ## Scope
