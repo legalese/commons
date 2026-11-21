@@ -1,0 +1,138 @@
+-- Regulation W, 12 CFR 223.3(h), (i), (a), 223.11, 223.12, 223.16: what is a covered transaction,
+-- what is treated as one, and the two quantitative limits.
+--
+-- Target compiler: main (see NOTES.md).
+-- Who is an affiliate comes from regw-affiliate.l4 (12 CFR 223.2), for the purposes of section 23A.
+-- Amounts are plain numbers in one currency unit and are compared exactly.
+-- Each function answers for one instant from the facts stated to it, including the amount of the
+-- covered transactions already outstanding and the member bank's capital stock and surplus
+-- (223.3(d)), which is a stated number.
+
+IMPORT prelude
+IMPORT `regw-nouns`
+IMPORT `regw-control`
+IMPORT `regw-affiliate`
+IMPORT `regwb-nouns`
+
+§ `223.3(h) and (i): covered transactions and credit transactions`
+
+-- 223.3(i): "Credit transaction with an affiliate means: (1) An extension of credit to the affiliate;
+-- (2) An issuance of a guarantee, acceptance, or letter of credit ... on behalf of the affiliate and a
+-- confirmation of a letter of credit issued by the affiliate; and (3) A cross-affiliate netting arrangement."
+GIVEN k IS A `Transaction kind`
+GIVETH A BOOLEAN
+@ref 12 CFR 223.3(i)
+`is a credit transaction kind` MEANS
+       k EQUALS `An extension of credit`
+    OR k EQUALS `The issuance of a guarantee, acceptance or letter of credit, or the confirmation of a letter of credit`
+    OR k EQUALS `A cross-affiliate netting arrangement`
+
+-- 223.3(h)(1) to (5): the kinds of transaction that are covered when they are with, or concern, an affiliate.
+GIVEN k IS A `Transaction kind`
+GIVETH A BOOLEAN
+@ref 12 CFR 223.3(h)
+`is a kind of covered transaction` MEANS NOT (k EQUALS `Some other transaction`)
+
+-- 223.3(h): "Covered transaction with respect to an affiliate means: ...".  The affiliate is judged for
+-- the purposes of section 23A (223.2(c) takes depository institutions out of "affiliate" for subpart F only).
+-- (h)(3) leaves out "such purchases of real and personal property as may be specifically exempted by the Board".
+GIVEN
+    s IS A Structure
+    r IS A Readings
+    t IS A Transaction
+GIVETH A BOOLEAN
+@ref 12 CFR 223.3(h)
+`is a covered transaction` MEANS
+        `is a kind of covered transaction` (t's `kind`)
+    AND `is an affiliate` s r `Section 23A` (t's `affiliate concerned`)
+    AND (NOT (t's `kind` EQUALS `A purchase of an asset` AND t's `exempted by the Board as a purchase of property`))
+
+§ `223.3(a): the aggregate amount`
+
+-- "Aggregate amount of covered transactions means the amount of the covered transaction about to be
+-- engaged in added to the current amount of all outstanding covered transactions."
+GIVEN
+    about       IS A NUMBER
+    outstanding IS A NUMBER
+GIVETH A NUMBER
+@ref 12 CFR 223.3(a)
+`aggregate amount of covered transactions` MEANS about PLUS outstanding
+
+-- "would exceed N percent of the capital stock and surplus": exactly, with no rounding.
+GIVEN
+    aggregate IS A NUMBER
+    css       IS A NUMBER
+    percent   IS A NUMBER
+GIVETH A BOOLEAN
+`exceeds a percent of capital stock and surplus` MEANS aggregate TIMES 100 GREATER THAN css TIMES percent
+
+§ `223.11 and 223.12: the limits`
+
+GIVEN
+    s    IS A Structure
+    name IS A STRING
+GIVETH A BOOLEAN
+`names a financial subsidiary` MEANS
+    any (GIVEN q YIELD q's `name` EQUALS name AND q's `is a financial subsidiary`) (s's `the parties`)
+
+-- 223.11: "A member bank may not engage in a covered transaction with an affiliate (other than a
+-- financial subsidiary of the member bank) if the aggregate amount of the member bank's covered
+-- transactions with such affiliate would exceed 10 percent of the capital stock and surplus of the
+-- member bank."  `outstanding` is the current amount of the outstanding covered transactions with
+-- that affiliate.
+GIVEN
+    s           IS A Structure
+    r           IS A Readings
+    t           IS A Transaction
+    outstanding IS A NUMBER
+    css         IS A NUMBER
+GIVETH A BOOLEAN
+@ref 12 CFR 223.11
+`would breach the single-affiliate limit` MEANS
+        `is a covered transaction` s r t
+    AND (NOT (`names a financial subsidiary` s (t's `affiliate concerned`)))
+    AND `exceeds a percent of capital stock and surplus` (`aggregate amount of covered transactions` (t's `value`) outstanding) css 10
+
+-- 223.12: "A member bank may not engage in a covered transaction with any affiliate if the aggregate
+-- amount of the member bank's covered transactions with all affiliates would exceed 20 percent of the
+-- capital stock and surplus of the member bank."  `outstanding` is the current amount of the
+-- outstanding covered transactions with all affiliates.
+GIVEN
+    s           IS A Structure
+    r           IS A Readings
+    t           IS A Transaction
+    outstanding IS A NUMBER
+    css         IS A NUMBER
+GIVETH A BOOLEAN
+@ref 12 CFR 223.12
+`would breach the all-affiliates limit` MEANS
+        `is a covered transaction` s r t
+    AND `exceeds a percent of capital stock and surplus` (`aggregate amount of covered transactions` (t's `value`) outstanding) css 20
+
+§ `223.16: transactions treated as transactions with an affiliate`
+
+-- (a): "A member bank must treat any of its transactions with any person as a transaction with an
+-- affiliate to the extent that the proceeds of the transaction are used for the benefit of, or
+-- transferred to, an affiliate."
+-- (b)(1): an extension of credit to a nonaffiliate is not so treated if "(i) The proceeds ... are used
+-- to purchase an asset through an affiliate of the member bank, and the affiliate is acting exclusively
+-- as an agent or broker in the transaction; and (ii) The asset purchased by the nonaffiliate is not
+-- issued, underwritten, or sold as principal by any affiliate of the member bank."
+-- (b)(2): that "does not apply to the extent of any agency fee, brokerage commission, or other
+-- compensation received by an affiliate from the proceeds".
+-- The amount returned is the part of the transaction treated as a transaction with an affiliate.
+GIVEN
+    t IS A Transaction
+    u IS A `Use of proceeds`
+GIVETH A NUMBER
+@ref 12 CFR 223.16(a)
+@ref 12 CFR 223.16(b)
+`amount treated as a transaction with an affiliate` MEANS
+    IF agencyExceptionApplies
+    THEN min (u's `agency fee, brokerage commission or other compensation an affiliate receives from the proceeds`) (t's `value`)
+    ELSE min (u's `amount used for the benefit of, or transferred to, an affiliate`) (t's `value`)
+    WHERE
+        agencyExceptionApplies MEANS
+                t's `kind` EQUALS `An extension of credit`
+            AND u's `used to purchase an asset through an affiliate acting exclusively as agent or broker`
+            AND u's `asset not issued, underwritten or sold as principal by any affiliate`

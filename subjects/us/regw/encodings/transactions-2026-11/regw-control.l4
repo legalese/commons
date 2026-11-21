@@ -1,0 +1,231 @@
+-- Regulation W, 12 CFR Part 223.3: company, person, subsidiary and control.
+--
+-- Target compiler: main (see NOTES.md).
+--
+-- How "control" is computed.
+-- 223.3(g)(3) says a company controls the securities its subsidiaries hold, and 223.3(ii) says a
+-- subsidiary is a company the first company controls, so control is defined in terms of itself.
+-- This module takes the LEAST fixed point of that definition: it starts from no control, and a
+-- pair (controller, company) is added only once the text makes it true given the pairs already
+-- added.  A group of companies that each hold less than 25 percent of one another is therefore
+-- not found to control one another merely because they could be read as doing so (NOTES.md,
+-- "Cross-holdings").
+--
+-- Why the recursion ends: `control from` is given the pairs still undecided, and it calls itself
+-- only on that list after at least one pair has been removed from it; `reached from` does the same
+-- with the pairs not yet used.
+
+IMPORT prelude
+IMPORT `regw-nouns`
+
+§ `223.3(f), (bb): company and person`
+
+-- 223.3(f): a corporation, partnership, limited liability company, business trust, association,
+-- or similar organization and, unless specifically excluded, a member bank and a depository
+-- institution.
+GIVEN
+    s IS A Structure
+    p IS A Party
+GIVETH A BOOLEAN
+@ref 12 CFR 223.3(f)
+`is a company` MEANS
+    CONSIDER p's `kind`
+    WHEN Corporation                  THEN TRUE
+    WHEN Partnership                  THEN TRUE
+    WHEN `Limited liability company`  THEN TRUE
+    WHEN `Business trust`             THEN TRUE
+    WHEN Association                  THEN TRUE
+    WHEN `Similar organization`       THEN TRUE
+    OTHERWISE
+           p's `is a depository institution`
+        OR p's `name` EQUALS s's `the member bank`
+
+-- 223.3(bb): an individual, company, trust, joint venture, pool, syndicate, sole proprietorship,
+-- unincorporated organization, or any other form of entity.  Every kind of party is one of those.
+GIVEN
+    s IS A Structure
+    p IS A Party
+GIVETH A BOOLEAN
+@ref 12 CFR 223.3(bb)
+`is a person` MEANS TRUE
+
+§ `Looking parties up`
+
+GIVEN
+    s    IS A Structure
+    name IS A STRING
+GIVETH A BOOLEAN
+`names a company` MEANS
+    any (GIVEN q YIELD q's `name` EQUALS name AND `is a company` s q) (s's `the parties`)
+
+GIVEN
+    s    IS A Structure
+    name IS A STRING
+GIVETH A BOOLEAN
+`names a business trust` MEANS
+    any (GIVEN q YIELD q's `name` EQUALS name AND q's `kind` EQUALS `Business trust`) (s's `the parties`)
+
+GIVEN
+    links IS A LIST OF Link
+    a     IS A STRING
+    b     IS A STRING
+GIVETH A BOOLEAN
+`has link` MEANS
+    any (GIVEN l YIELD l's `from` EQUALS a AND l's `to` EQUALS b) links
+
+§ `223.3(g): control`
+
+-- 223.3(g)(2): "no company will be deemed to control another company by virtue of its ownership or control of
+-- shares in a fiduciary capacity, except as provided in paragraph (a)(3) of § 223.2 or if the company owning or
+-- controlling the shares is a business trust."  The bar is on a company: a fiduciary holding by an individual or by a
+-- trust that is not a business trust still counts (NOTES.md).  `fid` is the exception "as provided in paragraph (a)(3)":
+-- when it is true every fiduciary holding counts, and 223.2(a)(3) uses the pairs found that way.
+-- 223.3(g)(4): a convertible instrument counts as the securities, unless the Board has accepted a showing that the
+-- holder should not be deemed to control them.
+GIVEN
+    s   IS A Structure
+    fid IS A BOOLEAN
+    h   IS A Holding
+GIVETH A BOOLEAN
+@ref 12 CFR 223.3(g)(2)
+@ref 12 CFR 223.3(g)(4)
+`holding counts` MEANS
+        (   (NOT (h's `held as fiduciary`))
+         OR fid
+         OR (NOT (`names a company` s (h's `holder`)))
+         OR `names a business trust` s (h's `holder`))
+    AND (NOT (h's `convertible` AND `has link` (s's `showings`) (h's `holder`) (h's `issuer`)))
+
+-- 223.3(g)(3): "A company controls securities ... owned or controlled, directly or indirectly, by
+-- any subsidiary".  The companies whose holdings count for `x` are `x` and every company reached
+-- from it through the control pairs found so far: its subsidiaries, their subsidiaries, and so on.
+-- `reached from` is given the pairs not yet used and calls itself only on that list after at least
+-- one pair has been removed from it, so it ends.
+GIVEN
+    known   IS A LIST OF STRING
+    pending IS A LIST OF Link
+GIVETH A LIST OF STRING
+`reached from` MEANS
+    LET used MEANS partition (GIVEN l YIELD elem (l's `from`) known) pending
+    IN IF null (fst used)
+       THEN known
+       ELSE `reached from` (append known (map (GIVEN l YIELD l's `to`) (fst used))) (snd used)
+
+-- 223.3(g)(1)(i) with (g)(3): `x` owns, controls or has power to vote 25 percent or more of any
+-- class of voting securities of `y`, counting what its subsidiaries and their subsidiaries (the
+-- companies reached from `x` through `rel`) hold.  Each holding is counted once.
+GIVEN
+    s   IS A Structure
+    fid IS A BOOLEAN
+    rel IS A LIST OF Link
+    x   IS A STRING
+    y   IS A STRING
+GIVETH A BOOLEAN
+@ref 12 CFR 223.3(g)(1)(i)
+@ref 12 CFR 223.3(g)(3)
+`holds a quarter of a class` MEANS
+    any (GIVEN c YIELD `percent of` c AT LEAST 25) classes
+    WHERE
+        holders MEANS `reached from` (LIST x) rel
+        ofIssuer MEANS filter (GIVEN h YIELD h's `issuer` EQUALS y) (s's `holdings`)
+        classes MEANS nub (map (GIVEN h YIELD h's `class`) ofIssuer)
+        `percent of` c MEANS
+            sum (map (GIVEN h YIELD h's `percent of class`) (filter (GIVEN h YIELD h's `class` EQUALS c AND `holding counts` s fid h AND elem (h's `holder`) holders) ofIssuer))
+
+-- 223.3(g)(5): `x` owns or controls 25 percent or more of the equity capital of `y`, counting what
+-- its subsidiaries hold, "unless the company or shareholder presents information to the Board that
+-- demonstrates, to the Board's satisfaction, that [it] does not control the other company".
+GIVEN
+    s   IS A Structure
+    fid IS A BOOLEAN
+    rel IS A LIST OF Link
+    x   IS A STRING
+    y   IS A STRING
+GIVETH A BOOLEAN
+@ref 12 CFR 223.3(g)(5)
+`holds a quarter of the equity capital` MEANS
+        sum (map (GIVEN h YIELD h's `percent of equity capital`) (filter (GIVEN h YIELD h's `issuer` EQUALS y AND `holding counts` s fid h AND elem (h's `holder`) holders) (s's `holdings`))) AT LEAST 25
+    AND (NOT (`has link` (s's `showings`) x y))
+    WHERE
+        holders MEANS `reached from` (LIST x) rel
+
+-- One step of the definition: given the control pairs found so far, does 223.3(g)(1) or (g)(5) make
+-- `x` control `y`?  (g)(1): (i) the 25 percent vote test, (ii) electing a majority of the directors,
+-- (iii) a Board determination.  The pairs so far are used only positively.
+-- (ii) "controls in any manner the election of a majority of the directors": an election link from `x` or from any
+-- company reached from `x` counts, as (g)(3) counts the securities its subsidiaries hold (NOTES.md).
+-- (iii) is a Board determination about the pair itself and is not passed up through subsidiaries.
+-- `fid` is true when the fiduciary exception of (g)(2) "as provided in paragraph (a)(3) of § 223.2" is being applied.
+GIVEN
+    s   IS A Structure
+    fid IS A BOOLEAN
+    rel IS A LIST OF Link
+    x   IS A STRING
+    y   IS A STRING
+GIVETH A BOOLEAN
+@ref 12 CFR 223.3(g)(1)
+`control step counting` MEANS
+        `names a company` s y
+    AND (   `holds a quarter of a class` s fid rel x y
+         OR `holds a quarter of the equity capital` s fid rel x y
+         OR any (GIVEN h YIELD `has link` (s's `elections`) h y) (`reached from` (LIST x) rel)
+         OR `has link` (s's `determinations`) x y)
+
+-- 223.3(g)(1) as the text states it: fiduciary holdings count only as (g)(2) says.
+GIVEN
+    s   IS A Structure
+    rel IS A LIST OF Link
+    x   IS A STRING
+    y   IS A STRING
+GIVETH A BOOLEAN
+@ref 12 CFR 223.3(g)(1)
+`control step` MEANS `control step counting` s FALSE rel x y
+
+-- Every ordered pair of distinct parties in which the second is a company.
+GIVEN s IS A Structure
+GIVETH A LIST OF Link
+`candidate control pairs` MEANS
+    concat (map (GIVEN p YIELD map (GIVEN q YIELD Link OF p's `name`, q's `name`) (targets p)) (s's `the parties`))
+    WHERE
+        targets p MEANS filter (GIVEN q YIELD `is a company` s q AND (NOT (q's `name` EQUALS p's `name`))) (s's `the parties`)
+
+-- The least fixed point.  `rel` holds the pairs found; `pending` the pairs not yet found.
+GIVEN
+    s       IS A Structure
+    fid     IS A BOOLEAN
+    rel     IS A LIST OF Link
+    pending IS A LIST OF Link
+GIVETH A LIST OF Link
+`control from` MEANS
+    LET found MEANS partition (GIVEN l YIELD `control step counting` s fid rel (l's `from`) (l's `to`)) pending
+    IN IF null (fst found)
+       THEN rel
+       ELSE `control from` s fid (append rel (fst found)) (snd found)
+
+-- All the control pairs of a structure, attribution through subsidiaries included.
+GIVEN s IS A Structure
+GIVETH A LIST OF Link
+`control relation` MEANS `control from` s FALSE EMPTY (`candidate control pairs` s)
+
+-- The same, with every fiduciary holding counted: the exception to 223.3(g)(2) "as provided in paragraph (a)(3) of
+-- § 223.2".  223.2(a)(3) uses it for a shareholder's control of the company in question.
+GIVEN s IS A Structure
+GIVETH A LIST OF Link
+`control relation counting fiduciary holdings` MEANS `control from` s TRUE EMPTY (`candidate control pairs` s)
+
+-- The pairs found by the first step alone: no attribution through subsidiaries, because nobody
+-- is yet a subsidiary.  This is one candidate reading of "directly" in 223.2(b)(1)(iii)
+-- (NOTES.md, "Directly controlled").
+GIVEN s IS A Structure
+GIVETH A LIST OF Link
+`direct control relation` MEANS
+    filter (GIVEN l YIELD `control step` s EMPTY (l's `from`) (l's `to`)) (`candidate control pairs` s)
+
+-- 223.3(ii): a company that is controlled by the specified company.
+GIVEN
+    rel IS A LIST OF Link
+    x   IS A STRING
+    y   IS A STRING
+GIVETH A BOOLEAN
+@ref 12 CFR 223.3(ii)
+`is a subsidiary of` MEANS `has link` rel x y
