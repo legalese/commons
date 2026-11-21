@@ -703,8 +703,8 @@ Line numbers of the Guide are those of `inputs/ENCODING-GUIDE.md`; line numbers 
 
 ### F-I19: A "may" gated by "where" (ss 27(2), 29(1), 29(2), 29(4), 32(2), 32(4)): split site (ii)
 
-- Answer taken: `NOTHING` where the gate fails.
-- The other reading: `JUST FALSE` ("where ..." fails).
+- Answer taken: `NOTHING` where the gate fails, except at s 32(4), which answers `JUST FALSE` by the S1b ruling (Guide line 101, 2026S1bC): the Court's power is a public body's power.
+- The other reading: `JUST FALSE` ("where ..." fails); at s 32(4) the other reading is `NOTHING`.
 - Licence: the grant ruling of 2026-11-12, limit 1 (line 97): "answer `NOTHING`, with one fork line each, only for a function named for a grant or a power (\"may\", \"is permitted to\", \"has power to\") whose `if` gate failed"; the other reading is the periods ruling of 2026-11-05, item (b) (line 93): "a \"where ...\" condition: when it fails the answer is `JUST FALSE`"; item (c) of the delegated-definitions ruling of the same day (line 94): "'when', 'upon' and 'whenever' count as 'where' under rule (b)". The grant ruling's limit 3 (line 99) says: "do not change, but list in the row's fork register for the maintainer or a lawyer, a \"may\" function whose gate is \"where\", \"when\" or \"upon\"" and that ruling (b) of the periods ruling "says `JUST FALSE`, and the \"In short\" line on grants points the other way". The brief makes this a split site to be decided site by site, so this part took `NOTHING` here and lists the site in the section "Split sites (sgi)"; a reader who takes limit 3 to keep the periods ruling's `JUST FALSE` flips the `ELSE` branch of the function and its tests.
 - Sites: 6.
 
@@ -716,6 +716,8 @@ Line numbers of the Guide are those of `inputs/ENCODING-GUIDE.md`; line numbers 
 | s 29(4) | `s 29(4) the company may alter any provision of the constitution` |
 | s 32(2) | `s 32(2) the Registrar may by notice served on the company determine that it ceased to be a private company` |
 | s 32(4) | `s 32(4) the Court may determine that the company has not ceased to be a private company` |
+
+Under the S1b ruling (Guide line 101, 2026S1bC) `s 32(4)` answers `JUST FALSE` when its gate fails, as a public body's power, and the ruling replaces limit 3 for it; the other five sites keep `NOTHING`.
 
 ### F-I20: s 27(12B)(a) and (13): "such further period of 60 days" and "a further period of 60 days"
 
@@ -1079,7 +1081,7 @@ The brief's two status-quo readings are taken as the status quo, and every branc
 
 - **Reading (a): a failed "if" counts as the text's no, clause by clause, within the provision that holds the "if" (and a flat negative counts as the text saying no).** 55 functions answer `JUST FALSE` on it, in the entries F-I4, F-I5, F-I10, F-I11, F-I21, F-I22, F-I24, F-I28, F-I29, and the duty of s 33(7)(a) in F-I14.
   The other reading answers `NOTHING` at each, because "if A then B" does not itself say "if not A then not B".
-- **Reading (b): a prohibition or grant limited by its own wording does not give the text's no.** 54 functions answer `NOTHING` on it (counting each function once, and not again where it is also in (a)), in the entries F-I1, F-I2, F-I3, F-I6, F-I9, F-I13, F-I15, F-I19, F-I23, F-I26, F-I32, and the powers of s 33(7)(b) to (d) in F-I14.
+- **Reading (b): a prohibition or grant limited by its own wording does not give the text's no.** 53 functions answer `NOTHING` on it (counting each function once, and not again where it is also in (a); `s 32(4)` of F-I19 is no longer one, since it answers `JUST FALSE` by the S1b ruling, 2026S1bC), in the entries F-I1, F-I2, F-I3, F-I6, F-I9, F-I13, F-I15, F-I19, F-I23, F-I26, F-I32, and the powers of s 33(7)(b) to (d) in F-I14.
   The other reading answers `JUST FALSE` at each.
 - **Decided case by case under the Guide's line 95** (an "unless" or "except" once it is met; a bare "must" not done): 15 functions in the entries F-I7, F-I18, F-I30, F-I31. The other reading is in each entry.
 - **Readings of the text that are not about FALSE and NOTHING** (a count of days, "and" against "or", a reference outside the range): 5 functions in the entries F-I8, F-I12, F-I16, F-I17, F-I20, F-I25, F-I27.
@@ -1162,11 +1164,11 @@ The other reading is `NOTHING`: the text does not say what the position is of on
 | s 32(8) | `s 32(8) the person is guilty of the offence` |
 | s 40(4) | `s 40(4) the person is guilty of the offence` |
 
-### (ii) A "may" gated by "where", "when", "upon", "on application" or "with the consent of": 12 sites, `NOTHING` at all 12; one more site, a duty, answers `JUST FALSE`
+### (ii) A "may" gated by "where", "when", "upon", "on application" or "with the consent of": 12 sites, `NOTHING` at 11 and `JUST FALSE` at 1 (s 32(4), by the S1b ruling, 2026S1bC); one more site, a duty, answers `JUST FALSE`
 
 The answer relies on the grant ruling of 2026-11-12, limit 1 (line 97): "answer `NOTHING`, with one fork line each, only for a function named for a grant or a power (\"may\", \"is permitted to\", \"has power to\") whose `if` gate failed", and on the Guide's "In short" (line 87): `NOTHING` where the text "limits a grant or prohibition in its own wording and the case falls outside the limit".
 The other reading is `JUST FALSE`, from the periods ruling of 2026-11-05, item (b) (line 93): "a \"where ...\" condition: when it fails the answer is `JUST FALSE`", with "when", "upon" and "whenever" counting as "where" (line 94, item (c)).
-The grant ruling's limit 3 (line 99) says to list these and not to change them; they are listed here and in the fork entries F-I6, F-I14, F-I15 and F-I19.
+The grant ruling's limit 3 (line 99) says to list these and not to change them; they are listed here and in the fork entries F-I6, F-I14, F-I15 and F-I19; `s 32(4)` is the exception, which the S1b ruling (Guide line 101, 2026S1bC) answers `JUST FALSE`.
 
 | fork entry | provision | function | answer taken |
 | --- | --- | --- | --- |
@@ -1178,7 +1180,7 @@ The grant ruling's limit 3 (line 99) says to list these and not to change them; 
 | F-I19 | s 29(2) | `s 29(2) the Registrar may grant approval to the company to change its name to a name without the word Limited or Berhad` | `NOTHING` |
 | F-I19 | s 29(4) | `s 29(4) the company may alter any provision of the constitution` | `NOTHING` |
 | F-I19 | s 32(2) | `s 32(2) the Registrar may by notice served on the company determine that it ceased to be a private company` | `NOTHING` |
-| F-I19 | s 32(4) | `s 32(4) the Court may determine that the company has not ceased to be a private company` | `NOTHING` |
+| F-I19 | s 32(4) | `s 32(4) the Court may determine that the company has not ceased to be a private company` | `JUST FALSE` (S1b ruling, 2026S1bC) |
 | F-I14 | s 33(7)(b) | `s 33(7)(b) the Court may adjourn the proceedings` | `NOTHING` |
 | F-I14 | s 33(7)(c) | `s 33(7)(c) the Court may give the directions and make the orders` | `NOTHING` |
 | F-I14 | s 33(7)(d) | `s 33(7)(d) the Court may make an order cancelling the alteration or confirming it, wholly or in part` | `NOTHING` |
@@ -1316,3 +1318,11 @@ TOTAL (30 modules)                             0      1336       0        0     
 exit 0
 ```
 
+
+## The S1b ruling on failed gates (2026S1bC)
+
+The Guide records this ruling at section 5, in the bullet that begins “Failed gates of the pure “may” functions”; it is copied here word for word, as the Guide asks of every ruling.
+
+> - **Failed gates of the pure "may" functions of the two Singapore encodings: the split follows the background, not the holder's name (card S1b of the bench "Singapore Split Sites", option C as modified on the card; accepted by Meng).** Conditions as printed on the card: (1) It governs only the functions that stay Boolean after the protocol split, the pure gates (58 on the card's line); the type (i) sites, an unmet element of an offence, are unchanged. (2) A failed gate answers `JUST FALSE` where the function is a public body's power, a relief from an express bar or duty, or a gate the text closes (“so long as”, “only if”); it answers `NOTHING` where it states a company's or person's liberty, standard or privilege with no bar to relieve. (3) At the card's reading that changes 16 answers: 6 `NOTHING` to `JUST FALSE` at public bodies, and 10 `JUST FALSE` to `NOTHING` at liberties (C024, C046, C084, C115, C135, C138, C154, C155, C157, C159), each a fork line with the other reading and each borderline, because a relief and a liberty are a judgment. The 10 liberties that already answered `NOTHING` stay. (4) Applied one commit per part, each “assumed, not ruled” until the card was marked, flipping the branch each site's tag marks. (5) The difference between an express bar and silence stays in the code's `FALSE-kind` and `NOTHING-kind` comments and in NOTES, which is the provenance channel, and not in the truth value. (6) Recorded in this guide, with limit 3 of the grant ruling above replaced for the Singapore rows, and in the `NOTES.md` of the parts that carry limit 3 (the card's own wording; this paragraph is that record). (7) The ruling reaches the two Singapore encodings only. The UK (164 listed sites) and Israel stay on the Guide as it stands until Meng rules; until then the differential compares Singapore under C with the UK under limit 3. The sites the 16 answers belong to: the public-body powers that went from `NOTHING` to `JUST FALSE` are s 173F (C045), s 32(4) (C106), s 139(6) (F018), s 139(10) (F019), s 282AA(1) (F057), s 281(1) (F062); the liberties that went from `JUST FALSE` to `NOTHING` are s 145(1), s 202A(2), s 21(7), s 130(2), s 173J(3), s 179(2), s 387A(1), s 387B(1), s 387D, s 390(1). Meng's note, verbatim: “Suggest that the changed encodings, and future rules encoded under this ruling, be marked with a greppable string like 2026S1bC to show where this rule took effect. Then in future we can revisit and review the consequences of this rule on encodings that haven’t been done today.” Marked 2026-11-21T12:17:37.989Z (accept, option C, not blind), ruled 2026-11-21, so the commits that applied it are ruled and no longer “assumed, not ruled”. Reading of the note (assumed, not ruled): each function this ruling changed, and each function encoded later under it in these two encodings, carries the string `2026S1bC` in its fork-line comment, so that `grep -rn 2026S1bC` lists where the rule took effect and a later review can find its consequences. Bench: https://claude.ai/artifact/SYSny5zjFYHHcMFeNYi5RX
+
+Sites of this part changed under it (2026S1bC): s 32(4), `s 32(4) the Court may determine that the company has not ceased to be a private company` (fork F-I19, `sgi-conversion.l4:623`), from `NOTHING` to `JUST FALSE`: a public body's power with a failed gate. The other five sites of F-I19 and the other sites of kind (ii) keep their answers.

@@ -412,7 +412,7 @@ A reader who compares this encoding with another jurisdiction's should treat (ii
 | part | type (i) sites (an unmet element of an offence) | answer | type (ii) sites answered `JUST FALSE` | type (ii) sites answered `NOTHING` |
 | --- | --- | --- | --- | --- |
 | sgh | 7 (plus the s 8A(7) defence) | `JUST FALSE` | 12 | 6 |
-| sgi | 6 | `JUST FALSE` | 0 | 12 |
+| sgi | 6 | `JUST FALSE` | 1 | 11 |
 | sgj | 13 | `JUST FALSE` | 6 | 3 |
 | sgk | 9 | `JUST FALSE` | 11 | 4 |
 | sgl | 10 | `JUST FALSE` | 6 | 1 |
@@ -420,7 +420,7 @@ A reader who compares this encoding with another jurisdiction's should treat (ii
 | sgn | 21 | `JUST FALSE` | 1 | 0 |
 | sgo | 20 | `NOTHING` | 13 | 2 |
 
-The parts of wave 2 did not answer alike either: for type (i), `sgo` answered `NOTHING` where the other parts answered `JUST FALSE`; for type (ii), `sgi` answered `NOTHING` at every one of its twelve sites where the others answered `JUST FALSE` at a failed `where`. Each site has a fork line quoting the Guide, so a ruling on either question can be applied site by site. The same caution holds as for wave 1: these are places where the answer comes from the agent and not from the text.
+The parts of wave 2 did not answer alike either: for type (i), `sgo` answered `NOTHING` where the other parts answered `JUST FALSE`; for type (ii), `sgi` answered `NOTHING` at eleven of its twelve sites (the twelfth, s 32(4), answers `JUST FALSE` by the S1b ruling, 2026S1bC) where the others answered `JUST FALSE` at a failed `where`. Each site has a fork line quoting the Guide, so a ruling on either question can be applied site by site. The same caution holds as for wave 1: these are places where the answer comes from the agent and not from the text.
 
 ## NEEDS-CORE
 
