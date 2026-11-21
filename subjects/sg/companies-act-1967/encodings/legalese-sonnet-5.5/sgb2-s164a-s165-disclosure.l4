@@ -1,0 +1,649 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `sg-core`
+IMPORT `sg-periods`
+IMPORT `sg-interests`
+IMPORT `sgb2-s164-register-of-shareholdings`
+
+-- Companies Act 1967 (Singapore), 2020 Revised Edition: s 164A -- the power to require disclosure of directors' emoluments -- and s 165 -- the general duty to make disclosure.
+-- Layer 1 (the law, objectively). Part sgb2. Every top-level name begins with the label of its provision.
+--
+-- HOW IT READS. s 164A: members holding 10% of the members, or 5% of the issued shares, can serve a notice requiring the emoluments of the directors to be disclosed; the company must then
+-- prepare and audit a statement (14 days, or longer if the Registrar allows), send it to those entitled to notice of general meetings (14 days after the audit) and lay it before the next
+-- general meeting. s 165: every director and chief executive officer must tell the company about his or her holdings (so that the company can keep the s 164 register), within 2 business days,
+-- and the company must pass the notice to the other directors and chief executive officers within 7 days. Business days are counted by the keel's `period:` function with the public holidays supplied.
+
+§ `Section 164A(1): the notice, and the three duties it triggers`
+
+-- (1), the trigger: a notice "sent by or on behalf of" (a) at least 10% of the members (excluding the company itself if registered as a member) or (b) a member or members with at least 5% of the
+-- issued shares (excluding treasury shares), "requiring the emoluments and other benefits received by the directors of the company or of a subsidiary to be disclosed".
+-- The percentages are cross-multiplied, so no division is used.
+-- src:14220 | 164A.—(1) If a company is served with a notice sent by or on
+-- src:14221 | behalf of —
+-- src:14223 | (a) at least 10% of the total number of members of the
+-- src:14224 | company (excluding the company itself if it is registered as
+-- src:14225 | a member); or
+-- src:14227 | (b) a member or members with at least 5% of the total number
+-- src:14228 | of issued shares of the company (excluding treasury
+-- src:14229 | shares),
+-- src:14231 | requiring the emoluments and other benefits received by the directors
+-- src:14232 | of the company or of a subsidiary to be disclosed, the company
+-- src:14233 | must —
+@ref s 164A(1) (src:14220-14233)
+GIVEN `the company has been served with the notice` IS A BOOLEAN
+      `the notice requires the emoluments and other benefits received by the directors of the company or of a subsidiary to be disclosed` IS A BOOLEAN
+      `the number of members who sent the notice, or on whose behalf it was sent` IS A NUMBER
+      `the total number of members of the company, excluding the company itself if it is registered as a member` IS A NUMBER
+      `the number of issued shares, excluding treasury shares, held by the member or members who sent the notice or on whose behalf it was sent` IS A NUMBER
+      `the total number of issued shares of the company, excluding treasury shares` IS A NUMBER
+GIVETH A MAYBE BOOLEAN
+`s 164A(1) the notice is one that the company must act on` MEANS
+    IF    `the company has been served with the notice`
+      AND `the notice requires the emoluments and other benefits received by the directors of the company or of a subsidiary to be disclosed`
+      AND (   (`the number of members who sent the notice, or on whose behalf it was sent` TIMES 100) AT LEAST (`the total number of members of the company, excluding the company itself if it is registered as a member` TIMES 10)
+           OR (`the number of issued shares, excluding treasury shares, held by the member or members who sent the notice or on whose behalf it was sent` TIMES 100) AT LEAST (`the total number of issued shares of the company, excluding treasury shares` TIMES 5))
+    THEN JUST TRUE
+    ELSE JUST FALSE   -- FALSE-kind (the text says no in its own words): "If a company is served with a notice sent by or on behalf of (a) at least 10% ... or (b) ... at least 5% ..., requiring the emoluments ... to be disclosed, the company must" (a failed "if": marginal reading (a))
+
+DECLARE `s 164A act` IS ONE OF
+    `s 164A(1)(c) prepare the statement and cause it to be audited`
+    `s 164A(1)(d) send a copy of the audited statement to all persons entitled to receive notice of general meetings`
+    `s 164A(1)(e) lay the audited statement before the next general meeting`
+
+-- (c): "within 14 days or such longer period as the Registrar may allow". The 14 days run from the day the company is served: the paragraph names no starting point, and the service of the notice is the only event
+-- the subsection names (fork F-164A-1 in NOTES.md).
+-- src:14235 | (c) within 14 days or such longer period as the Registrar may
+-- src:14236 | allow, prepare or cause to be prepared and cause to be
+-- src:14237 | audited a statement showing the total amount of
+-- src:14238 | emoluments and other benefits paid to or received by
+-- src:14239 | each of the directors of the company and each director of a
+-- src:14240 | subsidiary; including any amount paid by way of salary, for
+-- src:14241 | the financial year immediately preceding the service of the
+-- src:14242 | notice;
+@ref s 164A(1)(c) (src:14235-14242)
+GIVEN `the number of days the Registrar allows, where it is longer than 14 (0 where the Registrar has allowed no longer period)` IS A NUMBER
+GIVETH A NUMBER
+`s 164A(1)(c) the number of days the company has to prepare the statement and cause it to be audited` MEANS
+    IF `the number of days the Registrar allows, where it is longer than 14 (0 where the Registrar has allowed no longer period)` GREATER THAN 14
+    THEN `the number of days the Registrar allows, where it is longer than 14 (0 where the Registrar has allowed no longer period)`
+    ELSE 14
+
+-- src:14235 | (c) within 14 days or such longer period as the Registrar may
+-- src:14236 | allow, prepare or cause to be prepared and cause to be
+-- src:14237 | audited a statement showing the total amount of
+-- src:14238 | emoluments and other benefits paid to or received by
+-- src:14239 | each of the directors of the company and each director of a
+-- src:14240 | subsidiary; including any amount paid by way of salary, for
+-- src:14241 | the financial year immediately preceding the service of the
+-- src:14242 | notice;
+@ref s 164A(1)(c) (src:14235-14242)
+GIVEN `the day the company was served with the notice` IS A DATE
+      `the number of days the company has to prepare the statement and cause it to be audited` IS A NUMBER
+      `the day the statement had been prepared and audited` IS A DATE
+GIVETH A MAYBE BOOLEAN
+`s 164A(1)(c) the statement was prepared and audited in time` MEANS
+    IF `period: the date is not later than the end of a period after` `the day the company was served with the notice` `the day the statement had been prepared and audited` `the number of days the company has to prepare the statement and cause it to be audited` Days
+    THEN JUST TRUE
+    ELSE JUST FALSE   -- FALSE-kind (the text says no in its own words): "the company must (c) within 14 days or such longer period as the Registrar may allow, prepare or cause to be prepared and cause to be audited a statement" (a period the text fixes in its own words: the periods ruling of 2026-11-05, item (a))
+
+-- (c), the contents: the total amount of emoluments and other benefits paid to or received by each director of the company and each director of a subsidiary, including salary, for the financial year
+-- immediately preceding the service of the notice. "Emoluments" is s 4(1)'s term, read by the caller.
+-- src:14235 | (c) within 14 days or such longer period as the Registrar may
+-- src:14236 | allow, prepare or cause to be prepared and cause to be
+-- src:14237 | audited a statement showing the total amount of
+-- src:14238 | emoluments and other benefits paid to or received by
+-- src:14239 | each of the directors of the company and each director of a
+-- src:14240 | subsidiary; including any amount paid by way of salary, for
+-- src:14241 | the financial year immediately preceding the service of the
+-- src:14242 | notice;
+@ref s 164A(1)(c) (src:14235-14242)
+GIVEN `the statement shows the total amount of emoluments and other benefits paid to or received by each of the directors of the company` IS A BOOLEAN
+      `the statement shows the total amount of emoluments and other benefits paid to or received by each director of a subsidiary` IS A BOOLEAN
+      `the statement includes any amount paid by way of salary` IS A BOOLEAN
+      `the statement is for the financial year immediately preceding the service of the notice` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 164A(1)(c) the statement is the statement the paragraph requires` MEANS
+    IF    `the statement shows the total amount of emoluments and other benefits paid to or received by each of the directors of the company`
+      AND `the statement shows the total amount of emoluments and other benefits paid to or received by each director of a subsidiary`
+      AND `the statement includes any amount paid by way of salary`
+      AND `the statement is for the financial year immediately preceding the service of the notice`
+    THEN JUST TRUE
+    ELSE JUST FALSE   -- FALSE-kind (the text says no in its own words): "a statement showing the total amount of emoluments and other benefits paid to or received by each of the directors of the company and each director of a subsidiary; including any amount paid by way of salary, for the financial year immediately preceding the service of the notice" (a bare "must" not done: the provision's own question, fork F-164-1)
+
+-- src:14244 | (d) when the statement mentioned in paragraph (c) has been
+-- src:14245 | audited, within 14 days send a copy of the statement to all
+-- src:14246 | persons entitled to receive notice of general meetings of the
+-- src:14247 | company; and
+@ref s 164A(1)(d) (src:14244-14247)
+GIVEN `the day the statement had been prepared and audited` IS A DATE
+      `the day the company sent the copy` IS A DATE
+      `the company sent a copy to all persons entitled to receive notice of general meetings of the company` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 164A(1)(d) the company sent the copy of the audited statement in time to all the persons entitled` MEANS
+    IF    `the company sent a copy to all persons entitled to receive notice of general meetings of the company`
+      AND `period: the date is not later than the end of a period after` `the day the statement had been prepared and audited` `the day the company sent the copy` 14 Days
+    THEN JUST TRUE
+    ELSE JUST FALSE   -- FALSE-kind (the text says no in its own words): "when the statement mentioned in paragraph (c) has been audited, within 14 days send a copy of the statement to all persons entitled to receive notice of general meetings of the company" (a period the text fixes in its own words: the periods ruling of 2026-11-05, item (a))
+
+-- src:14249 | (e) lay the statement before the next general meeting of the
+-- src:14250 | company held after the statement is audited.
+@ref s 164A(1)(e) (src:14249-14250)
+GIVEN `the company laid the statement before the next general meeting of the company held after the statement was audited` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 164A(1)(e) the company laid the audited statement before the next general meeting` MEANS
+    IF `the company laid the statement before the next general meeting of the company held after the statement was audited`
+    THEN JUST TRUE
+    ELSE JUST FALSE   -- FALSE-kind (the text says no in its own words): "the company must ... (e) lay the statement before the next general meeting of the company held after the statement is audited" (a bare "must" not done: the provision's own question, fork F-164-1)
+
+-- The three duties as regulative rules. (e) has no period in days: it falls due when the next general meeting is held, so the days from the audit to that meeting are an input
+-- (the date of the meeting is s 175's question, a later wave).
+-- src:14235 | (c) within 14 days or such longer period as the Registrar may
+-- src:14236 | allow, prepare or cause to be prepared and cause to be
+-- src:14237 | audited a statement showing the total amount of
+-- src:14238 | emoluments and other benefits paid to or received by
+-- src:14239 | each of the directors of the company and each director of a
+-- src:14240 | subsidiary; including any amount paid by way of salary, for
+-- src:14241 | the financial year immediately preceding the service of the
+-- src:14242 | notice;
+@ref s 164A(1)(c) (src:14235-14242)
+GIVEN `the name of the company` IS A STRING
+      `the number of days the company has to prepare the statement and cause it to be audited` IS A NUMBER
+GIVETH A DEONTIC Party `s 164A act`
+`s 164A(1)(c) the company must prepare the statement and cause it to be audited within the days allowed after it is served with the notice` MEANS
+    PARTY Company `the name of the company`
+    MUST `s 164A(1)(c) prepare the statement and cause it to be audited`
+    WITHIN `the number of days the company has to prepare the statement and cause it to be audited`
+    HENCE FULFILLED
+    LEST BREACH BY Company `the name of the company` BECAUSE "the company did not prepare the statement of directors' emoluments and cause it to be audited within 14 days, or the longer period the Registrar allowed, after it was served with the notice"
+
+-- src:14244 | (d) when the statement mentioned in paragraph (c) has been
+-- src:14245 | audited, within 14 days send a copy of the statement to all
+-- src:14246 | persons entitled to receive notice of general meetings of the
+-- src:14247 | company; and
+@ref s 164A(1)(d) (src:14244-14247)
+GIVEN `the name of the company` IS A STRING
+GIVETH A DEONTIC Party `s 164A act`
+`s 164A(1)(d) the company must send a copy of the audited statement to all persons entitled to receive notice of general meetings within 14 days after the audit` MEANS
+    PARTY Company `the name of the company`
+    MUST `s 164A(1)(d) send a copy of the audited statement to all persons entitled to receive notice of general meetings`
+    WITHIN 14
+    HENCE FULFILLED
+    LEST BREACH BY Company `the name of the company` BECAUSE "the company did not send a copy of the audited statement to all persons entitled to receive notice of general meetings within 14 days after the statement was audited"
+
+-- src:14249 | (e) lay the statement before the next general meeting of the
+-- src:14250 | company held after the statement is audited.
+@ref s 164A(1)(e) (src:14249-14250)
+GIVEN `the name of the company` IS A STRING
+      `the number of days from the audit to the next general meeting of the company held after the statement is audited` IS A NUMBER
+GIVETH A DEONTIC Party `s 164A act`
+`s 164A(1)(e) the company must lay the audited statement before the next general meeting` MEANS
+    PARTY Company `the name of the company`
+    MUST `s 164A(1)(e) lay the audited statement before the next general meeting`
+    WITHIN `the number of days from the audit to the next general meeting of the company held after the statement is audited`
+    HENCE FULFILLED
+    LEST BREACH BY Company `the name of the company` BECAUSE "the next general meeting of the company held after the statement was audited was held and the statement was not laid before it"
+
+§ `Section 164A(2): the offence`
+
+DECLARE `s 164A(2) penalty` HAS
+    `s 164A(2) the highest fine, in Singapore dollars` IS A NUMBER
+    `s 164A(2) the longest imprisonment, in years (0: the subsection provides none)` IS A NUMBER
+
+-- src:14255 | (2) If default is made in complying with this section, the company
+-- src:14256 | and every director of the company shall be guilty of an offence and
+-- src:14257 | shall be liable on conviction to a fine not exceeding $10,000.
+@ref s 164A(2) (src:14255-14257)
+GIVEN `default is made in complying with section 164A` IS A BOOLEAN
+      `the person is the company` IS A BOOLEAN
+      `the person is a director of the company` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 164A(2) the person is guilty of the offence` MEANS
+    IF (NOT `default is made in complying with section 164A`)
+    THEN JUST FALSE   -- FALSE-kind (the text says no in its own words): "If default is made in complying with this section, the company and every director of the company shall be guilty of an offence" (a failed "if": marginal reading (a); split site (i), fork F-164A-2 in NOTES.md)
+    ELSE IF `the person is the company` OR `the person is a director of the company`
+         THEN JUST TRUE
+         ELSE NOTHING   -- NOTHING-kind (limited by its own wording): "the company and every director of the company" names who is guilty, with no "only" (periods ruling of 2026-11-05, item (c); split site (i))
+
+-- src:14255 | (2) If default is made in complying with this section, the company
+-- src:14256 | and every director of the company shall be guilty of an offence and
+-- src:14257 | shall be liable on conviction to a fine not exceeding $10,000.
+@ref s 164A(2) (src:14255-14257)
+GIVEN `default is made in complying with section 164A` IS A BOOLEAN
+      `the person is the company` IS A BOOLEAN
+      `the person is a director of the company` IS A BOOLEAN
+GIVETH A MAYBE `s 164A(2) penalty`
+`s 164A(2) the most the person may be sentenced to on conviction` MEANS
+    IF `default is made in complying with section 164A` AND (`the person is the company` OR `the person is a director of the company`)
+    THEN JUST (`s 164A(2) penalty` OF 10000, 0)   -- "liable on conviction to a fine not exceeding $10,000"; the subsection names no imprisonment
+    ELSE NOTHING   -- NOTHING-kind (limited by its own wording): the penalty is that of "the company and every director of the company" where "default is made in complying with this section"
+
+§ `Section 165(1) and (10): the notice every director and chief executive officer must give`
+
+DECLARE `s 165(1) kind of notice` IS ONE OF
+    `s 165(1)(a) the particulars relating to shares, debentures, participatory interests, rights, options and contracts`
+    `s 165(1)(b) the particulars of a change in those particulars`
+    `s 165(1)(c) the events and matters affecting or relating to the person that the company needs for section 173A`
+    `s 165(1) some other notice`
+
+DECLARE `s 165 act` IS ONE OF
+    `s 165(1)(a) give the company written notice of the particulars relating to shares, debentures, participatory interests, rights, options and contracts`
+    `s 165(1)(b) give the company written notice of the particulars of the change`
+    `s 165(1)(c) give the company written notice of the events and matters affecting or relating to the person`
+    `s 165(3) send a copy of the notice to each of the other directors and chief executive officers`
+
+-- (10): "Subsection (1)(a) and (b) does not apply to a person (a) who is a director or chief executive officer of a listed company; and (b) who is required to make disclosure of the matters
+-- referred to in subsection (1)(a) and (b) of this section under section 133 of the Securities and Futures Act 2001". "Listed" is s 4(1)'s term; the duty under the other Act is a fact.
+-- src:14385 | (10) Subsection (1)(a) and (b) does not apply to a person —
+-- src:14387 | (a) who is a director or chief executive officer of a listed
+-- src:14388 | company; and
+-- src:14393 | (b) who is required to make disclosure of the matters referred
+-- src:14394 | to in subsection (1)(a) and (b) of this section under
+-- src:14395 | section 133 of the Securities and Futures Act 2001.
+@ref s 165(10) (src:14385-14395)
+GIVEN `the person is a director or chief executive officer of a listed company` IS A BOOLEAN
+      `the person is required to make disclosure of the matters referred to in subsection (1)(a) and (b) of section 165 under section 133 of the Securities and Futures Act 2001` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 165(10) subsection (1)(a) and (b) does not apply to the person` MEANS
+    IF `the person is a director or chief executive officer of a listed company` AND `the person is required to make disclosure of the matters referred to in subsection (1)(a) and (b) of section 165 under section 133 of the Securities and Futures Act 2001`
+    THEN JUST TRUE
+    ELSE NOTHING   -- NOTHING-kind (limited by its own wording): the subsection says to whom "subsection (1)(a) and (b) does not apply" and says nothing of a person outside it, to whom subsection (1)(a) and (b) applies by its own terms
+
+-- (1): the duty, by kind of notice. The person must be a director or chief executive officer of the company; (a) and (b) are limited to "such particulars ... as are necessary for the purposes of
+-- compliance by the firstmentioned company with section 164 that are applicable in relation to him or her", and (c) to "such events and matters ... as are necessary for the purposes of compliance by the
+-- company with section 173A that are applicable in relation to him or her".
+-- src:14261 | 165.—(1) Every director and chief executive officer of a company
+-- src:14262 | must give written notice to the company —
+-- src:14264 | (a) of such particulars relating to shares, debentures,
+-- src:14265 | participatory interests, rights, options and contracts as
+-- src:14266 | are necessary for the purposes of compliance by the
+-- src:14267 | firstmentioned company with section 164 that are
+-- src:14268 | applicable in relation to him or her;
+-- src:14270 | (b) of particulars of any change in respect of the particulars
+-- src:14271 | referred to in paragraph (a) of which notice has been given
+-- src:14272 | to the company including the consideration (if any)
+-- src:14273 | received as a result of the event giving rise to the
+-- src:14274 | change; and
+-- src:14276 | (c) of such events and matters affecting or relating to himself
+-- src:14277 | or herself as are necessary for the purposes of compliance
+-- src:14278 | by the company with section 173A that are applicable in
+-- src:14279 | relation to him or her.
+@ref s 165(1) (src:14261-14279)
+GIVEN kind IS A `s 165(1) kind of notice`
+      `the person is a director or chief executive officer of the company` IS A BOOLEAN
+      `the particulars, change, events or matters are necessary for the company's compliance with the section the paragraph names and are applicable in relation to the person` IS A BOOLEAN
+      `subsection (1)(a) and (b) does not apply to the person by subsection (10)` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 165(1) the person must give the company written notice` MEANS
+    IF (NOT `the person is a director or chief executive officer of the company`)
+    THEN NOTHING   -- NOTHING-kind (limited by its own wording): the duty is that of "Every director and chief executive officer of a company", with no "only"; the subsection says nothing of anyone else
+    ELSE CONSIDER kind
+         WHEN `s 165(1) some other notice` THEN NOTHING   -- NOTHING-kind (list not closed): the subsection lists three kinds of notice, (a) to (c), without "only"
+         WHEN `s 165(1)(c) the events and matters affecting or relating to the person that the company needs for section 173A`
+              THEN (IF `the particulars, change, events or matters are necessary for the company's compliance with the section the paragraph names and are applicable in relation to the person`
+                    THEN JUST TRUE
+                    ELSE NOTHING)   -- NOTHING-kind (limited by its own wording): "such events and matters ... as are necessary for the purposes of compliance by the company with section 173A that are applicable in relation to him or her" limits the notice in its own wording, and the case falls outside the limit
+         OTHERWISE
+              (IF `subsection (1)(a) and (b) does not apply to the person by subsection (10)`
+               THEN JUST FALSE   -- FALSE-kind (the text says no in its own words): "Subsection (1)(a) and (b) does not apply to a person (a) who is a director or chief executive officer of a listed company; and (b) who is required to make disclosure ... under section 133 of the Securities and Futures Act 2001" (a flat negative)
+               ELSE IF `the particulars, change, events or matters are necessary for the company's compliance with the section the paragraph names and are applicable in relation to the person`
+                    THEN JUST TRUE
+                    ELSE NOTHING)   -- NOTHING-kind (limited by its own wording): "such particulars ... as are necessary for the purposes of compliance by the firstmentioned company with section 164 that are applicable in relation to him or her" limits the notice in its own wording, and the case falls outside the limit
+
+§ `Section 165(2): within 2 business days`
+
+-- (2)(a): within 2 business days after (i) the date the director became a director or the chief executive officer became a chief executive officer, or (ii) the date the person became a registered holder of
+-- or acquired an interest in the shares, debentures, participatory interests, rights, options or contracts, "whichever last occurs". (The rendering prints this tail as a second "(a)".)
+-- src:14285 | (a) in the case of a notice under subsection (1)(a), within
+-- src:14286 | 2 business days after —
+-- src:14288 | (i) the date on which the director became a director or
+-- src:14289 | the chief executive officer became a chief executive
+-- src:14290 | officer, as the case may be; or
+-- src:14292 | (ii) the date on which the director or chief executive
+-- src:14293 | officer (as the case may be) became a registered
+-- src:14294 | holder of or acquired an interest in the shares,
+-- src:14295 | debentures, participatory interests, rights, options or
+-- src:14296 | contracts,
+-- src:14298 | (a) whichever last occurs; and
+@ref s 165(2)(a) (src:14285-14298)
+GIVEN `the date the person became a director or chief executive officer, as the case may be` IS A DATE
+      `the date the person became a registered holder of, or acquired an interest in, the shares, debentures, participatory interests, rights, options or contracts` IS A DATE
+GIVETH A DATE
+`s 165(2)(a) the date from which the 2 business days run` MEANS
+    IF `the date the person became a registered holder of, or acquired an interest in, the shares, debentures, participatory interests, rights, options or contracts` GREATER THAN `the date the person became a director or chief executive officer, as the case may be`
+    THEN `the date the person became a registered holder of, or acquired an interest in, the shares, debentures, participatory interests, rights, options or contracts`
+    ELSE `the date the person became a director or chief executive officer, as the case may be`
+
+-- The window is counted in business days by the keel's function, with the public holidays supplied (P8). The act is "not later than" the last day: a notice given on the day of the event itself is in time, which the
+-- keel's window form (the day after the event onwards) would not allow (fork F-165-2 in NOTES.md).
+-- src:14285 | (a) in the case of a notice under subsection (1)(a), within
+-- src:14286 | 2 business days after —
+-- src:14288 | (i) the date on which the director became a director or
+-- src:14289 | the chief executive officer became a chief executive
+-- src:14290 | officer, as the case may be; or
+-- src:14292 | (ii) the date on which the director or chief executive
+-- src:14293 | officer (as the case may be) became a registered
+-- src:14294 | holder of or acquired an interest in the shares,
+-- src:14295 | debentures, participatory interests, rights, options or
+-- src:14296 | contracts,
+-- src:14298 | (a) whichever last occurs; and
+@ref s 165(2)(a) (src:14285-14298)
+GIVEN `the day the 2 business days run from` IS A DATE
+      `the public holidays` IS A LIST OF DATE
+GIVETH A DATE
+`s 165(2) the last day for the notice` MEANS
+    `period: the last day of a number of business days after` `the day the 2 business days run from` 2 `the public holidays`
+
+-- src:14285 | (a) in the case of a notice under subsection (1)(a), within
+-- src:14286 | 2 business days after —
+-- src:14288 | (i) the date on which the director became a director or
+-- src:14289 | the chief executive officer became a chief executive
+-- src:14290 | officer, as the case may be; or
+-- src:14292 | (ii) the date on which the director or chief executive
+-- src:14293 | officer (as the case may be) became a registered
+-- src:14294 | holder of or acquired an interest in the shares,
+-- src:14295 | debentures, participatory interests, rights, options or
+-- src:14296 | contracts,
+-- src:14298 | (a) whichever last occurs; and
+@ref s 165(2)(a) (src:14285-14298)
+GIVEN `the day the 2 business days run from` IS A DATE
+      `the public holidays` IS A LIST OF DATE
+GIVETH A NUMBER
+`s 165(2) the number of days from the day the 2 business days run from to the last day for the notice` MEANS
+    `s 165(2) the last day for the notice` `the day the 2 business days run from` `the public holidays` MINUS `the day the 2 business days run from`
+
+-- src:14285 | (a) in the case of a notice under subsection (1)(a), within
+-- src:14286 | 2 business days after —
+-- src:14288 | (i) the date on which the director became a director or
+-- src:14289 | the chief executive officer became a chief executive
+-- src:14290 | officer, as the case may be; or
+-- src:14292 | (ii) the date on which the director or chief executive
+-- src:14293 | officer (as the case may be) became a registered
+-- src:14294 | holder of or acquired an interest in the shares,
+-- src:14295 | debentures, participatory interests, rights, options or
+-- src:14296 | contracts,
+-- src:14298 | (a) whichever last occurs; and
+@ref s 165(2)(a) (src:14285-14298)
+GIVEN `the day the 2 business days run from` IS A DATE
+      `the day the notice was given` IS A DATE
+      `the public holidays` IS A LIST OF DATE
+GIVETH A MAYBE BOOLEAN
+`s 165(2)(a) the notice of the particulars was given within 2 business days` MEANS
+    IF `the day the notice was given` AT MOST `s 165(2) the last day for the notice` `the day the 2 business days run from` `the public holidays`
+    THEN JUST TRUE
+    ELSE JUST FALSE   -- FALSE-kind (the text says no in its own words): "A notice under subsection (1) must be given (a) in the case of a notice under subsection (1)(a), within 2 business days after" the later date (a period the text fixes in its own words: the periods ruling of 2026-11-05, item (a))
+
+-- src:14303 | (b) in the case of a notice under subsection (1)(b), within
+-- src:14304 | 2 business days after the occurrence of the event giving rise
+-- src:14305 | to the change mentioned in that paragraph.
+@ref s 165(2)(b) (src:14303-14305)
+GIVEN `the day of the event giving rise to the change` IS A DATE
+      `the day the notice was given` IS A DATE
+      `the public holidays` IS A LIST OF DATE
+GIVETH A MAYBE BOOLEAN
+`s 165(2)(b) the notice of the change was given within 2 business days` MEANS
+    IF `the day the notice was given` AT MOST `s 165(2) the last day for the notice` `the day of the event giving rise to the change` `the public holidays`
+    THEN JUST TRUE
+    ELSE JUST FALSE   -- FALSE-kind (the text says no in its own words): "A notice under subsection (1) must be given ... (b) in the case of a notice under subsection (1)(b), within 2 business days after the occurrence of the event giving rise to the change" (a period the text fixes in its own words: the periods ruling of 2026-11-05, item (a))
+
+-- The duties as regulative rules. (1)(a) and (1)(b) carry the 2 business days of (2); (1)(c) has no period in (2) (which names only (1)(a) and (1)(b)): see the rule after them.
+-- src:14261 | 165.—(1) Every director and chief executive officer of a company
+-- src:14262 | must give written notice to the company —
+-- src:14264 | (a) of such particulars relating to shares, debentures,
+-- src:14265 | participatory interests, rights, options and contracts as
+-- src:14266 | are necessary for the purposes of compliance by the
+-- src:14267 | firstmentioned company with section 164 that are
+-- src:14268 | applicable in relation to him or her;
+-- src:14270 | (b) of particulars of any change in respect of the particulars
+-- src:14271 | referred to in paragraph (a) of which notice has been given
+-- src:14272 | to the company including the consideration (if any)
+-- src:14273 | received as a result of the event giving rise to the
+-- src:14274 | change; and
+-- src:14276 | (c) of such events and matters affecting or relating to himself
+-- src:14277 | or herself as are necessary for the purposes of compliance
+-- src:14278 | by the company with section 173A that are applicable in
+-- src:14279 | relation to him or her.
+@ref s 165(1) (src:14261-14279)
+GIVEN `the name of the person` IS A STRING
+      `the person is a director or chief executive officer of a listed company who is required to make the disclosure under section 133 of the Securities and Futures Act 2001` IS A BOOLEAN
+      `the number of calendar days from the day the 2 business days run from to the last day for the notice` IS A NUMBER
+GIVETH A DEONTIC Party `s 165 act`
+`s 165(1)(a) and (2)(a) the director or chief executive officer must give the company written notice of the particulars within 2 business days` MEANS
+    IF `the person is a director or chief executive officer of a listed company who is required to make the disclosure under section 133 of the Securities and Futures Act 2001`
+    THEN FULFILLED
+    ELSE PARTY Individual `the name of the person`
+         MUST `s 165(1)(a) give the company written notice of the particulars relating to shares, debentures, participatory interests, rights, options and contracts`
+         WITHIN `the number of calendar days from the day the 2 business days run from to the last day for the notice`
+         HENCE FULFILLED
+         LEST BREACH BY Individual `the name of the person` BECAUSE "the director or chief executive officer did not give the company written notice of the particulars within 2 business days after the later of the day the person became a director or chief executive officer and the day the person became a registered holder of or acquired an interest in the shares, debentures, participatory interests, rights, options or contracts"
+
+-- src:14270 | (b) of particulars of any change in respect of the particulars
+-- src:14271 | referred to in paragraph (a) of which notice has been given
+-- src:14272 | to the company including the consideration (if any)
+-- src:14273 | received as a result of the event giving rise to the
+-- src:14274 | change; and
+@ref s 165(1) (src:14270-14274)
+GIVEN `the name of the person` IS A STRING
+      `the person is a director or chief executive officer of a listed company who is required to make the disclosure under section 133 of the Securities and Futures Act 2001` IS A BOOLEAN
+      `the number of calendar days from the day of the event to the last day for the notice` IS A NUMBER
+GIVETH A DEONTIC Party `s 165 act`
+`s 165(1)(b) and (2)(b) the director or chief executive officer must give the company written notice of the change within 2 business days` MEANS
+    IF `the person is a director or chief executive officer of a listed company who is required to make the disclosure under section 133 of the Securities and Futures Act 2001`
+    THEN FULFILLED
+    ELSE PARTY Individual `the name of the person`
+         MUST `s 165(1)(b) give the company written notice of the particulars of the change`
+         WITHIN `the number of calendar days from the day of the event to the last day for the notice`
+         HENCE FULFILLED
+         LEST BREACH BY Individual `the name of the person` BECAUSE "the director or chief executive officer did not give the company written notice of the change within 2 business days after the event giving rise to it"
+
+-- (1)(c) has no period: s 165(2) names only (1)(a) and (1)(b). A "must" with no deadline can never reach BREACH, so the rule is listed under "Rules with no breach path" in NOTES.md.
+-- src:14276 | (c) of such events and matters affecting or relating to himself
+-- src:14277 | or herself as are necessary for the purposes of compliance
+-- src:14278 | by the company with section 173A that are applicable in
+-- src:14279 | relation to him or her.
+@ref s 165(1)(c) (src:14276-14279)
+GIVEN `the name of the person` IS A STRING
+GIVETH A DEONTIC Party `s 165 act`
+`s 165(1)(c) the director or chief executive officer must give the company written notice of the events and matters` MEANS
+    PARTY Individual `the name of the person`
+    MUST `s 165(1)(c) give the company written notice of the events and matters affecting or relating to the person`
+    HENCE FULFILLED
+
+§ `Section 165(3): the company passes the notice on, within 7 days`
+
+-- src:14309 | (3) A company must, within 7 days after it receives a notice given
+-- src:14310 | under subsection (1), send a copy of the notice to each of the other
+-- src:14311 | directors and chief executive officers of the company.
+@ref s 165(3) (src:14309-14311)
+GIVEN `the day the company received the notice` IS A DATE
+      `the day the company sent the copy to each of the other directors and chief executive officers` IS A DATE
+      `the company sent a copy to each of the other directors and chief executive officers of the company` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 165(3) the company sent a copy of the notice to each of the other directors and chief executive officers in time` MEANS
+    IF    `the company sent a copy to each of the other directors and chief executive officers of the company`
+      AND `period: the date is not later than the end of a period after` `the day the company received the notice` `the day the company sent the copy to each of the other directors and chief executive officers` 7 Days
+    THEN JUST TRUE
+    ELSE JUST FALSE   -- FALSE-kind (the text says no in its own words): "A company must, within 7 days after it receives a notice given under subsection (1), send a copy of the notice to each of the other directors and chief executive officers of the company" (a period the text fixes in its own words: the periods ruling of 2026-11-05, item (a))
+
+-- src:14309 | (3) A company must, within 7 days after it receives a notice given
+-- src:14310 | under subsection (1), send a copy of the notice to each of the other
+-- src:14311 | directors and chief executive officers of the company.
+@ref s 165(3) (src:14309-14311)
+GIVEN `the name of the company` IS A STRING
+GIVETH A DEONTIC Party `s 165 act`
+`s 165(3) the company must send a copy of the notice to each of the other directors and chief executive officers within 7 days` MEANS
+    PARTY Company `the name of the company`
+    MUST `s 165(3) send a copy of the notice to each of the other directors and chief executive officers`
+    WITHIN 7
+    HENCE FULFILLED
+    LEST BREACH BY Company `the name of the company` BECAUSE "the company did not send a copy of the notice to each of the other directors and chief executive officers within 7 days after it received the notice"
+
+§ `Section 165(4) and (5): the defence of not being aware, and the presumption of awareness`
+
+DECLARE `s 165(4) kind of failure` IS ONE OF
+    `s 165(4) a failure to comply with subsection (1)(a)`
+    `s 165(4) a failure to comply with subsection (1)(b)`
+    `s 165(4) a failure to comply with subsection (2)`
+    `s 165(4) another failure`
+
+-- (4): "It is a defence to a prosecution for failing to comply with subsection (1)(a) or (b) or with subsection (2) if the defendant proves that his or her failure was due to his or her not being aware of a fact or
+-- occurrence the existence of which was necessary to constitute the offence and that (a) he or she was not so aware on the date of the information or summons; or (b) he or she became so aware less than 7 days
+-- before the date of the summons."
+-- src:14317 | (4) It is a defence to a prosecution for failing to comply with
+-- src:14318 | subsection (1)(a) or (b) or with subsection (2) if the defendant proves
+-- src:14319 | that his or her failure was due to his or her not being aware of a fact or
+-- src:14320 | occurrence the existence of which was necessary to constitute the
+-- src:14321 | offence and that —
+-- src:14323 | (a) he or she was not so aware on the date of the information or
+-- src:14324 | summons; or
+-- src:14326 | (b) he or she became so aware less than 7 days before the date
+-- src:14327 | of the summons.
+@ref s 165(4) (src:14317-14327)
+GIVEN kind IS A `s 165(4) kind of failure`
+      `the defendant proves that the failure was due to the defendant's not being aware of a fact or occurrence the existence of which was necessary to constitute the offence` IS A BOOLEAN
+      `the defendant was aware of that fact or occurrence by the date of the information or summons` IS A BOOLEAN
+      `the number of days before the date of the summons on which the defendant became aware (ignored where the defendant was not aware by that date)` IS A NUMBER
+GIVETH A MAYBE BOOLEAN
+`s 165(4) the section gives the defendant a defence on these facts` MEANS
+    CONSIDER kind
+    WHEN `s 165(4) another failure` THEN NOTHING   -- NOTHING-kind (limited by its own wording): "a defence to a prosecution for failing to comply with subsection (1)(a) or (b) or with subsection (2)" limits the defence in its own wording, with no "only", and the case falls outside the limit
+    OTHERWISE
+        (IF    `the defendant proves that the failure was due to the defendant's not being aware of a fact or occurrence the existence of which was necessary to constitute the offence`
+           AND (   (NOT `the defendant was aware of that fact or occurrence by the date of the information or summons`)
+                OR `the number of days before the date of the summons on which the defendant became aware (ignored where the defendant was not aware by that date)` LESS THAN 7)
+         THEN JUST TRUE
+         ELSE JUST FALSE)   -- FALSE-kind (the text says no in its own words): "It is a defence ... if the defendant proves that his or her failure was due to his or her not being aware of a fact or occurrence ... and that (a) he or she was not so aware on the date of the information or summons; or (b) he or she became so aware less than 7 days before the date of the summons" (the ruling of 2026-11-05 on defences: when X is not proved, JUST FALSE for that provision's defence, worded 'this section gives no defence on these facts')
+
+-- (5): a person "is conclusively presumed to have been aware at a particular time of a fact or occurrence (a) of which the person would, if the person had acted with reasonable diligence in the conduct of his or
+-- her affairs, have been aware at that time; or (b) of which an employee or agent of the person, being an employee or agent having duties or acting in relation to his or her master's or principal's interest or
+-- interests in a share in or a debenture of or participatory interest issued by the company concerned, was aware or would, if he or she had acted with reasonable diligence ..., have been aware at that time."
+-- src:14329 | (5) For the purposes of subsection (4), a person is conclusively
+-- src:14330 | presumed to have been aware at a particular time of a fact or
+-- src:14331 | occurrence —
+-- src:14333 | (a) of which the person would, if the person had acted with
+-- src:14334 | reasonable diligence in the conduct of his or her affairs,
+-- src:14335 | have been aware at that time; or
+-- src:14337 | (b) of which an employee or agent of the person, being an
+-- src:14338 | employee or agent having duties or acting in relation to his
+-- src:14339 | or her master’s or principal’s interest or interests in a share
+-- src:14340 | in or a debenture of or participatory interest issued by the
+-- src:14341 | company concerned, was aware or would, if he or she had
+-- src:14342 | acted with reasonable diligence in the conduct of his or her
+-- src:14343 | master’s or principal’s affairs, have been aware at that
+-- src:14344 | time.
+@ref s 165(5) (src:14329-14344)
+GIVEN `the person would, had the person acted with reasonable diligence in the conduct of his or her affairs, have been aware of the fact or occurrence at that time` IS A BOOLEAN
+      `the person has an employee or agent having duties or acting in relation to the person's interest or interests in a share in or a debenture of or participatory interest issued by the company concerned` IS A BOOLEAN
+      `that employee or agent was aware, or would, had he or she acted with reasonable diligence in the conduct of the person's affairs, have been aware, of the fact or occurrence at that time` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 165(5) the person is conclusively presumed to have been aware of the fact or occurrence at that time` MEANS
+    IF    `the person would, had the person acted with reasonable diligence in the conduct of his or her affairs, have been aware of the fact or occurrence at that time`
+       OR (`the person has an employee or agent having duties or acting in relation to the person's interest or interests in a share in or a debenture of or participatory interest issued by the company concerned` AND `that employee or agent was aware, or would, had he or she acted with reasonable diligence in the conduct of the person's affairs, have been aware, of the fact or occurrence at that time`)
+    THEN JUST TRUE
+    ELSE NOTHING   -- NOTHING-kind (silent): the subsection names two cases of a conclusive presumption of awareness for the purposes of subsection (4) and does not say that a person in neither is presumed unaware
+
+§ `Section 165(6) to (8): terms, interests, and matters already in the old register`
+
+-- src:14351 | (a) a reference to a participatory interest is a reference to a unit
+-- src:14352 | in a collective investment scheme within the meaning of
+-- src:14353 | section 2 of the Securities and Futures Act 2001; and
+@ref s 165(6)(a) (src:14351-14353)
+GIVEN `the thing is a unit in a collective investment scheme within the meaning of section 2 of the Securities and Futures Act 2001` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 165(6)(a) the thing is a participatory interest` MEANS
+    IF `the thing is a unit in a collective investment scheme within the meaning of section 2 of the Securities and Futures Act 2001`
+    THEN JUST TRUE
+    ELSE JUST FALSE   -- FALSE-kind (the text says no in its own words): "a reference to a participatory interest is a reference to a unit in a collective investment scheme within the meaning of section 2 of the Securities and Futures Act 2001" (read as a definition that fixes what is meant: fork F-162-12, read the same way)
+
+-- src:14355 | (b) a reference to a person who holds or acquires shares,
+-- src:14356 | debentures or participatory interests or an interest in
+-- src:14357 | shares, debentures or participatory interests includes a
+-- src:14358 | reference to a person who under an option holds or
+-- src:14359 | acquires a right to acquire a share, debenture, or
+-- src:14360 | participatory interest or an interest in a share, debenture
+-- src:14361 | or participatory interest.
+@ref s 165(6)(b) (src:14355-14361)
+GIVEN `the person under an option holds or acquires a right to acquire or dispose of a share, debenture or participatory interest or an interest in one` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 165(6)(b) the person is a person who holds or acquires shares, debentures or participatory interests or an interest in them` MEANS
+    IF `the person under an option holds or acquires a right to acquire or dispose of a share, debenture or participatory interest or an interest in one`
+    THEN JUST TRUE
+    ELSE NOTHING   -- NOTHING-kind (includes): "a reference to a person who holds or acquires shares, debentures or participatory interests or an interest in shares, debentures or participatory interests includes a reference to a person who under an option holds or acquires a right to acquire a share, debenture, or participatory interest"
+
+-- (7): the same words as s 164(14); this function answers by that one, which applies s 7 without subsections (1) and (3).
+-- src:14363 | (7) In determining for the purposes of this section whether a person
+-- src:14364 | has an interest in a debenture or participatory interest, the provisions
+-- src:14365 | of section 7, except subsections (1) and (3) thereof, have effect and in
+-- src:14366 | applying those provisions a reference to a share is a reference to a
+-- src:14367 | debenture or participatory interest.
+@ref s 165(7) (src:14363-14367)
+GIVEN facts IS A `s 7 interest facts`
+GIVETH A MAYBE BOOLEAN
+`s 165(7) the person has an interest in the debenture or participatory interest` MEANS
+    `s 164(14) the person has an interest in the debenture or participatory interest` facts
+
+-- src:14369 | (8) Nothing in section 164 or this section requires a company to
+-- src:14370 | enter in its register or requires a director to give notice to the company
+-- src:14371 | of matters that are shown in the register kept by the company in
+-- src:14372 | accordance with the repealed section 134 as in force immediately
+-- src:14373 | before 5 October 1973.
+@ref s 165(8) (src:14369-14373)
+GIVEN `the matter is shown in the register kept by the company in accordance with the repealed section 134 as in force immediately before 5 October 1973` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 165(8) section 164 and this section do not require the matter to be entered in the register or notified to the company` MEANS
+    IF `the matter is shown in the register kept by the company in accordance with the repealed section 134 as in force immediately before 5 October 1973`
+    THEN JUST TRUE
+    ELSE NOTHING   -- NOTHING-kind (limited by its own wording): "Nothing in section 164 or this section requires a company to enter in its register or requires a director to give notice to the company of matters that are shown in the register kept ... in accordance with the repealed section 134" removes the duty for those matters and says nothing of any other
+
+§ `Section 165(9): the offences`
+
+DECLARE `s 165(9) penalty` HAS
+    `s 165(9) the highest fine, in Singapore dollars` IS A NUMBER
+    `s 165(9) the longest imprisonment, in years` IS A NUMBER
+    `s 165(9) the further fine for each day the offence continues after conviction, in Singapore dollars` IS A NUMBER
+
+-- src:14375 | (9) Any director or chief executive officer who fails to comply with
+-- src:14376 | subsection (1) or (2) or any company that fails to comply with
+-- src:14377 | subsection (3) shall be guilty of an offence and shall be liable on
+-- src:14378 | conviction to a fine not exceeding $15,000 or to imprisonment for a
+-- src:14379 | term not exceeding 3 years and, in the case of a continuing offence, to
+-- src:14380 | a further fine of $1,000 for every day during which the offence
+-- src:14381 | continues after conviction.
+@ref s 165(9) (src:14375-14381)
+GIVEN `the person is a director or chief executive officer who fails to comply with subsection (1) or (2)` IS A BOOLEAN
+      `the person is a company that fails to comply with subsection (3)` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 165(9) the person is guilty of the offence` MEANS
+    IF `the person is a director or chief executive officer who fails to comply with subsection (1) or (2)` OR `the person is a company that fails to comply with subsection (3)`
+    THEN JUST TRUE
+    ELSE NOTHING   -- NOTHING-kind (limited by its own wording): "Any director or chief executive officer who fails to comply with subsection (1) or (2) or any company that fails to comply with subsection (3) shall be guilty" names who is guilty, with no "only" (periods ruling of 2026-11-05, item (c); split site (i), fork F-165-9 in NOTES.md)
+
+-- src:14375 | (9) Any director or chief executive officer who fails to comply with
+-- src:14376 | subsection (1) or (2) or any company that fails to comply with
+-- src:14377 | subsection (3) shall be guilty of an offence and shall be liable on
+-- src:14378 | conviction to a fine not exceeding $15,000 or to imprisonment for a
+-- src:14379 | term not exceeding 3 years and, in the case of a continuing offence, to
+-- src:14380 | a further fine of $1,000 for every day during which the offence
+-- src:14381 | continues after conviction.
+@ref s 165(9) (src:14375-14381)
+GIVEN `the person is a director or chief executive officer who fails to comply with subsection (1) or (2)` IS A BOOLEAN
+      `the person is a company that fails to comply with subsection (3)` IS A BOOLEAN
+GIVETH A MAYBE `s 165(9) penalty`
+`s 165(9) the most the person may be sentenced to on conviction` MEANS
+    IF `the person is a director or chief executive officer who fails to comply with subsection (1) or (2)` OR `the person is a company that fails to comply with subsection (3)`
+    THEN JUST (`s 165(9) penalty` OF 15000, 3, 1000)   -- "a fine not exceeding $15,000 or to imprisonment for a term not exceeding 3 years and, in the case of a continuing offence, to a further fine of $1,000 for every day during which the offence continues after conviction"
+    ELSE NOTHING   -- NOTHING-kind (limited by its own wording): the penalty is that of the director, chief executive officer or company named in the subsection
+
+-- src:14375 | (9) Any director or chief executive officer who fails to comply with
+-- src:14376 | subsection (1) or (2) or any company that fails to comply with
+-- src:14377 | subsection (3) shall be guilty of an offence and shall be liable on
+-- src:14378 | conviction to a fine not exceeding $15,000 or to imprisonment for a
+-- src:14379 | term not exceeding 3 years and, in the case of a continuing offence, to
+-- src:14380 | a further fine of $1,000 for every day during which the offence
+-- src:14381 | continues after conviction.
+@ref s 165(9) (src:14375-14381)
+GIVEN `the number of days the offence continues after conviction` IS A NUMBER
+GIVETH A NUMBER
+`s 165(9) the further fine for the days the offence continues after conviction, in Singapore dollars` MEANS
+    IF `the number of days the offence continues after conviction` GREATER THAN 0
+    THEN 1000 TIMES `the number of days the offence continues after conviction`
+    ELSE 0
