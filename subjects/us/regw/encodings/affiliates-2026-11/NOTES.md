@@ -1,8 +1,9 @@
 # Regulation W (12 CFR Part 223) — the affiliate definition
 
-Status, 2026-11-21: **every in-scope row is encoded, and its tests pass (105 assertions).**
+Status, 2026-11-21: **every in-scope row is encoded, and its tests pass (664 assertions: 123 written with the encoding, 541 independently).**
 The rows marked `out of scope` are not encoded, and neither is anything else in Part 223.
-No domain expert has read this against the source, and no independent test author has written expectations from the source before reading the encoding (the encoding skill's step 8).
+No domain expert has read this against the source.
+An independent test author wrote 541 of the assertions from the source before reading the encoding (the encoding skill's step 8); see "The independent test pass".
 This file is updated after each section lands; a row moves only when its tests pass.
 
 ## Scope
@@ -34,10 +35,10 @@ Dispositions: `done` (encoded and tested), `WIP` (encoded, not yet passing), `no
 | 223.3(bb) person | the nouns: what counts as a person | done |
 | 223.3(ii) subsidiary | a company controlled by another | done |
 | 223.3(g)(1)(i) | control: 25 percent of any class of voting securities | done |
-| 223.3(g)(1)(ii) | control: electing a majority of directors (a stated input) | done |
+| 223.3(g)(1)(ii) | control: electing a majority of directors (a stated input, counted through subsidiaries) | done |
 | 223.3(g)(1)(iii) | control: a Board determination (a stated input) | done |
 | 223.3(g)(3) | control: attribution through subsidiaries, and their subsidiaries, whatever the link that makes them subsidiaries | done |
-| 223.3(g)(2) | control: fiduciary holdings | done, except the (a)(3) exception (see forks) |
+| 223.3(g)(2) | control: fiduciary holdings | done; the exception "as provided in paragraph (a)(3)" is encoded for a shareholder who controls the bank, and not for the "for the benefit of" limb (see forks) |
 | 223.3(g)(4) | control: convertible instruments | done (the showing is a stated input) |
 | 223.3(g)(5) | control: nonvoting equity | done (the showing is a stated input) |
 | 223.2(a)(1)–(5) | affiliate prongs: parent, common control, interlocking directorates, sponsored and advised | done, with forks on (a)(2) and (a)(4), and (a)(3) for one shareholder only |
@@ -85,11 +86,14 @@ Both halves are asserted.
 
 **(a)(11) "a company described in paragraphs (a)(1) through (10)" (a switch, default: literal; assumed, not ruled).**
 223.2(a)(11): "Any subsidiary of a company described in paragraphs (a)(1) through (10) of this section".
-The prong does not say "of an affiliate", and a company that is an affiliate only through (a)(11) is not described in (1) through (10), so on the literal words the prong does not chain.
-The chain still arises through control: a parent controls the securities its subsidiaries hold (223.3(g)(3)), so a subsidiary of a subsidiary held by securities is a subsidiary of the parent too.
-What the literal reading drops is a company controlled by an (a)(11) affiliate in a way that is not securities, such as by electing its directors.
-The test has F sponsored by the bank, Q held 100 percent by F, and R controlled by Q only through its directors: literal, R is not an affiliate; chaining, it is.
-The switch therefore matters only where a company is controlled by an (a)(11) affiliate through directors or a Board determination, and not through securities: when securities are the link, the control test already attributes them (223.3(g)(3)), so the two readings agree.
+The heading is "Subsidiaries of affiliates", but the words are not "of an affiliate": a company that is an affiliate only through (a)(11), or only through (a)(12), is not described in (1) through (10), and a company the exclusions in (b) take out is still described.
+The default reading takes the words as they stand.
+The other reading takes the heading: a subsidiary of any affiliate found, after the exclusions, so that the prong chains; it replaces the literal reading and does not add to it.
+The two differ in both directions.
+A subsidiary of a company determined under (a)(12) is an affiliate only on the chaining reading, and so is a company that a Board determination, which is passed up to nobody, makes a subsidiary of an (a)(11) affiliate.
+A subsidiary of a company that (b)(2) excludes (a company that holds only the bank's premises and is sponsored by the bank) is an affiliate only on the literal reading.
+Where the link is securities or directors the control test already carries it up (223.3(g)(3) and (g)(1)(ii)), so the two readings agree.
+Each case is asserted on both readings.
 
 **(a)(3) and (b)(1)(iii)(B): one shareholder at a time.**
 223.2(a)(3) says "shareholders who ... control", and (b)(1)(iii)(B) says "a shareholder ... or a group of shareholders that together control".
@@ -125,9 +129,17 @@ A Board determination under 223.3(g)(1)(iii), the election of a majority of dire
 (g)(3) opens "A company controls securities...", and an individual is not a company; (g)(1)(i) says "directly or indirectly, or acting through one or more other persons".
 The encoding attributes a subsidiary's holdings to any controller, company or individual, reading (g)(1)(i) as the licence.
 
-**(g)(2) fiduciary shares: the exception "as provided in paragraph (a)(3) of § 223.2" is not encoded.**
-The business-trust exception is.
-The (a)(3) exception turns on shares held "by or for the benefit of" shareholders, which needs beneficiaries as a noun.
+**(g)(2) fiduciary shares.**
+223.3(g)(2): "no company will be deemed to control another company by virtue of its ownership or control of shares in a fiduciary capacity, except as provided in paragraph (a)(3) of § 223.2 or if the company owning or controlling the shares is a business trust."
+The bar is on a company: fiduciary shares held by an individual or by a trust that is not a business trust (not a "company" under 223.3(f)) still count towards control.
+That is the reading of the words; the other reading, that no holder's fiduciary shares count, would need "no person".
+The exception "as provided in paragraph (a)(3)" is encoded for the limb that needs no beneficiary: for 223.2(a)(3), a shareholder that controls the member bank controls Co through shares it holds as a fiduciary too ("by trust or otherwise"); its control of the member bank itself is judged without them.
+The limb "for the benefit of shareholders", which turns on who the beneficiaries are, is not encoded.
+
+**(g)(1)(ii) through a subsidiary.**
+223.3(g)(1)(ii): "controls in any manner the election of a majority of the directors".
+An election link from a company's subsidiary, or from a subsidiary of that subsidiary, counts for the company, as (g)(3) counts the securities they hold.
+A Board determination under (g)(1)(iii) is about the pair it names and is not passed up.
 
 **What "voting securities" and "percent of a class" are.**
 223.3(jj) takes "voting securities" from 12 CFR 225.2, which is not deposited.
@@ -139,10 +151,11 @@ The encoding takes holdings as given per voting class with a percentage; it does
 
 ```
 module                                    errors satisfied  failed  refused  expected | errors satisfied  failed  refused  main
-regw-affiliate-tests.l4                        0        54       0        0         0 |      0        54       0        0  same
+regw-affiliate-tests.l4                        0        64       0        0         0 |      0        64       0        0  same
 regw-affiliate.l4                              0         0       0        0         0 |      0         0       0        0  same
-regw-control-tests.l4                          0        51       0        0         0 |      0        51       0        0  same
+regw-control-tests.l4                          0        59       0        0         0 |      0        59       0        0  same
 regw-control.l4                                0         0       0        0         0 |      0         0       0        0  same
+regw-independent-tests.l4                      0       541       0        0         0 |      0       541       0        0  same
 regw-nouns.l4                                  0         0       0        0         0 |      0         0       0        0  same
 ```
 
@@ -151,6 +164,28 @@ On main, `NOT (x)` binds looser than `OR` and `AND`, so `NOT (x) OR y` and `a AN
 That wrongly dropped a business trust's fiduciary holding, and it made every affiliate that is not a depository institution count as a direct controller in (b)(1)(iii)(A), whether or not it controlled the company directly.
 Every `NOT` that precedes another operand is now bracketed as `(NOT (x))`.
 A later review found that attribution under (g)(3) stopped at a controller's direct subsidiaries; it now follows every chain of control links, and the test that exposed it (A controls S1, S1 controls S2 only through its directors, S2 holds 25 percent of T) fails against the earlier rule.
+
+## The independent test pass
+
+The independent author, a fresh session given only the text of 223.2 and 223.3, the nouns module and an interface whose function bodies answered FALSE, wrote 541 assertions into `regw-independent-tests.l4` and listed the points where it found the text open in `independent-readings.md` (R1 to R16).
+It did not read the encoding or its tests, and no expectation in the file has been changed since it was written: the header says so, and the edits it made after its first run were syntax fixes and corrections from the text.
+Run against the encoding for the first time, 532 passed and 9 failed.
+Each of the nine was settled from the text; none was a misreading by the author, and four rule defects were fixed, each with tests of its own:
+
+1. **The chaining switch for (a)(11) was a union, not the reading its name states** (three failures).
+   The constructor reads "a subsidiary of any affiliate, so that the prong chains", and the code counted a subsidiary of a described company as well.
+   It now takes a subsidiary of an affiliate found so far, after the exclusions, as the author expected; see the (a)(11) fork above.
+2. **(g)(1)(ii) was not passed up through subsidiaries** (two failures).
+   "controls in any manner the election of a majority of the directors" includes control through a subsidiary; the encoding only counted an election link from the controller itself.
+3. **(g)(2) barred every holder, not only a company** (two failures).
+   The text says "no company"; see the fork above.
+4. **The exception "as provided in paragraph (a)(3)" was not encoded at all** (two failures).
+   The author's readings R14 and R16 put a controlling shareholder who holds as a fiduciary into (a)(3); see the fork above.
+
+The encoding's own test for (a)(11) had used an election link as its discriminating fixture, which defect 2 made agree on both readings; it now uses a Board determination and the (a)(12) and (b)(2) cases, with expectations rewritten from the text.
+Of the author's other readings, R1 to R4 are the encoding's defaults (self-affiliation off, one board at a time, own holdings for "directly", literal (a)(11)); R5, R6, R8 to R13 and R15 agree with it; the file asserts both constructors for each of R1 to R4.
+The points the author lists as not expressible in the inputs (beneficiaries, groups of shareholders, power to vote other than by owning shares, (a)(6), (a)(9), the period in (b)(5)) are the encoding's own stated limits.
+Its interface questions have these answers: there is one list of showings for both (g)(4) and (g)(5); `control step` and `affiliate step` read the lists they are given and do not derive them; `current` in `affiliate step` is the set of names already found, and the chaining reading of (a)(11) reads it.
 
 ## Open questions for a lawyer
 
@@ -161,3 +196,5 @@ A later review found that attribution under (g)(3) stopped at a controller's dir
 5. Does (a)(3) aggregate a group of shareholders (above)?
 6. Is the member bank its own affiliate on the literal words (above)?
 7. Does the affiliate definition have two fixed points on cross-holdings, and is the least the meaning (above)?
+8. Is the bar in (g)(2) on companies only, as written, or on every holder (above)?
+9. Is control through a subsidiary's election of directors attributed up under (g)(1)(ii) (above)?

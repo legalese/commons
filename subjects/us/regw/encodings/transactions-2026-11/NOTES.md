@@ -114,6 +114,6 @@ A fix is made in `../affiliates-2026-11/` first and the copy is refreshed.
 
 | module | sha256 |
 | --- | --- |
-| `regw-nouns.l4` | `e007695972e9d6e5d52c11441714e0153b1be06094bab55c650f07df2a6d310f` |
-| `regw-control.l4` | `739ab38aa36741d3dad900a132ee6999c802b125b4e04be8bf79ae9c3daab1da` |
-| `regw-affiliate.l4` | `ae84eafb392c0010086ebef24ce563b1b9876c2b909dea903f16111857af88a6` |
+| `regw-nouns.l4` | `950ff5c950fcebb70fa747a26df7d54b4501c0945d1a24e55ee7c99abc6e45f9` |
+| `regw-control.l4` | `047bf0b15eb71cff16da800a9f56d306530ffb579a6e15a55c7926d9659b76da` |
+| `regw-affiliate.l4` | `6e092d9ffe47ac05fd01d8e6cf976e4e8026152857abca97aa62098a4a629ecd` |
