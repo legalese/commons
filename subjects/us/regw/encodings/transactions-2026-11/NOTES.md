@@ -43,8 +43,8 @@ Dispositions: `done` (encoded and tested), `WIP` (encoded, not yet passing), `no
 | 223.3(a), (d) | the aggregate amount; capital stock and surplus, as a stated number | done (an input) |
 | 223.11, 223.12 | the 10 percent and 20 percent limits | done |
 | 223.13 | safety and soundness, a stated judgement | not started |
-| 223.14 | collateral requirements | not started |
-| 223.15 | low-quality assets, and its exception | not started |
+| 223.14 | collateral requirements: the percentages, ineligible collateral, priority deductions, exceptions; the replacement rule (e) as the same test at one instant | done |
+| 223.15, 223.3(v) | low-quality assets, and the exception for renewals of participations | done, with a fork on (b)(3) |
 | 223.16 | transactions treated as with an affiliate | (a) and (b) done; (c), the exemptions, with 223.41 and 223.42 |
 | 223.41, 223.42 | exemptions | not started |
 | the top-level assessment | one proposed transaction: covered, valued, limits, collateral, what stays live | not started |
@@ -52,6 +52,19 @@ Dispositions: `done` (encoded and tested), `WIP` (encoded, not yet passing), `no
 | 223.31 to 223.33, 223.43, 223.51 to 223.56, 223.61, 223.71, 223.72 | acquisitions, financial subsidiaries, derivatives, section 23B, other | out of scope |
 
 ## Forks and open questions
+
+**223.15(b)(3) "by more than 5 percent" (a switch, default: five percentage points; assumed, not ruled).**
+223.15(b)(3): "The participating member bank's share of the renewal or extension of additional credit does not exceed its proportional share of the original transaction by more than 5 percent, unless the member bank obtains the prior written approval of its appropriate Federal banking agency".
+It can mean five percentage points of the transaction above the proportional share, or five percent more than the proportional share itself.
+With a proportional share of 25 percent the first allows a share up to 30 and the second up to 26.25; the tests assert both readings at 29 and at 26.25 and 26.3.
+
+**223.14(d)(1): collateral whose security interest is not perfected (assumed, not ruled).**
+The text says the member bank "must maintain a security interest in collateral required by this section that is perfected and enforceable under applicable law" and does not say how an imperfect interest is valued.
+The encoding gives such collateral no effective value.
+
+**223.14(b)(2): combining several kinds of collateral.**
+The printed example secures a $1,000 loan with $500, $480 and $130 of three kinds, and says each secures "$500 of the loan", "$400 of the loan" and "$100 of the loan".
+The encoding sums, over the items, each effective value divided by its percentage, and compares the sum with the amount to be secured; the text does not state the general rule, only the example, so this is the reading of it.
 
 **223.24(b): a negative value.**
 The text says the value is the lesser of "(1) The total value of the extension of credit less the fair market value of the nonaffiliate collateral" and the affiliate securities' fair market value if verified.

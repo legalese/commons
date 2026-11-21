@@ -1,0 +1,117 @@
+-- Regulation W, 12 CFR 223.14: the collateral requirements for a credit transaction with an affiliate.
+--
+-- Target compiler: main (see NOTES.md).
+-- Amounts are plain numbers in one currency unit, and percentages are compared exactly.
+-- The function answers for one instant, from the market values stated to it.  223.14(e), "Replacement
+-- requirement for retired or amortized collateral", asks that the percentage the collateral stood at when the
+-- transaction began be kept up; at one instant that is this same test with the present values, and how the
+-- collateral came to be retired is not encoded.
+
+IMPORT prelude
+IMPORT `regwb-nouns`
+IMPORT `regwb-covered`
+
+§ `223.14(b)(1) and (c): what is eligible and at what percentage`
+
+-- (c): "The following items are not eligible collateral for purposes of this section: (1) Low-quality assets;
+-- (2) Securities issued by any affiliate; (3) Equity securities issued by the member bank, and debt securities
+-- issued by the member bank that represent regulatory capital of the member bank; (4) Intangible assets
+-- (including servicing assets), unless specifically approved by the Board; and (5) Guarantees, letters of
+-- credit, and other similar instruments."
+GIVEN c IS A Collateral
+GIVETH A BOOLEAN
+@ref 12 CFR 223.14(c)
+`is eligible collateral` MEANS
+        (NOT (c's `kind` EQUALS `A low-quality asset`))
+    AND (NOT (c's `kind` EQUALS `A security issued by an affiliate`))
+    AND (NOT (c's `kind` EQUALS `An equity security of the member bank, or a debt security of the member bank that represents regulatory capital`))
+    AND (NOT (c's `kind` EQUALS `An intangible asset (including a servicing asset)` AND (NOT (c's `approved by the Board`))))
+    AND (NOT (c's `kind` EQUALS `A guarantee, letter of credit or other similar instrument`))
+
+-- (b)(1): "(i) 100 percent of the amount of the transaction, if the collateral is: (A) Obligations of the United
+-- States or its agencies; (B) Obligations fully guaranteed ...; (C) Notes, drafts, bills of exchange, or bankers'
+-- acceptances that are eligible for rediscount or purchase by a Federal Reserve Bank; or (D) A segregated,
+-- earmarked deposit account ...; (ii) 110 percent ..., if the collateral is obligations of any State or political
+-- subdivision of any State; (iii) 120 percent ..., if the collateral is other debt instruments, including loans
+-- and other receivables; or (iv) 130 percent ..., if the collateral is stock, leases, or other real or personal
+-- property."  Ineligible kinds stand at 0: they secure nothing.
+GIVEN k IS A `Collateral kind`
+GIVETH A NUMBER
+@ref 12 CFR 223.14(b)(1)
+`percent the collateral must stand at` MEANS
+    BRANCH
+        IF k EQUALS `Obligations of the United States or its agencies` THEN 100
+        IF k EQUALS `Obligations fully guaranteed by the United States or its agencies as to principal and interest` THEN 100
+        IF k EQUALS `Notes, drafts, bills of exchange or bankers' acceptances eligible for rediscount or purchase by a Federal Reserve Bank` THEN 100
+        IF k EQUALS `A segregated, earmarked deposit account with the member bank for the sole purpose of securing credit transactions with affiliates` THEN 100
+        IF k EQUALS `Obligations of a State or political subdivision of a State` THEN 110
+        IF k EQUALS `Other debt instruments, including loans and other receivables` THEN 120
+        IF k EQUALS `Stock, leases, or other real or personal property` THEN 130
+        OTHERWISE 0
+
+§ `223.14(d): perfection and priority`
+
+-- (d)(2): "A member bank either must obtain a first priority security interest in collateral required by this
+-- section or must deduct from the value of collateral obtained by the member bank the lesser of: (i) The amount of
+-- any security interest in the collateral that is senior to that of the member bank; or (ii) The amount of any
+-- credit secured by the collateral that is senior to that of the member bank."
+-- (d)(1): the security interest must be "perfected and enforceable"; collateral that is not does not count here
+-- (assumed: the text states the duty and does not say how an imperfect interest is valued).
+GIVEN c IS A Collateral
+GIVETH A NUMBER
+@ref 12 CFR 223.14(d)
+`effective value of collateral` MEANS
+    IF c's `perfected and enforceable`
+    THEN max 0 (c's `market value` MINUS min (c's `senior security interest`) (c's `senior credit`))
+    ELSE 0
+
+§ `223.14(b): how much of the transaction the collateral secures`
+
+-- (b)(2): "The loan satisfies the collateral requirements of this section because $500 of the loan is 100 percent
+-- secured by obligations of the United States, $400 of the loan is 120 percent secured by debt instruments, and
+-- $100 of the loan is 130 percent secured by real estate."  Each item of eligible collateral secures its effective
+-- value divided by its percentage; the items together secure the sum.
+GIVEN cs IS A LIST OF Collateral
+GIVETH A NUMBER
+@ref 12 CFR 223.14(b)(2)
+`amount of the transaction secured by collateral` MEANS
+    sum (map (GIVEN c YIELD IF `is eligible collateral` c THEN `effective value of collateral` c DIVIDED BY (`percent the collateral must stand at` (c's `kind`) DIVIDED BY 100) ELSE 0) cs)
+
+-- (d)(3): the market value of one kind of collateral a transaction of this amount needs: "$2,000 × 130 percent = $2,600".
+GIVEN
+    amount  IS A NUMBER
+    percent IS A NUMBER
+GIVETH A NUMBER
+@ref 12 CFR 223.14(d)(3)
+`collateral value required` MEANS amount TIMES percent DIVIDED BY 100
+
+§ `223.14(a) and (f): which transactions need collateral, and how much of them`
+
+-- (a): "each of its credit transactions with an affiliate"; (f): "(1) An acceptance that already is fully secured ...
+-- (2) The unused portion of an extension of credit ... (3) Purchases of affiliate debt securities in the secondary
+-- market".  The amount returned is the part of the transaction the collateral must cover.
+GIVEN
+    k  IS A `Transaction kind`
+    v  IS A NUMBER
+    ex IS A `Collateral exceptions`
+GIVETH A NUMBER
+@ref 12 CFR 223.14(a)
+@ref 12 CFR 223.14(f)
+`amount that must be secured` MEANS
+    BRANCH
+        IF NOT (`is a credit transaction kind` k) THEN 0
+        IF ex's `an acceptance already fully secured` THEN 0
+        IF ex's `a debt security of an affiliate bought from a nonaffiliate in a bona fide secondary market` THEN 0
+        IF ex's `no obligation to advance until the required collateral is provided` THEN max 0 (v MINUS ex's `unused portion`)
+        OTHERWISE v
+
+-- The collateral requirement is met when the collateral secures at least the amount that must be secured.
+GIVEN
+    k  IS A `Transaction kind`
+    v  IS A NUMBER
+    ex IS A `Collateral exceptions`
+    cs IS A LIST OF Collateral
+GIVETH A BOOLEAN
+@ref 12 CFR 223.14
+`collateral requirement is met` MEANS
+    `amount of the transaction secured by collateral` cs AT LEAST `amount that must be secured` k v ex
