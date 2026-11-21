@@ -1,0 +1,131 @@
+-- Tests for regwb-valuation.l4 (12 CFR 223.21(a), 223.22, 223.23, 223.24).
+--
+-- The regulation's own worked examples come first, each with the section that prints it; the edge
+-- cases after them name the words of the text they exercise.  Every expected value is written from
+-- the text, not from the output.
+
+IMPORT prelude
+IMPORT `regwb-valuation`
+
+§ `223.21(a)(4): the printed examples`
+
+-- (i) Term loan: "a loan to an affiliate that has a principal amount of $100. The affiliate pays $2 in
+-- up-front fees to the member bank, and the affiliate receives net loan proceeds of $98. The member
+-- bank must initially value the covered transaction at $100."  The affiliate owes $100.
+#ASSERT `initial value of a credit transaction` 100 100 98 0 EQUALS 100
+-- (ii) Revolving credit: "a $300 revolving credit facility ... The affiliate has drawn down $100 ...
+-- must value the covered transaction at $300 throughout the life of the facility."
+-- Drawn $100, $200 still available: the sum under (iii) is $300, though the principal drawn is $100.
+#ASSERT `initial value of a credit transaction` 100 100 100 200 EQUALS 300
+-- Later in the life of the facility, drawn $250: the sum under (iii) is still $300.
+#ASSERT `initial value of a credit transaction` 250 250 250 50 EQUALS 300
+-- (iii) Guarantee: "obligated to pay the nonaffiliate $500 if the affiliate defaults": nothing is
+-- provided yet and $500 could be required.
+#ASSERT `initial value of a credit transaction` 0 0 0 500 EQUALS 500
+-- (iv) Acquisition of a loan to an affiliate: "outstanding principal amount of $100 ... able to
+-- purchase the loan for $90. The member bank initially must value the credit transaction at $90."
+#ASSERT `initial value of an acquired credit transaction` 90 0 EQUALS 90
+-- (a)(2)(ii): "Any additional amount that the member bank could be required to provide" is added.
+#ASSERT `initial value of an acquired credit transaction` 90 20 EQUALS 110
+
+§ `223.21(a)(1): each limb of the greater-of`
+
+-- (i) the principal amount is the greatest.
+#ASSERT `initial value of a credit transaction` 100 80 70 10 EQUALS 100
+-- (ii) the amount owed is the greatest (the affiliate owes more than the principal, for example with
+-- interest added to the debt).
+#ASSERT `initial value of a credit transaction` 100 130 90 0 EQUALS 130
+-- (iii) the sum is the greatest.
+#ASSERT `initial value of a credit transaction` 100 100 90 40 EQUALS 130
+
+§ `223.22(a): which rule values a purchase of an asset from an affiliate`
+
+#ASSERT `rule that values an asset purchase` `An ordinary asset` EQUALS `223.22(a)(1): the consideration given`
+-- (a)(2)(i): an extension of credit to an affiliate is valued under 223.21, unless the note is a
+-- security issued by an affiliate, which is valued under 223.23.
+#ASSERT `rule that values an asset purchase` `An extension of credit to an affiliate` EQUALS `223.21: the credit transaction rules`
+#ASSERT `rule that values an asset purchase` `An extension of credit to an affiliate that is evidenced by a security issued by an affiliate` EQUALS `223.23: the security rules`
+-- (ii): a security issued by an affiliate: 223.23.
+#ASSERT `rule that values an asset purchase` `A security issued by an affiliate` EQUALS `223.23: the security rules`
+-- (iii): a transfer of a subsidiary: 223.31(b), which this encoding does not cover.
+#ASSERT `rule that values an asset purchase` `Securities of an affiliate transferred to the member bank, treated as an asset purchase under 223.31` EQUALS `223.31(b): not encoded here`
+-- (iv): a line of credit for a nonaffiliate.
+#ASSERT `rule that values an asset purchase` `A line of credit, revolving credit facility or similar arrangement for a nonaffiliate` EQUALS `223.22(a)(2)(iv): the consideration given plus the additional amount`
+
+§ `223.22(c): the printed examples`
+
+-- (1) Cash purchase of assets: "a pool of loans from an affiliate for $10 million ... initially must
+-- value the covered transaction at $10 million.  Going forward, if the borrowers repay $6 million of
+-- the principal amount of the loans, the member bank may value the covered transaction at $4 million."
+#ASSERT `initial value of an asset purchase` 10000000 0 EQUALS 10000000
+#ASSERT `value of an asset purchase later` 10000000 6000000 TRUE EQUALS 4000000
+-- (2) Purchase through an assumption of liabilities: "real property with a fair market value of
+-- $200,000 ... The member bank pays the affiliate no cash for the property, but assumes a $50,000
+-- mortgage ... initially must value the transaction at $50,000."
+#ASSERT `initial value of an asset purchase` 0 50000 EQUALS 50000
+-- "if the member bank retains the real property but pays off the mortgage, the member bank must
+-- continue to value the covered transaction at $50,000": paying a debt is not an amortization.
+#ASSERT `value of an asset purchase later` 50000 0 TRUE EQUALS 50000
+-- "If the member bank, however, sells the real property, the transaction ceases to be a covered
+-- transaction at the time of the sale".
+#ASSERT `value of an asset purchase later` 50000 0 FALSE EQUALS 0
+-- (a)(2)(iv): a purchased line of credit: consideration $30 and $70 that could be required.
+#ASSERT `initial value of a purchased line of credit` 30 70 EQUALS 100
+
+§ `223.23(a)(2): the printed examples`
+
+-- (i) Debt securities bought for $600, initial carrying value $600: value $600.
+#ASSERT `value of a security of an affiliate` 600 0 600 EQUALS 600
+-- (ii) Shares bought for $100, carrying value $100: value $100.  "if the member bank's carrying value of
+-- the shares declines to $40, the member bank must continue to value the investment at $100."
+#ASSERT `value of a security of an affiliate` 100 0 100 EQUALS 100
+#ASSERT `value of a security of an affiliate` 100 0 40 EQUALS 100
+-- (iii) Contribution of shares: "gives no consideration ... initial carrying value of the shares is
+-- $300 ... must initially value the investment at $300 ... if the carrying value ... increases to
+-- $500, the member bank must value the investment at $500."
+#ASSERT `value of a security of an affiliate` 0 0 300 EQUALS 300
+#ASSERT `value of a security of an affiliate` 0 0 500 EQUALS 500
+-- (a)(1)(i) "reduced to reflect amortization of the security": consideration $100 less $30 amortized is
+-- $70, which governs against a carrying value of $50 and not against one of $80.
+#ASSERT `value of a security of an affiliate` 100 30 50 EQUALS 70
+#ASSERT `value of a security of an affiliate` 100 30 80 EQUALS 80
+
+§ `223.24: extensions of credit to a nonaffiliate secured by affiliate securities`
+
+-- (a) exclusively: "lesser of: (1) The total value of the extension of credit; or (2) The fair market
+-- value of the securities ... if the member bank verifies ...".
+#ASSERT `value of credit secured only by affiliate securities` 1000 600 TRUE EQUALS 600
+#ASSERT `value of credit secured only by affiliate securities` 1000 1500 TRUE EQUALS 1000
+-- Alternative (2) is open only on verification.
+#ASSERT `value of credit secured only by affiliate securities` 1000 600 FALSE EQUALS 1000
+-- (b) in part: "(1) The total value of the extension of credit less the fair market value of the
+-- nonaffiliate collateral": 1,000 less 400 is 600; the affiliate securities are worth 700, then 500.
+#ASSERT `value of credit secured partly by affiliate securities` 1000 400 700 TRUE EQUALS 600
+#ASSERT `value of credit secured partly by affiliate securities` 1000 400 500 TRUE EQUALS 500
+#ASSERT `value of credit secured partly by affiliate securities` 1000 400 500 FALSE EQUALS 600
+
+§ `223.24(c): eligible affiliated mutual fund securities`
+
+-- (c)(2): open-end registered; a quotation standard; no more than 5 percent of a class or of equity.
+#ASSERT `are eligible affiliated mutual fund securities` TRUE TRUE FALSE FALSE 5 5
+#ASSERT `are eligible affiliated mutual fund securities` TRUE FALSE TRUE FALSE 3 2
+#ASSERT `are eligible affiliated mutual fund securities` TRUE FALSE FALSE TRUE 0 0
+-- "more than 5 percent" disqualifies, of a class or of the equity capital.
+#ASSERT NOT (`are eligible affiliated mutual fund securities` TRUE TRUE FALSE FALSE 6 1)
+#ASSERT NOT (`are eligible affiliated mutual fund securities` TRUE TRUE FALSE FALSE 1 6)
+-- No quotation standard met, or not an open-end registered company.
+#ASSERT NOT (`are eligible affiliated mutual fund securities` TRUE FALSE FALSE FALSE 1 1)
+#ASSERT NOT (`are eligible affiliated mutual fund securities` FALSE TRUE TRUE TRUE 1 1)
+-- (c)(1): eligible mutual fund securities are nonaffiliate collateral "unless the member bank knows or
+-- has reason to know that the proceeds ... will be used to purchase [them] or will otherwise be used for
+-- the benefit of or transferred to an affiliate".
+#ASSERT NOT (`pledged securities count as securities of an affiliate` TRUE FALSE)
+#ASSERT `pledged securities count as securities of an affiliate` TRUE TRUE
+-- Securities that are not eligible stay affiliate securities.
+#ASSERT `pledged securities count as securities of an affiliate` FALSE FALSE
+#ASSERT `pledged securities count as securities of an affiliate` FALSE TRUE
+-- (c)(3) example: a $100 loan secured exclusively by eligible mutual fund securities, the bank knowing
+-- that the proceeds will buy them: they count as affiliate securities, and (fair market value $100,
+-- verified) the loan is valued at $100.
+#ASSERT `pledged securities count as securities of an affiliate` TRUE TRUE
+#ASSERT `value of credit secured only by affiliate securities` 100 100 TRUE EQUALS 100
