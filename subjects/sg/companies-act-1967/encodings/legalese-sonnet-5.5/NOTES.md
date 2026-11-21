@@ -405,7 +405,7 @@ They are grouped by the reason, and none was repaired.
 ## Split sites (not harmonised)
 
 Each agent was asked to record, site by site and without harmonising with the others, two questions the Guide leaves to the encoder: (i) an unmet element of an offence or a contravention, `JUST FALSE` or `NOTHING`; (ii) a "may" gated by "where", "when", "upon", "on application" or "with the consent of", `JUST FALSE` (the periods ruling) or `NOTHING` (the grant ruling).
-Each agent's count and answer at each site is in its `## Split sites (<id>)` section (`notes/<agent>-NOTES.md`). **The agents did not answer (ii) alike:** the keel took `NOTHING` at its three sites, `sga1` at its four, and `sgb1` took `JUST FALSE` at all 19 of its sites.
+Each agent's count and answer at each site is in its `## Split sites (<id>)` section (`notes/<agent>-NOTES.md`). **The agents did not answer (ii) alike:** the keel took `NOTHING` at its three sites, `sga1` at its four, and `sgb1` took `JUST FALSE` at 18 of its 19 sites and `NOTHING` at s 145(1) (the S1b ruling, 2026S1bC).
 A reader who compares this encoding with another jurisdiction's should treat (ii) as a place where the answer comes from the agent and not from the text.
 **Wave 2 (counts as each part states them in its `## Split sites` section; a site may carry both a `where` gate and an `on application` gate):**
 
