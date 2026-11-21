@@ -1,0 +1,156 @@
+-- Tests for regwb-assessment.l4: one proposed transaction, end to end.
+--
+-- The member bank is Bank, P is its parent (an affiliate), U has no connection with it, and FS is a financial subsidiary
+-- of Bank.  The collateral that appears in the regulation's own examples (223.14(b)(2), 223.42(c)(2)) is used where the
+-- amounts allow; each case names the words of the text it exercises.  Every expected value is written from those words.
+
+IMPORT prelude
+IMPORT `regw-nouns`
+IMPORT `regw-control`
+IMPORT `regw-affiliate`
+IMPORT `regwb-nouns`
+IMPORT `regwb-assessment`
+
+§ `Fixtures`
+
+GIVEN n IS A STRING
+GIVETH A Party
+corp MEANS Party OF n, Corporation, FALSE, FALSE, `Some other activity`, `Not held through a debt previously contracted`, FALSE
+
+GIVEN n IS A STRING
+GIVETH A Party
+`financial subsidiary` MEANS Party OF n, Corporation, FALSE, TRUE, `Some other activity`, `Not held through a debt previously contracted`, FALSE
+
+GIVEN
+    a IS A STRING
+    b IS A STRING
+    p IS A NUMBER
+GIVETH A Holding
+stake MEANS Holding OF a, b, "common", p, 0, FALSE, FALSE
+
+GIVETH A Structure
+`the structure` MEANS Structure OF "Bank", parties, holdings, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY
+    WHERE
+        parties MEANS LIST corp "Bank", corp "P", corp "U", `financial subsidiary` "FS"
+        holdings MEANS LIST stake "P" "Bank" 100, stake "Bank" "FS" 100
+
+GIVETH A Readings
+`default readings` MEANS Readings OF `The member bank is not its own affiliate`, `One board at a time: the member bank, or one controlling company`, `Control through the controller's own holdings and elections, without attribution`, `A subsidiary of a company described in paragraphs (a)(1) through (10) only`
+
+GIVEN
+    k IS A `Transaction kind`
+    w IS A STRING
+    v IS A NUMBER
+GIVETH A Transaction
+transaction MEANS Transaction OF k, w, w, v, FALSE
+
+GIVEN
+    w IS A STRING
+    v IS A NUMBER
+GIVETH A Transaction
+`loan to` MEANS transaction `An extension of credit` w v
+
+GIVEN
+    k IS A `Collateral kind`
+    mv IS A NUMBER
+GIVETH A Collateral
+`collateral of` MEANS Collateral OF k, mv, 0, 0, FALSE, TRUE
+
+GIVEN
+    css     IS A NUMBER
+    single  IS A NUMBER
+    all     IS A NUMBER
+    safe    IS A BOOLEAN
+    e       IS AN `Exemption claimed`
+    exempt  IS A NUMBER
+GIVETH A Situation
+`situation of` MEANS Situation OF css, single, all, safe, e, exempt
+
+GIVEN css IS A NUMBER
+GIVETH A Situation
+`plain situation` MEANS `situation of` css 0 0 TRUE `No exemption` 0
+
+GIVETH A `Collateral exceptions`
+`no exceptions` MEANS `Collateral exceptions` OF FALSE, 0, FALSE, FALSE
+
+GIVETH A `Participation renewal`
+`no renewal` MEANS `Participation renewal` OF FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, 0, 0, FALSE, 0
+
+GIVETH AN `Asset purchase facts`
+`sound asset facts` MEANS `Asset purchase facts` OF (`Asset condition` OF FALSE, FALSE, 0, FALSE, FALSE), FALSE, FALSE, `no renewal`, `Five percentage points above the proportional share`
+
+GIVETH AN `Asset purchase facts`
+`past due asset facts` MEANS `Asset purchase facts` OF (`Asset condition` OF FALSE, FALSE, 90, FALSE, FALSE), FALSE, FALSE, `no renewal`, `Five percentage points above the proportional share`
+
+GIVEN
+    t   IS A Transaction
+    sit IS A Situation
+    cs  IS A LIST OF Collateral
+GIVETH AN Assessment
+assess MEANS `assessment of a proposed transaction` `the structure` `default readings` t sit cs `no exceptions` `sound asset facts`
+
+§ `A loan secured as the regulation's example secures it`
+
+-- 223.14(b)(2): a $1,000 loan secured by $500 of U.S. Treasury securities, $480 of corporate debt and $130 of real estate
+-- "satisfies the collateral requirements".  Capital stock and surplus of 10,000 makes 10 percent 1,000, which "would not
+-- exceed" the single-affiliate limit, and 20 percent 2,000, so the loan may be made.
+#ASSERT (assess (`loan to` "P" 1000) (`plain situation` 10000) (LIST `collateral of` `Obligations of the United States or its agencies` 500, `collateral of` `Other debt instruments, including loans and other receivables` 480, `collateral of` `Stock, leases, or other real or personal property` 130))'s `may be entered into`
+#ASSERT (assess (`loan to` "P" 1000) (`plain situation` 10000) (LIST `collateral of` `Obligations of the United States or its agencies` 500, `collateral of` `Other debt instruments, including loans and other receivables` 480, `collateral of` `Stock, leases, or other real or personal property` 130))'s `is a covered transaction`
+#ASSERT (assess (`loan to` "P" 1000) (`plain situation` 10000) (LIST `collateral of` `Obligations of the United States or its agencies` 500, `collateral of` `Other debt instruments, including loans and other receivables` 480, `collateral of` `Stock, leases, or other real or personal property` 130))'s `amount that counts toward the limits` EQUALS 1000
+-- One dollar less of real estate and the collateral requirement fails, and with it the answer.
+#ASSERT NOT ((assess (`loan to` "P" 1000) (`plain situation` 10000) (LIST `collateral of` `Obligations of the United States or its agencies` 500, `collateral of` `Other debt instruments, including loans and other receivables` 480, `collateral of` `Stock, leases, or other real or personal property` 129))'s `may be entered into`)
+
+§ `The limits and the collateral requirements`
+
+-- An unsecured loan of 50 to P is within both limits (capital stock and surplus of 1,000) but needs collateral.
+#ASSERT NOT ((assess (`loan to` "P" 50) (`plain situation` 1000) EMPTY)'s `meets the collateral requirements`)
+#ASSERT NOT ((assess (`loan to` "P" 50) (`plain situation` 1000) EMPTY)'s `may be entered into`)
+-- A loan of 200 to P, fully secured by Treasuries, breaches the 10 percent limit (100) though not the 20 percent limit (200).
+#ASSERT (assess (`loan to` "P" 200) (`plain situation` 1000) (LIST `collateral of` `Obligations of the United States or its agencies` 300))'s `breaches the single-affiliate limit`
+#ASSERT NOT ((assess (`loan to` "P" 200) (`plain situation` 1000) (LIST `collateral of` `Obligations of the United States or its agencies` 300))'s `breaches the all-affiliates limit`)
+#ASSERT NOT ((assess (`loan to` "P" 200) (`plain situation` 1000) (LIST `collateral of` `Obligations of the United States or its agencies` 300))'s `may be entered into`)
+-- A loan of 50 to P is within 223.11 (50 against 100) but breaches 223.12 where 160 is outstanding with all affiliates.
+#ASSERT (assess (`loan to` "P" 50) (`situation of` 1000 0 160 TRUE `No exemption` 0) (LIST `collateral of` `Obligations of the United States or its agencies` 50))'s `breaches the all-affiliates limit`
+#ASSERT NOT ((assess (`loan to` "P" 50) (`situation of` 1000 0 160 TRUE `No exemption` 0) (LIST `collateral of` `Obligations of the United States or its agencies` 50))'s `breaches the single-affiliate limit`)
+-- A financial subsidiary is outside 223.11: a loan of 200 to FS, secured, does not breach it, and 200 is exactly 20 percent.
+#ASSERT (assess (`loan to` "FS" 200) (`plain situation` 1000) (LIST `collateral of` `Obligations of the United States or its agencies` 200))'s `may be entered into`
+-- ... and 201 breaches 223.12.
+#ASSERT (assess (`loan to` "FS" 201) (`plain situation` 1000) (LIST `collateral of` `Obligations of the United States or its agencies` 201))'s `breaches the all-affiliates limit`
+-- A loan to a company that is not an affiliate is not a covered transaction: no limit, no collateral, and nothing counts.
+#ASSERT (assess (`loan to` "U" 1000) (`plain situation` 1000) EMPTY)'s `may be entered into`
+#ASSERT NOT ((assess (`loan to` "U" 1000) (`plain situation` 1000) EMPTY)'s `is a covered transaction`)
+#ASSERT (assess (`loan to` "U" 1000) (`plain situation` 1000) EMPTY)'s `amount that counts toward the limits` EQUALS 0
+-- A purchase of an asset from P valued at 150 breaches the 10 percent limit; at 90 it does not.  No collateral is required
+-- for it, since 223.14 is for credit transactions.
+#ASSERT (assess (transaction `A purchase of an asset` "P" 150) (`plain situation` 1000) EMPTY)'s `breaches the single-affiliate limit`
+#ASSERT (assess (transaction `A purchase of an asset` "P" 90) (`plain situation` 1000) EMPTY)'s `may be entered into`
+
+§ `Exemptions`
+
+-- 223.42(c): a transaction "to the extent that the transaction is and remains secured by" Treasuries is not subject to
+-- the limits or the collateral requirements.  The same 200 loan, all of it secured by Treasuries and so wholly exempt, may be
+-- made, though without the exemption it breaches the 10 percent limit.
+#ASSERT (assess (`loan to` "P" 200) (`situation of` 1000 0 0 TRUE `An exemption under 223.42` 200) (LIST `collateral of` `Obligations of the United States or its agencies` 200))'s `may be entered into`
+-- The printed example: a $100 loan secured by $50 of Treasuries and $75 of real estate; the covered transaction is worth $50.
+-- With capital stock and surplus of 500 the limit is 50, so the $50 that remains does not exceed it, and the real estate (the
+-- Treasuries support the exempt part) secures it: 75 / 1.3 is more than 50.
+#ASSERT (assess (`loan to` "P" 100) (`situation of` 500 0 0 TRUE `An exemption under 223.42` 50) (LIST `collateral of` `Stock, leases, or other real or personal property` 75))'s `amount that counts toward the limits` EQUALS 50
+#ASSERT (assess (`loan to` "P" 100) (`situation of` 500 0 0 TRUE `An exemption under 223.42` 50) (LIST `collateral of` `Stock, leases, or other real or personal property` 75))'s `may be entered into`
+-- Without the exemption the same loan breaches the limit.
+#ASSERT (assess (`loan to` "P" 100) (`plain situation` 500) (LIST `collateral of` `Obligations of the United States or its agencies` 50, `collateral of` `Stock, leases, or other real or personal property` 75))'s `breaches the single-affiliate limit`
+-- 223.13 applies to "any covered transaction, including any transaction exempt under this regulation".
+#ASSERT NOT ((assess (`loan to` "P" 200) (`situation of` 1000 0 0 FALSE `An exemption under 223.42` 200) (LIST `collateral of` `Obligations of the United States or its agencies` 200))'s `may be entered into`)
+#ASSERT NOT ((assess (`loan to` "P" 200) (`situation of` 1000 0 0 FALSE `An exemption under 223.42` 200) (LIST `collateral of` `Obligations of the United States or its agencies` 200))'s `meets the safety and soundness requirement`)
+
+§ `Low-quality assets and the exemptions`
+
+-- A purchase of an asset 90 days past due from P, 50 in value, with no independent evaluation and no prior commitment, is
+-- prohibited by 223.15 ...
+#ASSERT NOT ((assess (transaction `A purchase of an asset` "P" 50) (`plain situation` 1000) EMPTY)'s `is a prohibited purchase of a low-quality asset`)
+#ASSERT (`assessment of a proposed transaction` `the structure` `default readings` (transaction `A purchase of an asset` "P" 50) (`plain situation` 1000) EMPTY `no exceptions` `past due asset facts`)'s `is a prohibited purchase of a low-quality asset`
+#ASSERT NOT ((`assessment of a proposed transaction` `the structure` `default readings` (transaction `A purchase of an asset` "P" 50) (`plain situation` 1000) EMPTY `no exceptions` `past due asset facts`)'s `may be entered into`)
+-- ... 223.41 leaves 223.15 in force ("subject to ... the prohibition on the purchase of a low-quality asset of § 223.15") ...
+#ASSERT (`assessment of a proposed transaction` `the structure` `default readings` (transaction `A purchase of an asset` "P" 50) (`situation of` 1000 0 0 TRUE `An exemption under 223.41` 50) EMPTY `no exceptions` `past due asset facts`)'s `is a prohibited purchase of a low-quality asset`
+-- ... and 223.42 does not ("not subject to ... the prohibition on the purchase of a low-quality asset of § 223.15").
+#ASSERT NOT ((`assessment of a proposed transaction` `the structure` `default readings` (transaction `A purchase of an asset` "P" 50) (`situation of` 1000 0 0 TRUE `An exemption under 223.42` 50) EMPTY `no exceptions` `past due asset facts`)'s `is a prohibited purchase of a low-quality asset`)
+#ASSERT (`assessment of a proposed transaction` `the structure` `default readings` (transaction `A purchase of an asset` "P" 50) (`situation of` 1000 0 0 TRUE `An exemption under 223.42` 50) EMPTY `no exceptions` `past due asset facts`)'s `may be entered into`

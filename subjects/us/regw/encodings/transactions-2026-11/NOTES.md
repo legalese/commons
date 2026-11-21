@@ -48,7 +48,8 @@ Dispositions: `done` (encoded and tested), `WIP` (encoded, not yet passing), `no
 | 223.16 | transactions treated as with an affiliate | (a), (b) and the exemptions in (c) done |
 | 223.41 (a)-(d) | exemptions: parent and sister depository institutions, nonrecourse loan purchases, internal reorganizations | done (each a predicate on stated facts) |
 | 223.42 (a)-(o) | exemptions: deposits, uncollected items, cash and government security collateral, servicing affiliates, liquid assets, marketable and municipal securities, repurchase agreements, new banks, bank mergers, nonrecourse extensions of credit, intraday credit, riskless principal, securities financing and commercial paper | done (each a predicate on stated facts) |
-| the top-level assessment | one proposed transaction: covered, valued, limits, collateral, what stays live | not started |
+| 223.41, 223.42, 223.16(c) effects | which requirements each exemption leaves in force | done |
+| the top-level assessment | one proposed transaction: covered, what counts toward the limits, both limits, collateral, safety and soundness, low-quality assets, and whether it may be entered into | done (30 end-to-end tests) |
 | 223.21(b), 223.22(b)(2), 223.23(b)(2) | timing, and the sequence rule | out of scope: sequences are a separate phase |
 | 223.31 to 223.33, 223.43, 223.51 to 223.56, 223.61, 223.71, 223.72 | acquisitions, financial subsidiaries, derivatives, section 23B, other | out of scope |
 
@@ -58,6 +59,23 @@ Dispositions: `done` (encoded and tested), `WIP` (encoded, not yet passing), `no
 223.15(b)(3): "The participating member bank's share of the renewal or extension of additional credit does not exceed its proportional share of the original transaction by more than 5 percent, unless the member bank obtains the prior written approval of its appropriate Federal banking agency".
 It can mean five percentage points of the transaction above the proportional share, or five percent more than the proportional share itself.
 With a proportional share of 25 percent the first allows a share up to 30 and the second up to 26.25; the tests assert both readings at 29 and at 26.25 and 26.3.
+
+**Do exempt transactions count toward the aggregate amount? (assumed, not ruled).**
+223.3(a) defines the aggregate amount as the transaction about to be engaged in added to "the current amount of all outstanding covered transactions", and 223.41 and 223.42 say exempt transactions are "not subject to the quantitative limits".
+The text does not say whether an exempt transaction is itself counted among the outstanding covered transactions.
+The 223.42(c) example does: it values the covered transaction at the unsecured $50 of a $100 loan, so the exempt part is not counted.
+The encoding follows that: the outstanding amounts are stated by the caller, and the part of a transaction an exemption removes (`value exempt`) does not count toward the limits or the collateral requirement.
+
+**223.16(c) and 223.15 (assumed, not ruled).**
+223.41 says its transactions are "subject to ... the prohibition on the purchase of a low-quality asset of § 223.15" and 223.42 says they are "not subject to" it; 223.16(c) says neither.
+Every transaction it describes is an extension of credit to a nonaffiliate, to which 223.15 (a purchase of an asset from an affiliate) does not apply, so the encoding leaves 223.15 in force for it and nothing turns on that.
+
+**Collateral and a partial exemption (convention).**
+When 223.42(c) exempts part of a loan, the collateral that supports the exempt part is not listed among the collateral for the rest, so that no collateral is counted twice; the printed example is tested that way.
+
+**What the assessment takes from the caller.**
+The assessment takes a transaction at one instant with its value already worked out under 223.21 to 223.24 (`regwb-valuation.l4`), and the part of it an exemption removes; it does not choose among the exemptions or test their conditions, which are the predicates in `regwb-exemptions-41.l4` and `regwb-exemptions-42.l4`.
+For a transaction with a nonaffiliate whose proceeds go to an affiliate, the caller states the amount 223.16 treats as a transaction with the affiliate, as the value, and the affiliate it benefits.
 
 **223.42(c): what counts as "secured by" (assumed, not ruled).**
 The printed example uses market values.
