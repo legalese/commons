@@ -74,6 +74,12 @@ The encoding follows that: the outstanding amounts are stated by the caller, and
 223.41 says its transactions are "subject to ... the prohibition on the purchase of a low-quality asset of § 223.15" and 223.42 says they are "not subject to" it; 223.16(c) says neither.
 Every transaction it describes is an extension of credit to a nonaffiliate, to which 223.15 (a purchase of an asset from an affiliate) does not apply, so the encoding leaves 223.15 in force for it and nothing turns on that.
 
+**A transaction that meets a 223.41 exemption and a 223.42 exemption (open; not ruled).**
+223.41(c) exempts the purchase of a loan on a nonrecourse basis from an affiliated depository institution, and 223.42(k) exempts the purchase of an extension of credit from an affiliate on a nonrecourse basis, on conditions, so one purchase can satisfy both.
+223.41 leaves the transaction "subject to" the low-quality asset prohibition of 223.15, and 223.42 says it is "not subject to" it, so the two lead-ins give opposite instructions for a purchase in both lists.
+The text does not say whether the exemptions are cumulative (the stricter lead-in wins) or whether the more favourable one applies.
+The encoding takes the exemption family as one stated input (`Exemption claimed`), so the caller names the family, and there is no default for a purchase that fits both.
+
 **Collateral and a partial exemption (convention).**
 When 223.42(c) exempts part of a loan, the collateral that supports the exempt part is not listed among the collateral for the rest, so that no collateral is counted twice; the printed example is tested that way.
 
