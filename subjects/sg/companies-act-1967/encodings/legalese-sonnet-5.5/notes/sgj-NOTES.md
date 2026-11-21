@@ -284,7 +284,7 @@ Rows in the table: the first pass of the script produced 276 rows; it missed thr
 | heading before s 130 | 10752-10752 | Transfer of shares and debentures in public companies | inert, reason 1 (heading, no rule) |  |  |
 | s 130 | 10754-10782 | (1) Despite anything in its constitution, a public company must not... | fork |  | F-j-unless F-j130-1 F-j130-2 (by the rows inside it) |
 | s 130(1) | 10754-10761 | Despite anything in its constitution, a public company must not reg... | fork | `s 130(1) the public company is barred from registering the transfer of shares or debentures`; `s 130(1) a public company must not register a transfer of shares or debentures without a proper instrument of transfer` | F-j-unless an "unless" once met: JUST FALSE |
-| s 130(2) | 10763-10767 | Where there has been a transfer of shares, a public company may lod... | fork | `s 130(2) the public company may lodge with the Registrar a notice of the transfer of shares in the prescribed form` | F-j130-1 a "may" gated by "where": JUST FALSE (split site (ii)) |
+| s 130(2) | 10763-10767 | Where there has been a transfer of shares, a public company may lod... | fork | `s 130(2) the public company may lodge with the Registrar a notice of the transfer of shares in the prescribed form` | F-j130-1 a "may" gated by "where": NOTHING (S1b ruling, 2026S1bC; split site (ii)) |
 | s 130(3) | 10769-10782 | The notice must state — | fork | `s 130(3) the notice states what the subsection requires` | F-j130-2 "or" between (a) and (b): either suffices |
 | s 130(3)(a) | 10771-10776 | every other transfer of shares effected prior to the date of the no... | fork | `s 130(3) the notice states what the subsection requires` (inside the rule of s 130(3)) | F-j130-2 "or" between (a) and (b): either suffices |
 | s 130(3)(b) | 10778-10782 | the prescribed information in relation to the shares held by each o... | fork | `s 130(3) the notice states what the subsection requires` (inside the rule of s 130(3)) | F-j130-2 "or" between (a) and (b): either suffices |
@@ -438,7 +438,7 @@ A row of the coverage table with disposition `fork` points here by id.
 
 ### Division 7, public companies (ss 130 to 130AE)
 
-- **F-j130-1**, s 130(2): "Where there has been a transfer of shares, a public company may lodge ... a notice": a "may" gated by "where", `JUST FALSE` where there has been no transfer (item (b)); split site (ii); the other reading is `NOTHING`.
+- **F-j130-1**, s 130(2): "Where there has been a transfer of shares, a public company may lodge ... a notice": a "may" gated by "where", `NOTHING` where there has been no transfer (S1b ruling, Guide line 101, 2026S1bC: the public company's own liberty to lodge a notice, no bar to relieve); split site (ii); the other reading is `JUST FALSE` (item (b)).
 - **F-j130-2**, s 130(3): "The notice must state — (a) every other transfer ...; or (b) the prescribed information ...".
   Reading 1 (taken): the text says "or", so stating either suffices; a notice that states neither is `JUST FALSE`.
   Reading 2: "and" was meant, so both are required.
@@ -569,7 +569,7 @@ A function that returns a plain `BOOLEAN`, `NUMBER` or `DATE` (the last day of a
 
 **Assumed, not ruled (the ruling of 2026-10-29 for what `JUST FALSE` and `NOTHING` mean):** two readings are left for a lawyer, and every branch that rests on one is listed under "Marginal readings for a lawyer (sgj)" with the other reading stated.
 
-### Reading (a): a failed "if", "where", "unless", period or the provision's own question counts as the text's no (73 branches)
+### Reading (a): a failed "if", "where", "unless", period or the provision's own question counts as the text's no (72 branches)
 
 | module | line | function | the text's words |
 | --- | --- | --- | --- |
@@ -609,7 +609,6 @@ A function that returns a plain `BOOLEAN`, `NUMBER` or `DATE` (the last day of a
 | div7-private-transfers | 310 | `s 129(1) the notice of the refusal was sent within 30 days` | "it must, within 30 days after the date on which the transfer was lodged with it, send to the transferor and the transferee notice of the refusal" ... |
 | div7-private-transfers | 340 | `s 129(2) the notice of the refusal was sent within 30 days` | "it must, within 30 days after the date on which the transfer was lodged with it, send to the transferor and to the transferee notice of the refusa... |
 | div7-private-transfers | 409 | `s 129(4) the person is guilty of the offence this subsection creates` | "If default is made in complying with this section, the private company and every officer of the company who is in default shall each be guilty of ... |
-| div7-public-transfers | 62 | `s 130(2) the public company may lodge with the Registrar a notice of the transfer of shares in the prescribed form` | "Where there has been a transfer of shares, a public company may lodge" -- a "may" gated by "where" (listed for a lawyer) |
 | div7-public-transfers | 84 | `s 130(3) the notice states what the subsection requires` | "The notice must state (a) every other transfer ...; or (b) the prescribed information ..." -- a duty: the provision's own question |
 | div7-public-transfers | 142 | `s 130AA(2) the period stated in the notice is a period the subsection allows` | "within a stated period, being not less than 7 and not more than 28 days after the date of the notice" |
 | div7-public-transfers | 231 | `s 130AB(1) the notice of the refusal was sent within 30 days` | "it must, within 30 days after the date on which the transfer was lodged with it, send to the transferor and to the transferee notice of the refusa... |
@@ -647,7 +646,7 @@ A function that returns a plain `BOOLEAN`, `NUMBER` or `DATE` (the last day of a
 | part5-office-name | 380 | `s 144(2) the person is liable to the holder of the instrument for the amount due on it` | "unless it is paid by the company" |
 | part5-office-name | 381 | `s 144(2) the person is liable to the holder of the instrument for the amount due on it` | "unless it is paid by the company" |
 
-### Reading (b): a prohibition or grant limited by its own wording does not say no (78 branches)
+### Reading (b): a prohibition or grant limited by its own wording does not say no (79 branches)
 
 | module | line | function | the text's words |
 | --- | --- | --- | --- |
@@ -691,6 +690,7 @@ A function that returns a plain `BOOLEAN`, `NUMBER` or `DATE` (the last day of a
 | div7-private-transfers | 377 | `s 129(3) the private company is barred from refusing by virtue of a discretion in the constitution` | "Where an application is made to a private company ... in respect of any share that has been transferred or transmitted to a person by act of parti... |
 | div7-public-transfers | 32 | `s 130(1) the public company is barred from registering the transfer of shares or debentures` | "a public company must not register a transfer of shares or debentures" -- a scope limit with no "only"; the private company's rules are ss 126 and... |
 | div7-public-transfers | 59 | `s 130(2) the public company may lodge with the Registrar a notice of the transfer of shares in the prescribed form` | "a public company may lodge" -- a scope limit with no "only"; the private company's rule is s 126(2) |
+| div7-public-transfers | 62 | `s 130(2) the public company may lodge with the Registrar a notice of the transfer of shares in the prescribed form` | "Where there has been a transfer of shares, a public company may lodge" -- a failed "where" gate on the company's own liberty to lodge, no bar to relieve (the S1b ruling, 2026S1bC; listed for a lawyer) |
 | div7-public-transfers | 80 | `s 130(3) the notice states what the subsection requires` | "The notice must state" -- the notice of subsection (2); another notice is outside the text |
 | div7-public-transfers | 106 | `s 130AA(1) the public company must enter the name of the transferee in the appropriate register` | "On the request in writing of the transferor ... the company must" -- the duty is limited by the written request; without it, or for another compan... |
 | div7-public-transfers | 134 | `s 130AA(2) the public company must by written notice require delivery or production of the documents` | "On the request in writing of the transferor of a share or debenture the public company must" -- without the written request, or for another compan... |
@@ -773,10 +773,11 @@ The other reading at each site is `NOTHING`; the penalty functions answer `NOTHI
 
 ### Type (ii): 9 sites
 
-Six answer `JUST FALSE` (item (b), Guide line 93: "a \"where ...\" condition: when it fails the answer is `JUST FALSE`"; line 94: "\"when\", \"upon\" and \"whenever\" count as \"where\" under rule (b)"), and the grant ruling's limit 3 (line 98) requires them to be listed for a lawyer without being changed:
-s 91(1) (F-j91-1, "where" a person is or was a substantial shareholder and has failed to comply, on the Minister's application), s 91(4) (F-j91-1, "where a share is not sold"), s 125(2) (F-j125-1, "where the value ... is greater than $500"), s 128(5) (F-j128-3, "upon appearance"), s 130(2) (F-j130-1, "where there has been a transfer of shares"), s 130AA(4) (F-j130AA-3, "upon appearance").
+Five answer `JUST FALSE` (item (b), Guide line 93: "a \"where ...\" condition: when it fails the answer is `JUST FALSE`"; line 94: "\"when\", \"upon\" and \"whenever\" count as \"where\" under rule (b)"), and the grant ruling's limit 3 (line 98) requires them to be listed for a lawyer without being changed:
+s 91(1) (F-j91-1, "where" a person is or was a substantial shareholder and has failed to comply, on the Minister's application), s 91(4) (F-j91-1, "where a share is not sold"), s 125(2) (F-j125-1, "where the value ... is greater than $500"), s 128(5) (F-j128-3, "upon appearance"), s 130AA(4) (F-j130AA-3, "upon appearance").
 Three answer `NOTHING` because the gate is an application (the text's "on the application of ..."), where the Guide has no line for "on application" and limit 1 of the grant ruling (line 97, "answer `NOTHING`, with one fork line each, only for a function named for a grant or a power ... whose `if` gate failed") is the nearest: s 87 (F-j87-1), s 100(1) (F-j100-1), s 130AE(4) (F-j130AE-3).
 These three sit outside the Guide's lines, and are listed under Marginal readings for a lawyer.
+One more answers `NOTHING` by the S1b ruling (Guide line 101, 2026S1bC), which replaces limit 3 for it: s 130(2) (F-j130-1, "where there has been a transfer of shares"), a failed "where" gate on the public company's own liberty to lodge a notice.
 The other reading at each site is the opposite answer.
 
 ### Grants gated by "if" or by their own scope (not split sites of type (ii), answered `NOTHING` by limit 1)
@@ -1042,3 +1043,11 @@ Five single edits to copies of the modules were run against the tests, each in a
 (4) seat, s 88(5): "the person is the company" changed from FALSE to TRUE, 1 of 150 failed;
 (5) seat, s 130AE(1): two date arguments swapped, 1 of 150 failed.
 A sixth edit, replacing `s 83(1) the last day ...` with `s 84(2) the last day ...` in the seat, changed no result because both count 2 business days; it is an equivalent mutant, not a gap.
+
+## The S1b ruling on failed gates (2026S1bC)
+
+The Guide records this ruling at section 5, in the bullet that begins “Failed gates of the pure “may” functions”; it is copied here word for word, as the Guide asks of every ruling.
+
+> - **Failed gates of the pure "may" functions of the two Singapore encodings: the split follows the background, not the holder's name (card S1b of the bench "Singapore Split Sites", option C as modified on the card; accepted by Meng).** Conditions as printed on the card: (1) It governs only the functions that stay Boolean after the protocol split, the pure gates (58 on the card's line); the type (i) sites, an unmet element of an offence, are unchanged. (2) A failed gate answers `JUST FALSE` where the function is a public body's power, a relief from an express bar or duty, or a gate the text closes (“so long as”, “only if”); it answers `NOTHING` where it states a company's or person's liberty, standard or privilege with no bar to relieve. (3) At the card's reading that changes 16 answers: 6 `NOTHING` to `JUST FALSE` at public bodies, and 10 `JUST FALSE` to `NOTHING` at liberties (C024, C046, C084, C115, C135, C138, C154, C155, C157, C159), each a fork line with the other reading and each borderline, because a relief and a liberty are a judgment. The 10 liberties that already answered `NOTHING` stay. (4) Applied one commit per part, each “assumed, not ruled” until the card was marked, flipping the branch each site's tag marks. (5) The difference between an express bar and silence stays in the code's `FALSE-kind` and `NOTHING-kind` comments and in NOTES, which is the provenance channel, and not in the truth value. (6) Recorded in this guide, with limit 3 of the grant ruling above replaced for the Singapore rows, and in the `NOTES.md` of the parts that carry limit 3 (the card's own wording; this paragraph is that record). (7) The ruling reaches the two Singapore encodings only. The UK (164 listed sites) and Israel stay on the Guide as it stands until Meng rules; until then the differential compares Singapore under C with the UK under limit 3. The sites the 16 answers belong to: the public-body powers that went from `NOTHING` to `JUST FALSE` are s 173F (C045), s 32(4) (C106), s 139(6) (F018), s 139(10) (F019), s 282AA(1) (F057), s 281(1) (F062); the liberties that went from `JUST FALSE` to `NOTHING` are s 145(1), s 202A(2), s 21(7), s 130(2), s 173J(3), s 179(2), s 387A(1), s 387B(1), s 387D, s 390(1). Meng's note, verbatim: “Suggest that the changed encodings, and future rules encoded under this ruling, be marked with a greppable string like 2026S1bC to show where this rule took effect. Then in future we can revisit and review the consequences of this rule on encodings that haven’t been done today.” Marked 2026-11-21T12:17:37.989Z (accept, option C, not blind), ruled 2026-11-21, so the commits that applied it are ruled and no longer “assumed, not ruled”. Reading of the note (assumed, not ruled): each function this ruling changed, and each function encoded later under it in these two encodings, carries the string `2026S1bC` in its fork-line comment, so that `grep -rn 2026S1bC` lists where the rule took effect and a later review can find its consequences. Bench: https://claude.ai/artifact/SYSny5zjFYHHcMFeNYi5RX
+
+Sites of this part changed under it (2026S1bC): s 130(2), `s 130(2) the public company may lodge with the Registrar a notice of the transfer of shares in the prescribed form` (fork F-j130-1, `sgj-div7-public-transfers.l4:62`), from `JUST FALSE` to `NOTHING` for the failed "where" gate: the public company's own liberty with no bar to relieve. The scope branch of the same function (a company that is not public) answered `NOTHING` before and still does.

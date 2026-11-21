@@ -413,7 +413,7 @@ A reader who compares this encoding with another jurisdiction's should treat (ii
 | --- | --- | --- | --- | --- |
 | sgh | 7 (plus the s 8A(7) defence) | `JUST FALSE` | 12 | 6 |
 | sgi | 6 | `JUST FALSE` | 1 | 11 |
-| sgj | 13 | `JUST FALSE` | 6 | 3 |
+| sgj | 13 | `JUST FALSE` | 5 | 4 |
 | sgk | 9 | `JUST FALSE` | 11 | 4 |
 | sgl | 10 | `JUST FALSE` | 6 | 1 |
 | sgm | 12 | `JUST FALSE` | 9 | 1 |
