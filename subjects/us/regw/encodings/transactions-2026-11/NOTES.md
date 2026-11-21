@@ -39,13 +39,13 @@ Dispositions: `done` (encoded and tested), `WIP` (encoded, not yet passing), `no
 | 223.22 | valuation of an asset purchase, and which rule values each kind of purchase | done |
 | 223.23 | valuation of a security issued by an affiliate | done |
 | 223.24 | valuation of credit to a nonaffiliate secured by affiliate securities; eligible affiliated mutual fund securities | done |
-| 223.3(h), (i), (j), (o) | covered transaction, its five limbs; credit transaction | not started |
-| 223.3(d) | capital stock and surplus, as a stated number | not started |
-| 223.11, 223.12 | the 10 percent and 20 percent limits | not started |
+| 223.3(h), (i) | covered transaction, its five limbs; credit transaction (the kinds of transaction (j) and (o) describe are the stated `kind`) | done |
+| 223.3(a), (d) | the aggregate amount; capital stock and surplus, as a stated number | done (an input) |
+| 223.11, 223.12 | the 10 percent and 20 percent limits | done |
 | 223.13 | safety and soundness, a stated judgement | not started |
 | 223.14 | collateral requirements | not started |
 | 223.15 | low-quality assets, and its exception | not started |
-| 223.16 | transactions treated as with an affiliate | not started |
+| 223.16 | transactions treated as with an affiliate | (a) and (b) done; (c), the exemptions, with 223.41 and 223.42 |
 | 223.41, 223.42 | exemptions | not started |
 | the top-level assessment | one proposed transaction: covered, valued, limits, collateral, what stays live | not started |
 | 223.21(b), 223.22(b)(2), 223.23(b)(2) | timing, and the sequence rule | out of scope: sequences are a separate phase |
@@ -61,3 +61,14 @@ The encoding follows the words and returns the negative figure.
 **223.21(a)(4)(ii): the "principal amount" of a revolving credit facility.**
 The text does not say whether it is the amount drawn or the amount of the facility.
 It does not matter for the printed example, because the sum under (a)(1)(iii) gives $300 on either reading, and the tests state the principal as the amount drawn.
+
+## Copied modules
+
+The three modules below are copied byte for byte from `../affiliates-2026-11/` (the stable `l4` resolves `IMPORT` only within the importing file's folder), at the commit that deposited them; they are not edited here.
+A fix is made in `../affiliates-2026-11/` first and the copy is refreshed.
+
+| module | sha256 |
+| --- | --- |
+| `regw-nouns.l4` | `e007695972e9d6e5d52c11441714e0153b1be06094bab55c650f07df2a6d310f` |
+| `regw-control.l4` | `739ab38aa36741d3dad900a132ee6999c802b125b4e04be8bf79ae9c3daab1da` |
+| `regw-affiliate.l4` | `ae84eafb392c0010086ebef24ce563b1b9876c2b909dea903f16111857af88a6` |
