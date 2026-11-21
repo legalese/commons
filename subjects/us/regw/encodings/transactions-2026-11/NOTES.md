@@ -45,8 +45,9 @@ Dispositions: `done` (encoded and tested), `WIP` (encoded, not yet passing), `no
 | 223.13 | safety and soundness, a stated judgement | not started |
 | 223.14 | collateral requirements: the percentages, ineligible collateral, priority deductions, exceptions; the replacement rule (e) as the same test at one instant | done |
 | 223.15, 223.3(v) | low-quality assets, and the exception for renewals of participations | done, with a fork on (b)(3) |
-| 223.16 | transactions treated as with an affiliate | (a) and (b) done; (c), the exemptions, with 223.41 and 223.42 |
-| 223.41, 223.42 | exemptions | not started |
+| 223.16 | transactions treated as with an affiliate | (a), (b) and the exemptions in (c) done |
+| 223.41 (a)-(d) | exemptions: parent and sister depository institutions, nonrecourse loan purchases, internal reorganizations | done (each a predicate on stated facts) |
+| 223.42 (a)-(o) | exemptions: deposits, uncollected items, cash and government security collateral, servicing affiliates, liquid assets, marketable and municipal securities, repurchase agreements, new banks, bank mergers, nonrecourse extensions of credit, intraday credit, riskless principal, securities financing and commercial paper | done (each a predicate on stated facts) |
 | the top-level assessment | one proposed transaction: covered, valued, limits, collateral, what stays live | not started |
 | 223.21(b), 223.22(b)(2), 223.23(b)(2) | timing, and the sequence rule | out of scope: sequences are a separate phase |
 | 223.31 to 223.33, 223.43, 223.51 to 223.56, 223.61, 223.71, 223.72 | acquisitions, financial subsidiaries, derivatives, section 23B, other | out of scope |
@@ -57,6 +58,15 @@ Dispositions: `done` (encoded and tested), `WIP` (encoded, not yet passing), `no
 223.15(b)(3): "The participating member bank's share of the renewal or extension of additional credit does not exceed its proportional share of the original transaction by more than 5 percent, unless the member bank obtains the prior written approval of its appropriate Federal banking agency".
 It can mean five percentage points of the transaction above the proportional share, or five percent more than the proportional share itself.
 With a proportional share of 25 percent the first allows a share up to 30 and the second up to 26.25; the tests assert both readings at 29 and at 26.25 and 26.3.
+
+**223.42(c): what counts as "secured by" (assumed, not ruled).**
+The printed example uses market values.
+The encoding uses the collateral's effective value (223.14(d): perfected, after the deduction for a senior interest), so a transaction is exempt only "to the extent that" it is secured by interests that would count under 223.14; the text of (c) does not say.
+In the printed example, with perfected first-priority collateral, it makes no difference.
+
+**Dates in 223.42(n) and (o).**
+(n) runs "From September 15, 2008, until October 30, 2009 (unless further extended by the Board)" and (o) needs a purchase "on or after September 19, 2008".
+Whether a period is running, as the Board may have extended it, is a stated input, so the encoding does not read a calendar.
 
 **223.14(d)(1): collateral whose security interest is not perfected (assumed, not ruled).**
 The text says the member bank "must maintain a security interest in collateral required by this section that is perfected and enforceable under applicable law" and does not say how an imperfect interest is valued.
