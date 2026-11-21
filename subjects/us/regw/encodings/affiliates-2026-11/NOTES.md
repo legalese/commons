@@ -1,6 +1,6 @@
 # Regulation W (12 CFR Part 223) — the affiliate definition
 
-Status, 2026-11-21: **partial.** The rows marked `done` below are encoded and their tests pass (85 assertions); the rows marked `not started` are not encoded.
+Status, 2026-11-21: **partial.** The rows marked `done` below are encoded and their tests pass (96 assertions); the rows marked `not started` are not encoded.
 This file is updated after each section lands; a row moves only when its tests pass.
 
 ## Scope
@@ -33,8 +33,8 @@ Dispositions: `done` (encoded and tested), `WIP` (encoded, not yet passing), `no
 | 223.3(g)(1)(iii) | control: a Board determination (a stated input) | done |
 | 223.3(g)(3) | control: attribution through subsidiaries | done |
 | 223.3(g)(2) | control: fiduciary holdings | done, except the (a)(3) exception (see forks) |
-| 223.3(g)(4) | control: convertible instruments | not started |
-| 223.3(g)(5) | control: nonvoting equity | not started |
+| 223.3(g)(4) | control: convertible instruments | done (the showing is a stated input) |
+| 223.3(g)(5) | control: nonvoting equity | done (the showing is a stated input) |
 | 223.2(a)(1)–(5) | affiliate prongs: parent, common control, interlocking directorates, sponsored and advised | done, with forks on (a)(2) and (a)(4), and (a)(3) for one shareholder only |
 | 223.2(a)(7), (8) | affiliate prongs: depository institution subsidiary, financial subsidiary | done |
 | 223.2(a)(10), (11) | affiliate prongs: partnerships, subsidiaries of affiliates | done, with a fork on (a)(11) |
@@ -93,6 +93,14 @@ The encoding takes one shareholder in both places and does not aggregate groups.
 **(a)(2) takes a company as the controller; (a)(3) takes any shareholder.**
 The words are "controlled by a company that controls the member bank" in (a)(2) and "shareholders" in (a)(3), so an individual who controls the bank is a shareholder for (a)(3) only, and is not a company described in (a)(1) through (10) for (a)(11).
 
+**(g)(4) and (g)(5): one list of showings, and equity figures given per holding.**
+223.3(g)(4) and (g)(5) each end "unless the company or shareholder presents information to the Board that demonstrates, to the Board's satisfaction, ...".
+The encoding takes the outcome of the showing as a stated input, one pair (company, other company) in `showings`: for a convertible instrument it removes that holder's convertible holdings of that issuer from the count, and for nonvoting equity it removes the (g)(5) route to control of that company.
+A showing never removes control by 25 percent of a voting class under (g)(1)(i), which is asserted.
+The pair names the holder in (g)(4) and the controller in (g)(5), so a showing by a parent about securities its subsidiary holds is not distinguished from one by the subsidiary.
+The percentage a convertible instrument would convert into, and the holder's percentage of equity capital, are inputs on each holding; "equity capital" (223.3(n)) is not computed.
+In the test fixtures that state only a voting percentage, the equity figure is 0.
+
 **What is stated, not computed.**
 A Board determination under 223.3(g)(1)(iii), the election of a majority of directors under (g)(1)(ii), a determination under 223.2(a)(12), whether a company is a depository institution or a financial subsidiary, what it engages in solely, whether (b)(5)'s authorized period is still running, and the purpose (section 23A or subpart F) are inputs.
 
@@ -116,7 +124,7 @@ The encoding takes holdings as given per voting class with a percentage; it does
 module                                    errors satisfied  failed  refused  expected | errors satisfied  failed  refused  main
 regw-affiliate-tests.l4                        0        47       0        0         0 |      0        47       0        0  same
 regw-affiliate.l4                              0         0       0        0         0 |      0         0       0        0  same
-regw-control-tests.l4                          0        38       0        0         0 |      0        38       0        0  same
+regw-control-tests.l4                          0        49       0        0         0 |      0        49       0        0  same
 regw-control.l4                                0         0       0        0         0 |      0         0       0        0  same
 regw-nouns.l4                                  0         0       0        0         0 |      0         0       0        0  same
 ```
