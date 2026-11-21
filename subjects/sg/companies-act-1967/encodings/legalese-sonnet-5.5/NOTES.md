@@ -411,7 +411,7 @@ A reader who compares this encoding with another jurisdiction's should treat (ii
 
 | part | type (i) sites (an unmet element of an offence) | answer | type (ii) sites answered `JUST FALSE` | type (ii) sites answered `NOTHING` |
 | --- | --- | --- | --- | --- |
-| sgh | 7 (plus the s 8A(7) defence) | `JUST FALSE` | 13 | 5 |
+| sgh | 7 (plus the s 8A(7) defence) | `JUST FALSE` | 12 | 6 |
 | sgi | 6 | `JUST FALSE` | 0 | 12 |
 | sgj | 13 | `JUST FALSE` | 6 | 3 |
 | sgk | 9 | `JUST FALSE` | 11 | 4 |
