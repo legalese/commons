@@ -342,14 +342,14 @@ A site is a branch line tagged `-- SPLIT-SITE (i)` or `(ii)` in a layer-1 module
 | agent | (i) `NOTHING` | (i) `JUST FALSE` | (ii) `NOTHING` | (ii) `JUST FALSE` |
 | --- | --- | --- | --- | --- |
 | keel | 0 | 0 | 1 | 0 |
-| sfaa | 62 | 0 | 18 | 0 |
+| sfaa | 62 | 0 | 16 | 2 |
 | sfab | 43 | 24 | 26 | 9 |
 | sfac | 43 | 8 | 0 | 8 |
 | sfad | 0 | 12 | 2 | 10 |
-| all | 148 | 44 | 47 | 27 |
+| all | 148 | 44 | 45 | 29 |
 
 That is 266 sites: 192 of type (i) and 74 of type (ii).
-**The agents did not answer alike.** `sfaa` took `NOTHING` at all 80 of its sites; `sfad` took `JUST FALSE` at all 12 of its type (i) sites; `sfac` took `JUST FALSE` at all 8 of its type (ii) sites; `sfab` is mixed at both kinds.
+**The agents did not answer alike.** `sfaa` took `NOTHING` at 78 of its 80 sites (the two it answers `JUST FALSE` are the failed gates on a public body's power at s 139(6) and s 139(10), turned by the S1b ruling, 2026S1bC); `sfad` took `JUST FALSE` at all 12 of its type (i) sites; `sfac` took `JUST FALSE` at all 8 of its type (ii) sites; `sfab` is mixed at both kinds.
 A reader who compares this encoding with another jurisdiction's should treat both kinds as places where the answer comes from the agent and not from the text. A ruling can be applied by flipping the tagged branch, site by site.
 
 ## NEEDS-CORE
