@@ -1,6 +1,6 @@
 # Regulation W (12 CFR Part 223) — the affiliate definition
 
-Status, 2026-11-21: **every in-scope row is encoded, and its tests pass (96 assertions).**
+Status, 2026-11-21: **every in-scope row is encoded, and its tests pass (105 assertions).**
 The rows marked `out of scope` are not encoded, and neither is anything else in Part 223.
 No domain expert has read this against the source, and no independent test author has written expectations from the source before reading the encoding (the encoding skill's step 8).
 This file is updated after each section lands; a row moves only when its tests pass.
@@ -14,7 +14,10 @@ The source is the Part 223 slice of the annual CFR edition revised as of 2025-01
 ## Target and checks
 
 Target compiler: `main`.
-The modules were run and checked with `1.6.112 (main, e4f4bf3, 2026-11-18)`, the newest main build available locally; `check.sh` compared that build with itself, so it says only that the modules read on main and does not test them against an `unstable` build.
+The modules were run and checked with `1.6.112 (main, e4f4bf3, 2026-11-18)`, the newest main build available locally, and `check.sh` compared it with a second compiler, a `dev` build from a working tree of the language's repository (`l4 --version` prints `dev`, which does not say which line it was built from).
+The counts were the same on both.
+No run of the modules has been made with an `unstable` prerelease from the shelf.
+No module produces a warning on 1.6.112.
 
 ## Seat
 
@@ -33,7 +36,7 @@ Dispositions: `done` (encoded and tested), `WIP` (encoded, not yet passing), `no
 | 223.3(g)(1)(i) | control: 25 percent of any class of voting securities | done |
 | 223.3(g)(1)(ii) | control: electing a majority of directors (a stated input) | done |
 | 223.3(g)(1)(iii) | control: a Board determination (a stated input) | done |
-| 223.3(g)(3) | control: attribution through subsidiaries | done |
+| 223.3(g)(3) | control: attribution through subsidiaries, and their subsidiaries, whatever the link that makes them subsidiaries | done |
 | 223.3(g)(2) | control: fiduciary holdings | done, except the (a)(3) exception (see forks) |
 | 223.3(g)(4) | control: convertible instruments | done (the showing is a stated input) |
 | 223.3(g)(5) | control: nonvoting equity | done (the showing is a stated input) |
@@ -86,6 +89,7 @@ The prong does not say "of an affiliate", and a company that is an affiliate onl
 The chain still arises through control: a parent controls the securities its subsidiaries hold (223.3(g)(3)), so a subsidiary of a subsidiary held by securities is a subsidiary of the parent too.
 What the literal reading drops is a company controlled by an (a)(11) affiliate in a way that is not securities, such as by electing its directors.
 The test has F sponsored by the bank, Q held 100 percent by F, and R controlled by Q only through its directors: literal, R is not an affiliate; chaining, it is.
+The switch therefore matters only where a company is controlled by an (a)(11) affiliate through directors or a Board determination, and not through securities: when securities are the link, the control test already attributes them (223.3(g)(3)), so the two readings agree.
 
 **(a)(3) and (b)(1)(iii)(B): one shareholder at a time.**
 223.2(a)(3) says "shareholders who ... control", and (b)(1)(iii)(B) says "a shareholder ... or a group of shareholders that together control".
@@ -102,6 +106,17 @@ A showing never removes control by 25 percent of a voting class under (g)(1)(i),
 The pair names the holder in (g)(4) and the controller in (g)(5), so a showing by a parent about securities its subsidiary holds is not distinguished from one by the subsidiary.
 The percentage a convertible instrument would convert into, and the holder's percentage of equity capital, are inputs on each holding; "equity capital" (223.3(n)) is not computed.
 In the test fixtures that state only a voting percentage, the equity figure is 0.
+
+**The affiliate definition has two fixed points as well (open question; the least is taken).**
+P holds 100 percent of Bank; Bank holds 30 percent of S1 and of S2; S1 and S2 each hold 25 percent of the other.
+Each of S1 and S2 is controlled by P through Bank, so (a)(2) describes it, and each is a subsidiary of Bank, so (b)(1) excludes it unless it is "directly controlled by ... affiliates (other than depository institution affiliates)".
+The other of the two is such an affiliate if it is one: with only P found, neither is an affiliate; with P, S1 and S2 found, each is, and the set holds.
+The encoding takes the least, P alone, and `regw-affiliate-tests.l4` asserts both halves.
+Under the other reading a cross-holding between two bank subsidiaries would lift the exclusion from both.
+
+**There is no seat layer.**
+The commons guide asks for a seat layer with plain inputs, one per fact the person can state; this encoding takes an ownership graph (holdings, offices, links), which is not a list of plain facts, so no `@export` or `@desc` is written and a seat layer would have to be built over a fixed shape of structure.
+The seat is recorded in `encoding.json`.
 
 **What is stated, not computed.**
 A Board determination under 223.3(g)(1)(iii), the election of a majority of directors under (g)(1)(ii), a determination under 223.2(a)(12), whether a company is a depository institution or a financial subsidiary, what it engages in solely, whether (b)(5)'s authorized period is still running, and the purpose (section 23A or subpart F) are inputs.
@@ -124,17 +139,18 @@ The encoding takes holdings as given per voting class with a percentage; it does
 
 ```
 module                                    errors satisfied  failed  refused  expected | errors satisfied  failed  refused  main
-regw-affiliate-tests.l4                        0        47       0        0         0 |      0        47       0        0  same
+regw-affiliate-tests.l4                        0        54       0        0         0 |      0        54       0        0  same
 regw-affiliate.l4                              0         0       0        0         0 |      0         0       0        0  same
-regw-control-tests.l4                          0        49       0        0         0 |      0        49       0        0  same
+regw-control-tests.l4                          0        51       0        0         0 |      0        51       0        0  same
 regw-control.l4                                0         0       0        0         0 |      0         0       0        0  same
 regw-nouns.l4                                  0         0       0        0         0 |      0         0       0        0  same
 ```
 
 Three assertions failed across the first runs, and each failure was a defect in a rule, not in the expected value.
 On main, `NOT (x)` binds looser than `OR` and `AND`, so `NOT (x) OR y` and `a AND NOT (x) AND b` read as `NOT ((x) OR y)` and `a AND NOT ((x) AND b)`.
-That wrongly dropped a business trust's fiduciary holding, and wrongly let a depository institution affiliate count as a direct controller in (b)(1)(iii)(A).
+That wrongly dropped a business trust's fiduciary holding, and it made every affiliate that is not a depository institution count as a direct controller in (b)(1)(iii)(A), whether or not it controlled the company directly.
 Every `NOT` that precedes another operand is now bracketed as `(NOT (x))`.
+A later review found that attribution under (g)(3) stopped at a controller's direct subsidiaries; it now follows every chain of control links, and the test that exposed it (A controls S1, S1 controls S2 only through its directors, S2 holds 25 percent of T) fails against the earlier rule.
 
 ## Open questions for a lawyer
 
@@ -144,3 +160,4 @@ Every `NOT` that precedes another operand is now bracketed as `(NOT (x))`.
 4. (a)(11): does the prong chain through its own subsidiaries (above)?
 5. Does (a)(3) aggregate a group of shareholders (above)?
 6. Is the member bank its own affiliate on the literal words (above)?
+7. Does the affiliate definition have two fixed points on cross-holdings, and is the least the meaning (above)?

@@ -12,7 +12,8 @@
 -- "Cross-holdings").
 --
 -- Why the recursion ends: `control from` is given the pairs still undecided, and it calls itself
--- only on that list after at least one pair has been removed from it.
+-- only on that list after at least one pair has been removed from it; `reached from` does the same
+-- with the pairs not yet used.
 
 IMPORT prelude
 IMPORT `regw-nouns`
@@ -89,9 +90,24 @@ GIVETH A BOOLEAN
         ((NOT (h's `held as fiduciary`)) OR `names a business trust` s (h's `holder`))
     AND (NOT (h's `convertible` AND `has link` (s's `showings`) (h's `holder`) (h's `issuer`)))
 
+-- 223.3(g)(3): "A company controls securities ... owned or controlled, directly or indirectly, by
+-- any subsidiary".  The companies whose holdings count for `x` are `x` and every company reached
+-- from it through the control pairs found so far: its subsidiaries, their subsidiaries, and so on.
+-- `reached from` is given the pairs not yet used and calls itself only on that list after at least
+-- one pair has been removed from it, so it ends.
+GIVEN
+    known   IS A LIST OF STRING
+    pending IS A LIST OF Link
+GIVETH A LIST OF STRING
+`reached from` MEANS
+    LET used MEANS partition (GIVEN l YIELD elem (l's `from`) known) pending
+    IN IF null (fst used)
+       THEN known
+       ELSE `reached from` (append known (map (GIVEN l YIELD l's `to`) (fst used))) (snd used)
+
 -- 223.3(g)(1)(i) with (g)(3): `x` owns, controls or has power to vote 25 percent or more of any
--- class of voting securities of `y`, counting what its subsidiaries (the companies `x` controls
--- in `rel`) hold.  Each holding is counted once.
+-- class of voting securities of `y`, counting what its subsidiaries and their subsidiaries (the
+-- companies reached from `x` through `rel`) hold.  Each holding is counted once.
 GIVEN
     s   IS A Structure
     rel IS A LIST OF Link
@@ -103,7 +119,7 @@ GIVETH A BOOLEAN
 `holds a quarter of a class` MEANS
     any (GIVEN c YIELD `percent of` c AT LEAST 25) classes
     WHERE
-        holders MEANS x FOLLOWED BY map (GIVEN l YIELD l's `to`) (filter (GIVEN l YIELD l's `from` EQUALS x) rel)
+        holders MEANS `reached from` (LIST x) rel
         ofIssuer MEANS filter (GIVEN h YIELD h's `issuer` EQUALS y) (s's `holdings`)
         classes MEANS nub (map (GIVEN h YIELD h's `class`) ofIssuer)
         `percent of` c MEANS
@@ -123,7 +139,7 @@ GIVETH A BOOLEAN
         sum (map (GIVEN h YIELD h's `percent of equity capital`) (filter (GIVEN h YIELD h's `issuer` EQUALS y AND `holding counts` s h AND elem (h's `holder`) holders) (s's `holdings`))) AT LEAST 25
     AND (NOT (`has link` (s's `showings`) x y))
     WHERE
-        holders MEANS x FOLLOWED BY map (GIVEN l YIELD l's `to`) (filter (GIVEN l YIELD l's `from` EQUALS x) rel)
+        holders MEANS `reached from` (LIST x) rel
 
 -- One step of the definition: given the control pairs found so far, does 223.3(g)(1) or (g)(5) make
 -- `x` control `y`?  (g)(1): (i) the 25 percent vote test, (ii) electing a majority of the directors,
