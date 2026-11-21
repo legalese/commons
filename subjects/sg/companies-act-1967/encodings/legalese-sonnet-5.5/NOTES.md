@@ -415,7 +415,7 @@ A reader who compares this encoding with another jurisdiction's should treat (ii
 | sgi | 6 | `JUST FALSE` | 1 | 11 |
 | sgj | 13 | `JUST FALSE` | 5 | 4 |
 | sgk | 9 | `JUST FALSE` | 11 | 4 |
-| sgl | 10 | `JUST FALSE` | 6 | 1 |
+| sgl | 10 | `JUST FALSE` | 4 | 3 |
 | sgm | 12 | `JUST FALSE` | 9 | 1 |
 | sgn | 21 | `JUST FALSE` | 1 | 0 |
 | sgo | 20 | `NOTHING` | 13 | 2 |
