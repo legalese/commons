@@ -345,8 +345,8 @@ A site is a branch line tagged `-- SPLIT-SITE (i)` or `(ii)` in a layer-1 module
 | sfaa | 62 | 0 | 16 | 2 |
 | sfab | 43 | 24 | 26 | 9 |
 | sfac | 43 | 8 | 0 | 8 |
-| sfad | 0 | 12 | 2 | 10 |
-| all | 148 | 44 | 45 | 29 |
+| sfad | 0 | 12 | 0 | 12 |
+| all | 148 | 44 | 43 | 31 |
 
 That is 266 sites: 192 of type (i) and 74 of type (ii).
 **The agents did not answer alike.** `sfaa` took `NOTHING` at 78 of its 80 sites (the two it answers `JUST FALSE` are the failed gates on a public body's power at s 139(6) and s 139(10), turned by the S1b ruling, 2026S1bC); `sfad` took `JUST FALSE` at all 12 of its type (i) sites; `sfac` took `JUST FALSE` at all 8 of its type (ii) sites; `sfab` is mixed at both kinds.
