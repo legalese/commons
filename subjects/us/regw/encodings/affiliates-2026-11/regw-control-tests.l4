@@ -1,0 +1,158 @@
+-- Tests for regw-control.l4 (12 CFR 223.3(f), (g), (bb), (ii)).
+--
+-- The regulation prints no ownership diagram and no worked example for these definitions, so every
+-- fixture below is a small structure built for the purpose, and each test names the words of the
+-- text it exercises.  Every expected value is written from those words, not from the output.
+
+IMPORT prelude
+IMPORT `regw-nouns`
+IMPORT `regw-control`
+
+§ `Fixture builders`
+
+GIVEN n IS A STRING
+GIVETH A Party
+corp MEANS Party OF n, Corporation, FALSE, FALSE, `Some other activity`, `Not held through a debt previously contracted`, FALSE
+
+GIVEN
+    n IS A STRING
+    k IS A `Party kind`
+GIVETH A Party
+`party of kind` MEANS Party OF n, k, FALSE, FALSE, `Some other activity`, `Not held through a debt previously contracted`, FALSE
+
+GIVEN
+    a IS A STRING
+    b IS A STRING
+    c IS A STRING
+    p IS A NUMBER
+GIVETH A Holding
+stake MEANS Holding OF a, b, c, p, FALSE
+
+GIVEN
+    ps IS A LIST OF Party
+    hs IS A LIST OF Holding
+GIVETH A Structure
+`structure of` MEANS Structure OF "Bank", ps, hs, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY
+
+GIVEN
+    a IS A STRING
+    b IS A STRING
+GIVETH A Link
+link MEANS Link OF a, b
+
+GIVEN n IS A STRING
+GIVETH A Party
+`depository institution` MEANS Party OF n, `Other form of entity`, TRUE, FALSE, `Some other activity`, `Not held through a debt previously contracted`, FALSE
+
+GIVEN
+    a IS A STRING
+    b IS A STRING
+    c IS A STRING
+    p IS A NUMBER
+GIVETH A Holding
+`fiduciary stake` MEANS Holding OF a, b, c, p, TRUE
+
+GIVEN
+    ps IS A LIST OF Party
+    es IS A LIST OF Link
+GIVETH A Structure
+`structure with elections` MEANS Structure OF "Bank", ps, EMPTY, es, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY
+
+GIVEN
+    ps IS A LIST OF Party
+    ds IS A LIST OF Link
+GIVETH A Structure
+`structure with determinations` MEANS Structure OF "Bank", ps, EMPTY, EMPTY, ds, EMPTY, EMPTY, EMPTY, EMPTY
+
+GIVEN
+    s IS A Structure
+    a IS A STRING
+    b IS A STRING
+GIVETH A BOOLEAN
+`A controls B in` MEANS `has link` (`control relation` s) a b
+
+§ `223.3(f) and (bb): company and person`
+
+-- "Company means a corporation, partnership, limited liability company, business trust,
+-- association, or similar organization".
+#ASSERT `is a company` (`structure of` EMPTY EMPTY) (`party of kind` "X" Partnership)
+#ASSERT `is a company` (`structure of` EMPTY EMPTY) (`party of kind` "X" `Limited liability company`)
+#ASSERT `is a company` (`structure of` EMPTY EMPTY) (`party of kind` "X" `Business trust`)
+#ASSERT `is a company` (`structure of` EMPTY EMPTY) (`party of kind` "X" Association)
+#ASSERT `is a company` (`structure of` EMPTY EMPTY) (`party of kind` "X" `Similar organization`)
+-- An individual and a trust that is not a business trust are not on that list.
+#ASSERT NOT (`is a company` (`structure of` EMPTY EMPTY) (`party of kind` "Ann" Individual))
+#ASSERT NOT (`is a company` (`structure of` EMPTY EMPTY) (`party of kind` "X" Trust))
+-- "... and, unless specifically excluded, includes a member bank and a depository institution":
+-- the member bank (here named Bank) and a depository institution are companies whatever their form.
+#ASSERT `is a company` (`structure of` EMPTY EMPTY) (`party of kind` "Bank" `Other form of entity`)
+#ASSERT `is a company` (`structure of` EMPTY EMPTY) (`depository institution` "D")
+-- "Person means an individual, company, trust, joint venture, pool, syndicate, ...".
+#ASSERT `is a person` (`structure of` EMPTY EMPTY) (`party of kind` "Ann" Individual)
+#ASSERT `is a person` (`structure of` EMPTY EMPTY) (`party of kind` "X" `Joint venture`)
+
+§ `223.3(g)(1)(i): 25 percent of any class of voting securities`
+
+-- "25 percent or more": 24 is below, 25 is on the line.
+#ASSERT NOT (`A controls B in` (`structure of` (LIST corp "A", corp "B") (LIST stake "A" "B" "common" 24)) "A" "B")
+#ASSERT `A controls B in` (`structure of` (LIST corp "A", corp "B") (LIST stake "A" "B" "common" 25)) "A" "B"
+-- Control runs from the holder to the issuer, not back.
+#ASSERT NOT (`A controls B in` (`structure of` (LIST corp "A", corp "B") (LIST stake "A" "B" "common" 25)) "B" "A")
+-- "any class": 10 of one class and 30 of another is control; 20 of each is not.
+#ASSERT `A controls B in` (`structure of` (LIST corp "A", corp "B") (LIST stake "A" "B" "common" 10, stake "A" "B" "preferred" 30)) "A" "B"
+#ASSERT NOT (`A controls B in` (`structure of` (LIST corp "A", corp "B") (LIST stake "A" "B" "common" 20, stake "A" "B" "preferred" 20)) "A" "B")
+-- Two unrelated holders of 15 each do not add up for either of them.
+#ASSERT NOT (`A controls B in` (`structure of` (LIST corp "A", corp "B", corp "C") (LIST stake "A" "B" "common" 15, stake "C" "B" "common" 15)) "A" "B")
+-- "over another company": control is of a company, so an individual is never controlled.
+#ASSERT NOT (`A controls B in` (`structure of` (LIST corp "A", `party of kind` "Ann" Individual) (LIST stake "A" "Ann" "common" 100)) "A" "Ann")
+-- "company or shareholder": an individual holder controls.
+#ASSERT `A controls B in` (`structure of` (LIST `party of kind` "Ann" Individual, corp "B") (LIST stake "Ann" "B" "common" 60)) "Ann" "B"
+
+§ `223.3(g)(1)(ii) and (iii): directors, and a Board determination`
+
+-- "controls in any manner the election of a majority of the directors": no holding at all.
+#ASSERT `A controls B in` (`structure with elections` (LIST corp "A", corp "B") (LIST link "A" "B")) "A" "B"
+-- "The Board determines, after notice and opportunity for hearing": stated, so it is an input.
+#ASSERT `A controls B in` (`structure with determinations` (LIST corp "A", corp "B") (LIST link "A" "B")) "A" "B"
+#ASSERT NOT (`A controls B in` (`structure of` (LIST corp "A", corp "B") EMPTY) "A" "B")
+
+§ `223.3(g)(2): shares held as fiduciary`
+
+-- "no company will be deemed to control another company by virtue of its ownership or control of
+-- shares in a fiduciary capacity": 30 percent held as fiduciary is not control ...
+#ASSERT NOT (`A controls B in` (`structure of` (LIST corp "A", corp "B") (LIST `fiduciary stake` "A" "B" "common" 30)) "A" "B")
+-- ... "or if the company owning or controlling the shares is a business trust".
+#ASSERT `A controls B in` (`structure of` (LIST `party of kind` "A" `Business trust`, corp "B") (LIST `fiduciary stake` "A" "B" "common" 30)) "A" "B"
+
+§ `223.3(g)(3) and (ii): securities held by a subsidiary`
+
+-- "A company controls securities ... owned or controlled, directly or indirectly, by any subsidiary":
+-- A holds 100 of S, so S is A's subsidiary; A holds 15 of B and S holds 15 of B, so A controls 30.
+-- S alone holds 15 and does not control B.
+#ASSERT `A controls B in` (`structure of` (LIST corp "A", corp "S", corp "B") (LIST stake "A" "S" "common" 100, stake "A" "B" "common" 15, stake "S" "B" "common" 15)) "A" "B"
+#ASSERT `A controls B in` (`structure of` (LIST corp "A", corp "S", corp "B") (LIST stake "A" "S" "common" 100, stake "A" "B" "common" 15, stake "S" "B" "common" 15)) "A" "S"
+#ASSERT NOT (`A controls B in` (`structure of` (LIST corp "A", corp "S", corp "B") (LIST stake "A" "S" "common" 100, stake "A" "B" "common" 15, stake "S" "B" "common" 15)) "S" "B")
+-- Without control of S, A does not get S's securities: A holds 24 of S.
+#ASSERT NOT (`A controls B in` (`structure of` (LIST corp "A", corp "S", corp "B") (LIST stake "A" "S" "common" 24, stake "A" "B" "common" 15, stake "S" "B" "common" 15)) "A" "B")
+-- Through a chain: A controls S1, S1 controls S2, and S2 holds 25 of T, so A controls T.
+#ASSERT `A controls B in` (`structure of` (LIST corp "A", corp "S1", corp "S2", corp "T") (LIST stake "A" "S1" "common" 100, stake "S1" "S2" "common" 100, stake "S2" "T" "common" 25)) "A" "T"
+-- "any subsidiary (including a subsidiary depository institution)": the same at 24 does not.
+#ASSERT NOT (`A controls B in` (`structure of` (LIST corp "A", corp "S1", corp "S2", corp "T") (LIST stake "A" "S1" "common" 100, stake "S1" "S2" "common" 100, stake "S2" "T" "common" 24)) "A" "T")
+-- 223.3(ii): a subsidiary is a company the specified company controls.
+#ASSERT `is a subsidiary of` (`control relation` (`structure of` (LIST corp "A", corp "S") (LIST stake "A" "S" "common" 100))) "A" "S"
+#ASSERT NOT (`is a subsidiary of` (`control relation` (`structure of` (LIST corp "A", corp "S") (LIST stake "A" "S" "common" 100))) "S" "A")
+
+§ `Cross-holdings: two fixed points`
+
+-- A holds 15 percent of B and of C, and B and C each hold 15 percent of the other.
+-- No pair reaches 25 on its own holdings, so the first step finds nothing:
+#ASSERT count (`direct control relation` (`structure of` (LIST corp "A", corp "B", corp "C") (LIST stake "A" "B" "common" 15, stake "A" "C" "common" 15, stake "B" "C" "common" 15, stake "C" "B" "common" 15))) EQUALS 0
+-- The pairs {A controls B, A controls C} also satisfy 223.3(g)(1)(i) with (g)(3): if A controls B
+-- and C it controls their securities, so it holds 15 + 15 = 30 of each.  The step leaves that set unchanged:
+#ASSERT `control step` (`structure of` (LIST corp "A", corp "B", corp "C") (LIST stake "A" "B" "common" 15, stake "A" "C" "common" 15, stake "B" "C" "common" 15, stake "C" "B" "common" 15)) (LIST link "A" "B", link "A" "C") "A" "B"
+#ASSERT `control step` (`structure of` (LIST corp "A", corp "B", corp "C") (LIST stake "A" "B" "common" 15, stake "A" "C" "common" 15, stake "B" "C" "common" 15, stake "C" "B" "common" 15)) (LIST link "A" "B", link "A" "C") "A" "C"
+#ASSERT NOT (`control step` (`structure of` (LIST corp "A", corp "B", corp "C") (LIST stake "A" "B" "common" 15, stake "A" "C" "common" 15, stake "B" "C" "common" 15, stake "C" "B" "common" 15)) (LIST link "A" "B", link "A" "C") "B" "C")
+#ASSERT NOT (`control step` (`structure of` (LIST corp "A", corp "B", corp "C") (LIST stake "A" "B" "common" 15, stake "A" "C" "common" 15, stake "B" "C" "common" 15, stake "C" "B" "common" 15)) (LIST link "A" "B", link "A" "C") "C" "B")
+-- So the structure has two fixed points, the empty set and that set.  This encoding takes the
+-- least, the empty set (NOTES.md): the text does not say which is meant.
+#ASSERT count (`control relation` (`structure of` (LIST corp "A", corp "B", corp "C") (LIST stake "A" "B" "common" 15, stake "A" "C" "common" 15, stake "B" "C" "common" 15, stake "C" "B" "common" 15))) EQUALS 0
