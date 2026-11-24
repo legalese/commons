@@ -2,7 +2,7 @@
 # Run every .l4 module in an encoding and print, per module, the three numbers
 # that matter: error diagnostics, assertions satisfied, assertions failed.
 #
-# Why not trust the exit code: `l4 run` exits 0 when an #ASSERT fails. The
+# Why not trust the exit code: the stable `l4` exits 0 when an #ASSERT fails (the unstable one exits 1). The
 # failure is a DiagnosticSeverity_Error line whose message is "assertion failed".
 # An encoding that "ran green" by exit code can be carrying failed assertions.
 #

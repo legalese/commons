@@ -518,4 +518,7 @@ Moved back from `legalese/solutions` (Litigate.4/sg/income-tax-act-1947/legalese
   3. *NSman reliefs are not cumulative.* s 39(2)(m): a wife or widow "who had not made a claim under paragraph (n)"; (n): a parent "who had not made a claim under paragraph (m) or subsection (2A) or (2B)".
      `the NSman reliefs:` added the $750 for a wife and the $750 for a parent to the NSman's own relief whenever the flags were set; it now gives one $750 at most between the two, and none to a parent who has an NSman relief of his or her own.
 - *Not changed, a fork recorded for the household row:* whether a child barred by Fifth Schedule para 3B still counts in the order of a mother's eligible children (fork H3 of `../household-ya2026/`).
+- **A fourth gap, found by a review of the household row and settled from the text** (2026-11-24; five assertions added, 739 in all; a pre-existing gap, not from this branch): s 39(2)(e) proviso (vi): for an incapacitated unmarried child "in respect of whom ... no deduction is allowable under the Fifth Schedule, there is allowed a deduction of ... $7,500".
+  The only bar of the Fifth Schedule that reaches an incapacitated child is para 3 (the child is in employment or carries on a trade); paras 3A and 3B do not apply to an incapacitated child.
+  `an eligible child for YA` excludes that child, and `the qualifying child relief before sharing for YA` returned 0 where (vi) gives 7,500; it now gives 7,500 (shared as para 4 says).
 
