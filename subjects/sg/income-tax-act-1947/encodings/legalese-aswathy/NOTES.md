@@ -432,7 +432,7 @@ No row is deferred.
 |---|---|---|---|
 | I1 | the Act is stated by YA; earlier versions of most provisions are not in the text | answer earlier YAs from this text | refuse YAs before 2024; printed YA tables still answer |
 | I2 | ss 40B(3), 40C(3): relief limited so that the tax "in respect of such income" is not less than a resident's "in the same circumstances" | what the resident comparison is | the tax at resident rates on chargeable income less the reliefs a resident would have, apportioned to the employment share; compared with 15% on that share |
-| I3 | s 39(1)(c)-(d): "at any time ... above 55 ... above 60"; (b) "without affecting" (c), (d) | age band; how (b) combines | the band reached by 31 December of the preceding year; (b) added to (c) or (d) |
+| I3 | s 39(1)(c)-(d): "at any time ... above 55 ... above 60"; (b) "without affecting" (c), (d) | age band; how (b) combines; whether completing 55 (or 60) during the year is "above" it | the age reached by 31 December of the preceding year is *at least* 55 for (c), *at least* 60 for (d) (corrected 2026-11-24; it was *greater than*, which gave age 55 the (a) $1,000 and age 60 the (c) $6,000); (b) added to (c) or (d). One cohort is misread: a birthday on 31 December leaves the person exactly 55 (or 60) that night, never above it, and gets the higher band here |
 | I4 | s 39(2)(h), (ha): "37% ... or such other rate as may be prescribed", "$37,740 ... or such other amount" | prescribed alternatives | the printed figures |
 | I5 | s 10(2)(cb)(i): the employer's rent, without "less any rent paid by the employee" (which (ii) has) | deduct the employee's rent under (i) too | not deducted under (i), as printed |
 | I6 | s 45(4)(b): 1% per completed month "within 30 days after the time specified" | when months start | counted from 30 days after the due date |
@@ -477,7 +477,7 @@ The independent tests needed two plumbing edits (a split field, a mislabelled co
 ## 10. Open questions for a domain expert
 
 1. I2: how IRAS computes "the tax ... payable by a resident of Singapore in the same circumstances" for a non-resident employee with other income.
-2. I3: the age band for an individual whose 55th or 60th birthday falls during the preceding year.
+2. I3: the age band for an individual whose 55th or 60th birthday falls on 31 December of the preceding year (every other birthday in that year is settled by the words "at any time in the year").
 3. I5: whether the employee's rent is deducted from the employer-paid rent under s 10(2)(cb)(i).
 4. The prescribed figures the encoding takes as inputs (SRS caps, CPF top-up limits, withholding substitutions under s 45(1C)).
 
@@ -498,3 +498,13 @@ Moved back from `legalese/solutions` (Litigate.4/sg/income-tax-act-1947/legalese
 - In `the personal reliefs for YA`, `total` is `sum (LIST r1, ..., r12)` rather than `r1 PLUS ... PLUS r12`. It is the same sum. The stable `l4`'s overload resolution did not finish on the eleven-`PLUS` chain over untyped locals: `ita-reliefs.l4` ran for more than five minutes and did not end.
 
 **Check results.** 19 modules, 0 errors: 721 assertions written, 721 satisfied. `ita-tests-goal.l4` 26/26, `ita-tests-income.l4` 169/169, `ita-tests-process.l4` 84/84, `ita-tests-rates-reliefs.l4` 122/122, `tests-independent.l4` 320/320. This matches the 721 recorded under `encoding.json` → `checks`. `ita-goal.l4` takes about 1.5 minutes and `tests-independent.l4` several minutes under the stable `l4`.
+
+## Changed 2026-11-24 (Commons session)
+
+- **I3 corrected** in `ita-reliefs.l4`: `the earned income relief for` now tests `AT LEAST 60` and `AT LEAST 55` on the age reached by 31 December, where it tested `GREATER THAN`.
+  The Act's words are "at any time in the year immediately preceding the year of assessment, was above 55 years of age but was not above 60 years of age" (s 39(1)(c)) and "was above 60 years of age" (d).
+  A person whose 55th birthday fell on any day of that year but 31 December was above 55 from the next day, so for them (c) applies.
+  The old test gave everyone aged exactly 55 the $1,000 of (a) and everyone aged exactly 60 the $6,000 of (c).
+  Four assertions were added in `ita-tests-rates-reliefs.l4` (ages 54, 55, 59, 60: 1,000, 6,000, 6,000, 8,000), 725 in all; none was changed.
+  The reading was taken from the Act's text, not from IRAS's table or a software referee.
+
