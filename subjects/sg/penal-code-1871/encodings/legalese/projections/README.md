@@ -21,17 +21,17 @@ The other three carriers of that figure are correct.
 | slug | decision in the L4 | what it is for |
 | --- | --- | --- |
 | `robbery-390` | `commits robbery` | s 390(1), the root: a two-way OR. Meet this one first |
-| `robbery-390-2` | `theft is robbery` | s 390(2) — the widest, and the one to hold against a textbook's element list |
+| `robbery-390-2` | `theft is robbery` | s 390(2) — the widest, and the one to hold against any other statement of its elements |
 | `robbery-390-3` | `extortion is robbery` | s 390(3) — presence, instant harms, to whom, then-and-there |
 | `robbery-392` | `offence under s 392` | the punishing section: one rung over the definition |
 | `robbery-393` | `offence under s 393` | the attempt: one leaf, deliberately |
 | `robbery-394` | `offence under s 394` | not s 392 plus a leaf — its own first limb, and its own second question |
-| `robbery-392-implies` | `whoever commits robbery shall be so punished` | the same s 392 as an `IMPLIES`: scope, seam, **consequent on the right**, two lamps. Woon's shape, and the only figure here that has one |
+| `robbery-392-implies` | `whoever commits robbery shall be so punished` | the same s 392 as an `IMPLIES`: scope, seam, **consequent on the right**, two lamps. The only figure here with its conclusion on the right |
 | `robbery-392-liability` | `liable under s 392` | what that consequent contains — the ordinary punishment and the night one, as the statute splits them |
 
-## The head-as-sink twins — 14 files, the Woon reading
+## The head-as-sink twins — 14 files, conclusion on the right
 
-`<slug>-head.svg` and `<slug>-head.txt` beside seven of the eight figures draw the decision's own name as the **rightmost box**, so the ladder reads as a Layman Allen normalised diagram: subject at the left margin, consequent at the right, which is how Woon draws every element diagram in *Essential Criminal Law* ch 8 (`Offender` … `Commits Robbery`, p 187).
+`<slug>-head.svg` and `<slug>-head.txt` beside seven of the eight figures draw the decision's own name as the **rightmost box**, so the ladder reads as a Layman Allen normalised diagram: subject at the left margin, consequent at the right. This is a choice of presentation only; see `../notes/forks.md`, PC-12.
 They are a second variant, not a replacement, so the 32 files above and NOTES.md's references to them do not move.
 Made by the same generator with `LADDER_HEAD_AS_SINK=1`, via `@repo/ladder-core`'s opt-in `headAsSink` (l4-ide branch `headlamp`, PR legalese/l4-ide#445).
 
@@ -54,13 +54,13 @@ recorded in their README.
 rule becomes obvious in a way no diagram shows: **48 ways** to satisfy s 390(2), which is four
 timing limbs × two of causes-or-attempts × six harms. That number is the section, not the encoding.
 It read 36 until 2026-09-21, when the timing group went from three limbs to four — see NOTES.md,
-“s 390(2) at Woon’s granularity”.
+“s 390(2) at the granularity of its grammar”.
 
 ## There are no THEFT figures here, and s 380 is now the reason to want one
 
 Every slug above is `robbery-*`.
 Nothing in this directory draws `commits theft` (s 378), `offence under s 379`, or — since 2026-09-21 — `offence under s 380`.
-So Woon's two theft diagrams (*Essential Criminal Law* ch. 8, R02 at p. 181 and R05 at p. 185) have no artefact of ours to be laid beside, and the s 380 ladder is the first in this row with **two OR-groups in series**, which is exactly the shape a figure shows better than prose.
+So the theft sections have no figure here at all, and the s 380 ladder is the first in this row with **two OR-groups in series**, which is exactly the shape a figure shows better than prose.
 
 **The obvious fix does not work, and the shape of the real one is worth recording before anyone files it.**
 `ts-shared/ladder-svg/demo/robbery.ts` in `legalese/l4-ide` sets ONE module-level `const CORPUS = resolve(ROW, "robbery-390-392.l4")`, and its `SUBJECTS` entries carry only `{decision, slug, why}` — there is no per-subject corpus path.
