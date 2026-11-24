@@ -508,3 +508,14 @@ Moved back from `legalese/solutions` (Litigate.4/sg/income-tax-act-1947/legalese
   Four assertions were added in `ita-tests-rates-reliefs.l4` (ages 54, 55, 59, 60: 1,000, 6,000, 6,000, 8,000), 725 in all; none was changed.
   The reading was taken from the Act's text, not from IRAS's table or a software referee.
 
+- **Three more faults, found by running IRAS's published worked examples through the household calculator and settled from the Act** (2026-11-24; nine assertions added to `ita-tests-rates-reliefs.l4`, 734 in all; the 725 before were all still satisfied):
+  1. *The $50,000 for one child counts every claimant's qualifying child relief.* Fifth Schedule para 6(2): "The total deductions allowable to **all individuals** under paragraphs 1 and 5(1A) or (1AB) and proviso (v) to section 39(2)(e) in respect of the same child must not exceed $50,000", and para 6(3) has the qualifying child relief allowed first.
+     `the child reliefs for YA` capped each mother's working mother's child relief at 50,000 less *her own share* of the qualifying child relief, so a mother sharing the relief with her husband could draw $2,000 more than the Act allows.
+     It now takes the qualifying child relief before it is shared (new function `the qualifying child relief before sharing for YA`), the shares of the claimants being taken to add to 1.
+  2. *Shared parent relief.* s 39(2)(i)(vii)(B): where more than one individual claims for the same dependant and "at least one of the claimants was living with the dependant in the same household", the amount apportioned "is the amount set out in sub-paragraph (iv)(A) or (v)(A)", $9,000 or $14,000.
+     A claimant who lives apart and spent at least $2,000 therefore shares the larger amount.
+     `Dependant facts` has a new field, `at least one claimant of this dependant lived with the dependant in the same household`; every constructor of the type in the tests carries it (FALSE where the claimant is alone).
+  3. *NSman reliefs are not cumulative.* s 39(2)(m): a wife or widow "who had not made a claim under paragraph (n)"; (n): a parent "who had not made a claim under paragraph (m) or subsection (2A) or (2B)".
+     `the NSman reliefs:` added the $750 for a wife and the $750 for a parent to the NSman's own relief whenever the flags were set; it now gives one $750 at most between the two, and none to a parent who has an NSman relief of his or her own.
+- *Not changed, a fork recorded for the household row:* whether a child barred by Fifth Schedule para 3B still counts in the order of a mother's eligible children (fork H3 of `../household-ya2026/`).
+
