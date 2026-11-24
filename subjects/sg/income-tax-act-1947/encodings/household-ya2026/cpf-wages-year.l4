@@ -1,0 +1,196 @@
+IMPORT prelude
+IMPORT `cpf-contributions`
+
+-- Central Provident Fund Act 1953 (Singapore) -- what comes out of my pay for CPF over a whole calendar year, from ordinary and
+-- additional wages, for the years 2025 and 2026.
+--
+-- SEAT: the employee (the member of the Fund whose wages the contributions are paid on).
+--
+-- WHY THIS MODULE: cpf-contributions.l4 answers one month of ordinary wages and says in terms that additional wages and every month
+-- before 2026 are NOT encoded. A year of income for income tax (year of assessment 2026 taxes income of 2025) needs both: the
+-- employee's share for each of twelve months, bands by age that change in the month after a birthday month, the monthly Ordinary
+-- Wage Ceiling, and the $102,000 annual ceiling that bonuses fall under.
+--
+-- PROVISIONS COVERED: First Schedule paragraph 1 (the employee's column: nothing up to $500; the factor on the excess over $500 up to
+-- $750; the rate on ordinary wages up to the Ordinary Wage Ceiling and on the Relevant Additional Wages over $750), paragraph 2(1) and
+-- (4)(c) (no contribution on additional wages beyond the applicable amount less the year's ordinary wages), paragraph 4A(d) (ordinary
+-- wages over the Ordinary Wage Ceiling are disregarded in that sum), paragraph 5(a) (an age band starts the month after the birthday
+-- month), (c) (the employee's fraction of a dollar is ignored), (da) (the applicable amount, $102,000), (ea) (the Ordinary Wage
+-- Ceiling), (eba) (Relevant Additional Wages), (f) (Total Wages).
+--
+-- RATES: the year 2026 is the table already in cpf-contributions.l4 (First Schedule paragraph 1 "with effect from 1 January 2026").
+-- The year 2025 is the table in force until 31 December 2025; its source and the check of each figure are in NOTES.md.
+--
+-- ANSWERS NOTHING: any other year; a pay list that is not twelve months (both before the residence status is looked at, so a foreign employee
+-- gets the same answer); a permanent resident up to the end of the second anniversary month (paragraphs 1A to 1D).
+-- NOT ENCODED, and the module has no input that could say so, so the caller must not use it for them: the employees of paragraph 6 and 7
+-- bodies; more than one employer (paragraph 3 pools them, and paragraph 2 is per employer; this module is one employment); a "relevant
+-- employee" whose remuneration is paid after the employment ends (paragraph 5(ebb)); Exemption Order classes other than "neither a
+-- citizen nor a permanent resident"; the self-employed.
+--
+-- BASELINE ENCODING, written with the writing-l4-rules skill after the baseline modules of this folder. See NOTES.md.
+
+§ `Central Provident Fund Act 1953 -- my employee CPF over a calendar year`
+
+§§ `The facts of my year`
+
+DECLARE `My pay in one month` HAS
+    -- para 5(e): remuneration "due or granted wholly or exclusively in respect of employment during that month and payable before
+    -- the due date for the payment of contribution for that month"
+    `my ordinary wages for the month`            IS A NUMBER
+    -- para 5(d)(i): "any remuneration other than ordinary wages"; para 5(eba): the amount "payable to the employee in a calendar month"
+    `my additional wages payable in the month`   IS A NUMBER
+
+-- One case is one employment for one calendar year.
+DECLARE `My year of work` HAS
+    `the calendar year of my pay`                IS A NUMBER
+    `my residence status in my year`             IS A `Residence status`
+    -- para 5(a): the band changes "from the first day of the month following the month in which the employee attains that age"
+    `the year I was born`                        IS A NUMBER
+    `the month I was born`                       IS A NUMBER    -- 1 to 12
+    `my pay from January to December`            IS A LIST OF `My pay in one month`
+
+§§ `The employee's column of paragraph 1, by year and age band`
+
+-- Para 1: "(a) where the employee is 55 years of age and below" and the four bands above 55, 60, 65 and 70. For wages exceeding $500
+-- but not exceeding $750 the employee's column reads "0.6 [band's factor] of the difference between the Total Wages and $500"; above
+-- $750 it reads "N% of the employee's ordinary wages for the month subject to a maximum of N% of the Ordinary Wage Ceiling" and
+-- "N% of the Relevant Additional Wages".
+DECLARE `Employee rate band` HAS
+    `my factor on wages from $500 to $750`       IS A NUMBER
+    `my rate on wages above $750`                IS A NUMBER
+
+-- Para 5(a)(i): the older band's contributions are payable "from the first day of the month following the month in which the employee
+-- attains that age". Counting months from year 0, the month I attain an age is the one in which I was born, that many years on.
+-- READING (labelled; the same as in cpf-contributions.l4): "that age" is the threshold itself, 55, 60, 65 or 70.
+GIVEN y IS A `My year of work`
+      month IS A NUMBER
+      age IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `my month is after the month I attain` IF
+    (y's `the calendar year of my pay` TIMES 12 PLUS month)
+        GREATER THAN ((y's `the year I was born` PLUS age) TIMES 12 PLUS y's `the month I was born`)
+
+-- The band number for a month: 0 for 55 and below, 1 above 55, 2 above 60, 3 above 65, 4 above 70.
+GIVEN y IS A `My year of work`
+      month IS A NUMBER
+GIVETH A NUMBER
+`the age band I am in for` MEANS
+    BRANCH IF `my month is after the month I attain` y month 70 THEN 4
+           IF `my month is after the month I attain` y month 65 THEN 3
+           IF `my month is after the month I attain` y month 60 THEN 2
+           IF `my month is after the month I attain` y month 55 THEN 1
+           OTHERWISE                                              0
+
+-- Para 1 as in force from 1 January 2026 is the table in cpf-contributions.l4; this repeats its employee figures so that one function
+-- answers both years, and cpf-cases-wages-year.l4 asserts that the two agree.
+-- Para 1 as in force during 2025: see NOTES.md for where each figure comes from.
+GIVEN year IS A NUMBER
+      band IS A NUMBER
+GIVETH A MAYBE `Employee rate band`
+`my rate band in` year `, age band` band MEANS
+    --                                                        factor,  rate
+    BRANCH IF year EQUALS 2025 THEN
+               (BRANCH IF band EQUALS 0 THEN JUST (`Employee rate band` OF 0.6,   0.2)
+                       IF band EQUALS 1 THEN JUST (`Employee rate band` OF 0.51,  0.17)
+                       IF band EQUALS 2 THEN JUST (`Employee rate band` OF 0.345, 0.115)
+                       IF band EQUALS 3 THEN JUST (`Employee rate band` OF 0.225, 0.075)
+                       OTHERWISE             JUST (`Employee rate band` OF 0.15,  0.05))
+           IF year EQUALS 2026 THEN
+               (BRANCH IF band EQUALS 0 THEN JUST (`Employee rate band` OF 0.6,   0.2)
+                       IF band EQUALS 1 THEN JUST (`Employee rate band` OF 0.54,  0.18)
+                       IF band EQUALS 2 THEN JUST (`Employee rate band` OF 0.375, 0.125)
+                       IF band EQUALS 3 THEN JUST (`Employee rate band` OF 0.225, 0.075)
+                       OTHERWISE             JUST (`Employee rate band` OF 0.15,  0.05))
+           OTHERWISE NOTHING
+
+§§ `One month, and the year`
+
+-- Para 5(da): "applicable amount", in respect of the year 2016 and every subsequent year, means the sum of $102,000.
+`the applicable amount` MEANS 102000
+
+-- Para 2(1) and (4)(c), read with para 4A(d): "No contribution is payable by an employer on any part of an employee's additional wages
+-- payable in [a] year ... which is in excess of the applicable amount less the amount of ordinary wages for the current year", the
+-- ordinary wages being counted only up to the Ordinary Wage Ceiling for each month. Recomputed "at the end of the current year", in the
+-- order the additional wages became payable. So the additional wages that count in a month are what is left of the room under the
+-- applicable amount after the year's ordinary wages and the additional wages of the earlier months.
+-- READING (labelled): the employee's share follows the same limit. Para 1's third column says "20% of the Relevant Additional
+-- Wages" without repeating it, but where no contribution is payable at all there is nothing for the employer to recover.
+GIVEN `the room left under the applicable amount` IS A NUMBER
+      `additional wages payable` IS A NUMBER
+GIVETH A NUMBER
+`the additional wages that count` MEANS
+    IF   `the room left under the applicable amount` LESS THAN `additional wages payable`
+    THEN (IF `the room left under the applicable amount` LESS THAN 0 THEN 0 ELSE `the room left under the applicable amount`)
+    ELSE `additional wages payable`
+
+-- Para 1, the employee's column, for one month of Total Wages; para 5(c): "a fraction of a dollar is to be ignored".
+GIVEN band IS AN `Employee rate band`
+      pay IS A `My pay in one month`
+      `the Ordinary Wage Ceiling` IS A NUMBER
+      `the additional wages that count` IS A NUMBER
+GIVETH A NUMBER
+`my share for the month` MEANS
+    FLOOR (BRANCH IF `Total Wages` AT MOST 500 THEN 0
+                  IF `Total Wages` AT MOST 750 THEN (`Total Wages` MINUS 500) TIMES band's `my factor on wages from $500 to $750`
+                  OTHERWISE (`ordinary wages up to the ceiling` PLUS `the additional wages that count`) TIMES band's `my rate on wages above $750`)
+    WHERE
+        -- para 5(f): "the total amount of the employee's ordinary wages for a calendar month and any additional wages payable to him or
+        -- her in that same month"; the ceiling does not enter the band test
+        `Total Wages` MEANS pay's `my ordinary wages for the month` PLUS pay's `my additional wages payable in the month`
+        `ordinary wages up to the ceiling` MEANS
+            IF   pay's `my ordinary wages for the month` GREATER THAN `the Ordinary Wage Ceiling`
+            THEN `the Ordinary Wage Ceiling`
+            ELSE pay's `my ordinary wages for the month`
+
+GIVEN y IS A `My year of work`
+GIVETH A NUMBER
+`the year's ordinary wages, capped` MEANS
+    sum (map `capped` (y's `my pay from January to December`))
+    WHERE
+        `capped` p MEANS
+            IF   p's `my ordinary wages for the month` GREATER THAN `the Ordinary Wage Ceiling in` (y's `the calendar year of my pay`)
+            THEN `the Ordinary Wage Ceiling in` (y's `the calendar year of my pay`)
+            ELSE p's `my ordinary wages for the month`
+
+-- One month's share, then the sum over the months in the order the wages were paid.
+GIVEN y IS A `My year of work`
+      m IS A NUMBER
+      p IS A `My pay in one month`
+      `additional wages of the earlier months` IS A NUMBER
+GIVETH A NUMBER
+`my share in month` MEANS
+    CONSIDER `my rate band in` (y's `the calendar year of my pay`) `, age band` (`the age band I am in for` y m)
+    WHEN NOTHING THEN 0
+    WHEN JUST band THEN
+        `my share for the month` band p (`the Ordinary Wage Ceiling in` (y's `the calendar year of my pay`))
+            (`the additional wages that count`
+                (`the applicable amount` MINUS `the year's ordinary wages, capped` y MINUS `additional wages of the earlier months`)
+                (p's `my additional wages payable in the month`))
+
+GIVEN y IS A `My year of work`
+      m IS A NUMBER
+      pays IS A LIST OF `My pay in one month`
+      `additional wages of the earlier months` IS A NUMBER
+GIVETH A NUMBER
+`my shares from month` MEANS
+    CONSIDER pays
+    WHEN EMPTY THEN 0
+    WHEN p FOLLOWED BY rest THEN
+        `my share in month` y m p `additional wages of the earlier months`
+        PLUS `my shares from month` y (m PLUS 1) rest (`additional wages of the earlier months` PLUS p's `my additional wages payable in the month`)
+
+-- The year: twelve months, January first.
+GIVEN y IS A `My year of work`
+GIVETH A MAYBE NUMBER
+`my employee CPF for the year` MEANS
+    -- the year and the length come first: a foreign employee (below) is covered only for the years and the shape of pay this module encodes
+    IF   (count (y's `my pay from January to December`) GREATER THAN 12)
+         OR (count (y's `my pay from January to December`) LESS THAN 12)
+         OR ((y's `the calendar year of my pay` LESS THAN 2025) OR (y's `the calendar year of my pay` GREATER THAN 2026))
+    THEN NOTHING
+    ELSE
+        CONSIDER y's `my residence status in my year`
+        WHEN `neither a citizen nor a permanent resident` THEN JUST 0      -- Exemption Order para 3: the employer is exempt; nothing is recoverable
+        WHEN `a permanent resident up to the end of my second anniversary month` THEN NOTHING   -- paragraphs 1A to 1D
+        OTHERWISE JUST (`my shares from month` y 1 (y's `my pay from January to December`) 0)

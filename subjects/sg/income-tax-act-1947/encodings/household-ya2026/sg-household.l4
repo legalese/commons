@@ -1,0 +1,483 @@
+IMPORT prelude
+IMPORT `ita-types`
+IMPORT `ita-rates`
+IMPORT `ita-reliefs`
+IMPORT `cpf-contributions`
+IMPORT `cpf-wages-year`
+
+-- A Singapore household's income tax and employee CPF for one income year (YA 2026 is income year 2025).
+--
+-- SEAT: the individual who is taxed -- here one or two adults living together, and their children.
+--
+-- WHAT THIS IS: a thin layer. It builds, for each adult, the facts that the Income Tax Act encoding (ita-reliefs.l4, ita-rates.l4)
+-- asks for, and takes the employee CPF from the CPF encoding (cpf-wages-year.l4), then adds up. The rates and the reliefs are in the
+-- copied encodings. What this layer decides itself is listed in NOTES.md section 2a: the choices the Act leaves open (the labelled
+-- FORKS H1 to H8) and the points where it fixes a fact the household cannot state (a limb of s 39(2)(e) it does not ask for, a spouse's
+-- infirmity, the route to a parenthood rebate). The one thing it checks is its own input: a share of a child's relief or rebate that is not
+-- from 0 to 1, or not 1 for a sole adult, makes the answer NOTHING.
+--
+-- Both Acts' encodings are copied into this folder byte for byte (see NOTES.md, "Copied modules"): ita-types, ita-rates, ita-reliefs,
+-- cpf-contributions and cpf-wages-year.
+--
+-- SCOPE (a resident individual's wages, trade, rent; a spouse; children; the reliefs of s 39 and the Fifth Schedule; the s 39A cap; the
+-- Second Schedule rates; the s 42A parenthood rebate; employee CPF on ordinary and additional wages): income year 2025 (YA 2026) or 2026
+-- (YA 2027). NOT COVERED: a non-resident adult; a permanent resident in the first two years; employment expenses and donations (s 37);
+-- a trade's own deductions (the figure is supplied after them); taxable pensions in "earned income"; self-employed CPF; the
+-- Comptroller's discretionary remissions; any Budget rebate that is not in the Act's text (none is for YA 2026; see NOTES.md).
+
+§ `A Singapore household: income tax and employee CPF`
+
+§§ `The facts of the household`
+
+DECLARE `Mother of a child` IS ONE OF
+    `the first adult is the child's mother`
+    `the second adult is the child's mother`
+    `neither adult is the child's mother`
+
+-- The children are listed oldest first: the order in the list is the order of the family's children (s 42A) and of each mother's
+-- eligible children (Fifth Schedule para 5(1A), (1AB)).
+DECLARE `Child of the household` HAS
+    `the year the child was born`                                  IS A NUMBER
+    `the child is a Singapore citizen`                             IS A BOOLEAN
+    `the child's income in the income year, excluding scholarships` IS A NUMBER
+    `the child was engaged in employment or a trade`               IS A BOOLEAN
+    `the child is in full-time instruction`                        IS A BOOLEAN
+    `the child is incapacitated by physical or mental infirmity`   IS A BOOLEAN
+    `the child was unmarried throughout the income year`           IS A BOOLEAN
+    -- Fifth Schedule para 4: where more than one individual may claim the qualifying child relief it is apportioned "in such manner as appears
+    -- to the Comptroller to be reasonable". The first adult's share, from 0 to 1; the second adult takes the rest.
+    `the share of the child's relief the first adult claims`       IS A NUMBER
+    -- s 42A(2C): the parenthood rebate is apportioned "in such proportion as they may agree"; a separate decision, so a separate share
+    `the share of the parenthood rebate the first adult claims`    IS A NUMBER
+    `the child's mother`                                           IS A `Mother of a child`
+    -- Fifth Schedule para 5(1AA), (1AC): the date that fixes the working mother's child relief is the birth, the marriage, the adoption
+    -- or the citizenship; only its year is asked, because the Schedule splits at 31 December 2023 and 1 January 2024.
+    `the year of the date that fixes the working mother's child relief` IS A NUMBER
+
+DECLARE `Adult of the household` HAS
+    `my year of birth`                                             IS A NUMBER
+    `my month of birth`                                            IS A NUMBER      -- 1 to 12
+    `my residence status for CPF`                                  IS A `Residence status`
+    `I am resident in Singapore for income tax`                    IS A BOOLEAN     -- s 2 "resident in Singapore"
+    `my wages month by month`                                      IS A LIST OF `My pay in one month`
+    `my trade, business or profession income, after its deductions` IS A NUMBER
+    `my rent and other property income, after its deductions`      IS A NUMBER
+    -- income the Act does not tax here (bank interest, one-tier dividends, an exempt pension): it matters only for the $8,000 tests
+    `my tax-exempt income`                                         IS A NUMBER
+    `I am a married woman, a divorcee or a widow`                  IS A BOOLEAN     -- Fifth Schedule para 5
+    `I am totally blind or permanently and severely disabled`      IS A BOOLEAN
+    `my life insurance premiums, capped at 7% of the capital sum`  IS A NUMBER
+    `my SRS contributions`                                         IS A NUMBER
+    `my SRS contribution cap`                                      IS A NUMBER
+    `my CPF cash top-ups for family, after grants and as capped`   IS A NUMBER
+    `my CPF cash top-ups for myself, after grants and as capped`   IS A NUMBER
+    `the prescribed deduction limit for family top-ups`            IS A NUMBER
+    `the prescribed deduction limit for my own top-ups`            IS A NUMBER
+    `my dependants`                                                IS A LIST OF `Dependant facts`
+    `incapacitated siblings I maintain`                            IS A NUMBER
+    `my national service status`                                   IS A `National service status`
+    `I am the wife or widow of an NSman and claim`                 IS A BOOLEAN
+    `I am the parent of an NSman and claim`                        IS A BOOLEAN
+    `the caregiver grandparent's income from work`                 IS A MAYBE NUMBER
+    -- s 42A(3): a rebate that could not be used in an earlier year, carried forward
+    `my parenthood rebate brought forward`                         IS A NUMBER
+
+DECLARE `Household` HAS
+    `the income year`                                              IS A NUMBER      -- 2025 or 2026; the year of assessment is the next
+    `the first adult`                                              IS AN `Adult of the household`
+    `the second adult`                                             IS A MAYBE `Adult of the household`
+    `the adults are married to each other and live together`       IS A BOOLEAN
+    `the children`                                                 IS A LIST OF `Child of the household`
+
+§§ `What comes out`
+
+DECLARE `One adult's position` HAS
+    `employee CPF`                  IS A NUMBER
+    `employment income`             IS A NUMBER
+    `assessable income`             IS A NUMBER
+    `reliefs allowed, after the s 39A cap` IS A NUMBER
+    `chargeable income`             IS A NUMBER
+    `tax before the parenthood rebate` IS A NUMBER
+    `parenthood rebate used`        IS A NUMBER
+    `parenthood rebate carried forward` IS A NUMBER
+    `income tax`                    IS A NUMBER
+    `gross income`                  IS A NUMBER
+
+DECLARE `The household's position` HAS
+    `the first adult's position`    IS A `One adult's position`
+    `the second adult's position`   IS A MAYBE `One adult's position`
+    `income tax of the household`   IS A NUMBER
+    `employee CPF of the household` IS A NUMBER
+    `gross income of the household` IS A NUMBER
+    `net income of the household`   IS A NUMBER     -- gross income, less income tax and employee CPF
+
+§§ `Counting`
+
+-- A child counts as an eligible child of a mother in list order; the order is how many of her eligible children are at or before it.
+GIVEN flags IS A LIST OF BOOLEAN
+      before IS A NUMBER
+GIVETH A LIST OF NUMBER
+`the running counts of the true flags after` MEANS
+    CONSIDER flags
+    WHEN EMPTY THEN EMPTY
+    WHEN f FOLLOWED BY rest THEN
+        (IF f THEN before PLUS 1 ELSE before)
+            FOLLOWED BY (`the running counts of the true flags after` rest (IF f THEN before PLUS 1 ELSE before))
+
+§§ `One adult`
+
+-- Which adult: 1 is the first, 2 the second.
+GIVEN h IS A `Household`
+      who IS A NUMBER
+GIVETH A MAYBE (AN `Adult of the household`)
+`the adult numbered` MEANS
+    IF   who EQUALS 1
+    THEN JUST (h's `the first adult`)
+    ELSE h's `the second adult`
+
+GIVEN a IS AN `Adult of the household`
+GIVETH A NUMBER
+`my wages in the year` MEANS
+    sum (map `a month's wages` (a's `my wages month by month`))
+    WHERE
+        `a month's wages` p MEANS p's `my ordinary wages for the month` PLUS p's `my additional wages payable in the month`
+
+-- s 2 "earned income": the statutory income from "any trade, business, profession, vocation or employment" and from a pension on which tax
+-- is payable. READING H5: the taxable pension is not asked, so earned income is wages and trade income.
+GIVEN a IS AN `Adult of the household`
+GIVETH A NUMBER
+`my earned income` MEANS
+    `my wages in the year` a PLUS a's `my trade, business or profession income, after its deductions`
+
+-- READING H1: "income" in s 39(2)(a) and the $8,000 tests is not defined in the Act; IRAS counts all of it, tax-exempt income included.
+GIVEN a IS AN `Adult of the household`
+GIVETH A NUMBER
+`my total income for the $8,000 tests` MEANS
+    `my earned income` a
+        PLUS a's `my rent and other property income, after its deductions`
+        PLUS a's `my tax-exempt income`
+
+GIVEN h IS A `Household`
+      who IS A NUMBER
+GIVETH A MAYBE NUMBER
+`the employee CPF of the adult numbered` MEANS
+    CONSIDER `the adult numbered` h who
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST a THEN
+        `my employee CPF for the year` (`My year of work` WITH
+            `the calendar year of my pay`    IS h's `the income year`
+            `my residence status in my year` IS a's `my residence status for CPF`
+            `the year I was born`            IS a's `my year of birth`
+            `the month I was born`           IS a's `my month of birth`
+            `my pay from January to December` IS a's `my wages month by month`)
+
+-- The Fifth Schedule and s 39(2)(e) facts about one child, for the adult numbered `who`. The first adult's share is s, the second's 1 - s.
+GIVEN h IS A `Household`
+      who IS A NUMBER
+      c IS A `Child of the household`
+      `my order among my eligible children` IS A NUMBER
+GIVETH A `Child facts`
+`the facts of a child for the adult numbered` MEANS
+    `Child facts` WITH
+        `unmarried throughout the preceding year`          IS c's `the child was unmarried throughout the income year`
+        -- FORK H4. s 39(2)(e)(i): "being below 16 years of age at any time during the year": a child born 16 years before the end of the year was
+        -- below 16 until the birthday. Only the birth year is asked, so a child born on 1 January of that year, who is 16 from the first moment
+        -- of the year, is counted although the words exclude her (a one-day cohort)
+        `below 16 at any time in the preceding year`       IS c's `the year the child was born` AT LEAST (h's `the income year` MINUS 16)
+        `in full-time instruction`                         IS c's `the child is in full-time instruction`
+        `serving under articles or indentures`             IS FALSE     -- s 39(2)(e)(iii) is not asked: a child under articles is not covered by the household's inputs
+        `incapacitated by physical or mental infirmity`    IS c's `the child is incapacitated by physical or mental infirmity`
+        `income in the preceding year, excluding scholarships` IS c's `the child's income in the income year, excluding scholarships`
+        `engaged in employment or a trade, other than under articles` IS c's `the child was engaged in employment or a trade`
+        -- both adults of the household maintain its children; the share only apportions the relief (Fifth Schedule para 4), so a mother
+        -- whose share of the qualifying child relief is nil still maintains the child for the working mother's child relief
+        `maintained by the claimant`                       IS TRUE
+        `claimant's share of the relief`                   IS `my share`
+        `a Singapore citizen`                              IS c's `the child is a Singapore citizen`
+        `order among the mother's eligible children`       IS `my order among my eligible children`
+        `the para 5 date`                                  IS YearMonthDay (c's `the year of the date that fixes the working mother's child relief`) 7 1
+    WHERE
+        `my share` MEANS
+            IF who EQUALS 1
+            THEN c's `the share of the child's relief the first adult claims`
+            ELSE 1 MINUS c's `the share of the child's relief the first adult claims`
+
+-- Is this adult the child's mother?
+GIVEN who IS A NUMBER
+      c IS A `Child of the household`
+GIVETH A BOOLEAN
+DECIDE `the adult numbered is the mother of` IF
+    CONSIDER c's `the child's mother`
+    WHEN `the first adult is the child's mother`  THEN who EQUALS 1
+    WHEN `the second adult is the child's mother` THEN who EQUALS 2
+    WHEN `neither adult is the child's mother`    THEN FALSE
+
+-- The children of the household as facts for the adult numbered `who`, with each mother's order among her eligible children counted
+-- (zero for a child of whom this adult is not the mother, whose order the mother-only relief does not read).
+GIVEN h IS A `Household`
+      who IS A NUMBER
+GIVETH A LIST OF `Child facts`
+`the children as the adult numbered sees them` MEANS
+    `the facts from` (h's `the children`) (`the order counts` (h's `the children`))
+    WHERE
+        `the base facts` c MEANS `the facts of a child for the adult numbered` h who c 0
+        -- READING H3 (labelled): the order is the order among the children within s 39(2)(e), the Act giving the ranking to the Comptroller
+        -- (Fifth Schedule para 7(b)), whose published practice counts a child whom para 3 or 3B bars from any deduction: the Schedule's bars
+        -- remove the deduction, not the child's place in the order. The four limbs below are a second copy of the limbs in `an eligible child for YA`
+        -- (ita-reliefs.l4), without paras 3 to 3B: a later change to the limbs there has to be made here too.
+        `an eligible mother's child` c MEANS
+            `the adult numbered is the mother of` who c
+            AND `a child within s 39(2)(e)` (`the base facts` c)
+        `a child within s 39(2)(e)` k MEANS
+                k's `maintained by the claimant`
+            AND k's `unmarried throughout the preceding year`
+            AND (    k's `below 16 at any time in the preceding year`
+                 OR  k's `in full-time instruction`
+                 OR  k's `serving under articles or indentures`
+                 OR  k's `incapacitated by physical or mental infirmity`)
+        `the order counts` cs MEANS
+            `the running counts of the true flags after` (map `an eligible mother's child` cs) 0
+        `the facts from` cs counts MEANS
+            CONSIDER cs
+            WHEN EMPTY THEN EMPTY
+            WHEN c FOLLOWED BY rest THEN
+                CONSIDER counts
+                WHEN EMPTY THEN EMPTY
+                WHEN n FOLLOWED BY moreCounts THEN
+                    (`the facts of a child for the adult numbered` h who c
+                        (IF `the adult numbered is the mother of` who c THEN n ELSE 0))
+                    FOLLOWED BY (`the facts from` rest moreCounts)
+
+§§ `The facts that the Income Tax Act encoding asks for`
+
+-- The adult's relief facts. The adult's own earned income, age and employee CPF; the other adult is the spouse if they are married.
+-- No course fees (s 39(12C): the relief ceases from YA 2026), no domestic worker levy (s 39(11): YA 2024 and before), no former spouse.
+GIVEN h IS A `Household`
+      who IS A NUMBER
+      a IS AN `Adult of the household`
+      `my employee CPF` IS A NUMBER
+GIVETH AN `Individual relief facts`
+`the relief facts of an adult` MEANS
+    `Individual relief facts` WITH
+        `earned income`                                          IS `my earned income` a
+        `age reached by 31 December of the preceding year`       IS h's `the income year` MINUS a's `my year of birth`
+        `totally blind or permanently and severely disabled`     IS a's `I am totally blind or permanently and severely disabled`
+        `a female claimant (married, divorced or widowed)`       IS a's `I am a married woman, a divorcee or a widow`
+        `had a spouse living with or maintained by the claimant` IS `has a spouse`
+        `spouse's income in the preceding year`                  IS `the spouse's income`
+        `spouse incapacitated by physical or mental infirmity`   IS FALSE     -- s 39(2)(d) is not asked (fixed off); NOTES.md section 2a
+        `payments to a former spouse under a court order or deed` IS 0         -- s 39(2)(c) is not asked (fixed off)
+        `children`                                               IS `the children as the adult numbered sees them` h who
+        `life insurance premiums, capped at 7% of the capital sum` IS a's `my life insurance premiums, capped at 7% of the capital sum`
+        `obligatory CPF or approved fund contributions as an employee` IS `my employee CPF`
+        `self-employed: assessable income from the trade or profession` IS 0
+        `self-employed: obligatory CPF contributions on that income` IS 0
+        `self-employed: voluntary CPF contributions`             IS 0
+        `dependants`                                             IS a's `my dependants`
+        `incapacitated siblings maintained`                      IS a's `incapacitated siblings I maintain`
+        `course fees`                                            IS 0
+        `national service`                                       IS a's `my national service status`
+        `wife or widow of an NSman, claiming`                    IS a's `I am the wife or widow of an NSman and claim`
+        `parent of an NSman, claiming`                           IS a's `I am the parent of an NSman and claim`
+        `SRS contributions`                                      IS a's `my SRS contributions`
+        `SRS contribution cap`                                   IS a's `my SRS contribution cap`
+        `SRS account suspended, or the contribution withdrawn in the year` IS FALSE   -- s 39(2)(o) conditions are not asked (fixed off)
+        `grandparent caregiver: the caregiver's trade or employment income` IS a's `the caregiver grandparent's income from work`
+        `CPF cash top-ups for family, after grants and capped as prescribed` IS a's `my CPF cash top-ups for family, after grants and as capped`
+        `CPF cash top-ups for self, after grants and capped as prescribed`   IS a's `my CPF cash top-ups for myself, after grants and as capped`
+        `prescribed deduction limit for s 39(3)`                 IS a's `the prescribed deduction limit for family top-ups`
+        `prescribed deduction limit for s 39(3A)`                IS a's `the prescribed deduction limit for my own top-ups`
+        `foreign domestic worker levy paid, for one worker`      IS 0
+    WHERE
+        `the other adult` MEANS
+            IF who EQUALS 1 THEN h's `the second adult` ELSE JUST (h's `the first adult`)
+        -- s 39(2)(a): "a spouse, living with or maintained by him or her": the other adult of a married couple living together
+        `the spouse` MEANS
+            IF h's `the adults are married to each other and live together` THEN `the other adult` ELSE NOTHING
+        `has a spouse` MEANS
+            CONSIDER `the spouse`
+            WHEN NOTHING THEN FALSE
+            WHEN JUST s THEN TRUE
+        `the spouse's income` MEANS
+            CONSIDER `the spouse`
+            WHEN NOTHING THEN 0
+            WHEN JUST s THEN `my total income for the $8,000 tests` s
+
+§§ `The parenthood rebate (s 42A)`
+
+-- s 42A(1), (2), (2A), (2B): a rebate for the year of assessment following the year of the birth, by the child's place among the family's
+-- children. The place is the child's position in the list, oldest first (s 42A(11) counts siblings who are members of the same household at the
+-- birth: the list is taken to be that household). Only the route by birth is stated: the child is taken to be born on 1 July of the birth year and not
+-- adopted before marriage, so a rebate by adoption or by the marriage route (s 42A(1)(b) to (d)) cannot be stated here. A child born before the income year gives no new rebate: its
+-- unabsorbed balance is the adult's `parenthood rebate brought forward`.
+GIVEN n IS A NUMBER
+GIVETH AN `Order of child`
+`the place of the child numbered` MEANS
+    BRANCH IF n EQUALS 1 THEN `first child of the family`
+           IF n EQUALS 2 THEN `second child of the family`
+           IF n EQUALS 3 THEN `third child of the family`
+           IF n EQUALS 4 THEN `fourth child of the family`
+           OTHERWISE          `fifth or subsequent child of the family`
+
+GIVEN h IS A `Household`
+      who IS A NUMBER
+      c IS A `Child of the household`
+      n IS A NUMBER
+GIVETH A NUMBER
+`the rebate for the child at place` MEANS
+    IF   c's `the year the child was born` EQUALS h's `the income year`
+    THEN `my share` TIMES `the parenthood rebate for a` `the place` `, event on` `the birth` `, citizen:` `citizen` `, adopted before marriage:` FALSE
+    ELSE 0
+    WHERE
+        `the place` MEANS `the place of the child numbered` n
+        `the birth` MEANS YearMonthDay (c's `the year the child was born`) 7 1
+        `citizen` MEANS c's `the child is a Singapore citizen`
+        `my share` MEANS
+            IF who EQUALS 1
+            THEN c's `the share of the parenthood rebate the first adult claims`
+            ELSE 1 MINUS c's `the share of the parenthood rebate the first adult claims`
+
+GIVEN h IS A `Household`
+      who IS A NUMBER
+      cs IS A LIST OF `Child of the household`
+      n IS A NUMBER
+GIVETH A NUMBER
+`the rebates for the children from place` MEANS
+    CONSIDER cs
+    WHEN EMPTY THEN 0
+    WHEN c FOLLOWED BY rest THEN
+        `the rebate for the child at place` h who c n PLUS `the rebates for the children from place` h who rest (n PLUS 1)
+
+§§ `One adult's income tax`
+
+GIVEN h IS A `Household`
+      who IS A NUMBER
+      a IS AN `Adult of the household`
+      `my employee CPF` IS A NUMBER
+GIVETH A MAYBE (A `One adult's position`)
+`the position of an adult` MEANS
+    IF   NOT a's `I am resident in Singapore for income tax`
+    THEN NOTHING      -- the non-resident rates and the s 40A to 40D reliefs are not encoded here
+    ELSE CONSIDER `the resident individual rates for YA` `the year of assessment` `on chargeable income of` `chargeable income`
+         WHEN NOTHING THEN NOTHING
+         WHEN JUST tax THEN
+             JUST (`One adult's position` WITH
+                 `employee CPF`                         IS `my employee CPF`
+                 `employment income`                    IS `my wages in the year` a
+                 `assessable income`                    IS `assessable income`
+                 `reliefs allowed, after the s 39A cap` IS `reliefs`
+                 `chargeable income`                    IS `chargeable income`
+                 `tax before the parenthood rebate`     IS tax
+                 `parenthood rebate used`               IS `the rebate offered` MINUS (`a rebate of` `the rebate offered` `against tax of` tax)'s `rebate carried forward`
+                 `parenthood rebate carried forward`    IS (`a rebate of` `the rebate offered` `against tax of` tax)'s `rebate carried forward`
+                 `income tax`                           IS (`a rebate of` `the rebate offered` `against tax of` tax)'s `tax after rebate`
+                 `gross income`                         IS `my wages in the year` a
+                                                            PLUS a's `my trade, business or profession income, after its deductions`
+                                                            PLUS a's `my rent and other property income, after its deductions`
+                                                            PLUS a's `my tax-exempt income`)
+    WHERE
+        `the year of assessment` MEANS h's `the income year` PLUS 1
+        -- ss 10(1)(a), (b), (f) and 35: wages, trade income and rent are assessable; the rest is exempt or not income
+        `assessable income` MEANS
+            `my wages in the year` a
+                PLUS a's `my trade, business or profession income, after its deductions`
+                PLUS a's `my rent and other property income, after its deductions`
+        `reliefs` MEANS
+            (`the personal reliefs for YA` `the year of assessment` `, resident:` TRUE `:`
+                (`the relief facts of an adult` h who a `my employee CPF`))'s `total allowed`
+        `chargeable income` MEANS
+            `the chargeable income from assessable income` `assessable income` `less reliefs` `reliefs`
+        `the rebate offered` MEANS
+            `the rebates for the children from place` h who (h's `the children`) 1
+                PLUS a's `my parenthood rebate brought forward`
+
+§§ `The household`
+
+GIVEN h IS A `Household`
+      who IS A NUMBER
+GIVETH A MAYBE (A `One adult's position`)
+`the position of the adult numbered` MEANS
+    CONSIDER `the adult numbered` h who
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST a THEN
+        CONSIDER `the employee CPF of the adult numbered` h who
+        WHEN NOTHING THEN NOTHING
+        WHEN JUST cpf THEN `the position of an adult` h who a cpf
+
+GIVEN p1 IS A `One adult's position`
+      p2 IS A MAYBE (A `One adult's position`)
+GIVETH A `The household's position`
+`the household's position from` MEANS
+    `The household's position` WITH
+        `the first adult's position`    IS p1
+        `the second adult's position`   IS p2
+        `income tax of the household`   IS p1's `income tax` PLUS `the second's tax`
+        `employee CPF of the household` IS p1's `employee CPF` PLUS `the second's CPF`
+        `gross income of the household` IS p1's `gross income` PLUS `the second's gross`
+        `net income of the household`   IS (p1's `gross income` PLUS `the second's gross`)
+                                            MINUS (p1's `income tax` PLUS `the second's tax`)
+                                            MINUS (p1's `employee CPF` PLUS `the second's CPF`)
+    WHERE
+        `the second's tax` MEANS
+            CONSIDER p2
+            WHEN NOTHING THEN 0
+            WHEN JUST q THEN q's `income tax`
+        `the second's CPF` MEANS
+            CONSIDER p2
+            WHEN NOTHING THEN 0
+            WHEN JUST q THEN q's `employee CPF`
+        `the second's gross` MEANS
+            CONSIDER p2
+            WHEN NOTHING THEN 0
+            WHEN JUST q THEN q's `gross income`
+
+-- The shares of a child's relief and rebate (fork H2) are the household's own input, so they are checked: each from 0 to 1, and 1 where
+-- there is no second adult to take the rest. Anything else would give a figure that no division of the relief could (a half lost, or
+-- more than the whole).
+GIVEN h IS A `Household`
+      c IS A `Child of the household`
+GIVETH A BOOLEAN
+DECIDE `the shares of a child are possible` IF
+        (c's `the share of the child's relief the first adult claims` AT LEAST 0)
+    AND (c's `the share of the child's relief the first adult claims` AT MOST 1)
+    AND (c's `the share of the parenthood rebate the first adult claims` AT LEAST 0)
+    AND (c's `the share of the parenthood rebate the first adult claims` AT MOST 1)
+    AND (    `there is a second adult`
+         OR  (    (c's `the share of the child's relief the first adult claims` EQUALS 1)
+              AND (c's `the share of the parenthood rebate the first adult claims` EQUALS 1)))
+    WHERE
+        `there is a second adult` MEANS
+            CONSIDER h's `the second adult`
+            WHEN NOTHING THEN FALSE
+            WHEN JUST second THEN TRUE
+
+GIVEN h IS A `Household`
+GIVETH A BOOLEAN
+DECIDE `the shares of the children are possible` IF
+    `the number of children whose shares are possible` EQUALS count (h's `the children`)
+    WHERE
+        `the number of children whose shares are possible` MEANS
+            sum (map `one if possible` (h's `the children`))
+        `one if possible` c MEANS IF `the shares of a child are possible` h c THEN 1 ELSE 0
+
+-- The answer for a household: NOTHING where this encoding does not cover it (a non-resident adult, a permanent resident in the first two
+-- years, a year other than 2025 or 2026, a year of pay that is not twelve months) or the shares of a child cannot be.
+GIVEN h IS A `Household`
+GIVETH A MAYBE (A `The household's position`)
+`the household's position` MEANS
+    IF   NOT `the shares of the children are possible` h
+    THEN NOTHING
+    ELSE `the position of the household` h
+
+GIVEN h IS A `Household`
+GIVETH A MAYBE (A `The household's position`)
+`the position of the household` MEANS
+    CONSIDER `the position of the adult numbered` h 1
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST p1 THEN
+        CONSIDER h's `the second adult`
+        WHEN NOTHING THEN JUST (`the household's position from` p1 NOTHING)
+        WHEN JUST second THEN
+            CONSIDER `the position of the adult numbered` h 2
+            WHEN NOTHING THEN NOTHING
+            WHEN JUST p2 THEN JUST (`the household's position from` p1 (JUST p2))

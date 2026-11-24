@@ -1,0 +1,2848 @@
+IMPORT prelude
+IMPORT `ita-types`
+IMPORT `ita-rates`
+IMPORT `ita-reliefs`
+IMPORT `cpf-contributions`
+IMPORT `cpf-wages-year`
+IMPORT `sg-household`
+
+-- IRAS worked examples against the household encoding: NUMBERS ONLY.
+--
+-- Every expected value is a figure from a worked example on one of IRAS's pages, fetched 2026-11-24 (the pages' addresses are in FINDINGS.md section 4);
+-- the comment above each assertion names the example and the page by a short name. The table of examples and the mapping notes are kept outside
+-- this repository: they are a third party's figures table. No expected value was edited to match the code: a failing assertion is a finding
+-- (FINDINGS.md section 4 lists what the first run found, and what was changed in the Income Tax Act encoding as a result).
+-- Income year 2025 (YA 2026) unless the comment says otherwise.
+-- The CPF relief that an IRAS example gives as a figure is passed in through `the relief breakdown given CPF` / `the position of an adult`; where
+-- the household computes CPF itself, the pay layout is 12 equal whole-dollar ordinary wages plus one additional wage in December.
+-- Dates: each adult is born in December, so the age at 31 December of the income year is the income year minus the year of birth.
+-- Part-year (Cheong) is eleven months of ordinary wages and a zero January: the year function needs twelve entries.
+
+`a month of pay` ow aw MEANS `My pay in one month` OF ow, aw
+
+-- ---- accessors: unwrap a MAYBE position, -1 where the encoding does not cover the case ----
+
+GIVEN p IS A MAYBE (A `One adult's position`)
+GIVETH A NUMBER
+`the income tax in` MEANS
+    CONSIDER p
+    WHEN NOTHING THEN 0 MINUS 1
+    WHEN JUST q THEN q's `income tax`
+
+GIVEN p IS A MAYBE (A `One adult's position`)
+GIVETH A NUMBER
+`the employee CPF in` MEANS
+    CONSIDER p
+    WHEN NOTHING THEN 0 MINUS 1
+    WHEN JUST q THEN q's `employee CPF`
+
+GIVEN p IS A MAYBE (A `One adult's position`)
+GIVETH A NUMBER
+`the assessable income in` MEANS
+    CONSIDER p
+    WHEN NOTHING THEN 0 MINUS 1
+    WHEN JUST q THEN q's `assessable income`
+
+GIVEN p IS A MAYBE (A `One adult's position`)
+GIVETH A NUMBER
+`the reliefs allowed in` MEANS
+    CONSIDER p
+    WHEN NOTHING THEN 0 MINUS 1
+    WHEN JUST q THEN q's `reliefs allowed, after the s 39A cap`
+
+GIVEN p IS A MAYBE (A `One adult's position`)
+GIVETH A NUMBER
+`the chargeable income in` MEANS
+    CONSIDER p
+    WHEN NOTHING THEN 0 MINUS 1
+    WHEN JUST q THEN q's `chargeable income`
+
+GIVEN p IS A MAYBE (A `One adult's position`)
+GIVETH A NUMBER
+`the tax before the rebate in` MEANS
+    CONSIDER p
+    WHEN NOTHING THEN 0 MINUS 1
+    WHEN JUST q THEN q's `tax before the parenthood rebate`
+
+GIVEN p IS A MAYBE (A `One adult's position`)
+GIVETH A NUMBER
+`the rebate used in` MEANS
+    CONSIDER p
+    WHEN NOTHING THEN 0 MINUS 1
+    WHEN JUST q THEN q's `parenthood rebate used`
+
+GIVEN p IS A MAYBE (A `One adult's position`)
+GIVETH A NUMBER
+`the rebate carried forward in` MEANS
+    CONSIDER p
+    WHEN NOTHING THEN 0 MINUS 1
+    WHEN JUST q THEN q's `parenthood rebate carried forward`
+
+-- The adult in position 1 or 2 (position 2 falls back to the first adult if there is none).
+GIVEN h IS A `Household`
+      who IS A NUMBER
+GIVETH AN `Adult of the household`
+`the adult in position` MEANS
+    IF   who EQUALS 1
+    THEN h's `the first adult`
+    ELSE CONSIDER h's `the second adult`
+         WHEN NOTHING THEN h's `the first adult`
+         WHEN JUST a THEN a
+
+-- The Individual relief facts the household builds for an adult, with the CPF relief passed in (as an IRAS example states it).
+GIVEN h IS A `Household`
+      who IS A NUMBER
+      cpf IS A NUMBER
+GIVETH A `Relief breakdown`
+`the relief breakdown given CPF` MEANS
+    `the personal reliefs for YA` (h's `the income year` PLUS 1) `, resident:` TRUE `:` (`the relief facts of an adult` h who (`the adult in position` h who) cpf)
+
+GIVEN y IS A `My year of work`
+GIVETH A NUMBER
+`the CPF of the year` MEANS
+    CONSIDER `my employee CPF for the year` y
+    WHEN NOTHING THEN 0 MINUS 1
+    WHEN JUST n THEN n
+
+-- ---- fixtures ----
+
+
+`iras heng adult` MEANS `Adult of the household` WITH
+    `my year of birth` IS 1990
+    `my month of birth` IS 12
+    `my residence status for CPF` IS `a citizen of Singapore`
+    `I am resident in Singapore for income tax` IS TRUE
+    `my wages month by month` IS LIST (`a month of pay` 4000 0), (`a month of pay` 4000 0), (`a month of pay` 4000 0), (`a month of pay` 4000 0), (`a month of pay` 4000 0), (`a month of pay` 4000 0), (`a month of pay` 4000 0), (`a month of pay` 4000 0), (`a month of pay` 4000 0), (`a month of pay` 4000 0), (`a month of pay` 4000 0), (`a month of pay` 4000 2000)
+    `my trade, business or profession income, after its deductions` IS 0
+    `my rent and other property income, after its deductions` IS 0
+    `my tax-exempt income` IS 0
+    `I am a married woman, a divorcee or a widow` IS FALSE
+    `I am totally blind or permanently and severely disabled` IS FALSE
+    `my life insurance premiums, capped at 7% of the capital sum` IS 0
+    `my SRS contributions` IS 0
+    `my SRS contribution cap` IS 15300
+    `my CPF cash top-ups for family, after grants and as capped` IS 0
+    `my CPF cash top-ups for myself, after grants and as capped` IS 0
+    `the prescribed deduction limit for family top-ups` IS 8000
+    `the prescribed deduction limit for my own top-ups` IS 8000
+    `my dependants` IS EMPTY
+    `incapacitated siblings I maintain` IS 0
+    `my national service status` IS `not an operationally ready national serviceman`
+    `I am the wife or widow of an NSman and claim` IS FALSE
+    `I am the parent of an NSman and claim` IS FALSE
+    `the caregiver grandparent's income from work` IS NOTHING
+    `my parenthood rebate brought forward` IS 0
+
+`iras heng child` MEANS `Child of the household` WITH
+    `the year the child was born` IS 2025
+    `the child is a Singapore citizen` IS TRUE
+    `the child's income in the income year, excluding scholarships` IS 0
+    `the child was engaged in employment or a trade` IS FALSE
+    `the child is in full-time instruction` IS FALSE
+    `the child is incapacitated by physical or mental infirmity` IS FALSE
+    `the child was unmarried throughout the income year` IS TRUE
+    `the share of the child's relief the first adult claims` IS 1
+    `the share of the parenthood rebate the first adult claims` IS 1
+    `the child's mother` IS `neither adult is the child's mother`
+    `the year of the date that fixes the working mother's child relief` IS 2025
+
+`iras heng household` MEANS `Household` WITH
+    `the income year` IS 2025
+    `the first adult` IS `iras heng adult`
+    `the second adult` IS NOTHING
+    `the adults are married to each other and live together` IS FALSE
+    `the children` IS LIST `iras heng child`
+
+`iras fong adult` MEANS `Adult of the household` WITH
+    `my year of birth` IS 1961
+    `my month of birth` IS 12
+    `my residence status for CPF` IS `a citizen of Singapore`
+    `I am resident in Singapore for income tax` IS TRUE
+    `my wages month by month` IS LIST (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 161200)
+    `my trade, business or profession income, after its deductions` IS 0
+    `my rent and other property income, after its deductions` IS 0
+    `my tax-exempt income` IS 0
+    `I am a married woman, a divorcee or a widow` IS FALSE
+    `I am totally blind or permanently and severely disabled` IS FALSE
+    `my life insurance premiums, capped at 7% of the capital sum` IS 0
+    `my SRS contributions` IS 0
+    `my SRS contribution cap` IS 15300
+    `my CPF cash top-ups for family, after grants and as capped` IS 0
+    `my CPF cash top-ups for myself, after grants and as capped` IS 0
+    `the prescribed deduction limit for family top-ups` IS 8000
+    `the prescribed deduction limit for my own top-ups` IS 8000
+    `my dependants` IS EMPTY
+    `incapacitated siblings I maintain` IS 0
+    `my national service status` IS `not an operationally ready national serviceman`
+    `I am the wife or widow of an NSman and claim` IS FALSE
+    `I am the parent of an NSman and claim` IS FALSE
+    `the caregiver grandparent's income from work` IS NOTHING
+    `my parenthood rebate brought forward` IS 0
+
+`iras fong household` MEANS `Household` WITH
+    `the income year` IS 2025
+    `the first adult` IS `iras fong adult`
+    `the second adult` IS NOTHING
+    `the adults are married to each other and live together` IS FALSE
+    `the children` IS EMPTY
+
+`iras fong adult all ordinary` MEANS `Adult of the household` WITH
+    `my year of birth` IS 1961
+    `my month of birth` IS 12
+    `my residence status for CPF` IS `a citizen of Singapore`
+    `I am resident in Singapore for income tax` IS TRUE
+    `my wages month by month` IS LIST (`a month of pay` 20800 0), (`a month of pay` 20800 0), (`a month of pay` 20800 0), (`a month of pay` 20800 0), (`a month of pay` 20800 0), (`a month of pay` 20800 0), (`a month of pay` 20800 0), (`a month of pay` 20800 0), (`a month of pay` 20800 0), (`a month of pay` 20800 0), (`a month of pay` 20800 0), (`a month of pay` 20800 0)
+    `my trade, business or profession income, after its deductions` IS 0
+    `my rent and other property income, after its deductions` IS 0
+    `my tax-exempt income` IS 0
+    `I am a married woman, a divorcee or a widow` IS FALSE
+    `I am totally blind or permanently and severely disabled` IS FALSE
+    `my life insurance premiums, capped at 7% of the capital sum` IS 0
+    `my SRS contributions` IS 0
+    `my SRS contribution cap` IS 15300
+    `my CPF cash top-ups for family, after grants and as capped` IS 0
+    `my CPF cash top-ups for myself, after grants and as capped` IS 0
+    `the prescribed deduction limit for family top-ups` IS 8000
+    `the prescribed deduction limit for my own top-ups` IS 8000
+    `my dependants` IS EMPTY
+    `incapacitated siblings I maintain` IS 0
+    `my national service status` IS `not an operationally ready national serviceman`
+    `I am the wife or widow of an NSman and claim` IS FALSE
+    `I am the parent of an NSman and claim` IS FALSE
+    `the caregiver grandparent's income from work` IS NOTHING
+    `my parenthood rebate brought forward` IS 0
+
+`iras fong household all ordinary` MEANS `Household` WITH
+    `the income year` IS 2025
+    `the first adult` IS `iras fong adult all ordinary`
+    `the second adult` IS NOTHING
+    `the adults are married to each other and live together` IS FALSE
+    `the children` IS EMPTY
+
+`iras fong adult born 1959-12` MEANS `Adult of the household` WITH
+    `my year of birth` IS 1959
+    `my month of birth` IS 12
+    `my residence status for CPF` IS `a citizen of Singapore`
+    `I am resident in Singapore for income tax` IS TRUE
+    `my wages month by month` IS LIST (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 161200)
+    `my trade, business or profession income, after its deductions` IS 0
+    `my rent and other property income, after its deductions` IS 0
+    `my tax-exempt income` IS 0
+    `I am a married woman, a divorcee or a widow` IS FALSE
+    `I am totally blind or permanently and severely disabled` IS FALSE
+    `my life insurance premiums, capped at 7% of the capital sum` IS 0
+    `my SRS contributions` IS 0
+    `my SRS contribution cap` IS 15300
+    `my CPF cash top-ups for family, after grants and as capped` IS 0
+    `my CPF cash top-ups for myself, after grants and as capped` IS 0
+    `the prescribed deduction limit for family top-ups` IS 8000
+    `the prescribed deduction limit for my own top-ups` IS 8000
+    `my dependants` IS EMPTY
+    `incapacitated siblings I maintain` IS 0
+    `my national service status` IS `not an operationally ready national serviceman`
+    `I am the wife or widow of an NSman and claim` IS FALSE
+    `I am the parent of an NSman and claim` IS FALSE
+    `the caregiver grandparent's income from work` IS NOTHING
+    `my parenthood rebate brought forward` IS 0
+
+`iras fong household born 1959-12` MEANS `Household` WITH
+    `the income year` IS 2025
+    `the first adult` IS `iras fong adult born 1959-12`
+    `the second adult` IS NOTHING
+    `the adults are married to each other and live together` IS FALSE
+    `the children` IS EMPTY
+
+`iras fong adult born 1960-01` MEANS `Adult of the household` WITH
+    `my year of birth` IS 1960
+    `my month of birth` IS 1
+    `my residence status for CPF` IS `a citizen of Singapore`
+    `I am resident in Singapore for income tax` IS TRUE
+    `my wages month by month` IS LIST (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 161200)
+    `my trade, business or profession income, after its deductions` IS 0
+    `my rent and other property income, after its deductions` IS 0
+    `my tax-exempt income` IS 0
+    `I am a married woman, a divorcee or a widow` IS FALSE
+    `I am totally blind or permanently and severely disabled` IS FALSE
+    `my life insurance premiums, capped at 7% of the capital sum` IS 0
+    `my SRS contributions` IS 0
+    `my SRS contribution cap` IS 15300
+    `my CPF cash top-ups for family, after grants and as capped` IS 0
+    `my CPF cash top-ups for myself, after grants and as capped` IS 0
+    `the prescribed deduction limit for family top-ups` IS 8000
+    `the prescribed deduction limit for my own top-ups` IS 8000
+    `my dependants` IS EMPTY
+    `incapacitated siblings I maintain` IS 0
+    `my national service status` IS `not an operationally ready national serviceman`
+    `I am the wife or widow of an NSman and claim` IS FALSE
+    `I am the parent of an NSman and claim` IS FALSE
+    `the caregiver grandparent's income from work` IS NOTHING
+    `my parenthood rebate brought forward` IS 0
+
+`iras fong household born 1960-01` MEANS `Household` WITH
+    `the income year` IS 2025
+    `the first adult` IS `iras fong adult born 1960-01`
+    `the second adult` IS NOTHING
+    `the adults are married to each other and live together` IS FALSE
+    `the children` IS EMPTY
+
+`iras fong adult born 1960-12` MEANS `Adult of the household` WITH
+    `my year of birth` IS 1960
+    `my month of birth` IS 12
+    `my residence status for CPF` IS `a citizen of Singapore`
+    `I am resident in Singapore for income tax` IS TRUE
+    `my wages month by month` IS LIST (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 161200)
+    `my trade, business or profession income, after its deductions` IS 0
+    `my rent and other property income, after its deductions` IS 0
+    `my tax-exempt income` IS 0
+    `I am a married woman, a divorcee or a widow` IS FALSE
+    `I am totally blind or permanently and severely disabled` IS FALSE
+    `my life insurance premiums, capped at 7% of the capital sum` IS 0
+    `my SRS contributions` IS 0
+    `my SRS contribution cap` IS 15300
+    `my CPF cash top-ups for family, after grants and as capped` IS 0
+    `my CPF cash top-ups for myself, after grants and as capped` IS 0
+    `the prescribed deduction limit for family top-ups` IS 8000
+    `the prescribed deduction limit for my own top-ups` IS 8000
+    `my dependants` IS EMPTY
+    `incapacitated siblings I maintain` IS 0
+    `my national service status` IS `not an operationally ready national serviceman`
+    `I am the wife or widow of an NSman and claim` IS FALSE
+    `I am the parent of an NSman and claim` IS FALSE
+    `the caregiver grandparent's income from work` IS NOTHING
+    `my parenthood rebate brought forward` IS 0
+
+`iras fong household born 1960-12` MEANS `Household` WITH
+    `the income year` IS 2025
+    `the first adult` IS `iras fong adult born 1960-12`
+    `the second adult` IS NOTHING
+    `the adults are married to each other and live together` IS FALSE
+    `the children` IS EMPTY
+
+`iras fong adult born 1961-01` MEANS `Adult of the household` WITH
+    `my year of birth` IS 1961
+    `my month of birth` IS 1
+    `my residence status for CPF` IS `a citizen of Singapore`
+    `I am resident in Singapore for income tax` IS TRUE
+    `my wages month by month` IS LIST (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 0), (`a month of pay` 7400 161200)
+    `my trade, business or profession income, after its deductions` IS 0
+    `my rent and other property income, after its deductions` IS 0
+    `my tax-exempt income` IS 0
+    `I am a married woman, a divorcee or a widow` IS FALSE
+    `I am totally blind or permanently and severely disabled` IS FALSE
+    `my life insurance premiums, capped at 7% of the capital sum` IS 0
+    `my SRS contributions` IS 0
+    `my SRS contribution cap` IS 15300
+    `my CPF cash top-ups for family, after grants and as capped` IS 0
+    `my CPF cash top-ups for myself, after grants and as capped` IS 0
+    `the prescribed deduction limit for family top-ups` IS 8000
+    `the prescribed deduction limit for my own top-ups` IS 8000
+    `my dependants` IS EMPTY
+    `incapacitated siblings I maintain` IS 0
+    `my national service status` IS `not an operationally ready national serviceman`
+    `I am the wife or widow of an NSman and claim` IS FALSE
+    `I am the parent of an NSman and claim` IS FALSE
+    `the caregiver grandparent's income from work` IS NOTHING
+    `my parenthood rebate brought forward` IS 0
+
+`iras fong household born 1961-01` MEANS `Household` WITH
+    `the income year` IS 2025
+    `the first adult` IS `iras fong adult born 1961-01`
+    `the second adult` IS NOTHING
+    `the adults are married to each other and live together` IS FALSE
+    `the children` IS EMPTY
+
+`iras gabriel facts` MEANS `Individual relief facts` WITH
+    `earned income` IS 21000
+    `age reached by 31 December of the preceding year` IS 30
+    `totally blind or permanently and severely disabled` IS FALSE
+    `a female claimant (married, divorced or widowed)` IS FALSE
+    `had a spouse living with or maintained by the claimant` IS FALSE
+    `spouse's income in the preceding year` IS 0
+    `spouse incapacitated by physical or mental infirmity` IS FALSE
+    `payments to a former spouse under a court order or deed` IS 0
+    `children` IS EMPTY
+    `life insurance premiums, capped at 7% of the capital sum` IS 0
+    `obligatory CPF or approved fund contributions as an employee` IS 0
+    `self-employed: assessable income from the trade or profession` IS 0
+    `self-employed: obligatory CPF contributions on that income` IS 0
+    `self-employed: voluntary CPF contributions` IS 0
+    `dependants` IS EMPTY
+    `incapacitated siblings maintained` IS 0
+    `course fees` IS 0
+    `national service` IS `not an operationally ready national serviceman`
+    `wife or widow of an NSman, claiming` IS FALSE
+    `parent of an NSman, claiming` IS FALSE
+    `SRS contributions` IS 0
+    `SRS contribution cap` IS 15300
+    `SRS account suspended, or the contribution withdrawn in the year` IS FALSE
+    `grandparent caregiver: the caregiver's trade or employment income` IS NOTHING
+    `CPF cash top-ups for family, after grants and capped as prescribed` IS 0
+    `CPF cash top-ups for self, after grants and capped as prescribed` IS 0
+    `prescribed deduction limit for s 39(3)` IS 8000
+    `prescribed deduction limit for s 39(3A)` IS 8000
+    `foreign domestic worker levy paid, for one worker` IS 0
+
+`iras gabriel residence` MEANS `Residence facts` WITH
+    `resides in Singapore, except reasonable temporary absences` IS FALSE
+    `days physically present in Singapore` IS 92
+    `days exercising an employment in Singapore, other than as a director` IS 92
+    `control and management of the business exercised in Singapore` IS FALSE
+
+`iras burch facts` MEANS `Individual relief facts` WITH
+    `earned income` IS 85000
+    `age reached by 31 December of the preceding year` IS 30
+    `totally blind or permanently and severely disabled` IS FALSE
+    `a female claimant (married, divorced or widowed)` IS FALSE
+    `had a spouse living with or maintained by the claimant` IS FALSE
+    `spouse's income in the preceding year` IS 0
+    `spouse incapacitated by physical or mental infirmity` IS FALSE
+    `payments to a former spouse under a court order or deed` IS 0
+    `children` IS EMPTY
+    `life insurance premiums, capped at 7% of the capital sum` IS 0
+    `obligatory CPF or approved fund contributions as an employee` IS 0
+    `self-employed: assessable income from the trade or profession` IS 0
+    `self-employed: obligatory CPF contributions on that income` IS 0
+    `self-employed: voluntary CPF contributions` IS 0
+    `dependants` IS EMPTY
+    `incapacitated siblings maintained` IS 0
+    `course fees` IS 0
+    `national service` IS `not an operationally ready national serviceman`
+    `wife or widow of an NSman, claiming` IS FALSE
+    `parent of an NSman, claiming` IS FALSE
+    `SRS contributions` IS 0
+    `SRS contribution cap` IS 15300
+    `SRS account suspended, or the contribution withdrawn in the year` IS FALSE
+    `grandparent caregiver: the caregiver's trade or employment income` IS NOTHING
+    `CPF cash top-ups for family, after grants and capped as prescribed` IS 0
+    `CPF cash top-ups for self, after grants and capped as prescribed` IS 0
+    `prescribed deduction limit for s 39(3)` IS 8000
+    `prescribed deduction limit for s 39(3A)` IS 8000
+    `foreign domestic worker levy paid, for one worker` IS 0
+
+`iras eir 55 large` MEANS `Individual relief facts` WITH
+    `earned income` IS 100000
+    `age reached by 31 December of the preceding year` IS 55
+    `totally blind or permanently and severely disabled` IS FALSE
+    `a female claimant (married, divorced or widowed)` IS FALSE
+    `had a spouse living with or maintained by the claimant` IS FALSE
+    `spouse's income in the preceding year` IS 0
+    `spouse incapacitated by physical or mental infirmity` IS FALSE
+    `payments to a former spouse under a court order or deed` IS 0
+    `children` IS EMPTY
+    `life insurance premiums, capped at 7% of the capital sum` IS 0
+    `obligatory CPF or approved fund contributions as an employee` IS 0
+    `self-employed: assessable income from the trade or profession` IS 0
+    `self-employed: obligatory CPF contributions on that income` IS 0
+    `self-employed: voluntary CPF contributions` IS 0
+    `dependants` IS EMPTY
+    `incapacitated siblings maintained` IS 0
+    `course fees` IS 0
+    `national service` IS `not an operationally ready national serviceman`
+    `wife or widow of an NSman, claiming` IS FALSE
+    `parent of an NSman, claiming` IS FALSE
+    `SRS contributions` IS 0
+    `SRS contribution cap` IS 15300
+    `SRS account suspended, or the contribution withdrawn in the year` IS FALSE
+    `grandparent caregiver: the caregiver's trade or employment income` IS NOTHING
+    `CPF cash top-ups for family, after grants and capped as prescribed` IS 0
+    `CPF cash top-ups for self, after grants and capped as prescribed` IS 0
+    `prescribed deduction limit for s 39(3)` IS 8000
+    `prescribed deduction limit for s 39(3A)` IS 8000
+    `foreign domestic worker levy paid, for one worker` IS 0
+
+`iras eir 55 small` MEANS `Individual relief facts` WITH
+    `earned income` IS 5000
+    `age reached by 31 December of the preceding year` IS 55
+    `totally blind or permanently and severely disabled` IS FALSE
+    `a female claimant (married, divorced or widowed)` IS FALSE
+    `had a spouse living with or maintained by the claimant` IS FALSE
+    `spouse's income in the preceding year` IS 0
+    `spouse incapacitated by physical or mental infirmity` IS FALSE
+    `payments to a former spouse under a court order or deed` IS 0
+    `children` IS EMPTY
+    `life insurance premiums, capped at 7% of the capital sum` IS 0
+    `obligatory CPF or approved fund contributions as an employee` IS 0
+    `self-employed: assessable income from the trade or profession` IS 0
+    `self-employed: obligatory CPF contributions on that income` IS 0
+    `self-employed: voluntary CPF contributions` IS 0
+    `dependants` IS EMPTY
+    `incapacitated siblings maintained` IS 0
+    `course fees` IS 0
+    `national service` IS `not an operationally ready national serviceman`
+    `wife or widow of an NSman, claiming` IS FALSE
+    `parent of an NSman, claiming` IS FALSE
+    `SRS contributions` IS 0
+    `SRS contribution cap` IS 15300
+    `SRS account suspended, or the contribution withdrawn in the year` IS FALSE
+    `grandparent caregiver: the caregiver's trade or employment income` IS NOTHING
+    `CPF cash top-ups for family, after grants and capped as prescribed` IS 0
+    `CPF cash top-ups for self, after grants and capped as prescribed` IS 0
+    `prescribed deduction limit for s 39(3)` IS 8000
+    `prescribed deduction limit for s 39(3A)` IS 8000
+    `foreign domestic worker levy paid, for one worker` IS 0
+
+`iras chua idx child 1` MEANS `Child facts` WITH
+    `unmarried throughout the preceding year` IS TRUE
+    `below 16 at any time in the preceding year` IS TRUE
+    `in full-time instruction` IS FALSE
+    `serving under articles or indentures` IS FALSE
+    `incapacitated by physical or mental infirmity` IS FALSE
+    `income in the preceding year, excluding scholarships` IS 0
+    `engaged in employment or a trade, other than under articles` IS FALSE
+    `maintained by the claimant` IS TRUE
+    `claimant's share of the relief` IS 0
+    `a Singapore citizen` IS TRUE
+    `order among the mother's eligible children` IS 1
+    `the para 5 date` IS YearMonthDay 2013 6 30
+
+`iras chua idx child 2` MEANS `Child facts` WITH
+    `unmarried throughout the preceding year` IS TRUE
+    `below 16 at any time in the preceding year` IS TRUE
+    `in full-time instruction` IS FALSE
+    `serving under articles or indentures` IS FALSE
+    `incapacitated by physical or mental infirmity` IS FALSE
+    `income in the preceding year, excluding scholarships` IS 0
+    `engaged in employment or a trade, other than under articles` IS FALSE
+    `maintained by the claimant` IS TRUE
+    `claimant's share of the relief` IS 0
+    `a Singapore citizen` IS TRUE
+    `order among the mother's eligible children` IS 2
+    `the para 5 date` IS YearMonthDay 2015 6 30
+
+`iras chua idx child 3` MEANS `Child facts` WITH
+    `unmarried throughout the preceding year` IS TRUE
+    `below 16 at any time in the preceding year` IS TRUE
+    `in full-time instruction` IS FALSE
+    `serving under articles or indentures` IS FALSE
+    `incapacitated by physical or mental infirmity` IS FALSE
+    `income in the preceding year, excluding scholarships` IS 0
+    `engaged in employment or a trade, other than under articles` IS FALSE
+    `maintained by the claimant` IS TRUE
+    `claimant's share of the relief` IS 0
+    `a Singapore citizen` IS TRUE
+    `order among the mother's eligible children` IS 3
+    `the para 5 date` IS YearMonthDay 2024 6 30
+
+`iras chua idx facts` MEANS `Individual relief facts` WITH
+    `earned income` IS 150000
+    `age reached by 31 December of the preceding year` IS 40
+    `totally blind or permanently and severely disabled` IS FALSE
+    `a female claimant (married, divorced or widowed)` IS TRUE
+    `had a spouse living with or maintained by the claimant` IS FALSE
+    `spouse's income in the preceding year` IS 0
+    `spouse incapacitated by physical or mental infirmity` IS FALSE
+    `payments to a former spouse under a court order or deed` IS 0
+    `children` IS LIST `iras chua idx child 1`, `iras chua idx child 2`, `iras chua idx child 3`
+    `life insurance premiums, capped at 7% of the capital sum` IS 0
+    `obligatory CPF or approved fund contributions as an employee` IS 20400
+    `self-employed: assessable income from the trade or profession` IS 0
+    `self-employed: obligatory CPF contributions on that income` IS 0
+    `self-employed: voluntary CPF contributions` IS 0
+    `dependants` IS EMPTY
+    `incapacitated siblings maintained` IS 0
+    `course fees` IS 0
+    `national service` IS `not an operationally ready national serviceman`
+    `wife or widow of an NSman, claiming` IS TRUE
+    `parent of an NSman, claiming` IS FALSE
+    `SRS contributions` IS 0
+    `SRS contribution cap` IS 15300
+    `SRS account suspended, or the contribution withdrawn in the year` IS FALSE
+    `grandparent caregiver: the caregiver's trade or employment income` IS NOTHING
+    `CPF cash top-ups for family, after grants and capped as prescribed` IS 0
+    `CPF cash top-ups for self, after grants and capped as prescribed` IS 0
+    `prescribed deduction limit for s 39(3)` IS 8000
+    `prescribed deduction limit for s 39(3A)` IS 8000
+    `foreign domestic worker levy paid, for one worker` IS 0
+
+`iras chua idx adult` MEANS `Adult of the household` WITH
+    `my year of birth` IS 1985
+    `my month of birth` IS 12
+    `my residence status for CPF` IS `a citizen of Singapore`
+    `I am resident in Singapore for income tax` IS TRUE
+    `my wages month by month` IS LIST (`a month of pay` 12000 0), (`a month of pay` 12000 0), (`a month of pay` 12000 0), (`a month of pay` 12000 0), (`a month of pay` 12000 0), (`a month of pay` 12000 0), (`a month of pay` 12000 0), (`a month of pay` 12000 0), (`a month of pay` 12000 0), (`a month of pay` 12000 0), (`a month of pay` 12000 0), (`a month of pay` 12000 6000)
+    `my trade, business or profession income, after its deductions` IS 0
+    `my rent and other property income, after its deductions` IS 0
+    `my tax-exempt income` IS 0
+    `I am a married woman, a divorcee or a widow` IS TRUE
+    `I am totally blind or permanently and severely disabled` IS FALSE
+    `my life insurance premiums, capped at 7% of the capital sum` IS 0
+    `my SRS contributions` IS 0
+    `my SRS contribution cap` IS 15300
+    `my CPF cash top-ups for family, after grants and as capped` IS 0
+    `my CPF cash top-ups for myself, after grants and as capped` IS 0
+    `the prescribed deduction limit for family top-ups` IS 8000
+    `the prescribed deduction limit for my own top-ups` IS 8000
+    `my dependants` IS EMPTY
+    `incapacitated siblings I maintain` IS 0
+    `my national service status` IS `not an operationally ready national serviceman`
+    `I am the wife or widow of an NSman and claim` IS TRUE
+    `I am the parent of an NSman and claim` IS FALSE
+    `the caregiver grandparent's income from work` IS NOTHING
+    `my parenthood rebate brought forward` IS 0
+
+`iras chua idx kid 1` MEANS `Child of the household` WITH
+    `the year the child was born` IS 2013
+    `the child is a Singapore citizen` IS TRUE
+    `the child's income in the income year, excluding scholarships` IS 0
+    `the child was engaged in employment or a trade` IS FALSE
+    `the child is in full-time instruction` IS FALSE
+    `the child is incapacitated by physical or mental infirmity` IS FALSE
+    `the child was unmarried throughout the income year` IS TRUE
+    `the share of the child's relief the first adult claims` IS 0
+    `the share of the parenthood rebate the first adult claims` IS 0
+    `the child's mother` IS `the first adult is the child's mother`
+    `the year of the date that fixes the working mother's child relief` IS 2013
+
+`iras chua idx kid 2` MEANS `Child of the household` WITH
+    `the year the child was born` IS 2015
+    `the child is a Singapore citizen` IS TRUE
+    `the child's income in the income year, excluding scholarships` IS 0
+    `the child was engaged in employment or a trade` IS FALSE
+    `the child is in full-time instruction` IS FALSE
+    `the child is incapacitated by physical or mental infirmity` IS FALSE
+    `the child was unmarried throughout the income year` IS TRUE
+    `the share of the child's relief the first adult claims` IS 0
+    `the share of the parenthood rebate the first adult claims` IS 0
+    `the child's mother` IS `the first adult is the child's mother`
+    `the year of the date that fixes the working mother's child relief` IS 2015
+
+`iras chua idx kid 3` MEANS `Child of the household` WITH
+    `the year the child was born` IS 2024
+    `the child is a Singapore citizen` IS TRUE
+    `the child's income in the income year, excluding scholarships` IS 0
+    `the child was engaged in employment or a trade` IS FALSE
+    `the child is in full-time instruction` IS FALSE
+    `the child is incapacitated by physical or mental infirmity` IS FALSE
+    `the child was unmarried throughout the income year` IS TRUE
+    `the share of the child's relief the first adult claims` IS 0
+    `the share of the parenthood rebate the first adult claims` IS 0
+    `the child's mother` IS `the first adult is the child's mother`
+    `the year of the date that fixes the working mother's child relief` IS 2024
+
+`iras chua idx household` MEANS `Household` WITH
+    `the income year` IS 2025
+    `the first adult` IS `iras chua idx adult`
+    `the second adult` IS NOTHING
+    `the adults are married to each other and live together` IS FALSE
+    `the children` IS LIST `iras chua idx kid 1`, `iras chua idx kid 2`, `iras chua idx kid 3`
+
+`iras chua idx kid 1 share1` MEANS `Child of the household` WITH
+    `the year the child was born` IS 2013
+    `the child is a Singapore citizen` IS TRUE
+    `the child's income in the income year, excluding scholarships` IS 0
+    `the child was engaged in employment or a trade` IS FALSE
+    `the child is in full-time instruction` IS FALSE
+    `the child is incapacitated by physical or mental infirmity` IS FALSE
+    `the child was unmarried throughout the income year` IS TRUE
+    `the share of the child's relief the first adult claims` IS 1
+    `the share of the parenthood rebate the first adult claims` IS 1
+    `the child's mother` IS `the first adult is the child's mother`
+    `the year of the date that fixes the working mother's child relief` IS 2013
+
+`iras chua idx kid 2 share1` MEANS `Child of the household` WITH
+    `the year the child was born` IS 2015
+    `the child is a Singapore citizen` IS TRUE
+    `the child's income in the income year, excluding scholarships` IS 0
+    `the child was engaged in employment or a trade` IS FALSE
+    `the child is in full-time instruction` IS FALSE
+    `the child is incapacitated by physical or mental infirmity` IS FALSE
+    `the child was unmarried throughout the income year` IS TRUE
+    `the share of the child's relief the first adult claims` IS 1
+    `the share of the parenthood rebate the first adult claims` IS 1
+    `the child's mother` IS `the first adult is the child's mother`
+    `the year of the date that fixes the working mother's child relief` IS 2015
+
+`iras chua idx kid 3 share1` MEANS `Child of the household` WITH
+    `the year the child was born` IS 2024
+    `the child is a Singapore citizen` IS TRUE
+    `the child's income in the income year, excluding scholarships` IS 0
+    `the child was engaged in employment or a trade` IS FALSE
+    `the child is in full-time instruction` IS FALSE
+    `the child is incapacitated by physical or mental infirmity` IS FALSE
+    `the child was unmarried throughout the income year` IS TRUE
+    `the share of the child's relief the first adult claims` IS 1
+    `the share of the parenthood rebate the first adult claims` IS 1
+    `the child's mother` IS `the first adult is the child's mother`
+    `the year of the date that fixes the working mother's child relief` IS 2024
+
+`iras chua idx household share1` MEANS `Household` WITH
+    `the income year` IS 2025
+    `the first adult` IS `iras chua idx adult`
+    `the second adult` IS NOTHING
+    `the adults are married to each other and live together` IS FALSE
+    `the children` IS LIST `iras chua idx kid 1 share1`, `iras chua idx kid 2 share1`, `iras chua idx kid 3 share1`
+
+`iras bernice child` MEANS `Child facts` WITH
+    `unmarried throughout the preceding year` IS TRUE
+    `below 16 at any time in the preceding year` IS FALSE
+    `in full-time instruction` IS TRUE
+    `serving under articles or indentures` IS FALSE
+    `incapacitated by physical or mental infirmity` IS FALSE
+    `income in the preceding year, excluding scholarships` IS 9000
+    `engaged in employment or a trade, other than under articles` IS FALSE
+    `maintained by the claimant` IS TRUE
+    `claimant's share of the relief` IS 1
+    `a Singapore citizen` IS TRUE
+    `order among the mother's eligible children` IS 0
+    `the para 5 date` IS YearMonthDay 2018 6 30
+
+`iras andy child 2025` MEANS `Child facts` WITH
+    `unmarried throughout the preceding year` IS TRUE
+    `below 16 at any time in the preceding year` IS FALSE
+    `in full-time instruction` IS TRUE
+    `serving under articles or indentures` IS FALSE
+    `incapacitated by physical or mental infirmity` IS FALSE
+    `income in the preceding year, excluding scholarships` IS 3000
+    `engaged in employment or a trade, other than under articles` IS FALSE
+    `maintained by the claimant` IS TRUE
+    `claimant's share of the relief` IS 1
+    `a Singapore citizen` IS TRUE
+    `order among the mother's eligible children` IS 0
+    `the para 5 date` IS YearMonthDay 2018 6 30
+
+`iras andy child 2024` MEANS `Child facts` WITH
+    `unmarried throughout the preceding year` IS TRUE
+    `below 16 at any time in the preceding year` IS FALSE
+    `in full-time instruction` IS FALSE
+    `serving under articles or indentures` IS FALSE
+    `incapacitated by physical or mental infirmity` IS FALSE
+    `income in the preceding year, excluding scholarships` IS 0
+    `engaged in employment or a trade, other than under articles` IS FALSE
+    `maintained by the claimant` IS TRUE
+    `claimant's share of the relief` IS 1
+    `a Singapore citizen` IS TRUE
+    `order among the mother's eligible children` IS 0
+    `the para 5 date` IS YearMonthDay 2018 6 30
+
+`iras ow child share mr` MEANS `Child facts` WITH
+    `unmarried throughout the preceding year` IS TRUE
+    `below 16 at any time in the preceding year` IS TRUE
+    `in full-time instruction` IS FALSE
+    `serving under articles or indentures` IS FALSE
+    `incapacitated by physical or mental infirmity` IS TRUE
+    `income in the preceding year, excluding scholarships` IS 0
+    `engaged in employment or a trade, other than under articles` IS FALSE
+    `maintained by the claimant` IS TRUE
+    `claimant's share of the relief` IS (3500 / 7500)
+    `a Singapore citizen` IS TRUE
+    `order among the mother's eligible children` IS 0
+    `the para 5 date` IS YearMonthDay 2018 6 30
+
+`iras ow child share mrs` MEANS `Child facts` WITH
+    `unmarried throughout the preceding year` IS TRUE
+    `below 16 at any time in the preceding year` IS TRUE
+    `in full-time instruction` IS FALSE
+    `serving under articles or indentures` IS FALSE
+    `incapacitated by physical or mental infirmity` IS TRUE
+    `income in the preceding year, excluding scholarships` IS 0
+    `engaged in employment or a trade, other than under articles` IS FALSE
+    `maintained by the claimant` IS TRUE
+    `claimant's share of the relief` IS (4000 / 7500)
+    `a Singapore citizen` IS TRUE
+    `order among the mother's eligible children` IS 0
+    `the para 5 date` IS YearMonthDay 2018 6 30
+
+`iras lim50k child mother` MEANS `Child facts` WITH
+    `unmarried throughout the preceding year` IS TRUE
+    `below 16 at any time in the preceding year` IS TRUE
+    `in full-time instruction` IS FALSE
+    `serving under articles or indentures` IS FALSE
+    `incapacitated by physical or mental infirmity` IS FALSE
+    `income in the preceding year, excluding scholarships` IS 0
+    `engaged in employment or a trade, other than under articles` IS FALSE
+    `maintained by the claimant` IS TRUE
+    `claimant's share of the relief` IS 0
+    `a Singapore citizen` IS TRUE
+    `order among the mother's eligible children` IS 1
+    `the para 5 date` IS YearMonthDay 2015 6 30
+
+`iras lim50k child father` MEANS `Child facts` WITH
+    `unmarried throughout the preceding year` IS TRUE
+    `below 16 at any time in the preceding year` IS TRUE
+    `in full-time instruction` IS FALSE
+    `serving under articles or indentures` IS FALSE
+    `incapacitated by physical or mental infirmity` IS FALSE
+    `income in the preceding year, excluding scholarships` IS 0
+    `engaged in employment or a trade, other than under articles` IS FALSE
+    `maintained by the claimant` IS TRUE
+    `claimant's share of the relief` IS 1
+    `a Singapore citizen` IS TRUE
+    `order among the mother's eligible children` IS 0
+    `the para 5 date` IS YearMonthDay 2015 6 30
+
+`iras lim50k mother` MEANS `Individual relief facts` WITH
+    `earned income` IS 320000
+    `age reached by 31 December of the preceding year` IS 45
+    `totally blind or permanently and severely disabled` IS FALSE
+    `a female claimant (married, divorced or widowed)` IS TRUE
+    `had a spouse living with or maintained by the claimant` IS FALSE
+    `spouse's income in the preceding year` IS 0
+    `spouse incapacitated by physical or mental infirmity` IS FALSE
+    `payments to a former spouse under a court order or deed` IS 0
+    `children` IS LIST `iras lim50k child mother`
+    `life insurance premiums, capped at 7% of the capital sum` IS 0
+    `obligatory CPF or approved fund contributions as an employee` IS 0
+    `self-employed: assessable income from the trade or profession` IS 0
+    `self-employed: obligatory CPF contributions on that income` IS 0
+    `self-employed: voluntary CPF contributions` IS 0
+    `dependants` IS EMPTY
+    `incapacitated siblings maintained` IS 0
+    `course fees` IS 0
+    `national service` IS `not an operationally ready national serviceman`
+    `wife or widow of an NSman, claiming` IS FALSE
+    `parent of an NSman, claiming` IS FALSE
+    `SRS contributions` IS 0
+    `SRS contribution cap` IS 15300
+    `SRS account suspended, or the contribution withdrawn in the year` IS FALSE
+    `grandparent caregiver: the caregiver's trade or employment income` IS NOTHING
+    `CPF cash top-ups for family, after grants and capped as prescribed` IS 0
+    `CPF cash top-ups for self, after grants and capped as prescribed` IS 0
+    `prescribed deduction limit for s 39(3)` IS 8000
+    `prescribed deduction limit for s 39(3A)` IS 8000
+    `foreign domestic worker levy paid, for one worker` IS 0
+
+`iras chen adult` MEANS `Adult of the household` WITH
+    `my year of birth` IS 1990
+    `my month of birth` IS 12
+    `my residence status for CPF` IS `a citizen of Singapore`
+    `I am resident in Singapore for income tax` IS TRUE
+    `my wages month by month` IS LIST (`a month of pay` 6000 0), (`a month of pay` 6000 0), (`a month of pay` 6000 0), (`a month of pay` 6000 0), (`a month of pay` 6000 0), (`a month of pay` 6000 0), (`a month of pay` 6000 0), (`a month of pay` 6000 0), (`a month of pay` 6000 0), (`a month of pay` 6000 0), (`a month of pay` 6000 0), (`a month of pay` 6000 8000)
+    `my trade, business or profession income, after its deductions` IS 0
+    `my rent and other property income, after its deductions` IS 0
+    `my tax-exempt income` IS 0
+    `I am a married woman, a divorcee or a widow` IS TRUE
+    `I am totally blind or permanently and severely disabled` IS FALSE
+    `my life insurance premiums, capped at 7% of the capital sum` IS 0
+    `my SRS contributions` IS 0
+    `my SRS contribution cap` IS 15300
+    `my CPF cash top-ups for family, after grants and as capped` IS 0
+    `my CPF cash top-ups for myself, after grants and as capped` IS 0
+    `the prescribed deduction limit for family top-ups` IS 8000
+    `the prescribed deduction limit for my own top-ups` IS 8000
+    `my dependants` IS EMPTY
+    `incapacitated siblings I maintain` IS 0
+    `my national service status` IS `not an operationally ready national serviceman`
+    `I am the wife or widow of an NSman and claim` IS FALSE
+    `I am the parent of an NSman and claim` IS FALSE
+    `the caregiver grandparent's income from work` IS NOTHING
+    `my parenthood rebate brought forward` IS 0
+
+`iras chen child` MEANS `Child of the household` WITH
+    `the year the child was born` IS 2025
+    `the child is a Singapore citizen` IS TRUE
+    `the child's income in the income year, excluding scholarships` IS 0
+    `the child was engaged in employment or a trade` IS FALSE
+    `the child is in full-time instruction` IS FALSE
+    `the child is incapacitated by physical or mental infirmity` IS FALSE
+    `the child was unmarried throughout the income year` IS TRUE
+    `the share of the child's relief the first adult claims` IS 1
+    `the share of the parenthood rebate the first adult claims` IS 1
+    `the child's mother` IS `the first adult is the child's mother`
+    `the year of the date that fixes the working mother's child relief` IS 2025
+
+`iras chen household` MEANS `Household` WITH
+    `the income year` IS 2025
+    `the first adult` IS `iras chen adult`
+    `the second adult` IS NOTHING
+    `the adults are married to each other and live together` IS FALSE
+    `the children` IS LIST `iras chen child`
+
+`iras chen child facts` MEANS `Child facts` WITH
+    `unmarried throughout the preceding year` IS TRUE
+    `below 16 at any time in the preceding year` IS TRUE
+    `in full-time instruction` IS FALSE
+    `serving under articles or indentures` IS FALSE
+    `incapacitated by physical or mental infirmity` IS FALSE
+    `income in the preceding year, excluding scholarships` IS 0
+    `engaged in employment or a trade, other than under articles` IS FALSE
+    `maintained by the claimant` IS TRUE
+    `claimant's share of the relief` IS 1
+    `a Singapore citizen` IS TRUE
+    `order among the mother's eligible children` IS 1
+    `the para 5 date` IS YearMonthDay 2025 6 30
+
+`iras wmcr heng mother` MEANS `Adult of the household` WITH
+    `my year of birth` IS 1985
+    `my month of birth` IS 12
+    `my residence status for CPF` IS `a citizen of Singapore`
+    `I am resident in Singapore for income tax` IS TRUE
+    `my wages month by month` IS LIST (`a month of pay` 8000 0), (`a month of pay` 8000 0), (`a month of pay` 8000 0), (`a month of pay` 8000 0), (`a month of pay` 8000 0), (`a month of pay` 8000 0), (`a month of pay` 8000 0), (`a month of pay` 8000 0), (`a month of pay` 8000 0), (`a month of pay` 8000 0), (`a month of pay` 8000 0), (`a month of pay` 8000 4000)
+    `my trade, business or profession income, after its deductions` IS 0
+    `my rent and other property income, after its deductions` IS 0
+    `my tax-exempt income` IS 0
+    `I am a married woman, a divorcee or a widow` IS TRUE
+    `I am totally blind or permanently and severely disabled` IS FALSE
+    `my life insurance premiums, capped at 7% of the capital sum` IS 0
+    `my SRS contributions` IS 0
+    `my SRS contribution cap` IS 15300
+    `my CPF cash top-ups for family, after grants and as capped` IS 0
+    `my CPF cash top-ups for myself, after grants and as capped` IS 0
+    `the prescribed deduction limit for family top-ups` IS 8000
+    `the prescribed deduction limit for my own top-ups` IS 8000
+    `my dependants` IS EMPTY
+    `incapacitated siblings I maintain` IS 0
+    `my national service status` IS `not an operationally ready national serviceman`
+    `I am the wife or widow of an NSman and claim` IS FALSE
+    `I am the parent of an NSman and claim` IS FALSE
+    `the caregiver grandparent's income from work` IS NOTHING
+    `my parenthood rebate brought forward` IS 0
+
+`iras wmcr heng kid 1` MEANS `Child of the household` WITH
+    `the year the child was born` IS 2008
+    `the child is a Singapore citizen` IS TRUE
+    `the child's income in the income year, excluding scholarships` IS 9000
+    `the child was engaged in employment or a trade` IS FALSE
+    `the child is in full-time instruction` IS TRUE
+    `the child is incapacitated by physical or mental infirmity` IS FALSE
+    `the child was unmarried throughout the income year` IS TRUE
+    `the share of the child's relief the first adult claims` IS 1
+    `the share of the parenthood rebate the first adult claims` IS 1
+    `the child's mother` IS `the first adult is the child's mother`
+    `the year of the date that fixes the working mother's child relief` IS 2008
+
+`iras wmcr heng kid 2` MEANS `Child of the household` WITH
+    `the year the child was born` IS 2013
+    `the child is a Singapore citizen` IS TRUE
+    `the child's income in the income year, excluding scholarships` IS 0
+    `the child was engaged in employment or a trade` IS FALSE
+    `the child is in full-time instruction` IS TRUE
+    `the child is incapacitated by physical or mental infirmity` IS FALSE
+    `the child was unmarried throughout the income year` IS TRUE
+    `the share of the child's relief the first adult claims` IS 1
+    `the share of the parenthood rebate the first adult claims` IS 1
+    `the child's mother` IS `the first adult is the child's mother`
+    `the year of the date that fixes the working mother's child relief` IS 2013
+
+`iras wmcr heng household` MEANS `Household` WITH
+    `the income year` IS 2025
+    `the first adult` IS `iras wmcr heng mother`
+    `the second adult` IS NOTHING
+    `the adults are married to each other and live together` IS FALSE
+    `the children` IS LIST `iras wmcr heng kid 1`, `iras wmcr heng kid 2`
+
+`iras wmcr heng child 1 facts` MEANS `Child facts` WITH
+    `unmarried throughout the preceding year` IS TRUE
+    `below 16 at any time in the preceding year` IS FALSE
+    `in full-time instruction` IS TRUE
+    `serving under articles or indentures` IS FALSE
+    `incapacitated by physical or mental infirmity` IS FALSE
+    `income in the preceding year, excluding scholarships` IS 9000
+    `engaged in employment or a trade, other than under articles` IS FALSE
+    `maintained by the claimant` IS TRUE
+    `claimant's share of the relief` IS 1
+    `a Singapore citizen` IS TRUE
+    `order among the mother's eligible children` IS 1
+    `the para 5 date` IS YearMonthDay 2008 6 30
+
+`iras wmcr heng child 2 facts` MEANS `Child facts` WITH
+    `unmarried throughout the preceding year` IS TRUE
+    `below 16 at any time in the preceding year` IS TRUE
+    `in full-time instruction` IS TRUE
+    `serving under articles or indentures` IS FALSE
+    `incapacitated by physical or mental infirmity` IS FALSE
+    `income in the preceding year, excluding scholarships` IS 0
+    `engaged in employment or a trade, other than under articles` IS FALSE
+    `maintained by the claimant` IS TRUE
+    `claimant's share of the relief` IS 0
+    `a Singapore citizen` IS TRUE
+    `order among the mother's eligible children` IS 2
+    `the para 5 date` IS YearMonthDay 2013 6 30
+
+`iras wmcr heng mother facts` MEANS `Individual relief facts` WITH
+    `earned income` IS 100000
+    `age reached by 31 December of the preceding year` IS 40
+    `totally blind or permanently and severely disabled` IS FALSE
+    `a female claimant (married, divorced or widowed)` IS TRUE
+    `had a spouse living with or maintained by the claimant` IS FALSE
+    `spouse's income in the preceding year` IS 0
+    `spouse incapacitated by physical or mental infirmity` IS FALSE
+    `payments to a former spouse under a court order or deed` IS 0
+    `children` IS LIST `iras wmcr heng child 1 facts`, `iras wmcr heng child 2 facts`
+    `life insurance premiums, capped at 7% of the capital sum` IS 0
+    `obligatory CPF or approved fund contributions as an employee` IS 0
+    `self-employed: assessable income from the trade or profession` IS 0
+    `self-employed: obligatory CPF contributions on that income` IS 0
+    `self-employed: voluntary CPF contributions` IS 0
+    `dependants` IS EMPTY
+    `incapacitated siblings maintained` IS 0
+    `course fees` IS 0
+    `national service` IS `not an operationally ready national serviceman`
+    `wife or widow of an NSman, claiming` IS FALSE
+    `parent of an NSman, claiming` IS FALSE
+    `SRS contributions` IS 0
+    `SRS contribution cap` IS 15300
+    `SRS account suspended, or the contribution withdrawn in the year` IS FALSE
+    `grandparent caregiver: the caregiver's trade or employment income` IS NOTHING
+    `CPF cash top-ups for family, after grants and capped as prescribed` IS 0
+    `CPF cash top-ups for self, after grants and capped as prescribed` IS 0
+    `prescribed deduction limit for s 39(3)` IS 8000
+    `prescribed deduction limit for s 39(3A)` IS 8000
+    `foreign domestic worker levy paid, for one worker` IS 0
+
+`iras wmcr heng kid 1 employed student` MEANS `Child of the household` WITH
+    `the year the child was born` IS 2008
+    `the child is a Singapore citizen` IS TRUE
+    `the child's income in the income year, excluding scholarships` IS 9000
+    `the child was engaged in employment or a trade` IS TRUE
+    `the child is in full-time instruction` IS TRUE
+    `the child is incapacitated by physical or mental infirmity` IS FALSE
+    `the child was unmarried throughout the income year` IS TRUE
+    `the share of the child's relief the first adult claims` IS 1
+    `the share of the parenthood rebate the first adult claims` IS 1
+    `the child's mother` IS `the first adult is the child's mother`
+    `the year of the date that fixes the working mother's child relief` IS 2008
+
+`iras wmcr heng household employed student` MEANS `Household` WITH
+    `the income year` IS 2025
+    `the first adult` IS `iras wmcr heng mother`
+    `the second adult` IS NOTHING
+    `the adults are married to each other and live together` IS FALSE
+    `the children` IS LIST `iras wmcr heng kid 1 employed student`, `iras wmcr heng kid 2`
+
+`iras wmcr heng kid 1 employed not a student` MEANS `Child of the household` WITH
+    `the year the child was born` IS 2008
+    `the child is a Singapore citizen` IS TRUE
+    `the child's income in the income year, excluding scholarships` IS 9000
+    `the child was engaged in employment or a trade` IS TRUE
+    `the child is in full-time instruction` IS FALSE
+    `the child is incapacitated by physical or mental infirmity` IS FALSE
+    `the child was unmarried throughout the income year` IS TRUE
+    `the share of the child's relief the first adult claims` IS 1
+    `the share of the parenthood rebate the first adult claims` IS 1
+    `the child's mother` IS `the first adult is the child's mother`
+    `the year of the date that fixes the working mother's child relief` IS 2008
+
+`iras wmcr heng household employed not a student` MEANS `Household` WITH
+    `the income year` IS 2025
+    `the first adult` IS `iras wmcr heng mother`
+    `the second adult` IS NOTHING
+    `the adults are married to each other and live together` IS FALSE
+    `the children` IS LIST `iras wmcr heng kid 1 employed not a student`, `iras wmcr heng kid 2`
+
+`iras teo mother` MEANS `Adult of the household` WITH
+    `my year of birth` IS 1985
+    `my month of birth` IS 12
+    `my residence status for CPF` IS `a citizen of Singapore`
+    `I am resident in Singapore for income tax` IS TRUE
+    `my wages month by month` IS LIST (`a month of pay` 7000 0), (`a month of pay` 7000 0), (`a month of pay` 7000 0), (`a month of pay` 7000 0), (`a month of pay` 7000 0), (`a month of pay` 7000 0), (`a month of pay` 7000 0), (`a month of pay` 7000 0), (`a month of pay` 7000 0), (`a month of pay` 7000 0), (`a month of pay` 7000 0), (`a month of pay` 7000 6000)
+    `my trade, business or profession income, after its deductions` IS 0
+    `my rent and other property income, after its deductions` IS 0
+    `my tax-exempt income` IS 0
+    `I am a married woman, a divorcee or a widow` IS TRUE
+    `I am totally blind or permanently and severely disabled` IS FALSE
+    `my life insurance premiums, capped at 7% of the capital sum` IS 0
+    `my SRS contributions` IS 0
+    `my SRS contribution cap` IS 15300
+    `my CPF cash top-ups for family, after grants and as capped` IS 0
+    `my CPF cash top-ups for myself, after grants and as capped` IS 0
+    `the prescribed deduction limit for family top-ups` IS 8000
+    `the prescribed deduction limit for my own top-ups` IS 8000
+    `my dependants` IS EMPTY
+    `incapacitated siblings I maintain` IS 0
+    `my national service status` IS `not an operationally ready national serviceman`
+    `I am the wife or widow of an NSman and claim` IS FALSE
+    `I am the parent of an NSman and claim` IS FALSE
+    `the caregiver grandparent's income from work` IS NOTHING
+    `my parenthood rebate brought forward` IS 0
+
+`iras teo kid 1` MEANS `Child of the household` WITH
+    `the year the child was born` IS 2021
+    `the child is a Singapore citizen` IS TRUE
+    `the child's income in the income year, excluding scholarships` IS 0
+    `the child was engaged in employment or a trade` IS FALSE
+    `the child is in full-time instruction` IS FALSE
+    `the child is incapacitated by physical or mental infirmity` IS FALSE
+    `the child was unmarried throughout the income year` IS TRUE
+    `the share of the child's relief the first adult claims` IS 1
+    `the share of the parenthood rebate the first adult claims` IS 1
+    `the child's mother` IS `the first adult is the child's mother`
+    `the year of the date that fixes the working mother's child relief` IS 2021
+
+`iras teo kid 2` MEANS `Child of the household` WITH
+    `the year the child was born` IS 2024
+    `the child is a Singapore citizen` IS TRUE
+    `the child's income in the income year, excluding scholarships` IS 0
+    `the child was engaged in employment or a trade` IS FALSE
+    `the child is in full-time instruction` IS FALSE
+    `the child is incapacitated by physical or mental infirmity` IS FALSE
+    `the child was unmarried throughout the income year` IS TRUE
+    `the share of the child's relief the first adult claims` IS 1
+    `the share of the parenthood rebate the first adult claims` IS 1
+    `the child's mother` IS `the first adult is the child's mother`
+    `the year of the date that fixes the working mother's child relief` IS 2024
+
+`iras teo household` MEANS `Household` WITH
+    `the income year` IS 2025
+    `the first adult` IS `iras teo mother`
+    `the second adult` IS NOTHING
+    `the adults are married to each other and live together` IS FALSE
+    `the children` IS LIST `iras teo kid 1`, `iras teo kid 2`
+
+`iras teo child 1 facts` MEANS `Child facts` WITH
+    `unmarried throughout the preceding year` IS TRUE
+    `below 16 at any time in the preceding year` IS TRUE
+    `in full-time instruction` IS FALSE
+    `serving under articles or indentures` IS FALSE
+    `incapacitated by physical or mental infirmity` IS FALSE
+    `income in the preceding year, excluding scholarships` IS 0
+    `engaged in employment or a trade, other than under articles` IS FALSE
+    `maintained by the claimant` IS TRUE
+    `claimant's share of the relief` IS 0
+    `a Singapore citizen` IS TRUE
+    `order among the mother's eligible children` IS 1
+    `the para 5 date` IS YearMonthDay 2021 6 30
+
+`iras teo child 2 facts` MEANS `Child facts` WITH
+    `unmarried throughout the preceding year` IS TRUE
+    `below 16 at any time in the preceding year` IS TRUE
+    `in full-time instruction` IS FALSE
+    `serving under articles or indentures` IS FALSE
+    `incapacitated by physical or mental infirmity` IS FALSE
+    `income in the preceding year, excluding scholarships` IS 0
+    `engaged in employment or a trade, other than under articles` IS FALSE
+    `maintained by the claimant` IS TRUE
+    `claimant's share of the relief` IS 0
+    `a Singapore citizen` IS TRUE
+    `order among the mother's eligible children` IS 2
+    `the para 5 date` IS YearMonthDay 2024 6 30
+
+`iras teo mother facts` MEANS `Individual relief facts` WITH
+    `earned income` IS 90000
+    `age reached by 31 December of the preceding year` IS 40
+    `totally blind or permanently and severely disabled` IS FALSE
+    `a female claimant (married, divorced or widowed)` IS TRUE
+    `had a spouse living with or maintained by the claimant` IS FALSE
+    `spouse's income in the preceding year` IS 0
+    `spouse incapacitated by physical or mental infirmity` IS FALSE
+    `payments to a former spouse under a court order or deed` IS 0
+    `children` IS LIST `iras teo child 1 facts`, `iras teo child 2 facts`
+    `life insurance premiums, capped at 7% of the capital sum` IS 0
+    `obligatory CPF or approved fund contributions as an employee` IS 0
+    `self-employed: assessable income from the trade or profession` IS 0
+    `self-employed: obligatory CPF contributions on that income` IS 0
+    `self-employed: voluntary CPF contributions` IS 0
+    `dependants` IS EMPTY
+    `incapacitated siblings maintained` IS 0
+    `course fees` IS 0
+    `national service` IS `not an operationally ready national serviceman`
+    `wife or widow of an NSman, claiming` IS FALSE
+    `parent of an NSman, claiming` IS FALSE
+    `SRS contributions` IS 0
+    `SRS contribution cap` IS 15300
+    `SRS account suspended, or the contribution withdrawn in the year` IS FALSE
+    `grandparent caregiver: the caregiver's trade or employment income` IS NOTHING
+    `CPF cash top-ups for family, after grants and capped as prescribed` IS 0
+    `CPF cash top-ups for self, after grants and capped as prescribed` IS 0
+    `prescribed deduction limit for s 39(3)` IS 8000
+    `prescribed deduction limit for s 39(3A)` IS 8000
+    `foreign domestic worker levy paid, for one worker` IS 0
+
+`iras lim child 1` MEANS `Child facts` WITH
+    `unmarried throughout the preceding year` IS TRUE
+    `below 16 at any time in the preceding year` IS TRUE
+    `in full-time instruction` IS FALSE
+    `serving under articles or indentures` IS FALSE
+    `incapacitated by physical or mental infirmity` IS TRUE
+    `income in the preceding year, excluding scholarships` IS 0
+    `engaged in employment or a trade, other than under articles` IS FALSE
+    `maintained by the claimant` IS TRUE
+    `claimant's share of the relief` IS 0
+    `a Singapore citizen` IS TRUE
+    `order among the mother's eligible children` IS 1
+    `the para 5 date` IS YearMonthDay 2009 6 30
+
+`iras lim child 2` MEANS `Child facts` WITH
+    `unmarried throughout the preceding year` IS TRUE
+    `below 16 at any time in the preceding year` IS FALSE
+    `in full-time instruction` IS TRUE
+    `serving under articles or indentures` IS FALSE
+    `incapacitated by physical or mental infirmity` IS FALSE
+    `income in the preceding year, excluding scholarships` IS 0
+    `engaged in employment or a trade, other than under articles` IS FALSE
+    `maintained by the claimant` IS TRUE
+    `claimant's share of the relief` IS 0
+    `a Singapore citizen` IS TRUE
+    `order among the mother's eligible children` IS 2
+    `the para 5 date` IS YearMonthDay 2008 6 30
+
+`iras lim mother both` MEANS `Individual relief facts` WITH
+    `earned income` IS 250000
+    `age reached by 31 December of the preceding year` IS 45
+    `totally blind or permanently and severely disabled` IS FALSE
+    `a female claimant (married, divorced or widowed)` IS TRUE
+    `had a spouse living with or maintained by the claimant` IS FALSE
+    `spouse's income in the preceding year` IS 0
+    `spouse incapacitated by physical or mental infirmity` IS FALSE
+    `payments to a former spouse under a court order or deed` IS 0
+    `children` IS LIST `iras lim child 1`, `iras lim child 2`
+    `life insurance premiums, capped at 7% of the capital sum` IS 0
+    `obligatory CPF or approved fund contributions as an employee` IS 0
+    `self-employed: assessable income from the trade or profession` IS 0
+    `self-employed: obligatory CPF contributions on that income` IS 0
+    `self-employed: voluntary CPF contributions` IS 0
+    `dependants` IS EMPTY
+    `incapacitated siblings maintained` IS 0
+    `course fees` IS 0
+    `national service` IS `not an operationally ready national serviceman`
+    `wife or widow of an NSman, claiming` IS FALSE
+    `parent of an NSman, claiming` IS FALSE
+    `SRS contributions` IS 0
+    `SRS contribution cap` IS 15300
+    `SRS account suspended, or the contribution withdrawn in the year` IS FALSE
+    `grandparent caregiver: the caregiver's trade or employment income` IS NOTHING
+    `CPF cash top-ups for family, after grants and capped as prescribed` IS 0
+    `CPF cash top-ups for self, after grants and capped as prescribed` IS 0
+    `prescribed deduction limit for s 39(3)` IS 8000
+    `prescribed deduction limit for s 39(3A)` IS 8000
+    `foreign domestic worker levy paid, for one worker` IS 0
+
+`iras lim mother child 2 only` MEANS `Individual relief facts` WITH
+    `earned income` IS 250000
+    `age reached by 31 December of the preceding year` IS 45
+    `totally blind or permanently and severely disabled` IS FALSE
+    `a female claimant (married, divorced or widowed)` IS TRUE
+    `had a spouse living with or maintained by the claimant` IS FALSE
+    `spouse's income in the preceding year` IS 0
+    `spouse incapacitated by physical or mental infirmity` IS FALSE
+    `payments to a former spouse under a court order or deed` IS 0
+    `children` IS LIST `iras lim child 2`
+    `life insurance premiums, capped at 7% of the capital sum` IS 0
+    `obligatory CPF or approved fund contributions as an employee` IS 0
+    `self-employed: assessable income from the trade or profession` IS 0
+    `self-employed: obligatory CPF contributions on that income` IS 0
+    `self-employed: voluntary CPF contributions` IS 0
+    `dependants` IS EMPTY
+    `incapacitated siblings maintained` IS 0
+    `course fees` IS 0
+    `national service` IS `not an operationally ready national serviceman`
+    `wife or widow of an NSman, claiming` IS FALSE
+    `parent of an NSman, claiming` IS FALSE
+    `SRS contributions` IS 0
+    `SRS contribution cap` IS 15300
+    `SRS account suspended, or the contribution withdrawn in the year` IS FALSE
+    `grandparent caregiver: the caregiver's trade or employment income` IS NOTHING
+    `CPF cash top-ups for family, after grants and capped as prescribed` IS 0
+    `CPF cash top-ups for self, after grants and capped as prescribed` IS 0
+    `prescribed deduction limit for s 39(3)` IS 8000
+    `prescribed deduction limit for s 39(3A)` IS 8000
+    `foreign domestic worker levy paid, for one worker` IS 0
+
+`iras lim mother child 1 only` MEANS `Individual relief facts` WITH
+    `earned income` IS 250000
+    `age reached by 31 December of the preceding year` IS 45
+    `totally blind or permanently and severely disabled` IS FALSE
+    `a female claimant (married, divorced or widowed)` IS TRUE
+    `had a spouse living with or maintained by the claimant` IS FALSE
+    `spouse's income in the preceding year` IS 0
+    `spouse incapacitated by physical or mental infirmity` IS FALSE
+    `payments to a former spouse under a court order or deed` IS 0
+    `children` IS LIST `iras lim child 1`
+    `life insurance premiums, capped at 7% of the capital sum` IS 0
+    `obligatory CPF or approved fund contributions as an employee` IS 0
+    `self-employed: assessable income from the trade or profession` IS 0
+    `self-employed: obligatory CPF contributions on that income` IS 0
+    `self-employed: voluntary CPF contributions` IS 0
+    `dependants` IS EMPTY
+    `incapacitated siblings maintained` IS 0
+    `course fees` IS 0
+    `national service` IS `not an operationally ready national serviceman`
+    `wife or widow of an NSman, claiming` IS FALSE
+    `parent of an NSman, claiming` IS FALSE
+    `SRS contributions` IS 0
+    `SRS contribution cap` IS 15300
+    `SRS account suspended, or the contribution withdrawn in the year` IS FALSE
+    `grandparent caregiver: the caregiver's trade or employment income` IS NOTHING
+    `CPF cash top-ups for family, after grants and capped as prescribed` IS 0
+    `CPF cash top-ups for self, after grants and capped as prescribed` IS 0
+    `prescribed deduction limit for s 39(3)` IS 8000
+    `prescribed deduction limit for s 39(3A)` IS 8000
+    `foreign domestic worker levy paid, for one worker` IS 0
+
+`iras citizenship child` MEANS `Child facts` WITH
+    `unmarried throughout the preceding year` IS TRUE
+    `below 16 at any time in the preceding year` IS TRUE
+    `in full-time instruction` IS FALSE
+    `serving under articles or indentures` IS FALSE
+    `incapacitated by physical or mental infirmity` IS FALSE
+    `income in the preceding year, excluding scholarships` IS 0
+    `engaged in employment or a trade, other than under articles` IS FALSE
+    `maintained by the claimant` IS TRUE
+    `claimant's share of the relief` IS 0
+    `a Singapore citizen` IS TRUE
+    `order among the mother's eligible children` IS 1
+    `the para 5 date` IS YearMonthDay 2024 5 4
+
+`iras citizenship child control` MEANS `Child facts` WITH
+    `unmarried throughout the preceding year` IS TRUE
+    `below 16 at any time in the preceding year` IS TRUE
+    `in full-time instruction` IS FALSE
+    `serving under articles or indentures` IS FALSE
+    `incapacitated by physical or mental infirmity` IS FALSE
+    `income in the preceding year, excluding scholarships` IS 0
+    `engaged in employment or a trade, other than under articles` IS FALSE
+    `maintained by the claimant` IS TRUE
+    `claimant's share of the relief` IS 0
+    `a Singapore citizen` IS TRUE
+    `order among the mother's eligible children` IS 1
+    `the para 5 date` IS YearMonthDay 2022 3 30
+
+`iras chan dep A lives with` MEANS `Dependant facts` WITH
+    `a parent, grandparent or great-grandparent of the claimant or spouse` IS TRUE
+    `living in Singapore` IS TRUE
+    `age at any time in the preceding year` IS 70
+    `income in the preceding year` IS 0
+    `incapacitated by physical or mental infirmity` IS FALSE
+    `living with the claimant in the same household` IS TRUE
+    `spent by the claimant on maintenance` IS 0
+    `claimant's share of the relief` IS (1 / 3)
+    `at least one claimant of this dependant lived with the dependant in the same household` IS TRUE
+
+`iras chan dep A lives with none lives` MEANS `Dependant facts` WITH
+    `a parent, grandparent or great-grandparent of the claimant or spouse` IS TRUE
+    `living in Singapore` IS TRUE
+    `age at any time in the preceding year` IS 70
+    `income in the preceding year` IS 0
+    `incapacitated by physical or mental infirmity` IS FALSE
+    `living with the claimant in the same household` IS TRUE
+    `spent by the claimant on maintenance` IS 0
+    `claimant's share of the relief` IS (1 / 3)
+    `at least one claimant of this dependant lived with the dependant in the same household` IS FALSE
+
+`iras chan dep B apart` MEANS `Dependant facts` WITH
+    `a parent, grandparent or great-grandparent of the claimant or spouse` IS TRUE
+    `living in Singapore` IS TRUE
+    `age at any time in the preceding year` IS 70
+    `income in the preceding year` IS 0
+    `incapacitated by physical or mental infirmity` IS FALSE
+    `living with the claimant in the same household` IS FALSE
+    `spent by the claimant on maintenance` IS 2000
+    `claimant's share of the relief` IS (1 / 3)
+    `at least one claimant of this dependant lived with the dependant in the same household` IS TRUE
+
+`iras chan dep B apart none lives` MEANS `Dependant facts` WITH
+    `a parent, grandparent or great-grandparent of the claimant or spouse` IS TRUE
+    `living in Singapore` IS TRUE
+    `age at any time in the preceding year` IS 70
+    `income in the preceding year` IS 0
+    `incapacitated by physical or mental infirmity` IS FALSE
+    `living with the claimant in the same household` IS FALSE
+    `spent by the claimant on maintenance` IS 2000
+    `claimant's share of the relief` IS (1 / 3)
+    `at least one claimant of this dependant lived with the dependant in the same household` IS FALSE
+
+`iras chan dep C apart` MEANS `Dependant facts` WITH
+    `a parent, grandparent or great-grandparent of the claimant or spouse` IS TRUE
+    `living in Singapore` IS TRUE
+    `age at any time in the preceding year` IS 70
+    `income in the preceding year` IS 0
+    `incapacitated by physical or mental infirmity` IS FALSE
+    `living with the claimant in the same household` IS FALSE
+    `spent by the claimant on maintenance` IS 2000
+    `claimant's share of the relief` IS (1 / 3)
+    `at least one claimant of this dependant lived with the dependant in the same household` IS TRUE
+
+`iras chan dep C apart none lives` MEANS `Dependant facts` WITH
+    `a parent, grandparent or great-grandparent of the claimant or spouse` IS TRUE
+    `living in Singapore` IS TRUE
+    `age at any time in the preceding year` IS 70
+    `income in the preceding year` IS 0
+    `incapacitated by physical or mental infirmity` IS FALSE
+    `living with the claimant in the same household` IS FALSE
+    `spent by the claimant on maintenance` IS 2000
+    `claimant's share of the relief` IS (1 / 3)
+    `at least one claimant of this dependant lived with the dependant in the same household` IS FALSE
+
+`iras cpf lim year` MEANS `My year of work` WITH
+    `the calendar year of my pay` IS 2025
+    `my residence status in my year` IS `a citizen of Singapore`
+    `the year I was born` IS 1985
+    `the month I was born` IS 12
+    `my pay from January to December` IS LIST (`a month of pay` 5500 0), (`a month of pay` 5500 0), (`a month of pay` 5500 0), (`a month of pay` 5500 0), (`a month of pay` 5500 0), (`a month of pay` 5500 0), (`a month of pay` 5500 0), (`a month of pay` 5500 0), (`a month of pay` 5500 0), (`a month of pay` 5500 0), (`a month of pay` 5500 0), (`a month of pay` 5500 40000)
+
+`iras cpf lim year no AW` MEANS `My year of work` WITH
+    `the calendar year of my pay` IS 2025
+    `my residence status in my year` IS `a citizen of Singapore`
+    `the year I was born` IS 1985
+    `the month I was born` IS 12
+    `my pay from January to December` IS LIST (`a month of pay` 5500 0), (`a month of pay` 5500 0), (`a month of pay` 5500 0), (`a month of pay` 5500 0), (`a month of pay` 5500 0), (`a month of pay` 5500 0), (`a month of pay` 5500 0), (`a month of pay` 5500 0), (`a month of pay` 5500 0), (`a month of pay` 5500 0), (`a month of pay` 5500 0), (`a month of pay` 5500 0)
+
+`iras cpf heng year` MEANS `My year of work` WITH
+    `the calendar year of my pay` IS 2025
+    `my residence status in my year` IS `a citizen of Singapore`
+    `the year I was born` IS 1990
+    `the month I was born` IS 12
+    `my pay from January to December` IS LIST (`a month of pay` 7600 0), (`a month of pay` 7600 0), (`a month of pay` 7600 0), (`a month of pay` 7600 0), (`a month of pay` 7600 0), (`a month of pay` 7600 0), (`a month of pay` 7600 0), (`a month of pay` 7600 0), (`a month of pay` 7600 0), (`a month of pay` 7600 0), (`a month of pay` 7600 0), (`a month of pay` 7600 13000)
+
+`iras cpf heng year no AW` MEANS `My year of work` WITH
+    `the calendar year of my pay` IS 2025
+    `my residence status in my year` IS `a citizen of Singapore`
+    `the year I was born` IS 1990
+    `the month I was born` IS 12
+    `my pay from January to December` IS LIST (`a month of pay` 7600 0), (`a month of pay` 7600 0), (`a month of pay` 7600 0), (`a month of pay` 7600 0), (`a month of pay` 7600 0), (`a month of pay` 7600 0), (`a month of pay` 7600 0), (`a month of pay` 7600 0), (`a month of pay` 7600 0), (`a month of pay` 7600 0), (`a month of pay` 7600 0), (`a month of pay` 7600 0)
+
+`iras cpf cheong year` MEANS `My year of work` WITH
+    `the calendar year of my pay` IS 2025
+    `my residence status in my year` IS `a citizen of Singapore`
+    `the year I was born` IS 1996
+    `the month I was born` IS 12
+    `my pay from January to December` IS LIST (`a month of pay` 0 0), (`a month of pay` 7500 0), (`a month of pay` 7500 0), (`a month of pay` 7500 0), (`a month of pay` 7500 0), (`a month of pay` 7500 0), (`a month of pay` 7500 0), (`a month of pay` 7500 0), (`a month of pay` 7500 0), (`a month of pay` 7500 0), (`a month of pay` 7500 0), (`a month of pay` 7500 45000)
+
+`iras cpf cheong year no AW` MEANS `My year of work` WITH
+    `the calendar year of my pay` IS 2025
+    `my residence status in my year` IS `a citizen of Singapore`
+    `the year I was born` IS 1996
+    `the month I was born` IS 12
+    `my pay from January to December` IS LIST (`a month of pay` 0 0), (`a month of pay` 7500 0), (`a month of pay` 7500 0), (`a month of pay` 7500 0), (`a month of pay` 7500 0), (`a month of pay` 7500 0), (`a month of pay` 7500 0), (`a month of pay` 7500 0), (`a month of pay` 7500 0), (`a month of pay` 7500 0), (`a month of pay` 7500 0), (`a month of pay` 7500 0)
+
+`iras lir teo facts` MEANS `Individual relief facts` WITH
+    `earned income` IS 60000
+    `age reached by 31 December of the preceding year` IS 35
+    `totally blind or permanently and severely disabled` IS FALSE
+    `a female claimant (married, divorced or widowed)` IS FALSE
+    `had a spouse living with or maintained by the claimant` IS FALSE
+    `spouse's income in the preceding year` IS 0
+    `spouse incapacitated by physical or mental infirmity` IS FALSE
+    `payments to a former spouse under a court order or deed` IS 0
+    `children` IS EMPTY
+    `life insurance premiums, capped at 7% of the capital sum` IS 3500
+    `obligatory CPF or approved fund contributions as an employee` IS 1600
+    `self-employed: assessable income from the trade or profession` IS 0
+    `self-employed: obligatory CPF contributions on that income` IS 0
+    `self-employed: voluntary CPF contributions` IS 0
+    `dependants` IS EMPTY
+    `incapacitated siblings maintained` IS 0
+    `course fees` IS 0
+    `national service` IS `not an operationally ready national serviceman`
+    `wife or widow of an NSman, claiming` IS FALSE
+    `parent of an NSman, claiming` IS FALSE
+    `SRS contributions` IS 0
+    `SRS contribution cap` IS 15300
+    `SRS account suspended, or the contribution withdrawn in the year` IS FALSE
+    `grandparent caregiver: the caregiver's trade or employment income` IS NOTHING
+    `CPF cash top-ups for family, after grants and capped as prescribed` IS 0
+    `CPF cash top-ups for self, after grants and capped as prescribed` IS 0
+    `prescribed deduction limit for s 39(3)` IS 8000
+    `prescribed deduction limit for s 39(3A)` IS 8000
+    `foreign domestic worker levy paid, for one worker` IS 0
+
+`iras lir tooltip facts` MEANS `Individual relief facts` WITH
+    `earned income` IS 60000
+    `age reached by 31 December of the preceding year` IS 35
+    `totally blind or permanently and severely disabled` IS FALSE
+    `a female claimant (married, divorced or widowed)` IS FALSE
+    `had a spouse living with or maintained by the claimant` IS FALSE
+    `spouse's income in the preceding year` IS 0
+    `spouse incapacitated by physical or mental infirmity` IS FALSE
+    `payments to a former spouse under a court order or deed` IS 0
+    `children` IS EMPTY
+    `life insurance premiums, capped at 7% of the capital sum` IS 4000
+    `obligatory CPF or approved fund contributions as an employee` IS 3000
+    `self-employed: assessable income from the trade or profession` IS 0
+    `self-employed: obligatory CPF contributions on that income` IS 0
+    `self-employed: voluntary CPF contributions` IS 0
+    `dependants` IS EMPTY
+    `incapacitated siblings maintained` IS 0
+    `course fees` IS 0
+    `national service` IS `not an operationally ready national serviceman`
+    `wife or widow of an NSman, claiming` IS FALSE
+    `parent of an NSman, claiming` IS FALSE
+    `SRS contributions` IS 0
+    `SRS contribution cap` IS 15300
+    `SRS account suspended, or the contribution withdrawn in the year` IS FALSE
+    `grandparent caregiver: the caregiver's trade or employment income` IS NOTHING
+    `CPF cash top-ups for family, after grants and capped as prescribed` IS 0
+    `CPF cash top-ups for self, after grants and capped as prescribed` IS 0
+    `prescribed deduction limit for s 39(3)` IS 8000
+    `prescribed deduction limit for s 39(3A)` IS 8000
+    `foreign domestic worker levy paid, for one worker` IS 0
+
+`iras srs withdrawn` MEANS `Individual relief facts` WITH
+    `earned income` IS 60000
+    `age reached by 31 December of the preceding year` IS 40
+    `totally blind or permanently and severely disabled` IS FALSE
+    `a female claimant (married, divorced or widowed)` IS FALSE
+    `had a spouse living with or maintained by the claimant` IS FALSE
+    `spouse's income in the preceding year` IS 0
+    `spouse incapacitated by physical or mental infirmity` IS FALSE
+    `payments to a former spouse under a court order or deed` IS 0
+    `children` IS EMPTY
+    `life insurance premiums, capped at 7% of the capital sum` IS 0
+    `obligatory CPF or approved fund contributions as an employee` IS 0
+    `self-employed: assessable income from the trade or profession` IS 0
+    `self-employed: obligatory CPF contributions on that income` IS 0
+    `self-employed: voluntary CPF contributions` IS 0
+    `dependants` IS EMPTY
+    `incapacitated siblings maintained` IS 0
+    `course fees` IS 0
+    `national service` IS `not an operationally ready national serviceman`
+    `wife or widow of an NSman, claiming` IS FALSE
+    `parent of an NSman, claiming` IS FALSE
+    `SRS contributions` IS 10000
+    `SRS contribution cap` IS 15300
+    `SRS account suspended, or the contribution withdrawn in the year` IS TRUE
+    `grandparent caregiver: the caregiver's trade or employment income` IS NOTHING
+    `CPF cash top-ups for family, after grants and capped as prescribed` IS 0
+    `CPF cash top-ups for self, after grants and capped as prescribed` IS 0
+    `prescribed deduction limit for s 39(3)` IS 8000
+    `prescribed deduction limit for s 39(3A)` IS 8000
+    `foreign domestic worker levy paid, for one worker` IS 0
+
+`iras srs foreigner` MEANS `Individual relief facts` WITH
+    `earned income` IS 60000
+    `age reached by 31 December of the preceding year` IS 40
+    `totally blind or permanently and severely disabled` IS FALSE
+    `a female claimant (married, divorced or widowed)` IS FALSE
+    `had a spouse living with or maintained by the claimant` IS FALSE
+    `spouse's income in the preceding year` IS 0
+    `spouse incapacitated by physical or mental infirmity` IS FALSE
+    `payments to a former spouse under a court order or deed` IS 0
+    `children` IS EMPTY
+    `life insurance premiums, capped at 7% of the capital sum` IS 0
+    `obligatory CPF or approved fund contributions as an employee` IS 0
+    `self-employed: assessable income from the trade or profession` IS 0
+    `self-employed: obligatory CPF contributions on that income` IS 0
+    `self-employed: voluntary CPF contributions` IS 0
+    `dependants` IS EMPTY
+    `incapacitated siblings maintained` IS 0
+    `course fees` IS 0
+    `national service` IS `not an operationally ready national serviceman`
+    `wife or widow of an NSman, claiming` IS FALSE
+    `parent of an NSman, claiming` IS FALSE
+    `SRS contributions` IS 20000
+    `SRS contribution cap` IS 35700
+    `SRS account suspended, or the contribution withdrawn in the year` IS FALSE
+    `grandparent caregiver: the caregiver's trade or employment income` IS NOTHING
+    `CPF cash top-ups for family, after grants and capped as prescribed` IS 0
+    `CPF cash top-ups for self, after grants and capped as prescribed` IS 0
+    `prescribed deduction limit for s 39(3)` IS 8000
+    `prescribed deduction limit for s 39(3A)` IS 8000
+    `foreign domestic worker levy paid, for one worker` IS 0
+
+`iras nsman parent` MEANS `Individual relief facts` WITH
+    `earned income` IS 40000
+    `age reached by 31 December of the preceding year` IS 60
+    `totally blind or permanently and severely disabled` IS FALSE
+    `a female claimant (married, divorced or widowed)` IS FALSE
+    `had a spouse living with or maintained by the claimant` IS FALSE
+    `spouse's income in the preceding year` IS 0
+    `spouse incapacitated by physical or mental infirmity` IS FALSE
+    `payments to a former spouse under a court order or deed` IS 0
+    `children` IS EMPTY
+    `life insurance premiums, capped at 7% of the capital sum` IS 0
+    `obligatory CPF or approved fund contributions as an employee` IS 0
+    `self-employed: assessable income from the trade or profession` IS 0
+    `self-employed: obligatory CPF contributions on that income` IS 0
+    `self-employed: voluntary CPF contributions` IS 0
+    `dependants` IS EMPTY
+    `incapacitated siblings maintained` IS 0
+    `course fees` IS 0
+    `national service` IS `not an operationally ready national serviceman`
+    `wife or widow of an NSman, claiming` IS FALSE
+    `parent of an NSman, claiming` IS TRUE
+    `SRS contributions` IS 0
+    `SRS contribution cap` IS 15300
+    `SRS account suspended, or the contribution withdrawn in the year` IS FALSE
+    `grandparent caregiver: the caregiver's trade or employment income` IS NOTHING
+    `CPF cash top-ups for family, after grants and capped as prescribed` IS 0
+    `CPF cash top-ups for self, after grants and capped as prescribed` IS 0
+    `prescribed deduction limit for s 39(3)` IS 8000
+    `prescribed deduction limit for s 39(3A)` IS 8000
+    `foreign domestic worker levy paid, for one worker` IS 0
+
+`iras nsman father self only` MEANS `Individual relief facts` WITH
+    `earned income` IS 40000
+    `age reached by 31 December of the preceding year` IS 60
+    `totally blind or permanently and severely disabled` IS FALSE
+    `a female claimant (married, divorced or widowed)` IS FALSE
+    `had a spouse living with or maintained by the claimant` IS FALSE
+    `spouse's income in the preceding year` IS 0
+    `spouse incapacitated by physical or mental infirmity` IS FALSE
+    `payments to a former spouse under a court order or deed` IS 0
+    `children` IS EMPTY
+    `life insurance premiums, capped at 7% of the capital sum` IS 0
+    `obligatory CPF or approved fund contributions as an employee` IS 0
+    `self-employed: assessable income from the trade or profession` IS 0
+    `self-employed: obligatory CPF contributions on that income` IS 0
+    `self-employed: voluntary CPF contributions` IS 0
+    `dependants` IS EMPTY
+    `incapacitated siblings maintained` IS 0
+    `course fees` IS 0
+    `national service` IS `NSman who did not perform ORNS in the relevant period`
+    `wife or widow of an NSman, claiming` IS FALSE
+    `parent of an NSman, claiming` IS FALSE
+    `SRS contributions` IS 0
+    `SRS contribution cap` IS 15300
+    `SRS account suspended, or the contribution withdrawn in the year` IS FALSE
+    `grandparent caregiver: the caregiver's trade or employment income` IS NOTHING
+    `CPF cash top-ups for family, after grants and capped as prescribed` IS 0
+    `CPF cash top-ups for self, after grants and capped as prescribed` IS 0
+    `prescribed deduction limit for s 39(3)` IS 8000
+    `prescribed deduction limit for s 39(3A)` IS 8000
+    `foreign domestic worker levy paid, for one worker` IS 0
+
+`iras nsman father both` MEANS `Individual relief facts` WITH
+    `earned income` IS 40000
+    `age reached by 31 December of the preceding year` IS 60
+    `totally blind or permanently and severely disabled` IS FALSE
+    `a female claimant (married, divorced or widowed)` IS FALSE
+    `had a spouse living with or maintained by the claimant` IS FALSE
+    `spouse's income in the preceding year` IS 0
+    `spouse incapacitated by physical or mental infirmity` IS FALSE
+    `payments to a former spouse under a court order or deed` IS 0
+    `children` IS EMPTY
+    `life insurance premiums, capped at 7% of the capital sum` IS 0
+    `obligatory CPF or approved fund contributions as an employee` IS 0
+    `self-employed: assessable income from the trade or profession` IS 0
+    `self-employed: obligatory CPF contributions on that income` IS 0
+    `self-employed: voluntary CPF contributions` IS 0
+    `dependants` IS EMPTY
+    `incapacitated siblings maintained` IS 0
+    `course fees` IS 0
+    `national service` IS `NSman who did not perform ORNS in the relevant period`
+    `wife or widow of an NSman, claiming` IS FALSE
+    `parent of an NSman, claiming` IS TRUE
+    `SRS contributions` IS 0
+    `SRS contribution cap` IS 15300
+    `SRS account suspended, or the contribution withdrawn in the year` IS FALSE
+    `grandparent caregiver: the caregiver's trade or employment income` IS NOTHING
+    `CPF cash top-ups for family, after grants and capped as prescribed` IS 0
+    `CPF cash top-ups for self, after grants and capped as prescribed` IS 0
+    `prescribed deduction limit for s 39(3)` IS 8000
+    `prescribed deduction limit for s 39(3A)` IS 8000
+    `foreign domestic worker levy paid, for one worker` IS 0
+
+`iras nsman mother wife only` MEANS `Individual relief facts` WITH
+    `earned income` IS 40000
+    `age reached by 31 December of the preceding year` IS 55
+    `totally blind or permanently and severely disabled` IS FALSE
+    `a female claimant (married, divorced or widowed)` IS FALSE
+    `had a spouse living with or maintained by the claimant` IS FALSE
+    `spouse's income in the preceding year` IS 0
+    `spouse incapacitated by physical or mental infirmity` IS FALSE
+    `payments to a former spouse under a court order or deed` IS 0
+    `children` IS EMPTY
+    `life insurance premiums, capped at 7% of the capital sum` IS 0
+    `obligatory CPF or approved fund contributions as an employee` IS 0
+    `self-employed: assessable income from the trade or profession` IS 0
+    `self-employed: obligatory CPF contributions on that income` IS 0
+    `self-employed: voluntary CPF contributions` IS 0
+    `dependants` IS EMPTY
+    `incapacitated siblings maintained` IS 0
+    `course fees` IS 0
+    `national service` IS `not an operationally ready national serviceman`
+    `wife or widow of an NSman, claiming` IS TRUE
+    `parent of an NSman, claiming` IS FALSE
+    `SRS contributions` IS 0
+    `SRS contribution cap` IS 15300
+    `SRS account suspended, or the contribution withdrawn in the year` IS FALSE
+    `grandparent caregiver: the caregiver's trade or employment income` IS NOTHING
+    `CPF cash top-ups for family, after grants and capped as prescribed` IS 0
+    `CPF cash top-ups for self, after grants and capped as prescribed` IS 0
+    `prescribed deduction limit for s 39(3)` IS 8000
+    `prescribed deduction limit for s 39(3A)` IS 8000
+    `foreign domestic worker levy paid, for one worker` IS 0
+
+`iras nsman mother both` MEANS `Individual relief facts` WITH
+    `earned income` IS 40000
+    `age reached by 31 December of the preceding year` IS 55
+    `totally blind or permanently and severely disabled` IS FALSE
+    `a female claimant (married, divorced or widowed)` IS FALSE
+    `had a spouse living with or maintained by the claimant` IS FALSE
+    `spouse's income in the preceding year` IS 0
+    `spouse incapacitated by physical or mental infirmity` IS FALSE
+    `payments to a former spouse under a court order or deed` IS 0
+    `children` IS EMPTY
+    `life insurance premiums, capped at 7% of the capital sum` IS 0
+    `obligatory CPF or approved fund contributions as an employee` IS 0
+    `self-employed: assessable income from the trade or profession` IS 0
+    `self-employed: obligatory CPF contributions on that income` IS 0
+    `self-employed: voluntary CPF contributions` IS 0
+    `dependants` IS EMPTY
+    `incapacitated siblings maintained` IS 0
+    `course fees` IS 0
+    `national service` IS `not an operationally ready national serviceman`
+    `wife or widow of an NSman, claiming` IS TRUE
+    `parent of an NSman, claiming` IS TRUE
+    `SRS contributions` IS 0
+    `SRS contribution cap` IS 15300
+    `SRS account suspended, or the contribution withdrawn in the year` IS FALSE
+    `grandparent caregiver: the caregiver's trade or employment income` IS NOTHING
+    `CPF cash top-ups for family, after grants and capped as prescribed` IS 0
+    `CPF cash top-ups for self, after grants and capped as prescribed` IS 0
+    `prescribed deduction limit for s 39(3)` IS 8000
+    `prescribed deduction limit for s 39(3A)` IS 8000
+    `foreign domestic worker levy paid, for one worker` IS 0
+
+`iras gcr facts` MEANS `Individual relief facts` WITH
+    `earned income` IS 60000
+    `age reached by 31 December of the preceding year` IS 35
+    `totally blind or permanently and severely disabled` IS FALSE
+    `a female claimant (married, divorced or widowed)` IS TRUE
+    `had a spouse living with or maintained by the claimant` IS FALSE
+    `spouse's income in the preceding year` IS 0
+    `spouse incapacitated by physical or mental infirmity` IS FALSE
+    `payments to a former spouse under a court order or deed` IS 0
+    `children` IS EMPTY
+    `life insurance premiums, capped at 7% of the capital sum` IS 0
+    `obligatory CPF or approved fund contributions as an employee` IS 0
+    `self-employed: assessable income from the trade or profession` IS 0
+    `self-employed: obligatory CPF contributions on that income` IS 0
+    `self-employed: voluntary CPF contributions` IS 0
+    `dependants` IS EMPTY
+    `incapacitated siblings maintained` IS 0
+    `course fees` IS 0
+    `national service` IS `not an operationally ready national serviceman`
+    `wife or widow of an NSman, claiming` IS FALSE
+    `parent of an NSman, claiming` IS FALSE
+    `SRS contributions` IS 0
+    `SRS contribution cap` IS 15300
+    `SRS account suspended, or the contribution withdrawn in the year` IS FALSE
+    `grandparent caregiver: the caregiver's trade or employment income` IS JUST 0
+    `CPF cash top-ups for family, after grants and capped as prescribed` IS 0
+    `CPF cash top-ups for self, after grants and capped as prescribed` IS 0
+    `prescribed deduction limit for s 39(3)` IS 8000
+    `prescribed deduction limit for s 39(3A)` IS 8000
+    `foreign domestic worker levy paid, for one worker` IS 0
+
+`iras cfr deferral` MEANS `Individual relief facts` WITH
+    `earned income` IS 23000
+    `age reached by 31 December of the preceding year` IS 35
+    `totally blind or permanently and severely disabled` IS FALSE
+    `a female claimant (married, divorced or widowed)` IS FALSE
+    `had a spouse living with or maintained by the claimant` IS FALSE
+    `spouse's income in the preceding year` IS 0
+    `spouse incapacitated by physical or mental infirmity` IS FALSE
+    `payments to a former spouse under a court order or deed` IS 0
+    `children` IS EMPTY
+    `life insurance premiums, capped at 7% of the capital sum` IS 0
+    `obligatory CPF or approved fund contributions as an employee` IS 0
+    `self-employed: assessable income from the trade or profession` IS 0
+    `self-employed: obligatory CPF contributions on that income` IS 0
+    `self-employed: voluntary CPF contributions` IS 0
+    `dependants` IS EMPTY
+    `incapacitated siblings maintained` IS 0
+    `course fees` IS 6000
+    `national service` IS `not an operationally ready national serviceman`
+    `wife or widow of an NSman, claiming` IS FALSE
+    `parent of an NSman, claiming` IS FALSE
+    `SRS contributions` IS 0
+    `SRS contribution cap` IS 15300
+    `SRS account suspended, or the contribution withdrawn in the year` IS FALSE
+    `grandparent caregiver: the caregiver's trade or employment income` IS NOTHING
+    `CPF cash top-ups for family, after grants and capped as prescribed` IS 0
+    `CPF cash top-ups for self, after grants and capped as prescribed` IS 0
+    `prescribed deduction limit for s 39(3)` IS 8000
+    `prescribed deduction limit for s 39(3A)` IS 8000
+    `foreign domestic worker levy paid, for one worker` IS 0
+
+`iras bernard ya2025` MEANS `Individual relief facts` WITH
+    `earned income` IS 65000
+    `age reached by 31 December of the preceding year` IS 30
+    `totally blind or permanently and severely disabled` IS FALSE
+    `a female claimant (married, divorced or widowed)` IS FALSE
+    `had a spouse living with or maintained by the claimant` IS FALSE
+    `spouse's income in the preceding year` IS 0
+    `spouse incapacitated by physical or mental infirmity` IS FALSE
+    `payments to a former spouse under a court order or deed` IS 0
+    `children` IS EMPTY
+    `life insurance premiums, capped at 7% of the capital sum` IS 0
+    `obligatory CPF or approved fund contributions as an employee` IS 0
+    `self-employed: assessable income from the trade or profession` IS 65000
+    `self-employed: obligatory CPF contributions on that income` IS 5200
+    `self-employed: voluntary CPF contributions` IS 32540
+    `dependants` IS EMPTY
+    `incapacitated siblings maintained` IS 0
+    `course fees` IS 0
+    `national service` IS `not an operationally ready national serviceman`
+    `wife or widow of an NSman, claiming` IS FALSE
+    `parent of an NSman, claiming` IS FALSE
+    `SRS contributions` IS 0
+    `SRS contribution cap` IS 15300
+    `SRS account suspended, or the contribution withdrawn in the year` IS FALSE
+    `grandparent caregiver: the caregiver's trade or employment income` IS NOTHING
+    `CPF cash top-ups for family, after grants and capped as prescribed` IS 0
+    `CPF cash top-ups for self, after grants and capped as prescribed` IS 0
+    `prescribed deduction limit for s 39(3)` IS 8000
+    `prescribed deduction limit for s 39(3A)` IS 8000
+    `foreign domestic worker levy paid, for one worker` IS 0
+
+`iras charlie ya2025` MEANS `Individual relief facts` WITH
+    `earned income` IS 60000
+    `age reached by 31 December of the preceding year` IS 30
+    `totally blind or permanently and severely disabled` IS FALSE
+    `a female claimant (married, divorced or widowed)` IS FALSE
+    `had a spouse living with or maintained by the claimant` IS FALSE
+    `spouse's income in the preceding year` IS 0
+    `spouse incapacitated by physical or mental infirmity` IS FALSE
+    `payments to a former spouse under a court order or deed` IS 0
+    `children` IS EMPTY
+    `life insurance premiums, capped at 7% of the capital sum` IS 0
+    `obligatory CPF or approved fund contributions as an employee` IS 8000
+    `self-employed: assessable income from the trade or profession` IS 20000
+    `self-employed: obligatory CPF contributions on that income` IS 1600
+    `self-employed: voluntary CPF contributions` IS 21340
+    `dependants` IS EMPTY
+    `incapacitated siblings maintained` IS 0
+    `course fees` IS 0
+    `national service` IS `not an operationally ready national serviceman`
+    `wife or widow of an NSman, claiming` IS FALSE
+    `parent of an NSman, claiming` IS FALSE
+    `SRS contributions` IS 0
+    `SRS contribution cap` IS 15300
+    `SRS account suspended, or the contribution withdrawn in the year` IS FALSE
+    `grandparent caregiver: the caregiver's trade or employment income` IS NOTHING
+    `CPF cash top-ups for family, after grants and capped as prescribed` IS 0
+    `CPF cash top-ups for self, after grants and capped as prescribed` IS 0
+    `prescribed deduction limit for s 39(3)` IS 8000
+    `prescribed deduction limit for s 39(3A)` IS 8000
+    `foreign domestic worker levy paid, for one worker` IS 0
+
+`iras topup tan both` MEANS `Individual relief facts` WITH
+    `earned income` IS 60000
+    `age reached by 31 December of the preceding year` IS 45
+    `totally blind or permanently and severely disabled` IS FALSE
+    `a female claimant (married, divorced or widowed)` IS FALSE
+    `had a spouse living with or maintained by the claimant` IS FALSE
+    `spouse's income in the preceding year` IS 0
+    `spouse incapacitated by physical or mental infirmity` IS FALSE
+    `payments to a former spouse under a court order or deed` IS 0
+    `children` IS EMPTY
+    `life insurance premiums, capped at 7% of the capital sum` IS 0
+    `obligatory CPF or approved fund contributions as an employee` IS 0
+    `self-employed: assessable income from the trade or profession` IS 0
+    `self-employed: obligatory CPF contributions on that income` IS 0
+    `self-employed: voluntary CPF contributions` IS 0
+    `dependants` IS EMPTY
+    `incapacitated siblings maintained` IS 0
+    `course fees` IS 0
+    `national service` IS `not an operationally ready national serviceman`
+    `wife or widow of an NSman, claiming` IS FALSE
+    `parent of an NSman, claiming` IS FALSE
+    `SRS contributions` IS 0
+    `SRS contribution cap` IS 15300
+    `SRS account suspended, or the contribution withdrawn in the year` IS FALSE
+    `grandparent caregiver: the caregiver's trade or employment income` IS NOTHING
+    `CPF cash top-ups for family, after grants and capped as prescribed` IS 10000
+    `CPF cash top-ups for self, after grants and capped as prescribed` IS 5000
+    `prescribed deduction limit for s 39(3)` IS 8000
+    `prescribed deduction limit for s 39(3A)` IS 8000
+    `foreign domestic worker levy paid, for one worker` IS 0
+
+`iras topup tan self` MEANS `Individual relief facts` WITH
+    `earned income` IS 60000
+    `age reached by 31 December of the preceding year` IS 45
+    `totally blind or permanently and severely disabled` IS FALSE
+    `a female claimant (married, divorced or widowed)` IS FALSE
+    `had a spouse living with or maintained by the claimant` IS FALSE
+    `spouse's income in the preceding year` IS 0
+    `spouse incapacitated by physical or mental infirmity` IS FALSE
+    `payments to a former spouse under a court order or deed` IS 0
+    `children` IS EMPTY
+    `life insurance premiums, capped at 7% of the capital sum` IS 0
+    `obligatory CPF or approved fund contributions as an employee` IS 0
+    `self-employed: assessable income from the trade or profession` IS 0
+    `self-employed: obligatory CPF contributions on that income` IS 0
+    `self-employed: voluntary CPF contributions` IS 0
+    `dependants` IS EMPTY
+    `incapacitated siblings maintained` IS 0
+    `course fees` IS 0
+    `national service` IS `not an operationally ready national serviceman`
+    `wife or widow of an NSman, claiming` IS FALSE
+    `parent of an NSman, claiming` IS FALSE
+    `SRS contributions` IS 0
+    `SRS contribution cap` IS 15300
+    `SRS account suspended, or the contribution withdrawn in the year` IS FALSE
+    `grandparent caregiver: the caregiver's trade or employment income` IS NOTHING
+    `CPF cash top-ups for family, after grants and capped as prescribed` IS 0
+    `CPF cash top-ups for self, after grants and capped as prescribed` IS 5000
+    `prescribed deduction limit for s 39(3)` IS 8000
+    `prescribed deduction limit for s 39(3A)` IS 8000
+    `foreign domestic worker levy paid, for one worker` IS 0
+
+`iras topup tan family` MEANS `Individual relief facts` WITH
+    `earned income` IS 60000
+    `age reached by 31 December of the preceding year` IS 45
+    `totally blind or permanently and severely disabled` IS FALSE
+    `a female claimant (married, divorced or widowed)` IS FALSE
+    `had a spouse living with or maintained by the claimant` IS FALSE
+    `spouse's income in the preceding year` IS 0
+    `spouse incapacitated by physical or mental infirmity` IS FALSE
+    `payments to a former spouse under a court order or deed` IS 0
+    `children` IS EMPTY
+    `life insurance premiums, capped at 7% of the capital sum` IS 0
+    `obligatory CPF or approved fund contributions as an employee` IS 0
+    `self-employed: assessable income from the trade or profession` IS 0
+    `self-employed: obligatory CPF contributions on that income` IS 0
+    `self-employed: voluntary CPF contributions` IS 0
+    `dependants` IS EMPTY
+    `incapacitated siblings maintained` IS 0
+    `course fees` IS 0
+    `national service` IS `not an operationally ready national serviceman`
+    `wife or widow of an NSman, claiming` IS FALSE
+    `parent of an NSman, claiming` IS FALSE
+    `SRS contributions` IS 0
+    `SRS contribution cap` IS 15300
+    `SRS account suspended, or the contribution withdrawn in the year` IS FALSE
+    `grandparent caregiver: the caregiver's trade or employment income` IS NOTHING
+    `CPF cash top-ups for family, after grants and capped as prescribed` IS 10000
+    `CPF cash top-ups for self, after grants and capped as prescribed` IS 0
+    `prescribed deduction limit for s 39(3)` IS 8000
+    `prescribed deduction limit for s 39(3A)` IS 8000
+    `foreign domestic worker levy paid, for one worker` IS 0
+
+`iras topup tan parents` MEANS `Individual relief facts` WITH
+    `earned income` IS 60000
+    `age reached by 31 December of the preceding year` IS 45
+    `totally blind or permanently and severely disabled` IS FALSE
+    `a female claimant (married, divorced or widowed)` IS FALSE
+    `had a spouse living with or maintained by the claimant` IS FALSE
+    `spouse's income in the preceding year` IS 0
+    `spouse incapacitated by physical or mental infirmity` IS FALSE
+    `payments to a former spouse under a court order or deed` IS 0
+    `children` IS EMPTY
+    `life insurance premiums, capped at 7% of the capital sum` IS 0
+    `obligatory CPF or approved fund contributions as an employee` IS 0
+    `self-employed: assessable income from the trade or profession` IS 0
+    `self-employed: obligatory CPF contributions on that income` IS 0
+    `self-employed: voluntary CPF contributions` IS 0
+    `dependants` IS EMPTY
+    `incapacitated siblings maintained` IS 0
+    `course fees` IS 0
+    `national service` IS `not an operationally ready national serviceman`
+    `wife or widow of an NSman, claiming` IS FALSE
+    `parent of an NSman, claiming` IS FALSE
+    `SRS contributions` IS 0
+    `SRS contribution cap` IS 15300
+    `SRS account suspended, or the contribution withdrawn in the year` IS FALSE
+    `grandparent caregiver: the caregiver's trade or employment income` IS NOTHING
+    `CPF cash top-ups for family, after grants and capped as prescribed` IS 10000
+    `CPF cash top-ups for self, after grants and capped as prescribed` IS 0
+    `prescribed deduction limit for s 39(3)` IS 8000
+    `prescribed deduction limit for s 39(3A)` IS 8000
+    `foreign domestic worker levy paid, for one worker` IS 0
+
+`iras topup ong` MEANS `Individual relief facts` WITH
+    `earned income` IS 60000
+    `age reached by 31 December of the preceding year` IS 45
+    `totally blind or permanently and severely disabled` IS FALSE
+    `a female claimant (married, divorced or widowed)` IS FALSE
+    `had a spouse living with or maintained by the claimant` IS FALSE
+    `spouse's income in the preceding year` IS 0
+    `spouse incapacitated by physical or mental infirmity` IS FALSE
+    `payments to a former spouse under a court order or deed` IS 0
+    `children` IS EMPTY
+    `life insurance premiums, capped at 7% of the capital sum` IS 0
+    `obligatory CPF or approved fund contributions as an employee` IS 0
+    `self-employed: assessable income from the trade or profession` IS 0
+    `self-employed: obligatory CPF contributions on that income` IS 0
+    `self-employed: voluntary CPF contributions` IS 0
+    `dependants` IS EMPTY
+    `incapacitated siblings maintained` IS 0
+    `course fees` IS 0
+    `national service` IS `not an operationally ready national serviceman`
+    `wife or widow of an NSman, claiming` IS FALSE
+    `parent of an NSman, claiming` IS FALSE
+    `SRS contributions` IS 0
+    `SRS contribution cap` IS 15300
+    `SRS account suspended, or the contribution withdrawn in the year` IS FALSE
+    `grandparent caregiver: the caregiver's trade or employment income` IS NOTHING
+    `CPF cash top-ups for family, after grants and capped as prescribed` IS 0
+    `CPF cash top-ups for self, after grants and capped as prescribed` IS 9000
+    `prescribed deduction limit for s 39(3)` IS 8000
+    `prescribed deduction limit for s 39(3A)` IS 8000
+    `foreign domestic worker levy paid, for one worker` IS 0
+
+`iras sep 1` MEANS `Individual relief facts` WITH
+    `earned income` IS 0
+    `age reached by 31 December of the preceding year` IS 65
+    `totally blind or permanently and severely disabled` IS FALSE
+    `a female claimant (married, divorced or widowed)` IS FALSE
+    `had a spouse living with or maintained by the claimant` IS FALSE
+    `spouse's income in the preceding year` IS 0
+    `spouse incapacitated by physical or mental infirmity` IS FALSE
+    `payments to a former spouse under a court order or deed` IS 0
+    `children` IS EMPTY
+    `life insurance premiums, capped at 7% of the capital sum` IS 0
+    `obligatory CPF or approved fund contributions as an employee` IS 0
+    `self-employed: assessable income from the trade or profession` IS 0
+    `self-employed: obligatory CPF contributions on that income` IS 4200
+    `self-employed: voluntary CPF contributions` IS 0
+    `dependants` IS EMPTY
+    `incapacitated siblings maintained` IS 0
+    `course fees` IS 0
+    `national service` IS `not an operationally ready national serviceman`
+    `wife or widow of an NSman, claiming` IS FALSE
+    `parent of an NSman, claiming` IS FALSE
+    `SRS contributions` IS 0
+    `SRS contribution cap` IS 15300
+    `SRS account suspended, or the contribution withdrawn in the year` IS FALSE
+    `grandparent caregiver: the caregiver's trade or employment income` IS NOTHING
+    `CPF cash top-ups for family, after grants and capped as prescribed` IS 0
+    `CPF cash top-ups for self, after grants and capped as prescribed` IS 0
+    `prescribed deduction limit for s 39(3)` IS 8000
+    `prescribed deduction limit for s 39(3A)` IS 8000
+    `foreign domestic worker levy paid, for one worker` IS 0
+
+`iras sep 2` MEANS `Individual relief facts` WITH
+    `earned income` IS 17000
+    `age reached by 31 December of the preceding year` IS 65
+    `totally blind or permanently and severely disabled` IS FALSE
+    `a female claimant (married, divorced or widowed)` IS FALSE
+    `had a spouse living with or maintained by the claimant` IS FALSE
+    `spouse's income in the preceding year` IS 0
+    `spouse incapacitated by physical or mental infirmity` IS FALSE
+    `payments to a former spouse under a court order or deed` IS 0
+    `children` IS EMPTY
+    `life insurance premiums, capped at 7% of the capital sum` IS 0
+    `obligatory CPF or approved fund contributions as an employee` IS 0
+    `self-employed: assessable income from the trade or profession` IS 17000
+    `self-employed: obligatory CPF contributions on that income` IS 4200
+    `self-employed: voluntary CPF contributions` IS 2440
+    `dependants` IS EMPTY
+    `incapacitated siblings maintained` IS 0
+    `course fees` IS 0
+    `national service` IS `not an operationally ready national serviceman`
+    `wife or widow of an NSman, claiming` IS FALSE
+    `parent of an NSman, claiming` IS FALSE
+    `SRS contributions` IS 0
+    `SRS contribution cap` IS 15300
+    `SRS account suspended, or the contribution withdrawn in the year` IS FALSE
+    `grandparent caregiver: the caregiver's trade or employment income` IS NOTHING
+    `CPF cash top-ups for family, after grants and capped as prescribed` IS 0
+    `CPF cash top-ups for self, after grants and capped as prescribed` IS 0
+    `prescribed deduction limit for s 39(3)` IS 8000
+    `prescribed deduction limit for s 39(3A)` IS 8000
+    `foreign domestic worker levy paid, for one worker` IS 0
+
+`iras sep 3` MEANS `Individual relief facts` WITH
+    `earned income` IS 10000
+    `age reached by 31 December of the preceding year` IS 65
+    `totally blind or permanently and severely disabled` IS FALSE
+    `a female claimant (married, divorced or widowed)` IS FALSE
+    `had a spouse living with or maintained by the claimant` IS FALSE
+    `spouse's income in the preceding year` IS 0
+    `spouse incapacitated by physical or mental infirmity` IS FALSE
+    `payments to a former spouse under a court order or deed` IS 0
+    `children` IS EMPTY
+    `life insurance premiums, capped at 7% of the capital sum` IS 0
+    `obligatory CPF or approved fund contributions as an employee` IS 0
+    `self-employed: assessable income from the trade or profession` IS 10000
+    `self-employed: obligatory CPF contributions on that income` IS 4200
+    `self-employed: voluntary CPF contributions` IS 2440
+    `dependants` IS EMPTY
+    `incapacitated siblings maintained` IS 0
+    `course fees` IS 0
+    `national service` IS `not an operationally ready national serviceman`
+    `wife or widow of an NSman, claiming` IS FALSE
+    `parent of an NSman, claiming` IS FALSE
+    `SRS contributions` IS 0
+    `SRS contribution cap` IS 15300
+    `SRS account suspended, or the contribution withdrawn in the year` IS FALSE
+    `grandparent caregiver: the caregiver's trade or employment income` IS NOTHING
+    `CPF cash top-ups for family, after grants and capped as prescribed` IS 0
+    `CPF cash top-ups for self, after grants and capped as prescribed` IS 0
+    `prescribed deduction limit for s 39(3)` IS 8000
+    `prescribed deduction limit for s 39(3A)` IS 8000
+    `foreign domestic worker levy paid, for one worker` IS 0
+
+`iras sep 4` MEANS `Individual relief facts` WITH
+    `earned income` IS 87000
+    `age reached by 31 December of the preceding year` IS 53
+    `totally blind or permanently and severely disabled` IS FALSE
+    `a female claimant (married, divorced or widowed)` IS FALSE
+    `had a spouse living with or maintained by the claimant` IS FALSE
+    `spouse's income in the preceding year` IS 0
+    `spouse incapacitated by physical or mental infirmity` IS FALSE
+    `payments to a former spouse under a court order or deed` IS 0
+    `children` IS EMPTY
+    `life insurance premiums, capped at 7% of the capital sum` IS 0
+    `obligatory CPF or approved fund contributions as an employee` IS 14000
+    `self-employed: assessable income from the trade or profession` IS 17000
+    `self-employed: obligatory CPF contributions on that income` IS 4200
+    `self-employed: voluntary CPF contributions` IS 2440
+    `dependants` IS EMPTY
+    `incapacitated siblings maintained` IS 0
+    `course fees` IS 0
+    `national service` IS `not an operationally ready national serviceman`
+    `wife or widow of an NSman, claiming` IS FALSE
+    `parent of an NSman, claiming` IS FALSE
+    `SRS contributions` IS 0
+    `SRS contribution cap` IS 15300
+    `SRS account suspended, or the contribution withdrawn in the year` IS FALSE
+    `grandparent caregiver: the caregiver's trade or employment income` IS NOTHING
+    `CPF cash top-ups for family, after grants and capped as prescribed` IS 0
+    `CPF cash top-ups for self, after grants and capped as prescribed` IS 0
+    `prescribed deduction limit for s 39(3)` IS 8000
+    `prescribed deduction limit for s 39(3A)` IS 8000
+    `foreign domestic worker levy paid, for one worker` IS 0
+
+`iras sep 5` MEANS `Individual relief facts` WITH
+    `earned income` IS 80000
+    `age reached by 31 December of the preceding year` IS 53
+    `totally blind or permanently and severely disabled` IS FALSE
+    `a female claimant (married, divorced or widowed)` IS FALSE
+    `had a spouse living with or maintained by the claimant` IS FALSE
+    `spouse's income in the preceding year` IS 0
+    `spouse incapacitated by physical or mental infirmity` IS FALSE
+    `payments to a former spouse under a court order or deed` IS 0
+    `children` IS EMPTY
+    `life insurance premiums, capped at 7% of the capital sum` IS 0
+    `obligatory CPF or approved fund contributions as an employee` IS 14000
+    `self-employed: assessable income from the trade or profession` IS 10000
+    `self-employed: obligatory CPF contributions on that income` IS 4200
+    `self-employed: voluntary CPF contributions` IS 2440
+    `dependants` IS EMPTY
+    `incapacitated siblings maintained` IS 0
+    `course fees` IS 0
+    `national service` IS `not an operationally ready national serviceman`
+    `wife or widow of an NSman, claiming` IS FALSE
+    `parent of an NSman, claiming` IS FALSE
+    `SRS contributions` IS 0
+    `SRS contribution cap` IS 15300
+    `SRS account suspended, or the contribution withdrawn in the year` IS FALSE
+    `grandparent caregiver: the caregiver's trade or employment income` IS NOTHING
+    `CPF cash top-ups for family, after grants and capped as prescribed` IS 0
+    `CPF cash top-ups for self, after grants and capped as prescribed` IS 0
+    `prescribed deduction limit for s 39(3)` IS 8000
+    `prescribed deduction limit for s 39(3A)` IS 8000
+    `foreign domestic worker levy paid, for one worker` IS 0
+
+`iras fdwl 900` MEANS `Individual relief facts` WITH
+    `earned income` IS 60000
+    `age reached by 31 December of the preceding year` IS 35
+    `totally blind or permanently and severely disabled` IS FALSE
+    `a female claimant (married, divorced or widowed)` IS TRUE
+    `had a spouse living with or maintained by the claimant` IS FALSE
+    `spouse's income in the preceding year` IS 0
+    `spouse incapacitated by physical or mental infirmity` IS FALSE
+    `payments to a former spouse under a court order or deed` IS 0
+    `children` IS EMPTY
+    `life insurance premiums, capped at 7% of the capital sum` IS 0
+    `obligatory CPF or approved fund contributions as an employee` IS 0
+    `self-employed: assessable income from the trade or profession` IS 0
+    `self-employed: obligatory CPF contributions on that income` IS 0
+    `self-employed: voluntary CPF contributions` IS 0
+    `dependants` IS EMPTY
+    `incapacitated siblings maintained` IS 0
+    `course fees` IS 0
+    `national service` IS `not an operationally ready national serviceman`
+    `wife or widow of an NSman, claiming` IS FALSE
+    `parent of an NSman, claiming` IS FALSE
+    `SRS contributions` IS 0
+    `SRS contribution cap` IS 15300
+    `SRS account suspended, or the contribution withdrawn in the year` IS FALSE
+    `grandparent caregiver: the caregiver's trade or employment income` IS NOTHING
+    `CPF cash top-ups for family, after grants and capped as prescribed` IS 0
+    `CPF cash top-ups for self, after grants and capped as prescribed` IS 0
+    `prescribed deduction limit for s 39(3)` IS 8000
+    `prescribed deduction limit for s 39(3A)` IS 8000
+    `foreign domestic worker levy paid, for one worker` IS 900
+
+`iras fdwl 5400` MEANS `Individual relief facts` WITH
+    `earned income` IS 60000
+    `age reached by 31 December of the preceding year` IS 35
+    `totally blind or permanently and severely disabled` IS FALSE
+    `a female claimant (married, divorced or widowed)` IS TRUE
+    `had a spouse living with or maintained by the claimant` IS FALSE
+    `spouse's income in the preceding year` IS 0
+    `spouse incapacitated by physical or mental infirmity` IS FALSE
+    `payments to a former spouse under a court order or deed` IS 0
+    `children` IS EMPTY
+    `life insurance premiums, capped at 7% of the capital sum` IS 0
+    `obligatory CPF or approved fund contributions as an employee` IS 0
+    `self-employed: assessable income from the trade or profession` IS 0
+    `self-employed: obligatory CPF contributions on that income` IS 0
+    `self-employed: voluntary CPF contributions` IS 0
+    `dependants` IS EMPTY
+    `incapacitated siblings maintained` IS 0
+    `course fees` IS 0
+    `national service` IS `not an operationally ready national serviceman`
+    `wife or widow of an NSman, claiming` IS FALSE
+    `parent of an NSman, claiming` IS FALSE
+    `SRS contributions` IS 0
+    `SRS contribution cap` IS 15300
+    `SRS account suspended, or the contribution withdrawn in the year` IS FALSE
+    `grandparent caregiver: the caregiver's trade or employment income` IS NOTHING
+    `CPF cash top-ups for family, after grants and capped as prescribed` IS 0
+    `CPF cash top-ups for self, after grants and capped as prescribed` IS 0
+    `prescribed deduction limit for s 39(3)` IS 8000
+    `prescribed deduction limit for s 39(3A)` IS 8000
+    `foreign domestic worker levy paid, for one worker` IS 5400
+
+`iras family qcr child` MEANS `Child facts` WITH
+    `unmarried throughout the preceding year` IS TRUE
+    `below 16 at any time in the preceding year` IS TRUE
+    `in full-time instruction` IS FALSE
+    `serving under articles or indentures` IS FALSE
+    `incapacitated by physical or mental infirmity` IS FALSE
+    `income in the preceding year, excluding scholarships` IS 0
+    `engaged in employment or a trade, other than under articles` IS FALSE
+    `maintained by the claimant` IS TRUE
+    `claimant's share of the relief` IS (1 / 2)
+    `a Singapore citizen` IS TRUE
+    `order among the mother's eligible children` IS 0
+    `the para 5 date` IS YearMonthDay 2009 6 30
+
+`iras family wmcr child` MEANS `Child facts` WITH
+    `unmarried throughout the preceding year` IS TRUE
+    `below 16 at any time in the preceding year` IS TRUE
+    `in full-time instruction` IS FALSE
+    `serving under articles or indentures` IS FALSE
+    `incapacitated by physical or mental infirmity` IS FALSE
+    `income in the preceding year, excluding scholarships` IS 0
+    `engaged in employment or a trade, other than under articles` IS FALSE
+    `maintained by the claimant` IS TRUE
+    `claimant's share of the relief` IS 1
+    `a Singapore citizen` IS TRUE
+    `order among the mother's eligible children` IS 1
+    `the para 5 date` IS YearMonthDay 2025 6 30
+
+`iras family gcr` MEANS `Individual relief facts` WITH
+    `earned income` IS 60000
+    `age reached by 31 December of the preceding year` IS 35
+    `totally blind or permanently and severely disabled` IS FALSE
+    `a female claimant (married, divorced or widowed)` IS TRUE
+    `had a spouse living with or maintained by the claimant` IS FALSE
+    `spouse's income in the preceding year` IS 0
+    `spouse incapacitated by physical or mental infirmity` IS FALSE
+    `payments to a former spouse under a court order or deed` IS 0
+    `children` IS EMPTY
+    `life insurance premiums, capped at 7% of the capital sum` IS 0
+    `obligatory CPF or approved fund contributions as an employee` IS 0
+    `self-employed: assessable income from the trade or profession` IS 0
+    `self-employed: obligatory CPF contributions on that income` IS 0
+    `self-employed: voluntary CPF contributions` IS 0
+    `dependants` IS EMPTY
+    `incapacitated siblings maintained` IS 0
+    `course fees` IS 0
+    `national service` IS `not an operationally ready national serviceman`
+    `wife or widow of an NSman, claiming` IS FALSE
+    `parent of an NSman, claiming` IS FALSE
+    `SRS contributions` IS 0
+    `SRS contribution cap` IS 15300
+    `SRS account suspended, or the contribution withdrawn in the year` IS FALSE
+    `grandparent caregiver: the caregiver's trade or employment income` IS JUST 0
+    `CPF cash top-ups for family, after grants and capped as prescribed` IS 0
+    `CPF cash top-ups for self, after grants and capped as prescribed` IS 0
+    `prescribed deduction limit for s 39(3)` IS 8000
+    `prescribed deduction limit for s 39(3A)` IS 8000
+    `foreign domestic worker levy paid, for one worker` IS 0
+
+`iras ng mr` MEANS `Adult of the household` WITH
+    `my year of birth` IS 1990
+    `my month of birth` IS 12
+    `my residence status for CPF` IS `a citizen of Singapore`
+    `I am resident in Singapore for income tax` IS TRUE
+    `my wages month by month` IS LIST (`a month of pay` 8000 0), (`a month of pay` 8000 0), (`a month of pay` 8000 0), (`a month of pay` 8000 0), (`a month of pay` 8000 0), (`a month of pay` 8000 0), (`a month of pay` 8000 0), (`a month of pay` 8000 0), (`a month of pay` 8000 0), (`a month of pay` 8000 0), (`a month of pay` 8000 0), (`a month of pay` 8000 4000)
+    `my trade, business or profession income, after its deductions` IS 0
+    `my rent and other property income, after its deductions` IS 0
+    `my tax-exempt income` IS 0
+    `I am a married woman, a divorcee or a widow` IS FALSE
+    `I am totally blind or permanently and severely disabled` IS FALSE
+    `my life insurance premiums, capped at 7% of the capital sum` IS 0
+    `my SRS contributions` IS 0
+    `my SRS contribution cap` IS 15300
+    `my CPF cash top-ups for family, after grants and as capped` IS 0
+    `my CPF cash top-ups for myself, after grants and as capped` IS 0
+    `the prescribed deduction limit for family top-ups` IS 8000
+    `the prescribed deduction limit for my own top-ups` IS 8000
+    `my dependants` IS EMPTY
+    `incapacitated siblings I maintain` IS 0
+    `my national service status` IS `NSman who performed ORNS in the relevant period`
+    `I am the wife or widow of an NSman and claim` IS FALSE
+    `I am the parent of an NSman and claim` IS FALSE
+    `the caregiver grandparent's income from work` IS NOTHING
+    `my parenthood rebate brought forward` IS 0
+
+`iras ng mrs` MEANS `Adult of the household` WITH
+    `my year of birth` IS 1990
+    `my month of birth` IS 12
+    `my residence status for CPF` IS `a citizen of Singapore`
+    `I am resident in Singapore for income tax` IS TRUE
+    `my wages month by month` IS LIST (`a month of pay` 8000 0), (`a month of pay` 8000 0), (`a month of pay` 8000 0), (`a month of pay` 8000 0), (`a month of pay` 8000 0), (`a month of pay` 8000 0), (`a month of pay` 8000 0), (`a month of pay` 8000 0), (`a month of pay` 8000 0), (`a month of pay` 8000 0), (`a month of pay` 8000 0), (`a month of pay` 8000 4000)
+    `my trade, business or profession income, after its deductions` IS 0
+    `my rent and other property income, after its deductions` IS 0
+    `my tax-exempt income` IS 0
+    `I am a married woman, a divorcee or a widow` IS TRUE
+    `I am totally blind or permanently and severely disabled` IS FALSE
+    `my life insurance premiums, capped at 7% of the capital sum` IS 0
+    `my SRS contributions` IS 0
+    `my SRS contribution cap` IS 15300
+    `my CPF cash top-ups for family, after grants and as capped` IS 0
+    `my CPF cash top-ups for myself, after grants and as capped` IS 0
+    `the prescribed deduction limit for family top-ups` IS 8000
+    `the prescribed deduction limit for my own top-ups` IS 8000
+    `my dependants` IS EMPTY
+    `incapacitated siblings I maintain` IS 0
+    `my national service status` IS `not an operationally ready national serviceman`
+    `I am the wife or widow of an NSman and claim` IS TRUE
+    `I am the parent of an NSman and claim` IS FALSE
+    `the caregiver grandparent's income from work` IS JUST 0
+    `my parenthood rebate brought forward` IS 0
+
+`iras ng child` MEANS `Child of the household` WITH
+    `the year the child was born` IS 2025
+    `the child is a Singapore citizen` IS TRUE
+    `the child's income in the income year, excluding scholarships` IS 0
+    `the child was engaged in employment or a trade` IS FALSE
+    `the child is in full-time instruction` IS FALSE
+    `the child is incapacitated by physical or mental infirmity` IS FALSE
+    `the child was unmarried throughout the income year` IS TRUE
+    `the share of the child's relief the first adult claims` IS (1 / 2)
+    `the share of the parenthood rebate the first adult claims` IS (1 / 2)
+    `the child's mother` IS `the second adult is the child's mother`
+    `the year of the date that fixes the working mother's child relief` IS 2025
+
+`iras ng household` MEANS `Household` WITH
+    `the income year` IS 2025
+    `the first adult` IS `iras ng mr`
+    `the second adult` IS JUST `iras ng mrs`
+    `the adults are married to each other and live together` IS TRUE
+    `the children` IS LIST `iras ng child`
+
+`iras fam chua child 1` MEANS `Child facts` WITH
+    `unmarried throughout the preceding year` IS TRUE
+    `below 16 at any time in the preceding year` IS TRUE
+    `in full-time instruction` IS FALSE
+    `serving under articles or indentures` IS FALSE
+    `incapacitated by physical or mental infirmity` IS FALSE
+    `income in the preceding year, excluding scholarships` IS 0
+    `engaged in employment or a trade, other than under articles` IS FALSE
+    `maintained by the claimant` IS TRUE
+    `claimant's share of the relief` IS 0
+    `a Singapore citizen` IS TRUE
+    `order among the mother's eligible children` IS 1
+    `the para 5 date` IS YearMonthDay 2013 6 30
+
+`iras fam chua child 2` MEANS `Child facts` WITH
+    `unmarried throughout the preceding year` IS TRUE
+    `below 16 at any time in the preceding year` IS TRUE
+    `in full-time instruction` IS FALSE
+    `serving under articles or indentures` IS FALSE
+    `incapacitated by physical or mental infirmity` IS FALSE
+    `income in the preceding year, excluding scholarships` IS 0
+    `engaged in employment or a trade, other than under articles` IS FALSE
+    `maintained by the claimant` IS TRUE
+    `claimant's share of the relief` IS 0
+    `a Singapore citizen` IS TRUE
+    `order among the mother's eligible children` IS 2
+    `the para 5 date` IS YearMonthDay 2015 6 30
+
+`iras fam chua child 3` MEANS `Child facts` WITH
+    `unmarried throughout the preceding year` IS TRUE
+    `below 16 at any time in the preceding year` IS TRUE
+    `in full-time instruction` IS FALSE
+    `serving under articles or indentures` IS FALSE
+    `incapacitated by physical or mental infirmity` IS FALSE
+    `income in the preceding year, excluding scholarships` IS 0
+    `engaged in employment or a trade, other than under articles` IS FALSE
+    `maintained by the claimant` IS TRUE
+    `claimant's share of the relief` IS 0
+    `a Singapore citizen` IS TRUE
+    `order among the mother's eligible children` IS 3
+    `the para 5 date` IS YearMonthDay 2018 6 30
+
+`iras fam chua facts` MEANS `Individual relief facts` WITH
+    `earned income` IS 120000
+    `age reached by 31 December of the preceding year` IS 40
+    `totally blind or permanently and severely disabled` IS FALSE
+    `a female claimant (married, divorced or widowed)` IS TRUE
+    `had a spouse living with or maintained by the claimant` IS FALSE
+    `spouse's income in the preceding year` IS 0
+    `spouse incapacitated by physical or mental infirmity` IS FALSE
+    `payments to a former spouse under a court order or deed` IS 0
+    `children` IS LIST `iras fam chua child 1`, `iras fam chua child 2`, `iras fam chua child 3`
+    `life insurance premiums, capped at 7% of the capital sum` IS 0
+    `obligatory CPF or approved fund contributions as an employee` IS 20400
+    `self-employed: assessable income from the trade or profession` IS 0
+    `self-employed: obligatory CPF contributions on that income` IS 0
+    `self-employed: voluntary CPF contributions` IS 0
+    `dependants` IS EMPTY
+    `incapacitated siblings maintained` IS 0
+    `course fees` IS 0
+    `national service` IS `not an operationally ready national serviceman`
+    `wife or widow of an NSman, claiming` IS TRUE
+    `parent of an NSman, claiming` IS FALSE
+    `SRS contributions` IS 0
+    `SRS contribution cap` IS 15300
+    `SRS account suspended, or the contribution withdrawn in the year` IS FALSE
+    `grandparent caregiver: the caregiver's trade or employment income` IS NOTHING
+    `CPF cash top-ups for family, after grants and capped as prescribed` IS 0
+    `CPF cash top-ups for self, after grants and capped as prescribed` IS 0
+    `prescribed deduction limit for s 39(3)` IS 8000
+    `prescribed deduction limit for s 39(3A)` IS 8000
+    `foreign domestic worker levy paid, for one worker` IS 0
+
+`iras fam chua adult` MEANS `Adult of the household` WITH
+    `my year of birth` IS 1985
+    `my month of birth` IS 12
+    `my residence status for CPF` IS `a citizen of Singapore`
+    `I am resident in Singapore for income tax` IS TRUE
+    `my wages month by month` IS LIST (`a month of pay` 9000 0), (`a month of pay` 9000 0), (`a month of pay` 9000 0), (`a month of pay` 9000 0), (`a month of pay` 9000 0), (`a month of pay` 9000 0), (`a month of pay` 9000 0), (`a month of pay` 9000 0), (`a month of pay` 9000 0), (`a month of pay` 9000 0), (`a month of pay` 9000 0), (`a month of pay` 9000 12000)
+    `my trade, business or profession income, after its deductions` IS 0
+    `my rent and other property income, after its deductions` IS 0
+    `my tax-exempt income` IS 0
+    `I am a married woman, a divorcee or a widow` IS TRUE
+    `I am totally blind or permanently and severely disabled` IS FALSE
+    `my life insurance premiums, capped at 7% of the capital sum` IS 0
+    `my SRS contributions` IS 0
+    `my SRS contribution cap` IS 15300
+    `my CPF cash top-ups for family, after grants and as capped` IS 0
+    `my CPF cash top-ups for myself, after grants and as capped` IS 0
+    `the prescribed deduction limit for family top-ups` IS 8000
+    `the prescribed deduction limit for my own top-ups` IS 8000
+    `my dependants` IS EMPTY
+    `incapacitated siblings I maintain` IS 0
+    `my national service status` IS `not an operationally ready national serviceman`
+    `I am the wife or widow of an NSman and claim` IS TRUE
+    `I am the parent of an NSman and claim` IS FALSE
+    `the caregiver grandparent's income from work` IS NOTHING
+    `my parenthood rebate brought forward` IS 0
+
+`iras fam chua kid 1` MEANS `Child of the household` WITH
+    `the year the child was born` IS 2013
+    `the child is a Singapore citizen` IS TRUE
+    `the child's income in the income year, excluding scholarships` IS 0
+    `the child was engaged in employment or a trade` IS FALSE
+    `the child is in full-time instruction` IS FALSE
+    `the child is incapacitated by physical or mental infirmity` IS FALSE
+    `the child was unmarried throughout the income year` IS TRUE
+    `the share of the child's relief the first adult claims` IS 0
+    `the share of the parenthood rebate the first adult claims` IS 0
+    `the child's mother` IS `the first adult is the child's mother`
+    `the year of the date that fixes the working mother's child relief` IS 2013
+
+`iras fam chua kid 2` MEANS `Child of the household` WITH
+    `the year the child was born` IS 2015
+    `the child is a Singapore citizen` IS TRUE
+    `the child's income in the income year, excluding scholarships` IS 0
+    `the child was engaged in employment or a trade` IS FALSE
+    `the child is in full-time instruction` IS FALSE
+    `the child is incapacitated by physical or mental infirmity` IS FALSE
+    `the child was unmarried throughout the income year` IS TRUE
+    `the share of the child's relief the first adult claims` IS 0
+    `the share of the parenthood rebate the first adult claims` IS 0
+    `the child's mother` IS `the first adult is the child's mother`
+    `the year of the date that fixes the working mother's child relief` IS 2015
+
+`iras fam chua kid 3` MEANS `Child of the household` WITH
+    `the year the child was born` IS 2018
+    `the child is a Singapore citizen` IS TRUE
+    `the child's income in the income year, excluding scholarships` IS 0
+    `the child was engaged in employment or a trade` IS FALSE
+    `the child is in full-time instruction` IS FALSE
+    `the child is incapacitated by physical or mental infirmity` IS FALSE
+    `the child was unmarried throughout the income year` IS TRUE
+    `the share of the child's relief the first adult claims` IS 0
+    `the share of the parenthood rebate the first adult claims` IS 0
+    `the child's mother` IS `the first adult is the child's mother`
+    `the year of the date that fixes the working mother's child relief` IS 2018
+
+`iras fam chua household` MEANS `Household` WITH
+    `the income year` IS 2025
+    `the first adult` IS `iras fam chua adult`
+    `the second adult` IS NOTHING
+    `the adults are married to each other and live together` IS FALSE
+    `the children` IS LIST `iras fam chua kid 1`, `iras fam chua kid 2`, `iras fam chua kid 3`
+
+-- ---- assertions ----
+
+
+-- iras-sample-heng (IRAS page sample-calcs, YA 2026): earned income relief
+#ASSERT (`the relief breakdown given CPF` `iras heng household` 1 10000)'s `earned income relief` EQUALS 1000
+-- iras-sample-heng (IRAS page sample-calcs, YA 2026): qualifying child relief (child reliefs)
+#ASSERT (`the relief breakdown given CPF` `iras heng household` 1 10000)'s `child reliefs` EQUALS 4000
+-- iras-sample-heng (IRAS page sample-calcs, YA 2026): total reliefs
+#ASSERT (`the relief breakdown given CPF` `iras heng household` 1 10000)'s `total allowed` EQUALS 15000
+-- iras-sample-heng (IRAS page sample-calcs, YA 2026): chargeable income
+#ASSERT `the chargeable income from assessable income` 49750 `less reliefs` ((`the relief breakdown given CPF` `iras heng household` 1 10000)'s `total allowed`) EQUALS 34750
+-- iras-sample-heng (IRAS page sample-calcs, YA 2026): tax on the first 30,000
+#ASSERT `the resident individual rates for YA` 2026 `on chargeable income of` 30000 EQUALS JUST 200
+-- iras-sample-heng (IRAS page sample-calcs, YA 2026): tax on the next 4,750 at 3.5%
+#ASSERT ((`the tax by bands` `Table 3` `on` 34750)) MINUS ((`the tax by bands` `Table 3` `on` 30000)) EQUALS 166.25
+-- iras-sample-heng (IRAS page sample-calcs, YA 2026): gross tax on chargeable 34,750
+#ASSERT `the resident individual rates for YA` 2026 `on chargeable income of` 34750 EQUALS JUST 366.25
+-- iras-sample-heng (IRAS page sample-calcs, YA 2026): parenthood rebate for the first child
+#ASSERT `the parenthood rebate for a` `first child of the family` `, event on` (YearMonthDay 2025 6 30) `, citizen:` TRUE `, adopted before marriage:` FALSE EQUALS 5000
+-- iras-sample-heng (IRAS page sample-calcs, YA 2026): rebate offset against tax of 366.25
+#ASSERT 5000 MINUS ((`a rebate of` 5000 `against tax of` 366.25)'s `rebate carried forward`) EQUALS 366.25
+-- iras-sample-heng (IRAS page sample-calcs, YA 2026): net tax payable
+#ASSERT ((`a rebate of` 5000 `against tax of` 366.25))'s `tax after rebate` EQUALS 0
+-- iras-sample-heng (IRAS page sample-calcs, YA 2026): net tax payable, household end to end
+#ASSERT `the income tax in` (`the position of an adult` `iras heng household` 1 `iras heng adult` 10000) EQUALS 0
+
+-- iras-sample-fong (IRAS page sample-calcs, YA 2026): earned income relief
+#ASSERT (`the relief breakdown given CPF` `iras fong household` 1 7650)'s `earned income relief` EQUALS 8000
+-- iras-sample-fong (IRAS page sample-calcs, YA 2026): total reliefs, CPF relief taken as IRAS 7,650
+#ASSERT (`the relief breakdown given CPF` `iras fong household` 1 7650)'s `total allowed` EQUALS 15650
+-- iras-sample-fong (IRAS page sample-calcs, YA 2026): chargeable income
+#ASSERT `the chargeable income from assessable income` 249750 `less reliefs` ((`the relief breakdown given CPF` `iras fong household` 1 7650)'s `total allowed`) EQUALS 234100
+-- iras-sample-fong (IRAS page sample-calcs, YA 2026): tax on the first 200,000
+#ASSERT `the resident individual rates for YA` 2026 `on chargeable income of` 200000 EQUALS JUST 21150
+-- iras-sample-fong (IRAS page sample-calcs, YA 2026): tax on the next 34,100 at 19%
+#ASSERT ((`the tax by bands` `Table 3` `on` 234100)) MINUS ((`the tax by bands` `Table 3` `on` 200000)) EQUALS 6479
+-- iras-sample-fong (IRAS page sample-calcs, YA 2026): net tax payable
+#ASSERT `the resident individual rates for YA` 2026 `on chargeable income of` 234100 EQUALS JUST 27629
+-- iras-sample-fong (IRAS page sample-calcs, YA 2026): NOT ASSERTED. The page gives an employee CPF relief of 7,650 for a man aged 64 in 2025 on 250,000 of
+-- earned income. This encoding gives 11,730 for the age band above 60 to 65 all year, and 7,650 only for one aged 65 or over all year (7.5% of 102,000).
+-- The page states no birth month and no pay layout, so the figure cannot be derived from it; FINDINGS.md section 4 records it as an open disagreement.
+-- The rest of the example, with the CPF relief taken as the page gives it (the assertions above), agrees: relief, chargeable income and tax.
+
+-- iras-sample-gabriel (IRAS page sample-calcs, YA 2026): non-resident on a 92-day stay (1 Aug to 31 Oct)
+#ASSERT `resident in Singapore:` `an individual` `,` `iras gabriel residence` EQUALS JUST FALSE
+-- iras-sample-gabriel (IRAS page sample-calcs, YA 2026): personal reliefs
+#ASSERT (`the personal reliefs for YA` 2026 `, resident:` FALSE `:` `iras gabriel facts`)'s `total allowed` EQUALS 0
+-- iras-sample-gabriel (IRAS page sample-calcs, YA 2026): chargeable income
+#ASSERT `the chargeable income from assessable income` 21000 `less reliefs` 0 EQUALS 21000
+-- iras-sample-gabriel (IRAS page sample-calcs, YA 2026): tax at the s 40B rate
+#ASSERT `the tax with the non-resident relief for income` `as a non-resident employee` `, chargeable` 21000 `, from the source` 21000 `, assessable` 21000 `, only source:` TRUE `, resident tax` 20 `, YA` 2026 EQUALS 3150
+-- iras-sample-gabriel (IRAS page sample-calcs, YA 2026): rate 15%
+#ASSERT (`the tax with the non-resident relief for income` `as a non-resident employee` `, chargeable` 21000 `, from the source` 21000 `, assessable` 21000 `, only source:` TRUE `, resident tax` 20 `, YA` 2026) DIVIDED BY 21000 EQUALS 15%
+
+-- iras-sample-burch (IRAS page sample-calcs, YA 2026): rate on non-resident director fees
+#ASSERT `the non-resident individual rate for YA` 2026 EQUALS 24%
+-- iras-sample-burch (IRAS page sample-calcs, YA 2026): personal reliefs
+#ASSERT (`the personal reliefs for YA` 2026 `, resident:` FALSE `:` `iras burch facts`)'s `total allowed` EQUALS 0
+-- iras-sample-burch (IRAS page sample-calcs, YA 2026): chargeable income
+#ASSERT `the chargeable income from assessable income` 85000 `less reliefs` 0 EQUALS 85000
+-- iras-sample-burch (IRAS page sample-calcs, YA 2026): tax payable
+#ASSERT `the non-resident individual rate for YA` 2026 TIMES 85000 EQUALS 20400
+
+-- iras-eir-age55-cap (IRAS page eir, YA 2026): maximum for age 55 at 31 Dec 2025 (earned income large)
+#ASSERT `the earned income relief for` `iras eir 55 large` EQUALS 6000
+-- iras-eir-age55-cap (IRAS page eir, YA 2026): relief when earned income is 5,000
+#ASSERT `the earned income relief for` `iras eir 55 small` EQUALS 5000
+
+-- iras-cap-chua-index (IRAS page reliefs-index, YA 2026): WMCR child 1 at 15%
+#ASSERT `the working mother's child relief for YA` 2026 `, earned income` 150000 `:` `iras chua idx child 1` EQUALS 22500
+-- iras-cap-chua-index (IRAS page reliefs-index, YA 2026): WMCR child 2 at 20%
+#ASSERT `the working mother's child relief for YA` 2026 `, earned income` 150000 `:` `iras chua idx child 2` EQUALS 30000
+-- iras-cap-chua-index (IRAS page reliefs-index, YA 2026): WMCR child 3, fixed dollar
+#ASSERT `the working mother's child relief for YA` 2026 `, earned income` 150000 `:` `iras chua idx child 3` EQUALS 12000
+-- iras-cap-chua-index (IRAS page reliefs-index, YA 2026): earned income relief
+#ASSERT (`the personal reliefs for YA` 2026 `, resident:` TRUE `:` `iras chua idx facts`)'s `earned income relief` EQUALS 1000
+-- iras-cap-chua-index (IRAS page reliefs-index, YA 2026): child reliefs (WMCR on three children)
+#ASSERT (`the personal reliefs for YA` 2026 `, resident:` TRUE `:` `iras chua idx facts`)'s `child reliefs` EQUALS 64500
+-- iras-cap-chua-index (IRAS page reliefs-index, YA 2026): total reliefs claimed
+#ASSERT (`the personal reliefs for YA` 2026 `, resident:` TRUE `:` `iras chua idx facts`)'s `total before the cap` EQUALS 86650
+-- iras-cap-chua-index (IRAS page reliefs-index, YA 2026): total reliefs allowed
+#ASSERT (`the personal reliefs for YA` 2026 `, resident:` TRUE `:` `iras chua idx facts`)'s `total allowed` EQUALS 80000
+-- iras-cap-chua-index (IRAS page reliefs-index, YA 2026): chargeable income
+#ASSERT `the chargeable income from assessable income` 150000 `less reliefs` ((`the personal reliefs for YA` 2026 `, resident:` TRUE `:` `iras chua idx facts`)'s `total allowed`) EQUALS 70000
+-- iras-cap-chua-index (IRAS page reliefs-index, YA 2026): tax on the first 40,000
+#ASSERT (`the tax by bands` `Table 3` `on` 40000) EQUALS 550
+-- iras-cap-chua-index (IRAS page reliefs-index, YA 2026): tax on the next 30,000 at 7%
+#ASSERT ((`the tax by bands` `Table 3` `on` 70000)) MINUS ((`the tax by bands` `Table 3` `on` 40000)) EQUALS 2100
+-- iras-cap-chua-index (IRAS page reliefs-index, YA 2026): net tax payable
+#ASSERT `the resident individual rates for YA` 2026 `on chargeable income of` 70000 EQUALS JUST 2650
+-- iras-cap-chua-index (IRAS page reliefs-index, YA 2026): child reliefs (WMCR on three children), household layer
+#ASSERT (`the relief breakdown given CPF` `iras chua idx household` 1 20400)'s `child reliefs` EQUALS 64500
+-- iras-cap-chua-index (IRAS page reliefs-index, YA 2026): total reliefs claimed, household layer
+#ASSERT (`the relief breakdown given CPF` `iras chua idx household` 1 20400)'s `total before the cap` EQUALS 86650
+-- iras-cap-chua-index (IRAS page reliefs-index, YA 2026): total reliefs allowed, household layer
+#ASSERT (`the relief breakdown given CPF` `iras chua idx household` 1 20400)'s `total allowed` EQUALS 80000
+-- iras-cap-chua-index (IRAS page reliefs-index, YA 2026): chargeable income, household layer
+#ASSERT `the chargeable income in` (`the position of an adult` `iras chua idx household` 1 `iras chua idx adult` 20400) EQUALS 70000
+-- iras-cap-chua-index (IRAS page reliefs-index, YA 2026): net tax payable, household layer
+#ASSERT `the income tax in` (`the position of an adult` `iras chua idx household` 1 `iras chua idx adult` 20400) EQUALS 2650
+
+-- iras-qcr-bernice-income (IRAS page qcr, YA 2026): QCR for a full-time student aged 18 with income 9,000
+#ASSERT `the qualifying child relief for YA` 2026 `:` `iras bernice child` EQUALS 0
+
+-- iras-qcr-andy-ns (IRAS page qcr, YA 2026): eligible for YA 2026 (income year 2025: full-time study from July, NS allowance 3,000)
+#ASSERT `an eligible child for YA` 2026 `:` `iras andy child 2025` EQUALS TRUE
+-- iras-qcr-andy-ns (IRAS page qcr, YA 2026): eligible for YA 2025 (income year 2024: full-time NS, not instruction)
+#ASSERT `an eligible child for YA` 2025 `:` `iras andy child 2024` EQUALS FALSE
+
+-- iras-qcr-ow-disability-share (IRAS page qcr, YA 2026): Mr Ow's share of Child Relief (Disability)
+#ASSERT `the qualifying child relief for YA` 2026 `:` `iras ow child share mr` EQUALS 3500
+-- iras-qcr-ow-disability-share (IRAS page qcr, YA 2026): Mrs Ow's share of Child Relief (Disability)
+#ASSERT `the qualifying child relief for YA` 2026 `:` `iras ow child share mrs` EQUALS 4000
+
+-- iras-qcr-lim-50k-cap (IRAS page qcr, YA 2026): WMCR unrestricted at 15%
+#ASSERT `the working mother's child relief for YA` 2026 `, earned income` 320000 `:` `iras lim50k child mother` EQUALS 48000
+-- iras-qcr-lim-50k-cap (IRAS page qcr, YA 2026): WMCR allowed after the 50,000 per-child cap
+#ASSERT (`the child reliefs for YA` 2026 `:` `iras lim50k mother`) EQUALS 46000
+-- iras-qcr-lim-50k-cap (IRAS page qcr, YA 2026): total relief on the child (father QCR + mother WMCR)
+#ASSERT (`the qualifying child relief for YA` 2026 `:` `iras lim50k child father`) PLUS ((`the child reliefs for YA` 2026 `:` `iras lim50k mother`)) EQUALS 50000
+
+-- iras-chen-qcr-wmcr-ptr (IRAS page qcr, YA 2026): CPF relief for the stream (IRAS input 16,000)
+#ASSERT `the employee CPF in` (`the position of the adult numbered` `iras chen household` 1) EQUALS 16000
+-- iras-chen-qcr-wmcr-ptr (IRAS page qcr, YA 2026): earned income relief
+#ASSERT (`the relief breakdown given CPF` `iras chen household` 1 16000)'s `earned income relief` EQUALS 1000
+-- iras-chen-qcr-wmcr-ptr (IRAS page qcr, YA 2026): QCR
+#ASSERT `the qualifying child relief for YA` 2026 `:` `iras chen child facts` EQUALS 4000
+-- iras-chen-qcr-wmcr-ptr (IRAS page qcr, YA 2026): WMCR for a first child born 2025
+#ASSERT `the working mother's child relief for YA` 2026 `, earned income` 80000 `:` `iras chen child facts` EQUALS 8000
+-- iras-chen-qcr-wmcr-ptr (IRAS page qcr, YA 2026): child reliefs, household layer
+#ASSERT (`the relief breakdown given CPF` `iras chen household` 1 16000)'s `child reliefs` EQUALS 12000
+-- iras-chen-qcr-wmcr-ptr (IRAS page qcr, YA 2026): total reliefs, household end to end
+#ASSERT `the reliefs allowed in` (`the position of the adult numbered` `iras chen household` 1) EQUALS 29000
+-- iras-chen-qcr-wmcr-ptr (IRAS page qcr, YA 2026): chargeable income, household end to end
+#ASSERT `the chargeable income in` (`the position of the adult numbered` `iras chen household` 1) EQUALS 51000
+-- iras-chen-qcr-wmcr-ptr (IRAS page qcr, YA 2026): tax on the first 40,000
+#ASSERT (`the tax by bands` `Table 3` `on` 40000) EQUALS 550
+-- iras-chen-qcr-wmcr-ptr (IRAS page qcr, YA 2026): tax on the next 11,000 at 7%
+#ASSERT ((`the tax by bands` `Table 3` `on` 51000)) MINUS ((`the tax by bands` `Table 3` `on` 40000)) EQUALS 770
+-- iras-chen-qcr-wmcr-ptr (IRAS page qcr, YA 2026): gross tax
+#ASSERT `the tax before the rebate in` (`the position of the adult numbered` `iras chen household` 1) EQUALS 1320
+-- iras-chen-qcr-wmcr-ptr (IRAS page qcr, YA 2026): rebate offset
+#ASSERT `the rebate used in` (`the position of the adult numbered` `iras chen household` 1) EQUALS 1320
+-- iras-chen-qcr-wmcr-ptr (IRAS page qcr, YA 2026): net tax payable
+#ASSERT `the income tax in` (`the position of the adult numbered` `iras chen household` 1) EQUALS 0
+-- iras-chen-qcr-wmcr-ptr (IRAS page qcr, YA 2026): rebate for the first child
+#ASSERT `the parenthood rebate for a` `first child of the family` `, event on` (YearMonthDay 2025 6 30) `, citizen:` TRUE `, adopted before marriage:` FALSE EQUALS 5000
+
+-- iras-wmcr-heng-two-children (IRAS page wmcr, YA 2026): WMCR allowed on child 1 (income over 8,000)
+#ASSERT `the working mother's child relief for YA` 2026 `, earned income` 100000 `:` `iras wmcr heng child 1 facts` EQUALS 0
+-- iras-wmcr-heng-two-children (IRAS page wmcr, YA 2026): WMCR allowed on child 2 at 20% with order 2 supplied by the caller
+#ASSERT `the working mother's child relief for YA` 2026 `, earned income` 100000 `:` `iras wmcr heng child 2 facts` EQUALS 20000
+-- iras-wmcr-heng-two-children (IRAS page wmcr, YA 2026): cumulative WMCR, ITA layer (orders supplied; mother takes no QCR)
+#ASSERT (`the child reliefs for YA` 2026 `:` `iras wmcr heng mother facts`) EQUALS 20000
+-- iras-wmcr-heng-two-children (IRAS page wmcr, YA 2026): WMCR allowed, household layer (child reliefs less the QCR 4,000 on child 2; order derived)
+#ASSERT ((`the relief breakdown given CPF` `iras wmcr heng household` 1 0)'s `child reliefs`) MINUS 4000 EQUALS 20000
+
+-- iras-wmcr-teo-mixed-birth-dates (IRAS page wmcr, YA 2026): WMCR child 1 (born before 2024, 15%)
+#ASSERT `the working mother's child relief for YA` 2026 `, earned income` 90000 `:` `iras teo child 1 facts` EQUALS 13500
+-- iras-wmcr-teo-mixed-birth-dates (IRAS page wmcr, YA 2026): WMCR child 2 (born 2024, order 2, fixed)
+#ASSERT `the working mother's child relief for YA` 2026 `, earned income` 90000 `:` `iras teo child 2 facts` EQUALS 10000
+-- iras-wmcr-teo-mixed-birth-dates (IRAS page wmcr, YA 2026): cumulative WMCR, ITA layer
+#ASSERT (`the child reliefs for YA` 2026 `:` `iras teo mother facts`) EQUALS 23500
+-- iras-wmcr-teo-mixed-birth-dates (IRAS page wmcr, YA 2026): cumulative WMCR, household layer (child reliefs less the QCR 8,000)
+#ASSERT ((`the relief breakdown given CPF` `iras teo household` 1 0)'s `child reliefs`) MINUS 8000 EQUALS 23500
+
+-- iras-wmcr-lim-relief-cap (IRAS page wmcr, YA 2026): WMCR child 1 at 15% (after the 7,500 claimed by the father)
+#ASSERT (`the child reliefs for YA` 2026 `:` `iras lim mother child 1 only`) EQUALS 37500
+-- iras-wmcr-lim-relief-cap (IRAS page wmcr, YA 2026): WMCR child 2 formula at 20%
+#ASSERT `the working mother's child relief for YA` 2026 `, earned income` 250000 `:` `iras lim child 2` EQUALS 50000
+-- iras-wmcr-lim-relief-cap (IRAS page wmcr, YA 2026): WMCR child 2 allowed after the 50,000 per-child cap
+#ASSERT (`the child reliefs for YA` 2026 `:` `iras lim mother child 2 only`) EQUALS 46000
+-- iras-wmcr-lim-relief-cap (IRAS page wmcr, YA 2026): cumulative WMCR
+#ASSERT (`the child reliefs for YA` 2026 `:` `iras lim mother both`) EQUALS 83500
+-- iras-wmcr-lim-relief-cap (IRAS page wmcr, YA 2026): total personal reliefs allowed (80,000 cap)
+#ASSERT (`the personal reliefs for YA` 2026 `, resident:` TRUE `:` `iras lim mother both`)'s `total allowed` EQUALS 80000
+
+-- iras-wmcr-faq-citizenship-date (IRAS page wmcr, YA 2026): WMCR for a child born 2022 who became a citizen on 4 May 2024
+#ASSERT `the working mother's child relief for YA` 2026 `, earned income` 100000 `:` `iras citizenship child` EQUALS 8000
+
+-- iras-parent-chan-sharing (IRAS page parent, YA 2026): total parent relief when the parent lives with one of the three claimants
+#ASSERT (`the parent relief for YA` 2026 `:` `iras chan dep A lives with`) PLUS (`the parent relief for YA` 2026 `:` `iras chan dep B apart`) PLUS (`the parent relief for YA` 2026 `:` `iras chan dep C apart`) EQUALS 9000
+-- iras-parent-chan-sharing (IRAS page parent, YA 2026): total parent relief when the parent lives with none of the claimants
+#ASSERT (`the parent relief for YA` 2026 `:` `iras chan dep B apart none lives`) PLUS (`the parent relief for YA` 2026 `:` `iras chan dep C apart none lives`) PLUS (`the parent relief for YA` 2026 `:` `iras chan dep C apart none lives`) EQUALS 5500
+
+-- iras-cpf-lim-aw-over-ceiling (IRAS page cpf-employee, YA 2026): ordinary wages subject to CPF
+#ASSERT `the year's ordinary wages, capped` `iras cpf lim year` EQUALS 66000
+-- iras-cpf-lim-aw-over-ceiling (IRAS page cpf-employee, YA 2026): additional wage ceiling
+#ASSERT `the applicable amount` MINUS `the year's ordinary wages, capped` `iras cpf lim year` EQUALS 36000
+-- iras-cpf-lim-aw-over-ceiling (IRAS page cpf-employee, YA 2026): additional wages subject to CPF
+#ASSERT `the additional wages that count` (`the applicable amount` MINUS `the year's ordinary wages, capped` `iras cpf lim year`) 40000 EQUALS 36000
+-- iras-cpf-lim-aw-over-ceiling (IRAS page cpf-employee, YA 2026): CPF relief on ordinary wages (employee share, 20%)
+#ASSERT (`the CPF of the year` `iras cpf lim year no AW`) EQUALS 13200
+-- iras-cpf-lim-aw-over-ceiling (IRAS page cpf-employee, YA 2026): CPF relief on additional wages
+#ASSERT (`the CPF of the year` `iras cpf lim year`) MINUS (`the CPF of the year` `iras cpf lim year no AW`) EQUALS 7200
+-- iras-cpf-lim-aw-over-ceiling (IRAS page cpf-employee, YA 2026): total CPF relief
+#ASSERT `my employee CPF for the year` `iras cpf lim year` EQUALS JUST 20400
+
+-- iras-cpf-heng-ow-over-ceiling (IRAS page cpf-employee, YA 2026): ordinary wages subject to CPF
+#ASSERT `the year's ordinary wages, capped` `iras cpf heng year` EQUALS 88800
+-- iras-cpf-heng-ow-over-ceiling (IRAS page cpf-employee, YA 2026): additional wage ceiling
+#ASSERT `the applicable amount` MINUS `the year's ordinary wages, capped` `iras cpf heng year` EQUALS 13200
+-- iras-cpf-heng-ow-over-ceiling (IRAS page cpf-employee, YA 2026): additional wages subject to CPF
+#ASSERT `the additional wages that count` (`the applicable amount` MINUS `the year's ordinary wages, capped` `iras cpf heng year`) 13000 EQUALS 13000
+-- iras-cpf-heng-ow-over-ceiling (IRAS page cpf-employee, YA 2026): CPF relief on ordinary wages (employee share, 20%)
+#ASSERT (`the CPF of the year` `iras cpf heng year no AW`) EQUALS 17760
+-- iras-cpf-heng-ow-over-ceiling (IRAS page cpf-employee, YA 2026): CPF relief on additional wages
+#ASSERT (`the CPF of the year` `iras cpf heng year`) MINUS (`the CPF of the year` `iras cpf heng year no AW`) EQUALS 2600
+-- iras-cpf-heng-ow-over-ceiling (IRAS page cpf-employee, YA 2026): total CPF relief
+#ASSERT `my employee CPF for the year` `iras cpf heng year` EQUALS JUST 20360
+
+-- iras-cpf-cheong-part-year (IRAS page cpf-employee, YA 2026): ordinary wages subject to CPF
+#ASSERT `the year's ordinary wages, capped` `iras cpf cheong year` EQUALS 81400
+-- iras-cpf-cheong-part-year (IRAS page cpf-employee, YA 2026): additional wage ceiling
+#ASSERT `the applicable amount` MINUS `the year's ordinary wages, capped` `iras cpf cheong year` EQUALS 20600
+-- iras-cpf-cheong-part-year (IRAS page cpf-employee, YA 2026): additional wages subject to CPF
+#ASSERT `the additional wages that count` (`the applicable amount` MINUS `the year's ordinary wages, capped` `iras cpf cheong year`) 45000 EQUALS 20600
+-- iras-cpf-cheong-part-year (IRAS page cpf-employee, YA 2026): CPF relief on ordinary wages (employee share, 20%)
+#ASSERT (`the CPF of the year` `iras cpf cheong year no AW`) EQUALS 16280
+-- iras-cpf-cheong-part-year (IRAS page cpf-employee, YA 2026): CPF relief on additional wages
+#ASSERT (`the CPF of the year` `iras cpf cheong year`) MINUS (`the CPF of the year` `iras cpf cheong year no AW`) EQUALS 4120
+-- iras-cpf-cheong-part-year (IRAS page cpf-employee, YA 2026): total CPF relief
+#ASSERT `my employee CPF for the year` `iras cpf cheong year` EQUALS JUST 20400
+
+-- iras-lir-teo (IRAS page life-ins, YA 2026): life insurance relief (our function returns CPF plus insurance; CPF subtracted)
+#ASSERT (`the insurance and CPF reliefs for YA` 2026 `:` `iras lir teo facts`) MINUS 1600 EQUALS 3400
+
+-- iras-lir-calc-tooltip (IRAS page tax-calculator-ya26, YA 2026): life insurance relief ceiling with CPF 3,000
+#ASSERT (`the insurance and CPF reliefs for YA` 2026 `:` `iras lir tooltip facts`) MINUS 3000 EQUALS 2000
+
+-- iras-srs-jasmine-same-year (IRAS page srs, YA 2026): relief when the 10,000 contribution is withdrawn in the year (scenario 1b, withdrawal 15,000)
+#ASSERT `the SRS relief:` `iras srs withdrawn` EQUALS 0
+
+-- iras-srs-tan-foreigner (IRAS page srs, YA 2026): SRS relief for a foreigner contributing 20,000
+#ASSERT `the SRS relief:` `iras srs foreigner` EQUALS 20000
+
+-- iras-nsman-parents-one-son (IRAS page nsman, YA 2026): father's NSman parent relief
+#ASSERT `the NSman reliefs:` `iras nsman parent` EQUALS 750
+-- iras-nsman-parents-one-son (IRAS page nsman, YA 2026): mother's NSman parent relief
+#ASSERT `the NSman reliefs:` `iras nsman parent` EQUALS 750
+
+-- iras-nsman-parents-three-sons (IRAS page nsman, YA 2026): father's NSman parent relief with three NSman sons
+#ASSERT `the NSman reliefs:` `iras nsman parent` EQUALS 750
+-- iras-nsman-parents-three-sons (IRAS page nsman, YA 2026): mother's NSman parent relief with three NSman sons
+#ASSERT `the NSman reliefs:` `iras nsman parent` EQUALS 750
+
+-- iras-nsman-father-and-son (IRAS page nsman, YA 2026): self relief for an NSman who did not perform ORNS
+#ASSERT `the NSman reliefs:` `iras nsman father self only` EQUALS 1500
+-- iras-nsman-father-and-son (IRAS page nsman, YA 2026): parent relief of 750 not allowed on top (both claims entered)
+#ASSERT `the NSman reliefs:` `iras nsman father both` EQUALS 1500
+
+-- iras-nsman-mother-wife-or-parent (IRAS page nsman, YA 2026): relief when she claims as wife only
+#ASSERT `the NSman reliefs:` `iras nsman mother wife only` EQUALS 750
+-- iras-nsman-mother-wife-or-parent (IRAS page nsman, YA 2026): relief once, not both as wife and as parent (both claims entered)
+#ASSERT `the NSman reliefs:` `iras nsman mother both` EQUALS 750
+
+-- iras-gcr-one-or-other-caregiver (IRAS page grandparent, YA 2026): maximum grandparent caregiver relief (two possible caregivers)
+#ASSERT `the grandparent caregiver relief for YA` 2026 `:` `iras gcr facts` EQUALS 3000
+
+-- iras-cfr-lim-deferral (IRAS page course-fees, YA 2025): relief claimed in YA 2025 after the 5,500 cap
+#ASSERT `the course fees relief for YA` 2025 `:` `iras cfr deferral` EQUALS 5500
+
+-- iras-medisave-bernard-ya2025 (IRAS page medisave, YA 2025): total CPF relief for the self-employed (YA 2025: 37% of trade income)
+#ASSERT `the insurance and CPF reliefs for YA` 2025 `:` `iras bernard ya2025` EQUALS 24050
+
+-- iras-medisave-charlie-ya2025 (IRAS page medisave, YA 2025): total CPF relief (employee 8,000 + self-employed limited to 37% of 20,000 = 7,400)
+#ASSERT `the insurance and CPF reliefs for YA` 2025 `:` `iras charlie ya2025` EQUALS 15400
+-- iras-medisave-charlie-ya2025 (IRAS page medisave, YA 2025): maximum self-employed relief
+#ASSERT (`the insurance and CPF reliefs for YA` 2025 `:` `iras charlie ya2025`) MINUS 8000 EQUALS 7400
+-- iras-medisave-charlie-ya2025 (IRAS page medisave, YA 2025): voluntary relief
+#ASSERT (`the insurance and CPF reliefs for YA` 2025 `:` `iras charlie ya2025`) MINUS 8000 MINUS 1600 EQUALS 5800
+
+-- iras-topup-tan-self-and-mother (IRAS page cpf-topup, YA 2026): relief for own top-up
+#ASSERT `the CPF top-up reliefs:` `iras topup tan self` EQUALS 5000
+-- iras-topup-tan-self-and-mother (IRAS page cpf-topup, YA 2026): relief for the mother top-up of 10,000 (family limit 8,000)
+#ASSERT `the CPF top-up reliefs:` `iras topup tan family` EQUALS 8000
+-- iras-topup-tan-self-and-mother (IRAS page cpf-topup, YA 2026): total relief
+#ASSERT `the CPF top-up reliefs:` `iras topup tan both` EQUALS 13000
+
+-- iras-topup-tan-father-mother (IRAS page cpf-topup, YA 2026): total relief for 10,000 of family top-ups
+#ASSERT `the CPF top-up reliefs:` `iras topup tan parents` EQUALS 8000
+
+-- iras-topup-ong-limits (IRAS page cpf-topup, YA 2026): own total relief capped at 8,000 (SA 2,000 + MA 7,000 as allowed by IRAS)
+#ASSERT `the CPF top-up reliefs:` `iras topup ong` EQUALS 8000
+
+-- iras-sep-ex1-compulsory-only (IRAS page cpf-selfemp, YA 2026): total CPF relief, compulsory MediSave only
+#ASSERT `the insurance and CPF reliefs for YA` 2026 `:` `iras sep 1` EQUALS 4200
+
+-- iras-sep-ex2-voluntary-allowed (IRAS page cpf-selfemp, YA 2026): total CPF relief
+#ASSERT `the insurance and CPF reliefs for YA` 2026 `:` `iras sep 2` EQUALS 6290
+-- iras-sep-ex2-voluntary-allowed (IRAS page cpf-selfemp, YA 2026): 37% of trade income
+#ASSERT 17000 TIMES 37% EQUALS 6290
+-- iras-sep-ex2-voluntary-allowed (IRAS page cpf-selfemp, YA 2026): voluntary relief
+#ASSERT (`the insurance and CPF reliefs for YA` 2026 `:` `iras sep 2`) MINUS 4200 EQUALS 2090
+
+-- iras-sep-ex3-voluntary-nil (IRAS page cpf-selfemp, YA 2026): total CPF relief
+#ASSERT `the insurance and CPF reliefs for YA` 2026 `:` `iras sep 3` EQUALS 4200
+-- iras-sep-ex3-voluntary-nil (IRAS page cpf-selfemp, YA 2026): voluntary relief
+#ASSERT (`the insurance and CPF reliefs for YA` 2026 `:` `iras sep 3`) MINUS 4200 EQUALS 0
+-- iras-sep-ex3-voluntary-nil (IRAS page cpf-selfemp, YA 2026): 37% of trade income
+#ASSERT 10000 TIMES 37% EQUALS 3700
+
+-- iras-sep-ex4-also-employee (IRAS page cpf-selfemp, YA 2026): total CPF relief (employee 14,000 + 4,200 + 2,090)
+#ASSERT `the insurance and CPF reliefs for YA` 2026 `:` `iras sep 4` EQUALS 20290
+-- iras-sep-ex4-also-employee (IRAS page cpf-selfemp, YA 2026): voluntary relief
+#ASSERT (`the insurance and CPF reliefs for YA` 2026 `:` `iras sep 4`) MINUS 14000 MINUS 4200 EQUALS 2090
+
+-- iras-sep-ex5-also-employee-low-nti (IRAS page cpf-selfemp, YA 2026): total CPF relief
+#ASSERT `the insurance and CPF reliefs for YA` 2026 `:` `iras sep 5` EQUALS 18200
+-- iras-sep-ex5-also-employee-low-nti (IRAS page cpf-selfemp, YA 2026): voluntary relief
+#ASSERT (`the insurance and CPF reliefs for YA` 2026 `:` `iras sep 5`) MINUS 14000 MINUS 4200 EQUALS 0
+
+-- iras-fdwl-three-months (IRAS page fdwl, YA 2024): relief for a levy of 900
+#ASSERT `the foreign domestic worker levy relief for YA` 2024 `:` `iras fdwl 900` EQUALS 1800
+
+-- iras-fdwl-three-helpers (IRAS page fdwl, YA 2024): relief for the highest-levy helper (450 x 12)
+#ASSERT `the foreign domestic worker levy relief for YA` 2024 `:` `iras fdwl 5400` EQUALS 10800
+
+-- iras-family-share-qcr (IRAS page newborn, YA 2026): QCR for each parent of a 16-year-old student, shared equally
+#ASSERT `the qualifying child relief for YA` 2026 `:` `iras family qcr child` EQUALS 2000
+
+-- iras-family-wmcr-first-child (IRAS page newborn, YA 2026): WMCR for a first child born in 2025
+#ASSERT `the working mother's child relief for YA` 2026 `, earned income` 100000 `:` `iras family wmcr child` EQUALS 8000
+
+-- iras-family-koh-ptr (IRAS page newborn, YA 2026): net tax of Mr Koh (rebate share 2,500, tax 2,930)
+#ASSERT ((`a rebate of` 2500 `against tax of` 2930))'s `tax after rebate` EQUALS 430
+-- iras-family-koh-ptr (IRAS page newborn, YA 2026): rebate used by Mr Koh
+#ASSERT 2500 MINUS ((`a rebate of` 2500 `against tax of` 2930)'s `rebate carried forward`) EQUALS 2500
+-- iras-family-koh-ptr (IRAS page newborn, YA 2026): net tax of Mrs Koh (rebate share 2,500, tax 1,802.30)
+#ASSERT ((`a rebate of` 2500 `against tax of` 1802.3))'s `tax after rebate` EQUALS 0
+-- iras-family-koh-ptr (IRAS page newborn, YA 2026): rebate used by Mrs Koh
+#ASSERT 2500 MINUS ((`a rebate of` 2500 `against tax of` 1802.3)'s `rebate carried forward`) EQUALS 1802.3
+-- iras-family-koh-ptr (IRAS page newborn, YA 2026): rebate unused by Mrs Koh, carried forward
+#ASSERT ((`a rebate of` 2500 `against tax of` 1802.3))'s `rebate carried forward` EQUALS 697.7
+
+-- iras-family-sim-gcr (IRAS page newborn, YA 2026): grandparent caregiver relief for a working mother
+#ASSERT `the grandparent caregiver relief for YA` 2026 `:` `iras family gcr` EQUALS 3000
+
+-- iras-family-ng-summary (IRAS page newborn, YA 2026): Mr: NSman self relief
+#ASSERT (`the relief breakdown given CPF` `iras ng household` 1 20000)'s `NSman` EQUALS 3000
+-- iras-family-ng-summary (IRAS page newborn, YA 2026): Mr: total reliefs (1,000 + 2,000 + 20,000 + 3,000)
+#ASSERT `the reliefs allowed in` (`the position of an adult` `iras ng household` 1 `iras ng mr` 20000) EQUALS 26000
+-- iras-family-ng-summary (IRAS page newborn, YA 2026): Mr: chargeable income
+#ASSERT `the chargeable income in` (`the position of an adult` `iras ng household` 1 `iras ng mr` 20000) EQUALS 74000
+-- iras-family-ng-summary (IRAS page newborn, YA 2026): Mr: gross tax
+#ASSERT `the tax before the rebate in` (`the position of an adult` `iras ng household` 1 `iras ng mr` 20000) EQUALS 2930
+-- iras-family-ng-summary (IRAS page newborn, YA 2026): Mr: rebate used
+#ASSERT `the rebate used in` (`the position of an adult` `iras ng household` 1 `iras ng mr` 20000) EQUALS 2500
+-- iras-family-ng-summary (IRAS page newborn, YA 2026): Mr: net tax
+#ASSERT `the income tax in` (`the position of an adult` `iras ng household` 1 `iras ng mr` 20000) EQUALS 430
+-- iras-family-ng-summary (IRAS page newborn, YA 2026): Mrs: earned income relief
+#ASSERT (`the relief breakdown given CPF` `iras ng household` 2 20000)'s `earned income relief` EQUALS 1000
+-- iras-family-ng-summary (IRAS page newborn, YA 2026): Mrs: QCR + WMCR (2,000 + 8,000)
+#ASSERT (`the relief breakdown given CPF` `iras ng household` 2 20000)'s `child reliefs` EQUALS 10000
+-- iras-family-ng-summary (IRAS page newborn, YA 2026): Mrs: grandparent caregiver relief
+#ASSERT (`the relief breakdown given CPF` `iras ng household` 2 20000)'s `grandparent caregiver` EQUALS 3000
+-- iras-family-ng-summary (IRAS page newborn, YA 2026): Mrs: NSman wife relief
+#ASSERT (`the relief breakdown given CPF` `iras ng household` 2 20000)'s `NSman` EQUALS 750
+-- iras-family-ng-summary (IRAS page newborn, YA 2026): Mrs: total reliefs
+#ASSERT `the reliefs allowed in` (`the position of an adult` `iras ng household` 2 `iras ng mrs` 20000) EQUALS 34750
+-- iras-family-ng-summary (IRAS page newborn, YA 2026): Mrs: chargeable income
+#ASSERT `the chargeable income in` (`the position of an adult` `iras ng household` 2 `iras ng mrs` 20000) EQUALS 65250
+-- iras-family-ng-summary (IRAS page newborn, YA 2026): Mrs: gross tax
+#ASSERT `the tax before the rebate in` (`the position of an adult` `iras ng household` 2 `iras ng mrs` 20000) EQUALS 2317.5
+-- iras-family-ng-summary (IRAS page newborn, YA 2026): Mrs: rebate used
+#ASSERT `the rebate used in` (`the position of an adult` `iras ng household` 2 `iras ng mrs` 20000) EQUALS 2317.5
+-- iras-family-ng-summary (IRAS page newborn, YA 2026): Mrs: net tax
+#ASSERT `the income tax in` (`the position of an adult` `iras ng household` 2 `iras ng mrs` 20000) EQUALS 0
+-- iras-family-ng-summary (IRAS page newborn, YA 2026): Mrs: rebate unused
+#ASSERT `the rebate carried forward in` (`the position of an adult` `iras ng household` 2 `iras ng mrs` 20000) EQUALS 182.5
+
+-- iras-family-chua-relief-cap (IRAS page newborn, YA 2026): WMCR child 1 at 15%
+#ASSERT `the working mother's child relief for YA` 2026 `, earned income` 120000 `:` `iras fam chua child 1` EQUALS 18000
+-- iras-family-chua-relief-cap (IRAS page newborn, YA 2026): WMCR child 2 at 20%
+#ASSERT `the working mother's child relief for YA` 2026 `, earned income` 120000 `:` `iras fam chua child 2` EQUALS 24000
+-- iras-family-chua-relief-cap (IRAS page newborn, YA 2026): WMCR child 3 at 25%
+#ASSERT `the working mother's child relief for YA` 2026 `, earned income` 120000 `:` `iras fam chua child 3` EQUALS 30000
+-- iras-family-chua-relief-cap (IRAS page newborn, YA 2026): earned income relief
+#ASSERT (`the personal reliefs for YA` 2026 `, resident:` TRUE `:` `iras fam chua facts`)'s `earned income relief` EQUALS 1000
+-- iras-family-chua-relief-cap (IRAS page newborn, YA 2026): NSman wife relief
+#ASSERT (`the personal reliefs for YA` 2026 `, resident:` TRUE `:` `iras fam chua facts`)'s `NSman` EQUALS 750
+-- iras-family-chua-relief-cap (IRAS page newborn, YA 2026): child reliefs
+#ASSERT (`the personal reliefs for YA` 2026 `, resident:` TRUE `:` `iras fam chua facts`)'s `child reliefs` EQUALS 72000
+-- iras-family-chua-relief-cap (IRAS page newborn, YA 2026): total reliefs claimed
+#ASSERT (`the personal reliefs for YA` 2026 `, resident:` TRUE `:` `iras fam chua facts`)'s `total before the cap` EQUALS 94150
+-- iras-family-chua-relief-cap (IRAS page newborn, YA 2026): total reliefs allowed
+#ASSERT (`the personal reliefs for YA` 2026 `, resident:` TRUE `:` `iras fam chua facts`)'s `total allowed` EQUALS 80000
+-- iras-family-chua-relief-cap (IRAS page newborn, YA 2026): chargeable income
+#ASSERT `the chargeable income from assessable income` 120000 `less reliefs` ((`the personal reliefs for YA` 2026 `, resident:` TRUE `:` `iras fam chua facts`)'s `total allowed`) EQUALS 40000
+-- iras-family-chua-relief-cap (IRAS page newborn, YA 2026): gross tax
+#ASSERT `the resident individual rates for YA` 2026 `on chargeable income of` 40000 EQUALS JUST 550
+-- iras-family-chua-relief-cap (IRAS page newborn, YA 2026): child reliefs, household layer
+#ASSERT (`the relief breakdown given CPF` `iras fam chua household` 1 20400)'s `child reliefs` EQUALS 72000
+-- iras-family-chua-relief-cap (IRAS page newborn, YA 2026): total reliefs claimed, household layer
+#ASSERT (`the relief breakdown given CPF` `iras fam chua household` 1 20400)'s `total before the cap` EQUALS 94150
+-- iras-family-chua-relief-cap (IRAS page newborn, YA 2026): total reliefs allowed, household layer
+#ASSERT (`the relief breakdown given CPF` `iras fam chua household` 1 20400)'s `total allowed` EQUALS 80000
+-- iras-family-chua-relief-cap (IRAS page newborn, YA 2026): chargeable income, household layer
+#ASSERT `the chargeable income in` (`the position of an adult` `iras fam chua household` 1 `iras fam chua adult` 20400) EQUALS 40000
+-- iras-family-chua-relief-cap (IRAS page newborn, YA 2026): net tax payable, household layer
+#ASSERT `the income tax in` (`the position of an adult` `iras fam chua household` 1 `iras fam chua adult` 20400) EQUALS 550
