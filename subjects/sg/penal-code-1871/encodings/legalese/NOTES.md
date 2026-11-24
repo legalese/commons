@@ -69,7 +69,9 @@ CPC s 124 header and the closing words are normalised across the row:
 ## Interpretation calls
 
 Each module records its own in a header comment beside the fixture that makes it, so a reader
-finds the call next to the facts it decides. The ones worth knowing before relying on the row:
+finds the call next to the facts it decides. The structural choices of the 2026-09-21 changes
+are gathered in the forks register, [`notes/forks.md`](notes/forks.md) (PC-1 to PC-12); PC-2, PC-3, PC-4, PC-6 and PC-8 are open for human review.
+The ones worth knowing before relying on the row:
 
 - **ss 24 and 25 are flat booleans on every offence record**, with the definition quoted in the
   field's `@desc`; they are ALSO encoded as ladders of their own in `penal-code-general.l4` and
@@ -78,11 +80,11 @@ finds the call next to the facts it decides. The ones worth knowing before relyi
   by leaf (`penal-code-general.l4`, "A design call").
 - **s 380 nests** `theft IS A Theft Facts` inside `Theft in Dwelling Facts`, for the same reason
   robbery does, and because extending `Theft Facts` would have meant editing all six
-  `Theft Facts WITH` literals in the row. Woon treats s 380 as *defining* an offence ("theft in
-  dwelling is defined in section 380 PC", ch. 8 p. 185); this row treats it as a punishing section
-  carrying extra elements, so his `Commits Theft in dwelling` node maps to `offence under s 380`
-  and **no `commits theft in dwelling` ladder exists**. The two readings agree on what must be
-  proved. See the module header.
+  `Theft Facts WITH` literals in the row. s 380 could be read as *defining* an offence of theft
+  in dwelling, as its heading suggests; this row goes by its enacting words ("shall be punished")
+  and treats it as a punishing section carrying extra elements, so `offence under s 380` is the
+  name and **no `commits theft in dwelling` ladder exists**. The two readings agree on what must
+  be proved. See the module header and [`notes/forks.md`](notes/forks.md), PC-1.
 - **Robbery nests** `theft IS A Theft Facts` and `extortion IS AN Extortion Facts` (s 390(1): "in
   all robbery there is either theft or extortion"); the unused limb is an all-FALSE record. The
   s 390(2) harms for Chen Weixiong are classified in the module header (three calls).
@@ -208,21 +210,32 @@ first three changes moved them, so the mismatch is total rather than local.
 `misappropriation-403.l4` and `cbt-407-409.l4` have **no goldens at all** — four files each are
 owed under `tests/` when the row is next re-blessed, on the four-per-module pattern.
 
+## The 2026-09-21 changes, and where they came from
+
+*Rewritten 2026-11-24.*
+These 2026-09-21 changes came out of a structural comparison of this row with a published secondary reading of the Code: an expert's element-by-element account of these offences, not a review of this row.
+They are s 403 (added), s 390(2) (two places where the ladder was coarser than the grammar), s 392 (restated as an implication), s 380 (added) and ss 407–409 (added).
+The s 405 third-limb change was made beside that comparison, which showed only a difference of factoring; the ladder did not move, and the three defects fixed were defects of form in the recital, each reproduced by probe.
+s 393 was not attributed to the comparison when it was written; the getaway fixtures followed from the s 390(2) split.
+Each change was verified against the Code's text, and each is recorded below on that text alone.
+That reading is not cited or described in this row; each choice stands on the Code's text alone.
+Every structural choice whose recorded reason was that comparison is now in [`notes/forks.md`](notes/forks.md): where the text is ambiguous the fork gives the readings and the statutory reason for the one taken, and where it is not, the fork says the choice is one of presentation.
+The five genuine ambiguities among them (PC-2, PC-3, PC-4, PC-6, PC-8) are open for human review, and in every fork the reading taken stands until ruled.
+
 ## 2026-09-21 — section 403, criminal misappropriation
 
-Added `misappropriation-403.l4`, from Woon, *Essential Criminal Law* ch 8 p 189, where s 403 is
-drawn as four boxes: `Dishonestly` in series into a parallel pair `Misappropriates` /
-`Converts to own use`, rejoining into `Movable property`, feeding the consequent.
-That is exactly the section's operative words with nothing invented and nothing dropped, so the
-ladder is his diagram: `dishonestly AND (misappropriates OR converts to his own use) AND movable
-property`, three elements and one disjunction.
+Added `misappropriation-403.l4`.
+The ladder is the section's operative words, "Whoever dishonestly misappropriates or converts to
+his own use movable property", with nothing invented and nothing dropped:
+`dishonestly AND (misappropriates OR converts to his own use) AND movable property`, three
+elements and one disjunction.
 Twenty-one `#ASSERT`s, nine fixtures, and two exports.
 
 **Why two exports and not three.**
 s 403 defines and punishes in one sentence and never says "is said to commit", so there is no
 named offence for a wrapper rule to carry — see the exception recorded under "What it is" above.
-Woon's rightmost box reads "Commits Dishonest misappropriation", but that wording is the section's
-heading rather than its enacting words, and it is there to keep his chapter's diagrams uniform.
+"Dishonest misappropriation of property" is the section's heading rather than its enacting words,
+so no rule is named for it ([`notes/forks.md`](notes/forks.md), PC-5).
 
 **The adverb is in SERIES, and one fixture exists to prove it.**
 "Whoever dishonestly misappropriates or converts to his own use" puts the adverb in front of both
@@ -385,12 +398,12 @@ assert in the row still passes**, and on all four robbery fixtures the new selec
 is derived from the s 392 one and is a fixture of this module, not an oracle — the same caveat
 the s 394 recital already carried.
 
-## 2026-09-21 — s 390(2) at Woon’s granularity
+## 2026-09-21 — s 390(2) at the granularity of its grammar
 
-Woon, *Essential Criminal Law* ch 8 p 187 draws s 390(2) as a normalised diagram — series is AND,
-parallel is OR, the offender at the left and “commits robbery” at the right.
-Laid beside this module’s ladder it disagreed in two places, and on both the statutory text is on
-Woon’s side, so the module moved.
+The structural comparison described under "The 2026-09-21 changes, and where they came from"
+found this module’s ladder for s 390(2) coarser than the subsection’s grammar in two places.
+On both, the statutory text requires the finer reading, so the module moved
+([`notes/forks.md`](notes/forks.md), PC-3 and PC-7).
 
 **“Voluntarily” is its own conjunct.**
 The text reads *“the offender, for that end, voluntarily causes or attempts to cause”*, so the
@@ -399,11 +412,11 @@ The module had a single `voluntarily causes` leaf in parallel with `attempts to 
 leaves the attempt limb with no adverb at all — an involuntary attempt would have satisfied the
 subsection.
 The leaf is now split into `voluntarily`, a series conjunct, followed by a parallel choice of
-`causes` or `attempts to cause`, which is exactly the shape of the three boxes on p 187.
+`causes` or `attempts to cause`, which is the order of the words in the subsection.
 
 **“Carrying away” and “attempting to carry away” are two occasions, not one.**
-The text reads *“in carrying away or attempting to carry away property obtained by the theft”*,
-and p 187 draws them as two parallel boxes joining at “property obtained by theft”.
+The text reads *“in carrying away or attempting to carry away property obtained by the theft”*:
+two gerunds in the alternative, sharing one object.
 The single leaf `in carrying away or attempting to carry away property obtained by the theft` is
 now `in carrying away property obtained by the theft` and
 `in attempting to carry away property obtained by the theft`, so the timing group has four
@@ -442,9 +455,8 @@ untouched.)
 
 ## 2026-09-21 — s 392 as an implication, with the liability on the right
 
-Woon's diagrams in *Essential Criminal Law* ch. 8 read left to right.
-"Offender" is the leftmost box, the elements run across in series (AND) and in parallel (OR), and the **rightmost box is the conclusion** — "Commits Robbery" (p. 187).
-The row's generated figures did not look like that, and the reason turns out to be a keyword rather than a drawing choice.
+A ladder can be drawn to read left to right with its conclusion at the end: the subject is the leftmost box, the elements run across in series (AND) and in parallel (OR), and the **rightmost box is the conclusion**.
+The row's generated figures did not look like that, and the reason turns out to be a keyword rather than a drawing choice ([`notes/forks.md`](notes/forks.md), PC-10).
 
 A `DECIDE … IF` is a **biconditional**: it says what a name MEANS.
 Everything in its ladder is therefore antecedent, and the conclusion is the frame the whole picture sits inside rather than a box in it.
@@ -477,8 +489,7 @@ This is not house style — the two keywords say different things, and s 390 and
 A person serving 4 years and 8 strokes is not thereby a robber: s 393, s 394 and many other sections prescribe sentences in that range.
 Written as a biconditional the section would assert a converse the statute does not, and that converse is false.
 
-That asymmetry is what the consequent node in Woon's diagrams encodes.
-"Commits Robbery" sits at the right-hand end of the arrows and nowhere else, and the diagram gives a reader no way to run it backwards.
+That asymmetry is what a conclusion drawn at the right-hand end of a ladder encodes: it sits at the end of the arrows and nowhere else, and the picture gives a reader no way to run it backwards.
 `IMPLIES` is the L4 keyword with that property, and it is the one s 392 now uses.
 
 ### The supplied `NOT`, which the statute does not write
@@ -515,10 +526,9 @@ Worth an l4-ide issue.
 
 ## 2026-09-21 — section 380, theft in dwelling
 
-Woon, *Essential Criminal Law* ch. 8 §8.1.1 (p. 185), gives theft in dwelling its own heading, its
-own diagram and its own consequent node, and calls it "by far the most common version" of theft —
-expressly covering shop theft, "because shops are generally buildings used for the custody of
-property".
+s 380 punishes theft in a building, tent or vessel "used as a human dwelling, or for the custody of
+property", which reaches shop theft: a shop is a building, and the goods in it are kept there
+([`notes/forks.md`](notes/forks.md), PC-2).
 The row had nothing: a grep for `380` across every `.l4`, `.md` and `.json` here returned zero hits,
 and `Theft Facts` had no locus field, so the offence could not even be expressed on the record.
 
@@ -551,18 +561,16 @@ copy fails **6** of the module's assertions, `Tan Mei Ling, in the supermarket` 
 
 **Every limb is pinned by an assertion that can fail.** Two further scratch mutants: fusing the
 whole locus into one inert string (so s 380 becomes s 379) fails **4**; dropping the nested
-`commits theft` conjunct fails **2**. The two rarest disjuncts, `tent` and `vessel`, have
+`commits theft` conjunct fails **2**. The two disjuncts no bench fact reaches, `tent` and `vessel`, have
 constructed fixtures of their own for exactly this reason — without them an encoding that dropped
 either would still have run green.
 
-**s 380 is a punishing section here, and Woon calls it a defining one.**
-p. 185 says in terms that "theft in dwelling is defined in section 380 PC", and his figure's
-rightmost node reads `Commits Theft in dwelling`. This row keeps its defining/punishing split
-(CPC s 123(4)): s 378 is the only section in the group that says "is said to commit", s 380 says
-only "shall be punished", so `offence under s 380` is the name and **no `commits theft in dwelling`
-ladder was created**. The difference is one of characterisation; nothing about what must be proved
-turns on it. The module header says so in those words rather than explaining Woon's label away as
-shorthand — it is not shorthand, it is his reading.
+**s 380 is a punishing section here, though its heading could be read as naming a defined offence.**
+This row keeps its defining/punishing split (CPC s 123(4)): s 378 is the only section in the group
+that says "is said to commit", s 380 says only "shall be punished", so `offence under s 380` is the
+name and **no `commits theft in dwelling` ladder was created**. The difference is one of
+characterisation; nothing about what must be proved turns on it
+([`notes/forks.md`](notes/forks.md), PC-1).
 
 **A divergence the type does not prevent, ruled rather than fixed.**
 `Complaint` now carries both `theft` and `theft in dwelling`, and the second nests a `Theft Facts`
@@ -593,7 +601,7 @@ record.
 ## 2026-09-21 — sections 407, 408 and 409, the aggravated breach-of-trust sections
 
 The row encoded s 405 and s 406 and stopped there.
-That was a declared scope limit, but a silent one in the deployed surface: for an employee's criminal breach of trust — Woon's "very common form", and the modal real charge — `applicable charges` answered "406" and understated the maximum by eight years, with nothing in the output saying a more serious section had never been considered.
+That was a declared scope limit, but a silent one in the deployed surface: for an employee's criminal breach of trust, which s 408 punishes, `applicable charges` answered "406" and understated the maximum by eight years, with nothing in the output saying a more serious section had never been considered.
 Added in a new module, `cbt-407-409.l4`.
 
 **A sibling module, not more of `cbt-405-406.l4`.**
@@ -602,9 +610,9 @@ The aggravated sections ask a different question over a different record, and fo
 The row's filenames name their sections, so a file named for its own three is what a reader will look for.
 (`robbery-390-392.l4` kept its name when ss 393 and 394 arrived because those punish the SAME facts record it already declared; these three do not.)
 
-**Built on the s 405 node exactly as Woon draws it.**
-*Essential Criminal Law* p. 196 (s 408) and p. 198 (s 409) both put a single box, "Criminal breach of trust in respect of that property", immediately before the consequent, with the capacity elements in series to its left.
-`Aggravated CBT Facts` nests `breach of trust IS A CBT Facts` and every rule ends in `commits criminal breach of trust` (c's `breach of trust`) — which draws as ONE box on the caller's ladder, so the picture matches.
+**Built on the s 405 node, as the sections are written.**
+Each of ss 407, 408 and 409 states a capacity and then "commits criminal breach of trust in respect of such (or that) property", one element that is s 405 itself ([`notes/forks.md`](notes/forks.md), PC-11).
+`Aggravated CBT Facts` nests `breach of trust IS A CBT Facts` and every rule ends in `commits criminal breach of trust` (c's `breach of trust`) — which draws as ONE box on the caller's ladder, after the capacity.
 It is the same nesting `Robbery Facts` uses for its theft and extortion, and it means the one `property` field the Carl Elias Moses design turns on is still the one property all the way up: s 407's "in respect of SUCH property" and ss 408 and 409's "in respect of THAT property" cannot come apart from the entrustment, because there is nowhere to write a second property down.
 
 **s 407 is encoded on the IN-FORCE text, which names no occupation.**
@@ -615,22 +623,20 @@ A ladder built on the old occupations would put the wrong question to an investi
 
 **s 408's capacity is two leaves, because the section is two conditions.**
 "Being an employee, AND being in any manner entrusted IN SUCH CAPACITY" — it is not enough that a person who happens to be an employee was entrusted.
-Woon draws it as two boxes in series, and the bench separates them: `Carl Elias Moses, an employee but not entrusted as one` fails s 408 on that leaf alone and still makes out s 406.
+The two are leaves in series ([`notes/forks.md`](notes/forks.md), PC-8), and the bench separates them: `Carl Elias Moses, an employee but not entrusted as one` fails s 408 on that leaf alone and still makes out s 406.
 
-**s 409(1)(c) carries the statutory carve-out, which Woon's figure drops.**
-On p. 198 the residual limb is a bare box, "In other professional capacity", in parallel with the other two groups.
+**s 409(1)(c) carries the statutory carve-out.**
 The statute writes it "in his professional capacity (**other than** by way of a trade, profession or business mentioned in paragraph (b))", and that parenthesis is what makes (c) residual rather than an overlap with (b).
-The leaf is named with the exclusion and its `@desc` spells it out; a comment at the site says the encoding follows the statute and not the box.
-A figure of parallel branches cannot show an exclusion without an extra node, so this is a limit of the drawing rather than a mistake in the book.
+The leaf is named with the exclusion and its `@desc` spells it out.
 
 **s 409(2) and s 409(3) are definitions and avoidance of doubt, not elements.**
 They ride in the `@desc` of the leaf each governs, as Illustrations do elsewhere in this row.
 The two that change an answer rather than describe one are both in s 409(3): an unpaid office-holder still holds the office, and a contractual recital that no fiduciary relationship arises does not stop one arising.
 s 408(2)'s extensions of "employee" work the same way.
 
-**Woon's sub-boxes are kept.**
-Paragraph (b) is two columns in series — {trade | profession | business} then {banker | merchant | factor | broker | attorney | agent} — and paragraph (g) is "key executive of a" then {corporation | unincorporated association | partnership}.
-Both are inlined at that granularity rather than hidden behind a named sub-rule, so the ladder shows what the page shows.
+**The statute's own sub-lists are kept.**
+Paragraph (b) is two lists in series — "in the way of his trade, profession or business" then "as a banker, a merchant, a factor, a broker, an attorney or an agent" — and paragraph (g) is "a key executive of" then "a corporation, an unincorporated association or a partnership".
+Both are inlined one leaf per alternative rather than hidden behind a named sub-rule ([`notes/forks.md`](notes/forks.md), PC-9).
 
 **One breaking change to `Complaint`.**
 `charge-sheet.l4`'s `breach of trust` field keeps its name and changes TYPE, from `CBT Facts` to `Aggravated CBT Facts`.
@@ -659,15 +665,13 @@ Run with the `l4` binary built from `legalese/l4-ide` branch `robbery-demo`, `JL
 
 ## 2026-09-21 — s 405, the third limb recited
 
-Woon, *Essential Criminal Law* ch 8 p 192 draws s 405 as two branches.
-“Dishonesty” heads the upper one and fans into {Misappropriates | Converts to own use} → “that property” and {Uses | Disposes of} → “that property” → “in violation of” → {Direction of law | Legal contract}.
-“Intentionally suffers another person to” heads the lower one, runs through a *second* “dishonestly” box, and fans into the same four verbs.
-Nothing in the figure lets one adverb reach the other branch's verbs.
+s 405 writes each adverb in front of its own verbs: “dishonestly misappropriates or converts to his own use that property, or dishonestly uses or disposes of that property in violation of …, or intentionally suffers any other person to do so”.
+Nothing in the text lets one adverb reach the other limb's verbs ([`notes/forks.md`](notes/forks.md), PC-6).
 
 **The ladder was not the problem and did not move.**
 The third limb stays a single leaf, `intentionally suffers any other person to do so`, OR-ed in beside the two structured limbs.
 The leaf is named with the statute's anaphor intact, so answering it TRUE asserts the whole third limb — the other person's dishonesty and, where he used or disposed of the property, the violation.
-That is a factoring difference from Woon's figure, not a wrong answer, and the inert style's rule — only the operative atoms are lifted into named leaves — is what settles it.
+Splitting it into the other person's dishonesty and acts would be a different factoring, not a different answer, and the inert style's rule — only the operative atoms are lifted into named leaves — is what settles it.
 `CBT Facts` is unchanged; no field was added or removed.
 
 **Three defects of FORM were fixed, all in the recital.**
@@ -759,17 +763,17 @@ carrier drops, is [`projections/README.md`](projections/README.md).
 The carrier to read first is `projections/robbery-390-2.sentences`: **48 ways to satisfy
 s 390(2)**, one per line. Four timing limbs, times two of causes-or-attempts, times six harms.
 That number is the section, not the encoding. It read 36 until 2026-09-21; see
-“s 390(2) at Woon’s granularity” above.
+“s 390(2) at the granularity of its grammar” above.
 
 ## Section 390 stated as elements, in plain English
 
-Written out here so a criminal-law textbook's list can be laid beside it line by line.
+Written out here so any other statement of the elements can be laid beside it line by line.
 
 **This list is a TRANSCRIPTION and therefore a second source.** The module is the authority and
 `projections/robbery-390-2.sentences` is its generated prose; if this list and those disagree,
 this list is wrong. It exists because the generated prose carries the L4's own leaf names
-(`f's \`in order to commit theft\``), which is exact but is not what a reader compares against a
-textbook.
+(`f's \`in order to commit theft\``), which is exact but is not what a reader compares against
+another statement of the elements.
 
 **Robbery, s 390(1).** Robbery is not a third offence beside theft and extortion. It is either
 of those two, with something added. So:
@@ -812,7 +816,7 @@ of those two, with something added. So:
   robbery: 5 to 20 years and at least 12 strokes. It reaches every person jointly concerned,
   not only the one who caused the hurt.
 
-**Not encoded, and a textbook will have them:** s 391 gang-robbery and s 395 its punishment,
+**Not encoded, though they are part of the same Chapter:** s 391 gang-robbery and s 395 its punishment,
 s 396 gang-robbery with murder, s 397 (deadly weapon), and ss 398–402. The row stops at the
 four sections above.
 
