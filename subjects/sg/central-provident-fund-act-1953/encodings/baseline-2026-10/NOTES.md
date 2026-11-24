@@ -230,3 +230,48 @@ s 25(1)(a)(iii), s 25A beyond naming it, and everything from Part 3A onwards.
   `.txt` deposit; they were read cell by cell, not checked against the PDF.
 - The s 9(2) interest instrument, and the Minister's s 13(4) direction.
 - No case law was searched, and no human gate has been sought.
+
+## Added 2026-11-24: the employee's CPF over a calendar year (`cpf-wages-year.l4`)
+
+**Why.** `cpf-contributions.l4` answers one month of ordinary wages and says in terms that additional wages and every month before 2026 are not encoded.
+Income tax for a year of assessment taxes the income of the year before it: YA 2026 taxes 2025, and its CPF relief is the employee's share paid in 2025.
+`cpf-wages-year.l4` computes that share for twelve months of ordinary and additional wages, for 2025 or 2026, from the seat of the employee. The household calculator in `income-tax-act-1947/encodings/household-ya2026/` copies it in.
+
+**What it encodes.**
+First Schedule paragraph 1, the employee's column: nothing up to $500; the band's factor on the excess over $500 up to $750; the band's rate on ordinary wages up to the Ordinary Wage Ceiling and on the Relevant Additional Wages above $750.
+Paragraph 2(1) and (4)(c) with 4A(d): additional wages carry contributions only up to $102,000 less the year's ordinary wages (each month's ordinary wages counted up to the Ordinary Wage Ceiling), in the order the additional wages are paid.
+Paragraph 5: (a) a band starts the month after the birthday month, (c) the employee's fraction of a dollar is ignored, (da) the $102,000, (ea) the Ordinary Wage Ceiling ($7,400 in 2025, $8,000 from 2026), (eba) and (f).
+A citizen or a permanent resident past the second anniversary month pays; someone who is neither pays nothing (Exemption Order para 3); a permanent resident in the first two years is not covered (`NOTHING`), as is any year but 2025 and 2026 and any pay list that is not twelve months.
+
+**The 2025 figures (First Schedule paragraph 1 "with effect from 1 January 2025").** Employee's column, wages over $750 and the factor for $500 to $750:
+
+| band | rate over $750 | factor on the excess over $500 |
+|---|---|---|
+| 55 and below | 20% | 0.6 |
+| above 55 to 60 | 17% | 0.51 |
+| above 60 to 65 | 11.5% | 0.345 |
+| above 65 to 70 | 7.5% | 0.225 |
+| above 70 | 5% | 0.15 |
+
+Source: SSO's version of the Act "as at 1 Jan 2025" (https://sso.agc.gov.sg/Act/CPFA1953), read cell by cell in a browser on 2026-11-24 by a research subagent, with the amending notifications S 970/2024 and S 1025/2024 (both in force 1 January 2025).
+The research subagent reported (not re-checked by the encoder) that paragraph 1 and the additional-wage paragraphs were identical in all six SSO versions that applied during 2025 (from 1 Jan, 19 Jan, 1 Apr, 26 May, 1 Jul and 1 Dec), so the figures are taken to hold for the whole year.
+It also reported checking the table's column assignment (employer's second column, employee's third) in the page's cell structure for all five bands.
+The 2026 figures differ in two bands only: above 55 to 60 is 18% and 0.54, above 60 to 65 is 12.5% and 0.375; they are repeated from `cpf-contributions.l4`, and five assertions in `cpf-cases-wages-year.l4` tie the two files together.
+The employer's columns are not encoded: they do not enter an employee's net pay.
+What is not deposited: the 2025 text itself. It is held outside the repository (a hand transcription of paragraphs 1 to 5, 8 and 9, with the notifications), and putting it here is a first deposit of third-party text that needs the maintainer's word.
+
+**Forks.**
+
+| fork | text | readings | taken |
+|---|---|---|---|
+| W1 | paragraph 1's third column says "20% of the Relevant Additional Wages" and paragraph 2(1) limits the employer's contribution | the employee's share on additional wages above the annual ceiling is nil, or 20% of all of it | nil: where no contribution is payable at all there is nothing to recover. A discriminating case: $7,400 a month, $13,200 bonus in January and $5,000 more in December: the December bonus adds nothing (the cases file) |
+| W2 | paragraph 5(a)(i): the contributions "payable in respect of an employee above 55, 60, 65 or 70" start "from the first day of the month following the month in which the employee attains that age" | the older band starts the month after the 55th, 60th, 65th, 70th birthday month; or after the month of turning 56, 61, 66, 71 | the first, as in `cpf-contributions.l4` |
+| W3 | paragraph 5(c): "in calculating the amount recoverable ... a fraction of a dollar is to be ignored" | the fraction is dropped once for each month's amount; or once for the ordinary-wage part and once for the additional-wage part | once for each month's amount |
+| W4 | paragraphs 2(2), 3(3), 4(1) | the ceiling is tested as each additional wage is paid (on an estimate), or on the year's actual ordinary wages | the actual year, as paragraph 2(4)(c)'s recomputation "at the end of the current year" ends up with; a mid-year view could differ by the employer's cash-flow but not by the year's total |
+| W5 | paragraph 3 pools related employers; paragraph 2 is per employer | | one employer only; more than one is not covered by this module |
+
+**Checks** (2026-11-24, `unstable-20261124-9d26421` and the stable `main` build 1.6.112): `cpf-cases-wages-year.l4` 27 assertions satisfied, 0 failed, 0 errors on both.
+The expected values were worked by hand from the paragraphs' arithmetic (each case's working is in its comment), not from any software. No independent test pass has been run on this module.
+
+**Also fixed 2026-11-24:** `cpf-self-employed.l4` line 183 read `NOT a AND NOT b`; the unstable compiler now rejects that (`check/not-reaches-connective`), and with it the 15 assertions of `cpf-cases-self-employed.l4`. Each NOT is now bracketed.
+
