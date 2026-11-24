@@ -123,6 +123,9 @@ notes/PLAN.md §2 says "the single input is always `GIVEN f IS A ...`"; §5 writ
 
 Added 2026-09-30 (WONTON), when s 300 Exception 2 was wired to this module.
 
+**Status:** open, for human review; the reading taken stands until ruled.
+Both placements below are stated from the Code alone (2026-11-24).
+
 **Text.** s 300 Exception 2: "if the offender, in the exercise of the right of private defence of person or property, exceeds the power given to him by law".
 s 96 needs only "done in the exercise of the right"; Exception 2 needs a right that was being exercised and an act that went beyond it.
 So the one boolean `exception under s 96` has to become three outcomes: no right, a right exceeded, a valid exercise.
@@ -138,10 +141,10 @@ s 98(1) and the extent sections are the Code's own "does not extend to", which i
 A defender who strikes after the belief of danger has ended (s 101(2)), or after a thief's property is recovered (s 104(2)(c)), is here exceeding a right that arose, so Exception 2 can reach him.
 The other reading: once the right has ceased there is no right to exercise, so Exception 2 cannot apply and the killing is murder.
 The Code says only that the right "continues as long as" / "continues till"; it does not say which.
-Woon, *Essential Criminal Law* paras 10.9-10.9.1, files these cases as exceeding, in the third stage of its private-defence flowchart (as we read that stage, whose drawing is ambiguous).
+What the text offers for the reading taken is Exception 2's "exceeds the power given to him by law": a right that arose and then ended is a power the defender had, and striking after its end goes beyond it (restated 2026-11-24 on the text alone, when a secondary source cited here was withdrawn).
 (2) s 98(2) on the ARISE side, as one leaf.
 The leaf cannot tell recourse available at the outset from recourse that became available during the struggle (s 98 illus (b): the police arrive midway).
-Woon's flowchart files the second as exceeding too; here both are "no right".
+Illustration (b) says the right "arises" at the ambush and "ceases" when the police arrive, which is the same shape as a continuance case under (1), so the other reading files recourse arising mid-struggle as exceeding too; here both are "no right".
 Splitting the leaf in two would let the encoding take that reading; it would add a field to every `Private Defence Facts` record, and is not done.
 
 **Polarity (E-1).** `the right of private defence was exceeded` puts NOT over the two `extends to the act` ladders, never over a leaf.
