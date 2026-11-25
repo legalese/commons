@@ -8,7 +8,7 @@ They do not say what a court must hold, and nothing in this encoding does either
 
 Status: `draft`, version 0.1.0, written 2026-11-25 by one encoder working alone from the brief, then revised the same day on an independent test pass (section 11) and an adversarial review (section 12).
 No domain expert has read it.
-The review's requests that the independent test file pinned were held at first, then made later the same day on the coordinator's leave, with that file respelled in a commit of its own that changed no expected value (section 13).
+The review's requests that the independent test file pinned were held at first, then made later the same day on the coordinator's leave, with that file respelled in a commit of its own that changed no input value and no case: eight lines changed only the spelling of a result, and three lines (576, 577, 715) changed their expected result, which the parent corrected against 5.5's own sentence (section 13, "Three expected values").
 
 What was checked, and how:
 
@@ -278,7 +278,7 @@ Before this round's fixes it gave 149 satisfied and 3 failed on both builds (uns
 
 After the fixes: 152 satisfied, 0 failed, on both builds (section 7).
 No other expected value in the file was edited.
-Later the same day, on the coordinator's leave, the file was respelled for the renames, in a commit of its own whose every change is a name, a field-name mapping, a wrapper or the header note that says so: no expected value and no input value changed, and it still gives 152 satisfied, 0 failed, on both builds (section 13 lists the lines and the mapping).
+Later the same day, on the coordinator's leave, the file was respelled for the renames, in a commit of its own whose every change is a name, a field-name mapping, a wrapper or the header note that says so: no input value changed, eight lines changed only the spelling of an expected result, and three lines (576, 577, 715) changed their expected result to the one 5.5 itself words; it still gives 152 satisfied, 0 failed, on both builds (section 13 lists the lines, the mapping, and what those three lines are).
 
 **Example 10 goes through different rules in the two test files.**
 The independent author's Example 10 assertions (lines 736 and 737) go through the "precludes" field: they set 5.7's exclusive-license field, `the transferee obtains a license that precludes all other persons, including the licensor, from using the licensed intellectual property`, to TRUE, and expect 5.7's "an exclusive license" and the zone not applying.
@@ -326,6 +326,7 @@ At that commit `tests-independent.l4` does not type-check, so `check.sh` is red 
 The two commits therefore go together, and the respelling cannot be reverted alone.
 
 **The respelling of `tests-independent.l4`** is the commit whose subject ends `tests-independent.l4 respelled for the renames`, and whose message says `signature-only: constructors, field names, CONSIDER wrappers; no expected value touched`.
+That message is accurate for every line but three: see "Three expected values" below.
 Its line numbers are the same before and after: every change is within its line, and the one new definition is appended after the last assertion.
 
 | lines | what changed |
@@ -363,6 +364,16 @@ A NOTHING reaching it fails loudly, never passes: on both builds the assertion i
 That was probed on 2026-11-25 on a small file of its own, where the same holds under `NOT`, and on the scratch copy above with FALSE mapped to "not stated", where line 549 errored; `check.sh`, run on that copy, read the file as 151 satisfied and 1 failed on both builds, and exited 1.
 The unstable build also warns about the missing branch at check time (`lint/non-exhaustive-match`, a Warning, which `check.sh` does not count); main does not.
 Neither assertion can reach NOTHING as written, because the BOOLEAN maps to one of the two stated values.
+
+**Three expected values.**
+Lines 576, 577 and 715 are not renames.
+The independent author expected, for a pool restraint that is naked price-fixing or market division, 3.4's sentence "the agencies will challenge the restraint under the per se rule" (3.4 [pdf page 20]).
+5.5 states its own sentence for those two restraints: "they are subject to challenge under the per se rule" (5.5 [pdf page 32], line 1117 of the deposited text).
+After the review round the encoding answers 5.5's sentence there, and `the arrangement is subject to challenge under the per se rule` is the expected result on those three lines now.
+This corrects the author's expectation against the text, in the manner of B6: the author took 3.4's modal for a restraint 5.5 words differently.
+It is recorded here and in the commit message of the NOTES commit because the respelling commit's own message says no expected value was touched, which is not true of these three lines.
+The other eight lines that changed an expected result (514, 558, 582, 583, 592, 593, 672, 681) are renames of the same case: the same function returns, for the same inputs, the same result under its new name.
+That was checked by script on 2026-11-25: every number, TRUE, FALSE, NOTHING and JUST on all 152 assertion lines is the same before and after the respelling, names blanked.
 
 **Mechanical evidence.**
 `git show --word-diff=plain` of the respelling commit was saved for the coordinator outside the repository, and regenerates from the commit.
