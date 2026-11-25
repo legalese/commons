@@ -6,7 +6,8 @@ What it does (and every thing it does that the older mechanical extraction in th
   - an amendment marker of a consolidated version (anchors in p.arrow / p.modref, titled e.g. "32026R1744: REPLACED") becomes its own line "▼M1 REPLACED" / "▼B";
   - a footnote reference (a superscript inside a link) becomes "[^N]" and the footnote itself "[^N] text";
   - any other superscript (an exponent) becomes "^N", so 10<sup>25</sup> reads "10^25" and not "1025" (the older extraction flattened it);
-  - table rows read "| cell | cell |".
+  - table rows read "| cell | cell |"; a table nested in a cell is written after the row that holds it, whose label and lead-in text come first.
+Changed from the copy in subjects/eu/ai-act-2024 in this one respect (the nested-table rule): that copy drops the label and the text that precede a table nested in a cell.
 It does not drop or reorder text.  Writes the sha256 of IN and OUT to stdout."""
 import hashlib, html, re, sys
 from html.parser import HTMLParser
@@ -47,6 +48,16 @@ class P(HTMLParser):
         self.stack.append((tag, cls))
         if tag in SKIP:
             self.skip += 1
+            return
+        if tag == "table" and self.cell is not None:
+            # a table nested in a cell: write the enclosing row as it stands, so that the label and the text that precede the
+            # nested table are not lost (the nested table's own rows follow it, in order)
+            c = re.sub(r"\s+", " ", " ".join(self.cell)).strip()
+            row = (self.row or []) + ([c] if c else [])
+            if any(row):
+                self.out.append("| " + " | ".join(row) + " |")
+            self.row = None
+            self.cell = None
             return
         if tag == "tr":
             self.flush()

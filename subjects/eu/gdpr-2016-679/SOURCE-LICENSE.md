@@ -43,7 +43,7 @@ What was read on **2026-11-26**, with the User-Agent `legalese-commons-source-fe
   **What this does not settle.**
   The Regulation is an act of the European Parliament and of the Council, published by the Publications Office in the Official Journal.
   Whether it is a "public document produced by the Commission or by public and private entities on its behalf" within Article 2(1), and whether the consolidated version is one, is a question the text of the Decision does not answer, and no reading is recorded here.
-  If the Decision does apply, Article 6(2)(a) and (b) are the conditions it names as possible: acknowledge the source (each `.meta.json` does) and do not distort the meaning (the renderings are mechanical, and the losses the one known defect causes are recorded in the `text_caveat` of `eu-gdpr-2016-679.meta.json`).
+  If the Decision does apply, Article 6(2)(a) and (b) are the conditions it names as possible: acknowledge the source (each `.meta.json` does) and do not distort the meaning (the renderings are mechanical, and each `.meta.json` records the check that no word of the XHTML is missing from the rendering).
 - Not retried on 2026-11-26: EUR-Lex (a bot challenge on 2026-10-01 and 2026-10-24), the Publications Office's own copyright notice (HTTP 403 from an "Azure WAF" page on 2026-10-24 and 2026-11-17) and the `commission.europa.eu` legal notice (200 on 2026-10-24, covering "content owned by the EU on this website", meaning that site).
   The results are recorded in `subjects/eu/ai-act-2024/SOURCE-LICENSE.md` and `subjects/eu/eprivacy-directive-2002/SOURCE-LICENSE.md`.
   The 403 and the challenge were treated as a no and not worked around.
