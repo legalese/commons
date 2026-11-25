@@ -17,7 +17,7 @@ One expected value was wrong when first written, and the fault was mine, not the
 No assertion has been changed to match the code.
 Two of my expectations changed on review because the reading changed, and each was re-derived from the text (section 11, findings 1 and 2): the rejected offers of 150 and 90 in `mg-tests-boundaries.l4` were `NOTHING` and are now not accepted (fork FF-2); the rejected offer of 120 that would take a division's assets out of the market in `mg-tests.l4` barred the claim and now does not (fork FD-1).
 A review before the first hand-back found one test too weak to catch its rule: the failing division test for a rejected offer asserted only that the answer was not `NOTHING`. It now asserts the whole finding.
-Measured 2026-11-25 on scratch copies: with "keeps the assets in the market" removed from the division's bar, `mg-tests.l4` fails one assertion (the one after "Footnote 62's bar applied to a division only for an offer keeping the assets"); with the old rule restored (`NOTHING` whenever an offer at or below liquidation value is received), `mg-tests.l4` and `mg-tests-boundaries.l4` fail two each.
+Measured 2026-11-25 on scratch copies: with "keeps the assets in the market" removed from the division's bar, `mg-tests.l4` fails one assertion (the one after "Footnote 62's bar applied to a division only for an offer keeping the assets"); with the failing firm reading made to answer `NOTHING` whenever any offer at or below liquidation value is received, `mg-tests.l4` and `mg-tests-boundaries.l4` fail two each.
 
 The source is `registers/source-bundle/2023-merger-guidelines.txt`, a `pdftotext` extraction of the justice.gov PDF (sha256 in the `.meta.json` beside it).
 Page markers `[pdf page N of 51]` are the PDF's page index, not the printed page numbers.
@@ -261,7 +261,7 @@ Every reading below was taken by this builder: assumed, not ruled.
 ## 7. Findings
 
 1. Footnotes 87 and 90 (`[pdf pages 46 and 47 of 51]`) send the reader to "Section 4.3.A, n.81" for the hypothetical cartel, but n.81 is the Penn State Hershey citation and the hypothetical cartel is n.82 (`[pdf page 43 of 51]`).
-   Closed 2026-11-25: checked against the PDF itself (sha256 equal to the bundle's `pdf_sha256`) with `pdftotext -layout` on pdf pages 42 to 47, first by the parent session and then by this builder: n.81 is on page 42 and n.82 on page 43, and the "n.81" stands in fns 87 and 90.
+   Closed 2026-11-25: checked against the PDF itself (sha256 equal to the bundle's `pdf_sha256`) with `pdftotext -layout`, by the parent session on pdf pages 42 to 44 and by this builder on pages 42 to 47: n.81 is on page 42 and n.82 on page 43, and the "n.81" stands in fns 87 and 90.
    The cross-reference is the Guidelines' own error, not an artefact of the extraction.
 2. Footnote 13's own figures for six equal firms (16.67 each) sum to 100.02, so under fork G1-2 the text's illustration is not a market Guideline 1 reads; the exact shares (100/6) give 10,000/6, which rounds to the text's 1,667.
 3. Footnote 30 says what a share over 50 percent and a share under 50 percent mean, and nothing of exactly 50.
@@ -300,7 +300,7 @@ Each line says whether it was read at source in this row or only reported to thi
 
 `tests-independent.l4` was written on 2026-11-25 by a fresh agent, not this builder.
 It read the source text first and wrote its expected answers down before opening the encoding; it then took only the encoding's exported names and signatures, and read none of its tests or fixtures (the file's header says so).
-It has 291 assertions, each citing the provision and the `[pdf page]` its answer comes from; where the text is silent it asserts `NOTHING` or "not JUST TRUE", never a bare FALSE.
+It has 291 assertions, in groups each citing the provision and the `[pdf page]` its answers come from; where the text is silent it asserts `NOTHING` or "not JUST TRUE", never a bare FALSE.
 
 On the encoding as first handed back (commit 7ee34b5cf), 290 were satisfied and 1 failed, on both builds (re-measured by this builder on a scratch copy).
 The failure, at line 1040: footnote 62's test answered `JUST TRUE` for an offer of 10 against a liquidation value of -5, while the failing firm reading answered `NOTHING` for the same input, so the encoding disagreed with itself.
