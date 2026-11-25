@@ -63,7 +63,7 @@ There is no separate seat layer (no `@export` functions written for the seat); a
 
 ## 3. Target and builds
 
-Target compiler: `main` (the stable `l4`), build 1.6.112 at `/Users/mengwong/.cache/l4-main/112/l4`, whose `--version` prints `1.6.112 (main, e4f4bf3, 2026-11-18)`.
+Target compiler: `main` (the stable `l4`), build 1.6.112 cached by `fetch-main-l4.sh`, whose `--version` prints `1.6.112 (main, e4f4bf3, 2026-11-18)`.
 The encoding is also checked with the unstable build `unstable-20261125-82a76fe (unstable, 82a76fe, 2026-11-25)`.
 Run it as `L4=<unstable l4> L4_MAIN=<main l4> ./check.sh`; with no `L4_MAIN`, `fetch-main-l4.sh` fetches the newest main build.
 The main run has `JL4_LIBRARY_PATH` unset.
