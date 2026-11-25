@@ -1,0 +1,262 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `ic-core`
+IMPORT `ic-core-company-kinds`
+IMPORT `ic4-part8-forced-sale`
+
+-- ic-proc-forced-sale: the procedure the Israeli Companies Law, 5759-1999 (חוק החברות, התשנ״ט–1999) lays down for the forced sale of shares, sections 336 to 341.
+-- A regulative layer over the Boolean encoding in ic4-part8-forced-sale.l4: the full tender offer in a public company and the bar on buying past ninety percent (336, 337(ב)),
+-- the forced sale and the change of the ownership records (337(א)), the offeree's petition for appraisal within six months (338),
+-- and, in a private company, the offeror's notice to a dissenting shareholder, the dissenter's application to the court, and the offeror's copy of the notice and the price (341).
+-- Source: the Hebrew Wikisource raw text (an unofficial consolidation, not the official text); each `-- src:N |` line copies line N of it.
+-- The Boolean gates (the ninety percent bar, the acceptance of a full offer by five and two percent and by the disinterested offerees, the right to ask for appraisal,
+-- the agreeing rate and its two months, the dissenter's right to apply, the duty to buy) are called, not restated.
+-- The L4 timeline is a bare integer line with no calendar: every clock here counts calendar days from the event its TIMELINE line names.
+-- A period the Act gives in months is turned into days by `מספר הימים בתקופה שהחוק קובע בחודשים` below, from the DATE the period starts on, so each DEONTIC takes that date as an input
+-- and its trace starts AT 0 on that day.
+-- Where the text gives no time limit, no clock is encoded: such a step stays open however long it waits and is never a breach.
+-- Chained or separate: the DEONTICs for sections 337 to 341 are run each on its own, because a month is not a fixed number of days and each month clock needs the date it starts from;
+-- inside each, the next step the text names is chained (the court's step after an application; the sale and purchase after a notice; the company's registration after the offeror's copy);
+-- the one exception is 341(ב) into 341(ג): the month of 341(ב) is also the day the duty of 341(ג) falls due, so the 341(ב) DEONTIC opens the 341(ג) one at the end of its month or after the court's ruling.
+-- Section 338א (the same sections apply to each class of security the offer covers) is run by calling the DEONTICs once for each class; section 339 (the company becomes private)
+-- and section 340(א) (dormant shares) state a status, not an act, and are the Boolean encoding's.
+
+§ `הליך המכירה הכפויה: סעיפים 336 עד 341`
+
+§§ `הצדדים והפעולות`
+
+-- The five who act: the offeror (in a public company, the buyer; in a private company, the person who offered to buy), the offeree, the company whose shares are bought,
+-- the dissenting shareholder, and the court.
+DECLARE `גורם בהליך המכירה הכפויה` IS ONE OF
+    `המציע בהצעת רכש`
+    `הניצע בהצעת רכש`
+    `החברה שמניותיה נרכשות`
+    `בעל מניה מתנגד`
+    `בית המשפט בהליך המכירה הכפויה`
+
+-- The acts the text names: buying past ninety percent (336(א), 337(ב)), changing the ownership records (337(א)), the offeree's application for a fair value (338(א), (ב)),
+-- the court fixing it (338(א)), the offeror's notice (341(א)), the dissenter's sale and the offeror's purchase (341(ב)), the dissenter's application (341(ב)),
+-- the court deciding otherwise or ruling that it does not (341(ב), (ג)), the offeror's copy and price (341(ג)), the company's registration (341(ג)).
+DECLARE `פעולה בהליך המכירה הכפויה` IS ONE OF
+    `המציע רוכש מניות שיקנו לו למעלה מתשעים אחוזים שלא בהצעת רכש מלאה שהתקבלה`
+    `המציע רוכש מניצעים שנענו מניות שיקנו לו למעלה מתשעים אחוזים לאחר שההצעה לא התקבלה`
+    `החברה משנה את רישומי הבעלות במניות`
+    `הניצע מבקש מבית המשפט לקבוע את השווי ההוגן`
+    `בית המשפט קובע את השווי ההוגן ומורה לשלם אותו`
+    `המציע מודיע לבעל מניה מתנגד שברצונו לרכוש את מניותיו`
+    `בעל מניה מתנגד מוכר את מניותיו למציע`
+    `המציע רוכש את מניותיו של בעל מניה מתנגד`
+    `בעל מניה מתנגד מבקש מבית המשפט להחליט אחרת`
+    `בית המשפט מחליט אחרת לבקשת בעל מניה מתנגד`
+    `בית המשפט פוסק בבקשת בעל מניה מתנגד ואינו מחליט אחרת`
+    `המציע שולח לחברה העתק מהודעתו ומעביר לה את התמורה`
+    `החברה רושמת את המציע כבעל המניות`
+
+§§ `מניין תקופה שהחוק קובע בחודשים`
+
+-- A counting rule, not a provision. The Act gives six months, two months, "a month" and "חודש ימים": each is read as that many calendar months from the day the period starts on,
+-- ending on the same day of the month (on the last day of the month where that month has no such day: `add months` of the daydate library), and that last day is inside the period.
+-- The number of days is the distance from the start day to that last day. The other reading (a month of thirty days) is the fork recorded at each DEONTIC.
+GIVEN `היום שהתקופה נמנית ממנו` IS A DATE
+      `מספר החודשים שהחוק קובע` IS A NUMBER
+GIVETH A NUMBER
+`מספר הימים בתקופה שהחוק קובע בחודשים` MEANS
+    (Day (`add months` `היום שהתקופה נמנית ממנו` `מספר החודשים שהחוק קובע`)) MINUS (Day `היום שהתקופה נמנית ממנו`)
+
+§§ `סעיפים 336 ו־337(ב): איסור הרכישה מעל תשעים אחוזים`
+
+-- src:2191 | {{ח:סעיף|336|הצעת רכש מלאה|תיקון: תשס״ה, תשע״א־3}}
+-- src:2192 | {{ח:תת|(א)}} לא ירכוש אדם מניות של חברה ציבורית או זכויות הצבעה בחברה כאמור ({{ח:פנימי|חלק 8 פרק 3|בפרק זה}} – מניות) או סוג של מניות של חברה ציבורית, כך שלאחר הרכישה תהיה לו החזקה של למעלה מתשעים אחוזים ממניות החברה הציבורית או מסוג המניות, אלא בדרך של הצעת רכש לכלל המניות או לסוג המניות (להלן – הצעת רכש מלאה), אשר תתקבל לפי הוראות {{ח:פנימי|חלק 8 פרק 3|פרק זה}}.
+-- src:2215 | {{ח:תת|(ב)}} הפרת הוראות {{ח:פנימי|חלק 8 פרק 3|פרק זה}} היא הפרת חובה חקוקה כלפי בעלי המניות בחברה.
+-- A person shall not buy shares of a public company so that he holds more than ninety percent, except by a full tender offer that is accepted under the chapter;
+-- a breach of the chapter is a breach of a statutory duty toward the shareholders (340(ב)).
+-- The text states no period: the prohibition has no end date and no clock is encoded.
+-- FORK: סעיף 336(א) | the prohibition is a SHANT: the offeror breaches the moment he buys past ninety percent otherwise than by an accepted full offer, and the breach is the statutory-duty breach of section 340(ב) | a bar that only strips the purchased shares of their rights (340(א), dormant shares) without making the purchase itself a breach
+-- FORK: סעיף 336(א) | whether the full offer was accepted is a fact the caller states when the DEONTIC is run (the Boolean input), so the purchase is judged on the offer's outcome | judged only at the moment of the purchase, before the offer's outcome is known
+-- TIMELINE: unit=none stated; day 0=the day the offeror's holding would pass ninety percent; counting="silent"
+@ref סעיף 336(א); סעיף 340(ב) הצעת רכש מלאה; תוצאות רכישה אסורה (src:2191-2192; src:2215-2215)
+GIVEN `עובדות החברה הנבדקת` IS A `עובדות על חברה`
+      `שיעור ההחזקה במניות החברה הציבורית או בסוג המניות לאחר הרכישה` IS A NUMBER
+      `הרכישה נעשית בדרך של הצעת רכש מלאה שהתקבלה לפי הפרק` IS A BOOLEAN
+GIVETH A DEONTIC `גורם בהליך המכירה הכפויה` `פעולה בהליך המכירה הכפויה`
+`סעיף 336(א) - הליך: אסור לרכוש מעל תשעים אחוזים אלא בהצעת רכש מלאה שהתקבלה` MEANS
+    IF `סעיף 336(א) - אסור לרכוש מניות כך שיהיה למעלה מתשעים אחוזים אלא בהצעת רכש מלאה שהתקבלה` `עובדות החברה הנבדקת` `שיעור ההחזקה במניות החברה הציבורית או בסוג המניות לאחר הרכישה` `הרכישה נעשית בדרך של הצעת רכש מלאה שהתקבלה לפי הפרק`
+    THEN
+        PARTY `המציע בהצעת רכש`
+        SHANT `המציע רוכש מניות שיקנו לו למעלה מתשעים אחוזים שלא בהצעת רכש מלאה שהתקבלה`
+        HENCE FULFILLED
+        LEST BREACH BY `המציע בהצעת רכש` BECAUSE "המציע רכש מניות של חברה ציבורית כך שהחזקתו עברה תשעים אחוזים שלא בדרך של הצעת רכש מלאה שהתקבלה, בניגוד לסעיף 336(א); ההפרה היא הפרת חובה חקוקה כלפי בעלי המניות (סעיף 340(ב))"
+    ELSE FULFILLED
+
+-- src:2196 | {{ח:סעיף|337|מכירה כפויה|תיקון: תשע״א־3, תשע״א־4}}
+-- src:2199 | {{ח:תת|(ב)}} לא התקבלה הצעת רכש מלאה כאמור בסעיף קטן (א) או (א1) לא ירכוש המציע, מניצעים שנענו להצעה, מניות שיקנו לו החזקה של למעלה מתשעים אחוזים מכלל המניות בחברה או מכלל סוג המניות שלגביהן הוצעה ההצעה.
+-- src:2215 | {{ח:תת|(ב)}} הפרת הוראות {{ח:פנימי|חלק 8 פרק 3|פרק זה}} היא הפרת חובה חקוקה כלפי בעלי המניות בחברה.
+-- If a full tender offer was not accepted as 337(א) or (א1) provide, the offeror shall not buy from offerees who responded shares that would give him more than ninety percent.
+-- The acceptance is called from the Boolean encoding (five percent, two percent, and more than half of the disinterested offerees), not restated.
+-- The text states no period: no clock is encoded.
+-- FORK: סעיף 337(ב) | the prohibition is a SHANT with the statutory-duty breach of 340(ב), as for 336(א) | a bar that only strips the shares of their rights (340(א))
+-- TIMELINE: unit=none stated; day 0=the day the offeror's purchase from responding offerees would pass ninety percent; counting="silent"
+@ref סעיף 337(ב); סעיף 340(ב) מכירה כפויה; תוצאות רכישה אסורה (src:2196-2196; src:2199-2199; src:2215-2215)
+GIVEN `שיעור הון המניות המונפק, או ההון המונפק מהסוג שהוצעה לגביו ההצעה, שבידי ניצעים שלא נענו להצעה` IS A NUMBER
+      `מספר הניצעים שאין להם עניין אישי בקבלת ההצעה` IS A NUMBER
+      `מספר הניצעים שאין להם עניין אישי בקבלת ההצעה ונענו להצעה` IS A NUMBER
+      `שיעור ההחזקה שיהיה למציע לאחר הרכישה מניצעים שנענו, בכלל המניות או בסוג המניות שהוצעה לגביו ההצעה` IS A NUMBER
+GIVETH A DEONTIC `גורם בהליך המכירה הכפויה` `פעולה בהליך המכירה הכפויה`
+`סעיף 337(ב) - הליך: אסור לרכוש מניצעים שנענו מעל תשעים אחוזים כשההצעה לא התקבלה` MEANS
+    IF `סעיף 337(ב) - אסור למציע לרכוש מניצעים שנענו מניות שיקנו לו למעלה מתשעים אחוזים` (`סעיף 337 - כלל המניות שביקש המציע לרכוש עוברות לבעלותו` `שיעור הון המניות המונפק, או ההון המונפק מהסוג שהוצעה לגביו ההצעה, שבידי ניצעים שלא נענו להצעה` `מספר הניצעים שאין להם עניין אישי בקבלת ההצעה` `מספר הניצעים שאין להם עניין אישי בקבלת ההצעה ונענו להצעה`) `שיעור ההחזקה שיהיה למציע לאחר הרכישה מניצעים שנענו, בכלל המניות או בסוג המניות שהוצעה לגביו ההצעה`
+    THEN
+        PARTY `המציע בהצעת רכש`
+        SHANT `המציע רוכש מניצעים שנענו מניות שיקנו לו למעלה מתשעים אחוזים לאחר שההצעה לא התקבלה`
+        HENCE FULFILLED
+        LEST BREACH BY `המציע בהצעת רכש` BECAUSE "הצעת הרכש המלאה לא התקבלה כאמור בסעיף 337(א) או (א1) והמציע רכש מניצעים שנענו מניות שהקנו לו למעלה מתשעים אחוזים, בניגוד לסעיף 337(ב); ההפרה היא הפרת חובה חקוקה כלפי בעלי המניות (סעיף 340(ב))"
+    ELSE FULFILLED
+
+§§ `סעיף 337(א): העברת המניות ושינוי הרישומים`
+
+-- src:2194 | {{ח:תת|(ג)}} על אף האמור בסעיף קטן (ב), החזיק אדם ביום כ״ה בשבט התש״ס (1 בפברואר 2000) מניות בשיעור כאמור בסעיף קטן (ב), לפי הדין שחל ערב היום האמור, לא ירכוש מניות נוספות אלא בדרך של הצעת רכש מלאה אשר התקבלה על ידי הניצעים, באופן ששיעור הניצעים שלא נענו להצעה מהווה פחות ממחצית מהון המניות המונפק, או מההון המונפק מסוג המניות שלגביהן הוצעה ההצעה; התקבלה הצעת רכש מלאה כאמור בסעיף קטן זה, יעברו כלל המניות שביקש המציע לרכוש לבעלותו, והרישומים של הבעלויות במניות ישונו בהתאם לכך.
+-- src:2196 | {{ח:סעיף|337|מכירה כפויה|תיקון: תשע״א־3, תשע״א־4}}
+-- src:2197 | {{ח:תת|(א)}} התקבלה הצעת רכש מלאה על ידי הניצעים, באופן ששיעור ההחזקות של הניצעים שלא נענו להצעה מהווה פחות מחמישה אחוזים מהון המניות המונפק או מההון המונפק מסוג המניות שלגביהן הוצעה ההצעה ויותר ממחצית הניצעים שאין להם עניין אישי בקבלת ההצעה נענו לה, יעברו כלל המניות שביקש המציע לרכוש לבעלותו והרישומים של הבעלויות במניות ישונו בהתאם. על מי שיש לו עניין אישי יחולו הוראות {{ח:פנימי|סעיף 276|סעיף 276}}, בשינויים המחויבים.
+-- src:2198 | {{ח:תת|(א1)}} על אף האמור בסעיף קטן (א), הצעת רכש מלאה תתקבל אם שיעור ההחזקות של הניצעים שלא נענו להצעה מהווה פחות משני אחוזים מהון המניות המונפק או מהון המונפק מסוג המניות שלגביהן הוצעה ההצעה.
+-- Where a full tender offer is accepted (by 337(א), (א1), or, for a holder who held past ninety percent on 1 February 2000, by 336(ג)), all the shares the offeror asked to buy pass to his ownership
+-- and the ownership records are changed accordingly. The shares pass by the Act itself: no party's act is named for that. The one act is the change of the records.
+-- The text names no party for it ("והרישומים של הבעלויות במניות ישונו") and no period: the company that keeps the records is given the duty, with no clock.
+-- The acceptance under 336(ג) is an input the caller reads from `סעיף 336(ב) ו־(ג) - רכישת מניות נוספות בידי מי שמחזיק למעלה מתשעים אחוזים` (it answers `מותר לרכוש בהצעת רכש מלאה שהתקבלה כאמור בסעיף 336(ג)`), as the Boolean section 338 gate also takes it.
+-- FORK: סעיף 337(א) | the duty to change the ownership records is the company's (it keeps them), with no clock | the offeror's duty, or no party's: a pure effect of the Act
+-- TIMELINE: unit=none stated; day 0=the day the full tender offer is accepted; counting="silent"
+@ref סעיף 336(ג); סעיף 337(א) הצעת רכש מלאה; מכירה כפויה (src:2194-2194; src:2196-2198)
+GIVEN `ההצעה התקבלה כאמור בסעיף 336(ג)` IS A BOOLEAN
+      `שיעור הון המניות המונפק, או ההון המונפק מהסוג שהוצעה לגביו ההצעה, שבידי ניצעים שלא נענו להצעה` IS A NUMBER
+      `מספר הניצעים שאין להם עניין אישי בקבלת ההצעה` IS A NUMBER
+      `מספר הניצעים שאין להם עניין אישי בקבלת ההצעה ונענו להצעה` IS A NUMBER
+GIVETH A DEONTIC `גורם בהליך המכירה הכפויה` `פעולה בהליך המכירה הכפויה`
+`סעיף 337(א) - הליך: רישום העברת המניות לאחר שהצעת הרכש המלאה התקבלה` MEANS
+    IF `ההצעה התקבלה כאמור בסעיף 336(ג)` OR `סעיף 337 - כלל המניות שביקש המציע לרכוש עוברות לבעלותו` `שיעור הון המניות המונפק, או ההון המונפק מהסוג שהוצעה לגביו ההצעה, שבידי ניצעים שלא נענו להצעה` `מספר הניצעים שאין להם עניין אישי בקבלת ההצעה` `מספר הניצעים שאין להם עניין אישי בקבלת ההצעה ונענו להצעה`
+    THEN
+        PARTY `החברה שמניותיה נרכשות`
+        MUST `החברה משנה את רישומי הבעלות במניות`
+        HENCE FULFILLED
+    ELSE FULFILLED
+
+§§ `סעיף 338: סעד ההערכה בתוך שישה חודשים`
+
+-- src:2201 | {{ח:סעיף|338|סעד הערכה|תיקון: תשס״ה, תש״ע־2, תשע״א־3, תשע״א־4}}
+-- src:2202 | {{ח:תת|(א)}} בית המשפט רשאי, לבקשתו של כל מי שהיה ניצע בהצעת רכש מלאה שהתקבלה כאמור {{ח:פנימי|סעיף 336|בסעיפים 336(ג)}} {{ח:פנימי|סעיף 337|ו־337(א) או (א1)}}, לקבוע, כי התמורה בעבור המניות היתה פחות משיווין ההוגן, וכי יש לשלם את השווי ההוגן, כפי שיקבע בית המשפט.
+-- src:2203 | {{ח:תת|(ב)}} בקשה כאמור בסעיף קטן (א) תוגש לא יאוחר משישה חודשים ממועד קבלת הצעת הרכש המלאה.
+-- src:2204 | {{ח:תת|(ג)}} המציע רשאי לקבוע בתנאי הצעת הרכש המלאה, כי ניצע שנענה להצעת הרכש המלאה שהתקבלה כאמור {{ח:פנימי|סעיף 337|בסעיף 337(א) או (א1)}}, לא יהיה זכאי לסעד לפי סעיף זה.
+-- src:2205 | {{ח:תת|(ד)}} לא יהיה תוקף לקביעת מציע לפי סעיף קטן (ג), אם המציע או החברה לא פרסמו לפני מועד ההיענות להצעה את המידע שחובה לפרסם לפי כל דין בקשר עם הצעת הרכש המלאה.
+-- The court may, at the request of any offeree in a full tender offer accepted as 336(ג) or 337(א) or (א1) provide, determine that the consideration was below fair value and that the fair value, as the court fixes it, is to be paid.
+-- The application is to be filed no later than six months from the date the full tender offer was accepted. The offeror may provide in the offer that an offeree who responded to an offer accepted as 337(א) or (א1)
+-- is not entitled to relief, but the provision has no validity if the offeror or the company did not publish, before the date for responding, the information the law requires to be published about the offer.
+-- The existing gate carries all of that: the acceptance, the exclusion by the offer's terms, and the publication. Its months-elapsed input is passed as 0 here, because the six months are this DEONTIC's clock.
+-- Silent: who pays the fair value and by when; the text states neither, so the court's act is "fixes it and orders it paid" and no payment step is encoded.
+-- FORK: סעיף 338(ב) | the six months run from the day the full tender offer was accepted (the day section 337's test is met), reading "קבלת" with "התקבלה" in 337(א) and 338(א) | "קבלת" as the offerees' receipt of the offer, which starts the clock earlier: only the start-date input changes
+-- FORK: סעיף 338(ב) | "no later than six months" includes the sixth month's own day, counted in calendar months to the same day of the month (the last day of the month where it has no such day) | six months of thirty days
+-- FORK: סעיף 338(א) | the court MAY fix the fair value ("רשאי") and does so only if it finds the consideration was below it | a MUST once the finding is made
+-- FORK: סעיף 338(א) | where the court finds the consideration was not below fair value, no step remains and the DEONTIC ends FULFILLED, which means the Act lays down nothing further and not that the application succeeded | an explicit refusal as an act of the court
+-- TIMELINE: unit=calendar day (six calendar months turned into days by `add months` from the acceptance date); day 0=the day the full tender offer was accepted; counting="לא יאוחר משישה חודשים ממועד קבלת הצעת הרכש המלאה"
+@ref סעיף 338 סעד הערכה (src:2201-2205)
+GIVEN `היום שבו התקבלה הצעת הרכש המלאה` IS A DATE
+      `ההצעה התקבלה כאמור בסעיף 336(ג)` IS A BOOLEAN
+      `שיעור הון המניות המונפק, או ההון המונפק מהסוג שהוצעה לגביו ההצעה, שבידי ניצעים שלא נענו להצעה` IS A NUMBER
+      `מספר הניצעים שאין להם עניין אישי בקבלת ההצעה` IS A NUMBER
+      `מספר הניצעים שאין להם עניין אישי בקבלת ההצעה ונענו להצעה` IS A NUMBER
+      `אם הניצע נענה להצעה` IS A BOOLEAN
+      `תנאי ההצעה קבעו שניצע שנענה להצעה לא יהיה זכאי לסעד לפי סעיף 338` IS A BOOLEAN
+      `אם המציע או החברה פרסמו לפני מועד ההיענות את המידע שחובה לפרסם לפי כל דין` IS A BOOLEAN
+      `בית המשפט מצא שהתמורה היתה פחות מהשווי ההוגן` IS A BOOLEAN
+GIVETH A DEONTIC `גורם בהליך המכירה הכפויה` `פעולה בהליך המכירה הכפויה`
+`סעיף 338 - הליך: בקשת הניצע לסעד הערכה בתוך שישה חודשים` MEANS
+    IF `סעיף 338 - הניצע רשאי לבקש מבית המשפט לקבוע את השווי ההוגן` `ההצעה התקבלה כאמור בסעיף 336(ג)` (`סעיף 337 - כלל המניות שביקש המציע לרכוש עוברות לבעלותו` `שיעור הון המניות המונפק, או ההון המונפק מהסוג שהוצעה לגביו ההצעה, שבידי ניצעים שלא נענו להצעה` `מספר הניצעים שאין להם עניין אישי בקבלת ההצעה` `מספר הניצעים שאין להם עניין אישי בקבלת ההצעה ונענו להצעה`) 0 `אם הניצע נענה להצעה` `תנאי ההצעה קבעו שניצע שנענה להצעה לא יהיה זכאי לסעד לפי סעיף 338` `אם המציע או החברה פרסמו לפני מועד ההיענות את המידע שחובה לפרסם לפי כל דין`
+    THEN
+        PARTY `הניצע בהצעת רכש`
+        MAY `הניצע מבקש מבית המשפט לקבוע את השווי ההוגן`
+        WITHIN (`מספר הימים בתקופה שהחוק קובע בחודשים` `היום שבו התקבלה הצעת הרכש המלאה` 6)
+        HENCE (
+            IF `בית המשפט מצא שהתמורה היתה פחות מהשווי ההוגן`
+            THEN (PARTY `בית המשפט בהליך המכירה הכפויה` MAY `בית המשפט קובע את השווי ההוגן ומורה לשלם אותו` HENCE FULFILLED)
+            ELSE FULFILLED)
+        LEST FULFILLED
+    ELSE FULFILLED
+
+§§ `סעיף 341(א): הודעת המציע לבעל מניה מתנגד`
+
+-- src:2219 | {{ח:סעיף|341|סמכות לרכוש מניותיהם של בעלי מניות מתנגדים בחברה פרטית}}
+-- src:2220 | {{ח:תת|(א)}} הציע אדם לרכוש מניות או סוג מניות של חברה פרטית ({{ח:פנימי|חלק 8 פרק 3 סימן ב|בסימן זה}} – המציע), ובעלי מניות שבבעלותם שמונים אחוזים מן המניות העומדות להעברה הסכימו בתוך חודשיים להצעה, רשאי המציע בתוך חודש לאחר תום החודשיים האמורים, להודיע, בדרך שיקבע השר, לכל בעל מניה שלא הסכים להצעה ({{ח:פנימי|חלק 8 פרק 3 סימן ב|בסימן זה}} – בעל מניה מתנגד), כי ברצונו לרכוש את מניותיו; במנין בעלי המניות האמורים לא יובאו בחשבון בעל שליטה במציע או מי מטעמו של בעל השליטה או של המציע, לרבות קרוביהם או תאגידים שבשליטתם.
+-- src:2223 | {{ח:תת|(ד)}} ניתן לקבוע בתקנון החברה שיעור שונה מהשיעור הקבוע בסעיף קטן (א); החלטה לשינוי התקנון כאמור, תתקבל כאמור {{ח:פנימי|סעיף 20|בסעיף 20}}.
+-- A person offered to buy the shares of a private company; shareholders owning eighty percent of the shares up for transfer agreed within two months. The offeror may, within a month after the two months end,
+-- notify each shareholder who did not agree that he wishes to buy his shares. After the notice the dissenting shareholders must sell and the offeror must buy, on the terms offered to the agreeing shareholders (341(ב)).
+-- The articles may fix a rate other than eighty percent (341(ד)); the existing function gives the rate in force, and the existing gate holds the eighty percent and the two months (its months inputs are the agreement's months, and 0 for the notice month, which is this DEONTIC's clock).
+-- The two months are counted from the day of the offer; the month after them is counted from the day they end: the offeror's last day is one calendar month after the offer day plus two calendar months.
+-- The sale and the purchase are two acts with no clock of their own; they are done through the offeror's copy and price (341(ג)), and the dissenter's application to the court is the DEONTIC for 341(ב), which runs on its own and opens the 341(ג) one.
+-- FORK: סעיף 341(א) | the notice is a MAY with a last day only: a notice before the two months end counts as in time (the clock holds no lower bound) | a notice before the end of the two months is outside the power
+-- FORK: סעיף 341(א) | the month after the two months is counted from the day the two months end (the offer day plus two calendar months), the last day inside, so a month-end clamp can apply twice (offer on 30 December 2026: the two months end on 28 February 2027, the last day is 28 March) | three calendar months from the offer day in one step (30 March), or counted from the day the shareholders' agreement reached the required rate
+-- FORK: סעיף 341(ב) | after the notice the dissenter's duty to sell and the offeror's duty to buy are two duties at once with no clock (a RAND), the court's relief being the other DEONTIC | the duties arise only when the offeror's copy and price are sent
+-- TIMELINE: unit=calendar day (the two months turned into days by `add months` from the offer date, then one more month by `add months` from the day the two months end); day 0=the day the offeror made the offer; counting="הסכימו בתוך חודשיים להצעה, רשאי המציע בתוך חודש לאחר תום החודשיים האמורים, להודיע"
+@ref סעיף 341(א); סעיף 341(ד) סמכות לרכוש מניותיהם של בעלי מניות מתנגדים בחברה פרטית (src:2219-2220; src:2223-2223)
+GIVEN `היום שבו המציע הציע את ההצעה` IS A DATE
+      `שיעור המניות העומדות להעברה שבבעלות בעלי מניות שהסכימו להצעה, בלי למנות את בעלי השליטה במציע, מי מטעמם, קרוביהם והתאגידים שבשליטתם` IS A NUMBER
+      `חודשים שחלפו מהצעת המציע עד שהסכימו בעלי המניות האמורים` IS A NUMBER
+      `אם החברה התאגדה לפני תחילתו של חוק זה` IS A BOOLEAN
+      `שיעור ההסכמה שנקבע בתקנון, אם נקבע` IS A MAYBE NUMBER
+      `קביעת השיעור בתקנון נעשתה בהחלטה שהתקבלה כדין` IS A BOOLEAN
+GIVETH A DEONTIC `גורם בהליך המכירה הכפויה` `פעולה בהליך המכירה הכפויה`
+`סעיף 341(א) - הליך: הודעת המציע לבעל מניה מתנגד` MEANS
+    IF `סעיף 341(א) - המציע רשאי להודיע לבעל מניה מתנגד שברצונו לרכוש את מניותיו` `שיעור המניות העומדות להעברה שבבעלות בעלי מניות שהסכימו להצעה, בלי למנות את בעלי השליטה במציע, מי מטעמם, קרוביהם והתאגידים שבשליטתם` (`סעיפים 341(ד) ו־342 - שיעור ההסכמה הנדרש לפי התקנון או לפי הדין` `אם החברה התאגדה לפני תחילתו של חוק זה` `שיעור ההסכמה שנקבע בתקנון, אם נקבע` `קביעת השיעור בתקנון נעשתה בהחלטה שהתקבלה כדין`) `חודשים שחלפו מהצעת המציע עד שהסכימו בעלי המניות האמורים` 0
+    THEN
+        PARTY `המציע בהצעת רכש`
+        MAY `המציע מודיע לבעל מניה מתנגד שברצונו לרכוש את מניותיו`
+        WITHIN ((Day (`add months` (`add months` `היום שבו המציע הציע את ההצעה` 2) 1)) MINUS (Day `היום שבו המציע הציע את ההצעה`))
+        HENCE (
+            (PARTY `בעל מניה מתנגד` MUST `בעל מניה מתנגד מוכר את מניותיו למציע` HENCE FULFILLED)
+            RAND
+            (PARTY `המציע בהצעת רכש` MUST `המציע רוכש את מניותיו של בעל מניה מתנגד` HENCE FULFILLED))
+        LEST FULFILLED
+    ELSE FULFILLED
+
+§§ `סעיפים 341(ב) ו־(ג): בקשת בעל מניה מתנגד, העתק ההודעה והתמורה`
+
+-- src:2221 | {{ח:תת|(ב)}} הודיע המציע כאמור בסעיף קטן (א), חייבים בעלי המניות המתנגדים למכור את מניותיהם וחייב המציע לרכוש אותן, בתנאים שהוצעו לבעלי המניות המסכימים להעברה, אלא אם כן החליט בית המשפט אחרת לבקשת בעל מניה מתנגד שהוגשה בתוך חודש ימים לאחר תאריך ההודעה.
+-- src:2222 | {{ח:תת|(ג)}} הודיע המציע כאמור בסעיף קטן (א) ולא ניתנה החלטה אחרת של בית המשפט, ישלח המציע, בתום חודש ימים מתאריך הודעתו, ואם היתה אותה שעה בקשתו של בעל מניה מתנגד תלויה ועומדת לפני בית המשפט – לאחר שפסק בה בית המשפט, העתק הודעתו אל החברה ויעביר לה את התמורה בעד המניות שהוא חייב לרכשן לפי סעיף זה, והחברה תרשום את המציע כבעל המניות הללו.
+-- 341(ב): once the offeror has notified, the dissenting shareholders must sell and the offeror must buy, unless the court decides otherwise at the request of a dissenting shareholder filed within a month after the date of the notice.
+-- 341(ג): where the offeror notified and the court made no other decision, the offeror shall, at the end of a month from the date of his notice (and, if a dissenting shareholder's application is then pending,
+-- after the court has decided it), send a copy of his notice to the company and transfer to it the price for the shares; the company registers the offeror as their holder.
+-- One month is the clock of both subsections: it is the dissenter's time to apply and, when it has run out, the day the offeror's duty falls due. So the DEONTIC for 341(ב) counts the month, and opens the 341(ג) duty when the month lapses
+-- with no application, or after the court has ruled on an application that does not decide otherwise. The 341(ג) duty has no last day in the text, and the company's registration has no period.
+-- A court that decides otherwise ends both: the sale and purchase and the offeror's duty fall away.
+-- FORK: סעיף 341(ג) | "בתום חודש ימים מתאריך הודעתו" is the day the duty falls due, as "לאחר שפסק בה בית המשפט" is for a pending application: the duty opens when the dissenter's month lapses unused or after the court's ruling, and has no last day, so a late copy and price are no breach | a last day: a copy and price sent after the month are a breach by the offeror
+-- FORK: סעיף 341(ג) | a copy and price sent before the duty falls due are not the send the subsection asks for and leave the duty open | an early send discharges the duty
+-- FORK: סעיף 341(ג) | where the court rules before the month's end, the duty opens at the ruling and not at the month's end (the clock holds no lower bound for the court's step) | it opens at the month's end in every case
+-- FORK: סעיף 341(ב) | "חודש ימים" is one calendar month from the date of the notice, the last day inside, counted by `add months` | thirty days
+-- FORK: סעיף 341(ב) | a court that does not decide otherwise rules on the application as an act (`בית המשפט פוסק בבקשת בעל מניה מתנגד ואינו מחליט אחרת`), because the duty of 341(ג) waits for "after the court has decided it" | the ruling is not an act on the trace, so the duty opens at the application
+-- TIMELINE: unit=calendar day (one calendar month turned into days by `add months` from the notice date); day 0=the day of the offeror's notice ("תאריך ההודעה"); counting="בתוך חודש ימים לאחר תאריך ההודעה"; the 341(ג) duty follows it: "בתום חודש ימים מתאריך הודעתו, ואם היתה אותה שעה בקשתו של בעל מניה מתנגד תלויה ועומדת לפני בית המשפט – לאחר שפסק בה בית המשפט"
+@ref סעיף 341(ב); סעיף 341(ג) סמכות לרכוש מניותיהם של בעלי מניות מתנגדים בחברה פרטית (src:2221-2222)
+GIVEN `היום שבו המציע הודיע לבעל המניה המתנגד` IS A DATE
+      `אם המציע הודיע כאמור בסעיף 341(א)` IS A BOOLEAN
+      `בית המשפט מצא עילה להחליט אחרת` IS A BOOLEAN
+GIVETH A DEONTIC `גורם בהליך המכירה הכפויה` `פעולה בהליך המכירה הכפויה`
+`סעיף 341(ב) - הליך: בקשת בעל מניה מתנגד לבית המשפט בתוך חודש ימים` MEANS
+    IF `סעיף 341(ב) - בעל מניה מתנגד רשאי לבקש מבית המשפט להחליט אחרת` `אם המציע הודיע כאמור בסעיף 341(א)` 0
+    THEN
+        PARTY `בעל מניה מתנגד`
+        MAY `בעל מניה מתנגד מבקש מבית המשפט להחליט אחרת`
+        WITHIN (`מספר הימים בתקופה שהחוק קובע בחודשים` `היום שבו המציע הודיע לבעל המניה המתנגד` 1)
+        HENCE (
+            IF `בית המשפט מצא עילה להחליט אחרת`
+            THEN (PARTY `בית המשפט בהליך המכירה הכפויה` MAY `בית המשפט מחליט אחרת לבקשת בעל מניה מתנגד` HENCE FULFILLED)
+            ELSE (PARTY `בית המשפט בהליך המכירה הכפויה` MAY `בית המשפט פוסק בבקשת בעל מניה מתנגד ואינו מחליט אחרת` HENCE (`סעיף 341(ג) - הליך: העתק ההודעה והתמורה לחברה` `אם המציע הודיע כאמור בסעיף 341(א)` FALSE)))
+        LEST (`סעיף 341(ג) - הליך: העתק ההודעה והתמורה לחברה` `אם המציע הודיע כאמור בסעיף 341(א)` FALSE)
+    ELSE FULFILLED
+
+-- The offeror's duty of 341(ג), with no clock of its own: the DEONTIC above opens it. It can be run alone for a notice whose month has run out, the court having made no other decision.
+-- TIMELINE: unit=none stated beyond the month the DEONTIC for 341(ב) counts; day 0=the day the duty falls due (the end of a month from the notice, or after the court's ruling on an application then pending); counting="בתום חודש ימים מתאריך הודעתו" (the company's registration: "silent")
+@ref סעיף 341(ג) סמכות לרכוש מניותיהם של בעלי מניות מתנגדים בחברה פרטית (src:2222-2222)
+GIVEN `אם המציע הודיע כאמור בסעיף 341(א)` IS A BOOLEAN
+      `בית המשפט החליט אחרת לבקשת בעל מניה מתנגד שהוגשה בתוך חודש ימים לאחר תאריך ההודעה` IS A BOOLEAN
+GIVETH A DEONTIC `גורם בהליך המכירה הכפויה` `פעולה בהליך המכירה הכפויה`
+`סעיף 341(ג) - הליך: העתק ההודעה והתמורה לחברה` MEANS
+    IF `סעיף 341(ב) - בעלי המניות המתנגדים חייבים למכור את מניותיהם והמציע חייב לרכוש אותן` `אם המציע הודיע כאמור בסעיף 341(א)` `בית המשפט החליט אחרת לבקשת בעל מניה מתנגד שהוגשה בתוך חודש ימים לאחר תאריך ההודעה`
+    THEN
+        PARTY `המציע בהצעת רכש`
+        MUST `המציע שולח לחברה העתק מהודעתו ומעביר לה את התמורה`
+        HENCE (PARTY `החברה שמניותיה נרכשות` MUST `החברה רושמת את המציע כבעל המניות` HENCE FULFILLED)
+    ELSE FULFILLED
