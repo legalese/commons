@@ -1,0 +1,622 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `sg-core`
+IMPORT `sg-periods`
+IMPORT `sga3-78a-78c`
+IMPORT `sga3-78d-78k`
+
+-- Companies Act 1967 (Singapore), 2020 Revised Edition, SSO informal consolidation "version in force from 6/5/2026 to 20/10/2026":
+-- the procedure for a reduction of share capital (ss 78B to 78K), as a regulative layer over the Boolean encodings in sga3-78a-78c.l4 and sga3-78d-78k.l4.
+--
+-- The steps are ONE CHAIN: each step's clock is measured from the step before it, because a HENCE starts the next clock when the earlier step is done.
+-- The chain runs: the directors' solvency statement (s 78B(3), s 78C(3)); the special resolution (s 78B(1), s 78C(1)); what the company owes from the day it is passed
+-- (the statement at the meeting, s 78B(4)(a), s 78C(4)(a); the copy lodged with the Registrar for a public company, s 78C(3)(c));
+-- the statement open to creditors throughout the 6 weeks (s 78B(4)(b), s 78C(4)(b)); a creditor's application to the Court during those 6 weeks (s 78D(2));
+-- the lodging with the Registrar after the end of 6 weeks and before the end of 8 weeks where no creditor applies (s 78E(1), (2));
+-- where a creditor applies: the service and the notice to the Registrar (s 78D(4)), the Court's order or dismissal (s 78F(2), (3)), the notice of the order (s 78F(4)),
+-- the lodging within 15 days beginning with the end of the proceedings (s 78E(3), (4)); and the Court-approved route (ss 78G to 78I).
+-- The offences are BREACH lines on the duties they attach to (s 78B(5), s 78C(5), s 78F(5)) and two prohibitions (s 78H(5), s 78J).
+-- The parties are the corpus's own `Party` (sg-core.l4). The gates are the existing section functions, called and not restated.
+-- Where a DATE is an input of a rule, it must agree with the day of the trace (day 0 is the day the TIMELINE line names).
+-- The Court has no time limit anywhere in these sections, so no clock is encoded for it.
+-- A "must ... for the reduction to take effect" (s 78E, s 78I(3)) is a condition of the reduction taking effect and states no offence; it is encoded as a duty whose breach line says so.
+
+DECLARE `capital reduction act` IS ONE OF
+    `s 78B(3)(a) and s 78C(3)(a) all the directors make the solvency statement in relation to the reduction`
+    `s 78B(1) and s 78C(1) the company passes the special resolution reducing its share capital`
+    `s 78B(4)(a) and s 78C(4)(a) the company makes the solvency statement available to the members at the meeting, or serves it with every copy of the resolution`
+    `s 78C(3)(c) the public company lodges a copy of the solvency statement with the Registrar together with the copy of the resolution`
+    `s 78B(4)(b) and s 78C(4)(b) the company has kept the solvency statement available at its registered office for inspection free of charge by any creditor throughout the 6 weeks`
+    `s 78D(2) a creditor applies to the Court for the resolution to be cancelled`
+    `s 78D(4)(a) the creditor serves the application on the company`
+    `s 78D(4)(b) the company gives the Registrar notice of the application`
+    `s 78E(1)(d) and (2) the company lodges the documents with the Registrar after the end of 6 weeks and before the end of 8 weeks`
+    `s 78F(2) the Court makes an order cancelling the resolution`
+    `s 78F(3) the Court dismisses the application`
+    `s 78E(3)(d)(ii) and (4)(d)(ii) the creditor withdraws the application so that the proceedings end without determination`
+    `s 78F(4) the company sends notice of the order to the Registrar`
+    `s 78E(3)(e) and (4)(e) the company lodges the directors' statement, the copy of the Court's order and the notice containing the reduction information`
+    `s 78G(1) the company applies to the Court for an order approving the resolution`
+    `s 78H(2) the Court settles a list of qualifying creditors`
+    `s 78I(1) the Court makes an order approving the reduction`
+    `s 78I(3) the company lodges a copy of the order and a notice containing the reduction information`
+    `s 78H(5) an officer conceals or misrepresents a qualifying creditor's name, debt or claim, or aids, abets or is privy to it`
+    `s 78J a director makes a statement under section 78E which is false and which the director does not believe to be true`
+
+§ `Counting helpers`
+
+-- The period of 20 (or 30) days ending with the resolution date begins 19 (or 29) days before it (sg-periods P10).
+-- A statement made on day 0 is not before the beginning of that period for any resolution date up to the last day of the period of 20 (or 30) days BEGINNING with day 0, which is day 19 (or 29).
+GIVEN `the date of the solvency statement` IS A DATE
+      `the number of days in the period ending with the resolution date` IS A NUMBER
+GIVETH A NUMBER
+`the days from the solvency statement to the latest resolution date it can serve` MEANS
+    (DATE_SERIAL (`period: the last day of a period beginning with` `the date of the solvency statement` `the number of days in the period ending with the resolution date` Days)) MINUS (DATE_SERIAL `the date of the solvency statement`)
+
+-- "the 6 weeks beginning with the resolution date" end on the 41st day after it: 41 for 6 weeks, 55 for 8 weeks (sg-periods P3 and P10).
+GIVEN `the resolution date` IS A DATE
+      `the number of weeks` IS A NUMBER
+GIVETH A NUMBER
+`the days from the resolution date to the last day of the weeks beginning with it` MEANS
+    (DATE_SERIAL (`period: the last day of a period beginning with` `the resolution date` `the number of weeks` Weeks)) MINUS (DATE_SERIAL `the resolution date`)
+
+-- "within N days beginning with the date": the date is day 1, so the last day is N less 1 days after it (sg-periods P10).
+GIVEN `the number of days` IS A NUMBER
+GIVETH A NUMBER
+`the days after its first day on which a period of days beginning with that day ends` MEANS
+    `the number of days` MINUS 1
+
+-- s 78B(2) and s 78C(2) are the same dispensation, one for each kind of company.
+GIVEN `the company is a private company` IS A BOOLEAN
+      `the reduction involves a reduction or distribution of cash or other assets by the company` IS A BOOLEAN
+      `the reduction involves a release of any liability owed to the company` IS A BOOLEAN
+GIVETH A BOOLEAN
+`the company need not meet the solvency requirements under s 78B(2) or s 78C(2)` MEANS
+    IF `the company is a private company`
+    THEN (`s 78B(2) the company need not meet the solvency requirements` `the reduction involves a reduction or distribution of cash or other assets by the company` `the reduction involves a release of any liability owed to the company`) EQUALS JUST TRUE
+    ELSE (`s 78C(2) the company need not meet the solvency requirements` `the reduction involves a reduction or distribution of cash or other assets by the company` `the reduction involves a release of any liability owed to the company`) EQUALS JUST TRUE
+
+§ `Section 78B(4)(b) and section 78C(4)(b): the statement open to creditors for 6 weeks`
+
+-- TIMELINE: unit=calendar day; day 0=the resolution date; counting="throughout the 6 weeks beginning with the resolution date", the resolution date being day 1 of the 6 weeks, so the last day is day 41, computed from the DATE input `the resolution date` by sg-periods P10; the duty is done when the company has kept the statement open on every one of the 42 days, so the act is reported on or before day 41
+-- FORK: s 78B(4)(b) | the duty is one act ("has kept the statement available throughout the 6 weeks") due on or before day 41, so a company that opened it late or withdrew it early never does the act and the breach is found after day 41 | two acts as the existing rule has them (make it available on day 0, then not withdraw it until day 41)
+-- FORK: s 78B(6) | the revocation of the resolution, which ends the requirement, is not a step here: the text puts it in the passive and names no one who revokes | an act of the company that ends the duty
+-- src:9420 | (b) must, throughout the 6 weeks beginning with the resolution
+-- src:9421 | date, make the solvency statement or a copy of it available
+-- src:9422 | at the company’s registered office for inspection free of
+-- src:9423 | charge by any creditor of the company.
+-- src:9425 | (5) The resolution does not become invalid by virtue only of a
+-- src:9426 | contravention of subsection (4), but every officer of the company who
+-- src:9427 | is in default shall be guilty of an offence.
+@ref s 78B(4)(b) the statement open to creditors for 6 weeks (src:9420-9427)
+-- src:9490 | (b) throughout the 6 weeks beginning with the resolution
+-- src:9491 | date — make the solvency statement or a copy of it
+-- src:9492 | available at the company’s registered office for inspection
+-- src:9493 | free of charge by any creditor of the company.
+-- src:9495 | (5) The resolution does not become invalid by virtue only of a
+-- src:9496 | contravention of subsection (4), but every officer of the company who
+-- src:9497 | is in default shall be guilty of an offence.
+@ref s 78C(4)(b) the statement open to creditors for 6 weeks (src:9490-9497)
+GIVEN `the name of the company` IS A STRING
+      `the company is a private company` IS A BOOLEAN
+      `the reduction involves a reduction or distribution of cash or other assets by the company` IS A BOOLEAN
+      `the reduction involves a release of any liability owed to the company` IS A BOOLEAN
+      `the resolution date` IS A DATE
+GIVETH A DEONTIC Party `capital reduction act`
+`s 78B(4)(b) and s 78C(4)(b) the company must keep the solvency statement open to creditors throughout the 6 weeks` MEANS
+    IF `the company need not meet the solvency requirements under s 78B(2) or s 78C(2)` `the company is a private company` `the reduction involves a reduction or distribution of cash or other assets by the company` `the reduction involves a release of any liability owed to the company`
+    THEN FULFILLED
+    ELSE PARTY Company `the name of the company`
+         MUST `s 78B(4)(b) and s 78C(4)(b) the company has kept the solvency statement available at its registered office for inspection free of charge by any creditor throughout the 6 weeks`
+         WITHIN (`the days from the resolution date to the last day of the weeks beginning with it` `the resolution date` 6)
+         HENCE FULFILLED
+         LEST BREACH BY Company `the name of the company` BECAUSE "the company did not keep the solvency statement available at its registered office for inspection free of charge by any creditor throughout the 6 weeks beginning with the resolution date; the resolution does not become invalid by that alone, but every officer of the company who is in default is guilty of an offence (s 78B(5), s 78C(5))"
+
+§ `Section 78F(4): the notice of the Court's order`
+
+-- TIMELINE: unit=calendar day; day 0=the day the Court makes the order cancelling the resolution; counting="within 15 days beginning with the date the order is made", the date being day 1, so the last day is day 14 (sg-periods P10)
+-- src:9723 | (4) Where the Court makes an order under subsection (2), the
+-- src:9724 | company must send notice of the order to the Registrar within 15 days
+-- src:9725 | beginning with the date the order is made.
+-- src:9727 | (5) If a company contravenes subsection (4), every officer of the
+-- src:9728 | company who is in default shall be guilty of an offence.
+@ref s 78F(4) the notice of the order to the Registrar (src:9723-9728)
+GIVEN `the name of the company` IS A STRING
+GIVETH A DEONTIC Party `capital reduction act`
+`s 78F(4) and (5) the company must send notice of the order to the Registrar within 15 days beginning with the date the order is made` MEANS
+    PARTY Company `the name of the company`
+    MUST `s 78F(4) the company sends notice of the order to the Registrar`
+    WITHIN (`the days after its first day on which a period of days beginning with that day ends` 15)
+    HENCE FULFILLED
+    LEST BREACH BY Company `the name of the company` BECAUSE "the company did not send notice of the order to the Registrar within 15 days beginning with the date the order was made; every officer of the company who is in default is guilty of an offence (s 78F(5))"
+
+§ `Section 78E(3) and (4): the lodging after the proceedings end`
+
+-- TIMELINE: unit=calendar day; day 0=the day the last of the proceedings on the creditors' applications is brought to an end (by dismissal under s 78F, or without determination, for example by withdrawal); counting="within 15 days beginning with the date on which the last such proceedings were brought to an end", that date being day 1, so the last day is day 14 (sg-periods P10)
+-- FORK: s 78E(3)(e) | one application is encoded; where there are several, this rule starts on the day the last proceedings end, which the caller reads off | a clock for each application
+-- FORK: s 78E(3)(e) | the lodging is a duty whose breach line says the reduction does not take effect; the text states no offence for it | a bare condition with no breach
+-- The statement under (e)(i) is the director's statement to which s 78J attaches (see the prohibition at the end of this module); the documents are one act here.
+-- src:9618 | (e) the company has, within 15 days beginning with the date
+-- src:9619 | on which the last such proceedings were brought to an end
+-- src:9620 | in accordance with paragraph (d), lodged with the
+-- src:9621 | Registrar —
+-- src:9626 | (i) a statement made by the directors confirming that the
+-- src:9627 | requirements under section 78B(1)(c), the solvency
+-- src:9628 | requirements under section 78B(3) (if applicable)
+-- src:9629 | and section 78D(4)(b) have been complied with, and
+-- src:9630 | that the proceedings in relation to each such
+-- src:9631 | application have been brought to an end by the
+-- src:9632 | dismissal of the application or without
+-- src:9633 | determination;
+-- src:9635 | (ii) in relation to each such application which has been
+-- src:9636 | dismissed by the Court, a copy of the order of the
+-- src:9637 | Court dismissing the application; and
+-- src:9639 | (iii) a notice containing the reduction information.
+@ref s 78E(3)(e) the lodging after the proceedings end (src:9618-9639)
+-- src:9670 | (e) the company has, within 15 days beginning with the date
+-- src:9671 | on which the last such proceedings were brought to an end
+-- src:9676 | in accordance with paragraph (d), lodged with the
+-- src:9677 | Registrar —
+-- src:9679 | (i) a statement made by the directors confirming that the
+-- src:9680 | requirements under section 78C(1)(c), the solvency
+-- src:9681 | requirements under section 78C(3) (if applicable)
+-- src:9682 | and section 78D(4) have been complied with, and
+-- src:9683 | that the proceedings in relation to each such
+-- src:9684 | application have been brought to an end by the
+-- src:9685 | dismissal of the application or without
+-- src:9686 | determination;
+-- src:9688 | (ii) in relation to each such application which has been
+-- src:9689 | dismissed by the Court, a copy of the order of the
+-- src:9690 | Court dismissing the application; and
+-- src:9692 | (iii) a notice containing the reduction information.
+@ref s 78E(4)(e) the lodging after the proceedings end (src:9670-9692)
+GIVEN `the name of the company` IS A STRING
+GIVETH A DEONTIC Party `capital reduction act`
+`s 78E(3)(e) and (4)(e) the company must lodge within 15 days beginning with the date the last proceedings end` MEANS
+    PARTY Company `the name of the company`
+    MUST `s 78E(3)(e) and (4)(e) the company lodges the directors' statement, the copy of the Court's order and the notice containing the reduction information`
+    WITHIN (`the days after its first day on which a period of days beginning with that day ends` 15)
+    HENCE FULFILLED
+    LEST BREACH BY Company `the name of the company` BECAUSE "the company did not lodge the directors' statement, the copy of the Court's order and the notice containing the reduction information within 15 days beginning with the date on which the last proceedings were brought to an end, so the reduction does not take effect (s 78E(3), (4)); the text states no offence"
+
+§ `Sections 78F and 78E(3), (4): the Court decides, or the creditor withdraws`
+
+-- TIMELINE: unit=calendar day; day 0=the day the creditor applies to the Court; counting=silent for the Court's decision ("no time limit" in s 78F) and for the creditor's withdrawal; the clocks that follow are the two rules this one calls, whose day 0 is the day the order is made (s 78F(4)) or the day the proceedings end (s 78E(3), (4))
+-- FORK: s 78F(2) | where the gate does not answer JUST TRUE the Court MUST dismiss, because s 78F(3) says "Otherwise, the Court is to dismiss" | the Court MAY dismiss
+-- FORK: s 78E(3)(d)(ii) | the creditor's withdrawal is a MAY of the creditor, chosen by an input (`the creditor withdraws the application`) as the Court's order or dismissal is chosen by its gate, and not an alternative (ROR) to the Court's decision | a ROR of the Court's MUST and the creditor's MAY: measured, a late lodging after a withdrawal then leaves the Court's duty open and reads RESIDUAL where the text says the company is in breach
+-- src:9706 | (2) The Court must make an order cancelling the resolution if, at the
+-- src:9707 | time the application is considered, the resolution has not been
+-- src:9708 | cancelled previously, any debt or claim on which the application was
+-- src:9709 | based is outstanding and the Court is satisfied that —
+-- src:9711 | (a) the debt or claim has not been secured and the applicant
+-- src:9712 | does not have other adequate safeguards for it; and
+-- src:9714 | (b) it is not the case that security or other safeguards are
+-- src:9715 | unnecessary in view of the assets that the company would
+-- src:9716 | have after the reduction.
+-- src:9718 | (3) Otherwise, the Court is to dismiss the application.
+@ref s 78F(2) the Court's order or dismissal (src:9706-9718)
+-- src:9609 | (d) the proceedings in relation to each such application have
+-- src:9610 | been brought to an end —
+-- src:9612 | (i) by the dismissal of the application under section 78F;
+-- src:9613 | or
+-- src:9615 | (ii) without determination (for example, because the
+-- src:9616 | application has been withdrawn);
+@ref s 78E(3)(d) the end of the proceedings (src:9609-9616)
+GIVEN `the name of the company` IS A STRING
+      `the name of the creditor` IS A STRING
+      `at the time the application is considered, the resolution has not been cancelled previously` IS A BOOLEAN
+      `any debt or claim on which the application was based is outstanding` IS A BOOLEAN
+      `the Court is satisfied that the debt or claim has not been secured and the applicant does not have other adequate safeguards for it` IS A BOOLEAN
+      `the Court is satisfied that security or other safeguards are unnecessary in view of the assets that the company would have after the reduction` IS A BOOLEAN
+      `the creditor withdraws the application` IS A BOOLEAN
+GIVETH A DEONTIC Party `capital reduction act`
+`s 78F and s 78E(3)(d): the Court decides, or the creditor withdraws` MEANS
+    IF `the creditor withdraws the application`
+    THEN PARTY Creditor `the name of the creditor`
+         MAY `s 78E(3)(d)(ii) and (4)(d)(ii) the creditor withdraws the application so that the proceedings end without determination`
+         HENCE (`s 78E(3)(e) and (4)(e) the company must lodge within 15 days beginning with the date the last proceedings end` `the name of the company`)
+    ELSE (IF `s 78F(2) the Court must make an order cancelling the resolution` `at the time the application is considered, the resolution has not been cancelled previously` `any debt or claim on which the application was based is outstanding` `the Court is satisfied that the debt or claim has not been secured and the applicant does not have other adequate safeguards for it` `the Court is satisfied that security or other safeguards are unnecessary in view of the assets that the company would have after the reduction` EQUALS JUST TRUE
+          THEN PARTY Court
+               MUST `s 78F(2) the Court makes an order cancelling the resolution`
+               HENCE (`s 78F(4) and (5) the company must send notice of the order to the Registrar within 15 days beginning with the date the order is made` `the name of the company`)
+          ELSE PARTY Court
+               MUST `s 78F(3) the Court dismisses the application`
+               HENCE (`s 78E(3)(e) and (4)(e) the company must lodge within 15 days beginning with the date the last proceedings end` `the name of the company`))
+
+§ `Section 78D(4): the service and the notice to the Registrar, beside the Court's decision`
+
+-- TIMELINE: unit=calendar day; day 0=the day the creditor applies to the Court; counting="as soon as possible" for the service and for the company's notice to the Registrar, which is silent on a day, so no clock is encoded for either; the Court's decision is the rule called, with its own TIMELINE
+-- FORK: s 78D(4) | "as soon as possible" is a duty with no day, so it is a MUST with no clock and no breach path | a clock of some days
+-- src:9517 | (4) When an application is made under subsection (2) —
+-- src:9519 | (a) the creditor must as soon as possible serve the application
+-- src:9520 | on the company; and
+-- src:9522 | (b) the company must as soon as possible give to the Registrar
+-- src:9523 | notice of the application.
+@ref s 78D(4) the service and the notice to the Registrar (src:9517-9523)
+GIVEN `the name of the company` IS A STRING
+      `the name of the creditor` IS A STRING
+      `at the time the application is considered, the resolution has not been cancelled previously` IS A BOOLEAN
+      `any debt or claim on which the application was based is outstanding` IS A BOOLEAN
+      `the Court is satisfied that the debt or claim has not been secured and the applicant does not have other adequate safeguards for it` IS A BOOLEAN
+      `the Court is satisfied that security or other safeguards are unnecessary in view of the assets that the company would have after the reduction` IS A BOOLEAN
+      `the creditor withdraws the application` IS A BOOLEAN
+GIVETH A DEONTIC Party `capital reduction act`
+`s 78D(4), s 78E(3), s 78F: the service, the notice to the Registrar and the Court's decision after a creditor applies` MEANS
+        ((PARTY Creditor `the name of the creditor`
+          MUST `s 78D(4)(a) the creditor serves the application on the company`
+          HENCE FULFILLED)
+         RAND
+         (PARTY Company `the name of the company`
+          MUST `s 78D(4)(b) the company gives the Registrar notice of the application`
+          HENCE FULFILLED))
+    RAND
+        (`s 78F and s 78E(3)(d): the Court decides, or the creditor withdraws` `the name of the company` `the name of the creditor` `at the time the application is considered, the resolution has not been cancelled previously` `any debt or claim on which the application was based is outstanding` `the Court is satisfied that the debt or claim has not been secured and the applicant does not have other adequate safeguards for it` `the Court is satisfied that security or other safeguards are unnecessary in view of the assets that the company would have after the reduction` `the creditor withdraws the application`)
+
+§ `Sections 78D and 78E(1), (2): the creditors' 6 weeks and the lodging after them`
+
+-- TIMELINE: unit=calendar day; day 0=the resolution date; counting="at any time during the 6 weeks beginning with the resolution date" for the creditor (day 0 to day 41, computed from the DATE input by sg-periods P10) and "after the end of 6 weeks, and before the end of 8 weeks, beginning with the resolution date" for the company (day 42 to day 55); the lodging clock is the rest of the 8 weeks after the creditors' window lapses, which is day 55 less day 41
+-- FORK: s 78E(1)(d) | the last day is day 55, so a lodging on the last day of the 8 weeks is "before the end" of them | the last day is day 54
+-- FORK: s 78E(1)(c) | the copy of the resolution is lodged "in accordance with section 186", which is outside the sources, so it is no step here and the one act is the documents of paragraph (d) (and of s 78E(2)(c), (d)) | a second act with its own clock
+-- FORK: s 78D(3) | an application by a person who is not a creditor within s 78D(3) is not an application under s 78D(2), so s 78E(1)(b) is still met and the company's lodging is still owed; it is owed here as a MUST with no clock, because the HENCE restarts the clock on the day of that application, which the rule does not know, so the window to day 55 cannot be carried | the application as one that stops the lodging under s 78E(1)(b), the rule then FULFILLED
+-- src:9508 | (2) Any creditor of the company to which this subsection applies
+-- src:9509 | may, at any time during the 6 weeks beginning with the resolution
+-- src:9510 | date, apply to the Court for the resolution to be cancelled.
+-- src:9512 | (3) Subsection (2) applies to a creditor of the company who, at the
+-- src:9513 | date of the creditor’s application to the Court, is entitled to any debt or
+-- src:9514 | claim which, if that date were the commencement of the winding up
+-- src:9515 | of the company, would be admissible in proof against the company.
+@ref s 78D(2) the creditor's application during the 6 weeks (src:9508-9515)
+-- src:9530 | 78E.—(1) Where —
+-- src:9532 | (a) a private company passes a special resolution for reducing
+-- src:9533 | its share capital and meets the requirements under
+-- src:9534 | section 78B(1)(c) and the solvency requirements under
+-- src:9535 | section 78B(3) (if applicable); and
+-- src:9537 | (b) no application for cancellation of the resolution has been
+-- src:9538 | made under section 78D(2) during the 6 weeks beginning
+-- src:9539 | with the resolution date,
+-- src:9541 | for the reduction of share capital to take effect, the company must
+-- src:9542 | lodge with the Registrar —
+-- src:9544 | (c) a copy of the resolution in accordance with section 186;
+-- src:9545 | and
+-- src:9547 | (d) the following documents after the end of 6 weeks, and
+-- src:9548 | before the end of 8 weeks, beginning with the resolution
+-- src:9549 | date:
+-- src:9551 | (i) a copy of the solvency statement under
+-- src:9552 | section 78B(3) (if applicable);
+-- src:9554 | (ii) a statement made by the directors confirming that the
+-- src:9555 | requirements under section 78B(1)(c) and the
+-- src:9556 | solvency requirements under section 78B(3) (if
+-- src:9557 | applicable) have been complied with, and that no
+-- src:9558 | application for cancellation of the resolution has
+-- src:9559 | been made;
+-- src:9561 | (iii) a notice containing the reduction information.
+@ref s 78E(1) the private company's lodging (src:9530-9561)
+-- src:9565 | (2) Where —
+-- src:9567 | (a) a public company passes a special resolution for reducing
+-- src:9568 | its share capital and meets the requirements under
+-- src:9569 | section 78C(1)(c) and the solvency requirements (if
+-- src:9570 | applicable) under section 78C(3); and
+-- src:9572 | (b) no application for cancellation of the resolution has been
+-- src:9573 | made under section 78D(2) during the 6 weeks beginning
+-- src:9574 | with the resolution date,
+-- src:9579 | for the reduction of share capital to take effect, the company must
+-- src:9580 | lodge with the Registrar the following documents after the end of
+-- src:9581 | 6 weeks, and before the end of 8 weeks, beginning with the resolution
+-- src:9582 | date:
+-- src:9584 | (c) a statement made by the directors confirming that the
+-- src:9585 | requirements under section 78C(1)(c) and the solvency
+-- src:9586 | requirements under section 78C(3) (if applicable) have
+-- src:9587 | been complied with, and that no application for
+-- src:9588 | cancellation of the resolution has been made;
+-- src:9590 | (d) a notice containing the reduction information.  [36/2014]
+@ref s 78E(2) the public company's lodging (src:9565-9590)
+GIVEN `the name of the company` IS A STRING
+      `the name of the creditor` IS A STRING
+      `the resolution date` IS A DATE
+      `the creditor, at the date of the creditor's application to the Court, is entitled to a debt or claim which, if that date were the commencement of the winding up of the company, would be admissible in proof against the company` IS A BOOLEAN
+      `at the time the application is considered, the resolution has not been cancelled previously` IS A BOOLEAN
+      `any debt or claim on which the application was based is outstanding` IS A BOOLEAN
+      `the Court is satisfied that the debt or claim has not been secured and the applicant does not have other adequate safeguards for it` IS A BOOLEAN
+      `the Court is satisfied that security or other safeguards are unnecessary in view of the assets that the company would have after the reduction` IS A BOOLEAN
+      `the creditor withdraws the application` IS A BOOLEAN
+GIVETH A DEONTIC Party `capital reduction act`
+`s 78D(2) and s 78E: a creditor may apply to the Court during the 6 weeks, and otherwise the company must lodge after them` MEANS
+    PARTY Creditor `the name of the creditor`
+    MAY `s 78D(2) a creditor applies to the Court for the resolution to be cancelled`
+    WITHIN (`the days from the resolution date to the last day of the weeks beginning with it` `the resolution date` 6)
+    HENCE (IF `s 78D(3) subsection (2) applies to the creditor` `the creditor, at the date of the creditor's application to the Court, is entitled to a debt or claim which, if that date were the commencement of the winding up of the company, would be admissible in proof against the company` EQUALS JUST TRUE
+           THEN `s 78D(4), s 78E(3), s 78F: the service, the notice to the Registrar and the Court's decision after a creditor applies` `the name of the company` `the name of the creditor` `at the time the application is considered, the resolution has not been cancelled previously` `any debt or claim on which the application was based is outstanding` `the Court is satisfied that the debt or claim has not been secured and the applicant does not have other adequate safeguards for it` `the Court is satisfied that security or other safeguards are unnecessary in view of the assets that the company would have after the reduction` `the creditor withdraws the application`
+           ELSE PARTY Company `the name of the company`
+                MUST `s 78E(1)(d) and (2) the company lodges the documents with the Registrar after the end of 6 weeks and before the end of 8 weeks`
+                HENCE FULFILLED)
+    LEST (PARTY Company `the name of the company`
+          MUST `s 78E(1)(d) and (2) the company lodges the documents with the Registrar after the end of 6 weeks and before the end of 8 weeks`
+          WITHIN ((`the days from the resolution date to the last day of the weeks beginning with it` `the resolution date` 8) MINUS (`the days from the resolution date to the last day of the weeks beginning with it` `the resolution date` 6))
+          HENCE FULFILLED
+          LEST BREACH BY Company `the name of the company` BECAUSE "the company did not lodge the documents with the Registrar after the end of 6 weeks and before the end of 8 weeks beginning with the resolution date, so the reduction does not take effect (s 78E(1), (2)); the text states no offence for this")
+
+§ `Sections 78B to 78F: from the day the special resolution is passed to the end of the creditors' period`
+
+-- TIMELINE: unit=calendar day; day 0=the resolution date; counting="the 6 weeks beginning with the resolution date" and "after the end of 6 weeks, and before the end of 8 weeks, beginning with the resolution date" as the two rules called here state; the two run side by side, so both must be done
+GIVEN `the name of the company` IS A STRING
+      `the name of the creditor` IS A STRING
+      `the company is a private company` IS A BOOLEAN
+      `the reduction involves a reduction or distribution of cash or other assets by the company` IS A BOOLEAN
+      `the reduction involves a release of any liability owed to the company` IS A BOOLEAN
+      `the resolution date` IS A DATE
+      `the creditor, at the date of the creditor's application to the Court, is entitled to a debt or claim which, if that date were the commencement of the winding up of the company, would be admissible in proof against the company` IS A BOOLEAN
+      `at the time the application is considered, the resolution has not been cancelled previously` IS A BOOLEAN
+      `any debt or claim on which the application was based is outstanding` IS A BOOLEAN
+      `the Court is satisfied that the debt or claim has not been secured and the applicant does not have other adequate safeguards for it` IS A BOOLEAN
+      `the Court is satisfied that security or other safeguards are unnecessary in view of the assets that the company would have after the reduction` IS A BOOLEAN
+      `the creditor withdraws the application` IS A BOOLEAN
+GIVETH A DEONTIC Party `capital reduction act`
+`s 78B(4)(b) to s 78F: the statement open to creditors, and the creditors' period with the lodging after it` MEANS
+        (`s 78B(4)(b) and s 78C(4)(b) the company must keep the solvency statement open to creditors throughout the 6 weeks` `the name of the company` `the company is a private company` `the reduction involves a reduction or distribution of cash or other assets by the company` `the reduction involves a release of any liability owed to the company` `the resolution date`)
+    RAND
+        (`s 78D(2) and s 78E: a creditor may apply to the Court during the 6 weeks, and otherwise the company must lodge after them` `the name of the company` `the name of the creditor` `the resolution date` `the creditor, at the date of the creditor's application to the Court, is entitled to a debt or claim which, if that date were the commencement of the winding up of the company, would be admissible in proof against the company` `at the time the application is considered, the resolution has not been cancelled previously` `any debt or claim on which the application was based is outstanding` `the Court is satisfied that the debt or claim has not been secured and the applicant does not have other adequate safeguards for it` `the Court is satisfied that security or other safeguards are unnecessary in view of the assets that the company would have after the reduction` `the creditor withdraws the application`)
+
+§ `Sections 78B(4)(a), 78C(4)(a), 78C(3)(c): what the company owes on the day the resolution is passed`
+
+-- TIMELINE: unit=calendar day; day 0=the resolution date; counting="throughout that meeting" for the statement at the meeting (the same day as the resolution, so WITHIN 0) and "within 15 days beginning with the resolution date" for the public company's lodging of the copy of the statement (day 0 to day 14, sg-periods P10)
+-- FORK: s 78B(4)(a) | the written-means route (s 78B(4)(a)(i)) and the meeting route (s 78B(4)(a)(ii)) are one act, because the trace says only that the statement was made available as the paragraph requires on the resolution date | two acts, one for each route
+-- FORK: s 78C(3)(c) | the public company's lodging of the copy of the statement is a duty whose breach line says the company does not meet the solvency requirements; the text frames it as a condition | a bare condition with no breach
+-- src:9404 | (4) Unless subsection (2) applies, the company —
+-- src:9406 | (a) must —
+-- src:9408 | (i) if the resolution for reducing share capital is a special
+-- src:9409 | resolution to be passed by written means under
+-- src:9410 | section 184A — ensure that every copy of the
+-- src:9411 | resolution served under section 183(3A) or 184C(1)
+-- src:9412 | (as the case may be) is accompanied by a copy of the
+-- src:9413 | solvency statement; or
+-- src:9415 | (ii) if the resolution is a special resolution to be passed in
+-- src:9416 | a general meeting — throughout that meeting make
+-- src:9417 | the solvency statement or a copy of it available for
+-- src:9418 | inspection by the members at that meeting; and
+@ref s 78B(4)(a) the statement at the meeting or with the resolution (src:9404-9418)
+-- src:9483 | (4) Unless subsection (2) applies, the company must —
+-- src:9485 | (a) throughout the meeting at which the resolution is to be
+-- src:9486 | passed — make the solvency statement or a copy of it
+-- src:9487 | available for inspection by the members at the meeting;
+-- src:9488 | and
+@ref s 78C(4)(a) the statement at the meeting (src:9483-9488)
+-- src:9473 | (c) a copy of the solvency statement is lodged with the
+-- src:9474 | Registrar, together with the copy of the resolution required
+-- src:9475 | to be lodged with the Registrar under section 186, within
+-- src:9476 | 15 days beginning with the resolution date.
+@ref s 78C(3)(c) the copy of the statement lodged with the Registrar (src:9473-9476)
+GIVEN `the name of the company` IS A STRING
+      `the name of the creditor` IS A STRING
+      `the company is a private company` IS A BOOLEAN
+      `the reduction involves a reduction or distribution of cash or other assets by the company` IS A BOOLEAN
+      `the reduction involves a release of any liability owed to the company` IS A BOOLEAN
+      `the resolution date` IS A DATE
+      `the creditor, at the date of the creditor's application to the Court, is entitled to a debt or claim which, if that date were the commencement of the winding up of the company, would be admissible in proof against the company` IS A BOOLEAN
+      `at the time the application is considered, the resolution has not been cancelled previously` IS A BOOLEAN
+      `any debt or claim on which the application was based is outstanding` IS A BOOLEAN
+      `the Court is satisfied that the debt or claim has not been secured and the applicant does not have other adequate safeguards for it` IS A BOOLEAN
+      `the Court is satisfied that security or other safeguards are unnecessary in view of the assets that the company would have after the reduction` IS A BOOLEAN
+      `the creditor withdraws the application` IS A BOOLEAN
+GIVETH A DEONTIC Party `capital reduction act`
+`s 78B(4)(a), s 78C(3)(c), s 78C(4)(a): what the company owes on the day the resolution is passed, and what follows` MEANS
+        ((IF `the company need not meet the solvency requirements under s 78B(2) or s 78C(2)` `the company is a private company` `the reduction involves a reduction or distribution of cash or other assets by the company` `the reduction involves a release of any liability owed to the company`
+          THEN FULFILLED
+          ELSE PARTY Company `the name of the company`
+               MUST `s 78B(4)(a) and s 78C(4)(a) the company makes the solvency statement available to the members at the meeting, or serves it with every copy of the resolution`
+               WITHIN 0
+               HENCE FULFILLED
+               LEST BREACH BY Company `the name of the company` BECAUSE "the company did not make the solvency statement available to the members at the meeting, or serve it with every copy of the resolution; the resolution does not become invalid by that alone, but every officer of the company who is in default is guilty of an offence (s 78B(5), s 78C(5))")
+         RAND
+         (IF (NOT `the company is a private company`) AND (NOT (`the company need not meet the solvency requirements under s 78B(2) or s 78C(2)` `the company is a private company` `the reduction involves a reduction or distribution of cash or other assets by the company` `the reduction involves a release of any liability owed to the company`))
+          THEN PARTY Company `the name of the company`
+               MUST `s 78C(3)(c) the public company lodges a copy of the solvency statement with the Registrar together with the copy of the resolution`
+               WITHIN (`the days after its first day on which a period of days beginning with that day ends` 15)
+               HENCE FULFILLED
+               LEST BREACH BY Company `the name of the company` BECAUSE "the public company did not lodge a copy of the solvency statement with the Registrar, with the copy of the resolution, within 15 days beginning with the resolution date, so it does not meet the solvency requirements (s 78C(3)(c)); the text states no offence for this"
+          ELSE FULFILLED))
+    RAND
+        (`s 78B(4)(b) to s 78F: the statement open to creditors, and the creditors' period with the lodging after it` `the name of the company` `the name of the creditor` `the company is a private company` `the reduction involves a reduction or distribution of cash or other assets by the company` `the reduction involves a release of any liability owed to the company` `the resolution date` `the creditor, at the date of the creditor's application to the Court, is entitled to a debt or claim which, if that date were the commencement of the winding up of the company, would be admissible in proof against the company` `at the time the application is considered, the resolution has not been cancelled previously` `any debt or claim on which the application was based is outstanding` `the Court is satisfied that the debt or claim has not been secured and the applicant does not have other adequate safeguards for it` `the Court is satisfied that security or other safeguards are unnecessary in view of the assets that the company would have after the reduction` `the creditor withdraws the application`)
+
+§ `Sections 78B(1), 78B(3), 78C(1), 78C(3): the solvency statement, then the special resolution`
+
+-- TIMELINE: unit=calendar day; day 0=the day all the directors make the solvency statement (where s 78B(2) or s 78C(2) dispenses with it, the day the company is free to pass the resolution); counting="not before the beginning of the period of 20 days ending with the resolution date" (private) and "30 days" (public): the resolution is passed within day 19 (private) or day 29 (public) of the statement day, computed from the DATE input `the date of the solvency statement` by sg-periods P10; the resolution date is day 0 of every clock that follows, because the HENCE restarts the clock when the resolution is passed
+-- FORK: s 78B(3)(b)(i) | "in time for subsection (4)(a) to be complied with" is read as: the statement is made on or before the day of the resolution, so the resolution is never earlier than day 0 | a stricter day, the day before the meeting
+-- FORK: s 78B(3) | the directors' statement is a MAY of the board as a body, with no clock, because the text makes it a condition of the company's power and never a duty; the 20 (or 30) days are the limit on the resolution that follows | the statement as a duty (MUST)
+-- FORK: s 78B(1) | where the statement's 20 or 30 days lapse before the resolution, the rule is FULFILLED at once: nothing is owed and the company may not rely on this route for that statement | a breach by the company
+-- FORK: s 78B(1), s 78C(1), s 78A(5) | the chain is not gated on who may use the route (a private company limited by shares for s 78B(1), a public company for s 78C(1); not an unlimited company, a redemption under s 70(1) or a purchase under ss 76B to 76G, s 78A(5); and not where the constitution excludes the power, s 78A(3)): the caller supplies the facts, because the existing `may` functions take inputs the chain itself produces (the special resolution passed, the solvency requirements met), so calling them whole here would be circular | a gate on `s 78A(1)` and `s 78B(1)` or `s 78C(1)` before the first step
+-- FORK: s 78B(1)(c) | the publicity requirements are "as may be prescribed by the Minister", which is outside the sources, so they are not a step | a step with a clock
+-- src:9360 | 78B.—(1) A private company limited by shares may reduce its
+-- src:9361 | share capital in any way by a special resolution if the company —
+-- src:9363 | (a) [Deleted by Act 36 of 2014]
+-- src:9365 | (b) meets the solvency requirements; and
+-- src:9367 | (c) meets such publicity requirements as may be prescribed by
+-- src:9368 | the Minister,
+-- src:9370 | but the resolution and the reduction of the share capital take effect
+-- src:9371 | only as provided by section 78E.
+@ref s 78B(1) the private company's power (src:9360-9371)
+-- src:9389 | (3) For the purposes of subsection (1), the company meets the
+-- src:9390 | solvency requirements if —
+-- src:9392 | (a) all the directors of the company make a solvency statement
+-- src:9393 | in relation to the reduction of capital; and
+-- src:9395 | (b) the statement is made —
+-- src:9397 | (i) in time for subsection (4)(a) to be complied with; but
+-- src:9399 | (ii) not before the beginning of the period of 20 days
+-- src:9400 | ending with the resolution date.
+@ref s 78B(3) the solvency requirements (src:9389-9400)
+-- src:9437 | 78C.—(1) A public company may reduce its share capital in any
+-- src:9438 | way by a special resolution if the company —
+-- src:9440 | (a) [Deleted by Act 36 of 2014]
+-- src:9442 | (b) meets the solvency requirements; and
+-- src:9444 | (c) meets such publicity requirements as may be prescribed by
+-- src:9445 | the Minister,
+-- src:9447 | but the resolution and the reduction of the share capital take effect
+-- src:9448 | only as provided by section 78E.
+@ref s 78C(1) the public company's power (src:9437-9448)
+-- src:9461 | (3) The company meets the solvency requirements if —
+-- src:9463 | (a) all the directors of the company make a solvency statement
+-- src:9464 | in relation to the reduction of share capital;
+-- src:9466 | (b) the statement is made —
+-- src:9468 | (i) in time for subsection (4)(a) to be complied with; but
+-- src:9470 | (ii) not before the beginning of the period of 30 days
+-- src:9471 | ending with the resolution date; and
+@ref s 78C(3) the solvency requirements (src:9461-9471)
+GIVEN `the name of the company` IS A STRING
+      `the name of the creditor` IS A STRING
+      `the company is a private company` IS A BOOLEAN
+      `the reduction involves a reduction or distribution of cash or other assets by the company` IS A BOOLEAN
+      `the reduction involves a release of any liability owed to the company` IS A BOOLEAN
+      `the date of the solvency statement` IS A DATE
+      `the resolution date` IS A DATE
+      `the creditor, at the date of the creditor's application to the Court, is entitled to a debt or claim which, if that date were the commencement of the winding up of the company, would be admissible in proof against the company` IS A BOOLEAN
+      `at the time the application is considered, the resolution has not been cancelled previously` IS A BOOLEAN
+      `any debt or claim on which the application was based is outstanding` IS A BOOLEAN
+      `the Court is satisfied that the debt or claim has not been secured and the applicant does not have other adequate safeguards for it` IS A BOOLEAN
+      `the Court is satisfied that security or other safeguards are unnecessary in view of the assets that the company would have after the reduction` IS A BOOLEAN
+      `the creditor withdraws the application` IS A BOOLEAN
+GIVETH A DEONTIC Party `capital reduction act`
+`s 78B and s 78C: the solvency statement, the special resolution, and what the company owes from the resolution date` MEANS
+    IF `the company need not meet the solvency requirements under s 78B(2) or s 78C(2)` `the company is a private company` `the reduction involves a reduction or distribution of cash or other assets by the company` `the reduction involves a release of any liability owed to the company`
+    THEN PARTY Company `the name of the company`
+         MAY `s 78B(1) and s 78C(1) the company passes the special resolution reducing its share capital`
+         HENCE (`s 78B(4)(a), s 78C(3)(c), s 78C(4)(a): what the company owes on the day the resolution is passed, and what follows` `the name of the company` `the name of the creditor` `the company is a private company` `the reduction involves a reduction or distribution of cash or other assets by the company` `the reduction involves a release of any liability owed to the company` `the resolution date` `the creditor, at the date of the creditor's application to the Court, is entitled to a debt or claim which, if that date were the commencement of the winding up of the company, would be admissible in proof against the company` `at the time the application is considered, the resolution has not been cancelled previously` `any debt or claim on which the application was based is outstanding` `the Court is satisfied that the debt or claim has not been secured and the applicant does not have other adequate safeguards for it` `the Court is satisfied that security or other safeguards are unnecessary in view of the assets that the company would have after the reduction` `the creditor withdraws the application`)
+    ELSE PARTY `Board of directors` `the name of the company`
+         MAY `s 78B(3)(a) and s 78C(3)(a) all the directors make the solvency statement in relation to the reduction`
+         HENCE (PARTY Company `the name of the company`
+                MAY `s 78B(1) and s 78C(1) the company passes the special resolution reducing its share capital`
+                WITHIN (`the days from the solvency statement to the latest resolution date it can serve` `the date of the solvency statement` (IF `the company is a private company` THEN 20 ELSE 30))
+                HENCE (`s 78B(4)(a), s 78C(3)(c), s 78C(4)(a): what the company owes on the day the resolution is passed, and what follows` `the name of the company` `the name of the creditor` `the company is a private company` `the reduction involves a reduction or distribution of cash or other assets by the company` `the reduction involves a release of any liability owed to the company` `the resolution date` `the creditor, at the date of the creditor's application to the Court, is entitled to a debt or claim which, if that date were the commencement of the winding up of the company, would be admissible in proof against the company` `at the time the application is considered, the resolution has not been cancelled previously` `any debt or claim on which the application was based is outstanding` `the Court is satisfied that the debt or claim has not been secured and the applicant does not have other adequate safeguards for it` `the Court is satisfied that security or other safeguards are unnecessary in view of the assets that the company would have after the reduction` `the creditor withdraws the application`)
+                LEST FULFILLED)
+
+§ `Sections 78G to 78I: the reduction approved by the Court`
+
+-- TIMELINE: unit=calendar day; day 0=the day the company applies to the Court under s 78G(1); counting=silent for the Court's list, its order and the application ("no time limit"); the one clock is the company's lodging, whose day 0 is the day the order is made: "within 90 days beginning with the date the order is made, or within such longer period as the Registrar may ... allow", computed by the existing `s 78I(3) the last day ...` from the DATE inputs (the order date, whether the Registrar allowed longer, the last day of the longer period), which must agree with the days of the trace; the order date is day 0 of the clock because the HENCE restarts it when the order is made
+-- FORK: s 78G(1) | the chain is not gated on the company being limited by shares, nor on s 78A(5); the caller supplies the facts (see the fork at s 78B(1)) | a gate on `s 78G(1) the company limited by shares may reduce ...`
+-- FORK: s 78I(1) | where a creditor on the list stands in the way (s 78I(2)), the Court is under a SHANT and an order is a breach by the Court | the order simply not open to the Court, with no breach
+-- FORK: s 78H(2) | the Court's duty to settle the list is a MUST with no clock (the text has none), and s 78H(4)(a) (ascertaining the creditors) is part of that one act | s 78H(4)(a) as a separate step
+-- FORK: s 78G(1)(c) | the Registrar's recording, on which the reduction's taking effect depends, is not a step: it is an effect, not a duty with a clock | a MAY of the Registrar
+-- FORK: s 78I(3) | the Registrar's allowance of a longer period is an input (a Boolean and the last day), not a step in the chain: the text gives no time for the company's application to the Registrar | a MAY of the Registrar
+-- src:9736 | 78G.—(1) A company limited by shares may, as an alternative to
+-- src:9737 | reducing its share capital under section 78B or 78C, reduce it in any
+-- src:9738 | way by a special resolution approved by an order of the Court under
+-- src:9739 | section 78I, but the resolution and the reduction of the share capital do
+-- src:9740 | not take effect until —
+-- src:9742 | (a) that order has been made;
+-- src:9744 | (b) the company has complied with section 78I(3) (lodgment
+-- src:9745 | of information with Registrar); and
+-- src:9747 | (c) the Registrar has recorded the information lodged with him
+-- src:9748 | or her under section 78I(3) in the appropriate register.
+@ref s 78G(1) the application for the Court's approval (src:9736-9748)
+-- src:9765 | (2) Upon the application to the Court, the Court is to settle a list of
+-- src:9766 | qualifying creditors.
+@ref s 78H(2) the list of qualifying creditors (src:9765-9766)
+-- src:9815 | 78I.—(1) On an application by a company under section 78G(1),
+-- src:9816 | the Court may, subject to subsection (2), make an order approving the
+-- src:9821 | reduction in share capital unconditionally or on such terms and
+-- src:9822 | conditions as it thinks fit.
+@ref s 78I(1) the Court's order (src:9815-9822)
+-- src:9824 | (2) If, at the time the Court considers the application, there is a
+-- src:9825 | qualifying creditor within the meaning of section 78H —
+-- src:9827 | (a) who is included in the Court’s list of qualifying creditors
+-- src:9828 | under that section; and
+-- src:9830 | (b) whose claim has not been terminated or whose debt has not
+-- src:9831 | been discharged,
+-- src:9833 | the Court must not make an order approving the reduction unless
+-- src:9834 | satisfied, as respects each qualifying creditor, that —
+-- src:9836 | (c) the qualifying creditor has consented to the reduction;
+-- src:9838 | (d) the qualifying creditor’s debt or claim has been secured or
+-- src:9839 | the qualifying creditor has other adequate safeguards for it;
+-- src:9840 | or
+-- src:9842 | (e) security or other safeguards are unnecessary in view of the
+-- src:9843 | assets the company would have after the reduction.
+@ref s 78I(2) the creditors who must be satisfied (src:9824-9843)
+-- src:9845 | (3) Where an order is made under this section approving a
+-- src:9846 | company’s reduction in share capital, the company must (for the
+-- src:9847 | reduction to take effect) lodge with the Registrar —
+-- src:9849 | (a) a copy of the order; and
+-- src:9851 | (b) a notice containing the reduction information,
+-- src:9853 | within 90 days beginning with the date the order is made, or within
+-- src:9854 | such longer period as the Registrar may, on the application of the
+-- src:9855 | company and on receiving the prescribed fee, allow.
+@ref s 78I(3) the lodging within 90 days (src:9845-9855)
+GIVEN `the name of the company` IS A STRING
+      `the company makes an application under section 78G(1)` IS A BOOLEAN
+      `the proposed reduction of share capital involves a reduction of liability in respect of unpaid share capital` IS A BOOLEAN
+      `the proposed reduction of share capital involves the payment to a shareholder of any paid-up share capital` IS A BOOLEAN
+      `the Court so directs in the case` IS A BOOLEAN
+      creditors IS A LIST OF `s 78I(2) qualifying creditor`
+      `the date the order is made` IS A DATE
+      `the Registrar has allowed a longer period on the application of the company and on receiving the prescribed fee` IS A BOOLEAN
+      `the last day of the longer period the Registrar allowed` IS A DATE
+GIVETH A DEONTIC Party `capital reduction act`
+`s 78G to s 78I: the application to the Court, the list, the order and the lodging within 90 days` MEANS
+    PARTY Company `the name of the company`
+    MAY `s 78G(1) the company applies to the Court for an order approving the resolution`
+    HENCE ((IF `s 78H(1) this section applies` `the company makes an application under section 78G(1)` `the proposed reduction of share capital involves a reduction of liability in respect of unpaid share capital` `the proposed reduction of share capital involves the payment to a shareholder of any paid-up share capital` `the Court so directs in the case` EQUALS JUST TRUE
+            THEN PARTY Court
+                 MUST `s 78H(2) the Court settles a list of qualifying creditors`
+                 HENCE FULFILLED
+            ELSE FULFILLED)
+           RAND
+           (IF `s 78I(2) the Court must not make an order approving the reduction` creditors EQUALS JUST TRUE
+            THEN PARTY Court
+                 SHANT `s 78I(1) the Court makes an order approving the reduction`
+                 HENCE FULFILLED
+                 LEST BREACH BY Court BECAUSE "the Court made an order approving the reduction although a qualifying creditor on its list, with a claim not terminated or a debt not discharged, had neither consented, nor been secured or otherwise safeguarded, nor been shown to need no security (s 78I(2))"
+            ELSE PARTY Court
+                 MAY `s 78I(1) the Court makes an order approving the reduction`
+                 HENCE (PARTY Company `the name of the company`
+                        MUST `s 78I(3) the company lodges a copy of the order and a notice containing the reduction information`
+                        WITHIN ((DATE_SERIAL (`s 78I(3) the last day for the company to lodge the copy of the order and the notice` `the date the order is made` `the Registrar has allowed a longer period on the application of the company and on receiving the prescribed fee` `the last day of the longer period the Registrar allowed`)) MINUS (DATE_SERIAL `the date the order is made`))
+                        HENCE FULFILLED
+                        LEST BREACH BY Company `the name of the company` BECAUSE "the company did not lodge a copy of the order and a notice containing the reduction information within 90 days beginning with the date the order was made, or within the longer period the Registrar allowed, so the reduction does not take effect (s 78G(1)(b), s 78I(3)); the text states no offence")))
+
+§ `Section 78H(5): concealing or misrepresenting a qualifying creditor`
+
+-- TIMELINE: unit=calendar day; day 0=the day the Court begins to settle the list; counting=silent (a standing prohibition; the text puts no time on it)
+-- Penalty (stated in the text): a fine not exceeding $15,000 or imprisonment for a term not exceeding 3 years.
+-- FORK: s 78H(5) | the prohibition is derived from the offence and its bearer is an officer of the company (ruling N2 of 2026-11-04) | no bearer
+-- src:9793 | (5) Any officer of the company who —
+-- src:9795 | (a) intentionally conceals the name of a qualifying creditor;
+-- src:9797 | (b) intentionally misrepresents the nature or amount of the
+-- src:9798 | debt or claim of any creditor; or
+-- src:9800 | (c) aids, abets or is privy to any such concealment or
+-- src:9801 | misrepresentation,
+-- src:9803 | shall be guilty of an offence and shall be liable on conviction to a fine
+-- src:9804 | not exceeding $15,000 or to imprisonment for a term not exceeding
+-- src:9805 | 3 years.
+@ref s 78H(5) the offence of concealing or misrepresenting (src:9793-9805)
+GIVEN `the name of the officer` IS A STRING
+GIVETH A DEONTIC Party `capital reduction act`
+`s 78H(5) an officer must not conceal or misrepresent a qualifying creditor's name, debt or claim` MEANS
+    PARTY Officer `the name of the officer`
+    SHANT `s 78H(5) an officer conceals or misrepresents a qualifying creditor's name, debt or claim, or aids, abets or is privy to it`
+    HENCE FULFILLED
+    LEST BREACH BY Officer `the name of the officer` BECAUSE "the officer intentionally concealed the name of a qualifying creditor, or intentionally misrepresented the nature or amount of a creditor's debt or claim, or aided, abetted or was privy to it: guilty of an offence, liable on conviction to a fine not exceeding $15,000 or to imprisonment for a term not exceeding 3 years (s 78H(5))"
+
+§ `Section 78J: a false statement to the Registrar`
+
+-- TIMELINE: unit=calendar day; day 0=the day the director makes the statement under s 78E(1)(d)(ii), (2)(c), (3)(e)(i) or (4)(e)(i); counting=silent (no time); the text states no penalty
+-- FORK: s 78J | the offence has two elements (false, and not believed by the director to be true), and the act is one: making a statement which is both | two acts
+-- src:9859 | 78J. A director making a statement under section 78E(1)(d)(ii),
+-- src:9860 | (2)(c), (3)(e)(i) or (4)(e)(i) shall be guilty of an offence if the
+-- src:9861 | statement —
+-- src:9863 | (a) is false; and
+-- src:9865 | (b) is not believed by the director to be true.
+@ref s 78J the offence for a false statement (src:9859-9865)
+GIVEN `the name of the director` IS A STRING
+GIVETH A DEONTIC Party `capital reduction act`
+`s 78J a director must not make a false statement which the director does not believe to be true` MEANS
+    PARTY Director `the name of the director`
+    SHANT `s 78J a director makes a statement under section 78E which is false and which the director does not believe to be true`
+    HENCE FULFILLED
+    LEST BREACH BY Director `the name of the director` BECAUSE "the director made a statement under section 78E(1)(d)(ii), (2)(c), (3)(e)(i) or (4)(e)(i) which was false and which the director did not believe to be true: guilty of an offence (s 78J); the text states no penalty"
+
+-- Section 78K (a member's liability on reduced shares) is a limit on a sum, not a step with a party and a time, so it has no DEONTIC here; the Boolean and number functions in sga3-78d-78k.l4 answer it.
+-- src:9872 | 78K. Where a company’s share capital is reduced under any
+-- src:9873 | provision of this Division, a member of the company (past or present)
+-- src:9874 | is not liable in respect of the issue price of any share to any call or
+-- src:9875 | contribution greater in amount than the difference (if any) between —
+-- src:9877 | (a) the issue price of the share; and
+-- src:9879 | (b) the aggregate of the amount paid up on the share (if any)
+-- src:9880 | and the amount reduced on the share.
+-- s 78K liability of members on reduced shares (src:9872-9880)
