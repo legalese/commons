@@ -46,12 +46,14 @@ expected_satisfied() {
   case "$1" in
     wk-tests.l4) echo 49 ;;
     wk-tests-boundaries.l4) echo 99 ;;
+    tests-independent.l4) echo 118 ;;
     *) echo 0 ;;
   esac
 }
 expected_failed() {
   case "$1" in
     wk-tests-red.l4) echo 6 ;;
+    tests-independent.l4) echo 11 ;;
     *) echo 0 ;;
   esac
 }
