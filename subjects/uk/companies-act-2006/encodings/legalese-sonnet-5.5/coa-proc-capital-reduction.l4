@@ -1,0 +1,385 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `coa-core`
+IMPORT `coa14-nouns`
+IMPORT `coa14-ch10-reduction`
+
+-- coa-proc-capital-reduction.l4: Companies Act 2006 (United Kingdom), ss 641 to 653 (reduction of share capital): the procedure the Act lays down,
+-- written as regulative rules over the Boolean encoding in coa14-ch10-reduction.l4. Lines 8529-8710 of ukpga-2006-46.txt.
+-- Route one is the private company's special resolution supported by a solvency statement (ss 642 to 644).
+-- Route two is the application to the court (ss 645 to 649).
+-- The offences are in ss 643(4), 644(7), 644(8) and 647.
+-- The gates are the existing functions of coa14-ch10-reduction.l4 wherever one answers the question.
+-- Where none can serve, a helper below says why (see `ss 641-653 route one is open to the company`).
+-- Nothing here edits that module, and nothing here calls its two DEONTICs for s 644(1) and s 644(5).
+--
+-- SEAMS taken as INPUTS: whether the resolution is a special resolution (s 283); whether the directors' statement is made in accordance with s 643;
+-- whether an officer is in default (s 1121); whether a person is an officer (s 1173(1)); whether the registrar is barred by s 650(2).
+-- The dates are inputs too; the Act's periods in this unit are counted in days from them.
+
+DECLARE `ss 641-653 party` IS ONE OF
+    `ss 641-653 the company`
+    `ss 641-653 a director of the company who is in default`
+    `ss 641-653 an officer of the company who is in default`
+    `ss 641-653 an officer of the company`
+    `ss 641-653 a creditor entitled to object`
+    `ss 641-653 a creditor not entered on the list`
+    `ss 641-653 the court`
+    `ss 641-653 the registrar`
+
+DECLARE `ss 641-653 act` IS ONE OF
+    `s 642(1)(a) the company passes the special resolution for reducing share capital`
+    `s 644(1) the company delivers to the registrar a copy of the solvency statement and a statement of capital`
+    `s 644(5) the company delivers to the registrar a statement by the directors confirming that the solvency statement was made in time and provided to members`
+    `s 644(3) the registrar registers the documents delivered to him`
+    `s 643(4) a director makes a solvency statement without reasonable grounds and the statement is delivered to the registrar`
+    `s 644(7) the company delivers to the registrar a solvency statement that was not provided to members`
+    `s 644(8) the officer is in default in the company's default in complying with section 644`
+    `s 645(1) the company applies to the court for an order confirming the reduction`
+    `s 646(1) the creditor objects to the reduction of capital`
+    `s 646(2) the court settles a list of creditors entitled to object`
+    `s 646(3)(b) a creditor not entered on the list claims to be entered`
+    `s 647(1)(a)(i) an officer intentionally or recklessly conceals the name of a creditor entitled to object`
+    `s 647(1)(a)(ii) an officer intentionally or recklessly misrepresents the nature or amount of a creditor's debt or claim`
+    `s 647(1)(b) an officer is knowingly concerned in such a concealment or misrepresentation`
+    `s 648(1) the court makes an order confirming the reduction`
+    `s 649(1) the registrar registers the order and the statement of capital`
+    `s 649(5) the registrar certifies the registration`
+
+-- The facts about route one that the gates and the clocks read, in one record so that a trace states them once.
+DECLARE `ss 641-653 route one facts` HAS
+    `route one: the company is a private company limited by shares` IS A BOOLEAN
+    `route one: the resolution is a special resolution` IS A MAYBE BOOLEAN
+    `route one: the solvency statement is made in accordance with section 643` IS A MAYBE BOOLEAN
+    `route one: after the reduction no member would hold shares other than redeemable shares` IS A BOOLEAN
+    `route one: the date the directors made the solvency statement` IS A DATE
+    `route one: the date the resolution was passed` IS A DATE
+
+-- ---- the gates: is route one open, and are the deliveries of s 644 owed? -------------------------------------------------------
+
+-- src:8530 | (1) A limited company having a share capital may reduce its share capital—
+-- src:8531 | (a) in the case of a private company limited by shares, by special resolution supported by a solvency statement (see sections 642 to 644);
+-- src:8532 | (b) in any case, by special resolution confirmed by the court (see sections 645 to 651).
+-- src:8533 | (2) A company may not reduce its capital under subsection (1)(a) if as a result of the reduction there would no longer be any member of the company holding shares other than redeemable shares.
+@ref s 641(1)(a) and (2) Circumstances in which a company may reduce its share capital: route one is open (src:8530-8533)
+-- FORK: s 642(1) "supported by a solvency statement" as a gate | the existing function `s 642(1) the resolution is supported by a solvency statement` cannot gate a duty to deliver: its limb (b) (src:8555) asks that "the resolution and solvency statement are registered in accordance with section 644", which is what the delivery duty brings about, so passing TRUE for it would assume the outcome as the precondition; the gate here asks limb (a) alone, from the statement and resolution dates (helper below) | use the existing function with the registration input set TRUE
+GIVEN facts IS A `ss 641-653 route one facts`
+GIVETH A BOOLEAN
+`ss 641-653 route one is open to the company` MEANS
+        facts's `route one: the company is a private company limited by shares`
+    AND (`s 641(2) the section bars the reduction under subsection (1)(a)` (`s 641(1)(a) special resolution supported by a solvency statement`) (facts's `route one: after the reduction no member would hold shares other than redeemable shares`)) EQUALS JUST FALSE
+    AND (facts's `route one: the solvency statement is made in accordance with section 643`) EQUALS JUST TRUE
+
+-- src:8553 | (1) A resolution for reducing share capital of a private company limited by shares is supported by a solvency statement if—
+-- src:8554 | (a) the directors of the company make a statement of the solvency of the company in accordance with section 643 (a “solvency statement”) not more than 15 days before the date on which the resolution is passed, and
+-- src:8555 | (b) the resolution and solvency statement are registered in accordance with section 644.
+@ref s 642(1)(a) Reduction of capital supported by solvency statement: not more than 15 days before the resolution (src:8553-8555)
+-- The window of limb (a), read from the statement's date: the resolution is passed on the day of the statement or in the 15 days after it.
+GIVEN facts IS A `ss 641-653 route one facts`
+GIVETH A BOOLEAN
+`ss 641-653 the resolution was passed within 15 days after the solvency statement` MEANS
+        (facts's `route one: the date the directors made the solvency statement`) AT MOST (facts's `route one: the date the resolution was passed`)
+    AND (facts's `route one: the date the resolution was passed`) AT MOST ((facts's `route one: the date the directors made the solvency statement`) PLUS 15)
+
+-- src:8576 | (1) Within 15 days after the resolution for reducing share capital is passed the company must deliver to the registrar—
+-- src:8577 | (a) a copy of the solvency statement, and
+-- src:8578 | (b) a statement of capital.
+-- src:8579 | This is in addition to the copy of the resolution itself that is required to be delivered to the registrar under Chapter 3 of Part 3.
+@ref s 644(1) and (5) The deliveries of s 644 are owed (src:8576-8579)
+GIVEN facts IS A `ss 641-653 route one facts`
+GIVETH A BOOLEAN
+`ss 641-653 the deliveries of s 644 are owed` MEANS
+        (`ss 641-653 route one is open to the company` facts)
+    AND (facts's `route one: the resolution is a special resolution`) EQUALS JUST TRUE
+    AND (`ss 641-653 the resolution was passed within 15 days after the solvency statement` facts)
+
+-- ---- s 642(1)(a): the window between the solvency statement and the resolution ---------------------------------------------------
+
+-- src:8553 | (1) A resolution for reducing share capital of a private company limited by shares is supported by a solvency statement if—
+-- src:8554 | (a) the directors of the company make a statement of the solvency of the company in accordance with section 643 (a “solvency statement”) not more than 15 days before the date on which the resolution is passed, and
+@ref s 642(1)(a) The company's power to pass the resolution within 15 days of the solvency statement (src:8553-8554)
+-- TIMELINE: unit=calendar day; day 0=the day the directors make the solvency statement; counting="not more than 15 days before the date on which the resolution is passed" (read forward: the resolution is passed on day 0 or within 15 days after it, so the last day is day 15; the Act does not say whether the day of the statement is counted)
+-- FORK: s 642(1)(a) "not more than 15 days before" | the text's limit is backward from the resolution; read forward it is a power of the company, MAY with a LEST, whose last day is day 15 (a resolution on day 16 is not supported by this statement); the LEST is the loss of the statement's use, not a wrong | no forward rule at all, only the Boolean test on two dates
+-- FORK: s 642(1)(a) a lapsed power | a BREACH is how the encoding says that the 15 days passed with no resolution; the Act makes nothing an offence here | no BREACH; the lapse is silent
+GIVEN facts IS A `ss 641-653 route one facts`
+GIVETH A DEONTIC `ss 641-653 party` `ss 641-653 act`
+`s 642(1)(a) the company's power to pass the resolution within 15 days of the solvency statement` MEANS
+    IF `ss 641-653 route one is open to the company` facts
+    THEN PARTY `ss 641-653 the company`
+         MAY `s 642(1)(a) the company passes the special resolution for reducing share capital`
+         WITHIN 15
+         HENCE FULFILLED
+         LEST BREACH BY `ss 641-653 the company` BECAUSE "the solvency statement was made more than 15 days before the resolution was passed, or no resolution was passed within 15 days of it: a resolution passed later is not supported by that statement (s 642(1)(a))"
+    ELSE FULFILLED
+
+-- ---- s 644(1) and (5): the two deliveries to the registrar --------------------------------------------------------------------------
+
+-- src:8575 | 644 Registration of resolution and supporting documents
+-- src:8576 | (1) Within 15 days after the resolution for reducing share capital is passed the company must deliver to the registrar—
+-- src:8577 | (a) a copy of the solvency statement, and
+-- src:8578 | (b) a statement of capital.
+-- src:8579 | This is in addition to the copy of the resolution itself that is required to be delivered to the registrar under Chapter 3 of Part 3.
+@ref s 644(1) Registration of resolution and supporting documents: the copy of the solvency statement and the statement of capital (src:8575-8579)
+-- TIMELINE: unit=calendar day; day 0=the day the resolution for reducing share capital is passed; counting="Within 15 days after the resolution ... is passed" (the Act does not say whether the day of the resolution is counted; the existing function ends the period on the resolution's date plus 15, so day 15 is in time)
+-- FORK: s 644(1) the gate | the duty arises on route one when the resolution is passed within 15 days of a solvency statement made in accordance with s 643, and the 15 days run from the resolution whatever the later delivery | the duty arises on any resolution for reducing share capital of a private company, whether or not the statement is in time
+-- FORK: s 644(8)(a) the company's offence | the company's offence under s 644(8)(a) is the BREACH of this rule, named in its reason, not a second rule | a separate rule for the company beside the officer's
+GIVEN facts IS A `ss 641-653 route one facts`
+GIVETH A DEONTIC `ss 641-653 party` `ss 641-653 act`
+`s 644(1) the company's duty to deliver the solvency statement and the statement of capital, as a procedure` MEANS
+    IF `ss 641-653 the deliveries of s 644 are owed` facts
+    THEN PARTY `ss 641-653 the company`
+         MUST `s 644(1) the company delivers to the registrar a copy of the solvency statement and a statement of capital`
+         WITHIN (`s 644(1) the number of days allowed for the documents` (facts's `route one: the date the resolution was passed`))
+         HENCE FULFILLED
+         LEST BREACH BY `ss 641-653 the company` BECAUSE "the copy of the solvency statement and the statement of capital were not delivered to the registrar within 15 days after the resolution was passed (s 644(1)); default is an offence of the company under s 644(8)(a)"
+    ELSE FULFILLED
+
+-- src:8591 | (5) The company must also deliver to the registrar, within 15 days after the resolution is passed, a statement by the directors confirming that the solvency statement was—
+-- src:8592 | (a) made not more than 15 days before the date on which the resolution was passed, and
+-- src:8593 | (b) provided to members in accordance with section 642(2) or (3).
+@ref s 644(5) Registration of resolution and supporting documents: the directors' statement (src:8591-8593)
+-- TIMELINE: unit=calendar day; day 0=the day the resolution for reducing share capital is passed; counting="within 15 days after the resolution is passed" (as for s 644(1) above: day 15 is in time)
+GIVEN facts IS A `ss 641-653 route one facts`
+GIVETH A DEONTIC `ss 641-653 party` `ss 641-653 act`
+`s 644(5) the company's duty to deliver the directors' statement, as a procedure` MEANS
+    IF `ss 641-653 the deliveries of s 644 are owed` facts
+    THEN PARTY `ss 641-653 the company`
+         MUST `s 644(5) the company delivers to the registrar a statement by the directors confirming that the solvency statement was made in time and provided to members`
+         WITHIN (`s 644(5) the number of days allowed for the directors' statement` (facts's `route one: the date the resolution was passed`))
+         HENCE FULFILLED
+         LEST BREACH BY `ss 641-653 the company` BECAUSE "the directors' statement was not delivered to the registrar within 15 days after the resolution was passed (s 644(5)); default is an offence of the company under s 644(8)(a)"
+    ELSE FULFILLED
+
+-- src:8594 | (6) The validity of a resolution is not affected by—
+-- src:8595 | (a) a failure to deliver the documents required to be delivered to the registrar under subsection (1) within the time specified in that subsection, or
+-- src:8596 | (b) a failure to comply with subsection (5).
+@ref s 644(1) and (5) together, and s 644(6) (src:8576-8596)
+-- TIMELINE: unit=calendar day; day 0=the day the resolution for reducing share capital is passed; counting="within 15 days after the resolution is passed" for both deliveries, each on its own clock from the same day 0
+-- FORK: s 644(1) with s 644(5) | the two deliveries are two duties side by side (RAND), each with its own breach; the section says the directors' statement is delivered "also" | one rule with two acts
+-- not encoded: s 644(6) (a late delivery does not affect the validity of the resolution) changes neither duty nor time limit; it stays as a Boolean function in coa14-ch10-reduction.l4, and a breach here does not end the resolution
+GIVEN facts IS A `ss 641-653 route one facts`
+GIVETH A DEONTIC `ss 641-653 party` `ss 641-653 act`
+`s 644 the company's two deliveries to the registrar` MEANS
+        (`s 644(1) the company's duty to deliver the solvency statement and the statement of capital, as a procedure` facts)
+    RAND
+        (`s 644(5) the company's duty to deliver the directors' statement, as a procedure` facts)
+
+-- ---- s 644(3): the registrar registers on receipt ----------------------------------------------------------------------------------
+
+-- src:8589 | (3) The registrar must register the documents delivered to him under subsection (1) on receipt.
+-- src:8590 | (4) The resolution does not take effect until those documents are registered.
+@ref s 644(3) Registration of resolution and supporting documents: the registrar registers on receipt (src:8589-8590)
+-- TIMELINE: unit=none; day 0=the day the registrar receives the documents; counting=silent beyond "on receipt" (a clock is not encoded: the registration stays owed until the trace shows it)
+-- FORK: s 644(3) "on receipt" | no clock: the registration is owed from the day of receipt and the text gives no later limit | WITHIN 0, the same day as receipt
+-- Why this is its own rule and not the HENCE of the delivery rule: under s 644(6) a late delivery leaves the resolution valid and the registrar's duty still arises, but a LEST BREACH ends the chain.
+GIVEN `the registrar has received the documents delivered to him under subsection (1)` IS A BOOLEAN
+GIVETH A DEONTIC `ss 641-653 party` `ss 641-653 act`
+`s 644(3) the registrar's duty to register the documents, as a procedure` MEANS
+    IF (`s 644(3) the registrar is obliged to register the documents` `the registrar has received the documents delivered to him under subsection (1)`) EQUALS JUST TRUE
+    THEN PARTY `ss 641-653 the registrar`
+         MUST `s 644(3) the registrar registers the documents delivered to him`
+         HENCE FULFILLED
+    ELSE FULFILLED
+
+-- ---- the offences of route one: ss 643(4), 644(7), 644(8) -----------------------------------------------------------------------------
+
+-- src:8569 | (4) If the directors make a solvency statement without having reasonable grounds for the opinions expressed in it, and the statement is delivered to the registrar, an offence is committed by every director who is in default.
+@ref s 643(4) Solvency statement: the offence of a director (src:8569-8569)
+-- TIMELINE: unit=none; day 0=not applicable; counting=silent (the offence is the event "makes a solvency statement without having reasonable grounds ... and the statement is delivered to the registrar"; the Act gives it no time limit, so no clock is encoded and the event is supplied by the trace)
+-- FORK: s 643(4) "every director who is in default" | the prohibition lies on the director, gated by the existing function with the director's default (s 1121) as an input and answering only where that is JUST TRUE | any director, in default or not
+-- not encoded: s 643(5) (the penalties) is a Boolean function in coa14-ch10-reduction.l4 and fixes no time
+GIVEN `s 1121 the officer is in default` IS A MAYBE BOOLEAN
+GIVETH A DEONTIC `ss 641-653 party` `ss 641-653 act`
+`s 643(4) the director's duty not to deliver a solvency statement made without reasonable grounds` MEANS
+    IF (`s 643(4) the director commits an offence` TRUE TRUE `s 1121 the officer is in default`) EQUALS JUST TRUE
+    THEN PARTY `ss 641-653 a director of the company who is in default`
+         SHANT `s 643(4) a director makes a solvency statement without reasonable grounds and the statement is delivered to the registrar`
+         HENCE FULFILLED
+         LEST BREACH BY `ss 641-653 a director of the company who is in default` BECAUSE "the director made a solvency statement without having reasonable grounds for the opinions expressed in it and the statement was delivered to the registrar: an offence under s 643(4)"
+    ELSE FULFILLED
+
+-- src:8597 | (7) If the company delivers to the registrar a solvency statement that was not provided to members in accordance with section 642(2) or (3), an offence is committed by every officer of the company who is in default.
+@ref s 644(7) Registration of resolution and supporting documents: the offence of delivering a statement not provided to members (src:8597-8597)
+-- TIMELINE: unit=none; day 0=not applicable; counting=silent (s 644(7) gives no time limit; the event is the delivery of the statement, supplied by the trace)
+-- FORK: s 644(7) the party | the prohibition lies on the officer in default (the offence is "committed by every officer of the company who is in default"), and the act is the company's delivery | the prohibition lies on the company
+GIVEN `s 1121 the officer is in default` IS A MAYBE BOOLEAN
+GIVETH A DEONTIC `ss 641-653 party` `ss 641-653 act`
+`s 644(7) the officer's duty not to let the company deliver a solvency statement that was not provided to members` MEANS
+    IF (`s 644(7) the officer commits an offence` TRUE `s 1121 the officer is in default`) EQUALS JUST TRUE
+    THEN PARTY `ss 641-653 an officer of the company who is in default`
+         SHANT `s 644(7) the company delivers to the registrar a solvency statement that was not provided to members`
+         HENCE FULFILLED
+         LEST BREACH BY `ss 641-653 an officer of the company who is in default` BECAUSE "the company delivered to the registrar a solvency statement that was not provided to members in accordance with section 642(2) or (3): an offence of every officer in default under s 644(7)"
+    ELSE FULFILLED
+
+-- src:8598 | (8) If default is made in complying with this section, an offence is committed by—
+-- src:8599 | (a) the company, and
+-- src:8600 | (b) every officer of the company who is in default.
+@ref s 644(8)(b) Registration of resolution and supporting documents: the offence of an officer in default (src:8598-8600)
+-- TIMELINE: unit=none; day 0=not applicable; counting=silent (the default is the breach of the delivery rules above, which carry the 15 days; the officer's offence is the event "default is made", supplied by the trace)
+-- FORK: s 644(8)(b) "default is made in complying with this section" | the officer's offence is a prohibition on being in default, gated by the existing function with default made (JUST TRUE) and the officer's default (s 1121) as inputs; the company's side is the BREACH of the delivery rules | the officer's offence follows from the company's breach only
+GIVEN `s 1121 the officer is in default` IS A MAYBE BOOLEAN
+GIVETH A DEONTIC `ss 641-653 party` `ss 641-653 act`
+`s 644(8)(b) the officer's duty not to be in default in complying with section 644` MEANS
+    IF (`s 644(8)(b) the officer commits an offence` (JUST TRUE) `s 1121 the officer is in default`) EQUALS JUST TRUE
+    THEN PARTY `ss 641-653 an officer of the company who is in default`
+         SHANT `s 644(8) the officer is in default in the company's default in complying with section 644`
+         HENCE FULFILLED
+         LEST BREACH BY `ss 641-653 an officer of the company who is in default` BECAUSE "default was made in complying with section 644 and the officer was in default: an offence under s 644(8)(b)"
+    ELSE FULFILLED
+
+-- ---- route two: s 645, the application to the court ------------------------------------------------------------------------------
+
+-- src:8606 | (1) Where a company has passed a resolution for reducing share capital, it may apply to the court for an order confirming the reduction.
+@ref s 645(1) Application to court for order of confirmation (src:8606-8606)
+-- TIMELINE: unit=none; day 0=not applicable; counting=silent (the Act gives the company no time to apply, so no clock is encoded: the power stays open until the trace shows it used)
+-- FORK: s 645(1) what follows an application | each later step (the list, the order, the registration) is a separate rule below with its own day 0 and its own gate, because the court's outcome is an input to each | the next step of this rule
+GIVEN `the company has passed a resolution for reducing share capital` IS A BOOLEAN
+GIVETH A DEONTIC `ss 641-653 party` `ss 641-653 act`
+`s 645(1) the company's power to apply to the court for an order confirming the reduction` MEANS
+    IF (`s 645(1) the company may apply to the court for an order confirming the reduction` `the company has passed a resolution for reducing share capital`) EQUALS JUST TRUE
+    THEN PARTY `ss 641-653 the company`
+         MAY `s 645(1) the company applies to the court for an order confirming the reduction`
+         HENCE FULFILLED
+    ELSE FULFILLED
+
+-- src:8618 | (2) The court shall settle a list of creditors entitled to object.
+@ref s 646(2) Creditors entitled to object to reduction: the court settles the list (src:8618-8618)
+-- TIMELINE: unit=none; day 0=not applicable; counting=silent (the Act gives the court no time to settle the list, so no clock is encoded)
+GIVEN `the answer to whether section 646 applies to the reduction` IS A MAYBE BOOLEAN
+GIVETH A DEONTIC `ss 641-653 party` `ss 641-653 act`
+`s 646(2) the court's duty to settle a list of creditors entitled to object` MEANS
+    IF (`s 646(2) the court is obliged to settle a list of creditors entitled to object` `the answer to whether section 646 applies to the reduction`) EQUALS JUST TRUE
+    THEN PARTY `ss 641-653 the court`
+         MUST `s 646(2) the court settles a list of creditors entitled to object`
+         HENCE FULFILLED
+    ELSE FULFILLED
+
+-- src:8614 | (1) Where this section applies (see section 645(2) and (4)), every creditor of the company who
+-- src:8615 | (a) at the date fixed by the court is entitled to any debt or claim that, if that date were the commencement of the winding up of the company would be admissible in proof against the company, and
+-- src:8616 | (b) can show that there is a real likelihood that the reduction would result in the company being unable to discharge his debt or claim when it fell due,
+-- src:8617 | is entitled to object to the reduction of capital.
+@ref s 646(1) Creditors entitled to object to reduction: the creditor's right to object (src:8614-8617)
+-- TIMELINE: unit=none; day 0=not applicable; counting=silent (s 646(1) gives the creditor no time to object, so no clock is encoded: the power stays open until the trace shows it used)
+-- FORK: s 646(1) "is entitled to object" | the entitlement is a power of the creditor (MAY), gated by the existing function on the three facts it reads, and objecting is the act | no rule: the entitlement is only a condition of s 648(2)
+-- What an objection does is not a next step of this rule: the consequence is the court's duty in the separate rule for s 648(2) below, which reads the creditor's consent, payment or security and not the objection itself.
+GIVEN `the answer to whether section 646 applies to the reduction` IS A MAYBE BOOLEAN
+      `at the date fixed by the court the creditor is entitled to a debt or claim that would be admissible in proof against the company if that date were the commencement of the winding up` IS A BOOLEAN
+      `the creditor can show a real likelihood that the reduction would result in the company being unable to discharge the debt or claim when it fell due` IS A BOOLEAN
+GIVETH A DEONTIC `ss 641-653 party` `ss 641-653 act`
+`s 646(1) the creditor's power to object to the reduction of capital` MEANS
+    IF (`s 646(1) the creditor is entitled to object to the reduction of capital` `the answer to whether section 646 applies to the reduction` `at the date fixed by the court the creditor is entitled to a debt or claim that would be admissible in proof against the company if that date were the commencement of the winding up` `the creditor can show a real likelihood that the reduction would result in the company being unable to discharge the debt or claim when it fell due`) EQUALS JUST TRUE
+    THEN PARTY `ss 641-653 a creditor entitled to object`
+         MAY `s 646(1) the creditor objects to the reduction of capital`
+         HENCE FULFILLED
+    ELSE FULFILLED
+
+-- src:8619 | (3) For that purpose the court—
+-- src:8620 | (a) shall ascertain, as far as possible without requiring an application from any creditor, the names of those creditors and the nature and amount of their debts or claims, and
+-- src:8621 | (b) may publish notices fixing a day or days within which creditors not entered on the list are to claim to be so entered or are to be excluded from the right of objecting to the reduction of capital.
+@ref s 646(3)(b) Creditors entitled to object to reduction: the day fixed for creditors not on the list (src:8619-8621)
+-- TIMELINE: unit=calendar day; day 0=the day the court publishes the notice; counting="a day or days within which creditors not entered on the list are to claim to be so entered" (the days are counted from the two dates the court fixes: the notice's date and the last day for claims, so the last day is the day fixed itself)
+-- FORK: s 646(3)(b) "within which" | the day fixed is the last day on which a claim is in time | the day fixed is the first day that is too late
+-- FORK: s 646(3)(b) a lapsed claim | the BREACH is how the encoding says that the day fixed passed with no claim, so that the creditor "is to be excluded from the right of objecting"; it is the loss of a right and no wrong | no BREACH, the exclusion only
+-- not encoded: where the court fixes more than one day ("a day or days"), each is a separate rule with its own dates
+GIVEN `the answer to whether section 646 applies to the reduction` IS A MAYBE BOOLEAN
+      `the court has published a notice fixing a day within which creditors not entered on the list are to claim to be entered` IS A BOOLEAN
+      `the creditor is entered on the list` IS A BOOLEAN
+      `the date the court published the notice` IS A DATE
+      `the day the court fixed for the claims` IS A DATE
+GIVETH A DEONTIC `ss 641-653 party` `ss 641-653 act`
+`s 646(3)(b) the creditor's power to claim to be entered on the list by the day fixed` MEANS
+    IF (    (`s 646(2) the court is obliged to settle a list of creditors entitled to object` `the answer to whether section 646 applies to the reduction`) EQUALS JUST TRUE
+        AND `the court has published a notice fixing a day within which creditors not entered on the list are to claim to be entered`
+        AND (NOT `the creditor is entered on the list`))
+    THEN PARTY `ss 641-653 a creditor not entered on the list`
+         MAY `s 646(3)(b) a creditor not entered on the list claims to be entered`
+         WITHIN ((Day `the day the court fixed for the claims`) MINUS (Day `the date the court published the notice`))
+         HENCE FULFILLED
+         LEST BREACH BY `ss 641-653 a creditor not entered on the list` BECAUSE "the day fixed by the court passed without a claim to be entered on the list: the creditor is excluded from the right of objecting to the reduction of capital (s 646(3)(b))"
+    ELSE FULFILLED
+
+-- src:8627 | (1) If an officer of the company—
+-- src:8628 | (a) intentionally or recklessly—
+-- src:8629 | (i) conceals the name of a creditor entitled to object to the reduction of capital, or
+-- src:8630 | (ii) misrepresents the nature or amount of the debt or claim of a creditor, or
+-- src:8631 | (b) is knowingly concerned in any such concealment or misrepresentation,
+-- src:8632 | he commits an offence.
+@ref s 647(1) Offences in connection with list of creditors (src:8627-8632)
+-- TIMELINE: unit=none; day 0=not applicable; counting=silent (s 647 gives no time limit; each of the three events is supplied by the trace)
+-- FORK: s 647(1) the three limbs | three prohibitions on the officer side by side (RAND), each gated by the existing function with its own event TRUE and the others FALSE | one prohibition with one act
+GIVEN `s 1173(1) the holder of the position is an officer of the body corporate` IS A MAYBE BOOLEAN
+GIVETH A DEONTIC `ss 641-653 party` `ss 641-653 act`
+`s 647(1) the officer's duty not to conceal or misrepresent a creditor's name, debt or claim` MEANS
+        (IF (`s 647(1) the officer commits an offence` `s 1173(1) the holder of the position is an officer of the body corporate` TRUE FALSE FALSE) EQUALS JUST TRUE
+         THEN PARTY `ss 641-653 an officer of the company`
+              SHANT `s 647(1)(a)(i) an officer intentionally or recklessly conceals the name of a creditor entitled to object`
+              HENCE FULFILLED
+              LEST BREACH BY `ss 641-653 an officer of the company` BECAUSE "an officer intentionally or recklessly concealed the name of a creditor entitled to object to the reduction of capital: an offence under s 647(1)"
+         ELSE FULFILLED)
+    RAND
+        (IF (`s 647(1) the officer commits an offence` `s 1173(1) the holder of the position is an officer of the body corporate` FALSE TRUE FALSE) EQUALS JUST TRUE
+         THEN PARTY `ss 641-653 an officer of the company`
+              SHANT `s 647(1)(a)(ii) an officer intentionally or recklessly misrepresents the nature or amount of a creditor's debt or claim`
+              HENCE FULFILLED
+              LEST BREACH BY `ss 641-653 an officer of the company` BECAUSE "an officer intentionally or recklessly misrepresented the nature or amount of a creditor's debt or claim: an offence under s 647(1)"
+         ELSE FULFILLED)
+    RAND
+        (IF (`s 647(1) the officer commits an offence` `s 1173(1) the holder of the position is an officer of the body corporate` FALSE FALSE TRUE) EQUALS JUST TRUE
+         THEN PARTY `ss 641-653 an officer of the company`
+              SHANT `s 647(1)(b) an officer is knowingly concerned in such a concealment or misrepresentation`
+              HENCE FULFILLED
+              LEST BREACH BY `ss 641-653 an officer of the company` BECAUSE "an officer was knowingly concerned in a concealment or misrepresentation of that kind: an offence under s 647(1)"
+         ELSE FULFILLED)
+
+-- ---- route two: s 648, the court's order ------------------------------------------------------------------------------------------------
+
+-- src:8637 | (1) The court may make an order confirming the reduction of capital on such terms and conditions as it thinks fit.
+-- src:8638 | (2) The court must not confirm the reduction unless it is satisfied, with respect to every creditor of the company who is entitled to object to the reduction of capital that either—
+-- src:8639 | (a) his consent to the reduction has been obtained, or
+-- src:8640 | (b) his debt or claim has been discharged, or has determined or has been secured.
+@ref s 648(1) and (2) Court order confirming reduction (src:8637-8640)
+-- TIMELINE: unit=none; day 0=not applicable; counting=silent (the Act gives the court no time to make or refuse the order, so no clock is encoded on either rule)
+-- FORK: s 648(2) "must not confirm ... unless" | a prohibition on the court gated by the existing function answering JUST TRUE (the bar applies, because some creditor entitled to object has neither consented nor been paid, nor had the claim determined or secured); the court's order in that case is the BREACH | the court's order is void or open to appeal, not a breach
+GIVEN creditors IS A LIST OF `s 648(2) creditor entitled to object`
+GIVETH A DEONTIC `ss 641-653 party` `ss 641-653 act`
+`s 648(2) the court's duty not to confirm the reduction unless satisfied about every creditor entitled to object` MEANS
+    IF (`s 648(2) the section bars the court from confirming the reduction` creditors) EQUALS JUST TRUE
+    THEN PARTY `ss 641-653 the court`
+         SHANT `s 648(1) the court makes an order confirming the reduction`
+         HENCE FULFILLED
+         LEST BREACH BY `ss 641-653 the court` BECAUSE "the court confirmed the reduction without being satisfied, with respect to every creditor entitled to object, that his consent had been obtained or his debt or claim discharged, determined or secured (s 648(2))"
+    ELSE FULFILLED
+
+-- TIMELINE: unit=none; day 0=not applicable; counting=silent (as above)
+GIVEN creditors IS A LIST OF `s 648(2) creditor entitled to object`
+GIVETH A DEONTIC `ss 641-653 party` `ss 641-653 act`
+`s 648(1) the court's power to make an order confirming the reduction` MEANS
+    IF (`s 648(2) the section bars the court from confirming the reduction` creditors) EQUALS JUST FALSE
+    THEN PARTY `ss 641-653 the court`
+         MAY `s 648(1) the court makes an order confirming the reduction`
+         HENCE FULFILLED
+    ELSE FULFILLED
+
+-- ---- route two: s 649, registration of the order and certificate -----------------------------------------------------------------
+
+-- src:8645 | (1) The registrar, on the delivery of a copy of a court order confirming the reduction of a company’s share capital and of a statement of capital (approved by the court), shall register the order and statement.
+-- src:8646 | This is subject to section 650 (public company reducing capital below authorised minimum).
+-- src:8666 | (5) The registrar must certify the registration of the order and statement of capital.
+@ref s 649(1) and (5) Registration of order and statement of capital (src:8645-8666)
+-- TIMELINE: unit=none; day 0=the day the order and the statement of capital are delivered to the registrar; counting="on the delivery" for the registration and silent for the certificate (no clock is encoded on either: each stays owed until the trace shows it)
+-- FORK: s 649(1) "on the delivery" | no clock: the registration is owed from the day of delivery and the text gives no later limit | WITHIN 0, the same day as the delivery
+-- FORK: s 649(5) "must certify the registration" | the certificate is the next step of the registration (the HENCE below), because its subject exists only once the order and statement are registered | a separate rule gated on the registration
+-- not encoded: s 649(4) (notice of the registration "must be published in such manner as the court may direct") names no one who must publish it, so no party is chosen
+GIVEN `a copy of the court order confirming the reduction has been delivered to the registrar` IS A BOOLEAN
+      `a statement of capital approved by the court has been delivered to the registrar` IS A BOOLEAN
+      `s 650(2) the registrar is barred from registering the order` IS A MAYBE BOOLEAN
+GIVETH A DEONTIC `ss 641-653 party` `ss 641-653 act`
+`s 649(1) the registrar's duty to register the order and the statement of capital, and then to certify the registration` MEANS
+    IF (`s 649(1) the registrar is obliged to register the order and the statement` `a copy of the court order confirming the reduction has been delivered to the registrar` `a statement of capital approved by the court has been delivered to the registrar` `s 650(2) the registrar is barred from registering the order`) EQUALS JUST TRUE
+    THEN PARTY `ss 641-653 the registrar`
+         MUST `s 649(1) the registrar registers the order and the statement of capital`
+         HENCE (PARTY `ss 641-653 the registrar`
+                MUST `s 649(5) the registrar certifies the registration`
+                HENCE FULFILLED)
+    ELSE FULFILLED
