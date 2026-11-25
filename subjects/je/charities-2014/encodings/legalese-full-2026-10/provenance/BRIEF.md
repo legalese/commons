@@ -21,7 +21,7 @@ The Law has been amended and was commenced in stages; the text has nine point-in
 | `WORK` | `FLEET_DIR/work/<your role>/` | write: all scratch files, probes and scripts go here, never anywhere else |
 | `SKILLS` | `FLEET_DIR/skills` | read: a clean copy of the two skills (see "Skills") |
 
-You may read `INPUTS_DIR`, `PHASE1`, the DEPOSIT files your assignment names, `SKILLS`, and the l4-ide language documentation under `/Users/mengwong/src/legalese/l4-ide/doc/reference/` and `/Users/mengwong/src/legalese/l4-ide/doc/concepts/`. Nothing else.
+You may read `INPUTS_DIR`, `PHASE1`, the DEPOSIT files your assignment names, `SKILLS`, and the l4-ide language documentation under `~/src/legalese/l4-ide/doc/reference/` and `~/src/legalese/l4-ide/doc/concepts/`. Nothing else.
 In particular do NOT read `doc/courses/`, `doc/tutorials/`, `jl4/examples`, `paper/`, or the original `skills/` directory of l4-ide: they carry material drawn from other encodings of this Law.
 Do not list or read the parent of `FLEET_DIR`: it holds material from other work that you must not see.
 `L4_BIN` is `/Volumes/transcend/claude-tmp/claude-502/-Users-mengwong-src-legalese-l4-ide/7d96192f-aaa4-44f5-ac28-10f6e3777fd5/scratchpad/je-full/bin/l4` (sha256 `18bd5a72fb8dc3180540afeece05da982f87d03aa098de562de2140e4e89d475`; the prerelease l4 unstable-20261026-6325439 (darwin-arm64, SHA256SUMS-verified), installed 2026-10-26; an ancestor of origin/unstable 65adfc2de with no jl4-core change in between); use exactly this path.
@@ -138,7 +138,7 @@ Concurrent `l4` runs on DIFFERENT files are safe.
 
 ## Independence (cleanroom)
 
-Other encodings of this exact Law exist (more than one). You must not read, list, grep or otherwise inspect any of them: nothing under `/Users/mengwong/src/legalese/commons/`, `commonswt/`, `canon/`, `l4-ide/paper/`, `l4-ide/jl4/examples/`, nor any copy of those on any volume under `/Volumes/` other than your own working directory, nor `~/.claude/` other than what this brief names (no `memory/`, `projects/`, `tmp`).
+Other encodings of this exact Law exist (more than one). You must not read, list, grep or otherwise inspect any of them: nothing under `~/src/legalese/commons/`, `commonswt/`, `canon/`, `l4-ide/paper/`, `l4-ide/jl4/examples/`, nor any copy of those on any volume under `/Volumes/` other than your own working directory, nor `~/.claude/` other than what this brief names (no `memory/`, `projects/`, `tmp`).
 Do not search any filesystem for `charit*`, `jersey*` or this Law's name. Your context may contain an index of someone's notes that mentions this subject; do not follow it.
 If you open a forbidden file by accident, stop reading it and say so under `peeked`. An honest admission costs nothing; a silent peek destroys the comparison.
 

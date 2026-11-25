@@ -2,7 +2,7 @@
 # Run the encoding with the l4 binary and the prelude that MATCHES it.
 # CLAUDE.md § 3.1: never point an l4 binary at a prelude newer than itself.
 # Both come from the same worktree, so they agree by construction.
-WT=${OFEK_L4_WORKTREE:-/Users/mengwong/src/legalese/l4wt/ofek-build}
+WT=${OFEK_L4_WORKTREE:-$HOME/src/legalese/l4wt/ofek-build}
 L4=$WT/dist-newstyle/build/aarch64-osx/ghc-9.10.3/jl4-0.1/x/l4/build/l4/l4
 export JL4_LIBRARY_PATH=$WT/jl4-core/libraries
 cd "$(dirname "$0")" || exit 1

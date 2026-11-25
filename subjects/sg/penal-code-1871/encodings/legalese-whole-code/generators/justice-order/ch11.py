@@ -3,7 +3,7 @@ from lib import Facts, Pun, pred, charge, mu, or_both, and_fine, heading
 from build import Module, Tests, COVERAGE, catalogue, TIER_DEATH, TIER_LIFE, tier_puns, tier_expr
 import build
 
-DEP = "/Users/mengwong/src/legalese/pc-encode/deposit/"
+DEP = __import__("os").path.expanduser("~/src/legalese/pc-encode/deposit/")
 
 HEADER = """-- Singapore Penal Code 1871 - Chapter 11 (False evidence and offences against
 -- public justice, ss 191-229) and Chapter 12 (Offences relating to Government

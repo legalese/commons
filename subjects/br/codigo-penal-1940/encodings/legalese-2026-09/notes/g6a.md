@@ -124,7 +124,7 @@ M-sweep-c-01 (Lei nº 7.209/1984, art. 2º) was checked: no preceito in arts. 31
 
 ## 5. What `check.sh` prints
 
-`L4=/Users/mengwong/.claude/br-penal-toolchain/l4 ./check.sh . cp-g6a-`, 2026-09-30, after the art. 327 integration:
+`L4=~/.claude/br-penal-toolchain/l4 ./check.sh . cp-g6a-`, 2026-09-30, after the art. 327 integration:
 
 ```
 module                                        errors satisfied  failed refused asserts

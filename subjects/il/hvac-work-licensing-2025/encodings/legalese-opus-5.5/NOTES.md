@@ -530,7 +530,7 @@ The output-token figure sums the per-request usage the transcript records and ma
 Dollar cost is not computed here.
 
 **The binary.**
-`/Users/mengwong/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-41dd7a67/bin/l4`, built 2026-10-13 16:13 from l4-ide `unstable`, sha256 `2e3d6bd3a154e6b4080a445af6cc189dbc4ac087d8221682d09509212f1ce187`.
+`~/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-41dd7a67/bin/l4`, built 2026-10-13 16:13 from l4-ide `unstable`, sha256 `2e3d6bd3a154e6b4080a445af6cc189dbc4ac087d8221682d09509212f1ce187`.
 `JL4_LIBRARY_PATH` was unset.
 
 **What the launching session re-ran, rather than taking from the encoder's report.**

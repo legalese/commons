@@ -112,7 +112,7 @@ Readings of g0's taken as g0 took them: F-g0-06 (maior de), F-g0-08 (idoso), F-g
 Run in the foreground from ENC. The exit status is 0: errors, failed and refused are all 0 and nothing is UNACCOUNTED, the four conditions of `check.sh`'s last line.
 
 ```
-$ L4=/Users/mengwong/.claude/br-penal-toolchain/l4 ./check.sh . cp-g2a-
+$ L4=~/.claude/br-penal-toolchain/l4 ./check.sh . cp-g2a-
 module                                        errors satisfied  failed refused asserts
 cp-g2a-aborto-testes.l4                            0        55       0       0      55
 cp-g2a-aborto.l4                                   0         0       0       0       0

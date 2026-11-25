@@ -13,7 +13,7 @@
 set -e
 
 HERE=$(cd "$(dirname "$0")/.." && pwd)
-WT=${OFEK_L4_WORKTREE:-/Users/mengwong/src/legalese/l4wt/ofek-build}
+WT=${OFEK_L4_WORKTREE:-$HOME/src/legalese/l4wt/ofek-build}
 L4=$WT/dist-newstyle/build/aarch64-osx/ghc-9.10.3/jl4-0.1/x/l4/build/l4/l4
 export JL4_LIBRARY_PATH=$WT/jl4-core/libraries
 CATALA="opam exec --switch=catala --"

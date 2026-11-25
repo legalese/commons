@@ -47,7 +47,7 @@ The other two (008, 113) are on cases marked certain.
 
 ## check.sh, verbatim
 
-Run over all seven files from 17:37 to 17:53 SGT on 2026-09-30 (`L4=/Users/mengwong/.claude/br-penal-toolchain/l4 ./check.sh . cp-ind-g5-`); `cp-ind-g5-estado-democratico.l4` was re-run alone at 22:57, after a comment-only edit, with the same line. Exit status 1, as expected with failures.
+Run over all seven files from 17:37 to 17:53 SGT on 2026-09-30 (`L4=~/.claude/br-penal-toolchain/l4 ./check.sh . cp-ind-g5-`); `cp-ind-g5-estado-democratico.l4` was re-run alone at 22:57, after a comment-only edit, with the same line. Exit status 1, as expected with failures.
 
 ```
 module                                        errors satisfied  failed refused asserts

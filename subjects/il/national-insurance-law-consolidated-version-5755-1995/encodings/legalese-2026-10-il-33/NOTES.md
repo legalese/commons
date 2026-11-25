@@ -200,7 +200,7 @@ By default every year after 2015 is declined, because the readings differ from 2
 
 ## 5. `check.sh`
 
-`L4=/Users/mengwong/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset.
+`L4=~/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset.
 Run from 2026-10-09T00:04:50Z to 00:05:35Z (version 0.1.2), after the last edit to any module.
 Binary: `~/.local/bin/l4` resolving to the cabal store's `jl4-0.1-6df1397b/bin/l4`, sha256 `f0759b2ef2f1d1b2a577c68f059c54f487de9d913553fc9f0d9bf0f7f5dab0d8`, the same before and after the run.
 
@@ -408,7 +408,7 @@ The pass found no misreading and one unregistered fork; the lead asked for the r
    611 assertions in 0.1.1; 625 in this row's own tests in 0.1.2, and the tester's file is 318 satisfied, 0 failed, 3 refused (declared).
    The check table is the one in `check.sh`'s run below.
 
-Run from 2026-10-09T00:04:50Z to 00:05:35Z, `L4=/Users/mengwong/.local/bin/l4 ./check.sh`, exit 0; l4 sha256 `f0759b2ef2f1d1b2a577c68f059c54f487de9d913553fc9f0d9bf0f7f5dab0d8` before and after.
+Run from 2026-10-09T00:04:50Z to 00:05:35Z, `L4=~/.local/bin/l4 ./check.sh`, exit 0; l4 sha256 `f0759b2ef2f1d1b2a577c68f059c54f487de9d913553fc9f0d9bf0f7f5dab0d8` before and after.
 TOTAL (34 modules): 0 errors, 943 satisfied, 0 failed, 3 refused (the tester's, declared).
 
 **For IL-55.**

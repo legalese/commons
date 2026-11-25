@@ -52,5 +52,5 @@ IL-06's fork F18 (a resident housewife under s 65(a) "מבוטח") is left as it
 
 ## Toolchain
 
-`/Users/mengwong/.local/bin/l4`, `JL4_LIBRARY_PATH` unset; `L4=/Users/mengwong/.local/bin/l4 ./check.sh`.
+`~/.local/bin/l4`, `JL4_LIBRARY_PATH` unset; `L4=~/.local/bin/l4 ./check.sh`.
 The binary's sha256 is recorded before and after each check run.

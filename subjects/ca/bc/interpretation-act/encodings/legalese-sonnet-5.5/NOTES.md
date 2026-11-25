@@ -31,7 +31,7 @@ The brief mandates `REFUSE` for what the text does not answer, and `main` reject
 `/Volumes/transcend/claude-tmp/claude-502/-Users-mengwong-src-legalese-l4-ide/ca81f332-162b-4c52-8cc3-57ed15b3f6fa/scratchpad/bin/l4-unstable-0528`, sha256 `0f0f1b86d37164af242ca2b6c03aa31ddeedef752bd10474f1459b78cf539e9d` (`shasum -a 256`, computed in this pass).
 Its `--version` line is `unstable-20261028-5e95b5a (unstable, 5e95b5a, 2026-10-28)`.
 `JL4_LIBRARY_PATH` was left unset throughout.
-Pass 1 was run with a different binary (`/Users/mengwong/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-9afd0288/bin/l4`, sha256 `2d912dd2a61ba36b3fb8c1e02dcbd445ba1143c3b8ecb931462c01050cd607d7`); the baseline of section 5 was reproduced with the pass-2 binary before any change and gave the same numbers.
+Pass 1 was run with a different binary (`~/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-9afd0288/bin/l4`, sha256 `2d912dd2a61ba36b3fb8c1e02dcbd445ba1143c3b8ecb931462c01050cd607d7`); the baseline of section 5 was reproduced with the pass-2 binary before any change and gave the same numbers.
 
 ### Modules (reading order; each starts `@lang en`)
 

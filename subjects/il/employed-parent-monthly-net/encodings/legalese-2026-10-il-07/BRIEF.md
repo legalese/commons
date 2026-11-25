@@ -64,5 +64,5 @@ The answer for a month: the income tax for tax year 2026 and one twelfth of it, 
 
 ## Toolchain
 
-`/Users/mengwong/.local/bin/l4` (no `--version`), `JL4_LIBRARY_PATH` unset.
-`L4=/Users/mengwong/.local/bin/l4 ./check.sh`.
+`~/.local/bin/l4` (no `--version`), `JL4_LIBRARY_PATH` unset.
+`L4=~/.local/bin/l4 ./check.sh`.

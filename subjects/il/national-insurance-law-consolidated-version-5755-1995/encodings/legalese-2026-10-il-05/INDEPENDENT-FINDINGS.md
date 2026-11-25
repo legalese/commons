@@ -5,7 +5,7 @@ Companion files: `DECIDED-ANSWERS.md` (the pre-encoding reading, finished 21:49:
 
 ## Numbers
 
-`check.sh` run over a directory holding the five rule modules and `tests-independent.l4` (L4=/Users/mengwong/.local/bin/l4):
+`check.sh` run over a directory holding the five rule modules and `tests-independent.l4` (L4=~/.local/bin/l4):
 
 | module | errors | satisfied | failed | refused |
 |---|---|---|---|---|

@@ -56,6 +56,6 @@ The definition of "year of birth" and "year of majority" in s 40(b)(3) is incorp
 
 ## Toolchain
 
-The binary is `/Users/mengwong/.local/bin/l4` (no `--version`; build undetermined).
+The binary is `~/.local/bin/l4` (no `--version`; build undetermined).
 Leave `JL4_LIBRARY_PATH` unset.
-`L4=/Users/mengwong/.local/bin/l4 ./check.sh` runs every module.
+`L4=~/.local/bin/l4 ./check.sh` runs every module.

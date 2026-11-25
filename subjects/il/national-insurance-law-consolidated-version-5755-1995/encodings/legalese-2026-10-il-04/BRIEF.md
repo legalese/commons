@@ -59,5 +59,5 @@ Where a provision in scope refers to one of these, its result is an **input**, w
 
 ## Toolchain
 
-`/Users/mengwong/.local/bin/l4` (it has no `--version`; NOTES.md section 0 identifies the build used), with `JL4_LIBRARY_PATH` unset.
+`~/.local/bin/l4` (it has no `--version`; NOTES.md section 0 identifies the build used), with `JL4_LIBRARY_PATH` unset.
 `l4 check FILE` type-checks; `l4 run FILE` also evaluates every `#EVAL` and `#ASSERT`.

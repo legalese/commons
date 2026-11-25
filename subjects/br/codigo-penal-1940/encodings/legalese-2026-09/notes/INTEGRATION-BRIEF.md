@@ -4,7 +4,7 @@ Written by the conductor on 2026-09-30, for the integrator agent.
 
 ENC is this directory.
 Read `BRIEF.md` and `PLAN.md` (§§ 0, 1, 2, 6, 8 and 12) first; every convention there still holds.
-The binary is `/Users/mengwong/.claude/br-penal-toolchain/l4`; leave `JL4_LIBRARY_PATH` unset.
+The binary is `~/.claude/br-penal-toolchain/l4`; leave `JL4_LIBRARY_PATH` unset.
 Never run `cabal`, never commit, and never push.
 Your scratch directory is `/private/tmp/claude-502/-Users-mengwong-src-legalese-l4-ide/452e2526-ee93-4276-9db4-448804aa5ac6/scratchpad/integrator/`.
 **Do not read `~/.claude/br-penal-oracle/`.** It holds the independent test cases, which are still to be scored against your result.
@@ -70,7 +70,7 @@ The conductor's mechanical extraction took the WRONG source line for many unit t
 Encoders corrected some of these by hand (g1a 3, g2a 6, g6a 3, g6b ~16, g5 7, g3 6, g1b 2, g4b 1).
 Re-derive every title in `registers/parts/*.roadmap.json` from the source: the rubric line directly above each article, where the article has one.
 Where your derivation differs from an encoder's correction, keep the encoder's and note the difference. Where an article has no rubric (e.g. arts. 144–145), use the article's own first words and say so.
-Validate every part with `node /Users/mengwong/src/legalese/l4wt/br-penal/etc/go/lib/register-validate.mjs encoding-roadmap <part> <ENC>/registers/source-bundle.json`, run from `/Users/mengwong/src/legalese/l4wt/br-penal`.
+Validate every part with `node ~/src/legalese/l4wt/br-penal/etc/go/lib/register-validate.mjs encoding-roadmap <part> <ENC>/registers/source-bundle.json`, run from `~/src/legalese/l4wt/br-penal`.
 If you renamed or moved modules, update each unit's `modules` paths too; they must resolve.
 
 ### 6. Do NOT

@@ -250,11 +250,11 @@ Other Korean laws (for example sectoral or personal-information laws), MSIT noti
 ## Checks
 
 Target compiler: `main`.
-The `l4` used for every run: `L4=/Users/mengwong/.cache/l4-main/99/l4`, whose `--version` prints `1.6.99 (main, 6cc2c91, 2026-10-21)`; `JL4_LIBRARY_PATH` unset.
+The `l4` used for every run: `L4=~/.cache/l4-main/99/l4`, whose `--version` prints `1.6.99 (main, 6cc2c91, 2026-10-21)`; `JL4_LIBRARY_PATH` unset.
 `check.sh` compared it with the main build `fetch-main-l4.sh` supplied, the same build.
 
 ```
-$ L4=/Users/mengwong/.cache/l4-main/99/l4 ./check.sh
+$ L4=~/.cache/l4-main/99/l4 ./check.sh
 target: main. Each module is run with your l4 and with the main build below; the main columns must match.
 main build: 1.6.99 (main, 6cc2c91, 2026-10-21)
 module                                    errors satisfied  failed  refused  expected | errors satisfied  failed  refused  main

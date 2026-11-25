@@ -68,14 +68,14 @@ Re-read after a compaction: this file, `NOTES.md`, the six statute `.txt` files 
 ## Fixed facts
 
 - Target: `unstable` (the brief requires `REFUSE` and `@lang en`, which `main` rejects). Run `L4_TARGET=unstable L4=<L4_BIN> ./check.sh`; the default target of this copy of `check.sh` is `unstable`.
-- L4_BIN `/Users/mengwong/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-9afd0288/bin/l4`, sha256 `2d912dd2a61ba36b3fb8c1e02dcbd445ba1143c3b8ecb931462c01050cd607d7`, `l4 --version` prints `dev`.
+- L4_BIN `~/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-9afd0288/bin/l4`, sha256 `2d912dd2a61ba36b3fb8c1e02dcbd445ba1143c3b8ecb931462c01050cd607d7`, `l4 --version` prints `dev`.
 - `JL4_LIBRARY_PATH` stays UNSET.
 - The `.txt` files are a converter-made rendering, not the official text; nothing here was checked against the official text.
 
 ## Status
 
 - [x] Coverage plan: 159 sections, every one has a row in the coverage table of `NOTES.md`.
-- [x] `usca-interpretation-time.l4` (prelude + daydate only), `usca-holidays.l4`, `usca-operation-of-statutes.l4`, `usca-general-provisions.l4`: all compile with no diagnostics; `srcrefs.py check --refs` (the encoding skill's tool, /Users/mengwong/src/legalese/l4-ide/skills/encoding-a-subject/assets/srcrefs.py) reports 0 problems on each.
+- [x] `usca-interpretation-time.l4` (prelude + daydate only), `usca-holidays.l4`, `usca-operation-of-statutes.l4`, `usca-general-provisions.l4`: all compile with no diagnostics; `srcrefs.py check --refs` (the encoding skill's tool, ~/src/legalese/l4-ide/skills/encoding-a-subject/assets/srcrefs.py) reports 0 problems on each.
 - [x] Tests: `test-usca-time.l4`, `test-usca-rules.l4`, `test-usca-holidays.l4`, `test-usca-operation.l4`, `test-usca-general.l4`, `test-usca-worked.l4`: all assertions satisfied (counts in the check output in `NOTES.md`).
 - [x] `tests-red.l4`: 8 assertions meant to fail; counted in `check.sh` (`expected_failed`) and `encoding.json` (`expected_red`).
 - [x] Answer table: 63 evaluations of the worked cases, 0 differences from the values written down before the first run.

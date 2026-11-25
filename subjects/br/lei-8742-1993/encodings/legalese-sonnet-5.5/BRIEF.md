@@ -154,7 +154,7 @@ The binary is `L4_BIN` (given in your task; version 1.6.98, sha256 `82ea44addf09
 ## Independence
 
 You may read: `INPUTS_DIR`, your own `DEPOSIT`, the two skills and their references, and the Commons guide copies in `inputs/`. Nothing else on disk.
-Do not read any existing encoding of any Act: nothing under `/Users/mengwong/src/legalese/commons`, `commonswt` or `canon`; nothing under `/Volumes/transcend/claude-tmp/claude-502/-Users-mengwong-src-legalese-commons/13faa5dd-0489-4b66-8599-941241b16104/scratchpad/tc1` other than your own folder `lo/` (in particular, not the folders of the other texts, which are being written at the same time); nothing in the directory that holds `L4_BIN` except that you run it; and nothing under `~/.claude/` (no `memory/`, no `projects/`, no `state/`, no `tmp`).
+Do not read any existing encoding of any Act: nothing under `~/src/legalese/commons`, `commonswt` or `canon`; nothing under `/Volumes/transcend/claude-tmp/claude-502/-Users-mengwong-src-legalese-commons/13faa5dd-0489-4b66-8599-941241b16104/scratchpad/tc1` other than your own folder `lo/` (in particular, not the folders of the other texts, which are being written at the same time); nothing in the directory that holds `L4_BIN` except that you run it; and nothing under `~/.claude/` (no `memory/`, no `projects/`, no `state/`, no `tmp`).
 The one exception is `inputs/EXAMPLE-sg-employment-act-seat/`, which is yours to read.
 The answers must come from the text alone.
 Your context may contain an index of someone's notes that mentions other encodings; do not follow it. If you open a forbidden file by accident, stop reading it and say so under `peeked`.

@@ -18,7 +18,7 @@
 #
 # Environment.
 #   L4        the l4 binary (default: l4 on PATH).  The fleet's binary is
-#             /Users/mengwong/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-41dd7a67/bin/l4; leave JL4_LIBRARY_PATH unset.
+#             ~/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-41dd7a67/bin/l4; leave JL4_LIBRARY_PATH unset.
 #   INPUTS    the directory holding law.wiki, regulations-fees.wiki, kovetz-hatakanot-11951-p2116.txt and takanot-12383.txt (or kovetz-hatakanot-12383-p2062.txt); default: ../inputs, else ../../source
 #   SRCREFS   the path of srcrefs.py; default: tools/srcrefs.py beside this script (the encoding-a-subject skill's assets/srcrefs.py, vendored)
 #   If INPUTS or SRCREFS is not found, step 4 is reported as NOT RUN.  A run with a step not run is not a full check.
@@ -33,7 +33,7 @@ if [ -z "${INPUTS:-}" ]; then
 fi
 # srcrefs.py: the copy vendored in tools/ (byte-identical to the encoding-a-subject skill's assets/srcrefs.py), unless SRCREFS says otherwise.
 if [ -z "${SRCREFS:-}" ]; then
-  if [ -f "$DIR/tools/srcrefs.py" ]; then SRCREFS="$DIR/tools/srcrefs.py"; else SRCREFS="/Users/mengwong/src/legalese/l4-ide/skills/encoding-a-subject/assets/srcrefs.py"; fi
+  if [ -f "$DIR/tools/srcrefs.py" ]; then SRCREFS="$DIR/tools/srcrefs.py"; else SRCREFS="$HOME/src/legalese/l4-ide/skills/encoding-a-subject/assets/srcrefs.py"; fi
 fi
 # The two Kovetz HaTakanot text layers are named takanot-12383.txt in the fleet's inputs and kovetz-hatakanot-12383-p2062.txt in source/.
 KT12383="$INPUTS/takanot-12383.txt"; [ -f "$KT12383" ] || KT12383="$INPUTS/kovetz-hatakanot-12383-p2062.txt"

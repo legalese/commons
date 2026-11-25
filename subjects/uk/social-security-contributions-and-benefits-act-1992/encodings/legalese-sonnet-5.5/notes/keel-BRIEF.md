@@ -114,7 +114,7 @@ Run the check as `L4=<L4_BIN> L4_MAIN=<the lead's scratchpad>/bin/l4-main-108 ./
 
 ## Independence
 
-Do not read any existing encoding of any Act: nothing under `/Users/mengwong/src/legalese/commons`, `commonswt` or `canon`, no directory under `<the lead's scratchpad>/runs` other than your own `iaw-ssc-k/`, and nothing under `~/.claude/` (no `memory/`, no `projects/`, no `state/`, no `tmp`).
+Do not read any existing encoding of any Act: nothing under `~/src/legalese/commons`, `commonswt` or `canon`, no directory under `<the lead's scratchpad>/runs` other than your own `iaw-ssc-k/`, and nothing under `~/.claude/` (no `memory/`, no `projects/`, no `state/`, no `tmp`).
 You may read `INPUTS_DIR`, the two skills and their references, and the Commons guide copies in `inputs/`. Your context may contain an index of someone's notes that mentions other encodings; do not follow it. If you open a forbidden file by accident, stop reading it and say so under `peeked`.
 
 ## Final report (your last message; the report is your final response, not a file)

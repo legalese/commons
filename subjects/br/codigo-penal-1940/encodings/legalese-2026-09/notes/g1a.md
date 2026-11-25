@@ -127,7 +127,7 @@ A duplicate to reconcile: `a primeira pena é menos grave que a segunda` (art. 2
 
 ## 5. What check.sh prints
 
-`L4=/Users/mengwong/.claude/br-penal-toolchain/l4 ./check.sh . cp-g1a-`, run from the encoding directory, 2026-09-29, after the last edit to any g1a module (exit status 0):
+`L4=~/.claude/br-penal-toolchain/l4 ./check.sh . cp-g1a-`, run from the encoding directory, 2026-09-29, after the last edit to any g1a module (exit status 0):
 
 ```
 module                                        errors satisfied  failed refused asserts

@@ -177,7 +177,7 @@ The file was re-run after the edit: 131 satisfied, 6 failed, 2 refused, each of 
 
 ### What `check.sh` prints at 0.6.0
 
-Run from 2026-10-08T22:50:26Z to 22:50:33Z as `L4=/Users/mengwong/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset, on the cabal store build `jl4-0.1-6df1397b`, sha256 `f0759b2ef2f1d1b2a577c68f059c54f487de9d913553fc9f0d9bf0f7f5dab0d8`, the same before and after the run (not the binary of 0.5.0, `f4f2bd25…`).
+Run from 2026-10-08T22:50:26Z to 22:50:33Z as `L4=~/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset, on the cabal store build `jl4-0.1-6df1397b`, sha256 `f0759b2ef2f1d1b2a577c68f059c54f487de9d913553fc9f0d9bf0f7f5dab0d8`, the same before and after the run (not the binary of 0.5.0, `f4f2bd25…`).
 On it, before any change (22:34:51Z to 22:34:59Z), the row gave 0.5.0's table, exit 0; and before the tester's four lines were re-pointed (22:47:42Z to 22:47:49Z) it gave 400 satisfied, 9 failed and 6 refused, exit 0, with the four declared.
 
 ```
@@ -261,7 +261,7 @@ Every added value was worked out by hand before the first run that evaluated it 
 
 ### What `check.sh` prints at 0.5.0
 
-Run from 2026-10-08T16:04:45Z to 16:05:03Z as `L4=/Users/mengwong/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset, on the binary of 0.4.0 (cabal store `jl4-0.1-d4290e25`, sha256 `f4f2bd2558f02f828f0deced5f74313a33670f08cc3275ff95b83f2cde71e448`), the same before and after the run.
+Run from 2026-10-08T16:04:45Z to 16:05:03Z as `L4=~/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset, on the binary of 0.4.0 (cabal store `jl4-0.1-d4290e25`, sha256 `f4f2bd2558f02f828f0deced5f74313a33670f08cc3275ff95b83f2cde71e448`), the same before and after the run.
 On it, a copy of the row as committed at 0.4.0 gave 0.4.0's table (16:05:13Z to 16:06:17Z).
 
 ```
@@ -402,7 +402,7 @@ The six failures and two refusals that remain are the tester's E8 (lines 302-305
 
 ### What `check.sh` prints at 0.4.0
 
-Run from 2026-10-08T07:08:54Z to 07:09:08Z as `L4=/Users/mengwong/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset.
+Run from 2026-10-08T07:08:54Z to 07:09:08Z as `L4=~/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset.
 `~/.local/bin/l4` resolved to the cabal store build `jl4-0.1-d4290e25` (233,567,184 bytes, modified 2026-10-08T06:07:24Z), sha256 `f4f2bd2558f02f828f0deced5f74313a33670f08cc3275ff95b83f2cde71e448`, the same before and after the run; not the binary of 0.3.0 (`3a1843a0…`).
 On it, before any repair (06:50:57Z to 06:51:28Z), the row gave 0.3.0's table exactly, exit 0.
 
@@ -461,7 +461,7 @@ No other expected value changed.
 
 ### What `check.sh` prints at 0.3.0
 
-Run from 2026-10-07T07:20:12Z to 07:20:25Z as `L4=/Users/mengwong/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset, on the binary row IL-04's "Version 0.3.0" records (sha256 `6015a4c3…`, unchanged during the run; not `jl4-0.1-0ee0100b`, which section 0 used). No module changed during the run.
+Run from 2026-10-07T07:20:12Z to 07:20:25Z as `L4=~/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset, on the binary row IL-04's "Version 0.3.0" records (sha256 `6015a4c3…`, unchanged during the run; not `jl4-0.1-0ee0100b`, which section 0 used). No module changed during the run.
 
 ```
 module                                    errors satisfied  failed  refused  expected
@@ -487,7 +487,7 @@ TOTAL (8 modules)                             18       305      18        2
 
 ## 0. What `check.sh` prints
 
-Run on 2026-10-06 with `/Users/mengwong/.local/bin/l4`, `JL4_LIBRARY_PATH` unset.
+Run on 2026-10-06 with `~/.local/bin/l4`, `JL4_LIBRARY_PATH` unset.
 That path is a symlink to `~/.cabal/bin/l4`, which resolves to the cabal store entry `jl4-0.1-0ee0100b`, sha256 `64bbcb157dbef2ef1020a6a75589313bba0a2aeeb807c921c5e65e62e9eca118` (the binary row IL-04 used).
 The binary has no `--version`, and no record beside it names the commit it was built from.
 
@@ -876,7 +876,7 @@ Neither amends s 348 or Schedule K; the Budget-year Law s 19(4) amends s 342 ("6
 The 2023 Economic Efficiency Law was not opened: nothing in this comparison turns on Schedule J's item 4.
 The National Insurance Institute's figures are taken from this row's `NOTES.md` section 7 (the encoder's fetch, 14:49-14:53 UTC on 2026-10-06) and `DECIDED-ANSWERS.md` section 1 (the independent tester's fetch through the Israeli proxy, 21:41-21:43 UTC); they agree, and nothing was re-fetched.
 
-Toolchain: `/Users/mengwong/.local/bin/l4` → `jl4-0.1-0ee0100b`, sha256 `64bbcb15…e118` (the binary of section 0), `JL4_LIBRARY_PATH` unset.
+Toolchain: `~/.local/bin/l4` → `jl4-0.1-0ee0100b`, sha256 `64bbcb15…e118` (the binary of section 0), `JL4_LIBRARY_PATH` unset.
 
 ### Licence
 

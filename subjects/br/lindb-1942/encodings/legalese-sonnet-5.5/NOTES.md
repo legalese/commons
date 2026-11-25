@@ -256,7 +256,7 @@ Counts: 108 rows: 79 encoded, 5 inert, 8 repealed or blank in this text, 16 not 
 
 ## 6. What `check.sh` prints
 
-Command: `L4_TARGET=unstable L4=<L4_BIN> ./check.sh`, with `JL4_LIBRARY_PATH` unset. `L4_BIN` is `/Users/mengwong/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-9afd0288/bin/l4`, sha256 `2d912dd2a61ba36b3fb8c1e02dcbd445ba1143c3b8ecb931462c01050cd607d7`. The first line goes to standard error; the rest is standard output.
+Command: `L4_TARGET=unstable L4=<L4_BIN> ./check.sh`, with `JL4_LIBRARY_PATH` unset. `L4_BIN` is `~/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-9afd0288/bin/l4`, sha256 `2d912dd2a61ba36b3fb8c1e02dcbd445ba1143c3b8ecb931462c01050cd607d7`. The first line goes to standard error; the rest is standard output.
 
 ```
 check.sh: the target is unstable, so the main check was skipped.

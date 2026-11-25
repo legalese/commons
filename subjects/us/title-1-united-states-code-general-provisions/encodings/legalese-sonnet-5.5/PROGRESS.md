@@ -6,7 +6,7 @@ After a compaction: re-read this file, NOTES.md and `../../registers/source-bund
 ## State
 
 - Started 2026-10-21. Target compiler: `unstable` (the brief requires `REFUSE`, `#ASSERT REFUSED`, `YMD`, `@lang en`; `main` rejects all four). Run `check.sh` with `L4_TARGET=unstable`.
-- L4_BIN = /Users/mengwong/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-9afd0288/bin/l4, sha256 2d912dd2a61ba36b3fb8c1e02dcbd445ba1143c3b8ecb931462c01050cd607d7 (matches the brief).
+- L4_BIN = ~/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-9afd0288/bin/l4, sha256 2d912dd2a61ba36b3fb8c1e02dcbd445ba1143c3b8ecb931462c01050cd607d7 (matches the brief).
 - Source: ../../registers/source-bundle/usc01.txt, 39 sections, no schedules, no tables, no repealed or blank sections.
 - Finished 2026-10-21. Eight rule modules, five test files, check.sh (target unstable: 13 modules, 0 errors, 462 satisfied, 0 failed, 0 refused) and the strict source-locator gate (102 quotation lines, 127 locators, 0 problems) are green. NOTES.md, encoding.json and SOURCE-LICENSE.md are written and `_probe/` is deleted.
 

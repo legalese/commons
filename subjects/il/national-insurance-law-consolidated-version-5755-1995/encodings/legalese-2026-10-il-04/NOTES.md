@@ -194,7 +194,7 @@ The Knesset's own cure changed the item (0.17 to 0.16) and kept the printed tota
 
 ### What `check.sh` prints at 0.7.0
 
-Run on 2026-11-09 from 15:12:29Z to 15:13:43Z with `L4=/Users/mengwong/.local/bin/l4`, `JL4_LIBRARY_PATH` unset, after the same command had printed the "before" numbers on the same binary (cabal store `jl4-0.1-177906e7`, sha256 `2e47661700d89bf98abc2af3fd91fee5f6dee000c20704246c9369a54b53f302`).
+Run on 2026-11-09 from 15:12:29Z to 15:13:43Z with `L4=~/.local/bin/l4`, `JL4_LIBRARY_PATH` unset, after the same command had printed the "before" numbers on the same binary (cabal store `jl4-0.1-177906e7`, sha256 `2e47661700d89bf98abc2af3fd91fee5f6dee000c20704246c9369a54b53f302`).
 
 ```
 module                                    errors satisfied  failed  refused  expected
@@ -775,7 +775,7 @@ Added (13, its last section, worked by hand from the cells before the run): the 
 
 ### What `check.sh` prints at 0.3.0
 
-Run from 2026-10-07T07:19:52Z to 07:20:10Z as `L4=/Users/mengwong/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset.
+Run from 2026-10-07T07:19:52Z to 07:20:10Z as `L4=~/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset.
 The binary is `~/.local/bin/l4` → `~/.cabal/bin/l4`, now a regular file, not a cabal store link: 233,037,424 bytes, modified 2026-10-07T05:35:45Z, sha256 `6015a4c3fa181842c597c95948290fe45537963d279ae5b5918a106a0c3b54a6`, the same before and after the run; it is neither `jl4-0.1-0ee0100b` (sections 0 and Repair) nor `jl4-0.1-ff13a0ea`. Before any change of 0.3.0 the same binary reproduced the Repair's table exactly (15 / 143 / 640 with 6 failed). No module changed during the run.
 
 ```
@@ -890,7 +890,7 @@ The consumer price index: the Central Bureau of Statistics API returned an empty
 
 (As run on 2026-10-06, before the repair; the numbers after it are in "Repair 2026-10-07" above.)
 
-Run on 2026-10-06 with `/Users/mengwong/.local/bin/l4`, `JL4_LIBRARY_PATH` unset.
+Run on 2026-10-06 with `~/.local/bin/l4`, `JL4_LIBRARY_PATH` unset.
 That path is a symlink to `~/.cabal/bin/l4`, which resolves to the cabal store entry `jl4-0.1-0ee0100b` (modified 2026-10-06 21:20 local), sha256 `64bbcb157dbef2ef1020a6a75589313bba0a2aeeb807c921c5e65e62e9eca118`.
 The binary has no `--version`, and no record beside it names the commit it was built from.
 

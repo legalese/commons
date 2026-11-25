@@ -1,7 +1,7 @@
 # PLAN — conventions for the L4 encoding of the Código Penal
 
 **Status (2026-09-29): written by the ontology pass (g0), after `cp-dominio.l4`, `cp-pena.l4` and the worked example `cp-g3-furto.l4` were landed and checked.**
-Every claim below about what `L4_BIN` does was measured on it (`/Users/mengwong/.claude/br-penal-toolchain/l4`, built from `legalese/l4-ide` unstable `73a953821`) and names the probe or test that showed it.
+Every claim below about what `L4_BIN` does was measured on it (`~/.claude/br-penal-toolchain/l4`, built from `legalese/l4-ide` unstable `73a953821`) and names the probe or test that showed it.
 The probes are in `notes/cp-g0-sondas/`; run any of them with `L4_BIN run` or `L4_BIN nlg --lang en` from that directory. Some fail on purpose: each is the evidence for a trap.
 This file overrides the brief's section "The per-offence contract".
 Where it and the brief disagree on anything else, the brief wins; tell the conductor.

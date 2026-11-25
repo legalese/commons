@@ -8,7 +8,7 @@ It holds 383 decided cases (28 rounding, 22 basic amounts, 28 s 68 amounts, 68 r
 
 ## Run
 
-`env -u JL4_LIBRARY_PATH L4=/Users/mengwong/.local/bin/l4 ./check.sh` exits 0.
+`env -u JL4_LIBRARY_PATH L4=~/.local/bin/l4 ./check.sh` exits 0.
 l4 sha256 before and after the run: `f0759b2ef2f1d1b2a577c68f059c54f487de9d913553fc9f0d9bf0f7f5dab0d8` (the same).
 `tests-independent.l4` row of the check table: errors 2, satisfied 318, failed 2, refused 1, expected 2/1.
 The two failures and the one refusal are declared in `check.sh` by line and id and explained below.

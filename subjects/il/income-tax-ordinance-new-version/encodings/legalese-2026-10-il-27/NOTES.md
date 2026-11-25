@@ -261,7 +261,7 @@ To call them it would have to supply, per section:
 
 ## 14. `check.sh`
 
-Run from 2026-10-08T23:12:20Z to 23:13:05Z as `L4=/Users/mengwong/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset.
+Run from 2026-10-08T23:12:20Z to 23:13:05Z as `L4=~/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset.
 The binary `~/.local/bin/l4` is the cabal store's `jl4-0.1-6df1397b`, 233,724,416 bytes, sha256 `f0759b2ef2f1d1b2a577c68f059c54f487de9d913553fc9f0d9bf0f7f5dab0d8` before and after; no module changed during the run.
 The first run (2026-10-08T23:07:45Z to 23:08:20Z, the same sha256 before and after, before the editorial changes to fork numbers and the NOTES) gave the same 463 satisfied.
 Each satisfied assertion logs "assertion satisfied" twice; `check.sh` counts assertions.

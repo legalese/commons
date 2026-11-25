@@ -23,4 +23,4 @@ s 65 is encoded in full by row IL-06 and is not re-encoded; s 67A does not exist
 
 ## Toolchain
 
-`/Users/mengwong/.local/bin/l4` (no `--version`), `JL4_LIBRARY_PATH` unset; `L4=/Users/mengwong/.local/bin/l4 ./check.sh`.
+`~/.local/bin/l4` (no `--version`), `JL4_LIBRARY_PATH` unset; `L4=~/.local/bin/l4 ./check.sh`.

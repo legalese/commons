@@ -12,7 +12,7 @@ Parte Especial (arts. 121–361): the offences, in twelve Títulos arranged by p
 
 ## Sources — read these and nothing else
 
-`SOURCE` = `/Users/mengwong/src/legalese/commonswt/br-penal/subjects/br/codigo-penal-1940/source/`
+`SOURCE` = `subjects/br/codigo-penal-1940/source/`
 
 - `SOURCE/codigo-penal-1940.txt` — **the text you encode from.** One source paragraph per line. Every quotation you put in the encoding is copied from this file, never retyped from memory.
   Text wrapped `⟦STRUCK: …⟧` is revoked matter that Planalto shows struck through; it is not law.
@@ -27,7 +27,7 @@ The source is Portuguese and so is the encoding. There is no official English te
 
 ## Where you write
 
-`ENC` = `/Users/mengwong/src/legalese/commonswt/br-penal/subjects/br/codigo-penal-1940/encodings/legalese-2026-09/`
+`ENC` = `subjects/br/codigo-penal-1940/encodings/legalese-2026-09/`
 
 Every file you create is under `ENC`, named with **your group prefix** (your task message gives it: `cp-g0-`, `cp-g1-`, … `cp-g6-`), ASCII only.
 **Do not edit a file another group owns.** Two exceptions, both owned by the ontology pass and read-only to everyone after it: `cp-dominio.l4` and `cp-pena.l4`.
@@ -51,7 +51,7 @@ If you need a shared noun that is not there, declare it in your own module, mark
 - **Where the source does not answer, `REFUSE "…"`** — never `FALSE`, `0` or a plausible default. Where the source names an absent case, `MAYBE`/`NOTHING`. Do not invent an `Established`/`Rejected`/`Unresolved` enum.
 - **Judgement stays with the judge.** Where the Code hands a court a range or a discretion ("de um terço até a metade", "o juiz pode deixar de aplicar a pena", art. 59's circumstances), encode the range or the power, not a number the Code never chose.
 - **Several modules, split along the Code's own structure** (Capítulo, or a run of related articles). A module over ~1,500 lines cannot be reviewed article by article.
-- **Read** `/Users/mengwong/src/legalese/l4-ide/skills/writing-l4-rules/SKILL.md`, its `references/gotchas.md`, `references/drafting-patterns.md` and every page of `references/source-patterns/` **before you write L4**, and `/Users/mengwong/src/legalese/l4-ide/skills/encoding-a-subject/SKILL.md` for the workflow. They are the house style and they record traps that were measured, not guessed.
+- **Read** `~/src/legalese/l4-ide/skills/writing-l4-rules/SKILL.md`, its `references/gotchas.md`, `references/drafting-patterns.md` and every page of `references/source-patterns/` **before you write L4**, and `~/src/legalese/l4-ide/skills/encoding-a-subject/SKILL.md` for the workflow. They are the house style and they record traps that were measured, not guessed.
 
 ## The per-offence contract
 
@@ -88,11 +88,11 @@ Under `ENC/registers/parts/`, you own exactly these (the conductor merges them):
 
 ## Toolchain
 
-`L4_BIN` = `/Users/mengwong/.claude/br-penal-toolchain/l4`, built from `legalese/l4-ide` unstable `73a953821` (sha256 in `SHA256` beside it). Do not use any other `l4`.
+`L4_BIN` = `~/.claude/br-penal-toolchain/l4`, built from `legalese/l4-ide` unstable `73a953821` (sha256 in `SHA256` beside it). Do not use any other `l4`.
 Leave `JL4_LIBRARY_PATH` **unset**: the standard library is compiled into the binary and matches it.
 `L4_BIN check FILE` typechecks; `L4_BIN run FILE` also evaluates every `#EVAL` and `#ASSERT`; `L4_BIN nlg --lang en FILE` renders the English glosses.
 Useful libraries: `prelude` (always import it), `daydate` for dates.
-**Never run `cabal`**, and never edit anything under `/Users/mengwong/src/legalese/l4-ide` or `/Users/mengwong/src/legalese/l4wt/` or `/Volumes/transcend/src/l4wt/`. Do not commit or push anything; the conductor does that.
+**Never run `cabal`**, and never edit anything under `~/src/legalese/l4-ide` or `~/src/legalese/l4wt/` or `/Volumes/transcend/src/l4wt/`. Do not commit or push anything; the conductor does that.
 
 ## When you finish
 

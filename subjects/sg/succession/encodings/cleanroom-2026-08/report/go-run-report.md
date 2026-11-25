@@ -7,7 +7,7 @@
 | subject     | sg-succession                                                                                                                                             |
 | repo HEAD   | `07e0a67d72fe3d60e3ed0dc0c9c3186e1a211bfc` (clean)                                                                                                        |
 | clock       | `2025-01-31T00:00:00Z`                                                                                                                                    |
-| `l4` binary | `/Users/mengwong/src/legalese/l4wt/sg-family-gia/dist-newstyle/build/aarch64-osx/ghc-9.10.3/jl4-0.1/x/l4/build/l4/l4`                                     |
+| `l4` binary | `~/src/legalese/l4wt/sg-family-gia/dist-newstyle/build/aarch64-osx/ghc-9.10.3/jl4-0.1/x/l4/build/l4/l4`                                     |
 | journal     | `/var/folders/jv/4t5pmlz5563gttw9cxqlx5k00000gp/T/l4-go/2026-08-26-3ab3039f-003/journal.ndjson` — 28 records, chain verifies                              |
 | verdict     | **COMPLETE**                                                                                                                                              |
 
@@ -27,11 +27,11 @@
 
 **PASS**
 
-Oracle (`structural`): `node etc/go/lib/register-validate.mjs source-bundle /Users/mengwong/src/legalese/l4wt/sg-family-gia/jl4/examples/legal/sg-succession/cleanroom-2026-08/source-bundle.json (+2 peer deposit(s))`
+Oracle (`structural`): `node etc/go/lib/register-validate.mjs source-bundle ~/src/legalese/l4wt/sg-family-gia/jl4/examples/legal/sg-succession/cleanroom-2026-08/source-bundle.json (+2 peer deposit(s))`
 
 the validator models the bundle's semantics rather than its syntax: it audits the schema before using it and refuses any keyword it does not implement, it enforces 50 declared cross-field rules whose ids must match its implementations in both directions, and it re-hashes every captured document that names a local_path. It does NOT establish that the fetched text is the law, that the capture is current, or that the annotation inventory is complete — the schema records the last of those as a self-declared flag, which is exactly why P2's disposition join exists.
 
-`deposit=/Users/mengwong/src/legalese/l4wt/sg-family-gia/jl4/examples/legal/sg-succession/cleanroom-2026-08/source-bundle.json` · `peers_present=2` · `rules_checked=50` · `joins_skipped=1` · `documents_retrieved=7` · `retrieval_requests=14` · `retrieval_ms=2153` · `retrieval_bytes=3659592`
+`deposit=~/src/legalese/l4wt/sg-family-gia/jl4/examples/legal/sg-succession/cleanroom-2026-08/source-bundle.json` · `peers_present=2` · `rules_checked=50` · `joins_skipped=1` · `documents_retrieved=7` · `retrieval_requests=14` · `retrieval_ms=2153` · `retrieval_bytes=3659592`
 
 > _claimed, not verified_ (phase-script): 1 cross-file join(s) could not run because a peer deposit is absent; the artifact reports each as 'skip' with its reason, never as a pass
 
@@ -43,11 +43,11 @@ the validator models the bundle's semantics rather than its syntax: it audits th
 
 **PASS**
 
-Oracle (`structural`): `node etc/go/lib/register-validate.mjs external-modifications /Users/mengwong/src/legalese/l4wt/sg-family-gia/jl4/examples/legal/sg-succession/cleanroom-2026-08/external-modifications.json (+2 peer deposit(s))`
+Oracle (`structural`): `node etc/go/lib/register-validate.mjs external-modifications ~/src/legalese/l4wt/sg-family-gia/jl4/examples/legal/sg-succession/cleanroom-2026-08/external-modifications.json (+2 peer deposit(s))`
 
 50 declared cross-field and cross-file rules ran over the register and its peers, including the searched-vs-found joins that make SPEC.md §4 P2's 'what was searched, not only what was found' checkable, the routing rules that force a binding modification to name where it landed in the encoding, and — when the P1 bundle is present — the completeness join over the bundle's annotation inventory. It does NOT establish that the sweep was thorough: no procedure enumerates the searches that should have been run.
 
-`deposit=/Users/mengwong/src/legalese/l4wt/sg-family-gia/jl4/examples/legal/sg-succession/cleanroom-2026-08/external-modifications.json` · `peers_present=2` · `rules_checked=50` · `joins_skipped=1` · `searches=60` · `entries=46` · `dispositions=4`
+`deposit=~/src/legalese/l4wt/sg-family-gia/jl4/examples/legal/sg-succession/cleanroom-2026-08/external-modifications.json` · `peers_present=2` · `rules_checked=50` · `joins_skipped=1` · `searches=60` · `entries=46` · `dispositions=4`
 
 > _claimed, not verified_ (phase-script): 1 cross-file join(s) could not run because a peer deposit is absent — most importantly 'annotation-inventory-disposed', which is the BNA C2 defect turned into an exit code and needs the P1 bundle. The artifact reports each as 'skip' with its reason, never as a pass
 
@@ -71,11 +71,11 @@ typechecking is the compiler's own verdict on the module, and for 'l4 check' the
 
 **Ambiguity forks:** PASS
 
-Oracle (`structural`): `node etc/go/lib/register-validate.mjs fork-register /Users/mengwong/src/legalese/l4wt/sg-family-gia/jl4/examples/legal/sg-succession/cleanroom-2026-08/fork-register.json (+2 peer deposit(s))`
+Oracle (`structural`): `node etc/go/lib/register-validate.mjs fork-register ~/src/legalese/l4wt/sg-family-gia/jl4/examples/legal/sg-succession/cleanroom-2026-08/fork-register.json (+2 peer deposit(s))`
 
 50 declared rules ran, and they model R4's ruled representation rather than the file's syntax: the 1:1 map between a materialised fork and an Interpretation field is enforced in both directions, the reading taken must be one of the register's own live readings, a non-live reading must explain itself, a live reading must cite the text that licenses it, and an observable divergence must name a witness. It does NOT establish COMPLETENESS — 62 fork(s) are recorded and nothing here says that is all of them.
 
-`deposit=/Users/mengwong/src/legalese/l4wt/sg-family-gia/jl4/examples/legal/sg-succession/cleanroom-2026-08/fork-register.json` · `peers_present=2` · `rules_checked=50` · `joins_skipped=1` · `forks=62` · `materialised=0` · `settled_by_authority=0` · `with_witnesses=40`
+`deposit=~/src/legalese/l4wt/sg-family-gia/jl4/examples/legal/sg-succession/cleanroom-2026-08/fork-register.json` · `peers_present=2` · `rules_checked=50` · `joins_skipped=1` · `forks=62` · `materialised=0` · `settled_by_authority=0` · `with_witnesses=40`
 
 > _claimed, not verified_ (phase-script): 1 cross-file join(s) could not run because a peer deposit is absent — including 'cross-refs-resolve', which is how a fork an authority has already settled proves it cites a real P2 entry rather than presenting as open. The artifact reports each as 'skip', never as a pass
 
@@ -83,7 +83,7 @@ Oracle (`structural`): `node etc/go/lib/register-validate.mjs fork-register /Use
 
 **Adversarial gate (mechanisable half):** PASS
 
-Oracle (`structural`): `node etc/go/lib/register-validate.mjs external-modifications /Users/mengwong/src/legalese/l4wt/sg-family-gia/jl4/examples/legal/sg-succession/cleanroom-2026-08/external-modifications.json /Users/mengwong/src/legalese/l4wt/sg-family-gia/jl4/examples/legal/sg-succession/cleanroom-2026-08/source-bundle.json /Users/mengwong/src/legalese/l4wt/sg-family-gia/jl4/examples/legal/sg-succession/cleanroom-2026-08/fork-register.json`
+Oracle (`structural`): `node etc/go/lib/register-validate.mjs external-modifications ~/src/legalese/l4wt/sg-family-gia/jl4/examples/legal/sg-succession/cleanroom-2026-08/external-modifications.json ~/src/legalese/l4wt/sg-family-gia/jl4/examples/legal/sg-succession/cleanroom-2026-08/source-bundle.json ~/src/legalese/l4wt/sg-family-gia/jl4/examples/legal/sg-succession/cleanroom-2026-08/fork-register.json`
 
 50 declared rules ran across all three de novo deposits with every peer present, which is what makes SPEC.md §4 P5's third check — 'disposition of every entry in P2's external-modification register (consumed by the encoding, consumed by a fork, or explicitly deferred with a reason)' — an exit code: 'annotation-inventory-disposed' joins the disposition table against the bundle's declared-complete annotation inventory, 'fork-refs-resolve' and 'cross-refs-resolve' check the register/fork cross-references in both directions, and the routing rules force a binding modification to name where it landed. Two of P5's five checks are discharged elsewhere (p3-check), and two are not discharged at all — see the notes.
 
@@ -175,7 +175,7 @@ The comparator evaluated **120** (pair, row) cells over 5 declared pair(s): 115 
 
 **`p8-diff`:** PASS
 
-Oracle (`structural`): `node etc/go/lib/denovo-diff.mjs run --map /Users/mengwong/src/legalese/l4wt/sg-family-gia/jl4/examples/legal/sg-succession/cleanroom-2026-08/surface-map.json; rc=$?; [ $rc -eq 0 ] || [ $rc -eq 1 ]  # 0 = agreement, 1 = divergence: both are completed measurements per its exit contract`
+Oracle (`structural`): `node etc/go/lib/denovo-diff.mjs run --map ~/src/legalese/l4wt/sg-family-gia/jl4/examples/legal/sg-succession/cleanroom-2026-08/surface-map.json; rc=$?; [ $rc -eq 0 ] || [ $rc -eq 1 ]  # 0 = agreement, 1 = divergence: both are completed measurements per its exit contract`
 
 the §8 comparator evaluated both encodings over the shared fact battery and completed with zero harness errors (no unresolvable pair, no missing battery field, no non-value row on either side). What PASS asserts is that the comparison RAN and its findings are on the record — 115/120 agreed, 5 diverged, 5 untriaged — not that the encodings agree: §8 calls a divergence-finding run the better pass.
 

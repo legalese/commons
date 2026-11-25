@@ -132,7 +132,7 @@ Every expected value was worked out from the source, in the comment beside it, b
 
 ### The check, 0.3.0
 
-Run on 2026-10-08 from 22:22:36Z to 22:22:39Z as `L4=/Users/mengwong/.local/bin/l4 ./check.sh`, the binary `/Volumes/transcend/caches/cabal/store/ghc-9.10.3-fe9c/jl4-0.1-6df1397b/bin/l4`, sha256 `f0759b2ef2f1d1b2a577c68f059c54f487de9d913553fc9f0d9bf0f7f5dab0d8`, the same before and after.
+Run on 2026-10-08 from 22:22:36Z to 22:22:39Z as `L4=~/.local/bin/l4 ./check.sh`, the binary `/Volumes/transcend/caches/cabal/store/ghc-9.10.3-fe9c/jl4-0.1-6df1397b/bin/l4`, sha256 `f0759b2ef2f1d1b2a577c68f059c54f487de9d913553fc9f0d9bf0f7f5dab0d8`, the same before and after.
 Before any edit the 0.2.0 baseline on this binary printed 125 and 78 satisfied, as recorded for 0.2.0.
 
 ```
@@ -341,7 +341,7 @@ Line numbers are lines of `ito-credit-points-tests.l4` as of 0.2.0; "old" is "�
 
 ### The check, 0.2.0
 
-Run on 2026-10-08 from 07:17:17Z to 07:17:26Z, after the last edit, as `L4=/Users/mengwong/.local/bin/l4 ./check.sh` in this directory.
+Run on 2026-10-08 from 07:17:17Z to 07:17:26Z, after the last edit, as `L4=~/.local/bin/l4 ./check.sh` in this directory.
 `~/.local/bin/l4` links to `~/.cabal/bin/l4`, which resolves to `/Volumes/transcend/caches/cabal/store/ghc-9.10.3-fe9c/jl4-0.1-d4290e25/bin/l4`, sha256 `f4f2bd2558f02f828f0deced5f74313a33670f08cc3275ff95b83f2cde71e448`, the same before and after the run (0.1.0 ran on `64bbcb15…`; `red-checks.txt` records 78 of 78 for the tester's file on this newer binary before any edit).
 
 ```
@@ -640,7 +640,7 @@ The row does not derive an annual figure from a monthly one; s 120B(e)(1) would 
 
 (0.2.0) This section records the 0.1.0 run; the 0.2.0 run is in "Version 0.2.0" above.
 
-Run on 2026-10-06 as `L4=/Users/mengwong/.local/bin/l4 ./check.sh`, with the binary at `/Volumes/transcend/caches/cabal/store/ghc-9.10.3-fe9c/jl4-0.1-0ee0100b/bin/l4`, sha256 `64bbcb157dbef2ef1020a6a75589313bba0a2aeeb807c921c5e65e62e9eca118` (it has no `--version`; its file time changed to 21:20 that evening, so another session may have reinstalled it during this run).
+Run on 2026-10-06 as `L4=~/.local/bin/l4 ./check.sh`, with the binary at `/Volumes/transcend/caches/cabal/store/ghc-9.10.3-fe9c/jl4-0.1-0ee0100b/bin/l4`, sha256 `64bbcb157dbef2ef1020a6a75589313bba0a2aeeb807c921c5e65e62e9eca118` (it has no `--version`; its file time changed to 21:20 that evening, so another session may have reinstalled it during this run).
 
 ```
 module                                    errors satisfied  failed  refused  expected
@@ -806,7 +806,7 @@ Axiom's period (tax year 2024 or 2025) has no counterpart: our rules take no yea
 | `non_woman_does_not_receive_woman_credit_point` (2025) | 36A | woman: false | 0 | 0, both | match |
 | none | 33A | `[]` | — | — | no case |
 
-`L4=/Users/mengwong/.local/bin/l4 ./check.sh` on the scratch copy, 2026-10-06 about 22:15 +08, binary sha256 `64bbcb157dbef2ef1020a6a75589313bba0a2aeeb807c921c5e65e62e9eca118`: `axiom-cases.l4` 0 errors, 12 satisfied, 0 failed, 0 refused; the other modules as before (58 and 78 satisfied).
+`L4=~/.local/bin/l4 ./check.sh` on the scratch copy, 2026-10-06 about 22:15 +08, binary sha256 `64bbcb157dbef2ef1020a6a75589313bba0a2aeeb807c921c5e65e62e9eca118`: `axiom-cases.l4` 0 errors, 12 satisfied, 0 failed, 0 refused; the other modules as before (58 and 78 satisfied).
 Negative control: with one expectation changed from 0.25 to 0.3 the same harness printed 1 error, 11 satisfied, 1 failed.
 6 of 6 cases match, 0 diverge, 0 could not be run.
 The cases test only the two sides of each section's one condition; none touches a refusal, a body of persons, s 48, s 48A, s 3A(f) or an amount in NIS, so their passing says nothing about X01–X12, S1 or S2.

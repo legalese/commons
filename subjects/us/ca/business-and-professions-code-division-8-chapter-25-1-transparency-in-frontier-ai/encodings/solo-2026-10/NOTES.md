@@ -299,7 +299,7 @@ The independent author found these points the exported questions cannot show, be
 
 ## What `check.sh` prints
 
-Run on 2026-10-24 with `L4=/Users/mengwong/.cache/l4-main/99/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset:
+Run on 2026-10-24 with `L4=~/.cache/l4-main/99/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset:
 
 ```
 target: main. Each module is run with your l4 and with the main build below; the main columns must match.

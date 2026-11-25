@@ -10,7 +10,7 @@ import os, re, pathlib, subprocess, collections, datetime, hashlib
 
 W = pathlib.Path(__file__).resolve().parent.parent
 DEP = pathlib.Path(os.environ['DEPOSIT']) if 'DEPOSIT' in os.environ else (W / 'deposit' if (W / 'deposit').exists() else W)
-L4 = '/Users/mengwong/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-41dd7a67/bin/l4'
+L4 = os.path.expanduser('~/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-41dd7a67/bin/l4')
 
 # (id, provision, heading / what it is, disposition, where)
 M = {

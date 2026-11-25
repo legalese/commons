@@ -64,12 +64,12 @@ example beneath it), transcribed and run.
 ## Rules that matter
 
 - **Follow the two skills.** Read, before writing any L4:
-  `/Users/mengwong/src/legalese/l4-ide/skills/encoding-a-subject/SKILL.md` (steps 1-7, 9, 11;
+  `~/src/legalese/l4-ide/skills/encoding-a-subject/SKILL.md` (steps 1-7, 9, 11;
   there is no step 8 here, and you do not deposit into a repository) and
-  `/Users/mengwong/src/legalese/l4-ide/skills/writing-l4-rules/SKILL.md`, then its
+  `~/src/legalese/l4-ide/skills/writing-l4-rules/SKILL.md`, then its
   `references/drafting-patterns.md`, `references/source-patterns/` (all of it, especially
   04-dates-and-periods and 11-when-the-encoding-cannot-answer). Documentation is under
-  `/Users/mengwong/src/legalese/l4-ide/doc/`.
+  `~/src/legalese/l4-ide/doc/`.
 - **Encode isomorphically.** A reader holding the Hebrew beside your module checks it line by
   line. Cite the section or regulation on every rule (`@ref` or a comment).
 - **Three vintages are three answers, not one.** A fee lookup takes the vintage as an input.
@@ -102,14 +102,14 @@ Three L4 encodings of this exact subject already exist (an English one with note
 a Hebrew twin, and a third from a collaborator). **You must not read, grep, list or otherwise
 inspect any of them.** Concretely, do NOT open or search:
 
-- anything under `/Users/mengwong/src/legalese/commons/`, `/Users/mengwong/src/legalese/commonswt/`,
-  `/Users/mengwong/src/legalese/canon/`, `/Users/mengwong/src/legalese/il/`, or any other
+- anything under `~/src/legalese/commons/`, `~/src/legalese/commonswt/`,
+  `~/src/legalese/canon/`, `~/src/legalese/il/`, or any other
   clone, worktree or copy of those repositories on any volume (including under `/Volumes/`)
 - any directory under `/Volumes/transcend/claude-tmp/` other than your own `WORKDIR`
 - anything under `~/.claude/` other than the two skills named above
   (no `~/.claude/projects`, no `memory/` directory, no `~/.claude/thermostat-oracle`,
   no `~/.claude/tmp`)
-- `/Users/mengwong/src/legalese/l4-ide/jl4/examples/` and `/Users/mengwong/src/legalese/l4-ide/specs/`
+- `~/src/legalese/l4-ide/jl4/examples/` and `~/src/legalese/l4-ide/specs/`
   may be read ONLY for L4 syntax and idiom, and ONLY after you have confirmed by the
   filename that the file is not about this Law, refrigeration, air-conditioning, Israel,
   SimpLEX or this Law's fee regulations; do not search them for those words

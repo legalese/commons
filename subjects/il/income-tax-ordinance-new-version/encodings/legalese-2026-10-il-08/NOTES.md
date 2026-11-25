@@ -72,7 +72,7 @@ In a scratch copy of the capstone at commons `728f2085` with the three modules p
 To follow: either ask s 40(b) under a reading by name (`the credit points under section 40(b) set against the tax generally, for` p `, reading section 40(b) as` r, and its siblings), re-pointing an assertion only where its author decided a reading, or expect the refusal and declare it.
 The capstone does not call s 47(a)(7)'s new form; its earners' deposits stay a total under the input convention.
 
-**`check.sh`** run from 2026-10-08T22:24:41Z to 22:24:58Z as `L4=/Users/mengwong/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset.
+**`check.sh`** run from 2026-10-08T22:24:41Z to 22:24:58Z as `L4=~/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset.
 The binary changed since version 0.4.0: `~/.local/bin/l4` → `~/.cabal/bin/l4` → cabal store `jl4-0.1-6df1397b`, 233,724,416 bytes, sha256 `f0759b2ef2f1d1b2a577c68f059c54f487de9d913553fc9f0d9bf0f7f5dab0d8`, the same before and after the run; no module changed during it.
 
 ```
@@ -159,7 +159,7 @@ Where IL-08's default answers, the orders agree, and the deduction it gives is t
 A household that should be answered under a reading calls `the deduction under section 47 for` i `, at` a `, reading the order with the section 45A credit as` r, and passes the same deduction to s 45A.
 N6 then either expects IL-08's refusal or names a reading (`the deduction first`: 2,220; `the credit first`: 0).
 
-**`check.sh`** run from 2026-10-08T15:58:47Z to 15:59:34Z as `L4=/Users/mengwong/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset; the binary `~/.local/bin/l4` → `~/.cabal/bin/l4` → cabal store `jl4-0.1-d4290e25`, 233,567,184 bytes, sha256 `f4f2bd2558f02f828f0deced5f74313a33670f08cc3275ff95b83f2cde71e448` before and after; no module changed during the run.
+**`check.sh`** run from 2026-10-08T15:58:47Z to 15:59:34Z as `L4=~/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset; the binary `~/.local/bin/l4` → `~/.cabal/bin/l4` → cabal store `jl4-0.1-d4290e25`, 233,567,184 bytes, sha256 `f4f2bd2558f02f828f0deced5f74313a33670f08cc3275ff95b83f2cde71e448` before and after; no module changed during the run.
 
 ```
 module                                    errors satisfied  failed  refused  expected
@@ -303,7 +303,7 @@ N4's tax and net above were printed in an earlier scratch run (07:09Z, before th
 
 ### `check.sh` after version 0.3.0
 
-Run from 2026-10-08T07:28:58Z to 07:29:18Z as `L4=/Users/mengwong/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset.
+Run from 2026-10-08T07:28:58Z to 07:29:18Z as `L4=~/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset.
 The binary is `~/.local/bin/l4` → `~/.cabal/bin/l4` → cabal store `jl4-0.1-d4290e25`, 233,567,184 bytes, sha256 `f4f2bd2558f02f828f0deced5f74313a33670f08cc3275ff95b83f2cde71e448`, the same before and after the run, and the build `red-checks.txt` of 2026-10-08 records.
 No module changed during the run (sha256 of every module taken before and after).
 Before any edit the same binary gave version 0.1.0's counts: every module as in section 0, and `tests-independent.l4` 7 errors, 190 satisfied, 7 failed, 8 refused, exit 1 (inventory CHK-08i).
@@ -433,7 +433,7 @@ N4's tax and net above were printed there; N4's credit and the figures for N5, N
 
 (Version 0.2.0's run; 0.3.0's is in the section above.)
 
-Run from 2026-10-08T07:13:05Z to 07:13:48Z as `L4=/Users/mengwong/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset.
+Run from 2026-10-08T07:13:05Z to 07:13:48Z as `L4=~/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset.
 The binary is `~/.local/bin/l4` → `~/.cabal/bin/l4` → cabal store `jl4-0.1-d4290e25`, 233,567,184 bytes, sha256 `f4f2bd2558f02f828f0deced5f74313a33670f08cc3275ff95b83f2cde71e448`, the same before and after the run, and the build `red-checks.txt` of 2026-10-08 records.
 No module changed during the run (sha256 of every module taken before and after).
 Before any edit the same binary gave version 0.1.0's counts: every module as in section 0, and `tests-independent.l4` 7 errors, 190 satisfied, 7 failed, 8 refused, exit 1 (inventory CHK-08i).
@@ -473,7 +473,7 @@ Every new assertion was satisfied on the first run that evaluated it; one test h
 
 (Version 0.1.0. The runs of versions 0.2.0 and 0.3.0 are in the sections above.)
 
-Run from 2026-10-07T00:21:52Z to 00:22:26Z as `L4=/Users/mengwong/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset.
+Run from 2026-10-07T00:21:52Z to 00:22:26Z as `L4=~/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset.
 The binary is `~/.local/bin/l4` → `~/.cabal/bin/l4` → cabal store `jl4-0.1-ff13a0ea`, sha256 `f65015688970231681a024ceb9ff3a58abba1f5280837cc955c2bba56dbfa8bc`.
 That is **not** the build rows IL-01 to IL-07 recorded (`jl4-0.1-0ee0100b`, sha256 `64bbcb15…e118`); the link `~/.cabal/bin/l4` carries a modification time of 2026-10-06T22:41Z, before this row's first run.
 No module changed during the run (sha256 of every module taken before and after).
@@ -867,7 +867,7 @@ The deposited Ordinance at the lines cited below (sha256 `b87f2cf4…94b81b6`, c
 **Licence.** `NOTICE` puts Axiom's encodings, companion test cases, parameter values and provenance metadata under CC BY 4.0 (`LICENSE`) and its tooling under Apache 2.0 (`LICENSE-CODE`); confirmed from the three files.
 Axiom material appears here only as short attributed snippets: Axiom Foundation RuleSpec corpus (CC BY 4.0), https://github.com/TheAxiomFoundation.
 
-**Runs.** Axiom's cases were put through a scratch copy of this directory (the session scratchpad, `lad-il-08/ito/zz-axiom-cases.l4`; cross-directory `IMPORT` does not work), with `/Users/mengwong/.local/bin/l4 run`, `JL4_LIBRARY_PATH` unset, at 2026-10-07T05:59:57Z.
+**Runs.** Axiom's cases were put through a scratch copy of this directory (the session scratchpad, `lad-il-08/ito/zz-axiom-cases.l4`; cross-directory `IMPORT` does not work), with `~/.local/bin/l4 run`, `JL4_LIBRARY_PATH` unset, at 2026-10-07T05:59:57Z.
 The binary had changed since section 0: `~/.cabal/bin/l4` is now `/Volumes/transcend/caches/cabal/bin/l4`, sha256 `6015a4c3fa181842c597c95948290fe45537963d279ae5b5918a106a0c3b54a6`, modified 2026-10-07T05:35:45Z.
 Under it this row's `ito-il08-tests-s37-s40.l4` still gives 52 satisfied, 0 failed, 0 refused, as section 0 records.
 The scratch module: 33 assertions, 33 satisfied, 0 errors.

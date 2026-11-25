@@ -5,7 +5,7 @@ Files: `DECIDED-ANSWERS.md` (the answers, decided from the Hebrew source and fin
 
 ## What `check.sh` prints
 
-Run in a scratch copy of this directory with `L4=/Users/mengwong/.local/bin/l4`, `JL4_LIBRARY_PATH` unset, after `tests-independent.l4` was added:
+Run in a scratch copy of this directory with `L4=~/.local/bin/l4`, `JL4_LIBRARY_PATH` unset, after `tests-independent.l4` was added:
 
 ```
 module                                    errors satisfied  failed  refused  expected

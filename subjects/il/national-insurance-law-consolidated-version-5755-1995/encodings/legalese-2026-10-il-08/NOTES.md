@@ -74,7 +74,7 @@ Line 247 (72-57 recorded as not paid; it expected REFUSE whichever way the recor
 
 ### `check.sh`, 0.4.0
 
-Run from 2026-10-08T22:18:27Z to 22:18:33Z as `L4=/Users/mengwong/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset, after the last edit to any module or to `check.sh`; binary `~/.local/bin/l4` resolving to the cabal store's `jl4-0.1-6df1397b/bin/l4`, 233,724,416 bytes, sha256 `f0759b2ef2f1d1b2a577c68f059c54f487de9d913553fc9f0d9bf0f7f5dab0d8` before and after the run.
+Run from 2026-10-08T22:18:27Z to 22:18:33Z as `L4=~/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset, after the last edit to any module or to `check.sh`; binary `~/.local/bin/l4` resolving to the cabal store's `jl4-0.1-6df1397b/bin/l4`, 233,724,416 bytes, sha256 `f0759b2ef2f1d1b2a577c68f059c54f487de9d913553fc9f0d9bf0f7f5dab0d8` before and after the run.
 This is a newer binary than 0.3.0's; the committed 0.3.0 files, run first in a scratch copy on it (22:18:08Z), gave 0.3.0's counts.
 
 ```
@@ -153,7 +153,7 @@ Refused: the 22 SCOPE lines of 0.2.0, unchanged.
 ### `check.sh`, 0.3.0
 
 `expected_failed` for `tests-independent.l4` goes from 4 to 1; `expected_refused` stays 22.
-Run from 2026-10-08T15:58:05Z to 15:58:15Z as `L4=/Users/mengwong/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset, after the last edit to any module or to `check.sh`; binary `~/.local/bin/l4` resolving to the cabal store's `jl4-0.1-d4290e25/bin/l4`, sha256 `f4f2bd2558f02f828f0deced5f74313a33670f08cc3275ff95b83f2cde71e448` before and after the run.
+Run from 2026-10-08T15:58:05Z to 15:58:15Z as `L4=~/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset, after the last edit to any module or to `check.sh`; binary `~/.local/bin/l4` resolving to the cabal store's `jl4-0.1-d4290e25/bin/l4`, sha256 `f4f2bd2558f02f828f0deced5f74313a33670f08cc3275ff95b83f2cde71e448` before and after the run.
 The 0.2.0 baseline was re-run on the same binary first (15:51:30Z), with 0.2.0's counts and exit 0.
 
 ```
@@ -267,7 +267,7 @@ Line 248 moved from failed to satisfied (08n-PAID).
 
 ### `check.sh`, 0.2.0
 
-Run from 2026-10-08T07:08:30Z to 07:08:43Z, after the last edit to any module or to check.sh, as `L4=/Users/mengwong/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset, binary `~/.local/bin/l4` resolving to the cabal store's `jl4-0.1-d4290e25/bin/l4` (sha256 `f4f2bd2558f02f828f0deced5f74313a33670f08cc3275ff95b83f2cde71e448`, unchanged during the run, and the binary of the 2026-10-08 inventory).
+Run from 2026-10-08T07:08:30Z to 07:08:43Z, after the last edit to any module or to check.sh, as `L4=~/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset, binary `~/.local/bin/l4` resolving to the cabal store's `jl4-0.1-d4290e25/bin/l4` (sha256 `f4f2bd2558f02f828f0deced5f74313a33670f08cc3275ff95b83f2cde71e448`, unchanged during the run, and the binary of the 2026-10-08 inventory).
 
 ```
 module                                    errors satisfied  failed  refused  expected
@@ -298,7 +298,7 @@ That the harness can fail: a scratch copy with three of the new assertions alter
 
 This section is the 0.1.0 run, before the independent tests were deposited; the 0.2.0 run is in "Version 0.2.0" above.
 
-Run from 2026-10-07T00:22:32Z to 00:22:41Z as `L4=/Users/mengwong/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset, with the binary the other half records (`jl4-0.1-ff13a0ea`, sha256 `f6501568…dbfa8bc`).
+Run from 2026-10-07T00:22:32Z to 00:22:41Z as `L4=~/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset, with the binary the other half records (`jl4-0.1-ff13a0ea`, sha256 `f6501568…dbfa8bc`).
 No module changed during the run.
 
 ```
@@ -507,7 +507,7 @@ The deposited Law at the lines cited below (sha256 `78bf47ee…552a97`, checked)
 **Licence.** `NOTICE` puts Axiom's encodings, companion test cases, parameter values and provenance metadata under CC BY 4.0 (`LICENSE`) and its tooling under Apache 2.0 (`LICENSE-CODE`); confirmed from the three files.
 Axiom material appears here only as short attributed snippets: Axiom Foundation RuleSpec corpus (CC BY 4.0), https://github.com/TheAxiomFoundation.
 
-**Runs.** Axiom's stated conventions and figures for these provisions were put through a scratch copy of this directory (the session scratchpad, `lad-il-08/nii/zz-axiom-cases.l4`) with `/Users/mengwong/.local/bin/l4 run`, `JL4_LIBRARY_PATH` unset, at 2026-10-07T06:01:08Z, under the binary the other half's section records (sha256 `6015a4c3…3b54a6`, not the build section 0 used).
+**Runs.** Axiom's stated conventions and figures for these provisions were put through a scratch copy of this directory (the session scratchpad, `lad-il-08/nii/zz-axiom-cases.l4`) with `~/.local/bin/l4 run`, `JL4_LIBRARY_PATH` unset, at 2026-10-07T06:01:08Z, under the binary the other half's section records (sha256 `6015a4c3…3b54a6`, not the build section 0 used).
 14 assertions, 14 satisfied, 0 errors (a first run failed to compile on `length`, which this binary's prelude does not define; the two assertions were rewritten with list equality, and no expected value changed).
 
 ### Coverage: what Axiom did with each provision of this half

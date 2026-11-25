@@ -1,6 +1,6 @@
 # De novo diff — sg-succession
 
-Produced by `etc/go/lib/denovo-diff.mjs` from `/Users/mengwong/src/legalese/l4wt/sg-family-gia/jl4/examples/legal/sg-succession/cleanroom-2026-08/surface-map.json`. Every disposition below is **UNTRIAGED**: this script measures, it does not triage. SPEC.md §8's three dispositions — `ENCODING-ERROR`, `GENUINE-AMBIGUITY`, `IMPROVEMENT-OVER-CORPUS` — are judgements and belong to the reviewer or the skill.
+Produced by `etc/go/lib/denovo-diff.mjs` from `~/src/legalese/l4wt/sg-family-gia/jl4/examples/legal/sg-succession/cleanroom-2026-08/surface-map.json`. Every disposition below is **UNTRIAGED**: this script measures, it does not triage. SPEC.md §8's three dispositions — `ENCODING-ERROR`, `GENUINE-AMBIGUITY`, `IMPROVEMENT-OVER-CORPUS` — are judgements and belong to the reviewer or the skill.
 
 ## Surfaces
 

@@ -7,14 +7,14 @@ No domain expert has read it against the source; HG1 has not been sought.
 
 ## 0. Build and run
 
-Run on 2026-10-07 with `/Users/mengwong/.local/bin/l4`, `JL4_LIBRARY_PATH` unset.
+Run on 2026-10-07 with `~/.local/bin/l4`, `JL4_LIBRARY_PATH` unset.
 That path is a symlink to `~/.cabal/bin/l4`, which resolves to the cabal store entry `jl4-0.1-ff13a0ea` (`/Volumes/transcend/caches/cabal/store/ghc-9.10.3-fe9c/jl4-0.1-ff13a0ea/bin/l4`, modified 2026-10-07 06:41 local), sha256 `f65015688970231681a024ceb9ff3a58abba1f5280837cc955c2bba56dbfa8bc`.
 The binary has no `--version`.
 
 The command, from this directory:
 
 ```
-L4=/Users/mengwong/.local/bin/l4 ./check.sh
+L4=~/.local/bin/l4 ./check.sh
 ```
 
 It prints `TOTAL (11 modules) 0 366 0 0` and exits 0 (section 6 has the whole table).

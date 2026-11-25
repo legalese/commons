@@ -8,7 +8,7 @@
 | subject     | sg-succession                                                                  |
 | repo HEAD   | `fdf2e1b3e19a0808460918375d3209198a5517af` (clean)                                         |
 | clock       | `2025-01-31T00:00:00Z`                                                              |
-| `l4` binary | `/Users/mengwong/src/legalese/l4wt/sg-succession/dist-newstyle/build/aarch64-osx/ghc-9.10.3/jl4-0.1/x/l4/build/l4/l4`                                                              |
+| `l4` binary | `~/src/legalese/l4wt/sg-succession/dist-newstyle/build/aarch64-osx/ghc-9.10.3/jl4-0.1/x/l4/build/l4/l4`                                                              |
 | journal     | `/var/folders/jv/4t5pmlz5563gttw9cxqlx5k00000gp/T/l4-go/2026-08-19-e364a474-001/journal.ndjson` — 25 records, chain verifies |
 | verdict     | **COMPLETE**                                                              |
 
@@ -28,11 +28,11 @@
 
 **PASS**
 
-Oracle (`structural`): `node etc/go/lib/register-validate.mjs source-bundle /Users/mengwong/src/legalese/l4wt/sg-succession/jl4/examples/legal/sg-succession/denovo/source-bundle.json (+2 peer deposit(s))`
+Oracle (`structural`): `node etc/go/lib/register-validate.mjs source-bundle ~/src/legalese/l4wt/sg-succession/jl4/examples/legal/sg-succession/denovo/source-bundle.json (+2 peer deposit(s))`
 
 the validator models the bundle's semantics rather than its syntax: it audits the schema before using it and refuses any keyword it does not implement, it enforces 49 declared cross-field rules whose ids must match its implementations in both directions, and it re-hashes every captured document that names a local_path. It does NOT establish that the fetched text is the law, that the capture is current, or that the annotation inventory is complete — the schema records the last of those as a self-declared flag, which is exactly why P2's disposition join exists.
 
-`deposit=/Users/mengwong/src/legalese/l4wt/sg-succession/jl4/examples/legal/sg-succession/denovo/source-bundle.json` · `peers_present=2` · `rules_checked=49` · `joins_skipped=1`
+`deposit=~/src/legalese/l4wt/sg-succession/jl4/examples/legal/sg-succession/denovo/source-bundle.json` · `peers_present=2` · `rules_checked=49` · `joins_skipped=1`
 
 > *claimed, not verified* (phase-script): 1 cross-file join(s) could not run because a peer deposit is absent; the artifact reports each as 'skip' with its reason, never as a pass
 
@@ -44,11 +44,11 @@ the validator models the bundle's semantics rather than its syntax: it audits th
 
 **PASS**
 
-Oracle (`structural`): `node etc/go/lib/register-validate.mjs external-modifications /Users/mengwong/src/legalese/l4wt/sg-succession/jl4/examples/legal/sg-succession/denovo/external-modifications.json (+2 peer deposit(s))`
+Oracle (`structural`): `node etc/go/lib/register-validate.mjs external-modifications ~/src/legalese/l4wt/sg-succession/jl4/examples/legal/sg-succession/denovo/external-modifications.json (+2 peer deposit(s))`
 
 49 declared cross-field and cross-file rules ran over the register and its peers, including the searched-vs-found joins that make SPEC.md §4 P2's 'what was searched, not only what was found' checkable, the routing rules that force a binding modification to name where it landed in the encoding, and — when the P1 bundle is present — the completeness join over the bundle's annotation inventory. It does NOT establish that the sweep was thorough: no procedure enumerates the searches that should have been run.
 
-`deposit=/Users/mengwong/src/legalese/l4wt/sg-succession/jl4/examples/legal/sg-succession/denovo/external-modifications.json` · `peers_present=2` · `rules_checked=49` · `joins_skipped=1` · `searches=3` · `entries=4` · `dispositions=3`
+`deposit=~/src/legalese/l4wt/sg-succession/jl4/examples/legal/sg-succession/denovo/external-modifications.json` · `peers_present=2` · `rules_checked=49` · `joins_skipped=1` · `searches=3` · `entries=4` · `dispositions=3`
 
 > *claimed, not verified* (phase-script): 1 cross-file join(s) could not run because a peer deposit is absent — most importantly 'annotation-inventory-disposed', which is the BNA C2 defect turned into an exit code and needs the P1 bundle. The artifact reports each as 'skip' with its reason, never as a pass
 
@@ -58,15 +58,15 @@ Oracle (`structural`): `node etc/go/lib/register-validate.mjs external-modificat
 
 ## What the encoding decided
 
-**Encoding (de novo):** SKIPPED — the 'sg-succession' sidecar declares no denovo.modules, so this subject has nowhere to deposit a de novo encoding. Add it to /Users/mengwong/src/legalese/l4wt/sg-succession/etc/go/subjects/sg-succession/subject.json; the paths' existence is optional, because writing the L4 is agent work owned by the G2 section of .claude/skills/running-the-l4-pipeline/SKILL.md and by the writing-l4-rules skill.
+**Encoding (de novo):** SKIPPED — the 'sg-succession' sidecar declares no denovo.modules, so this subject has nowhere to deposit a de novo encoding. Add it to ~/src/legalese/l4wt/sg-succession/etc/go/subjects/sg-succession/subject.json; the paths' existence is optional, because writing the L4 is agent work owned by the G2 section of .claude/skills/running-the-l4-pipeline/SKILL.md and by the writing-l4-rules skill.
 
 **Ambiguity forks:** PASS
 
-Oracle (`structural`): `node etc/go/lib/register-validate.mjs fork-register /Users/mengwong/src/legalese/l4wt/sg-succession/jl4/examples/legal/sg-succession/denovo/fork-register.json (+2 peer deposit(s))`
+Oracle (`structural`): `node etc/go/lib/register-validate.mjs fork-register ~/src/legalese/l4wt/sg-succession/jl4/examples/legal/sg-succession/denovo/fork-register.json (+2 peer deposit(s))`
 
 49 declared rules ran, and they model R4's ruled representation rather than the file's syntax: the 1:1 map between a materialised fork and an Interpretation field is enforced in both directions, the reading taken must be one of the register's own live readings, a non-live reading must explain itself, a live reading must cite the text that licenses it, and an observable divergence must name a witness. It does NOT establish COMPLETENESS — 7 fork(s) are recorded and nothing here says that is all of them.
 
-`deposit=/Users/mengwong/src/legalese/l4wt/sg-succession/jl4/examples/legal/sg-succession/denovo/fork-register.json` · `peers_present=2` · `rules_checked=49` · `joins_skipped=1` · `forks=7` · `materialised=2` · `settled_by_authority=2` · `with_witnesses=6`
+`deposit=~/src/legalese/l4wt/sg-succession/jl4/examples/legal/sg-succession/denovo/fork-register.json` · `peers_present=2` · `rules_checked=49` · `joins_skipped=1` · `forks=7` · `materialised=2` · `settled_by_authority=2` · `with_witnesses=6`
 
 > *claimed, not verified* (phase-script): 1 cross-file join(s) could not run because a peer deposit is absent — including 'cross-refs-resolve', which is how a fork an authority has already settled proves it cites a real P2 entry rather than presenting as open. The artifact reports each as 'skip', never as a pass
 
@@ -74,7 +74,7 @@ Oracle (`structural`): `node etc/go/lib/register-validate.mjs fork-register /Use
 
 **Adversarial gate (mechanisable half):** PASS
 
-Oracle (`structural`): `node etc/go/lib/register-validate.mjs external-modifications /Users/mengwong/src/legalese/l4wt/sg-succession/jl4/examples/legal/sg-succession/denovo/external-modifications.json /Users/mengwong/src/legalese/l4wt/sg-succession/jl4/examples/legal/sg-succession/denovo/source-bundle.json /Users/mengwong/src/legalese/l4wt/sg-succession/jl4/examples/legal/sg-succession/denovo/fork-register.json`
+Oracle (`structural`): `node etc/go/lib/register-validate.mjs external-modifications ~/src/legalese/l4wt/sg-succession/jl4/examples/legal/sg-succession/denovo/external-modifications.json ~/src/legalese/l4wt/sg-succession/jl4/examples/legal/sg-succession/denovo/source-bundle.json ~/src/legalese/l4wt/sg-succession/jl4/examples/legal/sg-succession/denovo/fork-register.json`
 
 49 declared rules ran across all three de novo deposits with every peer present, which is what makes SPEC.md §4 P5's third check — 'disposition of every entry in P2's external-modification register (consumed by the encoding, consumed by a fork, or explicitly deferred with a reason)' — an exit code: 'annotation-inventory-disposed' joins the disposition table against the bundle's declared-complete annotation inventory, 'fork-refs-resolve' and 'cross-refs-resolve' check the register/fork cross-references in both directions, and the routing rules force a binding modification to name where it landed. Two of P5's five checks are discharged elsewhere (p3-check), and two are not discharged at all — see the notes.
 
@@ -88,7 +88,7 @@ Oracle (`structural`): `node etc/go/lib/register-validate.mjs external-modificat
 
 > *claimed, not verified* (phase-script): this PASS is NOT the P5 gate. SPEC.md §4's P5 condition is 'independent adversarial review is satisfied the encoding is as good as it can be' — a judgement, held by HG1. What passed here is the mechanisable third of its checklist
 
-**What was checked about the committed encoding:** SKIPPED — the 'sg-succession' sidecar declares no module set for this milestone's origin (denovo: denovo.modules), so there is nothing to hold the P3 house rules against. Add it to /Users/mengwong/src/legalese/l4wt/sg-succession/etc/go/subjects/sg-succession/subject.json; writing the module is agent work.
+**What was checked about the committed encoding:** SKIPPED — the 'sg-succession' sidecar declares no module set for this milestone's origin (denovo: denovo.modules), so there is nothing to hold the P3 house rules against. Add it to ~/src/legalese/l4wt/sg-succession/etc/go/subjects/sg-succession/subject.json; writing the module is agent work.
 
 ---
 
@@ -96,11 +96,11 @@ Oracle (`structural`): `node etc/go/lib/register-validate.mjs external-modificat
 
 | leg | status | oracle class | what it says |
 | --- | --- | --- | --- |
-| `p7-dmn` | SKIPPED | none | the 'sg-succession' sidecar declares no denovo.modules, so there is no de novo module to emit DMN from. Add it to /Users/mengwong/src/legalese/l4wt/sg-succession/etc/go/subjects/sg-succession/subject.json; writing the module is agent work. |
+| `p7-dmn` | SKIPPED | none | the 'sg-succession' sidecar declares no denovo.modules, so there is no de novo module to emit DMN from. Add it to ~/src/legalese/l4wt/sg-succession/etc/go/subjects/sg-succession/subject.json; writing the module is agent work. |
 
 ### `p7-dmn` — SKIPPED
 
-the 'sg-succession' sidecar declares no denovo.modules, so there is no de novo module to emit DMN from. Add it to /Users/mengwong/src/legalese/l4wt/sg-succession/etc/go/subjects/sg-succession/subject.json; writing the module is agent work.
+the 'sg-succession' sidecar declares no denovo.modules, so there is no de novo module to emit DMN from. Add it to ~/src/legalese/l4wt/sg-succession/etc/go/subjects/sg-succession/subject.json; writing the module is agent work.
 
 **Oracle:** none ran.
 
@@ -109,7 +109,7 @@ the 'sg-succession' sidecar declares no denovo.modules, so there is no de novo m
 
 ## Test results
 
-**SKIPPED** — the 'sg-succession' sidecar declares no module set for this milestone's origin (denovo: denovo.modules), so there are no committed #ASSERT directives to run. Add it to /Users/mengwong/src/legalese/l4wt/sg-succession/etc/go/subjects/sg-succession/subject.json; writing the module is agent work.
+**SKIPPED** — the 'sg-succession' sidecar declares no module set for this milestone's origin (denovo: denovo.modules), so there are no committed #ASSERT directives to run. Add it to ~/src/legalese/l4wt/sg-succession/etc/go/subjects/sg-succession/subject.json; writing the module is agent work.
 
 ---
 
@@ -117,7 +117,7 @@ the 'sg-succession' sidecar declares no denovo.modules, so there is no de novo m
 
 The stages above are narrated under the heading they belong to. These are the rest — reporting stages, and anything added to the pipeline that has no heading of its own yet. They are here because the verdict gloss at the top of this report promises that every non-PASS receipt's reason appears below, and a stage with no site is how that promise quietly stops being true.
 
-**`p8-verify`:** SKIPPED — the 'sg-succession' sidecar declares no module set for this milestone's origin (denovo: denovo.modules), so there is nothing to verify. Add it to /Users/mengwong/src/legalese/l4wt/sg-succession/etc/go/subjects/sg-succession/subject.json; writing the module is agent work.
+**`p8-verify`:** SKIPPED — the 'sg-succession' sidecar declares no module set for this milestone's origin (denovo: denovo.modules), so there is nothing to verify. Add it to ~/src/legalese/l4wt/sg-succession/etc/go/subjects/sg-succession/subject.json; writing the module is agent work.
 
 **`p9-report`:** PASS
 
@@ -140,7 +140,7 @@ the renderer reads journal.ndjson and nothing else, refuses a template containin
 
 ## Triage
 
-**`p8-diff`:** SKIPPED — the 'sg-succession' sidecar declares no denovo.surface_map, so the §8 comparator has no pairing declaration to run over. Add it to /Users/mengwong/src/legalese/l4wt/sg-succession/etc/go/subjects/sg-succession/subject.json; writing the map (which decisions correspond, over which shared fact slots) is agent work owned by the skill's G2 section and DENOVO-DIFF-ORACLE.md.
+**`p8-diff`:** SKIPPED — the 'sg-succession' sidecar declares no denovo.surface_map, so the §8 comparator has no pairing declaration to run over. Add it to ~/src/legalese/l4wt/sg-succession/etc/go/subjects/sg-succession/subject.json; writing the map (which decisions correspond, over which shared fact slots) is agent work owned by the skill's G2 section and DENOVO-DIFF-ORACLE.md.
 
 ---
 

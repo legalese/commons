@@ -15,7 +15,7 @@
 # hand-written, so a failure is a bug in that script or in glossary.json -- or, more
 # usefully, a sign that the English row moved and this one has not been regenerated.
 # The twin of this file is ../legalese/check.sh; run both.
-WT=${HVAC_L4_WORKTREE:-/Users/mengwong/src/legalese/l4wt/smart-quotes}
+WT=${HVAC_L4_WORKTREE:-$HOME/src/legalese/l4wt/smart-quotes}
 L4=${HVAC_L4:-$WT/dist-newstyle/build/aarch64-osx/ghc-9.10.3/jl4-0.1/x/l4/build/l4/l4}
 if [ -n "${HVAC_LIBS:-}" ]; then export JL4_LIBRARY_PATH="$HVAC_LIBS"; else unset JL4_LIBRARY_PATH; fi
 cd "$(dirname "$0")" || exit 1

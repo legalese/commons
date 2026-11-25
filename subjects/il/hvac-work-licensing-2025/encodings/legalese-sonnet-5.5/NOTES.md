@@ -425,7 +425,7 @@ It shows reg 1, reg 2(א) to (ה) and the heading of reg 3, and the first panel;
 
 ## 7. What `check.sh` prints, and which failures are expected
 
-Binary: `/Users/mengwong/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-41dd7a67/bin/l4`, built 2026-10-13 16:13 from l4-ide `unstable`, as recorded in the task that produced this encoding (`l4` has no version flag).
+Binary: `~/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-41dd7a67/bin/l4`, built 2026-10-13 16:13 from l4-ide `unstable`, as recorded in the task that produced this encoding (`l4` has no version flag).
 `JL4_LIBRARY_PATH` was left unset.
 
 ```text
@@ -504,7 +504,7 @@ The transcript records 242 requests, all on `claude-sonnet-5-5`, 40,221 output t
 Dollar cost is not computed here.
 
 **The binary.**
-`/Users/mengwong/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-41dd7a67/bin/l4`, built 2026-10-13 16:13 from l4-ide `unstable`, sha256 `2e3d6bd3a154e6b4080a445af6cc189dbc4ac087d8221682d09509212f1ce187`.
+`~/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-41dd7a67/bin/l4`, built 2026-10-13 16:13 from l4-ide `unstable`, sha256 `2e3d6bd3a154e6b4080a445af6cc189dbc4ac087d8221682d09509212f1ce187`.
 `l4` has no `--version`, so the hash is the identity.
 `JL4_LIBRARY_PATH` was unset.
 

@@ -7,7 +7,7 @@ No domain expert has read it against the source; HG1 has not been sought.
 
 ## 0. Build and run
 
-Run on 2026-10-06 with `/Users/mengwong/.local/bin/l4`, `JL4_LIBRARY_PATH` unset.
+Run on 2026-10-06 with `~/.local/bin/l4`, `JL4_LIBRARY_PATH` unset.
 That path is a symlink to `~/.cabal/bin/l4`, which resolves to the cabal store entry `jl4-0.1-0ee0100b` (`/Volumes/transcend/caches/cabal/store/ghc-9.10.3-fe9c/jl4-0.1-0ee0100b/bin/l4`, modified 2026-10-06 21:20 local), sha256 `64bbcb157dbef2ef1020a6a75589313bba0a2aeeb807c921c5e65e62e9eca118`.
 The binary has no `--version`.
 Every run prints two Warnings that differing copies of `prelude` and `daydate` exist under `~/.local/share/jl4/libraries/`; the binary uses its embedded copies, and the warnings are not errors.
@@ -15,7 +15,7 @@ Every run prints two Warnings that differing copies of `prelude` and `daydate` e
 The command, from this directory:
 
 ```
-L4=/Users/mengwong/.local/bin/l4 ./check.sh
+L4=~/.local/bin/l4 ./check.sh
 ```
 
 It takes about four minutes, most of it in the 1,235 generated Annex VI tests.

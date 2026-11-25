@@ -2,7 +2,7 @@
 from lib import Facts, Pun, pred, mu, or_both, and_fine
 from build import Module, COVERAGE, family, recite
 
-DEP = "/Users/mengwong/src/legalese/pc-encode/deposit/"
+DEP = __import__("os").path.expanduser("~/src/legalese/pc-encode/deposit/")
 WD = ("what was done", "S", "What the accused did, as it is to read in the charge after \"to wit,\"")
 
 HEADER = """-- Singapore Penal Code 1871 - Chapter 13 (repealed, ss 264-267), Chapter 14

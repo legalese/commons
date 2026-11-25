@@ -108,7 +108,7 @@ The rest of `cp-g1b-condenacao.l4` (`Crime em julgamento`, `Sentença`, `Circuns
 
 ## 4. What `check.sh` prints for g1b's modules
 
-`L4=/Users/mengwong/.claude/br-penal-toolchain/l4 ENC/check.sh ENC cp-g1b-`, 2026-09-30, exit 0:
+`L4=~/.claude/br-penal-toolchain/l4 ENC/check.sh ENC cp-g1b-`, 2026-09-30, exit 0:
 
 ```
 module                                        errors satisfied  failed refused asserts

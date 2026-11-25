@@ -7,7 +7,7 @@ The row was written by one Sonnet 5.5 agent working alone from a brief, with no 
 **The source text.**
 The six `.txt` files this encoding was written from are a converter-made plain-text rendering of California Legislative Information (the Legislature's bulk file), not the official text.
 Nothing here was checked against the official text.
-Every quotation in the modules (`-- src:ID:N | text` lines) was copied by script from those files and checked against them by `srcrefs.py check --refs` (the tool of the encoding skill, `/Users/mengwong/src/legalese/l4-ide/skills/encoding-a-subject/assets/srcrefs.py`, documented in its `references/source-locators.md`), which reports 0 problems for each of the four modules.
+Every quotation in the modules (`-- src:ID:N | text` lines) was copied by script from those files and checked against them by `srcrefs.py check --refs` (the tool of the encoding skill, `~/src/legalese/l4-ide/skills/encoding-a-subject/assets/srcrefs.py`, documented in its `references/source-locators.md`), which reports 0 problems for each of the four modules.
 That proves the quotation is the deposited text; it does not prove the deposited text is the law.
 The terms of the source are in `SOURCE-LICENSE.md`.
 
@@ -43,7 +43,7 @@ Beyond that, these parts of encoded sections are not encoded:
   `check.sh` defaults to target `unstable`; with that target it prints that the main check was skipped, and there is no `fetch-main-l4.sh` in this row.
   Do not file this row for `main`.
 - **Build.** `l4 --version` prints `dev`.
-  The binary is `/Users/mengwong/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-9afd0288/bin/l4`, sha256 `2d912dd2a61ba36b3fb8c1e02dcbd445ba1143c3b8ecb931462c01050cd607d7`, also recorded in `encoding.json`.
+  The binary is `~/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-9afd0288/bin/l4`, sha256 `2d912dd2a61ba36b3fb8c1e02dcbd445ba1143c3b8ecb931462c01050cd607d7`, also recorded in `encoding.json`.
   `JL4_LIBRARY_PATH` was left unset throughout.
 - **Modules, in reading order.**
   1. `usca-interpretation-time.l4` imports only `prelude` and `daydate`, as the brief requires.
@@ -581,7 +581,7 @@ Commencement (Gov. Code § 9600, § 9602):
 ## What `check.sh` prints
 
 **Target: `unstable`.**
-Run as `L4_TARGET=unstable L4=/Users/mengwong/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-9afd0288/bin/l4 ./check.sh`; the default target of this copy of `check.sh` is `unstable`, where the skill's own default is `main`.
+Run as `L4_TARGET=unstable L4=~/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-9afd0288/bin/l4 ./check.sh`; the default target of this copy of `check.sh` is `unstable`, where the skill's own default is `main`.
 `l4 --version` prints `dev`; the binary's sha256 is `2d912dd2a61ba36b3fb8c1e02dcbd445ba1143c3b8ecb931462c01050cd607d7`.
 With the target `unstable`, `check.sh` skips the `main` comparison, so there are no main columns and no main build to name.
 
@@ -642,7 +642,7 @@ Each states the answer a naive reading gives and the text does not support, so a
   No disagreement between the code and a value derived from the text was left standing.
 
 **What else was checked, and with what result** (measured on 2026-10-22 against the files as they stand):
-- `srcrefs.py check --refs` (the skill's tool, /Users/mengwong/src/legalese/l4-ide/skills/encoding-a-subject/assets/srcrefs.py; every quotation is the deposited line, and every `@ref` locator names lines that exist): 0 problems in each of the four modules.
+- `srcrefs.py check --refs` (the skill's tool, ~/src/legalese/l4-ide/skills/encoding-a-subject/assets/srcrefs.py; every quotation is the deposited line, and every `@ref` locator names lines that exist): 0 problems in each of the four modules.
   `--strict`, which also wants the lines each locator cites to be the lines quoted in the run directly above it, reports 23, 13, 0 and 5 problems in the time, holiday, operation and general modules (23 + 12 + 4 "cites lines not quoted in the run above it" and 1 + 1 "the run quotes fewer lines than its locator reaches", and no orphan quotation).
   In each case the locator cites lines that the same module quotes somewhere other than directly above the locator (checked: no non-blank line that any locator cites is missing from the quotations of its module), or cites a whole section where the run above it quotes part.
   No quoted line differs from the file.

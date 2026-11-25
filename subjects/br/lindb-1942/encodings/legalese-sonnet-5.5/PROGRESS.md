@@ -7,7 +7,7 @@ Paths (all absolute):
 - `BR` = `/Volumes/transcend/claude-tmp/claude-502/-Users-mengwong-src-legalese-l4-ide/f0f88090-d3bb-4c2f-a86e-663d7b9acf93/scratchpad/interp-wave/br`
 - `INPUTS` = `$BR/inputs`; raw text `$INPUTS/lindb-1942.pt.txt` (113 lines)
 - `ENC` = `$BR/deposit/encodings/legalese-sonnet-5.5` (the only place I write)
-- `L4_BIN` = `/Users/mengwong/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-9afd0288/bin/l4`, sha256 `2d912dd2a61ba36b3fb8c1e02dcbd445ba1143c3b8ecb931462c01050cd607d7` (checked 2026-10-21)
+- `L4_BIN` = `~/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-9afd0288/bin/l4`, sha256 `2d912dd2a61ba36b3fb8c1e02dcbd445ba1143c3b8ecb931462c01050cd607d7` (checked 2026-10-21)
 
 ## What the text is
 

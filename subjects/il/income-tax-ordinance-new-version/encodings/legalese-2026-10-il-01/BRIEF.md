@@ -47,7 +47,7 @@ Where an answer turns on either, the rule must `REFUSE` with a named reason, nev
 2. A tests module whose expected values come from the source text and from the Israel Tax Authority's own published statement of how a credit point is applied — never from the code.
    Cover each section on both sides of every condition, the refusals, and the aggregate the Ordinance itself names elsewhere ("נקודות הזיכוי שעל פי סעיפים 34 ו־36", s 134A(2)).
 3. `NOTES.md`: scope, a coverage table (every provision met, with a disposition), a fork register, an answer table (points per section per kind of person; the credit-point amount per tax year as published), what `check.sh` prints, open questions, and "Nouns to reconcile at IL-07".
-4. `check.sh` from the `encoding-a-subject` skill, run as `L4=/Users/mengwong/.local/bin/l4 ./check.sh`.
+4. `check.sh` from the `encoding-a-subject` skill, run as `L4=~/.local/bin/l4 ./check.sh`.
 5. `encoding.json` (status `draft`, HG1 not sought) and `SOURCE-LICENSE.md`.
 
 ## Rules that matter
@@ -63,7 +63,7 @@ Where an answer turns on either, the rule must `REFUSE` with a named reason, nev
 
 ## Toolchain
 
-The binary is `/Users/mengwong/.local/bin/l4` (a symlink into a cabal store build `jl4-0.1-0ee0100b`; it has no `--version`, so `NOTES.md` records its sha256 at the time of each run).
+The binary is `~/.local/bin/l4` (a symlink into a cabal store build `jl4-0.1-0ee0100b`; it has no `--version`, so `NOTES.md` records its sha256 at the time of each run).
 Leave `JL4_LIBRARY_PATH` unset.
 `l4 check FILE` typechecks; `l4 run FILE` also evaluates every `#EVAL` and `#ASSERT`.
 

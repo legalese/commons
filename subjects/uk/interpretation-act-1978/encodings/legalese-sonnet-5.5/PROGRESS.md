@@ -52,7 +52,7 @@ This file is the memory across a context compaction: after one, re-read this fil
 
 ## Standing facts
 
-- L4_BIN = /Users/mengwong/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-9afd0288/bin/l4, sha256 2d912dd2a61ba36b3fb8c1e02dcbd445ba1143c3b8ecb931462c01050cd607d7 (verified); `l4 --version` prints `dev`.
+- L4_BIN = ~/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-9afd0288/bin/l4, sha256 2d912dd2a61ba36b3fb8c1e02dcbd445ba1143c3b8ecb931462c01050cd607d7 (verified); `l4 --version` prints `dev`.
   JL4_LIBRARY_PATH is unset for every run.
 - Target compiler: unstable (the brief mandates `@lang en`, `REFUSE`, `#ASSERT REFUSED ... BECAUSE`, which main rejects).
   Run: `cd` to this directory, then `env -u JL4_LIBRARY_PATH L4=<L4_BIN> L4_TARGET=unstable ./check.sh`.

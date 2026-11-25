@@ -5,7 +5,7 @@ Agents are the transcripts under the session's subagents/ directory whose first 
 Messages are de-duplicated by message id (streaming writes the same id several times; the last record has the final output_tokens).
 RATES.json: {"claude-sonnet-5-5": {"input":..,"cache_write_1h":..,"cache_write_5m":..,"cache_read":..,"output":..}, ...}  in dollars per million tokens."""
 import json,glob,os,re,sys,collections
-T="/Users/mengwong/.claude/projects/-Users-mengwong-src-legalese-l4-ide/7d96192f-aaa4-44f5-ac28-10f6e3777fd5/subagents"
+T=os.path.expanduser("~/.claude/projects/") + os.path.expanduser("~").replace("/", "-") + "-src-legalese-l4-ide/7d96192f-aaa4-44f5-ac28-10f6e3777fd5/subagents"
 rates=json.load(open(sys.argv[1])) if len(sys.argv)>1 else None
 ROLES=[("SKILL-REWRITER","skill-rewriter"),("SURVEYOR","surveyor"),("HUNTER","hunt"),("INTEGRATOR","integrator"),("COMPARATOR","comparator"),("COMPARER","comparator"),("OVERLAP","overlap")]
 def role(first):

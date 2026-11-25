@@ -41,4 +41,4 @@ Integrating these rows into the capstone is a later version of IL-07.
 
 ## Toolchain
 
-`/Users/mengwong/.local/bin/l4` (no `--version`), `JL4_LIBRARY_PATH` unset; `L4=/Users/mengwong/.local/bin/l4 ./check.sh`.
+`~/.local/bin/l4` (no `--version`), `JL4_LIBRARY_PATH` unset; `L4=~/.local/bin/l4 ./check.sh`.

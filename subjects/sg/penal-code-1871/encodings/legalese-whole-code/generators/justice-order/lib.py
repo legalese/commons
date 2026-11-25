@@ -6,7 +6,7 @@ ladders, punishment records, charge builders, and full-literal test fixtures.
 """
 import re, textwrap
 
-SRC = "/Users/mengwong/src/legalese/pc-encode/inputs/PC1871.txt"
+SRC = __import__("os").path.expanduser("~/src/legalese/pc-encode/inputs/PC1871.txt")
 ASCII = {"’": "'", "‘": "'", "“": '"', "”": '"', "—": "-", "–": "-",
          "…": "...", " ": " "}
 

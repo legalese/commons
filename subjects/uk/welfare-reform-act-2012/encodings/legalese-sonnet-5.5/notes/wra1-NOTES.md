@@ -1141,5 +1141,5 @@ What these numbers do not show: that a domain expert agrees with any reading (ev
 ## peeked
 
 I opened nothing in a forbidden place.
-I grepped one file outside `inputs/` and my own folders, once, for the spelling of `#TRACE`: `/Users/mengwong/src/legalese/l4-ide/skills/writing-l4-rules/SKILL.md`, the skill the brief names.
+I grepped one file outside `inputs/` and my own folders, once, for the spelling of `#TRACE`: `~/src/legalese/l4-ide/skills/writing-l4-rules/SKILL.md`, the skill the brief names.
 I did not read any other directory under the runs directory, anything under `~/.claude/`, or any existing encoding.

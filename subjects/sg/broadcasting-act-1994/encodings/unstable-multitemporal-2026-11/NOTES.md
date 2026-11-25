@@ -46,7 +46,7 @@ D and R are two plain DATE inputs on every seat question.
 - `@effective` and `@repealed` are **not** in this build (finding 1).
 
 **Footnote: the dev build the row was first written on.**
-The first runs were on `/Users/mengwong/.local/bin/l4`, which is a symlink (dated 28 Sep 2026) to `~/.cabal/bin/l4`, which is a symlink (dated 1 Nov 2026 10:24) to the store binary `/Volumes/transcend/caches/cabal/store/ghc-9.10.3-fe9c/jl4-0.1-ebe709e8/bin/l4`.
+The first runs were on `~/.local/bin/l4`, which is a symlink (dated 28 Sep 2026) to `~/.cabal/bin/l4`, which is a symlink (dated 1 Nov 2026 10:24) to the store binary `/Volumes/transcend/caches/cabal/store/ghc-9.10.3-fe9c/jl4-0.1-ebe709e8/bin/l4`.
 That file is 246,639,728 bytes, dated 1 Nov 2026 10:24, sha256 `25a091f450fd99d12a4ee9e4731721c0c03c13d75c14eb11dbe04392931aa051`, and `l4 --version` prints only `dev`.
 The brief said it was "installed on 28 Sep 2026"; 28 Sep is the date of the first symlink, and the file it resolves to is dated 1 Nov.
 **Dev against shelf: no difference.** All 34 files of the row (the 11 modules, the 14 findings reproducers, the 6 alternative ways and the 3 probes), and also the tutorial's two examples and six early probes kept outside the repository, were run on both builds, and the normalised diagnostics (range, severity, the first lines of each message) are identical on every one.

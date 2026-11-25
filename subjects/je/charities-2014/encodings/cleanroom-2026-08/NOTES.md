@@ -31,7 +31,7 @@ It encodes the charity test of the Law, Articles 5 to 7, **de novo from the prim
 
 ## 2. Things a reader will trip on
 
-- `comparison/make-surface-map.py:5-6` hard-codes absolute paths on the machine that ran it (`/Users/mengwong/src/legalese/l4wt/charities-cleanroom/...`).
+- `comparison/make-surface-map.py:5-6` hard-codes absolute paths on the machine that ran it (`~/src/legalese/l4wt/charities-cleanroom/...`).
   It will not run anywhere else unedited, and it is left as deposited because it is the record of what produced `comparison/charity-test.surface-map.json`.
 - Paths in the surface map and in `README.md` are l4-ide paths.
 - `COMPARISON.md` discusses and counts pages of `lexipedia.xyz` from read-only fetches on 2026-08-02/03.

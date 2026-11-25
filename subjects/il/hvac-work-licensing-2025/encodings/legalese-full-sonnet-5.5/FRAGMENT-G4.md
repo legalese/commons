@@ -8,7 +8,7 @@ Everything below is the encoder's reading; where the Law does not settle a point
 Modules, in `DEPOSIT`: `g4-registrar.l4` (s.19), `g4-council-membership.l4` (ss.20 to 23), `g4-council-work.l4` (ss.24 to 28), `g4-conflict.l4` (s.29), and `g4-composition.l4` on top of the four (the wiring between them; section 5).
 Tests: `g4-tests-registrar.l4`, `g4-tests-membership.l4`, `g4-tests-council-work.l4`, `g4-tests-conflict.l4`, `g4-tests-composition.l4`, and `g4-tests-red.l4` (17 expectations that are meant to fail).
 Source: `inputs/law.wiki` lines 159 to 242 (Wikisource revision 2947808), checked against the gazette (Sefer HaChukim 3349, pp. 186 to 189).
-Binary: `/Users/mengwong/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-41dd7a67/bin/l4`, sha256 `2e3d6bd3a154e6b4080a445af6cc189dbc4ac087d8221682d09509212f1ce187` (verified at the start of the work).
+Binary: `~/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-41dd7a67/bin/l4`, sha256 `2e3d6bd3a154e6b4080a445af6cc189dbc4ac087d8221682d09509212f1ce187` (verified at the start of the work).
 The time module `il-interpretation-time.l4` was used unedited; its sha256 `d1552de57266d7dc7a5d2fca43b73e100b8814dc78f33fb755daeb2294cf671f` was verified by the check script.
 
 ## 0. What changed from the PLAN and the slice, and how the files were made

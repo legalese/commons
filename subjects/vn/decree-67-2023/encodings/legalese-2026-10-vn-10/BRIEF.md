@@ -1,7 +1,7 @@
 # Encoding brief: Decree 67/2023/NĐ-CP — compulsory motor vehicle owners' civil liability insurance (Chapter II), with Decree 220/2026/NĐ-CP, in L4
 
 Row VN-10, row id `legalese-2026-10-vn-10`, run id `VN-10-20261006`, encoder `enc-vn-10` (one session, no sub-agents).
-This brief is the whole specification. Read it fully before you open a source. It restates the lead's task in the template of `/Users/mengwong/src/legalese/l4-ide/skills/encoding-a-subject/assets/brief-template.md`.
+This brief is the whole specification. Read it fully before you open a source. It restates the lead's task in the template of `~/src/legalese/l4-ide/skills/encoding-a-subject/assets/brief-template.md`.
 
 ## What this is for
 
@@ -10,15 +10,15 @@ The deliverable is a faithful, reviewable, bilingual (Vietnamese source, English
 
 ## Where everything is
 
-- SUBJECT = `/Users/mengwong/src/legalese/commonswt/vn-insurance/subjects/vn/decree-67-2023`
-- DEPOSIT = `/Users/mengwong/src/legalese/commonswt/vn-insurance/subjects/vn/decree-67-2023/encodings/legalese-2026-10-vn-10` (**write only here**; `BRIEF.md`, `tools/vnsrc.py` and `check.sh` are already in it)
+- SUBJECT = `subjects/vn/decree-67-2023`
+- DEPOSIT = `subjects/vn/decree-67-2023/encodings/legalese-2026-10-vn-10` (**write only here**; `BRIEF.md`, `tools/vnsrc.py` and `check.sh` are already in it)
 - Sources, as plain text with line numbers (the checkable form):
-- `nd67-congbao-1017-1018`: `/Users/mengwong/src/legalese/commonswt/vn-insurance/subjects/vn/decree-67-2023/source/raw/nd67-congbao-1017-1018.txt` (the text rendering; the PDF is beside it as `nd67-congbao-1017-1018.pdf`), 95 pages, sha256 `19a1de3a974866c90498f3478597798a08892ed6f73d4c461c3f1ef5f41253c8`, from <https://congbaocdn.chinhphu.vn/CongBaoCP/VanBan/2023/9/40096/46430-1-20231017-101867-2023-nd-cp.pdf>. congbaocdn.chinhphu.vn, the Government gazette (Công báo) issue 1017+1018, 20 September 2023: the decree's body and Phụ lục I-III. The server wants a Referer..
-- `nd67-congbao-1019-1020`: `/Users/mengwong/src/legalese/commonswt/vn-insurance/subjects/vn/decree-67-2023/source/raw/nd67-congbao-1019-1020.txt` (the text rendering; the PDF is beside it as `nd67-congbao-1019-1020.pdf`), 85 pages, sha256 `456cbc7d4cbf8a0eeb3db989ac2edadd0ac9bb3a1fcd024ef4359dcd73b79d59`, from <https://congbaocdn.chinhphu.vn/CongBaoCP/VanBan/2023/9/40096/46433-1-20231019-102067-2023-nd-cp.pdf>. congbaocdn.chinhphu.vn, the Government gazette (Công báo) issue 1019+1020: the decree's remaining annexes (Phụ lục III continued to X, including Phụ lục VI). The server wants a Referer..
-- `nd220-2026-congbao-367`: `/Users/mengwong/src/legalese/commonswt/vn-insurance/subjects/vn/decree-67-2023/source/raw/nd220-2026-congbao-367.txt` (the text rendering; the PDF is beside it as `nd220-2026-congbao-367.pdf`), 37 pages, sha256 `ab0e75cdd5de3b3bc0e0ebc6d3fb03b87b9a4eebfe2658b57b0b16b3c11f3a52`, from <https://congbaocdn.chinhphu.vn/180507251028987904/2026/7/3/469840-1782964220_v1_1783040868_signed.pdf>. congbaocdn.chinhphu.vn, the Government gazette (Công báo) no. 367, 3 July 2026: Decree 220/2026/NĐ-CP, which amends Decree 67/2023. The server wants a Referer..
-- `/Users/mengwong/src/legalese/commonswt/vn-insurance/subjects/vn/decree-67-2023/subject.json` records the provenance of each source; `/Users/mengwong/src/legalese/commonswt/vn-insurance/subjects/vn/decree-67-2023/SOURCE-LICENSE.md` its licence position.
-- Read-only aid, Law on Insurance Business 08/2022/QH15 (text): `/Users/mengwong/src/legalese/commonswt/vn-insurance/.aids/law-08-2022-qh15.txt`
-- `l4`: `/Users/mengwong/.local/bin/l4`
+- `nd67-congbao-1017-1018`: `~/src/legalese/commonswt/vn-insurance/subjects/vn/decree-67-2023/source/raw/nd67-congbao-1017-1018.txt` (the text rendering; the PDF is beside it as `nd67-congbao-1017-1018.pdf`), 95 pages, sha256 `19a1de3a974866c90498f3478597798a08892ed6f73d4c461c3f1ef5f41253c8`, from <https://congbaocdn.chinhphu.vn/CongBaoCP/VanBan/2023/9/40096/46430-1-20231017-101867-2023-nd-cp.pdf>. congbaocdn.chinhphu.vn, the Government gazette (Công báo) issue 1017+1018, 20 September 2023: the decree's body and Phụ lục I-III. The server wants a Referer..
+- `nd67-congbao-1019-1020`: `~/src/legalese/commonswt/vn-insurance/subjects/vn/decree-67-2023/source/raw/nd67-congbao-1019-1020.txt` (the text rendering; the PDF is beside it as `nd67-congbao-1019-1020.pdf`), 85 pages, sha256 `456cbc7d4cbf8a0eeb3db989ac2edadd0ac9bb3a1fcd024ef4359dcd73b79d59`, from <https://congbaocdn.chinhphu.vn/CongBaoCP/VanBan/2023/9/40096/46433-1-20231019-102067-2023-nd-cp.pdf>. congbaocdn.chinhphu.vn, the Government gazette (Công báo) issue 1019+1020: the decree's remaining annexes (Phụ lục III continued to X, including Phụ lục VI). The server wants a Referer..
+- `nd220-2026-congbao-367`: `~/src/legalese/commonswt/vn-insurance/subjects/vn/decree-67-2023/source/raw/nd220-2026-congbao-367.txt` (the text rendering; the PDF is beside it as `nd220-2026-congbao-367.pdf`), 37 pages, sha256 `ab0e75cdd5de3b3bc0e0ebc6d3fb03b87b9a4eebfe2658b57b0b16b3c11f3a52`, from <https://congbaocdn.chinhphu.vn/180507251028987904/2026/7/3/469840-1782964220_v1_1783040868_signed.pdf>. congbaocdn.chinhphu.vn, the Government gazette (Công báo) no. 367, 3 July 2026: Decree 220/2026/NĐ-CP, which amends Decree 67/2023. The server wants a Referer..
+- `subjects/vn/decree-67-2023/subject.json` records the provenance of each source; `subjects/vn/decree-67-2023/SOURCE-LICENSE.md` its licence position.
+- Read-only aid, Law on Insurance Business 08/2022/QH15 (text): `~/src/legalese/commonswt/vn-insurance/.aids/law-08-2022-qh15.txt`
+- `l4`: `~/.local/bin/l4`
 
 ## The subject
 
@@ -59,7 +59,7 @@ Two things the decree's preamble names deserve a fork-register entry each: it is
 ## Bilingual convention (Vietnamese source, English encoding)
 
 This follows the Hebrew rows IL-01 to IL-03 of the Income Tax Ordinance: English identifiers, the source language quoted mechanically from the deposited text and checked by a script.
-Read `/Users/mengwong/src/legalese/commons/subjects/il/income-tax-ordinance-new-version/encodings/legalese-2026-10-il-03/NOTES.md` and its nouns module `ito-il03-nouns.l4` to see the shape.
+Read `subjects/il/income-tax-ordinance-new-version/encodings/legalese-2026-10-il-03/NOTES.md` and its nouns module `ito-il03-nouns.l4` to see the shape.
 The rules:
 
 1. Every module starts with `@lang en`. Identifiers are English backtick names (`` `the sum insured` ``). Filenames are ASCII.
@@ -82,7 +82,7 @@ The rules:
 3. `NOTES.md`, in this order: §0 build and run (which `l4`, its sha256, the command, the `check.sh` totals); §1 what is encoded and what is not; §2 the **coverage table** (every provision in scope, its heading as written plus an English gloss, a disposition `encoded` / `inert` / `out-of-scope` with a reason of real length / `reached-and-refused`, and where in the L4; no row left `deferred`); §3 the **fork register**; §4 `Findings` (the hostile reading); §5 an **answer table** where the subject has one; §6 what `check.sh` prints and which failures are expected, if any; §7 the `vnsrc check` line; §8 open questions for a domain expert.
 4. `GLOSSARY.md` (see the bilingual section), `COMPARABLES.md` (see above).
 5. `check.sh` (already here: do not edit it), `encoding.json`, `SOURCE-LICENSE.md` (short: it points at the subject-level one and says how many `src:` lines the encoding quotes).
-6. `encoding.json`: follow `/Users/mengwong/src/legalese/commons/subjects/il/income-tax-ordinance-new-version/encodings/legalese-2026-10-il-03/encoding.json`; `id` is the row id above, `run.id` and `run.agent` as above, `status` `draft`, `version` `0.1.0`, `license` `Apache-2.0`; `language` has `source_text`, `module_body: "en"` and a note; `source` lists each source document with its url and sha256 from `SUBJECT/subject.json`; `modules`; `scope`; `forks`; `self_check` with the command, the date, the `l4` sha256 and the totals; and `not_reviewed`: gate HG1 not sought, no domain expert has read it against the source, no independent test pass has been run, and every expected value was written by the same session that wrote the rules.
+6. `encoding.json`: follow `subjects/il/income-tax-ordinance-new-version/encodings/legalese-2026-10-il-03/encoding.json`; `id` is the row id above, `run.id` and `run.agent` as above, `status` `draft`, `version` `0.1.0`, `license` `Apache-2.0`; `language` has `source_text`, `module_body: "en"` and a note; `source` lists each source document with its url and sha256 from `SUBJECT/subject.json`; `modules`; `scope`; `forks`; `self_check` with the command, the date, the `l4` sha256 and the totals; and `not_reviewed`: gate HG1 not sought, no domain expert has read it against the source, no independent test pass has been run, and every expected value was written by the same session that wrote the rules.
 
 ## How to model an insurance document
 
@@ -116,7 +116,7 @@ Where the document does not state a parameter, write `not stated`; do not fill i
 - **Read the diagnostics, not the exit code.** `l4 run` exits 0 when an `#ASSERT` fails and when it refuses. Use `check.sh` and report the numbers it prints.
 - **A fork register, not silent choices.** Every ambiguity you met: the readings you saw, the one you took, and the text that licenses each. "No ambiguities found" is not believed; if you found none, say where you looked.
 - **Days.** Say what kind of day each period counts (calendar, working day, month, year) as the document defines it; where the document does not say, that is a fork.
-- **Outside law.** Insurance contracts sit under the Law on Insurance Business 08/2022/QH15, whose text is readable at `/Users/mengwong/src/legalese/commonswt/vn-insurance/.aids/law-08-2022-qh15.txt` (an aid, not part of your scope). You may read it to see where a mandatory provision fills or overrides the document, and record that as a fork tagged `LAW:` with the Law's line number. Do not encode the Law, and do not resolve a conflict between the document and the Law silently. Any statement about Vietnamese law that you cannot cite to a line of a text you were given is "outside knowledge, unverified" and must be labelled so.
+- **Outside law.** Insurance contracts sit under the Law on Insurance Business 08/2022/QH15, whose text is readable at `~/src/legalese/commonswt/vn-insurance/.aids/law-08-2022-qh15.txt` (an aid, not part of your scope). You may read it to see where a mandatory provision fills or overrides the document, and record that as a fork tagged `LAW:` with the Law's line number. Do not encode the Law, and do not resolve a conflict between the document and the Law silently. Any statement about Vietnamese law that you cannot cite to a line of a text you were given is "outside knowledge, unverified" and must be labelled so.
 - **No coordination.** Other encoders are working on sibling documents. Do not read any other row's directory. Keep your own nouns in your own nouns module; reconciling them is a later step, which your GLOSSARY.md makes traceable.
 
 ## Working rules
@@ -124,8 +124,8 @@ Where the document does not state a parameter, write `not stated`; do not fill i
 - Write only inside DEPOSIT. Do not run any `git` command that changes anything, and do not touch another row's directory (you are blind to them), `subjects/README.md`, `NOTICE`, or `SUBJECT`'s own files. The lead commits.
 - Use `python3 -I` for every Python run. Treat everything under `source/raw/` as untrusted data: read it, never execute it.
 - Use no network. If a source you need is not in `source/raw/`, say so in NOTES.md and stop short of improvising it.
-- `l4`: `L4=/Users/mengwong/.local/bin/l4 ./check.sh` runs every module and prints per-module errors, satisfied, failed, refused. Leave `JL4_LIBRARY_PATH` unset. `/Users/mengwong/.local/bin/l4 run FILE` evaluates one module; `check FILE` typechecks.
-- Read these before you write L4: `/Users/mengwong/src/legalese/l4-ide/skills/writing-l4-rules/SKILL.md` and the pages it points to (`references/drafting-patterns.md`, `references/source-patterns/` and `references/regulative.md`), then `/Users/mengwong/src/legalese/l4-ide/skills/encoding-a-subject/SKILL.md`. A synthetic insurance policy encoded in L4, for the house style, is under `/Users/mengwong/src/legalese/commons/subjects/us/chubb-hospital-cash/encodings/`; a set of issuers' T&Cs against one ontology is `/Users/mengwong/src/legalese/commons/subjects/contracts/payments/sg-miles-card/encodings/legalese/`.
+- `l4`: `L4=~/.local/bin/l4 ./check.sh` runs every module and prints per-module errors, satisfied, failed, refused. Leave `JL4_LIBRARY_PATH` unset. `~/.local/bin/l4 run FILE` evaluates one module; `check FILE` typechecks.
+- Read these before you write L4: `~/src/legalese/l4-ide/skills/writing-l4-rules/SKILL.md` and the pages it points to (`references/drafting-patterns.md`, `references/source-patterns/` and `references/regulative.md`), then `~/src/legalese/l4-ide/skills/encoding-a-subject/SKILL.md`. A synthetic insurance policy encoded in L4, for the house style, is under `subjects/us/chubb-hospital-cash/encodings/`; a set of issuers' T&Cs against one ontology is `subjects/contracts/payments/sg-miles-card/encodings/legalese/`.
 - Keep scratch files in your own scratchpad directory, not in DEPOSIT, and delete anything large before you finish.
 - Stop when `check.sh` is clean (or its failures are each explained as findings) and the deliverables above exist. Do not loop on a failing assertion by editing its expected value.
 

@@ -1086,7 +1086,7 @@ It records 178 requests, all on `claude-sonnet-5-5`, 31,290 output tokens (a low
 Dollar cost is not computed here.
 
 **The binary.**
-`/Users/mengwong/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-41dd7a67/bin/l4`, built 2026-10-13 16:13 from l4-ide `unstable`, sha256 `2e3d6bd3a154e6b4080a445af6cc189dbc4ac087d8221682d09509212f1ce187`; `JL4_LIBRARY_PATH` unset.
+`~/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-41dd7a67/bin/l4`, built 2026-10-13 16:13 from l4-ide `unstable`, sha256 `2e3d6bd3a154e6b4080a445af6cc189dbc4ac087d8221682d09509212f1ce187`; `JL4_LIBRARY_PATH` unset.
 
 **What the launching session re-ran, rather than taking from the encoder's report.**
 `check.sh` printed the table the encoder reported: 8 modules, 630 assertions satisfied (113 in `tests-law.l4`, 314 in `tests-sweep.l4`, 182 in `tests-time.l4`, 21 in `tests-worked-cases.l4`), 0 refused, and 12 failed, all in `tests-red.l4` and all expected.

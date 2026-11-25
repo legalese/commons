@@ -990,5 +990,5 @@ Every definition in the seven modules carries an `@ref` directly above it (check
 ## Peeked, and files the harness attached
 
 I opened nothing under `~/.claude/`, nothing under `commons`, `commonswt` or `canon`, no existing encoding, and no other directory under `runs/`: nothing to report under `peeked`.
-The harness attached to my context files that are not mine, and I did not use them for this task: `/Users/mengwong/CLAUDE.md`, `/Users/mengwong/.claude/rules/l4-ide-on-nye.md`, `/Users/mengwong/src/legalese/l4-ide/CLAUDE.md`, and the auto-memory index `/Users/mengwong/.claude-work/projects/-Users-mengwong-src-legalese-l4-ide/memory/MEMORY.md` (with its one-line entries; I opened none of the files it points at).
+The harness attached to my context files that are not mine, and I did not use them for this task: `~/CLAUDE.md`, `~/.claude/rules/l4-ide-on-nye.md`, `~/src/legalese/l4-ide/CLAUDE.md`, and the auto-memory index `~/.claude-work/projects/<project dir>/memory/MEMORY.md` (with its one-line entries; I opened none of the files it points at).
 The files attached from `inputs/` (`ssc-core.l4`, `COMMONS-CLAUDE.md`, and the brief and plan re-read after a compaction) are mine to read.

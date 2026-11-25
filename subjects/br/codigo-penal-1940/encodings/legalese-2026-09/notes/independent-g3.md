@@ -134,9 +134,9 @@ So agreement on IT-g3-106, 107, 115 and 116 was reachable legitimately.
 - **Slices with no planted control:** furto, roubo, extorsão, dano, apropriação, estelionato, outras fraudes, trabalho and mortos.
   - Their comparisons are exact equalities: pena records, cause lists, ação penal members.
   - Their negatives pair with positives built from the same fact builders. For example, IT-g3-247 (a liquidante distributes fictitious dividends: not art. 177 § 1º) and IT-g3-277 (a director does the same: made out, satisfied) differ only in the role.
-- **Combined run.** `L4=/Users/mengwong/.claude/br-penal-toolchain/l4 ./check.sh . cp-ind-g3-` over all fourteen files, after the fact-section comments were relabelled (a change to comments only): _pending when this file was written; see below._
+- **Combined run.** `L4=~/.claude/br-penal-toolchain/l4 ./check.sh . cp-ind-g3-` over all fourteen files, after the fact-section comments were relabelled (a change to comments only): _pending when this file was written; see below._
 
-Re-run with `L4=/Users/mengwong/.claude/br-penal-toolchain/l4 ENC/check.sh ENC cp-ind-g3-`.
+Re-run with `L4=~/.claude/br-penal-toolchain/l4 ENC/check.sh ENC cp-ind-g3-`.
 On 2026-09-30 the load average was between 100 and 430, from other sessions' mutation runs, and one module took 20 to 80 minutes.
 
 ## Re-run after fix round (2026-10-09, s-ta-g3)

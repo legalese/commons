@@ -11,7 +11,7 @@ Run:  python3 notes/state-public-gen/build.py
 import json
 import re
 
-SRC = "/Users/mengwong/src/legalese/pc-encode/inputs/PC1871.txt"
+SRC = __import__("os").path.expanduser("~/src/legalese/pc-encode/inputs/PC1871.txt")
 
 ASCII = {
     "’": "'", "‘": "'", "“": '"', "”": '"',

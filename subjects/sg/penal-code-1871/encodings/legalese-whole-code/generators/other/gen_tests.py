@@ -1,5 +1,5 @@
 import re
-D='/Users/mengwong/src/legalese/pc-encode/deposit/'
+D=__import__("os").path.expanduser('~/src/legalese/pc-encode/deposit/')
 src=open(D+'pc-body-b-kidnapping.l4').read()+open(D+'pc-body-b-sexual.l4').read()
 def fields(rec):
     m=re.search(r'DECLARE `'+re.escape(rec)+r'` HAS\n(.*?)\n\n(?=\S)',src,re.S)

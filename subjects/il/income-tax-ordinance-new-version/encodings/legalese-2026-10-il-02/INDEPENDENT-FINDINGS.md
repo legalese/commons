@@ -6,7 +6,7 @@ Before finishing `DECIDED-ANSWERS.md` I had read `BRIEF.md` from the encoding di
 
 ## The numbers `check.sh` printed
 
-Run in a scratch copy of the encoding directory with `L4=/Users/mengwong/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset:
+Run in a scratch copy of the encoding directory with `L4=~/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset:
 
 ```
 module                                    errors satisfied  failed  refused  expected

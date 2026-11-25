@@ -100,7 +100,7 @@ Run the check as `L4=<L4_BIN> L4_TARGET=unstable ./check.sh` (the word `unstable
 ## Independence
 
 You may read: `INPUTS_DIR`, `DEPOSIT` (including pass 1), the two skills and their references, and the Commons guide copies in `inputs/`.
-Do not read any other encoding of any other Act: nothing under `/Users/mengwong/src/legalese/commons`, `commonswt` or `canon`, no other directory under `<the lead's scratchpad>/runs` than your own `iaw-il/`, and nothing under `~/.claude/` (no `memory/`, no `projects/`, no `state/`, no `tmp`).
+Do not read any other encoding of any other Act: nothing under `~/src/legalese/commons`, `commonswt` or `canon`, no other directory under `<the lead's scratchpad>/runs` than your own `iaw-il/`, and nothing under `~/.claude/` (no `memory/`, no `projects/`, no `state/`, no `tmp`).
 Your context may contain an index of someone's notes that mentions other encodings; do not follow it. If you open a forbidden file by accident, stop reading it and say so under `peeked`.
 
 ## Final report (your last message; the report is your final response, not a file)

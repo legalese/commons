@@ -25,7 +25,7 @@ Status: evidence for the encoder to weigh, as `skills/encoding-a-subject/referen
 
 ## The run
 
-Command: `/Users/mengwong/.local/bin/l4 run tests-independent.l4`, run in a scratch copy of the encoding directory, with `JL4_LIBRARY_PATH` unset.
+Command: `~/.local/bin/l4 run tests-independent.l4`, run in a scratch copy of the encoding directory, with `JL4_LIBRARY_PATH` unset.
 Counted from the diagnostics in the way `check.sh` counts them. The exit code was not used, because it is 0 even when assertions fail.
 
 | `#ASSERT` lines | errors | satisfied | failed | refused |

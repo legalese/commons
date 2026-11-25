@@ -232,7 +232,7 @@ Notice on 30 May 2026 (the 90th day): in time on reading A of N90, late on B; on
 
 ## 7. What `check.sh` prints
 
-Run from 2026-10-08T23:48:15Z to 23:48:30Z as `L4=/Users/mengwong/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset.
+Run from 2026-10-08T23:48:15Z to 23:48:30Z as `L4=~/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset.
 `l4` is `~/.local/bin/l4` which resolves to `jl4-0.1-6df1397b`, sha256 `f0759b2ef2f1d1b2a577c68f059c54f487de9d913553fc9f0d9bf0f7f5dab0d8`, the same before and after the run.
 
 ```text

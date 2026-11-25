@@ -14,7 +14,7 @@ Every field of the record is written out, so a fixture is a complete literal.
 """
 import re, sys, os, glob
 HERE = os.path.dirname(os.path.abspath(__file__))
-DEP = '/Users/mengwong/src/legalese/pc-encode/deposit'
+DEP = os.path.expanduser('~/src/legalese/pc-encode/deposit')
 
 def parse_records():
     recs = {}

@@ -5,7 +5,7 @@ For a resumed session: what is done, the last `check.sh` TOTAL, what remains.
 ## How the .l4 files are made
 
 The modules are generated from templates in the scratch directory
-`/Users/mengwong/.claude/tmp/claude-502/-Users-mengwong-src-legalese-l4-pipeline/9efa11ae-1dd6-427f-9147-a0be56160d6d/scratchpad/vn28/tpl/*.l4.tpl`
+`~/.claude/tmp/claude-502/<project dir>/9efa11ae-1dd6-427f-9147-a0be56160d6d/scratchpad/vn28/tpl/*.l4.tpl`
 by `scratch/vn28/expand.py RAW VNSRC DEPOSIT TEMPLATE...`, which turns each `-- QUOTE N M` line into `vnsrc.py quote` output and each `-- INCLUDE f` into `scratch/vn28/gen/f` (written by `gen_tables.py` from the raw text).
 If the scratch directory is gone, edit the .l4 files in DEPOSIT directly and quote with `tools/vnsrc.py quote`.
 

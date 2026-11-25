@@ -53,5 +53,5 @@ Everything else is out of scope; where these provisions refer to another provisi
 
 ## Toolchain
 
-`/Users/mengwong/.local/bin/l4` (cabal store `jl4-0.1-0ee0100b`, sha256 `64bbcb15…e9eca118`), `JL4_LIBRARY_PATH` unset.
+`~/.local/bin/l4` (cabal store `jl4-0.1-0ee0100b`, sha256 `64bbcb15…e9eca118`), `JL4_LIBRARY_PATH` unset.
 `l4 run FILE` typechecks and evaluates every `#EVAL` and `#ASSERT`; `check.sh` reads the diagnostics.

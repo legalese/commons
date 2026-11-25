@@ -2,8 +2,8 @@
 """Build the charities surface map for etc/go/lib/denovo-diff.mjs."""
 import json, re, sys, os
 
-CORPUS_DIR = "/Users/mengwong/src/legalese/l4wt/charities-cleanroom/paper/case-studies/charities-jersey-2014"
-CLEAN = "/Users/mengwong/src/legalese/l4wt/charities-cleanroom/jl4/examples/legal/charities-cleanroom/charity-test.l4"
+CORPUS_DIR = os.path.expanduser("~/src/legalese/l4wt/charities-cleanroom/paper/case-studies/charities-jersey-2014")
+CLEAN = os.path.expanduser("~/src/legalese/l4wt/charities-cleanroom/jl4/examples/legal/charities-cleanroom/charity-test.l4")
 
 def fields(path, decl):
     txt = open(path).read()

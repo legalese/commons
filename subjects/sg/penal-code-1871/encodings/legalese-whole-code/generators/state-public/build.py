@@ -5,7 +5,7 @@ import lib
 import part_common
 import part_contempts
 
-DEP = "/Users/mengwong/src/legalese/pc-encode/deposit/"
+DEP = __import__("os").path.expanduser("~/src/legalese/pc-encode/deposit/")
 MODULES = [
     ("pc-state-public-common.l4", part_common),
     ("pc-state-public-contempts.l4", part_contempts),

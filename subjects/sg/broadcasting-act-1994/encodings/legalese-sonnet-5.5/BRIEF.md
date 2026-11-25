@@ -108,7 +108,7 @@ In each folder:
 2. **Vintages are inputs, never merged**: a decision takes the date as an input (`Date day month year`) and the module for each vintage of a rule is its own function; a vintage silent on something answers "not covered", never a figure borrowed from another vintage. Use the rule-version mechanism if the stable `l4` reads it (`references/dialects.md`), otherwise explicit date inputs.
 3. Tests from the text, never from the code: both sides of every date edge, one per route through each licensing and exemption provision, the penalty arithmetic, and worked cases for each hypothesis H1–H6. A failing assertion is a finding. A test meant to fail goes in its own file with the count stated.
 4. `NOTES.md` (method; editions encoded and where each text could not be had; the checks; the seat; scope (the whole Act and every instrument, ruled 2026-11-03), with the coverage table and no deferred row; the fork register with every reading and the text that licenses each; numbered findings "What the Act turns out to say"; open questions), `encoding.json` (seat, scope, edition(s), checks, `target: "main"`, `status: "draft"`, `not_reviewed`), `SOURCE-LICENSE.md` (pointing at the subject-level one), `PROGRESS.md` (keep it current so you can resume after a context compaction).
-5. `check.sh` and `fetch-main-l4.sh` copied from `/Users/mengwong/src/legalese/l4-ide/skills/encoding-a-subject/assets/`, run with the build named below. Paste its output, main columns included, into NOTES.md.
+5. `check.sh` and `fetch-main-l4.sh` copied from `~/src/legalese/l4-ide/skills/encoding-a-subject/assets/`, run with the build named below. Paste its output, main columns included, into NOTES.md.
 
 ### The seat
 

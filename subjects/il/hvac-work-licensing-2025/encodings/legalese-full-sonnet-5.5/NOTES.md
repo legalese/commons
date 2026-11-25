@@ -1213,7 +1213,7 @@ The run took 3 minutes 11 seconds of wall clock, one `l4` process at a time unde
 The output of the final run, unedited:
 
 ```
-l4 binary: /Users/mengwong/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-41dd7a67/bin/l4 (sha256 matches the fleet's binary)
+l4 binary: ~/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-41dd7a67/bin/l4 (sha256 matches the fleet's binary)
 
 module                                    errors satisfied  failed  refused  warnings  exp.fail exp.refuse
 domain.l4                                      0         0       0        0         0         0         0
@@ -1414,7 +1414,7 @@ The same control was applied to the other half of the harness: `int-tests-red.l4
 
 ## Toolchain notes
 
-The `l4` binary is the cabal-store build the fleet used, `/Users/mengwong/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-41dd7a67/bin/l4`, sha256 `2e3d6bd3a154e6b4080a445af6cc189dbc4ac087d8221682d09509212f1ce187`; `check.sh` prints whether the binary it was given matches.
+The `l4` binary is the cabal-store build the fleet used, `~/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-41dd7a67/bin/l4`, sha256 `2e3d6bd3a154e6b4080a445af6cc189dbc4ac087d8221682d09509212f1ce187`; `check.sh` prints whether the binary it was given matches.
 It was run with `JL4_LIBRARY_PATH` unset, so every module resolved the prelude embedded in the binary.
 `check-traces.py` reads `l4 run FILE --json`, whose `results` array has one entry per `#TRACE` and `#EVAL`, keyed by the range of the directive; a deontic result is printed back as text, so the checker compares text and never a value.
 A run killed by a signal, or one that prints no JSON, is reported as no valid run and fails: the checker cannot tell "all as expected" from "nothing ran" unless it counts what it saw.
@@ -1462,7 +1462,7 @@ The fleet ran from the evening of 2026-10-13 (about 20:20 +08) to the morning of
 6. **Integration** by one Sonnet agent, which wired the groups, wrote the headline functions and the integration tests, wrote `check.sh` and the trace checker, and consolidated the registers. It spawned one read-only helper agent of its own (Sonnet, 94 requests) to dig facts out of transcripts, and a sub-agent wrote the expectations for the sidecar trace rows of groups 6 to 8 (see the limits below).
 7. **Merge of the independent suites** into the row, with `expected_refused` added to `check.sh`.
 
-The binary is `/Users/mengwong/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-41dd7a67/bin/l4` (built 2026-10-13 16:13 from l4-ide `unstable`, sha256 `2e3d6bd3a154e6b4080a445af6cc189dbc4ac087d8221682d09509212f1ce187`), with `JL4_LIBRARY_PATH` unset.
+The binary is `~/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-41dd7a67/bin/l4` (built 2026-10-13 16:13 from l4-ide `unstable`, sha256 `2e3d6bd3a154e6b4080a445af6cc189dbc4ac087d8221682d09509212f1ce187`), with `JL4_LIBRARY_PATH` unset.
 
 ### Agents, models and effort
 

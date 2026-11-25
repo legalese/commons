@@ -293,7 +293,7 @@ The `s 351` matrix is 21 situations against the nine subsections in `nii-il34-te
 
 ## 6. What check.sh prints
 
-Run from 2026-10-09T00:23:49Z to 00:24:09Z as `L4=/Users/mengwong/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset.
+Run from 2026-10-09T00:23:49Z to 00:24:09Z as `L4=~/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset.
 The binary was `jl4-0.1-6df1397b`, sha256 `f0759b2ef2f1d1b2a577c68f059c54f487de9d913553fc9f0d9bf0f7f5dab0d8` before and after the run (`shasum -a 256 "$(readlink -f "$(which l4)")"`).
 No module changed during the run.
 

@@ -108,7 +108,7 @@ Read and not bearing on the range: every other sweep-b entry (all name articles 
 
 ## 5. What `check.sh` prints, and the checks it does not make
 
-`L4=/Users/mengwong/.claude/br-penal-toolchain/l4 ./check.sh . cp-g3b-`, from the encoding directory, 2026-09-29:
+`L4=~/.claude/br-penal-toolchain/l4 ./check.sh . cp-g3b-`, from the encoding directory, 2026-09-29:
 
 ```
 module                                        errors satisfied  failed refused asserts

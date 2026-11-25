@@ -52,5 +52,5 @@ out += ["", "## Tests", "",
         "## Catalogue entries (reference/charge-generator-catalogue.ts `OFFENCES`)", "",
         "New `family` slugs proposed (the app's union has none of them): " + ", ".join(sorted({c['family'] for c in build.CATALOGUE})) + ".", "",
         "```json", json.dumps(build.CATALOGUE, indent=1), "```"]
-open("/Users/mengwong/src/legalese/pc-encode/notes/justice-order-coverage.md", "w").write("\n".join(out) + "\n")
+open(__import__("os").path.expanduser("~/src/legalese/pc-encode/notes/justice-order-coverage.md"), "w").write("\n".join(out) + "\n")
 print(len(build.CATALOGUE), sorted({c['family'] for c in build.CATALOGUE}))

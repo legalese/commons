@@ -312,5 +312,5 @@ P('''#ASSERT `offence under s 377BA` `lewd gesture`
 #ASSERT NOT `offence under s 377BA` `muttered, not meant to be heard`
 #ASSERT `offence under s 377BA` `peeping into the bathroom`
 ''')
-open('/Users/mengwong/src/legalese/pc-encode/deposit/pc-body-b-tests.l4','w').write('\n'.join(out))
+open(__import__("os").path.expanduser('~/src/legalese/pc-encode/deposit/pc-body-b-tests.l4'),'w').write('\n'.join(out))
 print('written')

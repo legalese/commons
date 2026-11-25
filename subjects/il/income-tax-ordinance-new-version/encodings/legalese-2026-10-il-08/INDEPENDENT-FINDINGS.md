@@ -10,7 +10,7 @@ The only addition is a section headed "Revised after seeing the encoding", appen
 
 ## The run
 
-The command was `/Users/mengwong/.local/bin/l4 run tests-independent.l4`, run in a scratch copy of this directory with `JL4_LIBRARY_PATH` unset.
+The command was `~/.local/bin/l4 run tests-independent.l4`, run in a scratch copy of this directory with `JL4_LIBRARY_PATH` unset.
 It ran from 2026-10-07T01:45:29Z to 01:45:44Z.
 The binary resolves to cabal store `jl4-0.1-ff13a0ea`, sha256 `f6501568…dfa8bc`, the same build `NOTES.md` section 0 records.
 `tests-independent.l4` has sha256 `88a0bf25…ce926451`.

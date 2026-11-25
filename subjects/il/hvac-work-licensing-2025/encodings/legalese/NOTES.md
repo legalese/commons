@@ -2,7 +2,7 @@
 
 ## Verification status, 2026-10-13 (after the date-logic correction; see section 9)
 
-Run with the `l4` at `/Users/mengwong/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-41dd7a67/bin/l4` (built 2026-10-13 16:13 from l4-ide `unstable`, sha256 `2e3d6bd3a154e6b4080a445af6cc189dbc4ac087d8221682d09509212f1ce187`), `JL4_LIBRARY_PATH` unset.
+Run with the `l4` at `~/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-41dd7a67/bin/l4` (built 2026-10-13 16:13 from l4-ide `unstable`, sha256 `2e3d6bd3a154e6b4080a445af6cc189dbc4ac087d8221682d09509212f1ce187`), `JL4_LIBRARY_PATH` unset.
 
 - `check.sh` exits 0 in both rows. All assertions are satisfied: `hvac-law.l4` 32, `hvac-fees.l4` 18, `hvac-tests-simplex.l4` 63, `hvac-tests-generated.l4` 366. `hvac-tests-simplex-red.l4` fails on exactly 3, as intended.
 - The twin's section 4 cross-row comparison passes: every `Result:` block is identical after unmapping.

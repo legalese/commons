@@ -105,5 +105,5 @@ cov += "\n## Catalogue entries (`OFFENCES`, reference/charge-generator-catalogue
 for e in entries:
     cov += "  " + json.dumps(e, ensure_ascii=True).replace('"section"', "section").replace('"title"', "title").replace('"defines"', "defines").replace('"family"', "family").replace('"offenceFn"', "offenceFn").replace('"chargeFn"', "chargeFn").replace('"definitionFns"', "definitionFns").replace('"factsType"', "factsType").replace('"factsParam"', "factsParam") + ",\n"
 cov += "```\n"
-open("/Users/mengwong/src/legalese/pc-encode/notes/state-public-coverage.md", "w").write(cov)
+open(__import__("os").path.expanduser("~/src/legalese/pc-encode/notes/state-public-coverage.md"), "w").write(cov)
 print(sum(1 for r in rows if "| encoded |" in r), "encoded;", sum(1 for r in rows if "| deferred |" in r), "deferred;", sum(1 for r in rows if "| repealed |" in r), "repealed;", len(rows), "rows")

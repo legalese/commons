@@ -125,7 +125,7 @@ Fork F-g6a-15 (g6a's: arts. 326 and 335 overlap arts. 337-J, 337-I and 337-K) is
 
 ## 6. What `check.sh` prints
 
-`L4=/Users/mengwong/.claude/br-penal-toolchain/l4 ENC/check.sh ENC cp-g6b-`, 2026-10-08, after the four fixes of § 10, exit 0:
+`L4=~/.claude/br-penal-toolchain/l4 ENC/check.sh ENC cp-g6b-`, 2026-10-08, after the four fixes of § 10, exit 0:
 
 ```
 module                                        errors satisfied  failed refused asserts

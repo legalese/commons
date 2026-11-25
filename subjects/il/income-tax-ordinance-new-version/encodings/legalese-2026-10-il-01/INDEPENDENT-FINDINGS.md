@@ -18,7 +18,7 @@ Nothing from the Axiom Foundation, any `rulespec-*` path, or any other forbidden
 
 ## What `check.sh` printed
 
-`L4=/Users/mengwong/.local/bin/l4 ./check.sh .` in the scratch copy (encoding modules unmodified, plus `tests-independent.l4`):
+`L4=~/.local/bin/l4 ./check.sh .` in the scratch copy (encoding modules unmodified, plus `tests-independent.l4`):
 
 ```
 module                                    errors satisfied  failed  refused  expected

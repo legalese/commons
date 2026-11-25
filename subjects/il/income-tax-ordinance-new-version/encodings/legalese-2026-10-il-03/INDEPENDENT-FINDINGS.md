@@ -5,7 +5,7 @@ Files: `DECIDED-ANSWERS.md` (91 scenarios, decided from the Hebrew source and st
 
 ## What `check.sh` printed
 
-Run in a scratch copy of the directory with `L4=/Users/mengwong/.local/bin/l4`, `JL4_LIBRARY_PATH` unset; no file of the encoding was edited.
+Run in a scratch copy of the directory with `L4=~/.local/bin/l4`, `JL4_LIBRARY_PATH` unset; no file of the encoding was edited.
 
 ```
 module                                    errors satisfied  failed  refused  expected

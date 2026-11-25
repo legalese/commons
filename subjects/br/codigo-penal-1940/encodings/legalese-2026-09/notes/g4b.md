@@ -123,7 +123,7 @@ Two more are candidates, not yet marked, for the conductor to weigh: `Imputaçã
 
 ## 4. What `check.sh` prints
 
-`L4=/Users/mengwong/.claude/br-penal-toolchain/l4 ./check.sh . cp-g4b-`, run 2026-09-30 after the session-2 changes, and run again after `cp-pena.l4` gained `o último dia do prazo em dias` and the T9b herald fix (00:44); both runs printed the same table:
+`L4=~/.claude/br-penal-toolchain/l4 ./check.sh . cp-g4b-`, run 2026-09-30 after the session-2 changes, and run again after `cp-pena.l4` gained `o último dia do prazo em dias` and the T9b herald fix (00:44); both runs printed the same table:
 
 ```
 module                                        errors satisfied  failed refused asserts

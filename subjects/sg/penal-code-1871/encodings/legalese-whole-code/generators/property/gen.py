@@ -7,8 +7,8 @@
 """
 import re, sys, os, glob
 
-SRC = '/Users/mengwong/src/legalese/pc-encode/inputs/PC1871.txt'
-OUT = '/Users/mengwong/src/legalese/pc-encode/deposit'
+SRC = os.path.expanduser('~/src/legalese/pc-encode/inputs/PC1871.txt')
+OUT = os.path.expanduser('~/src/legalese/pc-encode/deposit')
 TPL = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'src')
 
 lines = open(SRC, encoding='utf-8').read().split('\n')

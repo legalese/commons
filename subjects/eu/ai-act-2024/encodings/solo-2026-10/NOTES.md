@@ -232,7 +232,7 @@ Where else I looked for forks and found none worth recording: Art 73(5) and (6) 
 ## What check.sh prints
 
 Target compiler: **main**.
-`l4` used: `/Users/mengwong/.cache/l4-main/99/l4`, `1.6.99 (main, 6cc2c91, 2026-10-21)`; `check.sh` compared it with the main build `fetch-main-l4.sh` returned, the same build.
+`l4` used: `~/.cache/l4-main/99/l4`, `1.6.99 (main, 6cc2c91, 2026-10-21)`; `check.sh` compared it with the main build `fetch-main-l4.sh` returned, the same build.
 Run 2026-10-24, after rebasing onto origin/main and making the changes under "The independent test pass":
 
 ```

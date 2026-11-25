@@ -8,7 +8,7 @@
 | subject     | sg-succession                                                                  |
 | repo HEAD   | `fdf2e1b3e19a0808460918375d3209198a5517af` (dirty)                                         |
 | clock       | `2025-01-31T00:00:00Z`                                                              |
-| `l4` binary | `/Users/mengwong/src/legalese/l4wt/sg-succession/dist-newstyle/build/aarch64-osx/ghc-9.10.3/jl4-0.1/x/l4/build/l4/l4`                                                              |
+| `l4` binary | `~/src/legalese/l4wt/sg-succession/dist-newstyle/build/aarch64-osx/ghc-9.10.3/jl4-0.1/x/l4/build/l4/l4`                                                              |
 | journal     | `/var/folders/jv/4t5pmlz5563gttw9cxqlx5k00000gp/T/l4-go/2026-08-19-951d08d8-002/journal.ndjson` — 5 records, chain verifies |
 | verdict     | **INCOMPLETE**                                                              |
 

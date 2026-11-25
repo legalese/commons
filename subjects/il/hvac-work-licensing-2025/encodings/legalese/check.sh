@@ -14,7 +14,7 @@
 # five modules by ../../source/revoice.py. Run ../legalese-he/check.sh too: its section 4
 # compares the two rows' answers directly, so it fails when this row moves and that one
 # has not been regenerated.
-WT=${HVAC_L4_WORKTREE:-/Users/mengwong/src/legalese/l4wt/smart-quotes}
+WT=${HVAC_L4_WORKTREE:-$HOME/src/legalese/l4wt/smart-quotes}
 L4=${HVAC_L4:-$WT/dist-newstyle/build/aarch64-osx/ghc-9.10.3/jl4-0.1/x/l4/build/l4/l4}
 if [ -n "${HVAC_LIBS:-}" ]; then export JL4_LIBRARY_PATH="$HVAC_LIBS"; else unset JL4_LIBRARY_PATH; fi
 cd "$(dirname "$0")" || exit 1

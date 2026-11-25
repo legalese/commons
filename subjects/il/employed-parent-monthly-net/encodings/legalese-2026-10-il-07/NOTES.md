@@ -18,7 +18,7 @@ Sections 0 to 10 describe version 0.1.0; where 0.2.0 changed what they say, the 
 
 (0.2.0: the run below is version 0.1.0's, with 12 modules and 36 vendored; version 0.2.0's, with 16 modules and 50 vendored, is in section 11.1.)
 
-Run from 2026-10-06T22:53:25Z to 23:06:50Z (13 min 25 s wall clock on a busy machine) as `L4=/Users/mengwong/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset.
+Run from 2026-10-06T22:53:25Z to 23:06:50Z (13 min 25 s wall clock on a busy machine) as `L4=~/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset.
 The binary is `~/.local/bin/l4` → `~/.cabal/bin/l4`, cabal store `jl4-0.1-0ee0100b`, sha256 `64bbcb157dbef2ef1020a6a75589313bba0a2aeeb807c921c5e65e62e9eca118`, the build all six rows used; it has no `--version`.
 No module of this row and no vendored copy changed during the run (checked against hashes taken before it).
 
@@ -290,7 +290,7 @@ The sections above describe version 0.1.0; where 0.2.0 changed what they say, th
 
 (**Superseded by 11.13** for the counts: this run was made before Meng's ruling on Schedule J, with the items' reading. The binary, the module list and the changes to `check.sh` below still hold; `tests-independent.l4`'s expected counts are now 18 failed and 2 refused.)
 
-Run from 2026-10-07T06:44:29Z to 06:46:01Z (1 min 32 s) as `L4=/Users/mengwong/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset.
+Run from 2026-10-07T06:44:29Z to 06:46:01Z (1 min 32 s) as `L4=~/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset.
 **The binary is not the build the lead's brief named (`jl4-0.1-ff13a0ea`).**
 `~/.local/bin/l4` → `~/.cabal/bin/l4`, which is now a regular file, not a link into the cabal store: 233,037,424 bytes, modified 2026-10-07T05:35:45Z, sha256 `6015a4c3fa181842c597c95948290fe45537963d279ae5b5918a106a0c3b54a6`.
 `jl4-0.1-ff13a0ea/bin/l4` is 231,960,768 bytes and the newest store build, `jl4-0.1-977c878b` (05:33Z), is 232,940,992, so it is neither; it has no `--version`. The lead was told at 06:00Z.
@@ -659,7 +659,7 @@ Where 11.13 says the switch is the capstone's rule with the value `the printed t
 
 **Expected values changed in 0.2.1.** In `il07-tests-il08.l4`, five BECAUSE texts (N25's deduction and net, N26's deduction and net, and the controlling shareholder at the printed-totals reading), from the capstone's removed refusal to IL-04's words above; no number changed. In `il07-tests-expected-red.l4`, R1's two assertions removed. Nothing in `il07-tests.l4` changed.
 
-**What `check.sh` prints at 0.2.1.** Run from 2026-10-07T07:27:35Z to 07:28:14Z as `L4=/Users/mengwong/.local/bin/l4 ./check.sh`. **The binary changed again** before the run: `~/.cabal/bin/l4` was replaced at 07:25:28Z, now 233,039,712 bytes, sha256 `3a1843a0e51ce1663cd71b4307e061fa425f2f9f23d78afb8ffa9be6fd20278f`, a regular file, not a store build; the same before and after the run. No module changed during it.
+**What `check.sh` prints at 0.2.1.** Run from 2026-10-07T07:27:35Z to 07:28:14Z as `L4=~/.local/bin/l4 ./check.sh`. **The binary changed again** before the run: `~/.cabal/bin/l4` was replaced at 07:25:28Z, now 233,039,712 bytes, sha256 `3a1843a0e51ce1663cd71b4307e061fa425f2f9f23d78afb8ffa9be6fd20278f`, a regular file, not a store build; the same before and after the run. No module changed during it.
 
 ```
 vendor.sh: 50 vendored modules match their sources and VENDORED.sha256
@@ -696,7 +696,7 @@ Backlog row IL-12 made row IL-04's fork F6 a switch (its v0.4.0, its NOTES.md "V
 
 **No answer moved, as expected.** The capstone reads s 334(a) only through `s 334(a) — the reduced collection threshold for a month in` (`il07-adapter-il04.l4`), which gives 2026 the published 7,703 and declines 2027 on by name; it never calls the s 334(a)(1) or (a)(2) update, the only rules the switch reaches. Checked by running, not only by reading: the four modules with assertions were run on the same binary before and after `vendor.sh --record`, and every assertion's outcome is the same, line by line (`il07-tests.l4` 114 satisfied; `il07-tests-il08.l4` 98; `il07-tests-expected-red.l4` 2 failed; `tests-independent.l4` 258 satisfied, 18 failed, 2 refused). No expected value changed.
 
-**What `check.sh` prints at 0.2.2.** Run from 2026-10-07T09:50:53Z to 09:51:25Z as `L4=/Users/mengwong/.local/bin/l4 ./check.sh`. **The binary changed** since 0.2.1: `~/.cabal/bin/l4` is now a symbolic link into the cabal store, `jl4-0.1-d8a7263f/bin/l4`, 232,974,288 bytes, sha256 `4476e7580ea3c5c0d06c1d029ba801b6627070fcce8c7c40fae47d5521559fac`; the same before and after the run. The 0.2.1 counts were reproduced on it before the re-vendoring (above), so the binary moved no answer either.
+**What `check.sh` prints at 0.2.2.** Run from 2026-10-07T09:50:53Z to 09:51:25Z as `L4=~/.local/bin/l4 ./check.sh`. **The binary changed** since 0.2.1: `~/.cabal/bin/l4` is now a symbolic link into the cabal store, `jl4-0.1-d8a7263f/bin/l4`, 232,974,288 bytes, sha256 `4476e7580ea3c5c0d06c1d029ba801b6627070fcce8c7c40fae47d5521559fac`; the same before and after the run. The 0.2.1 counts were reproduced on it before the re-vendoring (above), so the binary moved no answer either.
 
 ```
 vendor.sh: 50 vendored modules match their sources and VENDORED.sha256
@@ -735,7 +735,7 @@ No tester's file was edited: both compile against version 0.3.0 unchanged, so th
 
 ### 12.1 What `check.sh` prints
 
-Run from 2026-10-08T08:03:31Z to 08:07:45Z as `L4=/Users/mengwong/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset, after the last edit to any module.
+Run from 2026-10-08T08:03:31Z to 08:07:45Z as `L4=~/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset, after the last edit to any module.
 An earlier run, 07:56:40Z to 07:58:21Z, made before two comment-only edits (the s 3A(f) convention in `il07-nouns.l4` and in the pipeline's `@desc`), printed the same table.
 The binary is `~/.local/bin/l4` → `~/.cabal/bin/l4` → cabal store `jl4-0.1-d4290e25`, sha256 `f4f2bd2558f02f828f0deced5f74313a33670f08cc3275ff95b83f2cde71e448`, the same before and after the run, and the binary of the 2026-10-08 inventory and of every row's repair run.
 No module of this row and no vendored copy changed during the run (sha256 of each, taken before and after).
@@ -954,7 +954,7 @@ Neither tester's file was edited: both compile against version 0.4.0 unchanged, 
 
 ### 13.1 What `check.sh` prints
 
-Run from 2026-10-08T16:53:30Z to 16:55:11Z as `L4=/Users/mengwong/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset, after the last edit to any module.
+Run from 2026-10-08T16:53:30Z to 16:55:11Z as `L4=~/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset, after the last edit to any module.
 The binary is `~/.local/bin/l4` → `~/.cabal/bin/l4` → cabal store `jl4-0.1-d4290e25`, sha256 `f4f2bd2558f02f828f0deced5f74313a33670f08cc3275ff95b83f2cde71e448`, the same before and after, and the binary of every row's run that day; no module, vendored copy, `VENDORED.sha256` or `check.sh` changed during the run (sha256 of each, before and after).
 Before any edit the same binary reproduced version 0.3.0's counts module by module (`il07-tests.l4` 130, `il07-tests-il08.l4` 116, `tests-independent.l4` 260/18/0, `tests-independent-2.l4` 298/7/20), so every difference below comes from this version.
 
@@ -1104,7 +1104,7 @@ Both testers' files were edited under the repair brief's addendum, in place, so 
 
 ### 14.1 What `check.sh` prints
 
-Run from 2026-10-08T23:30:00Z to 23:30:55Z as `L4=/Users/mengwong/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset, after the last edit to any module.
+Run from 2026-10-08T23:30:00Z to 23:30:55Z as `L4=~/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset, after the last edit to any module.
 The binary is `~/.local/bin/l4` → `~/.cabal/bin/l4` → cabal store `jl4-0.1-6df1397b`, sha256 `f0759b2ef2f1d1b2a577c68f059c54f487de9d913553fc9f0d9bf0f7f5dab0d8`, the same before and after; it is a newer build than version 0.4.0's (`jl4-0.1-d4290e25`, `f4f2bd25…`).
 No module, vendored copy, `VENDORED.sha256` or `check.sh` changed during the run (sha256 of each, before and after).
 Before any edit, with version 0.4.0's vendored copies still in place and `vendor.sh --check` skipped (the rows' sources had moved), this binary reproduced version 0.4.0's counts module by module (`il07-tests.l4` 130, `il07-tests-il08.l4` 130, `tests-independent.l4` 260/18/0, `tests-independent-2.l4` 304/7/14), so every difference below comes from this version.
@@ -1303,7 +1303,7 @@ Neither tester's file was edited: no interface they use changed.
 
 ### 15.1 What `check.sh` prints
 
-Run from 2026-10-09T01:51:02Z to 01:52:25Z as `L4=/Users/mengwong/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset, after the last edit to any module.
+Run from 2026-10-09T01:51:02Z to 01:52:25Z as `L4=~/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset, after the last edit to any module.
 The binary is `~/.local/bin/l4` → `~/.cabal/bin/l4` → cabal store `jl4-0.1-6df1397b`, sha256 `f0759b2ef2f1d1b2a577c68f059c54f487de9d913553fc9f0d9bf0f7f5dab0d8`, the same before and after; no module, vendored copy, `VENDORED.sha256` or `check.sh` changed during the run (sha256 of each, before and after).
 Before any edit the same binary printed version 0.5.0's counts module by module (`il07-tests.l4` 140, `il07-tests-il08.l4` 135, `tests-independent.l4` 260/18/0, `tests-independent-2.l4` 304/7/14), so every difference below comes from this version.
 

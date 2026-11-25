@@ -26,7 +26,7 @@ The brief does not name a target, so this is an inference from that mandate.
 **No run against a `main` build was made**, so nothing here claims these modules read on `main`.
 
 **Pinned binary.**
-`/Users/mengwong/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-9afd0288/bin/l4`, sha256 `2d912dd2a61ba36b3fb8c1e02dcbd445ba1143c3b8ecb931462c01050cd607d7` (checked with `shasum -a 256` before the final run).
+`~/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-9afd0288/bin/l4`, sha256 `2d912dd2a61ba36b3fb8c1e02dcbd445ba1143c3b8ecb931462c01050cd607d7` (checked with `shasum -a 256` before the final run).
 `JL4_LIBRARY_PATH` was left unset throughout.
 `l4` has no `--version`.
 
@@ -402,7 +402,7 @@ The office rows use an office open Monday to Friday, shut on Friday 2026-04-03 f
 Run from this directory, with the pinned binary (sha256 `2d912dd2a61ba36b3fb8c1e02dcbd445ba1143c3b8ecb931462c01050cd607d7`, computed again just before this run):
 
 ```
-L4=/Users/mengwong/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-9afd0288/bin/l4 ./check.sh
+L4=~/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-9afd0288/bin/l4 ./check.sh
 ```
 
 On stderr:

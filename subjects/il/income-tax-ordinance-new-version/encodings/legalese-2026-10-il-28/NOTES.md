@@ -153,7 +153,7 @@ I did not read the capstone's own records, so I do not say which of these it sup
 
 ## `check.sh`
 
-Run from 2026-10-08T22:50:28Z to 22:50:33Z as `L4=/Users/mengwong/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset.
+Run from 2026-10-08T22:50:28Z to 22:50:33Z as `L4=~/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset.
 The binary is `~/.local/bin/l4` -> `~/.cabal/bin/l4` -> the cabal-store build `jl4-0.1-6df1397b`; sha256 before `f0759b2ef2f1d1b2a577c68f059c54f487de9d913553fc9f0d9bf0f7f5dab0d8`, after `f0759b2ef2f1d1b2a577c68f059c54f487de9d913553fc9f0d9bf0f7f5dab0d8`, the same.
 Exit code 0.
 

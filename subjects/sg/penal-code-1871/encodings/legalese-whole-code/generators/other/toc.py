@@ -1,6 +1,6 @@
 import sys,re
 rows=[];cur=None;chap=None
-for line in open("/Users/mengwong/src/legalese/pc-encode/inputs/PC1871.txt").readlines()[265:455]:
+for line in open(__import__("os").path.expanduser("~/src/legalese/pc-encode/inputs/PC1871.txt")).readlines()[265:455]:
     s=line.strip()
     if not s or "Singapore Statutes Online" in s: continue
     m=re.match(r"Chapter (\S+) — (.*)",s)

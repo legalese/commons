@@ -6,7 +6,7 @@ Written 2026-10-21 against release point Public Law 119-121.
 
 **Target compiler: `unstable`.**
 The brief requires `REFUSE`, `#ASSERT REFUSED`, `YMD` and `@lang en`, which `main` rejects; so `check.sh` was run with `L4_TARGET=unstable`, and the main step was skipped (the script says so).
-The `l4` binary has no `--version` flag; it is `/Users/mengwong/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-9afd0288/bin/l4`, sha256 `2d912dd2a61ba36b3fb8c1e02dcbd445ba1143c3b8ecb931462c01050cd607d7`.
+The `l4` binary has no `--version` flag; it is `~/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-9afd0288/bin/l4`, sha256 `2d912dd2a61ba36b3fb8c1e02dcbd445ba1143c3b8ecb931462c01050cd607d7`.
 `JL4_LIBRARY_PATH` was left unset throughout.
 
 **The source text is a plain-text rendering, not the official text.**
@@ -273,7 +273,7 @@ Other computed answers in the tests, each with its section: the last six days of
 
 ## 5. What check.sh prints
 
-Command: `L4=/Users/mengwong/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-9afd0288/bin/l4 L4_TARGET=unstable ./check.sh`, run 2026-10-21, exit status 0.
+Command: `L4=~/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-9afd0288/bin/l4 L4_TARGET=unstable ./check.sh`, run 2026-10-21, exit status 0.
 
 ```
 check.sh: the target is unstable, so the main check was skipped.

@@ -187,7 +187,7 @@ The same for the woman, the woman who married a widower, the man and the man who
 
 ## 6. What `check.sh` prints
 
-Run 2026-10-08T23:38:36Z to 2026-10-08T23:38:40Z, with `l4` on PATH: `/Users/mengwong/.local/bin/l4`, which resolves to the cabal-store build `jl4-0.1-6df1397b`.
+Run 2026-10-08T23:38:36Z to 2026-10-08T23:38:40Z, with `l4` on PATH: `~/.local/bin/l4`, which resolves to the cabal-store build `jl4-0.1-6df1397b`.
 sha256 before the run `f0759b2ef2f1d1b2a577c68f059c54f487de9d913553fc9f0d9bf0f7f5dab0d8`, after the run `f0759b2ef2f1d1b2a577c68f059c54f487de9d913553fc9f0d9bf0f7f5dab0d8`: the same.
 `JL4_LIBRARY_PATH` unset.
 

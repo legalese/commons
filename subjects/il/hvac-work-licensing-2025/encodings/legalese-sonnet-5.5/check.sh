@@ -24,7 +24,7 @@
 # expected_failed says.
 set -u
 DIR="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
-L4="${L4:-/Users/mengwong/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-41dd7a67/bin/l4}"
+L4="${L4:-$HOME/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-41dd7a67/bin/l4}"
 
 # A module that is MEANT to fail (a draft's test cases run against the text as made,
 # say) is listed here with its exact count, and named in encoding.json `expected_red`.

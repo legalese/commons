@@ -15,7 +15,7 @@ The text encoded is the legislature's bill print (S.8828, signed as Laws of 2026
   - `ny-s6953b-2025-ch-699.txt`: S.6953-B, the RAISE Act as first enacted, signed 2025-12-19 as chapter 699 of 2025 (§§ 1420-1425). Used only to say what the amendment changed. Role: authoritative, as above.
 - **Why the Senate prints.** The Actions on each page record the Assembly bill being substituted by the Senate bill (A6453-B by S6953-B on 2025-06-12; A9449 by S8828 on 2026-02-25) and the Senate bill being signed. S8828's page shows `AMEND=` blank: there is no amended print, so the introduced print is the one passed. (Read on the fetched pages' Actions sections in this session; the Actions are not part of the deposited text, and the pages themselves are not deposited: their sha256 is in each `.meta.json`.)
 - **Edition and vintage.** Article 44-B as re-added by chapter 96, effective 1 January 2027 (chapter 96, sections 3 and 5, verified in the deposited text). The 2025 article is a second vintage, deposited and compared (see "What chapter 96 changed") but not encoded. Whether anything enacted after 2026-03-27 amends Article 44-B was not checked.
-- **Target compiler: `main`.** Written and run with `1.6.99 (main, 6cc2c91, 2026-10-21)` at `/Users/mengwong/.cache/l4-main/99/l4`; `check.sh` compared it with the same main build.
+- **Target compiler: `main`.** Written and run with `1.6.99 (main, 6cc2c91, 2026-10-21)` at `~/.cache/l4-main/99/l4`; `check.sh` compared it with the same main build.
 - **Licence of the sources: UNDETERMINED** for the host pages (no terms found on nyassembly.gov); see `../../SOURCE-LICENSE.md`.
 
 ## Source gate (2026-10-24, about 10:43 to 10:50 SGT)

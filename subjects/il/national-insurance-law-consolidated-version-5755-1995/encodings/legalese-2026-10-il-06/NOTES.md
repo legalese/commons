@@ -118,7 +118,7 @@ No other household changes: none has an absence, a person paid Income Support or
 
 ### `check.sh` after the switches
 
-Run on 2026-10-08, 22:25:02Z to 22:25:18Z, in place with `L4=/Users/mengwong/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset.
+Run on 2026-10-08, 22:25:02Z to 22:25:18Z, in place with `L4=~/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset.
 Binary `~/.cabal/bin/l4` -> cabal store `jl4-0.1-6df1397b`, sha256 `f0759b2ef2f1d1b2a577c68f059c54f487de9d913553fc9f0d9bf0f7f5dab0d8`, the same before and after the run (another session replaced the binary of 0.3.0's run, `f4f2bd25…`, during this job).
 
 ```
@@ -301,7 +301,7 @@ No capstone test has such a child, which is why no assertion moved. **Proposed f
 
 ### `check.sh` after the switches
 
-Run on 2026-10-08, 16:21:15Z to 16:21:39Z, in place with `L4=/Users/mengwong/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset, after the default was narrowed.
+Run on 2026-10-08, 16:21:15Z to 16:21:39Z, in place with `L4=~/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset, after the default was narrowed.
 Binary `~/.cabal/bin/l4` -> cabal store `jl4-0.1-d4290e25`, sha256 `f4f2bd2558f02f828f0deced5f74313a33670f08cc3275ff95b83f2cde71e448`, the same before and after the run.
 
 ```
@@ -442,7 +442,7 @@ The capstone's `IL-06: the refusal for` has an `OTHERWISE` arm, so the three new
 
 ### `check.sh` after the repairs
 
-Run on 2026-10-08, 07:10:46Z to 07:11:08Z, in place with `L4=/Users/mengwong/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset.
+Run on 2026-10-08, 07:10:46Z to 07:11:08Z, in place with `L4=~/.local/bin/l4 ./check.sh`, `JL4_LIBRARY_PATH` unset.
 Binary `~/.cabal/bin/l4` -> cabal store `jl4-0.1-d4290e25`, sha256 `f4f2bd2558f02f828f0deced5f74313a33670f08cc3275ff95b83f2cde71e448`, the same before and after the run.
 
 ```
@@ -469,7 +469,7 @@ Before the repairs, on the same binary: `nii-il06-tests.l4` 117 satisfied; `test
 
 (0.2.0) This is version 0.1.0's run, kept; 0.2.0's is at the end of the section "Version 0.2.0" above.
 
-Run on 2026-10-06 with `/Users/mengwong/.local/bin/l4`, `JL4_LIBRARY_PATH` unset.
+Run on 2026-10-06 with `~/.local/bin/l4`, `JL4_LIBRARY_PATH` unset.
 That path is a symlink to `~/.cabal/bin/l4`, which resolves to cabal store entry `jl4-0.1-0ee0100b`, sha256 `64bbcb157dbef2ef1020a6a75589313bba0a2aeeb807c921c5e65e62e9eca118`.
 The binary has no `--version`, and no record beside it names the commit it was built from.
 
@@ -819,7 +819,7 @@ Axiom records none of F1-F17 as a fork; its gap entries on s 67's relations, on 
 
 ### Axiom's own cases, put through our encoding
 
-Run on 2026-10-07 in a scratch copy of our ten modules plus one scratch module (`lad-il-06/run/axiom-cases.l4`), with `/Users/mengwong/.local/bin/l4 run`, `JL4_LIBRARY_PATH` unset: type-check succeeded, every `#EVAL` produced a value or a named refusal.
+Run on 2026-10-07 in a scratch copy of our ten modules plus one scratch module (`lad-il-06/run/axiom-cases.l4`), with `~/.local/bin/l4 run`, `JL4_LIBRARY_PATH` unset: type-check succeeded, every `#EVAL` produced a value or a named refusal.
 Axiom's expected values were checked against Axiom's formulas by hand (its runner was not run); all 20 are what its formulas give.
 Each Axiom case was realised as a family; where Axiom's inputs leave open a fact ours needs (is the other parent insured? is the child also with the other parent?), each realisation is shown.
 s 67 cases are asked on 15 September 2026 (Axiom period 2026-09); "Avi", "Batya" natural father and mother, "Gadi" step-father, "Dina" step-mother, "Ezra" a supporter whose support is proven.

@@ -133,7 +133,7 @@ EXPOSURE.md lists what the encoders saw of the test authors' work. For ta-g2 tha
 - `cp-ind-g2-correspondencia.l4` — arts. 151–152 (IT-g2-343–355)
 - `cp-ind-g2-segredos.l4` — arts. 153–154-B (IT-g2-356–383)
 
-Per-case results (verdict, class, evidence) for every one of the 383 cases: `/Users/mengwong/.claude/br-penal-oracle/results/ta-g2/*.json`, one file per slice.
+Per-case results (verdict, class, evidence) for every one of the 383 cases: `~/.claude/br-penal-oracle/results/ta-g2/*.json`, one file per slice.
 
 ## Re-run after fix round (2026-10-09)
 

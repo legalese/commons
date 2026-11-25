@@ -7,7 +7,7 @@ The assertions are in `tests-independent.l4`.
 
 ## The run
 
-`/Users/mengwong/.local/bin/l4 run tests-independent.l4` in a scratch copy of the encoding directory, `JL4_LIBRARY_PATH` unset, on the delivered bytes (sha256 `aca1bfc1af17e24e7c0e4b15512d1acb09818a32acd7b1038bd58bc73c5f83da`), counted with `check.sh`'s own greps (the full `check.sh` was not run, because the machine was busy):
+`~/.local/bin/l4 run tests-independent.l4` in a scratch copy of the encoding directory, `JL4_LIBRARY_PATH` unset, on the delivered bytes (sha256 `aca1bfc1af17e24e7c0e4b15512d1acb09818a32acd7b1038bd58bc73c5f83da`), counted with `check.sh`'s own greps (the full `check.sh` was not run, because the machine was busy):
 
 | module | errors | satisfied | failed | refused |
 | --- | --- | --- | --- | --- |

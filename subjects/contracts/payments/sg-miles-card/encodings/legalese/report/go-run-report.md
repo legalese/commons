@@ -8,7 +8,7 @@
 | subject      | sg-miles-card                                                                  |
 | repo HEAD    | `28c8a1864ff56337a4cfd5c0e6fa39184e80910f` (clean)                                         |
 | clock        | `2025-01-31T00:00:00Z`                                                              |
-| `l4` binary  | `/Users/mengwong/src/legalese/l4wt/miles-card/dist-newstyle/build/aarch64-osx/ghc-9.10.3/jl4-0.1/x/l4/build/l4/l4`                                                              |
+| `l4` binary  | `~/src/legalese/l4wt/miles-card/dist-newstyle/build/aarch64-osx/ghc-9.10.3/jl4-0.1/x/l4/build/l4/l4`                                                              |
 | journal      | `/var/folders/jv/4t5pmlz5563gttw9cxqlx5k00000gp/T/l4-go/2026-09-21-430aa01d-002/journal.ndjson` — 26 records, chain verifies |
 | verdict      | **COMPLETE**                                                              |
 | destined for | _no `canon` block in this subject's sidecar, so no destination is declared. A guessed path on a public repository is worse than an absent one._                                                        |

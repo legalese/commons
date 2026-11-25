@@ -26,7 +26,7 @@ All paths are relative to DEPOSIT, which is your working directory. Write only i
 - `tools/vnsrc.py`: quotes the Vietnamese source mechanically and checks that every quotation is verbatim.
 - `check.sh` (already here: do not edit it) runs every `.l4` module in DEPOSIT and prints errors, assertions satisfied, failed and refused per module.
 - `l4`: on `PATH`. Leave `JL4_LIBRARY_PATH` unset.
-- Skills to read before you write L4, read-only: `/Users/mengwong/src/legalese/l4-ide/skills/writing-l4-rules/SKILL.md` and the pages it points to (`references/drafting-patterns.md`, `references/source-patterns/` including `04-dates-and-periods.md` section 4.7 on the rule-version axis, `references/regulative.md`), then `/Users/mengwong/src/legalese/l4-ide/skills/encoding-a-subject/SKILL.md`.
+- Skills to read before you write L4, read-only: `~/src/legalese/l4-ide/skills/writing-l4-rules/SKILL.md` and the pages it points to (`references/drafting-patterns.md`, `references/source-patterns/` including `04-dates-and-periods.md` section 4.7 on the rule-version axis, `references/regulative.md`), then `~/src/legalese/l4-ide/skills/encoding-a-subject/SKILL.md`.
 - A worked example of the bilingual convention, read-only: `../../../../../refs/il-03/` (a copy of the Hebrew-source row `legalese-2026-10-il-03` of the Income Tax Ordinance in `legalese/commons`: its `encoding.json`, its nouns module and its `NOTES.md`).
 
 ## The subject

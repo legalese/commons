@@ -2,7 +2,7 @@
 from lib import FACTS
 from build import Tests
 
-DEP = "/Users/mengwong/src/legalese/pc-encode/deposit/"
+DEP = __import__("os").path.expanduser("~/src/legalese/pc-encode/deposit/")
 OPEN = "You, Tan Ah Kow, are charged that you, on or about the 1st day of June 2026, at about 10.00 am, at the State Courts, 1 Havelock Square, Singapore, "
 
 

@@ -104,7 +104,7 @@ I first took these from the Senado record's DOU dates and my recollection of two
 
 ## 5. What `check.sh` prints
 
-`L4=/Users/mengwong/.claude/br-penal-toolchain/l4 ./check.sh <ENC> cp-g4a-`, 2026-10-08, final tree, exit 0, 2 min 44 s wall clock:
+`L4=~/.claude/br-penal-toolchain/l4 ./check.sh <ENC> cp-g4a-`, 2026-10-08, final tree, exit 0, 2 min 44 s wall clock:
 
 ```
 module                                        errors satisfied  failed refused asserts

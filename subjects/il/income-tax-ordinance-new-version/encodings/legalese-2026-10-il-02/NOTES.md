@@ -91,7 +91,7 @@ No rule was renamed and no signature changed; every rule of the old names answer
 
 ### What `check.sh` prints, version 0.4.0
 
-Run from 2026-10-08T22:36:59Z to 22:37:07Z as `./check.sh`, with `l4` on PATH: `/Users/mengwong/.local/bin/l4` -> `~/.cabal/bin/l4` -> the cabal-store build `jl4-0.1-6df1397b`, sha256 `f0759b2ef2f1d1b2a577c68f059c54f487de9d913553fc9f0d9bf0f7f5dab0d8`, the same before and after the run.
+Run from 2026-10-08T22:36:59Z to 22:37:07Z as `./check.sh`, with `l4` on PATH: `~/.local/bin/l4` -> `~/.cabal/bin/l4` -> the cabal-store build `jl4-0.1-6df1397b`, sha256 `f0759b2ef2f1d1b2a577c68f059c54f487de9d913553fc9f0d9bf0f7f5dab0d8`, the same before and after the run.
 That binary is not the one of version 0.3.0's run (`jl4-0.1-d4290e25`, `f4f2bd25…`): `~/.cabal/bin/l4` was relinked at 2026-10-08T18:46Z, by another session, before this job's first run, so every run of this job used it.
 `JL4_LIBRARY_PATH` unset.
 
@@ -170,7 +170,7 @@ No other answer moved: a child born from 2024 on, a child without the election, 
 
 ### What `check.sh` prints, version 0.3.0
 
-Run from 2026-10-08T15:56:54Z to 15:57:08Z as `./check.sh`, with `l4` on PATH: `/Users/mengwong/.local/bin/l4` -> `~/.cabal/bin/l4` -> the cabal-store build `jl4-0.1-d4290e25`, sha256 `f4f2bd2558f02f828f0deced5f74313a33670f08cc3275ff95b83f2cde71e448`, the same before and after the run.
+Run from 2026-10-08T15:56:54Z to 15:57:08Z as `./check.sh`, with `l4` on PATH: `~/.local/bin/l4` -> `~/.cabal/bin/l4` -> the cabal-store build `jl4-0.1-d4290e25`, sha256 `f4f2bd2558f02f828f0deced5f74313a33670f08cc3275ff95b83f2cde71e448`, the same before and after the run.
 `JL4_LIBRARY_PATH` unset.
 
 ```
@@ -311,7 +311,7 @@ Added, all in `ito66-tests.l4` (none existed before, so "old" is none; "refused"
 
 ### What `check.sh` prints, version 0.2.0
 
-Run from 2026-10-08T07:13:30Z to 07:13:50Z as `./check.sh`, after every repair including 02-N3 and a comment-only update of IL-01's line citation (the same counts as runs at 06:59:43Z, before the rename, and 07:02:05Z), with `l4` on PATH: `/Users/mengwong/.local/bin/l4` -> `~/.cabal/bin/l4` -> the cabal-store build `jl4-0.1-d4290e25`, sha256 `f4f2bd2558f02f828f0deced5f74313a33670f08cc3275ff95b83f2cde71e448`, the same before and after the run.
+Run from 2026-10-08T07:13:30Z to 07:13:50Z as `./check.sh`, after every repair including 02-N3 and a comment-only update of IL-01's line citation (the same counts as runs at 06:59:43Z, before the rename, and 07:02:05Z), with `l4` on PATH: `~/.local/bin/l4` -> `~/.cabal/bin/l4` -> the cabal-store build `jl4-0.1-d4290e25`, sha256 `f4f2bd2558f02f828f0deced5f74313a33670f08cc3275ff95b83f2cde71e448`, the same before and after the run.
 `JL4_LIBRARY_PATH` unset.
 Before any edit, the same binary reproduced 0.1.0's figures: 2 errors, 266 satisfied, 2 failed (both in `tests-independent.l4`), 0 refused.
 
@@ -497,7 +497,7 @@ Beside the children's points, (c)(4) gives the woman ½ under s 36A, and (c)(2) 
 
 (0.2.0: this section is version 0.1.0's run, before the independent tests were added; the current table is in the version section at the top.)
 
-Run on 2026-10-06 as `L4=/Users/mengwong/.local/bin/l4 ./check.sh`.
+Run on 2026-10-06 as `L4=~/.local/bin/l4 ./check.sh`.
 The binary has no `--version`; it resolves to a cabal-store build `jl4-0.1-0ee0100b`, sha256 `64bbcb157dbef2ef1020a6a75589313bba0a2aeeb807c921c5e65e62e9eca118`.
 `JL4_LIBRARY_PATH` unset; the embedded standard library was used.
 
@@ -727,7 +727,7 @@ For a 2024 calculation of a child born in 2023 it gives 4½, neither refusing no
 
 Each case's inputs were mapped onto our interface in a scratch module, `tests-axiom-cases.l4`, in a copy of this directory in the comparison session's scratchpad (not deposited), with every expected output asserted as Axiom states it.
 Mapping: the person is the non-registered woman of a 2024 couple with a salaried registered man; a child turning *n* is a child of both born in 2024 − *n*; Axiom's single (d)(1)(b) input is given to both of our limbs; `spouses_income_sources_are_dependent: false` is `common source of income` = NOTHING; the band indices have no counterpart, so the points they select are compared instead.
-`l4 run` (`/Users/mengwong/.local/bin/l4`, `JL4_LIBRARY_PATH` unset): 0 errors, **47 of 47 assertions satisfied**, counted as `check.sh` counts (the raw output logs each satisfied assertion twice, 94 lines).
+`l4 run` (`~/.local/bin/l4`, `JL4_LIBRARY_PATH` unset): 0 errors, **47 of 47 assertions satisfied**, counted as `check.sh` counts (the raw output logs each satisfied assertion twice, 94 lines).
 A control copy asserting four wrong values reported four failures.
 `check.sh` over the scratch copy also reproduced the deposited figures for every other module (`tests-independent.l4`: 101 satisfied, 2 failed).
 

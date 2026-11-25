@@ -125,7 +125,7 @@ Added, each worked by hand before it was run:
 
 ### What `check.sh` prints at 0.3.0
 
-Run on 2026-10-08 from 22:28:03Z to 22:28:11Z with `L4=/Users/mengwong/.local/bin/l4`, `JL4_LIBRARY_PATH` unset; the binary is now `~/.local/bin/l4` → the cabal store, `/Volumes/transcend/caches/cabal/store/ghc-9.10.3-fe9c/jl4-0.1-6df1397b/bin/l4`, sha256 `f0759b2ef2f1d1b2a577c68f059c54f487de9d913553fc9f0d9bf0f7f5dab0d8`, the same before and after the run (a newer build than 0.2.0's).
+Run on 2026-10-08 from 22:28:03Z to 22:28:11Z with `L4=~/.local/bin/l4`, `JL4_LIBRARY_PATH` unset; the binary is now `~/.local/bin/l4` → the cabal store, `/Volumes/transcend/caches/cabal/store/ghc-9.10.3-fe9c/jl4-0.1-6df1397b/bin/l4`, sha256 `f0759b2ef2f1d1b2a577c68f059c54f487de9d913553fc9f0d9bf0f7f5dab0d8`, the same before and after the run (a newer build than 0.2.0's).
 The 0.2.0 baseline was re-run on this binary before any edit (22:18:35Z) and printed 0.2.0's table: `ito-il03-tests.l4` 103 satisfied, `tests-independent.l4` 118/6/2, exit 0.
 
 ```
@@ -322,7 +322,7 @@ No other expected value changed; the 86 assertions of 0.1.0 are all still there,
 
 ### What `check.sh` prints at 0.2.0
 
-Run on 2026-10-08 from 07:03:55Z to 07:04:11Z with `L4=/Users/mengwong/.local/bin/l4`, `JL4_LIBRARY_PATH` unset; the binary is `~/.local/bin/l4` → the cabal store, `/Volumes/transcend/caches/cabal/store/ghc-9.10.3-fe9c/jl4-0.1-d4290e25/bin/l4`, sha256 `f4f2bd2558f02f828f0deced5f74313a33670f08cc3275ff95b83f2cde71e448`, the same before and after the run.
+Run on 2026-10-08 from 07:03:55Z to 07:04:11Z with `L4=~/.local/bin/l4`, `JL4_LIBRARY_PATH` unset; the binary is `~/.local/bin/l4` → the cabal store, `/Volumes/transcend/caches/cabal/store/ghc-9.10.3-fe9c/jl4-0.1-d4290e25/bin/l4`, sha256 `f4f2bd2558f02f828f0deced5f74313a33670f08cc3275ff95b83f2cde71e448`, the same before and after the run.
 The 0.1.0 baseline was re-run on the same binary before any edit and printed 0.1.0's table with `tests-independent.l4` at 6 errors, 118 satisfied, 6 failed, 2 refused, exit 1.
 
 ```
@@ -364,7 +364,7 @@ Observation for IL-22: `il07-published-figures.l4` says the booklet's figure is 
 
 **(0.2.0)** This is 0.1.0's run; the table at 0.2.0 is in "Version 0.2.0" above.
 
-Run on 2026-10-06 with `/Users/mengwong/.local/bin/l4`, `JL4_LIBRARY_PATH` unset.
+Run on 2026-10-06 with `~/.local/bin/l4`, `JL4_LIBRARY_PATH` unset.
 That path is a symlink to `~/.cabal/bin/l4`, a local cabal build in store entry `jl4-0.1-0ee0100b`, modified 2026-10-06 21:20 (local), sha256 `64bbcb157dbef2ef1020a6a75589313bba0a2aeeb807c921c5e65e62e9eca118`.
 The binary has no `--version`, and no record beside it names the commit it was built from.
 It was rebuilt at 21:20, one minute before this directory was created; every run recorded here was made after that.

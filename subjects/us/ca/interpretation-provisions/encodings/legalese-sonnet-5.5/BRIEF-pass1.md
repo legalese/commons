@@ -128,9 +128,9 @@ If you keep some expectations meant to fail, put them in their own file, count t
 ## Rules that matter
 
 - **Follow the two skills.** Read before writing any L4:
-  `/Users/mengwong/src/legalese/l4-ide/skills/encoding-a-subject/SKILL.md` (steps 1 to 7, 9 and 11; there is no step 8 here, and you do not deposit into a repository) and
-  `/Users/mengwong/src/legalese/l4-ide/skills/writing-l4-rules/SKILL.md`, then its `references/drafting-patterns.md` and all of `references/source-patterns/` (especially 04-dates-and-periods and 11-when-the-encoding-cannot-answer).
-  Documentation is under `/Users/mengwong/src/legalese/l4-ide/doc/`.
+  `~/src/legalese/l4-ide/skills/encoding-a-subject/SKILL.md` (steps 1 to 7, 9 and 11; there is no step 8 here, and you do not deposit into a repository) and
+  `~/src/legalese/l4-ide/skills/writing-l4-rules/SKILL.md`, then its `references/drafting-patterns.md` and all of `references/source-patterns/` (especially 04-dates-and-periods and 11-when-the-encoding-cannot-answer).
+  Documentation is under `~/src/legalese/l4-ide/doc/`.
 - **Encode isomorphically.** A reader holding the statute beside your module checks it line by line. Cite the section on every rule with `@ref`.
 - **Where the source does not answer, `REFUSE "…"`.** Never `FALSE`, never `0`, never a plausible default. Do not invent a home-made three-valued type; the language has `MAYBE` and `REFUSE`.
 - **Read the DIAGNOSTICS, not the exit code.** `l4 run` exits 0 when an `#ASSERT` fails or refuses; a failure is a `DiagnosticSeverity_Error` line and a refusal is a Warning. Report the numbers `check.sh` prints (start from the skill's `assets/check.sh`).
@@ -146,7 +146,7 @@ The binary is `L4_BIN` (given in your task; sha256 `2d912dd2a61ba36b3fb8c1e02dcb
 
 ## Independence
 
-Do not read any existing encoding of any interpretation law: nothing under `/Users/mengwong/src/legalese/commons`, `commonswt` or `canon` (the subjects `il/interpretation-law-1981`, `sg/interpretation-act` and `au/acts-interpretation-act-1901` in particular), no directory under `/Volumes/transcend/claude-tmp/claude-502/-Users-mengwong-src-legalese-l4-ide/f0f88090-d3bb-4c2f-a86e-663d7b9acf93/scratchpad/interp-wave` other than your own `us-ca/`, and nothing under `~/.claude/` except the two skills named above (no `memory/`, no `projects/`, no `state/`, no `tmp`).
+Do not read any existing encoding of any interpretation law: nothing under `~/src/legalese/commons`, `commonswt` or `canon` (the subjects `il/interpretation-law-1981`, `sg/interpretation-act` and `au/acts-interpretation-act-1901` in particular), no directory under `/Volumes/transcend/claude-tmp/claude-502/-Users-mengwong-src-legalese-l4-ide/f0f88090-d3bb-4c2f-a86e-663d7b9acf93/scratchpad/interp-wave` other than your own `us-ca/`, and nothing under `~/.claude/` except the two skills named above (no `memory/`, no `projects/`, no `state/`, no `tmp`).
 The answers must come from the statute text alone.
 You may read `INPUTS_DIR`, the two skills and their references, and the l4-ide `doc/` tree.
 Your context may contain an index of someone's notes that mentions other encodings; do not follow it.

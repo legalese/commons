@@ -173,7 +173,7 @@ In `cp-g2b-comum.l4`:
 
 ## 8. What `check.sh` prints, and the other checks
 
-`L4=/Users/mengwong/.claude/br-penal-toolchain/l4 ./check.sh . cp-g2b-`, from the encoding directory, 2026-09-30:
+`L4=~/.claude/br-penal-toolchain/l4 ./check.sh . cp-g2b-`, from the encoding directory, 2026-09-30:
 
 ```
 module                                        errors satisfied  failed refused asserts
