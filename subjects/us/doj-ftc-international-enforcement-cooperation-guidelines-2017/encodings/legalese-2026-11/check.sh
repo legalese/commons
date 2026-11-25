@@ -39,17 +39,21 @@ MAIN_TIMEOUT="${L4_MAIN_TIMEOUT:-300}"
 
 # Expected assertions satisfied and failed, per module. A module not listed has none of either.
 # intl-tests-red.l4 is the positive controls: every assertion in it is wrong on purpose and must
-# fail (encoding.json `expected_red`). Update these with the files.
+# fail (encoding.json `expected_red`). tests-independent.l4 is the independent test pass; its one
+# expected failure, line 299, is a genuine ambiguity kept failing on purpose (fork F23;
+# encoding.json `expected_failed`; NOTES.md section 13). Update these with the files.
 expected_satisfied() {
   case "$1" in
     intl-tests.l4) echo 39 ;;
-    intl-tests-boundaries.l4) echo 236 ;;
+    intl-tests-boundaries.l4) echo 250 ;;
+    tests-independent.l4) echo 159 ;;
     *) echo 0 ;;
   esac
 }
 expected_failed() {
   case "$1" in
     intl-tests-red.l4) echo 6 ;;
+    tests-independent.l4) echo 1 ;;
     *) echo 0 ;;
   esac
 }
@@ -149,7 +153,7 @@ for f in "$HERE"/*.l4; do
   printf '%-26s %4d %4d %4d %4d %9s | %4d %4d %4d %4d  %s%s\n' "$m" "$err" "$ok" "$bad" "$ref" "$exs/$exf" "$merr" "$mok" "$mbad" "$mref" "$verdict" "${note:+  <- $note}"
   n=$((n + 1)) tot_sat=$((tot_sat + ok)) tot_msat=$((tot_msat + mok)) tot_fail=$((tot_fail + bad)) tot_mfail=$((tot_mfail + mbad))
 done
-echo "TOTAL ($n modules): satisfied unstable $tot_sat, main $tot_msat; failed (positive controls) unstable $tot_fail, main $tot_mfail"
+echo "TOTAL ($n modules): satisfied unstable $tot_sat, main $tot_msat; failed (positive controls and expected failures) unstable $tot_fail, main $tot_mfail"
 echo "(a failed assertion is also an error; the expected column is satisfied/failed)"
 case "$status" in 0) echo "check.sh: all passed" ;; *) echo "check.sh: FAILED" ;; esac
 exit "$status"
