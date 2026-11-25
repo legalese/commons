@@ -66,3 +66,33 @@ They have not been reviewed one by one.
 - Some agents kept files of their own outside their deposit (scripts, templates, probes or check outputs), and none of them is in this repository: `ic1` (ic1-work in the run's scratchpad); `ic2` (ic2-tools in the run's scratchpad); `ic3` (work/ beside its deposit; cases-run.out in the run's scratchpad; checksh3.out in the run's scratchpad); `ic4` (inputs/_work; fixsec.py in the run's scratchpad; seatq.txt in the run's scratchpad); `ic5` (inputs/work); `ic6` (inputs/work).
   The list comes from the agents' sandboxes and from the paths their tool calls name; a path is a mention, not proof that anything was read or written there.
   Where an agent's `NOTES-<agent>.md` or `PROGRESS-<agent>.md` mentions such a file, the path is the run's own and does not exist here.
+
+## Procedure layer (DEONTIC), added beside the Boolean encoding
+
+This section lists the modules that were added to lay the Act's procedures out as regulative rules (`DEONTIC`, with traces).
+They are additive: no existing module was edited, and no existing assertion count moved.
+Each unit is a module, a test module and a notes file (`notes/procedure-<unit>.md`) that says what it encodes, its timeline unit and counting rule, its forks and what it leaves out.
+Every `#TRACE` in the test modules has a `-- EXPECT` line decided from the text before the trace was run, and each was checked against it on two builds: the unstable prerelease `unstable-20261125-a50cbd0` and the stable line, main build 112.
+`check.sh` counts assertions and never reads a `#TRACE` outcome, so it cannot see the differences below; they were found by running each trace on both builds.
+The two builds differ on traces in four known ways: a `MAY` that lapses, a `LEST` continuation's clock, two parties in breach at once, and the first event after a wait device lapses.
+Where a unit's traces read differently on main, its test module ends with a `READS-DIFFERENTLY-ON-MAIN` block listing them, and the count is in the table.
+The traces are the ones to read on unstable; main 112 gives a different class for the listed ones.
+
+| unit (module) | provisions | traces | read differently on main 112 |
+| --- | --- | --- | --- |
+| `ic-proc-register-access` | ss 124-129 | 25 | 0 |
+| `ic-proc-derivative-claim` | ss 194-198 | 68 | 6 |
+| `ic-proc-forced-sale` | ss 336-341 | 44 | 7 |
+| `ic-proc-merger` | ss 316-327 | 43 | 0 |
+| `ic-proc-own-shares` | ss 301-312 (own-share purchase is a distribution by the s 1 definition, src:209) | 44 | 0 |
+| `ic-proc-foreign-company` | ss 346-349א | 46 | 0 |
+| `ic-proc-interested-transactions` | ss 269-272, 278, 280, 283 | 43 | 0 |
+
+### Observations on the existing modules (nothing was changed)
+
+- This encoding had no `DEONTIC` anywhere before this layer.
+- `ic6-foreign-company.l4:78-82`, the Boolean for s 346(ג), tests changes in the documents, directors and the particulars of the persons named in s 346(ב)(3) and (4) only.
+  Section 346(ד) (src:2967) also makes the foreign company notify the Registrar of changes in the further documents the Minister may require; that limb is not encoded in the Boolean (its comment says the power is taken into s 346(ב)).
+  It matters only if the Minister has set further documents, and none are in the bundle.
+  `ic-proc-foreign-company` has its own helper for it.
+- Reduction of issued capital has no route in the Law (no hits for הפחתת הון, הקטנת הון or הפחתה); ss 286-287 only increase registered capital and cancel unallotted registered capital.
