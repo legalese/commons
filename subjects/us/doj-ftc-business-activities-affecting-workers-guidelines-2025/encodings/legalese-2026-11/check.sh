@@ -49,7 +49,7 @@ MAIN_TIMEOUT="${L4_MAIN_TIMEOUT:-300}"
 expected_satisfied() {
   case "$1" in
     wk-tests.l4) echo 49 ;;
-    wk-tests-boundaries.l4) echo 122 ;;
+    wk-tests-boundaries.l4) echo 126 ;;
     tests-independent.l4) echo 123 ;;
     *) echo 0 ;;
   esac
