@@ -11,13 +11,14 @@ No result says that a merger is lawful or unlawful, and none should be read as w
 
 Status: `draft`, version 0.1.0, written 2026-11-25 by a single builder session from the deposited text alone.
 No domain expert has read it.
-An independent test pass has been run (section 10), and an adversarial review (section 11); several of the review's findings are held, not landed, because they would break the independent tests.
+An independent test pass has been run (section 10), and an adversarial review (section 11). Every finding of the review has been dealt with after the parent session's rulings of 2026-11-25, and `tests-independent.l4` carries a signature-only patch made at its ruling (section 10).
 Every expected value in the test modules was written from the text, or from a fixture built from the text's own definitions and stated as such in its comment.
 One expected value was wrong when first written, and the fault was mine, not the encoding's: a hand sum of a pre-merger HHI (2,850 for 2,950), corrected before commit.
 No assertion has been changed to match the code.
+The type changes of section 11, finding 5 wrapped some of my expected values in `JUST`; none changed value.
 Two of my expectations changed on review because the reading changed, and each was re-derived from the text (section 11, findings 1 and 2): the rejected offers of 150 and 90 in `mg-tests-boundaries.l4` were `NOTHING` and are now not accepted (fork FF-2); the rejected offer of 120 that would take a division's assets out of the market in `mg-tests.l4` barred the claim and now does not (fork FD-1).
 A review before the first hand-back found one test too weak to catch its rule: the failing division test for a rejected offer asserted only that the answer was not `NOTHING`. It now asserts the whole finding.
-Measured 2026-11-25 on scratch copies: with "keeps the assets in the market" removed from the division's bar, `mg-tests.l4` fails one assertion (the one after "Footnote 62's bar applied to a division only for an offer keeping the assets"); with the failing firm reading made to answer `NOTHING` whenever any offer at or below liquidation value is received, `mg-tests.l4` and `mg-tests-boundaries.l4` fail two each.
+Measured 2026-11-25 on scratch copies: with "keeps the assets in the market" removed from the division's bar, `mg-tests.l4` fails one assertion (the one after "Footnote 62's bar applied to a division only for an offer keeping the assets"); with the failing firm reading made to answer `NOTHING` whenever any offer at or below liquidation value is received, `mg-tests.l4` and `mg-tests-boundaries.l4` fail two each; with failed attempts at coordination drawing Guideline 3's inference, `mg-tests.l4` fails one.
 
 The source is `registers/source-bundle/2023-merger-guidelines.txt`, a `pdftotext` extraction of the justice.gov PDF (sha256 in the `.meta.json` beside it).
 Page markers `[pdf page N of 51]` are the PDF's page index, not the printed page numbers.
@@ -39,12 +40,12 @@ mg-frameworks.l4           0/0/0/0                    0/0/0/0                   
 mg-nouns.l4                0/0/0/0                    0/0/0/0                    0/0
 mg-rebuttal.l4             0/0/0/0                    0/0/0/0                    0/0
 mg-test-fixtures.l4        0/0/0/0                    0/0/0/0                    0/0
-mg-tests-boundaries.l4     0/138/0/0                  0/138/0/0                  138/0
+mg-tests-boundaries.l4     0/155/0/0                  0/155/0/0                  155/0
 mg-tests-red.l4            19/0/19/0                  19/0/19/0                  0/19
-mg-tests.l4                0/155/0/0                  0/155/0/0                  155/0
+mg-tests.l4                0/159/0/0                  0/159/0/0                  159/0
 mg-tools.l4                0/0/0/0                    0/0/0/0                    0/0
 tests-independent.l4       0/291/0/0                  0/291/0/0                  291/0
-assertions satisfied: unstable 584, main 584
+assertions satisfied: unstable 605, main 605
 check.sh: all passed
 ```
 
@@ -69,6 +70,8 @@ Not encoded: the discussion of evidence in section 4 (sources, the generally app
 Which results refuse an impossible input with `NOTHING`, as the code stands at this commit:
 
 - `the Agencies' reading under Guideline 1 of`, and `Guideline 1 applied to the whole series`: shares that are negative, over 100, or do not sum to exactly 100, an empty market, or no party (fork G1-2).
+- `the Agencies' reading under Guideline 3 of` and `the HHI limb of the presumption is met by`: a post-merger HHI outside 0 to 10,000, a negative change, or a change above the post-merger HHI (which would make the pre-merger HHI negative).
+- `the share limb of the presumption is met by`: a merged share outside 0 to 100, or a change below 0 or over 10,000; `the Guideline 1 presumption on the metrics`: any impossible HHI, change or share, as for the limbs; `the concentration band of an HHI of`: an HHI outside 0 to 10,000.
 - `the Agencies' reading under Guideline 4 of`: an HHI of the market entered outside 0 to 10,000.
 - `the Agencies' reading under Guideline 5 of`: a foreclosure share outside 0 to 100.
 - `the offer is a reasonable alternative offer, by footnote 62`, and the failing firm and failing division readings: a negative price or liquidation value.
@@ -80,9 +83,10 @@ Which results refuse an impossible input with `NOTHING`, as the code stands at t
 - `the HMT answer for`: an empty candidate market.
 - `the seller's share of the geographic market, in percent` and `the market shares on the measure`: a negative amount, or a total of zero.
 
-Not guarded, at this commit: `the Agencies' reading under Guideline 3 of` returns a finding for any numbers (a post-merger HHI of 12,000 with a change of 200 draws the inference; a negative change still gives a finding), and so do `the concentration band of an HHI of`, `the Guideline 1 presumption on the metrics` and the two limbs of the presumption.
-Guarding them changes their result types, which the independent tests compare as bare values; that is held for a ruling (section 11, finding 5).
-The number helpers and predicates compute on whatever they are given, impossible numbers included, and only the readings above guard: `the HHI of the shares`, `the change in HHI from merging firms with shares` (2ab), the pre-merger, post-merger and merged-share helpers, `the value of diverted sales of`, `the margin on incremental units of`, `the implicit price of the pipeline's service`, `the SSNIP percentage of`, `what footnote 30 says of a foreclosure share of`, the threshold predicates of Guidelines 1, 3 and 4 (`highly concentrated, by an HHI of`, `the market entered is concentrated, for Guideline 4` and the like), and the comparisons of recapture and critical loss.
+The limbs, the presumption on the metrics and the Guideline 3 reading check each number's own range, not that the numbers could come from one market together.
+A merged share of 10 cannot give a change of 101 (the change is less than the square of the merged share), yet `the Guideline 1 presumption on the metrics` presumes on 1,801, 101 and 10, which `tests-independent.l4` line 202 asserts as a test of the HHI limb on its own numbers.
+`the Agencies' reading under Guideline 1 of` computes the metrics from the shares, so there they always agree.
+The number helpers and predicates compute on whatever they are given, impossible numbers included, and only the results above guard: `the HHI of the shares`, `the change in HHI from merging firms with shares` (2ab), the pre-merger, post-merger and merged-share helpers, `the value of diverted sales of`, `the margin on incremental units of`, `the implicit price of the pipeline's service`, `the SSNIP percentage of`, `what footnote 30 says of a foreclosure share of`, the threshold predicates of Guidelines 1, 3 and 4 (`highly concentrated, by an HHI of`, `the market is presumptively susceptible to coordination, under 2.3.A`, `the market entered is concentrated, for Guideline 4` and the like), and the comparisons of recapture and critical loss.
 `mg-tests-boundaries.l4` pins two of them on impossible input (a value of diverted sales on -30 units; a margin on an incremental revenue of -10) so that this paragraph stays true.
 
 Number conventions: shares and percentages are NUMBER in percent points (30 means 30 percent); HHI is on the 0 to 10,000 scale; the diversion ratio and the price increase of a critical loss are fractions (0.3, 0.05), because the text defines them as fractions.
@@ -97,11 +101,11 @@ Arithmetic is exact: L4 keeps rationals, so 10,000/6 is not 1,666.67.
 | `mg-frameworks.l4` | 2.2 to 2.11, Guidelines 2 to 11 | 0 |
 | `mg-rebuttal.l4` | 3.1 to 3.3, footnotes 31, 62, 64, 65, 70, 71 | 0 |
 | `mg-tools.l4` | 4.2.B, 4.3, 4.3.A to 4.3.D.2, 4.4.A, 4.4.B, footnotes 72, 84, 85 | 0 |
-| `mg-test-fixtures.l4` | builders for test inputs; not rules of the Guidelines | 0 |
-| `mg-tests.l4` | tests from the text | 155 satisfied |
-| `mg-tests-boundaries.l4` | both sides of every threshold, impossible inputs, properties | 138 satisfied |
+| `mg-test-fixtures.l4` | builders for test inputs, and readers of a Guideline 3 finding; not rules of the Guidelines | 0 |
+| `mg-tests.l4` | tests from the text | 159 satisfied |
+| `mg-tests-boundaries.l4` | both sides of every threshold, impossible inputs, properties | 155 satisfied |
 | `mg-tests-red.l4` | positive controls, each written wrong | 19 failed, as required |
-| `tests-independent.l4` | the independent test pass (section 10); not edited by this builder | 291 satisfied |
+| `tests-independent.l4` | the independent test pass (section 10); its signatures patched by this builder, no expected value | 291 satisfied |
 
 The positive controls each state a plausible wrong reading and must fail: the rounded 1,667 as the exact HHI; 1,800 as highly concentrated; a change of 100 as significant; a share of 30 as over thirty percent; (a + b)² as the change; shares summing to 99 as readable; 1,000 as concentrated; footnote 30's inference at exactly 50; footnote 37's routing reversed; an offer at liquidation value as reasonable; a rejected reasonable offer not barring the claim; entry at the moment of the effect as timely; entry depending on lessening elsewhere as sufficient; efficiencies with a contractual alternative as cognizable; the diversion ratio as a percentage; the HMT met with no SSNIPT; the SSNIP on 200 as 5; recapture gains equal to the losses as profitable; idle capacity alone as a rapid entrant.
 
@@ -223,7 +227,7 @@ Counted from this file with `awk` over the table's disposition column, 2026-11-2
 
 ## 6. Fork register
 
-Every reading below was taken by this builder: assumed, not ruled.
+Every reading below was taken by this builder, assumed and not ruled, except where a row says the parent session ruled it on 2026-11-25. No domain expert has ruled any of them.
 
 | fork | text | readings | taken |
 | --- | --- | --- | --- |
@@ -236,19 +240,19 @@ Every reading below was taken by this builder: assumed, not ruled.
 | G3-1 | 1 "A market that is highly concentrated ... the Agencies will infer"; 2.3.A "highly concentrated after a merger that significantly increases concentration" | (a) post over 1,800 alone; (b) post over 1,800 and change over 100 | (b). At post 2,000 and change 50, (a) infers harm and (b) does not; tested |
 | G3-2 | 1 names concentration and prior coordination; 2.3.A names three primary factors for "may conclude" | which factors found the inference | concentration (G3-1) or prior coordination found the inference; any of the three founds "may conclude", so the elimination of a maverick alone gives "may conclude" and not the inference |
 | G3-3 | 1 "In a market that is not highly concentrated, the Agencies investigate" | not highly concentrated by (a) post HHI alone; (b) G3-1's reading | (a). So at post 2,000 and change 50 the encoding neither infers nor flags an investigation; open question 1 |
-| G3-4 | 1 "has seen prior anticompetitive coordination" (`[pdf page 4 of 51]`); 2.3.A "Prior Actual or Attempted Attempts to Coordinate", and failed attempts "suggest that successful coordination was not so difficult as to deter attempts" (`[pdf page 10 of 51]`) | (a) one input for actual or attempted coordination, grounding both the primary factor and the inference; (b) two inputs: actual coordination grounds the inference and the primary factor, attempted coordination the primary factor only | (a) at this commit, which is a defect: attempted coordination alone draws the inference. (b) is proposed, not landed: it changes `Guideline 3 facts`, which `tests-independent.l4` builds field by field (lines 277-283), so it waits for a ruling (section 11, finding 4) |
+| G3-4 | 1 "has seen prior anticompetitive coordination" (`[pdf page 4 of 51]`); 2.3.A "Prior Actual or Attempted Attempts to Coordinate", and failed attempts "suggest that successful coordination was not so difficult as to deter attempts" (`[pdf page 10 of 51]`) | (a) one input for actual or attempted coordination, grounding both the primary factor and the inference; (b) two inputs: actual coordination grounds the inference and the primary factor, attempted coordination the primary factor only | (b), since the 2026-11-25 review (until then (a), which let failed attempts alone draw the inference). Only actual prior coordination grounds section 1's inference; failed attempts alone count only as 2.3.A's primary factor, so they allow "may conclude" and not the inference. Tested both ways, and both together give the factor once |
 | G4-1 | fn 21, fn 23 | concentrated | HHI over 1,000, or a future market with few equivalent potential entrants |
-| G4-2 | 2.4.A "a reasonable probability of entering a highly concentrated relevant market ... suggests ... unless ... de minimis", and "to supplement the suggestion ... the Agencies will consider projections" (`[pdf page 12 of 51]`) | (a) the suggestion satisfies element (2), overriding the caller's own FALSE; (b) it is reported as its own field, and element (2) stays the caller's finding | (a) at this commit, with "highly concentrated" read as over 1,800 (Guideline 1); a future market has no HHI, so the suggestion never arises there. The adversarial review reads (b); the independent test author reads (a) (`tests-independent.l4` line 366). Disputed, and held for a ruling (section 11, finding 3) |
+| G4-2 | 2.4.A "a reasonable probability of entering a highly concentrated relevant market ... suggests ... unless ... de minimis", and "To supplement the suggestion ... the Agencies will consider projections" (`[pdf page 12 of 51]`) | (a) the suggestion satisfies element (2), unless there is substantial direct evidence of a de minimis effect; (b) the adversarial review's reading: "suggests" and "supplement" make it evidence only, so it is reported as its own field and element (2) stays the caller's finding even when the caller says FALSE | (a), kept by the parent session's ruling of 2026-11-25. The suggestion carries its own stated exception, which the de minimis input is, and the projections "supplement" the suggestion rather than replace it. The two reviewers split: the independent test author reads (a) (`tests-independent.l4` line 411), the refuter (b). That the de minimis input defeats the suggestion is tested in `mg-tests.l4` line 220 and `tests-independent.l4` lines 409 and 412. The suggestion is also reported as its own field. "Highly concentrated" is over 1,800 (Guideline 1); a future market has no HHI, so the suggestion never arises there |
 | G5-1 | fn 30 "a share greater than 50% of the related product market"; 2.5.A.2 defines the "foreclosure share" | which share | the foreclosure share, which 2.5.A.2 defines just before the sentence fn 30 annotates |
 | G5-2 | fn 30: greater than 50 infers; "less than 50%" may still lessen competition | exactly 50 | neither sentence covers it; a named result says so |
 | G5-3 | 2.5.C "may occur irrespective of the merged firm's incentive" | concern (C) needs (a) ability or visibility; (b) ability and incentive | (a) |
 | G6-1 | 2.6 "direct evidence or market shares showing durable market power" | a share threshold for dominance | none is given; dominance is the caller's finding |
 | G8-1 | 2.8 "collectively under Guidelines 1-6" | how Guideline 1 applies to a series | the firms of the series as the parties to one merger, on the shares before the first acquisition |
 | G9-1 | 2.9 scenarios A to D and the paragraphs after | which kinds of platform competition each scenario engages | the mapping in `the platform competition Guideline 9 examines`; scenario B also engages competition on a platform |
-| G10-1 | 2.10 "not saved by benefits to competition among sellers"; 3.3 "benefits outside the relevant market" | identity of markets | whether a claimed benefit is in the market where competition may be lessened, compared by the caller's market name. Nothing is weighed: 3.3 says "possible economies [from a merger] cannot be used as a defense to illegality" (`[pdf page 33 of 51]`). The result's name, `the benefit may be weighed against the harm`, still says otherwise; its rename is held (section 11, finding 7) |
+| G10-1 | 2.10 "not saved by benefits to competition among sellers"; 3.3 "benefits outside the relevant market" | identity of markets | whether a claimed benefit is in the market where competition may be lessened (`the claimed benefit is in the market where competition may be lessened`), compared by the caller's market name. Nothing is weighed: 3.3 says "possible economies [from a merger] cannot be used as a defense to illegality" (`[pdf page 33 of 51]`). Until the 2026-11-25 review the result was named `the benefit may be weighed against the harm` |
 | FF-1 | fn 62 "If a reasonable alternative offer was rejected, the parties cannot claim that the business is failing"; requirement C "offers that pose a less severe danger" | the bar applies to (a) any rejected reasonable offer; (b) only one less dangerous than the merger | (a), as fn 62 is written, so a rejected offer more dangerous than the merger still bars. On fork FF-2's reading (b) a rejected offer at or below liquidation value bars too, and where that changes the answer it is `NOTHING` |
 | FF-2 | fn 62 "above the liquidation value ... will be regarded as a reasonable alternative offer"; "Liquidation value is the highest value the assets could command outside the market" | an offer at or below liquidation value is (a) not reasonable; (b) reasonable | both are computed in full. When they give the same accept (or credit) answer, that is the answer; when they differ, `NOTHING`. Counting more offers can only defeat requirement C or condition 2, or add a bar, so two readings cover every way of classifying several such offers. The requirement and bar fields count only offers above liquidation value, and a field says when one at or below it was received. The liquidation value is the caller's figure |
-| FF-3 | 3.1 "The Agencies typically look for evidence ..." under requirements A, B and C (`[pdf page 31 of 51]`) | each input is (a) the requirement itself; (b) the caller's finding on the evidence the Agencies look for | (b), as section 3 says of every BOOLEAN input. The field names of `Failing firm claim` still read as the requirements themselves; their rename is held, because `tests-independent.l4` builds the record by those names (lines 589-595; section 11, finding 6) |
+| FF-3 | 3.1 "The Agencies typically look for evidence ..." under requirements A, B and C (`[pdf page 31 of 51]`) | each input is (a) the requirement itself; (b) the caller's finding on the evidence the Agencies look for | (b), and since the 2026-11-25 review the `Failing firm claim` fields are named for it ("the evidence shows that the firm would be unable to meet its financial obligations ...", "the evidence suggests that the firm would be unable to reorganize ...", "the evidence shows good-faith efforts ..."); the requirements are the encoding's conclusions from them |
 | FD-1 | fn 64 "reasonable alternative offers that would keep its assets in the relevant market and pose a less severe danger" | fn 62's bar on a rejected reasonable offer applies to a division (a) for any such offer; (b) only for one that would keep the assets in the relevant market | (b), since 2026-11-25's review. Fn 64 asks only for offers that keep the assets in the market, and an offer that would take them out is no alternative to the exit the claim asserts. Fn 62's definition of a reasonable offer (above liquidation value) still applies, and the bar, as in FF-1, does not ask that the offer be less dangerous. Until then (a) was taken |
 | EN-1 | 3.2 "replicate the scale, strength, and durability of one of the merging parties" | (a) one party on all three; (b) each dimension against any party | (a); tested with A's scale and strength and B's durability, which is not sufficient |
 | EN-2 | 3.2 "before any effect ... may occur" | strict or not; units | strictly before; the two times in one unit the caller chooses |
@@ -293,8 +297,8 @@ Each line says whether it was read at source in this row or only reported to thi
 9. Critical loss: is the constant-cost breakeven the computation the Agencies intend, or one of several? (TL-1)
 10. Should Guideline 1 accept shares that sum to 100 only after rounding, as fn 13's do? (G1-2)
 11. Which prior guidelines does the 2023 text's "consolidates, revises, and replaces the various versions of Merger Guidelines" reach? It names none, and the status of the 2020 Vertical Merger Guidelines and the 2000 Collaboration Guidelines was only reported to this builder (section 8).
-12. Does a reasonable probability of entering a highly concentrated market satisfy element (2) of 2.4.A by itself, unless the effect would be de minimis, or is it a suggestion the Agencies supplement with projections, leaving element (2) to the evidence? Two reviewers of this row read `[pdf page 12 of 51]` differently. (G4-2)
-13. Does evidence of failed attempts at coordination ground section 1's inference, which names a market that "has seen prior anticompetitive coordination", or only 2.3.A's primary factor? (G3-4)
+12. Does a reasonable probability of entering a highly concentrated market satisfy element (2) of 2.4.A by itself, unless there is substantial direct evidence of a de minimis effect, or is it a suggestion the Agencies "supplement" with projections, leaving element (2) to the evidence? The encoding keeps the first, by the parent session's ruling; the refuter read the second, and the independent test author the first. (G4-2)
+13. Does evidence of failed attempts at coordination ground section 1's inference, which names a market that "has seen prior anticompetitive coordination", or only 2.3.A's primary factor? The encoding takes the second. (G3-4)
 
 ## 10. Independent test pass
 
@@ -303,30 +307,62 @@ It read the source text first and wrote its expected answers down before opening
 It has 291 assertions, in groups each citing the provision and the `[pdf page]` its answers come from; where the text is silent it asserts `NOTHING` or "not JUST TRUE", never a bare FALSE.
 
 On the encoding as first handed back (commit 7ee34b5cf), 290 were satisfied and 1 failed, on both builds (re-measured by this builder on a scratch copy).
-The failure, at line 1040: footnote 62's test answered `JUST TRUE` for an offer of 10 against a liquidation value of -5, while the failing firm reading answered `NOTHING` for the same input, so the encoding disagreed with itself.
+The failure, at what is now line 1085 (line 1040 before the signature patch below): footnote 62's test answered `JUST TRUE` for an offer of 10 against a liquidation value of -5, while the failing firm reading answered `NOTHING` for the same input, so the encoding disagreed with itself.
 `the offer is a reasonable alternative offer, by footnote 62` now answers `NOTHING` for a negative price or liquidation value (section 11, finding 5).
 Now 291 satisfied, 0 failed, on both builds (section 2).
 
-The author retracted one assertion of its own after its first run, and left a comment saying so at lines 804-806: the input at line 807 says both that a contract could achieve the efficiencies and that a contract would not be practical, which contradict each other; it first expected merger-specific, and corrected that to not merger-specific, footnote 70's first sentence answering the input as written.
+The author retracted one assertion of its own after its first run, and left a comment saying so at lines 849-851: the input at line 852 says both that a contract could achieve the efficiencies and that a contract would not be practical, which contradict each other; it first expected merger-specific, and corrected that to not merger-specific, footnote 70's first sentence answering the input as written.
 
 The author noted five cases where the text is silent and the encoding takes a reading; each is a fork: at a post-merger HHI of 2,000 with a change of 50, neither the inference nor the investigation (G3-1, G3-3, finding 6); the elimination of a maverick alone gives "may conclude" but not the inference (G3-2); a rejected offer more dangerous than the merger still bars (FF-1); concern (C) on the ability to limit access alone (G5-3); a "merger" with one party in the market gives a change of 0 (G1-6).
 
-This builder has not edited the file.
-Several of the review's findings would make it fail if landed as asked, and are held (section 11).
+### 10.1 The signature-only patch (2026-11-25)
+
+This builder patched the file once, in a commit of its own whose subject ends "signature-only: constructors, field names, CONSIDER wrappers; no expected value touched", at the parent session's ruling of 2026-11-25 (option (a)), so that findings 4 to 7 of section 11 could land.
+Measured on the patch itself: 19 of the 291 `#ASSERT` lines changed, and for each of them the text after `EQUALS` (where there is one) and every number and `TRUE`/`FALSE` outside backquotes are identical before and after (a script over both versions); the assertion count is still 291.
+After it, 291 satisfied and 0 failed on both builds.
+The unstable build prints 7 `lint/non-exhaustive-match` warnings for the file, one per wrapper below; they are deliberate.
+To see it word by word: `git show --word-diff=plain <that commit> -- tests-independent.l4`.
+
+What was mapped, and why: the file's `ind G3 facts` takes one `prior` coordination input, and the encoding now has two (fork G3-4).
+`prior` maps to actual prior coordination, and failed attempts are given as FALSE.
+The author's own words read as actual coordination: its comment at line 354 quotes section 1's "has seen prior anticompetitive coordination", its answers note S8 reads that clause as the ground of the inference, and line 358 expects the inference from `prior` alone, which only actual coordination draws.
+Its note E2 lists "prior actual or attempted coordination" as one primary factor, and line 352 asserts that factor from `prior`; that holds under either mapping.
+
+Each changed line, by its line number after the patch:
+
+- 119-150 (added): a comment and four wrappers, `ind band of`, `ind presumption on the metrics`, `ind HHI limb`, `ind share limb`, each a `CONSIDER` with only a `WHEN JUST` branch, so a `NOTHING` raises `eval/non-exhaustive-patterns` and cannot satisfy an assertion (measured on both builds before this round, `NOT (...)` included).
+- 181-185: `the concentration band of an HHI of` became `ind band of`; HHI and expected band unchanged.
+- 202-204 and 206-208: `the Guideline 1 presumption on the metrics` became `ind presumption on the metrics`; the three numbers and the expected `ind PRESUME` or `ind NO PRESUMPTION` unchanged.
+- 209-210: `the share limb of the presumption is met by` became `ind share limb`; numbers and `NOT` unchanged.
+- 211-212: `the HHI limb of the presumption is met by` became `ind HHI limb`; numbers and `NOT` unchanged.
+- 304-306 (added): a comment stating the mapping above.
+- 315: the field `firms with a substantial share appear to have coordinated, or attempted to, before` renamed to `... previously engaged in express or tacit coordination to lessen competition`; still `IS prior`.
+- 316 (added): `there is evidence of failed attempts at coordination in the relevant market IS FALSE`, the new field.
+- 321, 328, 335 (added): a comment on each Guideline 3 reader.
+- 322, 329, 336: each reader's parameter changed from `f IS A Guideline 3 finding` to `m IS A MAYBE Guideline 3 finding`.
+- 324-326, 331-333, 338-340: each reader's body changed from `f's <field>` to `CONSIDER m WHEN JUST f THEN f's <field>`, the same field, no `NOTHING` branch.
+- 553: `magnified concerns under Guideline 5` renamed to `concerns under Guideline 5 that the trend could magnify`; same trend, same `elem`.
+- 554: `exacerbated problems under Guidelines 1 to 6` renamed to `problems under Guidelines 1 to 6 that the trend can exacerbate`; same trend, same `elem`.
+- 596-597: `the benefit may be weighed against the harm` renamed to `the claimed benefit is in the market where competition may be lessened`; the market names and `NOT` unchanged.
+- 635: field `the firm would be unable to meet its financial obligations in the near future` renamed to `the evidence shows that the firm would be unable to ...`; still `IS unable`.
+- 637: field `the firm would be unable to reorganize successfully under Chapter 11` renamed to `the evidence suggests that the firm would be unable to ...`; still `IS noreorg`.
+- 638: field `good-faith efforts were made to elicit reasonable alternative offers, before the claim` renamed to `the evidence shows good-faith efforts, before the claim, to elicit reasonable alternative offers`; still `IS efforts`.
+
+Nothing else in the file changed.
 
 ## 11. Adversarial review
 
 A second fresh agent tried to refute the encoding against the text; the parent session confirmed each of its eight findings against the source and relayed them.
-This builder has not seen the refuter's own report, only the parent's statement of the findings.
-What was done with each, at this commit:
+This section relies on the parent session's statement of the refuter's findings: this builder has not read the refuter's own report.
+What was done with each, after the parent session's rulings of 2026-11-25:
 
 1. **The failing firm and division readings answered `NOTHING` where the text answers** (a claim failing requirement A or B, or a division whose negative cash flow is justified, is not accepted on either reading of an offer at or below liquidation value). Fixed: both readings of fork FF-2 are computed, and `NOTHING` is returned only when they differ. `mg-tests-boundaries.l4`'s rejected offers of 150 and 90, which asserted `NOTHING`, are now not accepted: the 150 bars the claim on both readings. New tests cover requirement A failing and a justified cash flow.
 2. **FD-1: footnote 64 counts only offers that would keep the assets in the market.** Fixed: the bar applies to a division only for a rejected offer above liquidation value that would keep the assets in the relevant market. `mg-tests.l4`'s rejected offer of 120 taking the assets out of the market now leaves the claim credited, and a new test shows the same offer keeping the assets bars it. Fork FD-1 records both readings.
-3. **G4-2: the high-concentration suggestion overrode the caller's own FALSE on element (2).** Held, not landed. It conflicts with `tests-independent.l4` line 366, which expects actual potential competition at an HHI of 2,000 with element (2) FALSE and no de minimis evidence: the independent author reads `[pdf page 12 of 51]` as the encoding does. `mg-tests.l4`'s matching assertion is unchanged. Fork G4-2 and open question 12 record the dispute.
-4. **Prior coordination conflates actual and attempted coordination.** Held, not landed. Splitting the input changes `Guideline 3 facts`, which `tests-independent.l4` builds field by field (lines 277-283); a record built without every field fails to check, and the whole file with it (`check/missing-named-arguments`, measured on both builds). Line 313 also expects the inference from the one combined input. Fork G3-4 records the defect and the proposed split; open question 13.
-5. **Guards: several results answered impossible input.** Narrowed. Landed: footnote 62's test (a negative price or liquidation value) and the upward pricing pressure indicator (a negative price, cost or unit count, or more units diverted than lost). Left unguarded and so documented: the number helpers (section 3), two of them pinned by tests. Held: the Guideline 3 reading, the band, the presumption on the metrics and the two limbs. Returning `NOTHING` needs a `MAYBE` result, and `tests-independent.l4` compares each as a bare value (lines 149-153 and 170-180, and lines 303-315 through its helpers at lines 285-295); a mismatched type makes the whole file fail to check (`check/type-mismatch`, measured). Section 3 says what is and is not guarded.
-6. **"Typically look for": the inputs are named as the requirements, not as the evidence findings.** Narrowed: fork FF-3 records the reading. The rename of the `Failing firm claim` fields is held, because `tests-independent.l4` builds that record by those names (lines 589-595).
-7. **Cosmetics and citations.** Fixed: `mg-frameworks.l4`'s header now quotes "could magnify"; the table is cited as "Indicator Threshold for Structural Presumption", with no slash, in `mg-nouns.l4` and `mg-concentration.l4`; "creates or further consolidates a highly concentrated market" is cited to `[pdf page 6 of 51]` and the overview at `[pdf page 3 of 51]`; the modal ("could magnify", "can exacerbate") is restored in comments on the two values and in the `@desc` of `what Guideline 7 says the trend does`; `the benefit may be weighed against the harm` has a comment and `@desc` saying it weighs nothing. Held: renaming those two values and that result, which `tests-independent.l4` uses by name (lines 508-509 and 551-552).
+3. **G4-2: the high-concentration suggestion overrode the caller's own FALSE on element (2).** Kept, with reason, by the parent session's ruling; behaviour unchanged. Two reviewers split: the independent test author reads the text as the encoding does (`tests-independent.l4` line 411), the refuter does not. Reading (a) is kept because the suggestion carries its own stated exception, substantial direct evidence of a de minimis effect, which is an input here, and because the projections "supplement" the suggestion rather than replace it (`[pdf page 12 of 51]`). Fork G4-2 and open question 12 record the refuter's reading as the alternative.
+4. **Prior coordination conflates actual and attempted coordination.** Fixed: `Guideline 3 facts` has two inputs (fork G3-4). Only actual prior coordination grounds section 1's inference; failed attempts alone count only as 2.3.A's primary factor, so they allow "may conclude" and not the inference. `tests-independent.l4` was patched to the new fields (section 10.1).
+5. **Guards: several results answered impossible input.** Fixed, narrowed in one respect. Footnote 62's test and the upward pricing pressure indicator were guarded first; the Guideline 3 reading, the band, the presumption on the metrics and its two limbs now return a `MAYBE` and answer `NOTHING` out of range. They check each number's range, not that the numbers could come from one market (section 3). The number helpers and predicates are left unguarded by design, documented in section 3, two of them pinned by tests.
+6. **"Typically look for": the inputs are named as the requirements, not as the evidence findings.** Fixed: the `Failing firm claim` fields are named as findings on the evidence (fork FF-3).
+7. **Cosmetics and citations.** Fixed: `mg-frameworks.l4`'s header quotes "could magnify"; the table is cited as "Indicator Threshold for Structural Presumption", with no slash; "creates or further consolidates a highly concentrated market" is cited to `[pdf page 6 of 51]` and the overview at `[pdf page 3 of 51]`; the two Guideline 7 values are renamed with their modals ("could magnify", "can exacerbate"); and Guideline 10's result is renamed `the claimed benefit is in the market where competition may be lessened`, which asserts no weighing, its `@desc` kept (fork G10-1).
 8. **Fns 87 and 90 cite "n.81"** (finding 1, then open question 11). Fixed: closed after the PDF check described in finding 1.
 
-None was disagreed with. Each held finding waits on one ruling: whether `tests-independent.l4`'s signatures may be patched (its expected answers unchanged, except line 366, which is a dispute about the text), or whether the old names stay as documented helpers beside new guarded readings.
+None was disagreed with; finding 3 is the one where the encoding keeps its reading against the refuter's.
