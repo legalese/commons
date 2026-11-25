@@ -8,7 +8,7 @@ They do not say what a court must hold, and nothing in this encoding does either
 
 Status: `draft`, version 0.1.0, written 2026-11-25 by one encoder working alone from the brief, then revised the same day on an independent test pass (section 11) and an adversarial review (section 12).
 No domain expert has read it.
-Some of the review's requests are held, because the independent test file spells the names they would change (section 13).
+The review's requests that the independent test file pinned were held at first, then made later the same day on the coordinator's leave, with that file respelled in a commit of its own that changed no expected value (section 13).
 
 What was checked, and how:
 
@@ -16,7 +16,7 @@ What was checked, and how:
   It was read in full.
   Quotations were checked against that text, not against the PDF (the meta file warns that the extraction is not the authentic text): on 2026-11-25 a script took every double-quoted span in the modules' comments and in this file, split it at each `...`, and searched each piece in the flattened text, allowing a footnote number between words; every miss was read by hand, and was either one of this encoding's own result names or reading labels (not a quotation), a sentence broken by a page break or a footnote, or a misquotation, which was corrected.
 - `check.sh` was run with both builds, and its output is in section 7.
-- `check.sh` was shown able to fail: it exits 1 with a wrong expected count (a scratch copy expecting 156 for `ip-tests-boundaries.l4` before the review, and 163 after it) and with a main run that does not finish in `L4_MAIN_TIMEOUT`, and exits 2 with no main build, with an unstable build given as `L4_MAIN`, with a missing binary, and with a stub binary that prints nothing.
+- `check.sh` was shown able to fail: it exits 1 with a wrong expected count (a scratch copy expecting 156 for `ip-tests-boundaries.l4` before the review, 163 after it, and 169 after the renames of section 13) and with a main run that does not finish in `L4_MAIN_TIMEOUT`, and exits 2 with no main build, with an unstable build given as `L4_MAIN`, with a missing binary, and with a stub binary that prints nothing.
   `ip-tests-red.l4` holds four wrong assertions, and both builds fail all four.
 
 **Whether the guideline is in force** (what was read at source, and what was only reported):
@@ -40,8 +40,9 @@ This guideline's own disclaimers are these, and the modules' header comments car
 - n.19 [pdf page 8]: the Examples are hypothetical.
 - n.70 [pdf page 31]: "the factors listed are those that guide the Agencies' internal analysis in exercising their prosecutorial discretion".
 
-So the result types are named for what the agencies say they do, with the text's own modal ("will", "may", "would be likely to", "generally"), and no type says "lawful", "unlawful" or "illegal" of the arrangement as a holding of this encoding.
-**Five names do not meet that yet** (fork F25, held in section 13): the 3.3 results drop "ordinarily will treat"; 5.5's exclusion result drops "In general"; 5.5's pool wrapper returns 3.4's "will challenge" for the text's "subject to challenge"; and two turn a passive sentence into the agencies' own act: 5.2's "will be considered per se illegal" became "the agencies will consider the agreement per se illegal", and 5.5's "may be challenged as unlawful restraints of trade" became "the agencies may challenge the settlement as an unlawful restraint of trade".
+So the result types are named for what the agencies say they do, with the text's own modal ("will", "may", "would be likely to", "generally", "ordinarily will treat", "In general"), a passive sentence stays passive, and no type says "lawful", "unlawful" or "illegal" of the arrangement as a holding of this encoding.
+**Five names did not meet that until the renames of 2026-11-25** (fork F25, section 13): the 3.3 horizontal results now carry "ordinarily will treat"; 5.5's exclusion result carries "In general"; 5.5's pool function has its own type, "subject to challenge under the per se rule", where it returned 3.4's "will challenge"; and 5.2's "will be considered per se illegal" and 5.5's "may be challenged" stay passive, where the names had made them the agencies' own acts.
+One difference is kept: 3.4's "will challenge" against Example 6's "would be likely to" and Example 8's "may" (section 6).
 Section 6's "it may violate section 2 of the Sherman Act" keeps the text's own words.
 
 ## Seat
@@ -104,15 +105,15 @@ Every numbered part, every Example, and every footnote, with its disposition.
 | 3.1 Nature of the concerns | encoded | `3.1: when competition among actual or potential competitors may be adversely affected`. Its result's "sections 3.2 to 5" is this encoding's gloss on the text's "set forth below". |
 | 3.2 Markets affected | inert | Framing for 3.2.1 to 3.2.3. |
 | 3.2.1 Goods markets | inert | Delineation and share measurement follow the 2010 Horizontal Merger Guidelines (n.31); the shares are the caller's input. |
-| 3.2.2 Technology markets | encoded | Whether one is analysed (n.33, F24); the equal share of Example 2's Discussion (n.37), none where no technology market is analysed; the competitor test, where blocked wins (F16). |
+| 3.2.2 Technology markets | encoded | Whether one is analysed: rights marketed separately, an integral part of a marketed good (n.33), or not stated, which gives NOTHING (F24); the equal share of Example 2's Discussion (n.37), only for rights marketed separately; the competitor test, where blocked wins (F16). |
 | 3.2.3 Research and development markets | encoded | The delineation rule; the "may assign" equal share. How R&D competition may be harmed is explanation: inert. |
-| 3.3 Horizontal and vertical relationships | encoded | `3.3: the relationship of the parties in the market`, n.27. |
+| 3.3 Horizontal and vertical relationships | encoded | `3.3: the relationship of the parties in the market`, n.27; the horizontal component with the text's "ordinarily will treat" (F25). |
 | 3.4 Framework for evaluating restraints | encoded | `3.4: the mode of analysis`, `3.4: what the agencies do with the restraint`. |
 | 4 Rule-of-reason principles | inert | A heading. |
 | 4.1 Analysis of anticompetitive effects | inert | One framing sentence. |
 | 4.1.1 Market structure, coordination, foreclosure | encoded | A factor report, no weighing. |
 | 4.1.2 Exclusivity | encoded | Exclusive licensing and exclusive dealing in effect; the two "generally" statements. |
-| 4.2 Efficiencies and justifications | encoded | The definite steps; the considerations of reasonable necessity as a report. |
+| 4.2 Efficiencies and justifications | encoded | The definite steps, on the agencies' conclusion on the restraint's effect, and NOTHING before one (F23); the considerations of reasonable necessity as a report. |
 | 4.3 Antitrust "safety zone" | encoded | `4.3: the antitrust safety zone` and its parts. |
 | 5 / 5.0 Application of general principles | inert | "not intended as an exhaustive list". |
 | 5.1 Horizontal restraints | encoded | 3.4's test. |
@@ -133,7 +134,7 @@ Every numbered part, every Example, and every footnote, with its disposition.
 | 5 Cross-license of valves | encoded | Horizontal in part and vertical in part; licensing to others "not important". |
 | 6 Gamma's sham process | encoded | Per se; with a real advance used by licensees, rule of reason. The body's "will" kept against the Example's "would be likely to". |
 | 7 NewCo and BigCo | encoded | Exclusive licensing raises no concern absent a horizontal relationship; exclusive dealing under the rule of reason; the factor reports. The bottom line is supplied as the agencies' finding. |
-| 8 Jointly assigned substitutes | encoded | Per se without integration (3.4 "will challenge", 5.1 "may merit per se treatment"); rule of reason with it; the quick look (fork F11). |
+| 8 Jointly assigned substitutes | encoded | Per se without integration (3.4 "will challenge", 5.1 "may merit per se treatment", 5.5 "subject to challenge under the per se rule"); rule of reason with it; the quick look (fork F11). |
 | 9 Jointly assigned blocking patents | encoded | Not horizontal in the patents; horizontal in the goods market. The bottom line is supplied. |
 | 10 Omega and Delta | encoded | Horizontal (a potential competitor); the Example's own limb, "would apply a merger analysis" as an acquisition of a potential competitor, from the Situation's facts (nominally non-exclusive, every reasonable offer rejected); n.85's "may also apply" for the same license; the safety zone does not apply (n.86, F8). The license is not 5.7's exclusive license (section 6). |
 
@@ -180,7 +181,7 @@ Footnotes (90): 31 footnotes are named in 23 rows, 11 of them encoded, 13 inert 
   The fixture gives the Situation's facts, and three answers follow: n.85's "may also apply", the Example's own limb ("would apply", as an acquisition of a potential competitor), and n.86's "does not apply" for the safety zone (fork F8).
   Until the review of 2026-11-25 the fixture set the exclusive-license field TRUE so that 5.7's "will apply" answered; that reading is withdrawn.
 - **Examples 1, 7 and 9** reach "unlikely to object" or "unlikely to challenge" from considerations. No rule is minted from them: the fixtures supply the finding of no likely anticompetitive effect, and assert that 3.4 and 4.2 then give "will treat it as reasonable" and "will not challenge" (fork F26).
-- **Example 8.** "May conclude that the joint marketing ... constitutes horizontal price-fixing" is the classification of the restraint, which the caller supplies; once it is classed so, 3.4 says "will" and 5.1 says it "may merit per se treatment". The Example's own "may" is in no result (fork F25). Its "sufficiently apparent" effects are read as 3.4's "facially appears" (fork F11).
+- **Example 8.** "May conclude that the joint marketing ... constitutes horizontal price-fixing" is the classification of the restraint, which the caller supplies; once it is classed so, 3.4 says "will", 5.1 says it "may merit per se treatment", and 5.5 that pools that are mechanisms for price-fixing are "subject to challenge under the per se rule". The Example's own "may" is in no result (fork F25). Its "sufficiently apparent" effects are read as 3.4's "facially appears" (fork F11).
 
 ## 7. Checks
 
@@ -195,11 +196,11 @@ ip-nouns.l4                   0    0    0    0       0/0 |    0    0    0    0  
 ip-restraints.l4              0    0    0    0       0/0 |    0    0    0    0  same
 ip-rule-of-reason.l4          0    0    0    0       0/0 |    0    0    0    0  same
 ip-safety-zone.l4             0    0    0    0       0/0 |    0    0    0    0  same
-ip-tests-boundaries.l4        0  164    0    0     164/0 |    0  164    0    0  same
+ip-tests-boundaries.l4        0  170    0    0     170/0 |    0  170    0    0  same
 ip-tests-red.l4               4    0    4    0       0/4 |    4    0    4    0  same
 ip-tests.l4                   0   58    0    0      58/0 |    0   58    0    0  same
 tests-independent.l4          0  152    0    0     152/0 |    0  152    0    0  same
-TOTAL (9 modules): satisfied unstable 374, main 374; failed (positive controls) unstable 4, main 4
+TOTAL (9 modules): satisfied unstable 380, main 380; failed (positive controls) unstable 4, main 4
 (a failed assertion is also an error; the expected column is satisfied/failed)
 check.sh: all passed
 ```
@@ -212,8 +213,8 @@ What it does not see: equal counts on the two builds can hide a different assert
 
 Every reading below is **assumed, not ruled**.
 Each has a fixture in `ip-tests-boundaries.l4` (or `ip-tests.l4` where named) on which the reading taken and its alternative give different answers, except four that no fixture can tell apart: F9 and F25, which are only results' names; F18, whose alternative would leave the equal-share rule unused (its fixtures test the rule's own edges); and F26, whose alternative is a rule nobody has written.
-For F23 and F24 the alternative needs an input the record cannot hold, so their fixture is the case the alternative would answer differently, not a run of the alternative.
-F8, F16 and F22 were revised on review on 2026-11-25, and the cell says what the earlier reading was.
+F8, F16 and F22 were revised on review on 2026-11-25, and F23, F24 and F25 later the same day, when the names the independent test file pinned could be changed (section 13); each cell says what the earlier reading was.
+The fixtures for F23 and F24 are the cases the earlier reading answered differently.
 
 | fork | the question | reading taken | the alternative | the text |
 | --- | --- | --- | --- | --- |
@@ -224,7 +225,7 @@ F8, F16 and F22 were revised on review on 2026-11-25, and the cell says what the
 | F5 | Is 3.4's per se list closed? | Open: the caller may class another type as accorded per se treatment. | Closed to the four named. | 3.4 "Among the restraints"; 5.1 "including". |
 | F6 | With accurate share data, which criterion applies to a technology or research and development market? | The twenty percent test, as for goods markets. | The four-or-more count whenever enough others exist. | 4.3 [pdf page 26]: the counts apply "if market share data are unavailable or do not accurately represent competitive significance". Fixture: a technology market at 25 with five others. |
 | F7 | A goods market with no usable share data? | NOTHING: the text names no criterion. | Inside, or outside. | 4.3 gives the substitute criteria only for technology and research and development markets. |
-| F8 | n.85 transactions, n.86, and Example 10. | Three limbs: 5.7's exclusive license read word for word (the licensor precluded too), "will apply"; n.85's license that in substance transfers the rights and raises the same concern, "may also apply"; Example 10's own limb (nominally non-exclusive, every reasonable offer rejected, a potential competitor), "would apply". The zone does not apply to n.85's transfers either: n.86 speaks of transfers "such as those described in this section", and n.85 is in that section. | Example 10 as 5.7's exclusive license "in fact" (the reading before the review: but 5.7's definition needs the licensor precluded, which the Example never says, and the Example gives its own reason); and n.86 confined to the sale and the exclusive license, leaving an n.85 license's zone NOTHING (the reading before the review) or inside. | 5.7, n.85, n.86 [pdf page 36]; Example 10 [pdf pages 36-37]. Fixtures: the n.85 license and the zone in the boundaries file; Example 10 in `ip-tests.l4`. |
+| F8 | n.85 transactions, n.86, and Example 10. | Three limbs: 5.7's exclusive license read word for word (the licensor precluded too), "will apply"; n.85's license that in substance transfers the rights and raises the same concern, "may also apply"; Example 10's own limb (nominally non-exclusive, every reasonable offer rejected, a potential competitor), "would apply". The zone does not apply to n.85's transfers either: n.86 speaks of transfers "such as those described in this section", and n.85 is in that section. Since the renames of 2026-11-25 the field's name no longer says "in fact" (section 13). | Example 10 as 5.7's exclusive license "in fact" (the reading before the review: but 5.7's definition needs the licensor precluded, which the Example never says, and the Example gives its own reason); and n.86 confined to the sale and the exclusive license, leaving an n.85 license's zone NOTHING (the reading before the review) or inside. | 5.7, n.85, n.86 [pdf page 36]; Example 10 [pdf pages 36-37]. Fixtures: the n.85 license and the zone in the boundaries file; Example 10 in `ip-tests.l4`. |
 | F9 | "Absent extraordinary circumstances". | A qualifier kept in the result's name; not an input. | An input that defeats the zone. | 4.3; the text never says what they are (open question 2). |
 | F10 | No market to consider. | NOTHING. | Inside (no market fails). | 4.3 assumes at least one relevant market is significantly affected. |
 | F11 | Example 8's "sufficiently apparent" and "sufficiently weak or not reasonably related". | 3.4's "facially appears ... always or almost always", with efficiencies not reasonably related. | A separate standard. | Example 8 [pdf page 29]; 3.4 [pdf page 20]. Fixture in `ip-tests.l4`. |
@@ -239,9 +240,9 @@ F8, F16 and F22 were revised on review on 2026-11-25, and the cell says what the
 | F20 | Section 6: the "other elements", and fraud without them. | One input stands for both sentences' other elements. Fraud without them: the fraud sentence states nothing; if inequitable conduct is also found, its sentence says it will not be the basis of a section 2 claim, because "unless" needs both fraud and the elements. | Two inputs; or "may violate" without the elements. | 6 [pdf page 37] "if all the elements otherwise necessary to establish a charge are proved"; "will not be the basis of a section 2 claim unless". |
 | F21 | 3.1 when no concern appears; Example 3 with fewer than four and no significant risk. | NOTHING for both. So Example 1's "unlikely to object" is reached only through 4.1.2 (its result `generally, the exclusive licensing raises no antitrust concern: ...`, from the "only if" sentence) and the supplied finding (F26), never through 3.1. | That the agencies will not challenge; that the venture is unlikely to harm competition. | 3.1; Example 3. |
 | F22 | Example 3 with four or more others and a significant risk found. | The risk wins: "would proceed to consider efficiency justifications". The risk sentence is not conditioned on the count, and "ordinarily" leaves room for the case where the agency finds the risk anyway. | The risk sentence belongs to the fewer-than-four branch, so four or more gives "ordinarily would be unlikely" whatever is found (the reading before the review). | Example 3 [pdf pages 15-16]. Fixture in `ip-tests.l4`: four others, `JUST TRUE`. |
-| F23 | One input, "the agencies conclude that the restraint is unlikely to have an anticompetitive effect", for 3.4 and 4.2. | FALSE means both a conclusion that the restraint has, or is likely to have, such an effect and no conclusion yet. 3.4 reads it as "no conclusion of no effect", which fits both; 4.2 reads it as the contrary conclusion, which it needs before it balances, so a caller with no conclusion yet who says the restraint is reasonably necessary gets "will balance" early. | A three-valued input (no likely effect; a likely effect; not yet concluded), with 4.2 answering NOTHING until a conclusion is made. Held (section 13). | 4.2 [pdf page 25] "If the Agencies conclude that the restraint has, or is likely to have, an anticompetitive effect". Fixture: FALSE, FALSE, TRUE, FALSE gives "will balance". |
-| F24 | 3.2.2 when the rights are not marketed separately. | FALSE is read as n.33's case, IP licensed "as an integral part of a marketed good": "no need for a separate analysis of technology markets", and no equal share. A caller who has not said how the rights are licensed gets the same answer, which over-reads n.33. | A three-way input (marketed separately; an integral part; not stated, NOTHING). Held (section 13). | 3.2.2, n.33 [pdf page 11]; Example 2 [pdf page 12]. Fixture: FALSE gives "no need". |
-| F25 | Result names whose modal or attribution differs from the text. | Kept: 3.3's results without "ordinarily will treat" [pdf page 16]; 5.5's exclusion result without "In general" [pdf page 33]; 5.5's pool wrapper with 3.4's "will challenge" for "subject to challenge under the per se rule" [pdf page 32]; 5.2's "the agencies will consider the agreement per se illegal" for the passive "will be considered per se illegal" [pdf page 30]; 5.5's "the agencies may challenge the settlement" for the passive "may be challenged as unlawful restraints of trade" [pdf page 32]; and 3.4's "will challenge" where Example 6 says "would be likely to" and Example 8 "may". | The text's words in each name. Held for the first five (section 13); 5.1 has been given its own words ("may merit per se treatment"). | The sentences cited. A name only: no fixture tells them apart. |
+| F23 | The agencies' conclusion on the restraint's effect, read by 3.4 and 4.2. | Three values (revised 2026-11-25): no likely effect; has, or is likely to have, one; not yet concluded. 3.4 reads only the first ("will treat it as reasonable") and leaves the other two to part 4's inquiry. 4.2's later steps (necessity, the clear alternative, the balance) follow the second, and before any conclusion 4.2 answers NOTHING. | One BOOLEAN whose FALSE stood for both a contrary conclusion and none yet, read by 4.2 as the contrary one, so a caller with no conclusion who said the restraint was reasonably necessary got "will balance" early (the reading before the renames); or the alternative sentence speaking before a conclusion. | 4.2 [pdf page 25] "If the Agencies conclude that the restraint has, or is likely to have, an anticompetitive effect". Fixtures: no conclusion yet with necessity, and with a clear alternative, give NOTHING; a likely effect with necessity gives "will balance"; 3.4 gives the inquiry for both. |
+| F24 | 3.2.2 when the rights are not marketed separately. | Three values (revised 2026-11-25): rights marketed separately, "may analyze"; licensed "as an integral part of a marketed good" (n.33), "no need for a separate analysis of technology markets"; not stated, NOTHING. The equal share needs the first. | One BOOLEAN whose FALSE was read as n.33's case, so a caller who had not said how the rights are licensed got n.33's answer (the reading before the renames). | 3.2.2, n.33 [pdf page 11]; Example 2 [pdf page 12]. Fixtures: the three values for the analysis; the share for the other two. |
+| F25 | Result names whose modal or voice differs from the text. | The text's modal or voice in each name (revised 2026-11-25): 3.3's horizontal results "ordinarily will treat" [pdf page 16], while the vertical result is stated flatly, as the text states it, and `no horizontal or vertical component` is this encoding's name for a case the text does not discuss; 5.5's exclusion "In general" [pdf page 33]; 5.5's pool function its own type, "subject to challenge under the per se rule" [pdf page 32]; 5.2's "will be considered per se illegal" [pdf page 30] and 5.5's settlement "may be challenged" [pdf page 32], passive as in the text; 5.1's "may merit per se treatment" [pdf page 28]. Still kept: 3.4's "will challenge" where Example 6 says "would be likely to" and Example 8 "may". | The readings before the renames: the 3.3 results without "ordinarily", 5.5's exclusion without "In general", 3.4's result for 5.5's pools, and the agencies as the actor of the two passive sentences. | The sentences cited. A name only: no fixture tells them apart. |
 | F26 | The bottom lines of Examples 1, 7 and 9. | Supplied as the agencies' finding of no likely anticompetitive effect; the fixtures assert what 3.4 and 4.2 do with it. Without the supplied finding no rule reaches "unlikely to challenge" or "unlikely to object". | Computing the bottom line from the facts (an empty 4.1.1 report, no horizontal relationship). | Examples 1, 7, 9. No fixture: the alternative is a rule the text does not state. |
 | F27 | An impossible share the zone does not reach. | Passed over: condition (1) is checked before the shares, so a per se restraint beside a share of 150 is "outside"; and a market not considered is not checked, so a technology market at 500 is ignored when goods-market analysis is adequate. | NOTHING whenever any listed share is impossible. | 4.3; F19's order. Fixtures: both cases. |
 
@@ -276,45 +277,94 @@ Before this round's fixes it gave 149 satisfied and 3 failed on both builds (uns
 | C4, a clear, significantly less restrictive alternative and a finding of reasonable necessity | "will not give weight" | **An encoding error.** The encoding answered NOTHING for contradictory findings. Fixed: the unconditioned sentence wins (F16). |
 
 After the fixes: 152 satisfied, 0 failed, on both builds (section 7).
-No other assertion in the file was edited.
+No other expected value in the file was edited.
+Later the same day, on the coordinator's leave, the file was respelled for the renames, in a commit of its own whose every change is a name, a field-name mapping, a wrapper or the header note that says so: no expected value and no input value changed, and it still gives 152 satisfied, 0 failed, on both builds (section 13 lists the lines and the mapping).
 
-Two passing assertions rest on a reading this encoding no longer takes: lines 736 and 737 give Example 10 the exclusive-license field TRUE, and expect 5.7's "an exclusive license" and the zone not applying. They pass because the function still maps that field to that answer; the encoding's own Example 10 fixture now sets the field FALSE (F8). They are left as the author wrote them.
+**Example 10 goes through different rules in the two test files.**
+The independent author's Example 10 assertions (lines 736 and 737) go through the "precludes" field: they set 5.7's exclusive-license field, `the transferee obtains a license that precludes all other persons, including the licensor, from using the licensed intellectual property`, to TRUE, and expect 5.7's "an exclusive license" and the zone not applying.
+The encoding's own Example 10 fixture (`ip-tests.l4`) now goes through Example 10's own limb: it sets that field FALSE, because the Situation never says Omega is precluded from using its own patent, and reaches "would apply a merger analysis" through `Example 10: merger analysis of a license exclusive in fact to a potential competitor` (F8).
+The two independent assertions pass because 5.7 still maps that field to that answer, so they test 5.7's exclusive-license limb, not Example 10 as this encoding reads it.
+They are left as the author wrote them.
 
 ## 12. Adversarial review
 
 A fresh agent was asked to refute the encoding against the text, on 2026-11-25.
 The coordinator relayed its findings 2 to 10 by number, and the Example 10 finding, which both reviewers made, as a separate item; this section counts that one as finding 1.
-"Fixed" means the code now follows the text; "narrowed" means part was fixed and the rest is a fork held in section 13; none was disagreed with.
+"Fixed" means the code now follows the text; "narrowed" means part was fixed at once and the rest, held at first because the independent test file pinned it, was made later the same day (section 13); none was disagreed with.
 
 | finding | the text | what was done |
 | --- | --- | --- |
-| 1. Example 10's fixture says the licensor is precluded; n.85 and n.86 misread. | 5.7, n.85, n.86 [pdf page 36]; Example 10 [pdf pages 36-37]. | **Fixed**, except the field's name (held). Three limbs, the Situation's own facts, and the zone out for n.85 transfers (F8). |
+| 1. Example 10's fixture says the licensor is precluded; n.85 and n.86 misread. | 5.7, n.85, n.86 [pdf page 36]; Example 10 [pdf pages 36-37]. | **Fixed.** Three limbs, the Situation's own facts, and the zone out for n.85 transfers (F8); the field's name, held at first, later (section 13). |
 | 2. F15 has no discriminating fixture. | 4.3 [pdf page 26]. | **Fixed.** Fixture added; section 8 corrected. |
 | 3. Example 3 with four or more ignores a significant risk found. | Example 3 [pdf pages 15-16]. | **Fixed.** The risk wins; both readings in F22. |
-| 4. One input stands for "no effect found" and "no finding yet". | 4.2 [pdf page 25]. | **Narrowed.** Fork F23 and a fixture; the three-valued input is held. |
+| 4. One input stands for "no effect found" and "no finding yet". | 4.2 [pdf page 25]. | **Narrowed, then fixed.** Fork F23 and a fixture at once; the three-valued input later (section 13). |
 | 5. F16's contradictions answer NOTHING where the text says which wins. | 4.2 [pdf page 25]; Example 9 [pdf page 34]. | **Fixed.** A clear alternative wins; blocked wins. 3.4's pair stays NOTHING (F16). |
-| 6. 3.2.2's FALSE over-reads n.33; the equal share is given where no technology market is analysed. | 3.2.2, n.33 [pdf page 11]. | **Narrowed.** No equal share without a technology market; fork F24; the three-way input is held. |
+| 6. 3.2.2's FALSE over-reads n.33; the equal share is given where no technology market is analysed. | 3.2.2, n.33 [pdf page 11]. | **Narrowed, then fixed.** No equal share without a technology market, and fork F24, at once; the three-way input later (section 13). |
 | 7. Section 6's inequitable-conduct sentence is gated on enforcement. | 6 [pdf page 37]. | **Fixed.** It answers without enforcement; a fixture shows it. |
-| 8. Result names drop the text's modals or make passive sentences the agencies' acts. | 3.3 [pdf page 16]; 5.1 [pdf page 28]; 5.2 [pdf page 30]; 5.5 [pdf pages 32-33]. | **Narrowed.** 5.1 now has its own words. The other five names are held (F25), and section 1 says which; Examples 6 and 8 are recorded in F25. |
+| 8. Result names drop the text's modals or make passive sentences the agencies' acts. | 3.3 [pdf page 16]; 5.1 [pdf page 28]; 5.2 [pdf page 30]; 5.5 [pdf pages 32-33]. | **Narrowed, then fixed.** 5.1 had its own words at once; the other five names later (F25; section 13). Examples 6 and 8 are recorded in F25. |
 | 9. Section 1 attributed the "no independent rights" words wrongly and was stale about `SOURCE-LICENSE.md`. | This text has no such sentence; the 2023 Merger Guidelines do. | **Fixed.** Section 1 rewritten. |
 | 10. Nits. | As cited. | **Fixed**: F12's page (35); "reported" on the withdrawal in section 5; "blocks" in `ip-nouns.l4`; the boundaries header; the footnote count (31 footnotes in 23 rows); n.62 marked inert; "sections 3.2 to 5" labelled a gloss. |
 
 The independent test author's observations are recorded as forks: Examples 1, 7 and 9's supplied findings (F26); Example 1 reachable only through 4.1.2 (F21); a share of 150 beside a per se restraint, and a technology share of 500 the zone does not consider (F27).
 
-## 13. Held: changes the independent test file pins
+## 13. The renames the independent test file pinned: held, then made
 
-The coordinator asked that no independent assertion be edited except B6.
 `tests-independent.l4` builds every record with `WITH`, which must supply every field (a probe on both builds: a missing field is the error `check/missing-named-arguments`), and it names result constructors in its assertions.
-So the changes below would make the whole file fail to type-check, and are held until the coordinator allows its spellings to be changed.
-Each is a fork, and each place in the code says so.
+So the changes below would have stopped it type-checking, and they were held while the coordinator allowed only B6's expected value to change.
+On 2026-11-25 the coordinator gave leave to make them and to respell the file, on four conditions: the respelling a separate commit, signature only; no expected value and no input value changed; this record of the lines changed and of the mapping; and 152 satisfied, 0 failed, on both builds after it, or a stop.
+All four hold.
 
-| change asked | why it is held (lines of `tests-independent.l4` as committed) | fork |
+| change | fork | modules changed |
 | --- | --- | --- |
-| Rename the field "the transferee obtains a license that in fact precludes all other persons, including the licensor, ..." to drop "in fact". | Line 62 constructs the record with that field. | F8 (the field already means 5.7's definition; its comment says so) |
-| A three-valued finding for 4.2 (no likely effect; a likely effect; no conclusion yet). | Line 322 constructs `Findings under the rule of reason` with that field as a BOOLEAN. | F23 |
-| A three-way input for 3.2.2 (marketed separately; an integral part of a marketed good; not stated). | Line 384 constructs the record with a BOOLEAN; line 549 expects "no need" for FALSE. | F24 |
-| The text's modal in the 3.3 results ("ordinarily will treat"). | Lines 514, 518, 671, 672, 681. | F25 |
-| 5.5's exclusion result with "In general". | Lines 582, 583. | F25 |
-| 5.5's pool wrapper in its own words ("subject to challenge under the per se rule"). | Lines 576, 577, 715 expect 3.4's constructor. | F25 |
-| 5.2's passive "will be considered per se illegal". | Line 558 (the cartel assertion). | F25 |
-| 5.5's passive "may be challenged as unlawful restraints of trade". | Lines 592, 593. | F25 |
+| The 5.7 field drops "in fact": `the transferee obtains a license that precludes all other persons, including the licensor, from using the licensed intellectual property`. | F8 | `ip-nouns.l4`, `ip-restraints.l4` |
+| A three-valued conclusion on the restraint's effect, `Conclusion on the restraint's anticompetitive effect (3.4, 4.2)`; 4.2 answers NOTHING before a conclusion. | F23 | `ip-nouns.l4`, `ip-framework.l4` (3.4), `ip-rule-of-reason.l4` (4.2) |
+| A three-way input for 3.2.2, `How the intellectual property is licensed (3.2.2)`; not stated gives NOTHING, so the analysis now returns a MAYBE. | F24 | `ip-nouns.l4`, `ip-framework.l4` |
+| The 3.3 horizontal results with "ordinarily will treat"; 5.5's exclusion with "In general"; 5.5's pool function with its own type; 5.2 and 5.5's settlement passive. | F25 | `ip-framework.l4`, `ip-restraints.l4` |
+
+The encoding's own tests were changed in the same commit as the modules, and gained six assertions that tell the new values apart (`ip-tests-boundaries.l4`, 164 to 170).
+At that commit `tests-independent.l4` does not type-check, so `check.sh` is red there; it is green from the next commit, the respelling, on.
+The two commits therefore go together, and the respelling cannot be reverted alone.
+
+**The respelling of `tests-independent.l4`** is the commit whose subject ends `tests-independent.l4 respelled for the renames`, and whose message says `signature-only: constructors, field names, CONSIDER wrappers; no expected value touched`.
+Its line numbers are the same before and after: every change is within its line, and the one new definition is appended after the last assertion.
+
+| lines | what changed |
+| --- | --- |
+| 27-29 | The header note, which said the file was as its author left it but for B6, now says the renames were respelled too (still three lines). |
+| 62 | The 5.7 field name, without "in fact". |
+| 322 | The Findings field name, with an `IF` that maps the helper's BOOLEAN (below). |
+| 384 | The 3.2.2 field name, with an `IF` that maps the helper's BOOLEAN (below). |
+| 514, 681 | The 3.3 result `a vertical relationship, which the agencies ordinarily will treat as also having a horizontal component`. |
+| 549, 653 | The call to `3.2.2: whether a technology market is analysed`, wrapped in the new helper; the expected value is unchanged. |
+| 558 | 5.2's result `the agreement constitutes a horizontal cartel, and will be considered per se illegal`. |
+| 576-577, 715 | 5.5's pool result `the arrangement is subject to challenge under the per se rule`. |
+| 582-583 | 5.5's exclusion result `in general, exclusion is unlikely to have anticompetitive effects`. |
+| 592-593 | 5.5's settlement result `the settlement may be challenged as an unlawful restraint of trade`. |
+| 672 | The 3.3 result `the agencies ordinarily will treat the relationship as having a horizontal component`. |
+| 742-757 | New: the helper `indep: the answer, with no NOTHING branch`, with its comment. |
+
+Lines 518 and 671 expect the 3.3 result `a vertical relationship`, whose name did not change: the text states the vertical component flatly.
+
+**The mapping, and why.**
+Two helpers take a BOOLEAN where the record now takes one of three values, so each maps its BOOLEAN to one value, for every call:
+
+- `indep: findings` (line 322): TRUE to `the agencies conclude that the restraint is unlikely to have an anticompetitive effect`, FALSE to `the agencies conclude that the restraint has, or is likely to have, an anticompetitive effect`.
+  The author's comment at C2 (line 491) calls that case "likely anticompetitive", and the author's written answers for C2 and C3, made before the encoding was read, say "likely anticompetitive effect".
+  Mapping FALSE to `the agencies have not yet concluded on the restraint's anticompetitive effect` instead makes lines 495, 499 and 500 fail (C3 and C4), measured on the unstable build in a scratch copy of this folder; every other assertion passed there.
+  So the other calls that pass FALSE pass under either mapping: those to 3.4 (lines 463, 470, 481 and 721), because 3.4 reads a contrary conclusion and none alike (F23); C2 (line 493), which expects NOTHING; and C5 (lines 502 and 503), whose function does not read the field.
+- `indep: technology facts` (line 384): TRUE to `the rights to the intellectual property are marketed separately from the products in which they are used`, FALSE to `the intellectual property is licensed, sold or transferred as an integral part of a marketed good`.
+  Only line 549 passes FALSE, and its comment (lines 547-548) reads FALSE as intellectual property licensed as an integral part of a marketed good (n.33).
+  The file's header counts n.33 among the assertions with no pre-written answer, so this mapping rests on that comment alone.
+  Mapping FALSE to `how the intellectual property is licensed is not stated` instead makes line 549 an evaluation error (next paragraph); the other 151 passed.
+
+**The new wrapper has no NOTHING branch, on purpose.**
+3.2.2's analysis now returns a MAYBE, and lines 549 and 653 expect a bare value; rather than add `JUST` on the expected side, they read the answer through `indep: the answer, with no NOTHING branch`, a `CONSIDER` with only `WHEN JUST a THEN a`.
+A NOTHING reaching it fails loudly, never passes: on both builds the assertion is reported as `assertion could not be evaluated` (code `eval/non-exhaustive-patterns`, an Error), which `check.sh` counts as failed.
+That was probed on 2026-11-25 on a small file of its own, where the same holds under `NOT`, and on the scratch copy above with FALSE mapped to "not stated", where line 549 errored.
+The unstable build also warns about the missing branch at check time (`lint/non-exhaustive-match`, a Warning, which `check.sh` does not count); main does not.
+Neither assertion can reach NOTHING as written, because the BOOLEAN maps to one of the two stated values.
+
+**Mechanical evidence.**
+`git show --word-diff=plain` of the respelling commit was saved for the coordinator outside the repository, and regenerates from the commit.
+With every backticked name blanked, the TRUE, FALSE, NOTHING, EMPTY, JUST, NOT, OR, AND, EQUALS, numbers and strings on each of the 152 `#ASSERT` lines are identical before and after the commit (a script compared the two lists, 2026-11-25).
+After it: 152 satisfied, 0 failed, on both builds (section 7).
