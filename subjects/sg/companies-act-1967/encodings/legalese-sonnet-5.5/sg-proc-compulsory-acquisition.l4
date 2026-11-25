@@ -1,0 +1,423 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `sg-core`
+IMPORT `sg-periods`
+IMPORT `sgd-acquisition`
+
+-- Companies Act 1967 (Singapore), 2020 Revised Edition, SSO informal consolidation "version in force from 6/5/2026 to 20/10/2026":
+-- the compulsory acquisition of the shares of dissenting shareholders after a take-over offer (s 215), and joint offers (s 215AA), as ONE CHAIN of steps,
+-- a regulative layer over the Boolean encoding in sgd-acquisition.l4. The gates are the existing section functions, called and not restated.
+-- The chain, each clock measured from its own trigger: the offer is made; the holders of not less than 90% approve it within 4 months after the offer (s 215(1));
+-- the transferee gives notice to a dissenting shareholder within 2 months after the approval (s 215(1)); the dissenting shareholder may apply to the Court within one month from the notice,
+-- or within 14 days of a statement being supplied, whichever is the later (s 215(1)); then, the Court not having ordered to the contrary, the transferee transmits the notice with the instrument of transfer and pays (s 215(4)).
+-- Beside the chain: the dissenter's demand for the other dissenters' names (s 215(2)); the election between alternative terms (s 215(1A), (1B));
+-- the sell-out leg once transfers reach 90% (s 215(3)); the company's registration, bank account and trust (ss 215(4), (5)); the transfer to the Official Receiver and what the Official Receiver does (ss 215(6), (7)); the joint notice (s 215AA(6)).
+-- Parties are the corpus's own `Party` (sg-core.l4). Every month or year period is turned into a number of days by sg-periods from DATE inputs, because a TRACE has no calendar:
+-- each DATE input must agree with the day of the trace on which that event happens (day 0 of the trace is the first trigger named in the rule's TIMELINE line).
+-- Where a step is a power with a time limit (MAY ... WITHIN), a missed limit is not a breach: the text states no consequence except that the power is gone, so LEST is FULFILLED.
+-- Where a step is a duty with no last day in the text, it carries no WITHIN and no LEST (a LEST on a clock-less MUST can never be reached).
+
+DECLARE `s 215 chain act` IS ONE OF
+    `s 215(1) the holders of not less than 90% of the shares approve the scheme or contract`
+    `s 215(1) the transferee gives notice to the dissenting shareholder that it desires to acquire the shares`
+    `s 215(1) the dissenting shareholder applies to the Court for an order that the transferee is not bound to acquire the shares`
+    `s 215(1) the Court orders that the transferee is not entitled and bound to acquire the shares`
+    `s 215(1) the Court disposes of the application without ordering to the contrary`
+    `s 215(1A) the dissenting shareholder elects which of the alternative terms the shareholder prefers`
+    `s 215(1B) the transferee states in the offer which of the alternative terms is to apply on a failure to elect`
+    `s 215(2) the dissenting shareholder serves a written demand for the statement of the names and addresses of the other dissenting shareholders`
+    `s 215(2) the transferor company supplies the statement and posts it to the dissenting shareholder`
+    `s 215(3)(a) the transferee gives notice that the transfers have reached 90% to the holders of the remaining shares who have not assented`
+    `s 215(3)(b) the holder requires the transferee to acquire the shares in question`
+    `s 215(3) the transferee acquires the shares that the holder requires it to acquire`
+    `s 215(4)(a) the transferee transmits a copy of the notice and the executed instrument of transfer to the transferor company`
+    `s 215(4)(b) the transferee pays, allots or transfers the price of the shares to the transferor company`
+    `s 215(4) the transferor company registers the transferee as the holder of the shares`
+    `s 215(5) the transferor company pays the sums it received into a separate bank account`
+    `s 215(5) the transferor company holds the sums and other consideration in trust for the persons entitled`
+    `s 215(6) the company holding the money or other consideration transfers it to the Official Receiver`
+    `s 215(7)(a) the Official Receiver deals with the moneys as if they were paid under section 197 of the Insolvency, Restructuring and Dissolution Act 2018`
+    `s 215(7)(b) the Official Receiver sells or disposes of the other consideration and deals with the proceeds as if they were moneys paid under section 197`
+    `s 215AA(6) a joint transferee joins in making the notice, and a joint transferee that is a company has a director sign it`
+
+§ `Helpers: periods turned into days`
+
+-- A month or a year has no fixed number of days, so the length of each window is the number of days from the day of its trigger to the last day of the period (sg-periods P1, P4).
+GIVEN `the day of the event` IS A DATE
+      `the number of units` IS A NUMBER
+      `the unit` IS A `Period unit`
+GIVETH A NUMBER
+`s 215 chain: the days from the event to the last day of a period after it` MEANS
+    (`period: the last day of a period after` `the day of the event` `the number of units` `the unit`) MINUS `the day of the event`
+
+-- "within one month from the date on which the notice was given or within 14 days of a statement being supplied (whichever is the later)": the days from the notice to the last day of the later.
+GIVEN `the day the notice was given under subsection (1)` IS A DATE
+      `the day the statement was supplied under subsection (2), if one was` IS A MAYBE DATE
+GIVETH A NUMBER
+`s 215(1) chain: the days from the notice to the last day of the later of the one month and the 14 days` MEANS
+    (`s 215(1) the last day of the later of the one month and the 14 days` `the day the notice was given under subsection (1)` `the day the statement was supplied under subsection (2), if one was`) MINUS `the day the notice was given under subsection (1)`
+
+§ `Section 215(4): the transferee's duties once the notice has been given`
+
+-- TIMELINE: unit=calendar day; day 0=the first day on which the transferee must act, which is the day after the end of the later of the one month after the notice and the 14 days after the statement, or the day after the Court disposes of a pending application (the existing function `s 215(4) the first day on which the transferee must act` gives the date); counting="after the expiration of one month after the date on which the notice has been given or, after 14 days after a statement has been supplied ... or if an application to the Court by the dissenting shareholder is then pending, after that application has been disposed of" (the text sets the earliest day and no last day, so no clock is encoded and nothing here can be breached by delay)
+-- FORK: s 215(4) | (a) the copy of the notice with the instrument of transfer, and (b) the payment, are joined by "and" and not put in an order, so each is a MUST open from day 0, in either order (RAND) | (a) before (b)
+-- FORK: s 215(4) | the earliest day is not a prohibition: a transmission or payment made before the one month or the 14 days is not a breach, because the text says the transferee "must, after" and states no bar before it; the chain below reaches this rule only after the dissenter's window has ended or the Court has disposed of the application | an early payment as a breach
+-- FORK: s 215(4) | "or if an application ... is then pending, after that application has been disposed of" is read as the later of the end of the window and the disposal, as the existing function does (F-215-14 in sgd-acquisition.l4) | the disposal alone, even where it comes before the end of the window
+-- src:20741 | (4) Where a notice has been given by the transferee under
+-- src:20742 | subsection (1) and the Court has not, on an application made by
+-- src:20743 | the dissenting shareholder, ordered to the contrary, the transferee
+-- src:20744 | must, after the expiration of one month after the date on which the
+-- src:20745 | notice has been given or, after 14 days after a statement has been
+-- src:20746 | supplied to a dissenting shareholder pursuant to subsection (2) or if an
+-- src:20747 | application to the Court by the dissenting shareholder is then pending,
+-- src:20748 | after that application has been disposed of —
+-- src:20750 | (a) transmit a copy of the notice to the transferor company
+-- src:20751 | together with an instrument of transfer executed, on behalf
+-- src:20752 | of the shareholder by any person appointed by the
+-- src:20753 | transferee, and on its own behalf by the transferee; and
+-- src:20755 | (b) pay, allot or transfer to the transferor company the amount
+-- src:20756 | or other consideration representing the price payable by the
+-- src:20757 | transferee for the shares which by virtue of this section the
+-- src:20758 | transferee is entitled to acquire,
+-- src:20760 | and the transferor company must thereupon register the transferee as
+-- src:20761 | the holder of those shares.
+@ref s 215(4) the transferee's duties after the notice (src:20741-20761)
+GIVEN transferee IS A Party
+      `a notice has been given by the transferee under subsection (1)` IS A BOOLEAN
+      `the Court has, on an application made by the dissenting shareholder, ordered to the contrary` IS A BOOLEAN
+GIVETH A DEONTIC Party `s 215 chain act`
+`s 215(4) chain: the transferee must transmit the notice and pay, but only once a notice has been given and the Court has not ordered to the contrary` MEANS
+    IF (`s 215(4) the transferee must transmit a copy of the notice and pay, allot or transfer the consideration to the transferor company` `a notice has been given by the transferee under subsection (1)` `the Court has, on an application made by the dissenting shareholder, ordered to the contrary`) EQUALS JUST TRUE
+    THEN ((PARTY transferee
+           MUST `s 215(4)(a) the transferee transmits a copy of the notice and the executed instrument of transfer to the transferor company`
+           HENCE FULFILLED)
+          RAND
+          (PARTY transferee
+           MUST `s 215(4)(b) the transferee pays, allots or transfers the price of the shares to the transferor company`
+           HENCE FULFILLED))
+    ELSE FULFILLED
+
+§ `Section 215(1): the approval, the notice, the application to the Court and the payment, as one chain`
+
+-- TIMELINE: unit=calendar day; day 0=the day the transferee makes the offer; counting="within 4 months after the making of the offer" for the approval (the window opens the day after the offer, sg-periods P2; the last day is the offer day plus 4 months, from the DATE input of the offer day); each later step is chained by HENCE, so its clock restarts on the day the step before it is done: "within 2 months, after the offer has been so approved" runs from the approval day (a DATE input that must equal the trace day on which the approval happens); "within one month from the date on which the notice was given or within 14 days of a statement being supplied ... (whichever is the later)" runs from the notice day and the statement day (two DATE inputs that must equal the trace days); the payment duty is the rule above, reached only through the notice
+-- FORK: s 215(1) | the approval by the holders is a MAY of the holders with a limit of 4 months, and a lapse ends the chain with nothing owed (FULFILLED) | the approval as something that happens outside the rule, supplied as a Boolean
+-- FORK: s 215(1) | a notice outside the 2 months, or a notice to a shareholder who is not dissenting, or a notice not in the prescribed manner, is no notice under subsection (1): the existing gate does not answer JUST TRUE and the chain ends with nothing owed | a late or irregular notice as a breach by the transferee
+-- FORK: s 215(1) | "supplied" is read as the day the statement is posted (subsection (2)), as the existing function does (F-215-5 in sgd-acquisition.l4) | the day the statement is received
+-- FORK: s 215(1) | the Court's order is a MAY of the Court with no time limit (the text has none): to order otherwise ends the chain, and to dispose of the application without ordering otherwise sends the transferee to its duties in subsection (4) | the Court's silence as a refusal
+-- Where no application is made in time the transferee's duties of subsection (4) follow at once (LEST of the application step): the text makes the transferee "entitled and bound" "when such a notice is given" unless the Court orders otherwise.
+-- src:20595 | 215.—(1) Where a scheme or contract involving the transfer of all
+-- src:20596 | of the shares or all of the shares in any particular class in a company
+-- src:20597 | (called in this section the transferor company) to a person (called in
+-- src:20598 | this section the transferee) has, within 4 months after the making of
+-- src:20599 | the offer in that behalf by the transferee, been approved as to the
+-- src:20600 | shares or as to each class of shares whose transfer is involved by the
+-- src:20601 | holders of not less than 90% of the total number of those shares
+-- src:20602 | (excluding treasury shares) or of the shares of that class (other than
+-- src:20603 | shares already held at the date of the offer by the transferee, and
+-- src:20604 | excluding any shares in the transferor company held as treasury
+-- src:20605 | shares), the transferee may at any time within 2 months, after the offer
+-- src:20606 | has been so approved, give notice in the prescribed manner to any
+-- src:20607 | dissenting shareholder that it desires to acquire the dissenting
+-- src:20608 | shareholder’s shares; and when such a notice is given the
+-- src:20609 | transferee is, unless on an application made by the dissenting
+-- src:20610 | shareholder within one month from the date on which the notice was
+-- src:20611 | given or within 14 days of a statement being supplied to a dissenting
+-- src:20612 | shareholder pursuant to subsection (2) (whichever is the later) the
+-- src:20613 | Court thinks fit to order otherwise, entitled and bound to acquire
+-- src:20614 | those shares on the terms which, under the scheme or contract the
+-- src:20615 | shares of the approving shareholders are to be transferred to the
+-- src:20616 | transferee or if the offer contained 2 or more alternative sets of terms
+-- src:20617 | upon the terms which were specified in the offer as being applicable
+-- src:20618 | to dissenting shareholders.
+@ref s 215(1) the offer approved by 90%, the notice, the application to the Court (src:20595-20618)
+GIVEN approvers IS A Party
+      transferee IS A Party
+      dissenter IS A Party
+      involves IS A `s 215(1) what the scheme or contract involves`
+      counts IS A `s 215(1) share count`
+      `the day the offer was made by the transferee` IS A DATE
+      `the day the holders of the requisite number of the shares approved the offer` IS A DATE
+      `the shareholder is a dissenting shareholder` IS A BOOLEAN
+      `the notice is given in the prescribed manner` IS A BOOLEAN
+      `the day the transferee gave the notice under subsection (1)` IS A DATE
+      `the day the statement was supplied under subsection (2), if one was` IS A MAYBE DATE
+GIVETH A DEONTIC Party `s 215 chain act`
+`s 215(1) chain: the approval within 4 months, the notice within 2 months, the application to the Court, then the payment` MEANS
+    PARTY approvers
+    MAY `s 215(1) the holders of not less than 90% of the shares approve the scheme or contract`
+    WITHIN (`s 215 chain: the days from the event to the last day of a period after it` `the day the offer was made by the transferee` 4 Months)
+    HENCE (IF (`s 215(1) the scheme or contract has been approved by the holders of the requisite number of the shares` involves counts `the day the offer was made by the transferee` `the day the holders of the requisite number of the shares approved the offer`) EQUALS JUST TRUE
+           THEN (PARTY transferee
+                 MAY `s 215(1) the transferee gives notice to the dissenting shareholder that it desires to acquire the shares`
+                 WITHIN (`s 215 chain: the days from the event to the last day of a period after it` `the day the holders of the requisite number of the shares approved the offer` 2 Months)
+                 HENCE (IF (`s 215(1) the transferee may give notice to the dissenting shareholder that it desires to acquire the shares` TRUE `the day the holders of the requisite number of the shares approved the offer` `the day the transferee gave the notice under subsection (1)` `the shareholder is a dissenting shareholder` `the notice is given in the prescribed manner`) EQUALS JUST TRUE
+                        THEN (PARTY dissenter
+                              MAY `s 215(1) the dissenting shareholder applies to the Court for an order that the transferee is not bound to acquire the shares`
+                              WITHIN (`s 215(1) chain: the days from the notice to the last day of the later of the one month and the 14 days` `the day the transferee gave the notice under subsection (1)` `the day the statement was supplied under subsection (2), if one was`)
+                              HENCE ((PARTY Court
+                                      MAY `s 215(1) the Court orders that the transferee is not entitled and bound to acquire the shares`
+                                      HENCE FULFILLED)
+                                     ROR
+                                     (PARTY Court
+                                      MAY `s 215(1) the Court disposes of the application without ordering to the contrary`
+                                      HENCE (`s 215(4) chain: the transferee must transmit the notice and pay, but only once a notice has been given and the Court has not ordered to the contrary` transferee TRUE FALSE)))
+                              LEST (`s 215(4) chain: the transferee must transmit the notice and pay, but only once a notice has been given and the Court has not ordered to the contrary` transferee TRUE FALSE))
+                        ELSE FULFILLED)
+                 LEST FULFILLED)
+           ELSE FULFILLED)
+    LEST FULFILLED
+
+§ `Section 215(1A) and (1B): alternative terms`
+
+-- TIMELINE: unit=calendar day; day 0=the day the transferee gave the notice under subsection (1); counting="not later than the end of one month after the date on which the notice is given under subsection (1), or 14 days after a statement is supplied under subsection (2), whichever is the later" (the same window as the application to the Court, from the notice day and the statement day, two DATE inputs)
+-- FORK: s 215(1A) | the election is a MAY of the dissenting shareholder, and a missed window is not a breach: the shareholder's election is lost, and the terms stated under (1B) apply | the election as a duty
+-- src:20622 | (1A) Where alternative terms were offered to the shareholders, a
+-- src:20623 | dissenting shareholder is entitled to elect not later than the end of
+-- src:20624 | one month after the date on which the notice is given under
+-- src:20626 | Informal Consolidation – version in force from 6/5/2026 to 20/10/2026
+-- src:20627 | 417 Companies Act 1967 2020 Ed.
+-- src:20629 | subsection (1), or 14 days after a statement is supplied under
+-- src:20630 | subsection (2), whichever is the later, which of those terms the
+-- src:20631 | dissenting shareholder prefers.
+@ref s 215(1A) the election between alternative terms (src:20622-20631)
+GIVEN dissenter IS A Party
+      `alternative terms were offered to the shareholders` IS A BOOLEAN
+      `a notice has been given by the transferee under subsection (1) to the dissenting shareholder` IS A BOOLEAN
+      `the day the notice was given under subsection (1)` IS A DATE
+      `the day the statement was supplied under subsection (2), if one was` IS A MAYBE DATE
+GIVETH A DEONTIC Party `s 215 chain act`
+`s 215(1A) chain: the dissenting shareholder may elect between the alternative terms within the later of the one month and the 14 days` MEANS
+    IF `alternative terms were offered to the shareholders` AND `a notice has been given by the transferee under subsection (1) to the dissenting shareholder`
+    THEN PARTY dissenter
+         MAY `s 215(1A) the dissenting shareholder elects which of the alternative terms the shareholder prefers`
+         WITHIN (`s 215(1) chain: the days from the notice to the last day of the later of the one month and the 14 days` `the day the notice was given under subsection (1)` `the day the statement was supplied under subsection (2), if one was`)
+         HENCE FULFILLED
+         LEST FULFILLED
+    ELSE FULFILLED
+
+-- TIMELINE: unit=calendar day; day 0=the day the transferee makes the offer; counting=silent ("In offering alternative terms", with no number of days, so no clock is encoded and the duty has no breach path of its own)
+-- FORK: s 215(1B) | the statement is a duty of the transferee open from the offer, with no limit, because the text puts it "in offering" the terms and names no day | a breach on the day the offer is made without the statement
+-- src:20635 | (1B) In offering alternative terms to the shareholders, the transferee
+-- src:20636 | must state which of those terms is to apply to the acquisition of the
+-- src:20637 | shares of a dissenting shareholder where the dissenting shareholder
+-- src:20638 | fails to make the election within the time allowed under
+-- src:20639 | subsection (1A).
+@ref s 215(1B) the statement of the terms that apply on a failure to elect (src:20635-20639)
+GIVEN transferee IS A Party
+      `alternative terms were offered to the shareholders` IS A BOOLEAN
+GIVETH A DEONTIC Party `s 215 chain act`
+`s 215(1B) chain: the transferee must state which of the alternative terms is to apply on a failure to elect` MEANS
+    IF `alternative terms were offered to the shareholders`
+    THEN PARTY transferee
+         MUST `s 215(1B) the transferee states in the offer which of the alternative terms is to apply on a failure to elect`
+         HENCE FULFILLED
+    ELSE FULFILLED
+
+§ `Section 215(2): the dissenting shareholder's demand for the other dissenting shareholders' names`
+
+-- TIMELINE: unit=calendar day; day 0=the day the transferee gave notice to the dissenting shareholder under subsection (1); counting="within one month from the date on which the notice was given" for the demand (the last day is the notice day plus one month, from the DATE input of the notice day); the company's duty to supply the statement has no day in the text (silent), and the 14 days after the posting, until which the transferee is not entitled or bound to acquire, are carried by the application window of the chain above
+-- FORK: s 215(2) | the demand is a MAY of the dissenting shareholder and the statement a MUST of the transferor company with no limit; a missed month ends the demand and nothing is owed (FULFILLED) | the company's statement as a duty with a deadline the text does not give
+-- The existing function `s 215(2) the dissenting shareholder is entitled to require the transferor company to supply the statement` folds the one month and the demand day into one answer, which the clock here carries, so the gate is the Boolean that the notice has been given.
+-- src:20688 | (2) Where a transferee has given notice to any dissenting
+-- src:20689 | shareholder that it desires to acquire the dissenting shareholder’s
+-- src:20690 | shares, the dissenting shareholder is entitled to require the transferor
+-- src:20691 | company by a written demand served on the transferor company,
+-- src:20692 | within one month from the date on which the notice was given, to
+-- src:20693 | supply the dissenting shareholder with a written statement of the
+-- src:20694 | names and addresses of all other dissenting shareholders as shown in
+-- src:20695 | the register of members, and the transferee is not entitled or bound to
+-- src:20696 | acquire the shares of the dissenting shareholders until 14 days after
+-- src:20697 | the posting of the statement of such names and addresses to the
+-- src:20698 | dissenting shareholder.
+@ref s 215(2) the demand for the statement of names and addresses (src:20688-20698)
+GIVEN dissenter IS A Party
+      company IS A Party
+      `a notice has been given by the transferee under subsection (1) to the dissenting shareholder` IS A BOOLEAN
+      `the day the notice was given under subsection (1)` IS A DATE
+GIVETH A DEONTIC Party `s 215 chain act`
+`s 215(2) chain: the dissenting shareholder may demand the statement within one month and the transferor company must supply it` MEANS
+    IF `a notice has been given by the transferee under subsection (1) to the dissenting shareholder`
+    THEN PARTY dissenter
+         MAY `s 215(2) the dissenting shareholder serves a written demand for the statement of the names and addresses of the other dissenting shareholders`
+         WITHIN (`s 215 chain: the days from the event to the last day of a period after it` `the day the notice was given under subsection (1)` 1 Months)
+         HENCE (PARTY company
+                MUST `s 215(2) the transferor company supplies the statement and posts it to the dissenting shareholder`
+                HENCE FULFILLED)
+         LEST FULFILLED
+    ELSE FULFILLED
+
+§ `Section 215(3): the sell-out leg once the transfers reach 90%`
+
+-- TIMELINE: unit=calendar day; day 0=the day of the transfer that takes the transferee's holding to 90%; counting="within one month from the date of the transfer" for the transferee's notice (the last day is the transfer day plus one month, from the DATE input of the transfer day); the holder's requirement runs "within 3 months from the giving of the notice to such holder", chained by HENCE from the day the notice is given (a DATE input that must equal the trace day of the notice); the transferee's acquisition has no day in the text (silent)
+-- FORK: s 215(3)(a) | a notice not given within the month is a BREACH by the transferee and ends the rule, so the holder's 3 months never start in the trace | the late notice as a breach that still lets the 3 months run from the late notice
+-- FORK: s 215(3)(a) | "(unless on a previous transfer ... it has already complied with this requirement)": where it has, no duty arises on this transfer and the rule is FULFILLED at once; the holder's 3 months then run from the earlier notice, under the rule of that transfer | the duty renewed on every transfer
+-- FORK: s 215(3)(b) | a holder who has assented is outside "any such holder", so no requirement step is offered to that holder | the step open to every holder
+-- FORK: s 215(3) | the acquisition is a MUST of the transferee with no limit and no breach path, because the text says it is "entitled and bound to acquire" and gives no day and no payment machinery (subsection (4) is for notices under subsection (1) only) | a clock borrowed from subsection (4)
+-- src:20702 | (3) Where, pursuant to any such scheme or contract, shares in a
+-- src:20703 | transferor company are transferred to a transferee or its nominee and
+-- src:20704 | those shares together with any other shares in the transferor company
+-- src:20705 | held by the transferee at the date of the transfer comprise or include
+-- src:20706 | 90% of the total number of the shares in the transferor company or of
+-- src:20707 | any class of those shares, then —
+-- src:20709 | (a) the transferee must within one month from the date of the
+-- src:20710 | transfer (unless on a previous transfer pursuant to the
+-- src:20711 | scheme or contract it has already complied with this
+-- src:20712 | requirement) give notice of that fact in the prescribed
+-- src:20713 | manner to the holders of the remaining shares or of the
+-- src:20714 | remaining shares of that class who have not assented to the
+-- src:20715 | scheme or contract; and
+-- src:20717 | (b) any such holder may within 3 months from the giving of
+-- src:20718 | the notice to such holder require the transferee to acquire
+-- src:20719 | the shares in question,
+-- src:20721 | and where a shareholder gives notice under paragraph (b) with
+-- src:20722 | respect to any shares, the transferee is entitled and bound to acquire
+-- src:20723 | those shares on the terms on which under the scheme or contract the
+-- src:20724 | shares of the approving shareholders were transferred to it, or on such
+-- src:20726 | Informal Consolidation – version in force from 6/5/2026 to 20/10/2026
+-- src:20727 | 419 Companies Act 1967 2020 Ed.
+-- src:20729 | other terms as are agreed or as the Court on the application of either
+-- src:20730 | the transferee or the shareholder thinks fit to order.
+@ref s 215(3) the sell-out leg (src:20702-20730)
+GIVEN transferee IS A Party
+      holder IS A Party
+      counts IS A `s 215(3) share count`
+      `the 90% is measured against a class of the shares and not against the total number of the shares` IS A BOOLEAN
+      `the transferee has already complied with this requirement on a previous transfer pursuant to the scheme or contract` IS A BOOLEAN
+      `the holder is a holder of the remaining shares who has not assented to the scheme or contract` IS A BOOLEAN
+      `the day of the transfer` IS A DATE
+      `the day the transferee gave the notice to the holder` IS A DATE
+GIVETH A DEONTIC Party `s 215 chain act`
+`s 215(3) chain: the notice of the 90% within one month, the holder's requirement within 3 months, and the acquisition` MEANS
+    IF (`s 215(3)(a) the transferee must give notice of that fact to the holders of the remaining shares who have not assented` ((`s 215(3) the shares transferred, together with the other shares held by the transferee, comprise or include 90%` counts `the 90% is measured against a class of the shares and not against the total number of the shares`) EQUALS JUST TRUE) `the transferee has already complied with this requirement on a previous transfer pursuant to the scheme or contract`) EQUALS JUST TRUE
+    THEN PARTY transferee
+         MUST `s 215(3)(a) the transferee gives notice that the transfers have reached 90% to the holders of the remaining shares who have not assented`
+         WITHIN (`s 215 chain: the days from the event to the last day of a period after it` `the day of the transfer` 1 Months)
+         HENCE (IF `the holder is a holder of the remaining shares who has not assented to the scheme or contract`
+                THEN (PARTY holder
+                      MAY `s 215(3)(b) the holder requires the transferee to acquire the shares in question`
+                      WITHIN (`s 215 chain: the days from the event to the last day of a period after it` `the day the transferee gave the notice to the holder` 3 Months)
+                      HENCE (PARTY transferee
+                             MUST `s 215(3) the transferee acquires the shares that the holder requires it to acquire`
+                             HENCE FULFILLED)
+                      LEST FULFILLED)
+                ELSE FULFILLED)
+         LEST BREACH BY transferee BECAUSE "notice that the transfers have reached 90% was not given to the holders of the remaining shares within one month from the date of the transfer"
+    ELSE FULFILLED
+
+§ `Section 215(4) and (5): the transferor company registers, banks and holds in trust`
+
+-- TIMELINE: unit=calendar day; day 0=the day the transferor company receives the copy of the notice, the instrument of transfer and the price from the transferee; counting="thereupon" for the registration and silent for subsection (5) (no day is named, so no clock is encoded and none of the three duties has a breach path of its own)
+-- FORK: s 215(4), (5) | registration and the two duties of subsection (5) are three MUSTs of the transferor company open together from the day it receives (RAND) | registration first, then the bank account, then the trust
+-- FORK: s 215(5) | the duty to pay into a separate bank account is owed only for "sums" (money); where only other consideration was received, only registration and the trust are owed | the bank account for any consideration
+-- src:20760 | and the transferor company must thereupon register the transferee as
+-- src:20761 | the holder of those shares.
+-- src:20765 | (5) Any sums received by the transferor company under this section
+-- src:20766 | must be paid into a separate bank account, and any such sums and any
+-- src:20767 | other consideration so received must be held by the transferor
+-- src:20768 | company in trust for the several persons entitled to the shares in
+-- src:20769 | respect of which they were respectively received.
+@ref s 215(4), (5) registration, bank account and trust (src:20760-20769)
+GIVEN company IS A Party
+      `the transferor company has received the copy of the notice, the instrument of transfer and the price from the transferee` IS A BOOLEAN
+      `the transferor company received sums of money` IS A BOOLEAN
+GIVETH A DEONTIC Party `s 215 chain act`
+`s 215(4) and (5) chain: the transferor company must register the transferee, bank the sums and hold them in trust once it has received them` MEANS
+    IF `the transferor company has received the copy of the notice, the instrument of transfer and the price from the transferee`
+    THEN ((PARTY company
+           MUST `s 215(4) the transferor company registers the transferee as the holder of the shares`
+           HENCE FULFILLED)
+          RAND
+          (PARTY company
+           MUST `s 215(5) the transferor company holds the sums and other consideration in trust for the persons entitled`
+           HENCE FULFILLED)
+          RAND
+          (IF `the transferor company received sums of money`
+           THEN (PARTY company
+                 MUST `s 215(5) the transferor company pays the sums it received into a separate bank account`
+                 HENCE FULFILLED)
+           ELSE FULFILLED))
+    ELSE FULFILLED
+
+§ `Section 215(6) and (7): the transfer to the Official Receiver`
+
+-- TIMELINE: unit=calendar day; day 0=the day the money or other consideration was received by the company holding it; counting="after the expiration of 2 years and must before the expiration of 10 years from the date on which the money or other consideration was received": the 2 years end on the day received plus 2 years and the 10 years on the day received plus 10 years (sg-periods P1, P4, from the DATE input of the day received), the second window being chained by HENCE from the end of the first (so its length is the 10 years less the 2 years); the Official Receiver's duties have no day (silent)
+-- FORK: s 215(6) | a transfer on or before the last day of the 2 years is outside the permission and is a BREACH by the company, although the text states no consequence | a transfer that is early merely not authorised, with no breach
+-- FORK: s 215(6) | "before the expiration of 10 years" is read as up to and including the last day of the 10 years (the existing function does the same, and so does section 210(10A)) | the day before the last day
+-- FORK: s 215(6) | "received by the person" is read as received by the company holding it, as the existing function does (finding 3 in NOTES.md) | the day the person became entitled
+-- FORK: s 215(7) | the Official Receiver's two duties are alternatives chosen by what was received (money, or other consideration), each a MUST with no limit and no breach path | both owed on every transfer
+-- src:20773 | (6) Where any money or other consideration is held in trust by a
+-- src:20774 | company for any person under this section, the company holding the
+-- src:20775 | money or other consideration may, after the expiration of 2 years and
+-- src:20776 | must before the expiration of 10 years from the date on which the
+-- src:20778 | Informal Consolidation – version in force from 6/5/2026 to 20/10/2026
+-- src:20779 | 2020 Ed. Companies Act 1967 420
+-- src:20781 | money or other consideration was received by the person, transfer the
+-- src:20782 | money or other consideration to the Official Receiver.
+-- src:20786 | (7) The Official Receiver must —
+-- src:20788 | (a) deal with any moneys received under subsection (6) as if
+-- src:20789 | the moneys were paid to the Official Receiver under
+-- src:20790 | section 197 of the Insolvency, Restructuring and
+-- src:20791 | Dissolution Act 2018; and
+-- src:20793 | (b) sell or dispose of any other consideration received under
+-- src:20794 | subsection (6) in such manner as the Official Receiver
+-- src:20795 | thinks fit and must deal with the proceeds of such sale or
+-- src:20796 | disposal as if it were moneys paid to the Official Receiver
+-- src:20797 | under section 197 of the Insolvency, Restructuring and
+-- src:20798 | Dissolution Act 2018.
+@ref s 215(6), (7) the transfer to the Official Receiver and what the Official Receiver does (src:20773-20798)
+GIVEN company IS A Party
+      `money or other consideration is held in trust by a company for a person under this section` IS A BOOLEAN
+      `the day the money or other consideration was received by the company holding it` IS A DATE
+      `the thing received under subsection (6) is money` IS A BOOLEAN
+      `the thing received under subsection (6) is other consideration` IS A BOOLEAN
+GIVETH A DEONTIC Party `s 215 chain act`
+`s 215(6) and (7) chain: the company may transfer after 2 years and must before 10 years, then the Official Receiver deals with it` MEANS
+    IF `money or other consideration is held in trust by a company for a person under this section`
+    THEN PARTY company
+         SHANT `s 215(6) the company holding the money or other consideration transfers it to the Official Receiver`
+         WITHIN (`s 215 chain: the days from the event to the last day of a period after it` `the day the money or other consideration was received by the company holding it` 2 Years)
+         HENCE (PARTY company
+                MUST `s 215(6) the company holding the money or other consideration transfers it to the Official Receiver`
+                WITHIN ((`s 215 chain: the days from the event to the last day of a period after it` `the day the money or other consideration was received by the company holding it` 10 Years) MINUS (`s 215 chain: the days from the event to the last day of a period after it` `the day the money or other consideration was received by the company holding it` 2 Years))
+                HENCE (IF `the thing received under subsection (6) is money`
+                       THEN (PARTY `Official Receiver`
+                             MUST `s 215(7)(a) the Official Receiver deals with the moneys as if they were paid under section 197 of the Insolvency, Restructuring and Dissolution Act 2018`
+                             HENCE FULFILLED)
+                       ELSE (IF `the thing received under subsection (6) is other consideration`
+                             THEN (PARTY `Official Receiver`
+                                   MUST `s 215(7)(b) the Official Receiver sells or disposes of the other consideration and deals with the proceeds as if they were moneys paid under section 197`
+                                   HENCE FULFILLED)
+                             ELSE FULFILLED))
+                LEST BREACH BY company BECAUSE "the money or other consideration was not transferred to the Official Receiver before the expiration of 10 years from the date it was received")
+         LEST BREACH BY company BECAUSE "the money or other consideration was transferred to the Official Receiver before the expiration of 2 years from the date it was received"
+    ELSE FULFILLED
+
+§ `Section 215AA(6): the joint transferees' notice`
+
+-- TIMELINE: unit=calendar day; day 0=the day the joint transferees give a notice under section 215(1) or (3); counting=silent (the text gives subsection (6) no day of its own; the days of the notices are those of the rules above)
+-- FORK: s 215AA(6) | the rule is written for two joint transferees, each a MUST joined by RAND, and the duty is gated by the existing test of section 215AA(1) (an offer for all the shares by 2 or more persons jointly); a third needs a third branch | one MUST of "all of the joint transferees" as a single party
+-- s 215AA(4) (joint rights and joint and several obligations) and (5) (a notice to any one of them is a notice to all, subject to (6)) are not steps with a day and are not encoded here.
+-- src:20949 | 215AA.—(1) In the case of a scheme involving an offer to acquire
+-- src:20950 | all of the shares in a company, or all of the shares in any particular
+-- src:20951 | class in a company, by 2 or more persons jointly (called in this section
+-- src:20952 | the joint transferees), section 215 is to be read subject to this section.
+-- src:21001 | (6) The notice required to be given by the joint transferees under
+-- src:21002 | section 215(1) and (3) must be made by all of the joint transferees
+-- src:21003 | and, where one or more of them is a company, signed by a director of
+-- src:21004 | that company.
+@ref s 215AA(1), (6) the joint notice (src:20949-21004)
+GIVEN `joint transferee one` IS A Party
+      `joint transferee two` IS A Party
+      `the scheme involves an offer to acquire all of the shares in a company, or all of the shares in a particular class in a company` IS A BOOLEAN
+      `the number of persons making the offer jointly` IS A NUMBER
+GIVETH A DEONTIC Party `s 215 chain act`
+`s 215AA(6) chain: the joint transferees must make the notice together` MEANS
+    IF (`s 215AA(1) section 215 is to be read subject to section 215AA` `the scheme involves an offer to acquire all of the shares in a company, or all of the shares in a particular class in a company` `the number of persons making the offer jointly`) EQUALS JUST TRUE
+    THEN ((PARTY `joint transferee one`
+           MUST `s 215AA(6) a joint transferee joins in making the notice, and a joint transferee that is a company has a director sign it`
+           HENCE FULFILLED)
+          RAND
+          (PARTY `joint transferee two`
+           MUST `s 215AA(6) a joint transferee joins in making the notice, and a joint transferee that is a company has a director sign it`
+           HENCE FULFILLED))
+    ELSE FULFILLED
