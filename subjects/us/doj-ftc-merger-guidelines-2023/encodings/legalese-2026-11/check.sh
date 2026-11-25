@@ -27,15 +27,15 @@ MAIN="${L4_MAIN:-}"
 # Expected assertions satisfied and failed, per module; a module not listed has none. Update with the files.
 expected_satisfied() {
   case "$1" in
-    mg-tests.l4) echo 26 ;;
-    mg-tests-boundaries.l4) echo 39 ;;
+    mg-tests.l4) echo 70 ;;
+    mg-tests-boundaries.l4) echo 64 ;;
     mg-tests-red.l4) echo 0 ;;
     *) echo 0 ;;
   esac
 }
 expected_failed() {
   case "$1" in
-    mg-tests-red.l4) echo 6 ;;
+    mg-tests-red.l4) echo 9 ;;
     *) echo 0 ;;
   esac
 }
