@@ -1,0 +1,344 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `sg-core`
+IMPORT `sg-periods`
+IMPORT `sg-proc-share-buyback`
+
+-- Tests for sg-proc-share-buyback.l4 (ss 76B to 76K: the procedure by which a company buys back its own shares).
+-- Every expected outcome below was written from the text (src:8314-9245 of CoA1967.txt) before the module was run, never copied from its output.
+-- A trace that does not match is a finding. Day 0 of each trace is the day the TIMELINE line above its rule names.
+-- Dates: the meeting is 1 March 2026 (day 0); an expiry date of 11 March 2026 gives a purchase window of 10 days; the next annual general meeting is held on 30 April 2026 and required to be held by 30 June 2026.
+
+§ `The count of days from a date computed by the existing period functions (written from the text: the 6 months beginning with 15 January end on 14 July; those beginning with 31 August end on 28 February under sg-periods P4 and P10)`
+
+#ASSERT ((DATE_SERIAL (`period: the last day of a period beginning with` (Date 15 1 2026) 6 Months)) MINUS (DATE_SERIAL (Date 15 1 2026))) EQUALS 180
+#ASSERT ((DATE_SERIAL (`period: the last day of a period beginning with` (Date 31 8 2026) 6 Months)) MINUS (DATE_SERIAL (Date 31 8 2026))) EQUALS 181
+#ASSERT ((DATE_SERIAL (Date 11 3 2026)) MINUS (DATE_SERIAL (Date 1 3 2026))) EQUALS 10
+
+§ `Sections 76B(9)(b) and 76G(1): after the purchase`
+
+-- Arguments: the company; the directors; the company is a public company; the shares are cancelled under section 76B(5) and not held in treasury. Day 0 is the day the shares are deemed purchased.
+
+-- Notice on day 30 (the last day) and the reduction on day 5.
+-- EXPECT FULFILLED
+#TRACE `s 76B(9)(b) and s 76G(1) after the purchase the directors of a public company lodge the notice of purchase and the company reduces its share capital or profits` (Company "Co") (Director "D") TRUE TRUE AT 0 WITH
+    PARTY Company "Co" DOES `s 76G(1) reduce the share capital or the profits by the total amount of the purchase price` AT 5
+    PARTY Director "D" DOES `s 76B(9)(b) lodge a notice of purchase or acquisition in the prescribed form with the Registrar` AT 30
+
+-- Notice on day 31: one day late.
+-- EXPECT BREACH
+#TRACE `s 76B(9)(b) and s 76G(1) after the purchase the directors of a public company lodge the notice of purchase and the company reduces its share capital or profits` (Company "Co") (Director "D") TRUE TRUE AT 0 WITH
+    PARTY Company "Co" DOES `s 76G(1) reduce the share capital or the profits by the total amount of the purchase price` AT 5
+    PARTY Director "D" DOES `s 76B(9)(b) lodge a notice of purchase or acquisition in the prescribed form with the Registrar` AT 31
+
+-- Notice on time but the reduction not made: the text sets no time for it, so nothing is breached and the duty stays open.
+-- EXPECT RESIDUAL
+#TRACE `s 76B(9)(b) and s 76G(1) after the purchase the directors of a public company lodge the notice of purchase and the company reduces its share capital or profits` (Company "Co") (Director "D") TRUE TRUE AT 0 WITH
+    PARTY Director "D" DOES `s 76B(9)(b) lodge a notice of purchase or acquisition in the prescribed form with the Registrar` AT 10
+
+-- A private company: no notice of purchase under (9)(b); the reduction is the only step.
+-- EXPECT FULFILLED
+#TRACE `s 76B(9)(b) and s 76G(1) after the purchase the directors of a public company lodge the notice of purchase and the company reduces its share capital or profits` (Company "Co") (Director "D") FALSE TRUE AT 0 WITH
+    PARTY Company "Co" DOES `s 76G(1) reduce the share capital or the profits by the total amount of the purchase price` AT 3
+
+§ `Sections 76B(7), 76B(9)(c) and 76F: the purchase within the authority`
+
+-- Arguments: the company; the directors; public company; cancelled and not in treasury; the days from the resolution to the day the authority expires (10); the company is solvent at the date of the payment. Day 0 is the day of the resolution.
+
+-- The company becomes entitled on day 10, the last day of the authority; the reduction on day 12; the notice on day 40, 30 days after the purchase.
+-- EXPECT FULFILLED
+#TRACE `s 76B and s 76F the company purchases or acquires its shares within the authority while it is solvent` (Company "Co") (Director "D") TRUE TRUE 10 TRUE AT 0 WITH
+    PARTY Company "Co" DOES `s 76B(9)(c) the company becomes entitled to exercise the rights attached to the shares, so that they are purchased or acquired` AT 10
+    PARTY Company "Co" DOES `s 76G(1) reduce the share capital or the profits by the total amount of the purchase price` AT 12
+    PARTY Director "D" DOES `s 76B(9)(b) lodge a notice of purchase or acquisition in the prescribed form with the Registrar` AT 40
+
+-- The purchase on day 10; the notice on day 41, 31 days after it.
+-- EXPECT BREACH
+#TRACE `s 76B and s 76F the company purchases or acquires its shares within the authority while it is solvent` (Company "Co") (Director "D") TRUE TRUE 10 TRUE AT 0 WITH
+    PARTY Company "Co" DOES `s 76B(9)(c) the company becomes entitled to exercise the rights attached to the shares, so that they are purchased or acquired` AT 10
+    PARTY Company "Co" DOES `s 76G(1) reduce the share capital or the profits by the total amount of the purchase price` AT 12
+    PARTY Director "D" DOES `s 76B(9)(b) lodge a notice of purchase or acquisition in the prescribed form with the Registrar` AT 41
+
+-- No purchase before the authority expires: the permission lapses with nothing owed.
+-- EXPECT FULFILLED
+#TRACE `s 76B and s 76F the company purchases or acquires its shares within the authority while it is solvent` (Company "Co") (Director "D") TRUE TRUE 10 TRUE AT 0 WITH
+    (WAITUNTIL 20)
+
+-- A private company that is not solvent purchases by lodging on day 3: no purchase is lawful (s 76F(2)(a)), and the lodging is the act the permission names.
+-- EXPECT BREACH
+#TRACE `s 76B and s 76F the company purchases or acquires its shares within the authority while it is solvent` (Company "Co") (Director "D") FALSE TRUE 10 FALSE AT 0 WITH
+    PARTY Company "Co" DOES `s 76B(7) lodge a copy of the resolution and a notice of purchase or acquisition with the Registrar` AT 3
+
+-- The company is not solvent and does not buy: the bar stays open.
+-- EXPECT RESIDUAL
+#TRACE `s 76B and s 76F the company purchases or acquires its shares within the authority while it is solvent` (Company "Co") (Director "D") TRUE TRUE 10 FALSE AT 0 WITH
+    (WAITUNTIL 400)
+
+-- A private company purchases by lodging on day 4; the reduction on day 5.
+-- EXPECT FULFILLED
+#TRACE `s 76B and s 76F the company purchases or acquires its shares within the authority while it is solvent` (Company "Co") (Director "D") FALSE TRUE 10 TRUE AT 0 WITH
+    PARTY Company "Co" DOES `s 76B(7) lodge a copy of the resolution and a notice of purchase or acquisition with the Registrar` AT 4
+    PARTY Company "Co" DOES `s 76G(1) reduce the share capital or the profits by the total amount of the purchase price` AT 5
+
+§ `Section 76B(9)(a): after the resolution`
+
+-- Arguments: as for the purchase rule above. Day 0 is the day the resolution is passed.
+
+-- The copy lodged on day 30 (the last day); the purchase on day 5, the reduction on day 6 and the notice on day 20.
+-- EXPECT FULFILLED
+#TRACE `s 76B(9)(a) after the resolution the directors of a public company lodge its copy and the company purchases within the authority` (Company "Co") (Director "D") TRUE TRUE 10 TRUE AT 0 WITH
+    PARTY Company "Co" DOES `s 76B(9)(c) the company becomes entitled to exercise the rights attached to the shares, so that they are purchased or acquired` AT 5
+    PARTY Company "Co" DOES `s 76G(1) reduce the share capital or the profits by the total amount of the purchase price` AT 6
+    PARTY Director "D" DOES `s 76B(9)(b) lodge a notice of purchase or acquisition in the prescribed form with the Registrar` AT 20
+    PARTY Director "D" DOES `s 76B(9)(a) lodge a copy of the resolution with the Registrar` AT 30
+
+-- The copy lodged on day 31: one day late.
+-- EXPECT BREACH
+#TRACE `s 76B(9)(a) after the resolution the directors of a public company lodge its copy and the company purchases within the authority` (Company "Co") (Director "D") TRUE TRUE 10 TRUE AT 0 WITH
+    PARTY Director "D" DOES `s 76B(9)(a) lodge a copy of the resolution with the Registrar` AT 31
+
+-- Nothing lodged by day 40: the 30 days have run.
+-- EXPECT BREACH
+#TRACE `s 76B(9)(a) after the resolution the directors of a public company lodge its copy and the company purchases within the authority` (Company "Co") (Director "D") TRUE TRUE 10 TRUE AT 0 WITH
+    (WAITUNTIL 40)
+
+-- A private company has no copy to lodge under (9)(a): it purchases by lodging on day 4 and reduces on day 5.
+-- EXPECT FULFILLED
+#TRACE `s 76B(9)(a) after the resolution the directors of a public company lodge its copy and the company purchases within the authority` (Company "Co") (Director "D") FALSE TRUE 10 TRUE AT 0 WITH
+    PARTY Company "Co" DOES `s 76B(7) lodge a copy of the resolution and a notice of purchase or acquisition with the Registrar` AT 4
+    PARTY Company "Co" DOES `s 76G(1) reduce the share capital or the profits by the total amount of the purchase price` AT 5
+
+§ `Section 76C: the off-market purchase on an equal access scheme`
+
+-- Arguments: the company; the directors; public; cancelled; solvent; the purchase is an off-market purchase; it is made on an equal access scheme; the date of the meeting; the expiry date; the next annual general meeting held; the next annual general meeting required.
+
+-- The whole chain: authority on day 0, purchase on day 7, reduction on day 8, copy lodged on day 30, notice on day 37 (30 days after the purchase).
+-- EXPECT FULFILLED
+#TRACE `s 76C the company in general meeting authorises an equal access scheme in advance and the lodging and the purchase follow` (Company "Co") (Director "D") TRUE TRUE TRUE TRUE TRUE (Date 1 3 2026) (Date 11 3 2026) (Date 30 4 2026) (Date 30 6 2026) AT 0 WITH
+    PARTY Company "Co" DOES `s 76C(1) the company in general meeting authorises the equal access scheme in advance` AT 0
+    PARTY Company "Co" DOES `s 76B(9)(c) the company becomes entitled to exercise the rights attached to the shares, so that they are purchased or acquired` AT 7
+    PARTY Company "Co" DOES `s 76G(1) reduce the share capital or the profits by the total amount of the purchase price` AT 8
+    PARTY Director "D" DOES `s 76B(9)(a) lodge a copy of the resolution with the Registrar` AT 30
+    PARTY Director "D" DOES `s 76B(9)(b) lodge a notice of purchase or acquisition in the prescribed form with the Registrar` AT 37
+
+-- The same route with a company that is not solvent (the fifth argument is FALSE): it is authorised on day 0 and then becomes entitled to exercise the rights on day 7, the ordinary purchase step, and no purchase is lawful (s 76F(2)(a)).
+-- EXPECT BREACH
+#TRACE `s 76C the company in general meeting authorises an equal access scheme in advance and the lodging and the purchase follow` (Company "Co") (Director "D") TRUE TRUE FALSE TRUE TRUE (Date 1 3 2026) (Date 11 3 2026) (Date 30 4 2026) (Date 30 6 2026) AT 0 WITH
+    PARTY Company "Co" DOES `s 76C(1) the company in general meeting authorises the equal access scheme in advance` AT 0
+    PARTY Company "Co" DOES `s 76B(9)(c) the company becomes entitled to exercise the rights attached to the shares, so that they are purchased or acquired` AT 7
+
+-- Not made on an equal access scheme: section 76C(1) gives no authority and nothing is owed under this rule.
+-- EXPECT FULFILLED
+#TRACE `s 76C the company in general meeting authorises an equal access scheme in advance and the lodging and the purchase follow` (Company "Co") (Director "D") TRUE TRUE TRUE TRUE FALSE (Date 1 3 2026) (Date 11 3 2026) (Date 30 4 2026) (Date 30 6 2026) AT 0 WITH
+    (WAITUNTIL 5)
+
+-- The expiry date, 1 July 2026, is later than the next annual general meeting (30 April) and the date it is required by law (30 June): the authority step is open but nothing follows it.
+-- EXPECT FULFILLED
+#TRACE `s 76C the company in general meeting authorises an equal access scheme in advance and the lodging and the purchase follow` (Company "Co") (Director "D") TRUE TRUE TRUE TRUE TRUE (Date 1 3 2026) (Date 1 7 2026) (Date 30 4 2026) (Date 30 6 2026) AT 0 WITH
+    PARTY Company "Co" DOES `s 76C(1) the company in general meeting authorises the equal access scheme in advance` AT 0
+
+-- The expiry date is the date of the next annual general meeting itself (30 April, day 60): not later than it, so the authority runs to day 60; purchase on day 60, reduction on day 61, copy on day 30, notice on day 90.
+-- EXPECT FULFILLED
+#TRACE `s 76C the company in general meeting authorises an equal access scheme in advance and the lodging and the purchase follow` (Company "Co") (Director "D") TRUE TRUE TRUE TRUE TRUE (Date 1 3 2026) (Date 30 4 2026) (Date 30 4 2026) (Date 30 6 2026) AT 0 WITH
+    PARTY Company "Co" DOES `s 76C(1) the company in general meeting authorises the equal access scheme in advance` AT 0
+    PARTY Director "D" DOES `s 76B(9)(a) lodge a copy of the resolution with the Registrar` AT 30
+    PARTY Company "Co" DOES `s 76B(9)(c) the company becomes entitled to exercise the rights attached to the shares, so that they are purchased or acquired` AT 60
+    PARTY Company "Co" DOES `s 76G(1) reduce the share capital or the profits by the total amount of the purchase price` AT 61
+    PARTY Director "D" DOES `s 76B(9)(b) lodge a notice of purchase or acquisition in the prescribed form with the Registrar` AT 90
+
+§ `Section 76D: the selective off-market purchase`
+
+-- Arguments: the company; the directors; public; cancelled; solvent; selective off-market purchase; the shares are of a class and not all of it; the holders of the class; the holders who consented; the consent came before the resolution; the date of the meeting; the day from which the copy has been available at the registered office; available at the meeting; the expiry date; the annual general meeting held; required.
+-- The 15 days ending with the date of the meeting (1 March) begin on 15 February.
+
+-- 15 of 20 holders (exactly 75%) consent before, the copy is available from 15 February (15 days) and at the meeting: the resolution on day 0, copy on day 30, purchase on day 10, reduction on day 11, notice on day 40.
+-- EXPECT FULFILLED
+#TRACE `s 76D the company passes a special resolution authorising a selective off-market purchase and the lodging and the purchase follow` (Company "Co") (Director "D") TRUE TRUE TRUE TRUE TRUE 20 15 TRUE (Date 1 3 2026) (Date 15 2 2026) TRUE (Date 11 3 2026) (Date 30 4 2026) (Date 30 6 2026) AT 0 WITH
+    PARTY Company "Co" DOES `s 76D(2) pass the special resolution authorising the terms of the agreement` AT 0
+    PARTY Company "Co" DOES `s 76B(9)(c) the company becomes entitled to exercise the rights attached to the shares, so that they are purchased or acquired` AT 10
+    PARTY Company "Co" DOES `s 76G(1) reduce the share capital or the profits by the total amount of the purchase price` AT 11
+    PARTY Director "D" DOES `s 76B(9)(a) lodge a copy of the resolution with the Registrar` AT 30
+    PARTY Director "D" DOES `s 76B(9)(b) lodge a notice of purchase or acquisition in the prescribed form with the Registrar` AT 40
+
+-- The copy is available only from 16 February (14 days): the resolution is not effective, so it is passed and nothing follows.
+-- EXPECT FULFILLED
+#TRACE `s 76D the company passes a special resolution authorising a selective off-market purchase and the lodging and the purchase follow` (Company "Co") (Director "D") TRUE TRUE TRUE TRUE TRUE 20 15 TRUE (Date 1 3 2026) (Date 16 2 2026) TRUE (Date 11 3 2026) (Date 30 4 2026) (Date 30 6 2026) AT 0 WITH
+    PARTY Company "Co" DOES `s 76D(2) pass the special resolution authorising the terms of the agreement` AT 0
+
+-- 14 of 20 holders (70%) consent: the company must not pass the resolution, and passes it on day 0.
+-- EXPECT BREACH
+#TRACE `s 76D the company passes a special resolution authorising a selective off-market purchase and the lodging and the purchase follow` (Company "Co") (Director "D") TRUE TRUE TRUE TRUE TRUE 20 14 TRUE (Date 1 3 2026) (Date 15 2 2026) TRUE (Date 11 3 2026) (Date 30 4 2026) (Date 30 6 2026) AT 0 WITH
+    PARTY Company "Co" DOES `s 76D(2) pass the special resolution authorising the terms of the agreement` AT 0
+
+-- 14 of 20 consent and the company does not pass the resolution: the bar stays open.
+-- EXPECT RESIDUAL
+#TRACE `s 76D the company passes a special resolution authorising a selective off-market purchase and the lodging and the purchase follow` (Company "Co") (Director "D") TRUE TRUE TRUE TRUE TRUE 20 14 TRUE (Date 1 3 2026) (Date 15 2 2026) TRUE (Date 11 3 2026) (Date 30 4 2026) (Date 30 6 2026) AT 0 WITH
+    (WAITUNTIL 400)
+
+-- Not a class case (all the shares in the class, or no class): no consent is needed; the resolution on day 0, then the copy on day 30 while the purchase window of 10 days lapses unused.
+-- EXPECT FULFILLED
+#TRACE `s 76D the company passes a special resolution authorising a selective off-market purchase and the lodging and the purchase follow` (Company "Co") (Director "D") TRUE TRUE TRUE TRUE FALSE 0 0 FALSE (Date 1 3 2026) (Date 15 2 2026) TRUE (Date 11 3 2026) (Date 30 4 2026) (Date 30 6 2026) AT 0 WITH
+    PARTY Company "Co" DOES `s 76D(2) pass the special resolution authorising the terms of the agreement` AT 0
+    PARTY Director "D" DOES `s 76B(9)(a) lodge a copy of the resolution with the Registrar` AT 30
+
+§ `Section 76E: the market purchase`
+
+-- Arguments: the company; the directors; public; cancelled; solvent; the purchase is on a securities exchange; the date of the meeting; the expiry date; the next annual general meeting held; required.
+
+-- The whole chain: authority on day 0, purchase on day 9, reduction on day 10, copy on day 30, notice on day 39.
+-- EXPECT FULFILLED
+#TRACE `s 76E the company in general meeting authorises a market purchase in advance and the lodging and the purchase follow` (Company "Co") (Director "D") TRUE TRUE TRUE TRUE (Date 1 3 2026) (Date 11 3 2026) (Date 30 4 2026) (Date 30 6 2026) AT 0 WITH
+    PARTY Company "Co" DOES `s 76E(1) the company in general meeting authorises the market purchase in advance` AT 0
+    PARTY Company "Co" DOES `s 76B(9)(c) the company becomes entitled to exercise the rights attached to the shares, so that they are purchased or acquired` AT 9
+    PARTY Company "Co" DOES `s 76G(1) reduce the share capital or the profits by the total amount of the purchase price` AT 10
+    PARTY Director "D" DOES `s 76B(9)(a) lodge a copy of the resolution with the Registrar` AT 30
+    PARTY Director "D" DOES `s 76B(9)(b) lodge a notice of purchase or acquisition in the prescribed form with the Registrar` AT 39
+
+-- Not a purchase on a securities exchange: section 76E gives no authority step and nothing is owed under this rule.
+-- EXPECT FULFILLED
+#TRACE `s 76E the company in general meeting authorises a market purchase in advance and the lodging and the purchase follow` (Company "Co") (Director "D") TRUE TRUE TRUE FALSE (Date 1 3 2026) (Date 11 3 2026) (Date 30 4 2026) (Date 30 6 2026) AT 0 WITH
+    (WAITUNTIL 5)
+
+§ `Section 76E(1): no market purchase without advance authority`
+
+-- Arguments: the company; the purchase is on a securities exchange; it has been authorised in advance by the company in general meeting.
+
+-- A market purchase with no advance authority.
+-- EXPECT BREACH
+#TRACE `s 76E(1) the company must not make a market purchase unless it has been authorised in advance by the company in general meeting` (Company "Co") TRUE FALSE AT 0 WITH
+    PARTY Company "Co" DOES `s 76E(1) make a purchase or acquisition of the company's own shares on a securities exchange` AT 0
+
+-- A market purchase authorised in advance: the bar does not apply.
+-- EXPECT FULFILLED
+#TRACE `s 76E(1) the company must not make a market purchase unless it has been authorised in advance by the company in general meeting` (Company "Co") TRUE TRUE AT 0 WITH
+    PARTY Company "Co" DOES `s 76E(1) make a purchase or acquisition of the company's own shares on a securities exchange` AT 0
+
+-- No advance authority and no purchase: the bar stays open.
+-- EXPECT RESIDUAL
+#TRACE `s 76E(1) the company must not make a market purchase unless it has been authorised in advance by the company in general meeting` (Company "Co") TRUE FALSE AT 0 WITH
+    (WAITUNTIL 400)
+
+§ `Section 76F(3): the director who approves a purchase knowing the company is not solvent`
+
+-- Arguments: the person; the company is solvent at the date of the payment; the person knows that the company is not solvent.
+
+-- The company is not solvent, the director knows it and approves the purchase.
+-- EXPECT BREACH
+#TRACE `s 76F(3) a director or chief executive officer must not approve or authorise the purchase, acquisition or release knowing that the company is not solvent` (Director "D") FALSE TRUE AT 0 WITH
+    PARTY Director "D" DOES `s 76F(3) approve or authorise the purchase or acquisition of the company's own shares or the release of obligations` AT 0
+
+-- The company is not solvent but the director does not know: the offence needs knowledge.
+-- EXPECT FULFILLED
+#TRACE `s 76F(3) a director or chief executive officer must not approve or authorise the purchase, acquisition or release knowing that the company is not solvent` (Director "D") FALSE FALSE AT 0 WITH
+    PARTY Director "D" DOES `s 76F(3) approve or authorise the purchase or acquisition of the company's own shares or the release of obligations` AT 0
+
+-- Insolvent and known to be, and the director does not approve: the bar stays open.
+-- EXPECT RESIDUAL
+#TRACE `s 76F(3) a director or chief executive officer must not approve or authorise the purchase, acquisition or release knowing that the company is not solvent` (Director "D") FALSE TRUE AT 0 WITH
+    (WAITUNTIL 400)
+
+§ `Sections 76I(3) and 76K(1D): the excess treasury shares`
+
+-- Arguments: the company; the directors; public; one class only; the shares held as treasury shares; the total shares; different classes; the treasury shares of the class; the shares of the class; the day of the contravention; the Registrar has allowed a further period; its last day.
+-- The contravention is on 15 January 2026 (day 0): the 6 months beginning with that day end on 14 July, which is day 180.
+
+-- 11 of 100 shares in treasury (11%, over 10%): disposal on day 180, the last day; the directors' notice on day 200.
+-- EXPECT FULFILLED
+#TRACE `s 76I(3) the company must dispose of or cancel the excess treasury shares before the end of the 6 months and a public company's directors then lodge the notice` (Company "Co") (Director "D") TRUE TRUE 11 100 FALSE 0 0 (Date 15 1 2026) FALSE (Date 15 1 2026) AT 0 WITH
+    PARTY Company "Co" DOES `s 76I(3) dispose of or cancel the excess shares in accordance with section 76K` AT 180
+    PARTY Director "D" DOES `s 76K(1D) lodge a prescribed notice of the cancellation or disposal of treasury shares with the Registrar together with the prescribed fee` AT 200
+
+-- Disposal on day 181: after the 6 months.
+-- EXPECT BREACH
+#TRACE `s 76I(3) the company must dispose of or cancel the excess treasury shares before the end of the 6 months and a public company's directors then lodge the notice` (Company "Co") (Director "D") TRUE TRUE 11 100 FALSE 0 0 (Date 15 1 2026) FALSE (Date 15 1 2026) AT 0 WITH
+    PARTY Company "Co" DOES `s 76I(3) dispose of or cancel the excess shares in accordance with section 76K` AT 181
+
+-- Disposal on day 100 and the directors' notice on day 131: 31 days after the disposal.
+-- EXPECT BREACH
+#TRACE `s 76I(3) the company must dispose of or cancel the excess treasury shares before the end of the 6 months and a public company's directors then lodge the notice` (Company "Co") (Director "D") TRUE TRUE 11 100 FALSE 0 0 (Date 15 1 2026) FALSE (Date 15 1 2026) AT 0 WITH
+    PARTY Company "Co" DOES `s 76I(3) dispose of or cancel the excess shares in accordance with section 76K` AT 100
+    PARTY Director "D" DOES `s 76K(1D) lodge a prescribed notice of the cancellation or disposal of treasury shares with the Registrar together with the prescribed fee` AT 131
+
+-- A private company disposes of the excess on day 50: the public company's notice does not apply to it.
+-- EXPECT FULFILLED
+#TRACE `s 76I(3) the company must dispose of or cancel the excess treasury shares before the end of the 6 months and a public company's directors then lodge the notice` (Company "Co") (Director "D") FALSE TRUE 11 100 FALSE 0 0 (Date 15 1 2026) FALSE (Date 15 1 2026) AT 0 WITH
+    PARTY Company "Co" DOES `s 76I(3) dispose of or cancel the excess shares in accordance with section 76K` AT 50
+
+-- 10 of 100 (exactly 10%) does not exceed the limit: nothing is owed.
+-- EXPECT FULFILLED
+#TRACE `s 76I(3) the company must dispose of or cancel the excess treasury shares before the end of the 6 months and a public company's directors then lodge the notice` (Company "Co") (Director "D") TRUE TRUE 10 100 FALSE 0 0 (Date 15 1 2026) FALSE (Date 15 1 2026) AT 0 WITH
+    (WAITUNTIL 5)
+
+-- The Registrar has allowed a further period to 15 August 2026 (day 212): disposal on day 200, after the 6 months, is in time; the notice on day 220.
+-- EXPECT FULFILLED
+#TRACE `s 76I(3) the company must dispose of or cancel the excess treasury shares before the end of the 6 months and a public company's directors then lodge the notice` (Company "Co") (Director "D") TRUE TRUE 11 100 FALSE 0 0 (Date 15 1 2026) TRUE (Date 15 8 2026) AT 0 WITH
+    PARTY Company "Co" DOES `s 76I(3) dispose of or cancel the excess shares in accordance with section 76K` AT 200
+    PARTY Director "D" DOES `s 76K(1D) lodge a prescribed notice of the cancellation or disposal of treasury shares with the Registrar together with the prescribed fee` AT 220
+
+-- Several classes: 3 of the 20 shares of one class (15%) are held in treasury; disposal on day 10, notice on day 11.
+-- EXPECT FULFILLED
+#TRACE `s 76I(3) the company must dispose of or cancel the excess treasury shares before the end of the 6 months and a public company's directors then lodge the notice` (Company "Co") (Director "D") TRUE FALSE 0 0 TRUE 3 20 (Date 15 1 2026) FALSE (Date 15 1 2026) AT 0 WITH
+    PARTY Company "Co" DOES `s 76I(3) dispose of or cancel the excess shares in accordance with section 76K` AT 10
+    PARTY Director "D" DOES `s 76K(1D) lodge a prescribed notice of the cancellation or disposal of treasury shares with the Registrar together with the prescribed fee` AT 11
+
+-- Nothing disposed of or cancelled by day 200.
+-- EXPECT BREACH
+#TRACE `s 76I(3) the company must dispose of or cancel the excess treasury shares before the end of the 6 months and a public company's directors then lodge the notice` (Company "Co") (Director "D") TRUE TRUE 11 100 FALSE 0 0 (Date 15 1 2026) FALSE (Date 15 1 2026) AT 0 WITH
+    (WAITUNTIL 200)
+
+-- Contravention on 31 August 2026: the 6 months end on 28 February 2027, day 181 (sg-periods P4 and P10, assumed, not ruled by a lawyer): disposal on day 181 is in time; notice on day 190.
+-- EXPECT FULFILLED
+#TRACE `s 76I(3) the company must dispose of or cancel the excess treasury shares before the end of the 6 months and a public company's directors then lodge the notice` (Company "Co") (Director "D") TRUE TRUE 11 100 FALSE 0 0 (Date 31 8 2026) FALSE (Date 31 8 2026) AT 0 WITH
+    PARTY Company "Co" DOES `s 76I(3) dispose of or cancel the excess shares in accordance with section 76K` AT 181
+    PARTY Director "D" DOES `s 76K(1D) lodge a prescribed notice of the cancellation or disposal of treasury shares with the Registrar together with the prescribed fee` AT 190
+
+§ `Further boundary traces: an earlier day, the day after the authority expires, the day after a further period`
+
+-- Public company; notice on day 10, well within the 30 days after the purchase, and the reduction on day 12.
+-- EXPECT FULFILLED
+#TRACE `s 76B(9)(b) and s 76G(1) after the purchase the directors of a public company lodge the notice of purchase and the company reduces its share capital or profits` (Company "Co") (Director "D") TRUE TRUE AT 0 WITH
+    PARTY Director "D" DOES `s 76B(9)(b) lodge a notice of purchase or acquisition in the prescribed form with the Registrar` AT 10
+    PARTY Company "Co" DOES `s 76G(1) reduce the share capital or the profits by the total amount of the purchase price` AT 12
+
+-- The authority expired on day 10 and the company becomes entitled to exercise the rights on day 11: the permission to purchase has lapsed with nothing owed under this rule (a purchase without authority is a matter of section 76, not encoded here; fork s 76C(2)(c)).
+-- EXPECT FULFILLED
+#TRACE `s 76B and s 76F the company purchases or acquires its shares within the authority while it is solvent` (Company "Co") (Director "D") TRUE TRUE 10 TRUE AT 0 WITH
+    PARTY Company "Co" DOES `s 76B(9)(c) the company becomes entitled to exercise the rights attached to the shares, so that they are purchased or acquired` AT 11
+
+-- The Registrar allowed a further period to 15 August 2026 (day 212) and the company disposes on day 213: after the further period.
+-- EXPECT BREACH
+#TRACE `s 76I(3) the company must dispose of or cancel the excess treasury shares before the end of the 6 months and a public company's directors then lodge the notice` (Company "Co") (Director "D") TRUE TRUE 11 100 FALSE 0 0 (Date 15 1 2026) TRUE (Date 15 8 2026) AT 0 WITH
+    PARTY Company "Co" DOES `s 76I(3) dispose of or cancel the excess shares in accordance with section 76K` AT 213
+
+§ `Section 76K(1C) and (1D): the public company's dealing with treasury shares and the notice`
+
+-- Arguments: the company; the directors; public company; the shares are held as treasury shares; the kind of dealing; the Minister has prescribed the purpose. Day 0 is the day of the cancellation or disposal.
+
+-- A public company sells treasury shares for cash on day 0; the directors lodge the notice on day 30, the last day.
+-- EXPECT FULFILLED
+#TRACE `s 76K(1C) the public company cancels or disposes of its treasury shares and the directors then lodge the prescribed notice` (Company "Co") (Director "D") TRUE TRUE `s 76K(1)(a) sell the shares for cash` FALSE AT 0 WITH
+    PARTY Company "Co" DOES `s 76K(1C) the public company cancels or disposes of the treasury shares` AT 0
+    PARTY Director "D" DOES `s 76K(1D) lodge a prescribed notice of the cancellation or disposal of treasury shares with the Registrar together with the prescribed fee` AT 30
+
+-- The notice is lodged on day 31: one day late.
+-- EXPECT BREACH
+#TRACE `s 76K(1C) the public company cancels or disposes of its treasury shares and the directors then lodge the prescribed notice` (Company "Co") (Director "D") TRUE TRUE `s 76K(1)(a) sell the shares for cash` FALSE AT 0 WITH
+    PARTY Company "Co" DOES `s 76K(1C) the public company cancels or disposes of the treasury shares` AT 0
+    PARTY Director "D" DOES `s 76K(1D) lodge a prescribed notice of the cancellation or disposal of treasury shares with the Registrar together with the prescribed fee` AT 31
+
+-- A private company: section 76K(1C) is not its rule, so no notice is owed under (1D).
+-- EXPECT FULFILLED
+#TRACE `s 76K(1C) the public company cancels or disposes of its treasury shares and the directors then lodge the prescribed notice` (Company "Co") (Director "D") FALSE TRUE `s 76K(1)(a) sell the shares for cash` FALSE AT 0 WITH
+    PARTY Company "Co" DOES `s 76K(1C) the public company cancels or disposes of the treasury shares` AT 0
+
+-- A public company that has not yet dealt with the shares: the permission, which is open at any time, stays open.
+-- EXPECT RESIDUAL
+#TRACE `s 76K(1C) the public company cancels or disposes of its treasury shares and the directors then lodge the prescribed notice` (Company "Co") (Director "D") TRUE TRUE `s 76K(1)(a) sell the shares for cash` FALSE AT 0 WITH
+    (WAITUNTIL 400)
+
+-- READS-DIFFERENTLY-ON-MAIN: (checked with the stable build ~/.cache/l4-main/112/l4; 45 of the 48 traces give the class written above, 3 differ)
+--   line 64   `s 76B and s 76F ...` (WAITUNTIL 20), "No purchase before the authority expires": written FULFILLED, main prints RESIDUAL (the directors' notice of purchase, the HENCE step of the lapsed MAY, left open).
+--   line 180  `s 76D ...`, "Not a class case": written FULFILLED, main prints RESIDUAL (FULFILLED AND the same open notice duty).
+--   line 305  `s 76B and s 76F ...`, "The authority expired on day 10 and the company becomes entitled ... on day 11": written FULFILLED, main prints RESIDUAL (the same open notice duty).
+-- All three are a MAY with a WITHIN that runs out unused. The unstable build reads that as the permission lapsing with nothing owed; main leaves the step after it open.
+-- A scratch copy of the module with the LEST FULFILLED of the two purchase MAYs removed, run against the 40 traces that existed then, gave the same classes on both builds (40 of 40 on unstable, 38 of 40 on main with the same two lapsed-MAY traces differing), so the difference is not caused by the LEST.
