@@ -39,6 +39,32 @@ cnt = Counter(c[3] for c in cells)
 m = re.search(r'Counts, computed from the table by `check.sh`: (\d+) rows \((\d+) body rows, (\d+) footnote rows\); encoded (\d+), inert (\d+), out-of-scope (\d+), deferred (\d+)', notes)
 check(bool(m) and tuple(map(int, m.groups())) == (len(cells), len(body), len(fns), cnt['encoded'], cnt['inert'], cnt['out-of-scope'], cnt['deferred']),
       'the counts line in section 3 equals the table: %d rows (%d body, %d footnotes); encoded %d, inert %d, out-of-scope %d, deferred %d' % (len(cells), len(body), len(fns), cnt['encoded'], cnt['inert'], cnt['out-of-scope'], cnt['deferred']))
+# per-page text, and the page on which each footnote's text begins (a line holding only the next expected number)
+rawtxt = raw.decode('utf-8')
+parts = re.split(r'\[pdf page (\d+) of 9\]\n', rawtxt)
+pages = {int(parts[i]): parts[i + 1] for i in range(1, len(parts) - 1, 2)}
+fnpage = {}; nxt = 1
+for pg in sorted(pages):
+    lines = pages[pg].split('\n')
+    for i, l in enumerate(lines):
+        if l.strip() == str(nxt) and not (i + 1 < len(lines) and re.match(r'^\d+$', lines[i + 1].strip())) and i + 1 < len(lines):
+            fnpage[nxt] = pg; nxt += 1
+check(len(fnpage) == 21, 'the text has 21 footnotes, each found by position (found %d)' % len(fnpage))
+def firstpage(cell): return int(re.findall(r'\d+', cell)[0])
+wrong = [(c[0], c[1], fnpage.get(int(c[0][2:]))) for c in fns if firstpage(c[1]) != fnpage.get(int(c[0][2:]))]
+check(not wrong, 'each footnote row gives the page on which that footnote begins' + (' (wrong: %s)' % wrong if wrong else ''))
+def pagetext(cell):
+    ps = [int(x) for x in re.findall(r'\d+', cell)]
+    rng = range(ps[0], ps[-1] + 1)
+    return norm(' '.join(pages[p] for p in rng))
+offpage = []
+for c in cells:
+    allowed = pagetext(c[1])
+    for q in re.findall(r'"([^"\n]*)"', ' | '.join(c)):
+        for frag in re.split(r'\.\.\.|\u2026', q):
+            frag = norm(frag).strip(' ,.;:')
+            if len(frag.split()) >= 5 and frag not in allowed: offpage.append((c[0], c[1], frag[:90]))
+check(not offpage, 'every quotation of five words or more in a table row occurs on a page that row cites' + (''.join('\n      %s (pages %s): %s' % o for o in offpage) if offpage else ''))
 # pages cited
 bad = []
 for c in cells:
@@ -59,8 +85,9 @@ for ln, line in enumerate(notes.split('\n'), 1):
 check(not unbalanced, 'double quotes are balanced on every line of NOTES.md' + (' (unbalanced: lines %s)' % unbalanced if unbalanced else ''))
 check(not missing, '%d quoted fragments of five words or more all occur in the source text' % n)
 for ln, q in missing: print('      line %d not found: %s' % (ln, q[:140]))
-# the status paragraph's claim that the text has no disclaimer of legal force
-check(not re.search(r'no force or effect|not legal advice|should not be construed as legal advice', src), 'the text has no sentence disclaiming legal force (as NOTES.md section 1 says)')
+# the status paragraph's claim that the text has no sentence about its own legal force
+force = re.findall(r'\bforce\b|\bbinding\b|legal advice', src)
+check(not force, 'the text has none of the words "force", "binding" or "legal advice" (as NOTES.md section 1 says)')
 print('check.sh: %s' % ('all passed' if not fails else '%d FAILED' % len(fails)))
 sys.exit(1 if fails else 0)
 PY
