@@ -42,8 +42,8 @@ MAIN_TIMEOUT="${L4_MAIN_TIMEOUT:-300}"
 # (encoding.json `expected_red`). Update these with the files.
 expected_satisfied() {
   case "$1" in
-    ip-tests.l4) echo 54 ;;
-    ip-tests-boundaries.l4) echo 157 ;;
+    ip-tests.l4) echo 53 ;;
+    ip-tests-boundaries.l4) echo 158 ;;
     *) echo 0 ;;
   esac
 }

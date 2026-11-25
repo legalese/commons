@@ -12,7 +12,8 @@ No domain expert has read it, and no independent test pass has been made yet (a 
 What was checked, and how:
 
 - The source is `../../registers/source-bundle/2017-ip-licensing-guidelines.txt`, a `pdftotext` extraction of the 38-page PDF (text sha256 `6327fa46…`, PDF sha256 `74c75d29…`, both in the `.meta.json` beside it).
-  It was read in full; every quotation in the modules' comments was checked against that text by a phrase search on 2026-11-25, not against the PDF (the meta file warns that the extraction is not the authentic text).
+  It was read in full.
+  Quotations were checked against that text, not against the PDF (the meta file warns that the extraction is not the authentic text): on 2026-11-25 a script took every double-quoted span in the modules' comments and in this file, split it at each `...`, and searched each piece in the flattened text, allowing a footnote number between words; every miss was read by hand, and was either one of this encoding's own result names or reading labels (not a quotation), a sentence broken by a page break or a footnote, or a misquotation, which was corrected.
 - `check.sh` was run with both builds, and its output is in section 7.
 - `check.sh` was shown able to fail: it exits 1 with a wrong expected count (a scratch copy with 156 for `ip-tests-boundaries.l4`) and with a main run that does not finish in `L4_MAIN_TIMEOUT`, and exits 2 with no main build, with an unstable build given as `L4_MAIN`, with a missing binary, and with a stub binary that prints nothing.
   `ip-tests-red.l4` holds four wrong assertions, and both builds fail all four.
@@ -29,6 +30,7 @@ What was checked, and how:
 **"Creates no independent rights or obligations."**
 The brief attributes these words to the guideline; they are **not in this text** (a search of the extraction finds neither "independent rights" nor "rights or obligations").
 `SOURCE-LICENSE.md` at the subject level attributes them to "the merger guidelines' own words", which may be where they come from.
+For that reason this row has no copy of `SOURCE-LICENSE.md` beside its modules, which commons' `CLAUDE.md` otherwise asks for: the subject-level file (`../../SOURCE-LICENSE.md`) should be checked first, so that a copy does not carry the attribution with it.
 This guideline's own disclaimers are these, and the modules' header comments carry them:
 
 - 1.0 [pdf page 3]: the guidelines "cannot remove judgment and discretion in antitrust law enforcement".
@@ -38,6 +40,12 @@ This guideline's own disclaimers are these, and the modules' header comments car
 
 So every result type is named for what the agencies say they do, with the text's own modal ("will", "may", "would be likely to", "generally"), and no type says "lawful", "unlawful" or "illegal" of the arrangement itself.
 Where the text quotes a legal characterisation, the result keeps it as the agencies' ("the agencies will consider the agreement per se illegal: it constitutes a horizontal cartel", 5.2; "it may violate section 2 of the Sherman Act", 6).
+
+## Seat
+
+A party to an intellectual property licensing arrangement, the licensor or a licensee (in practice, with its counsel), asking what the agencies say they will do with the arrangement: whether a restraint is in the safety zone, which mode of analysis applies, and what the guidelines say of the particular restraint.
+The agencies are never the seat; their statements are encoded for what they mean to that party.
+There is no seat layer with `@export` and `@desc` questions yet (deferred; the brief did not ask for one).
 
 ## 2. Target and builds
 
@@ -52,7 +60,7 @@ In scope: the tests and definite statements of parts 1 to 6 and the ten Examples
 
 - 4.3, the safety zone: condition (1), not facially anticompetitive (n.59); condition (2), no more than twenty percent of each relevant market significantly affected, exactly twenty inside; the goods-markets-only rule and its exception; the four-or-more criteria for technology and research and development markets without usable share data; where the zone does not apply (n.58; transfers given a merger analysis, n.60, n.86); "absent extraordinary circumstances"; outside the zone is not a finding (4.3 [pdf page 27]).
 - Parts 2 and 3: reach (2.1); market power never presumed from protection (2.2, 5.3); the concerns (3.1); whether a technology market (3.2.2, n.33) or a research and development market (3.2.3) is analysed; the equal-share rules ("will assign", 3.2.2 via Example 2; "may assign", 3.2.3); Example 3's four-entity screen; horizontal and vertical relationships (3.3, n.27); per se or rule of reason, and the depth of the rule-of-reason inquiry (3.4).
-- Part 4: the risk considerations of 4.1.1 as a report; exclusivity in effect, and the two "generally no concern" statements (4.1.2); what the agencies do on their findings, and the considerations for reasonable necessity (4.2).
+- Part 4: the risk considerations of 4.1.1 as a report; exclusivity in effect, and the two statements that a license "generally" raises no concern (4.1.2); what the agencies do on their findings, and the considerations for reasonable necessity (4.2).
 - Parts 5 and 6: 5.1 to 5.7 and part 6, each to the extent the text states a test or a definite step.
 
 Not computed, by design:
@@ -114,8 +122,8 @@ Every numbered part, every Example, and every footnote, with its disposition.
 
 | Example | disposition | what the fixtures assert |
 | --- | --- | --- |
-| 1 ComputerCo | encoded | Vertical; 3.1 states nothing; the finding of no likely effect gives "treat as reasonable" and "will not challenge"; the barred-other-programs variant is exclusive dealing under the rule of reason; the form of property does not matter (n.22). The bottom line is supplied as the agencies' finding. |
-| 2 Alpha and Beta | encoded | A technology market may be analysed; the equal share is tested in the boundaries file, since the Example gives no count. |
+| 1 ComputerCo | encoded | Vertical; 3.1 states nothing; the finding of no likely effect gives "will treat it as reasonable" and "will not challenge"; the barred-other-programs variant is exclusive dealing under the rule of reason; the form of property does not matter (n.22). The bottom line is supplied as the agencies' finding. |
+| 2 Alpha and Beta | encoded | A technology market may be analysed. The fixture is partly constructed: that the processes are marketed apart from the drug is implied, not stated. The equal share is tested in the boundaries file, since the Example gives no count. |
 | 3 Biodegradable plastic venture | encoded | The screen at four and at three, unassessed and with a significant risk. n.43 (the withdrawn 2000 Collaborations guidelines; the National Cooperative Research Act) and n.44 ("Cf. section 4.3") are out-of-scope and inert. The venture's effects in other markets (the Example's last paragraph) are not screened. |
 | 4 AgCo and FarmCo | encoded | Vertical in emission control technology; horizontal in farm equipment. |
 | 5 Cross-license of valves | encoded | Horizontal in part and vertical in part; licensing to others "not important". |
@@ -123,7 +131,7 @@ Every numbered part, every Example, and every footnote, with its disposition.
 | 7 NewCo and BigCo | encoded | Exclusive licensing raises no concern absent a horizontal relationship; exclusive dealing under the rule of reason; the factor reports. The bottom line is supplied as the agencies' finding. |
 | 8 Jointly assigned substitutes | encoded | Per se without integration; rule of reason with it; the quick look (fork F11). |
 | 9 Jointly assigned blocking patents | encoded | Not horizontal in the patents; horizontal in the goods market. The bottom line is supplied. |
-| 10 Omega and Delta | encoded | Exclusive in fact: a merger analysis, and the safety zone does not apply (fork F8). |
+| 10 Omega and Delta | encoded | Horizontal (a potential competitor); a merger analysis, and the safety zone does not apply. The route to the merger analysis is fork F8's reading, not the Example's own reason (section 6). |
 
 No Example applies 4.3 with figures, so the safety-zone fixtures come from 4.3's own words (`ip-tests-boundaries.l4`).
 The fixtures for Examples 4, 5 and 9 are **not independent**: the 3.2.2 competitor test and the blocking rule were read with those Examples in view.
@@ -162,13 +170,16 @@ Footnotes (90): 31 have their own row, 12 encoded, 12 inert and 7 out-of-scope; 
 ## 6. The Examples where the text and the body differ
 
 - **3.4 against Example 6.** 3.4 says the agencies "will challenge the restraint under the per se rule"; Example 6 says the agency "would be likely to challenge" it under the per se rule. The result keeps 3.4's words.
-- **n.85 against Example 10.** n.85 says the agencies "may also apply" a merger analysis to a license that in substance transfers the rights, and cites Example 10; Example 10 says the agency "would apply" one because the license is "exclusive in fact". The fixture reads Example 10 as 5.7's main rule, an exclusive license in fact (fork F8).
-- **Examples 1, 7 and 9** reach "unlikely to object" or "unlikely to challenge" from considerations. No rule is minted from them: the fixtures supply the finding of no likely anticompetitive effect, and assert that 3.4 and 4.2 then give "treat as reasonable" and "will not challenge".
+- **n.85 against Example 10.** n.85 says the agencies "may also apply" a merger analysis to a license that in substance transfers the rights, and cites Example 10 for it.
+  Example 10 finds the nominally nonexclusive license "exclusive in fact", and says the agency "would apply a merger analysis to this transaction, since it involves an acquisition of a potential competitor".
+  The Example's stated reason is the acquisition of a potential competitor, which no rule here computes.
+  The fixture instead reads the license as 5.7's exclusive license in fact, so that 5.7's "will apply" answers: that is fork F8's reading, assumed, not ruled.
+- **Examples 1, 7 and 9** reach "unlikely to object" or "unlikely to challenge" from considerations. No rule is minted from them: the fixtures supply the finding of no likely anticompetitive effect, and assert that 3.4 and 4.2 then give "will treat it as reasonable" and "will not challenge".
 - **Example 8.** "May conclude that the joint marketing ... constitutes horizontal price-fixing" is the classification of the restraint, which the caller supplies; once it is classed so, 3.4 says "will". Its "sufficiently apparent" effects are read as 3.4's "facially appears" (fork F11).
 
 ## 7. Checks
 
-`L4=<unstable l4> L4_MAIN=/Users/mengwong/.cache/l4-main/112/l4 ./check.sh`, run 2026-11-25:
+`L4=<unstable l4> L4_MAIN=<main l4> ./check.sh`, run 2026-11-25:
 
 ```
 your l4:    unstable-20261125-a50cbd0 (unstable, a50cbd0, 2026-11-25)
@@ -179,9 +190,9 @@ ip-nouns.l4                   0    0    0    0       0/0 |    0    0    0    0  
 ip-restraints.l4              0    0    0    0       0/0 |    0    0    0    0  same
 ip-rule-of-reason.l4          0    0    0    0       0/0 |    0    0    0    0  same
 ip-safety-zone.l4             0    0    0    0       0/0 |    0    0    0    0  same
-ip-tests-boundaries.l4        0  157    0    0     157/0 |    0  157    0    0  same
+ip-tests-boundaries.l4        0  158    0    0     158/0 |    0  158    0    0  same
 ip-tests-red.l4               4    0    4    0       0/4 |    4    0    4    0  same
-ip-tests.l4                   0   54    0    0      54/0 |    0   54    0    0  same
+ip-tests.l4                   0   53    0    0      53/0 |    0   53    0    0  same
 TOTAL (8 modules): satisfied unstable 211, main 211; failed (positive controls) unstable 4, main 4
 (a failed assertion is also an error; the expected column is satisfied/failed)
 check.sh: all passed
@@ -194,7 +205,7 @@ What it does not see: equal counts on the two builds can hide a different assert
 ## 8. Fork register
 
 Every reading below is **assumed, not ruled**.
-Each has a fixture in `ip-tests-boundaries.l4` (or `ip-tests.l4` where named) on which the reading taken and its alternative give different answers.
+Each has a fixture in `ip-tests-boundaries.l4` (or `ip-tests.l4` where named) on which the reading taken and its alternative give different answers, except two that no fixture can tell apart: F9, which is only a result's name, and F18, whose alternative would leave the equal-share rule unused (its fixtures test the rule's own edges).
 
 | fork | the question | reading taken | the alternative | the text |
 | --- | --- | --- | --- | --- |
@@ -214,15 +225,15 @@ Each has a fixture in `ip-tests-boundaries.l4` (or `ip-tests.l4` where named) on
 | F14 | A trademark license and the zone. | NOTHING: the guidelines do not cover trademarks. | "Does not apply". | n.1. |
 | F15 | When goods-market analysis alone is inadequate, are goods markets still considered? | Yes, every listed market is considered. | Only the technology and research and development markets. | 4.3 "by reference only to goods markets unless ...". Fixture: the goods-only rule in both directions. |
 | F16 | Contradictory findings. | NOTHING, wherever two inputs the text treats as exclusive are both TRUE: a substitute that is also blocked (3.2.2); no likely effect and a facially harmful restraint with no related efficiency (3.4); reasonably necessary with a clear less restrictive alternative (4.2). | Let one win by the order of the sentences. | 3.2.2, 2.3; 3.4; 4.2. |
-| F17 | 4.1.2: exclusive licensing with a horizontal relationship; a non-exclusive license with exclusive dealing. | NOTHING for both: "only if" states nothing on the other side, and exclusive dealing is a restraint on the licensee's conduct. | "May raise concerns" as a result; exclusive dealing not counted as a restraint. | 4.1.2 [pdf page 23]. |
+| F17 | 4.1.2: exclusive licensing with a horizontal relationship; a non-exclusive license with exclusive dealing. | NOTHING for both: "only if" states nothing on the other side, and exclusive dealing is a restraint on the licensee's conduct. | "may raise antitrust concerns" as a result; exclusive dealing not counted as a restraint. | 4.1.2 [pdf page 23]. |
 | F18 | The equal share of Example 2's Discussion. | A general rule for technology markets ("will assign"), given only for a whole count of at least one. | Confined to Example 2. | Example 2 [pdf page 12], n.37. |
 | F19 | Order of the zone's gates. | Coverage, then n.58, then the merger analysis, then condition (1), then condition (2). | Another order. A per se restraint outside any licensing arrangement then reads "does not apply", not "outside". | 4.3, n.58. Fixture: a per se restraint not in a licensing arrangement. |
-| F20 | Section 6: fraud without the other elements proved. | Section 6 states nothing on it. | "May violate". | 6 [pdf page 37] "if all the elements otherwise necessary to establish a charge are proved". |
-| F21 | 3.1 when no concern appears; Example 3 with fewer than four and no significant risk. | NOTHING for both. | "Will not challenge"; "unlikely to affect competition". | 3.1; Example 3. |
+| F20 | Section 6: the "other elements", and fraud without them. | One input stands for both sentences' other elements. Fraud without them: the fraud sentence states nothing; if inequitable conduct is also found, its sentence says it will not be the basis of a section 2 claim, because "unless" needs both fraud and the elements. | Two inputs; or "may violate" without the elements. | 6 [pdf page 37] "if all the elements otherwise necessary to establish a charge are proved"; "will not be the basis of a section 2 claim unless". |
+| F21 | 3.1 when no concern appears; Example 3 with fewer than four and no significant risk. | NOTHING for both. | That the agencies will not challenge; that the venture is unlikely to harm competition. | 3.1; Example 3. |
 
 ## 9. Open questions for a domain expert
 
-1. Are the 2010 Horizontal Merger Guidelines, which 3.2.1 (n.31) and 5.7 rely on, still the agencies' merger guidelines? This was not checked (no fetching). The encoder's recollection, unverified and not relied on, is that the agencies issued new merger guidelines in December 2023; whether that changes how 5.7's "merger analysis" is done is outside this encoding either way.
+1. Are the 2010 Horizontal Merger Guidelines, which 3.2.1 (n.31) and 5.7 rely on, still the agencies' merger guidelines? This was not checked (no fetching). How a 5.7 merger analysis is done is outside this encoding either way.
 2. What are "extraordinary circumstances" (4.3)? The text does not say; the result carries the qualifier (F9).
 3. Does n.86 take n.85's in-substance transfers out of the safety zone (F8)?
 4. With accurate share data in a technology or research and development market, do the agencies ever apply the four-or-more criteria instead (F6)?
