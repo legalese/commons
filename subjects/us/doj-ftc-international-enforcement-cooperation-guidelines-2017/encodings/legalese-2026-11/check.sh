@@ -43,7 +43,7 @@ MAIN_TIMEOUT="${L4_MAIN_TIMEOUT:-300}"
 expected_satisfied() {
   case "$1" in
     intl-tests.l4) echo 39 ;;
-    intl-tests-boundaries.l4) echo 235 ;;
+    intl-tests-boundaries.l4) echo 236 ;;
     *) echo 0 ;;
   esac
 }
