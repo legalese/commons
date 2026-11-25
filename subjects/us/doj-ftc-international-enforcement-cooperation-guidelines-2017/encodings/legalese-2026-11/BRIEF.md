@@ -3,7 +3,7 @@
 Target compiler: `main` (the stable `l4`); the encoding is also checked with the newest `unstable` build.
 Label: **AGENCY ENFORCEMENT POLICY, NOT LAW.**
 The guidelines state how the U.S. Department of Justice and the Federal Trade Commission apply the antitrust laws to conduct involving foreign commerce, weigh foreign jurisdictions' interests, and cooperate with foreign authorities; they do not state what a court must hold.
-The text itself says it replaces the 1995 Antitrust Enforcement Guidelines for International Operations (read at source, 1 [pdf page 4]); the 1995 text is not to be read, and NOTES must say so.
+The text itself says it replaces the 1995 Antitrust Enforcement Guidelines for International Operations (read at source, 1 [pdf page 4]); NOTES must say so, and must say that the 1995 text was not read.
 
 This brief is the subject part of the coordinator's task; the common brief (`BRIEF-COMMON.md`) and the Phase 2 brief (`BRIEF-PHASE2.md`) of the batch, written by the parent session, apply with it, and the Phase 2 brief wins where they differ.
 
