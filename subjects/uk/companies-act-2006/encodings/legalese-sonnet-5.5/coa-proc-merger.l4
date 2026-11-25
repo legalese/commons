@@ -1,0 +1,435 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `coa-core`
+IMPORT `coa20-part26`
+IMPORT `coa20-part27-merger`
+
+-- coa-proc-merger.l4: Companies Act 2006 (United Kingdom), Part 27, Chapter 2, ss 902 to 918: the procedure the Act lays down for a merger of
+-- public companies, written as regulative rules over the Boolean encoding in coa20-part27-merger.l4. Lines 12530-12784 of ukpga-2006-46.txt.
+-- The gates are the existing functions of coa20-part27-merger.l4 (and, of coa20-part26.l4, the calendar-month helper `s 906(3) the date one month before`):
+-- s 902(1) and (3), s 904(1), s 907(1) and (2), s 908(3), s 909(7), s 910(1) and (6), s 911(7), s 915(1) and (4), s 915A(1) and (2), s 917A(1).
+-- Nothing here edits those modules. The Boolean module has no DEONTIC for this Part.
+--
+-- The merger procedure only: a division (Chapter 3, ss 919 to 934) is outside this module, so the answer for a division is passed to s 902(1) as JUST FALSE.
+-- The content of the draft terms (s 905(2)), of the directors' report (s 908(2)) and of the expert's report (s 909(5)) is not encoded here: the Boolean module asks it.
+--
+-- SEAMS taken as INPUTS: the answers of ss 916, 917 and 918 (whether a meeting is required for the company the duty is traced for: each of those functions asks for the answers
+-- of its own four conditions and the court's satisfaction, and each condition asks for dates and the availability of documents), s 915A(3) and (4),
+-- s 918A(1) (agreement to dispense with the reports; section 918A is outside this module); the dates of the receipt of the draft terms, of the first meeting,
+-- of the adoption of the draft terms and of the balance sheet; the votes counted in each class (s 907(1)).
+-- FORK: ss 908, 909, 910, 911 "requirement excluded" | an exclusion answered NOTHING (not known) leaves the duty standing | an unknown exclusion means no duty arises
+-- FORK: ss 916 to 918 "meeting not required" | the four answers are given for the company the duty is traced for (a meeting not required for the transferee may still be required for a transferor, so the scheme record is built per company) | one answer for the whole scheme
+-- FORK: "the first meeting" for s 906(3), s 906A(6), s 911(2) and s 910(1)(a) | the date input is the earliest of the meetings summoned to approve the scheme, since the one-month periods of the text run to "the date of any meeting" and the earliest date is the one that binds | each class meeting counted separately
+
+DECLARE `ss 902-918 party` IS ONE OF
+    `ss 902-918 the directors of a merging company`
+    `ss 902-918 the registrar`
+    `ss 902-918 a merging company`
+    `ss 902-918 the court`
+
+DECLARE `ss 902-918 act` IS ONE OF
+    `s 905(1) the directors draw up the draft terms and adopt them`
+    `s 906(1) the directors deliver a copy of the draft terms to the registrar`
+    `s 906A(4) the directors deliver to the registrar a notice giving details of the website`
+    `s 906(2) the registrar publishes in the Gazette notice of receipt of the draft terms`
+    `s 906A(5) the registrar publishes in the Gazette the notice giving details of the website`
+    `s 906A(6) the draft terms are on the company's website when the period begins`
+    `s 906A(6) the company takes the draft terms off its website`
+    `s 907(1) the meeting of the members is held and the vote on the scheme is taken`
+    `s 908(1) the directors draw up and adopt the explanatory report`
+    `s 909(3) the court approves the appointment of a joint expert`
+    `s 909(1) a single expert's report is drawn up by the joint expert on behalf of all the merging companies`
+    `s 909(1) a separate expert's report is drawn up by a separate expert on behalf of the company`
+    `s 910(1A) the directors prepare a supplementary accounting statement`
+    `s 911(1) the documents are open to inspection and copies are available free of charge when the period begins`
+    `s 911(1) the documents cease to be open to inspection or copies cease to be available free of charge`
+
+-- The facts of one scheme, as seen by one merging company, in one record so that a trace states them once.
+DECLARE `ss 902-918 the scheme` HAS
+    `scheme: the company is a public company` IS A BOOLEAN
+    `scheme: a compromise or arrangement is proposed between the public company and its creditors, or any class of them, or its members, or any class of them` IS A BOOLEAN
+    `scheme: it is proposed for the purposes of, or in connection with, a scheme for the reconstruction of any company or companies or the amalgamation of any two or more companies` IS A BOOLEAN
+    `scheme: the consideration for the transfer is to be shares in the transferee company, with or without any cash payment to members` IS A BOOLEAN
+    `scheme: the company in respect of which the compromise or arrangement is proposed is being wound up` IS A BOOLEAN
+    `scheme: the undertaking, property and liabilities of one or more public companies are to be transferred` IS A BOOLEAN
+    `scheme: they are to be transferred to another existing public company` IS A BOOLEAN
+    `scheme: the undertaking, property and liabilities of two or more public companies are to be transferred` IS A BOOLEAN
+    `scheme: they are to be transferred to a new company, whether or not a public company` IS A BOOLEAN
+    `scheme: all of the relevant securities of each transferor company are held by or on behalf of the transferee company` IS A BOOLEAN
+    `scheme: the percentages of the relevant securities of each transferor company held by or on behalf of the transferee company` IS A LIST OF NUMBER
+    `scheme: s 915A(3) the first condition is met` IS A MAYBE BOOLEAN
+    `scheme: s 915A(4) the second condition is met` IS A MAYBE BOOLEAN
+    `scheme: s 918A(1) the requirements are dispensed with by agreement` IS A MAYBE BOOLEAN
+    `scheme: s 916(2) the meeting of members of the transferee company is not required` IS A MAYBE BOOLEAN
+    `scheme: s 917(2) the meeting of members of any of the merging companies is not required` IS A MAYBE BOOLEAN
+    `scheme: the compromise or arrangement is to be sanctioned under Part 26A, and the company is the one in respect of which it is proposed` IS A BOOLEAN
+    `scheme: s 918(1) the meeting of members of the transferee company is not required` IS A MAYBE BOOLEAN
+
+-- ---- the gates: does the Part apply to this merger, and which requirements has the Act switched off? ------------------------------------
+
+-- src:12553 | (1) The scheme involves a merger where under the scheme—
+-- src:12554 | (a) the undertaking, property and liabilities of one or more public companies, including the company in respect of which the compromise or arrangement is proposed, are to be transferred to another existing public company (a “merger by absorption”), or
+-- src:12555 | (b) the undertaking, property and liabilities of two or more public companies, including the company in respect of which the compromise or arrangement is proposed, are to be transferred to a new company, whether or not a public company, (a “merger by formation of a new company”).
+@ref s 904(1) The scheme involves a merger (src:12553-12555)
+GIVEN scheme IS A `ss 902-918 the scheme`
+GIVETH A MAYBE BOOLEAN
+`ss 902-918 the scheme involves a merger` MEANS
+    `s 904(1) the scheme involves a merger`
+        (`s 904(1)(a) the scheme involves a merger by absorption` (scheme's `scheme: the undertaking, property and liabilities of one or more public companies are to be transferred`) (scheme's `scheme: they are to be transferred to another existing public company`))
+        (`s 904(1)(b) the scheme involves a merger by formation of a new company` (scheme's `scheme: the undertaking, property and liabilities of two or more public companies are to be transferred`) (scheme's `scheme: they are to be transferred to a new company, whether or not a public company`))
+
+GIVEN scheme IS A `ss 902-918 the scheme`
+GIVETH A BOOLEAN
+`ss 902-918 the scheme is a merger by absorption` MEANS
+    (`s 904(1)(a) the scheme involves a merger by absorption` (scheme's `scheme: the undertaking, property and liabilities of one or more public companies are to be transferred`) (scheme's `scheme: they are to be transferred to another existing public company`)) EQUALS JUST TRUE
+
+-- src:12531 | (1) This Part applies where—
+-- src:12532 | (a) a compromise or arrangement is proposed between a public company and—
+-- src:12533 | (i) its creditors or any class of them, or
+-- src:12534 | (ii) its members or any class of them,
+-- src:12535 | for the purposes of, or in connection with, a scheme for the reconstruction of any company or companies or the amalgamation of any two or more companies,
+-- src:12536 | (b) the scheme involves—
+-- src:12537 | (i) a merger (as defined in section 904), or
+-- src:12538 | (ii) a division (as defined in section 919), and
+-- src:12539 | (c) the consideration for the transfer (or each of the transfers) envisaged is to be shares in the transferee company (or one or more of the transferee companies) receivable by members of the transferor company (or transferor companies), with or without any cash payment to members.
+-- src:12543 | (3) This Part does not apply where the company in respect of which the compromise or arrangement is proposed is being wound up.
+@ref s 902(1) and (3) Application of this Part (src:12531-12543)
+-- FORK: s 902(1)(b)(ii) "a division" | this module is the merger procedure, so the answer for a division is JUST FALSE and the Part applies here only through a merger | a scheme that is both is also a division
+GIVEN scheme IS A `ss 902-918 the scheme`
+GIVETH A BOOLEAN
+`ss 902-918 Part 27 applies to a merger` MEANS
+        (`s 902(1) this Part applies`
+            (scheme's `scheme: the company is a public company`)
+            (scheme's `scheme: a compromise or arrangement is proposed between the public company and its creditors, or any class of them, or its members, or any class of them`)
+            (scheme's `scheme: it is proposed for the purposes of, or in connection with, a scheme for the reconstruction of any company or companies or the amalgamation of any two or more companies`)
+            (`ss 902-918 the scheme involves a merger` scheme)
+            (JUST FALSE)
+            (scheme's `scheme: the consideration for the transfer is to be shares in the transferee company, with or without any cash payment to members`)) EQUALS JUST TRUE
+    AND (NOT ((`s 902(3) the winding up of the company takes the compromise or arrangement out of this Part` (scheme's `scheme: the company in respect of which the compromise or arrangement is proposed is being wound up`)) EQUALS JUST TRUE))
+
+-- src:12692 | (1) This section applies in the case of a merger by absorption where all of the relevant securities of the transferor company (or, if there is more than one transferor company, of each of them) are held by or on behalf of the transferee company.
+-- src:12696 | (4) The requirements of the following sections do not apply—
+-- src:12697 | section 908 (directors' explanatory report),
+-- src:12698 | section 909 (expert's report).
+-- src:12702 | (1) This section applies in the case of a merger by absorption where 90% or more (but not all) of the relevant securities of the transferor company (or, if there is more than one transferor company, of each of them) are held by or on behalf of the transferee company.
+-- src:12703 | (2) If the conditions in subsections (3) and (4) are met, the requirements of the following sections do not apply—
+-- src:12704 | (a) section 908 (directors' explanatory report),
+-- src:12705 | (b) section 909 (expert's report),
+-- src:12706 | (c) section 910 (supplementary accounting statement),
+-- src:12707 | (d) section 911 (inspection of documents), and
+-- src:12708 | (e) section 911B (report on material changes of assets of merging company).
+@ref ss 915 and 915A Circumstances in which reports, particulars and inspection are not required (src:12692-12708)
+GIVEN scheme IS A `ss 902-918 the scheme`
+GIVETH A MAYBE BOOLEAN
+`ss 902-918 s 915(4) answer for the scheme` MEANS
+    `s 915(4) the requirements of sections 908 and 909 do not apply`
+        (`s 915(1) this section applies` (`ss 902-918 the scheme is a merger by absorption` scheme) (scheme's `scheme: all of the relevant securities of each transferor company are held by or on behalf of the transferee company`))
+
+GIVEN scheme IS A `ss 902-918 the scheme`
+GIVETH A MAYBE BOOLEAN
+`ss 902-918 s 915A(2) answer for the scheme` MEANS
+    `s 915A(2) the requirements of sections 908, 909, 910, 911 and 911B do not apply`
+        (`s 915A(1) this section applies` (`ss 902-918 the scheme is a merger by absorption` scheme) (scheme's `scheme: the percentages of the relevant securities of each transferor company held by or on behalf of the transferee company`))
+        (scheme's `scheme: s 915A(3) the first condition is met`)
+        (scheme's `scheme: s 915A(4) the second condition is met`)
+
+GIVEN scheme IS A `ss 902-918 the scheme`
+GIVETH A BOOLEAN
+`ss 902-918 section 908 requires the explanatory report` MEANS
+        `ss 902-918 Part 27 applies to a merger` scheme
+    AND (NOT ((`s 908(3) the requirement in section 908 is excluded` (`ss 902-918 s 915(4) answer for the scheme` scheme) (`ss 902-918 s 915A(2) answer for the scheme` scheme) (scheme's `scheme: s 918A(1) the requirements are dispensed with by agreement`)) EQUALS JUST TRUE))
+
+GIVEN scheme IS A `ss 902-918 the scheme`
+GIVETH A BOOLEAN
+`ss 902-918 section 909 requires the expert's report` MEANS
+        `ss 902-918 Part 27 applies to a merger` scheme
+    AND (NOT ((`s 909(7) the requirement in section 909 is excluded` (`ss 902-918 s 915(4) answer for the scheme` scheme) (`ss 902-918 s 915A(2) answer for the scheme` scheme) (scheme's `scheme: s 918A(1) the requirements are dispensed with by agreement`)) EQUALS JUST TRUE))
+
+GIVEN scheme IS A `ss 902-918 the scheme`
+GIVETH A BOOLEAN
+`ss 902-918 section 910 requires the supplementary accounting statement` MEANS
+        `ss 902-918 Part 27 applies to a merger` scheme
+    AND (NOT ((`s 910(6) the requirement in section 910 is excluded` (`ss 902-918 s 915A(2) answer for the scheme` scheme) (scheme's `scheme: s 918A(1) the requirements are dispensed with by agreement`)) EQUALS JUST TRUE))
+
+GIVEN scheme IS A `ss 902-918 the scheme`
+GIVETH A BOOLEAN
+`ss 902-918 section 911 requires the documents to be open to inspection` MEANS
+        `ss 902-918 Part 27 applies to a merger` scheme
+    AND (NOT ((`s 911(7) the requirements in section 911 are excluded` (`ss 902-918 s 915A(2) answer for the scheme` scheme)) EQUALS JUST TRUE))
+
+-- src:12592 | (1) The scheme must be approved by a majority in number, representing 75% in value, of each class of members of each of the merging companies, present and voting either in person or by proxy at a meeting.
+-- src:12593 | (2) This requirement is subject to sections 916, 917, 917A and 918 (circumstances in which meetings of members not required).
+@ref s 907(1) and (2) Approval of members of merging companies (src:12592-12593)
+-- FORK: s 917A(1) "the company in respect of which the compromise or arrangement is proposed" | the scheme record says, for the company the duty is traced for, whether it is that company and the arrangement is to be sanctioned under Part 26A, and the existing function is called on that answer | the whole scheme answers once
+GIVEN scheme IS A `ss 902-918 the scheme`
+GIVETH A BOOLEAN
+`ss 902-918 section 907 requires a meeting of the members` MEANS
+        `ss 902-918 Part 27 applies to a merger` scheme
+    AND (NOT ((`s 907(2) the meeting of members is not required`
+                   (scheme's `scheme: s 916(2) the meeting of members of the transferee company is not required`)
+                   (scheme's `scheme: s 917(2) the meeting of members of any of the merging companies is not required`)
+                   (`s 917A(1) the meeting of members of the transferor company is not required` (scheme's `scheme: the compromise or arrangement is to be sanctioned under Part 26A, and the company is the one in respect of which it is proposed`))
+                   (scheme's `scheme: s 918(1) the meeting of members of the transferee company is not required`)) EQUALS JUST TRUE))
+
+-- Day counts, computed from dates: the stable binary accepts a function call as a clock (`WITHIN (f x)`) but not as the act of a MUST, so the choice
+-- between the two routes of section 906A is written out as an IF in each rule below.
+GIVEN `the date the registrar receives the copy of the draft terms or the notice giving details of the website` IS A DATE
+      `the date of the first meeting of the company summoned for the purpose of approving the scheme` IS A DATE
+GIVETH A NUMBER
+`s 906(3) the days from the receipt to the last day for the notice` MEANS
+    (Day (`s 906(3) the date one month before` `the date of the first meeting of the company summoned for the purpose of approving the scheme`)) MINUS (Day `the date the registrar receives the copy of the draft terms or the notice giving details of the website`)
+
+GIVEN `the date of the first meeting of the company summoned for the purpose of approving the scheme` IS A DATE
+GIVETH A NUMBER
+`s 911(2) the days from the first day of the period to the date of the meeting` MEANS
+    (Day `the date of the first meeting of the company summoned for the purpose of approving the scheme`) MINUS (Day (`s 906(3) the date one month before` `the date of the first meeting of the company summoned for the purpose of approving the scheme`))
+
+-- ---- s 905(1): the draft terms ------------------------------------------------------------------------------------------------------
+
+-- src:12561 | (1) A draft of the proposed terms of the scheme must be drawn up and adopted by the directors of the merging companies.
+@ref s 905(1) A draft of the proposed terms drawn up and adopted by the directors (src:12561)
+-- TIMELINE: unit=none; day 0=not applicable; counting=silent (s 905(1) gives no time for drawing up and adopting the draft terms, so no clock runs: the duty stays open until the trace shows it done)
+-- FORK: s 905(1) "the directors of the merging companies" | the duty is the directors', one duty for each merging company (the scheme record is built per company) | one joint duty of all the directors
+GIVEN scheme IS A `ss 902-918 the scheme`
+GIVETH A DEONTIC `ss 902-918 party` `ss 902-918 act`
+`s 905(1) the directors' duty to draw up the draft terms and adopt them` MEANS
+    IF `ss 902-918 Part 27 applies to a merger` scheme
+    THEN PARTY `ss 902-918 the directors of a merging company`
+         MUST `s 905(1) the directors draw up the draft terms and adopt them`
+         HENCE FULFILLED
+    ELSE FULFILLED
+
+-- ---- s 906(1) and s 906A(4): delivery to the registrar --------------------------------------------------------------------------------
+
+-- src:12578 | (1) The directors of each of the merging companies must deliver a copy of the draft terms to the registrar.
+-- src:12588 | (4) The third condition is that the directors of the company deliver to the registrar a notice giving details of the website.
+@ref s 906(1) and s 906A(4) The directors deliver a copy of the draft terms, or a notice giving details of the website (src:12578-12588)
+-- TIMELINE: unit=none; day 0=not applicable; counting=silent (neither s 906(1) nor s 906A(4) gives the directors a time for delivery; the only time in the Act is the registrar's: the notice is published at least one month before the meeting, see the rule for s 906(3) below, so a late delivery shows there)
+-- FORK: s 906A(1) "Section 906 does not apply in respect of a company if the conditions in subsections (2) to (6) are met" | whether the company relies on the website route is an input chosen at the start, and the duty owed is the one of that route; the failure of a later condition is the rule for s 906A(6) below | the answer of s 906A(1) is the gate, which is not known until the meeting
+GIVEN scheme IS A `ss 902-918 the scheme`
+      `the company relies on section 906A` IS A BOOLEAN
+GIVETH A DEONTIC `ss 902-918 party` `ss 902-918 act`
+`s 906(1) the directors' duty to deliver the draft terms or the website notice to the registrar` MEANS
+    IF `ss 902-918 Part 27 applies to a merger` scheme
+    THEN (IF `the company relies on section 906A`
+          THEN PARTY `ss 902-918 the directors of a merging company`
+               MUST `s 906A(4) the directors deliver to the registrar a notice giving details of the website`
+               HENCE FULFILLED
+          ELSE PARTY `ss 902-918 the directors of a merging company`
+               MUST `s 906(1) the directors deliver a copy of the draft terms to the registrar`
+               HENCE FULFILLED)
+    ELSE FULFILLED
+
+-- ---- s 906(2) and (3), s 906A(5): the registrar publishes notice at least one month before the meeting -------------------------------------
+
+-- src:12579 | (2) The registrar must publish in the Gazette notice of receipt by him from that company of a copy of the draft terms.
+-- src:12580 | (3) That notice must be published at least one month before the date of any meeting of that company summoned for the purpose of approving the scheme.
+-- src:12589 | (5) The fourth condition is that the registrar publishes the notice in the Gazette at least one month before the date of any meeting of the company summoned for the purpose of approving the scheme.
+@ref s 906(2) and (3), s 906A(5) The registrar publishes notice in the Gazette at least one month before the meeting (src:12579-12589)
+-- TIMELINE: unit=calendar day; day 0=the day the registrar receives the copy of the draft terms (or the notice giving details of the website); counting="at least one month before the date of any meeting": the last day is the calendar date one month before the first meeting (the existing `s 906(3) the date one month before`, which clamps a day that the earlier month lacks), and the number of days to it is computed from the two dates
+-- FORK: s 906(3) "at least one month before" | the last day for the notice is the date one calendar month before the first meeting (the existing function), and a notice published on that date is in time | the period is thirty days
+-- FORK: s 906(3) the copy reaches the registrar after the last day | the notice can no longer be published in time and the failure is the directors', who delivered too late (s 906(1)), at once on day 0 | the registrar's breach
+GIVEN scheme IS A `ss 902-918 the scheme`
+      `the company relies on section 906A` IS A BOOLEAN
+      `the date the registrar receives the copy of the draft terms or the notice giving details of the website` IS A DATE
+      `the date of the first meeting of the company summoned for the purpose of approving the scheme` IS A DATE
+GIVETH A DEONTIC `ss 902-918 party` `ss 902-918 act`
+`s 906(3) the registrar's duty to publish the notice at least one month before the meeting` MEANS
+    IF `ss 902-918 Part 27 applies to a merger` scheme
+    THEN (IF (`s 906(3) the days from the receipt to the last day for the notice` `the date the registrar receives the copy of the draft terms or the notice giving details of the website` `the date of the first meeting of the company summoned for the purpose of approving the scheme`) LESS THAN 0
+          THEN BREACH BY `ss 902-918 the directors of a merging company` BECAUSE "the copy of the draft terms (or the notice giving details of the website) reached the registrar less than one month before the date of the meeting, so the notice cannot be published at least one month before it (s 906(1), s 906(3), s 906A(5))"
+          ELSE (IF `the company relies on section 906A`
+                THEN PARTY `ss 902-918 the registrar`
+                     MUST `s 906A(5) the registrar publishes in the Gazette the notice giving details of the website`
+                     WITHIN (`s 906(3) the days from the receipt to the last day for the notice` `the date the registrar receives the copy of the draft terms or the notice giving details of the website` `the date of the first meeting of the company summoned for the purpose of approving the scheme`)
+                     HENCE FULFILLED
+                     LEST BREACH BY `ss 902-918 the registrar` BECAUSE "the notice was not published in the Gazette at least one month before the date of the meeting (s 906A(5))"
+                ELSE PARTY `ss 902-918 the registrar`
+                     MUST `s 906(2) the registrar publishes in the Gazette notice of receipt of the draft terms`
+                     WITHIN (`s 906(3) the days from the receipt to the last day for the notice` `the date the registrar receives the copy of the draft terms or the notice giving details of the website` `the date of the first meeting of the company summoned for the purpose of approving the scheme`)
+                     HENCE FULFILLED
+                     LEST BREACH BY `ss 902-918 the registrar` BECAUSE "the notice was not published in the Gazette at least one month before the date of the meeting (s 906(3))"))
+    ELSE FULFILLED
+
+-- src:12579 | (2) The registrar must publish in the Gazette notice of receipt by him from that company of a copy of the draft terms.
+@ref s 906(2) The registrar must publish the notice of receipt (src:12579)
+-- Where no meeting has been summoned there is no date for the "one month before" to run from.
+-- TIMELINE: unit=none; day 0=not applicable; counting=silent (s 906(3) measures the month from "the date of any meeting of that company summoned for the purpose of approving the scheme"; with no meeting summoned there is no date, so s 906(2) alone applies and gives no time. Section 917(3A) measures the same month from the date of the court's order, as a condition of that exemption, and is read in the Boolean module)
+GIVEN scheme IS A `ss 902-918 the scheme`
+      `the company relies on section 906A` IS A BOOLEAN
+GIVETH A DEONTIC `ss 902-918 party` `ss 902-918 act`
+`s 906(2) the registrar's duty to publish the notice where no meeting is summoned` MEANS
+    IF `ss 902-918 Part 27 applies to a merger` scheme
+    THEN (IF `the company relies on section 906A`
+          THEN PARTY `ss 902-918 the registrar`
+               MUST `s 906A(5) the registrar publishes in the Gazette the notice giving details of the website`
+               HENCE FULFILLED
+          ELSE PARTY `ss 902-918 the registrar`
+               MUST `s 906(2) the registrar publishes in the Gazette notice of receipt of the draft terms`
+               HENCE FULFILLED)
+    ELSE FULFILLED
+
+-- ---- s 906A(6): the draft terms stay on the website -----------------------------------------------------------------------------------
+
+-- src:12590 | (6) The fifth condition is that the draft terms remain available on the website throughout the period beginning one month before, and ending on, the date of any such meeting.
+@ref s 906A(6) The draft terms remain available on the website throughout the period (src:12590)
+-- TIMELINE: unit=calendar day; day 0=the date one month before the first meeting (the first day of the period); counting="throughout the period beginning one month before, and ending on, the date of any such meeting": both ends are in the period, so the last day is the date of the meeting and the number of days to it is computed from the two dates
+-- Where no meeting is required (ss 916 to 918) there is no meeting date for this period to run to: the rule takes the date of the first meeting as given and does not look at whether a meeting is required; the corresponding periods of ss 916(3B), 917(3B) and 918(2B) are conditions of those exemptions, read in the Boolean module, and are not encoded here.
+-- FORK: s 906A(6) "remain available ... throughout the period" | for a company that relies on section 906A the fifth condition is a duty to have the terms on the website on day 0 and not to take them off through the meeting day: a removal shows as a breach | it is only a condition of the exemption, and its failure means section 906 applies after all (the Boolean s 906A(1)); the other conditions, (2) and (3), stay in the Boolean module
+GIVEN scheme IS A `ss 902-918 the scheme`
+      `the company relies on section 906A` IS A BOOLEAN
+      `the date of the first meeting of the company summoned for the purpose of approving the scheme` IS A DATE
+GIVETH A DEONTIC `ss 902-918 party` `ss 902-918 act`
+`s 906A(6) the company's duty to keep the draft terms on its website throughout the period` MEANS
+    IF (`ss 902-918 Part 27 applies to a merger` scheme) AND `the company relies on section 906A`
+    THEN PARTY `ss 902-918 a merging company`
+         MUST `s 906A(6) the draft terms are on the company's website when the period begins`
+         WITHIN 0
+         HENCE (PARTY `ss 902-918 a merging company`
+                SHANT `s 906A(6) the company takes the draft terms off its website`
+                WITHIN (`s 911(2) the days from the first day of the period to the date of the meeting` `the date of the first meeting of the company summoned for the purpose of approving the scheme`)
+                HENCE FULFILLED
+                LEST BREACH BY `ss 902-918 a merging company` BECAUSE "the draft terms were taken off the website before the end of the date of the meeting (s 906A(6))")
+         LEST BREACH BY `ss 902-918 a merging company` BECAUSE "the draft terms were not on the website when the period began, one month before the date of the meeting (s 906A(6))"
+    ELSE FULFILLED
+
+-- ---- s 907: approval by the members at a meeting ----------------------------------------------------------------------------------------
+
+-- src:12592 | (1) The scheme must be approved by a majority in number, representing 75% in value, of each class of members of each of the merging companies, present and voting either in person or by proxy at a meeting.
+-- src:12593 | (2) This requirement is subject to sections 916, 917, 917A and 918 (circumstances in which meetings of members not required).
+@ref s 907(1) and (2) The scheme must be approved by a majority in number representing 75% in value of each class of members (src:12592-12593)
+-- TIMELINE: unit=none; day 0=not applicable; counting=silent (s 907(1) says "at a meeting" and gives no time for the approval beyond the meeting itself, so no clock runs: the duty stays open until the trace shows the meeting held; the date of the meeting is the anchor of the other rules above and below)
+-- FORK: s 907(1) "The scheme must be approved" | the section states a requirement of the scheme and names no bearer; the seat is the merging company, which puts the scheme to its members (the existing module's seat), and a vote that does not reach the majority is shown as that company's breach of the requirement | the failed vote is no one's breach and only leaves the requirement unmet (s 903(1): the court cannot sanction)
+-- FORK: s 907(2) an answer of NOTHING for the four exclusions | the meeting is required (the gate treats an unknown exclusion as not applying) | no duty
+-- the majority itself is counted by the existing `s 907(1) the scheme has been approved by the members of the merging company`, from the numbers in each class
+GIVEN scheme IS A `ss 902-918 the scheme`
+      classes IS A LIST OF `s 907(1) votes of a class of members`
+GIVETH A DEONTIC `ss 902-918 party` `ss 902-918 act`
+`s 907(1) the company's duty to have the scheme approved at a meeting of its members` MEANS
+    IF `ss 902-918 section 907 requires a meeting of the members` scheme
+    THEN PARTY `ss 902-918 a merging company`
+         MUST `s 907(1) the meeting of the members is held and the vote on the scheme is taken`
+         HENCE (IF (`s 907(1) the scheme has been approved by the members of the merging company` (JUST FALSE) classes) EQUALS `s 903(1) requirement complied with`
+                THEN FULFILLED
+                ELSE BREACH BY `ss 902-918 a merging company` BECAUSE "the scheme was not approved by a majority in number, representing 75% in value, of each class of members present and voting at the meeting (s 907(1))")
+    ELSE FULFILLED
+
+-- ---- s 908: the directors' explanatory report -------------------------------------------------------------------------------------------
+
+-- src:12595 | (1) The directors of each of the merging companies must draw up and adopt a report.
+-- src:12604 | (3) The requirement in this section is subject to section 915 (circumstances in which reports not required) , section 915A (other circumstances in which reports and inspection not required) and section 918A (agreement to dispense with reports etc)..
+@ref s 908(1) and (3) The directors of each merging company must draw up and adopt a report (src:12595-12604)
+-- TIMELINE: unit=none; day 0=not applicable; counting=silent (s 908 gives no time for the report; section 911(3)(b) makes it a document the members must be able to inspect from one month before the first meeting, which is a limit on the availability of the document and is not read here as a time for drawing it up)
+-- FORK: s 908(1) time | no clock, as the text gives none | the report is owed one month before the first meeting, by way of s 911(3)(b) and (2)
+GIVEN scheme IS A `ss 902-918 the scheme`
+GIVETH A DEONTIC `ss 902-918 party` `ss 902-918 act`
+`s 908(1) the directors' duty to draw up and adopt the explanatory report` MEANS
+    IF `ss 902-918 section 908 requires the explanatory report` scheme
+    THEN PARTY `ss 902-918 the directors of a merging company`
+         MUST `s 908(1) the directors draw up and adopt the explanatory report`
+         HENCE FULFILLED
+    ELSE FULFILLED
+
+-- ---- s 909: the expert's report -----------------------------------------------------------------------------------------------------------
+
+-- src:12606 | (1) An expert's report must be drawn up on behalf of each of the merging companies.
+-- src:12607 | (2) The report required is a written report on the draft terms to the members of the company.
+-- src:12608 | (3) The court may on the joint application of all the merging companies approve the appointment of a joint expert to draw up a single report on behalf of all those companies.
+-- src:12609 | If no such appointment is made, there must be a separate expert's report to the members of each merging company drawn up by a separate expert appointed on behalf of that company.
+-- src:12623 | (7) The requirement in this section is subject to section 915 (circumstances in which reports not required) , section 915A (other circumstances in which reports and inspection not required)and section 918A (agreement to dispense with expert's report) .
+@ref s 909(1) to (3) and (7) An expert's report on behalf of each merging company, or one joint report approved by the court (src:12606-12623)
+-- TIMELINE: unit=none; day 0=not applicable; counting=silent (s 909 gives no time for the report; the same limit through s 911(3)(c) as for the directors' report above)
+-- FORK: s 909(1) "must be drawn up on behalf of each of the merging companies" | the text names no bearer; the seat is the merging company on whose behalf the report is drawn up (the existing module's seat) | the expert, or the directors who appoint the expert
+-- FORK: s 909(3) the court's approval of a joint expert | an input that selects which report is owed: with approval one single report on behalf of all the companies, without it a separate report on behalf of this company | a choice the company makes in the trace
+GIVEN scheme IS A `ss 902-918 the scheme`
+      `the court has approved the appointment of a joint expert on the joint application of all the merging companies` IS A BOOLEAN
+GIVETH A DEONTIC `ss 902-918 party` `ss 902-918 act`
+`s 909(1) the company's duty to have an expert's report drawn up` MEANS
+    IF `ss 902-918 section 909 requires the expert's report` scheme
+    THEN (IF `the court has approved the appointment of a joint expert on the joint application of all the merging companies`
+          THEN PARTY `ss 902-918 a merging company`
+               MUST `s 909(1) a single expert's report is drawn up by the joint expert on behalf of all the merging companies`
+               HENCE FULFILLED
+          ELSE PARTY `ss 902-918 a merging company`
+               MUST `s 909(1) a separate expert's report is drawn up by a separate expert on behalf of the company`
+               HENCE FULFILLED)
+    ELSE FULFILLED
+
+-- src:12608 | (3) The court may on the joint application of all the merging companies approve the appointment of a joint expert to draw up a single report on behalf of all those companies.
+@ref s 909(3) The court may approve a joint expert on the joint application of all the merging companies (src:12608)
+-- TIMELINE: unit=none; day 0=not applicable; counting=silent (s 909(3) gives the court no time, so no clock runs: the power stays open until the trace shows it used)
+GIVEN scheme IS A `ss 902-918 the scheme`
+      `all the merging companies have applied jointly to the court` IS A BOOLEAN
+GIVETH A DEONTIC `ss 902-918 party` `ss 902-918 act`
+`s 909(3) the court's power to approve the appointment of a joint expert` MEANS
+    IF (`ss 902-918 section 909 requires the expert's report` scheme) AND `all the merging companies have applied jointly to the court`
+    THEN PARTY `ss 902-918 the court`
+         MAY `s 909(3) the court approves the appointment of a joint expert`
+         HENCE FULFILLED
+    ELSE FULFILLED
+
+-- ---- s 910: the supplementary accounting statement and its date limit -----------------------------------------------------------------------
+
+-- src:12625 | (1) This section applies if the last annual accounts of any of the merging companies relate to a financial year ending before—
+-- src:12626 | (a) the date seven months before the first meeting of the company summoned for the purposes of approving the scheme, or
+-- src:12627 | (b) if no meeting of the company is required (by virtue of any of sections 916 to 918), the date six months before the directors of the company adopt the draft terms of the scheme.
+-- src:12628 | (1A) If the company has not made public a half-yearly financial report relating to a period ending on or after the date mentioned in subsection (1), the directors of the company must prepare a supplementary accounting statement.
+-- src:12629 | (2) That statement must consist of—
+-- src:12630 | (a) a balance sheet dealing with the state of affairs of the company as at a date not more than three months before the draft terms were adopted by the directors, and
+@ref s 910(1), (1A) and (2)(a) The supplementary accounting statement, and the date of its balance sheet (src:12625-12630)
+-- TIMELINE: unit=none; day 0=not applicable; counting=silent (s 910 gives no time for preparing the statement; the date limit of s 910(2)(a) is a limit on the date AS AT WHICH its balance sheet is made up, "not more than three months before the draft terms were adopted", and is checked on the date input; section 911(3)(e) makes the statement a document to be open to inspection from one month before the first meeting)
+-- FORK: s 910(2)(a) "not more than three months before the draft terms were adopted" | a balance sheet dated exactly three calendar months before the adoption (the existing `s 910(1) the date a number of months before`) is in time, an earlier one is a breach by the directors when they prepare the statement, and a later one (even after the adoption) is not a breach | the limit is two sided
+-- FORK: s 910(1)(a) and (b) | the "first meeting" date is a MAYBE DATE, as in the existing function: NOTHING means no meeting is required (ss 916 to 918) and the six months run back from the adoption of the draft terms | the meeting date is always given
+GIVEN scheme IS A `ss 902-918 the scheme`
+      `the end of the financial year to which the last annual accounts relate` IS A DATE
+      `the date of the first meeting of the company summoned for the purposes of approving the scheme` IS A MAYBE DATE
+      `the date the directors of the company adopt the draft terms of the scheme` IS A DATE
+      `the company has made public a half-yearly financial report relating to a period ending on or after the date mentioned in section 910(1)` IS A BOOLEAN
+      `the date as at which the balance sheet of the supplementary accounting statement is made up` IS A DATE
+GIVETH A DEONTIC `ss 902-918 party` `ss 902-918 act`
+`s 910(1A) the directors' duty to prepare a supplementary accounting statement` MEANS
+    IF     (`ss 902-918 section 910 requires the supplementary accounting statement` scheme)
+       AND ((`s 910(1) this section applies` `the end of the financial year to which the last annual accounts relate` `the date of the first meeting of the company summoned for the purposes of approving the scheme` `the date the directors of the company adopt the draft terms of the scheme`) EQUALS JUST TRUE)
+       AND (NOT `the company has made public a half-yearly financial report relating to a period ending on or after the date mentioned in section 910(1)`)
+    THEN PARTY `ss 902-918 the directors of a merging company`
+         MUST `s 910(1A) the directors prepare a supplementary accounting statement`
+         HENCE (IF `the date as at which the balance sheet of the supplementary accounting statement is made up` AT LEAST (`s 910(1) the date a number of months before` `the date the directors of the company adopt the draft terms of the scheme` 3)
+                THEN FULFILLED
+                ELSE BREACH BY `ss 902-918 the directors of a merging company` BECAUSE "the balance sheet of the supplementary accounting statement is made up as at a date more than three months before the draft terms were adopted (s 910(2)(a))")
+    ELSE FULFILLED
+
+-- ---- s 911: inspection of the documents -------------------------------------------------------------------------------------------------
+
+-- src:12637 | (1) The members of each of the merging companies must be able, during the period specified below—
+-- src:12638 | (a) to inspect at the registered office of that company copies of the documents listed below relating to that company and every other merging company, and
+-- src:12639 | (b) to obtain copies of those documents or any part of them on request free of charge.
+-- src:12640 | (2) The period referred to above is the period—
+-- src:12641 | (a) beginning one month before, and
+-- src:12642 | (b) ending on the date of,
+-- src:12643 | the first meeting of the members, or any class of members, of the company for the purposes of approving the scheme.
+@ref s 911(1) and (2) The members must be able to inspect the documents and obtain copies from one month before the first meeting to its date (src:12637-12643)
+-- TIMELINE: unit=calendar day; day 0=the date one month before the first meeting (the first day of the period); counting="beginning one month before, and ending on, the date of the first meeting": both ends are in the period, so the last day is the date of the meeting and the number of days to it is computed from the two dates
+-- Where no meeting is required (ss 916 to 918) there is no first meeting for the period of s 911(2) to run to: the rule takes the date of the first meeting as given and does not look at whether a meeting is required; ss 916(4A) to (4C), 917(4A) to (4C) and 918(3A) to (3C) count the same availability from other dates as conditions of those exemptions (Boolean module), and they are not encoded here.
+-- FORK: s 911(1) "must be able, during the period" | a duty to have the documents open on day 0 and not to withdraw them through the meeting day, as for s 906A(6): a withdrawal shows as a breach | only the availability on each day matters and the Boolean `s 911(2)` answers it
+-- FORK: s 911(1)(a) and s 911A | the duty is the same whether the documents are at the registered office or on the website (section 911A uses the same period), so one rule | a separate rule for the website
+GIVEN scheme IS A `ss 902-918 the scheme`
+      `the date of the first meeting of the members, or any class of members, of the company for the purposes of approving the scheme` IS A DATE
+GIVETH A DEONTIC `ss 902-918 party` `ss 902-918 act`
+`s 911(1) the company's duty to keep the documents open to inspection throughout the period` MEANS
+    IF `ss 902-918 section 911 requires the documents to be open to inspection` scheme
+    THEN PARTY `ss 902-918 a merging company`
+         MUST `s 911(1) the documents are open to inspection and copies are available free of charge when the period begins`
+         WITHIN 0
+         HENCE (PARTY `ss 902-918 a merging company`
+                SHANT `s 911(1) the documents cease to be open to inspection or copies cease to be available free of charge`
+                WITHIN (`s 911(2) the days from the first day of the period to the date of the meeting` `the date of the first meeting of the members, or any class of members, of the company for the purposes of approving the scheme`)
+                HENCE FULFILLED
+                LEST BREACH BY `ss 902-918 a merging company` BECAUSE "the documents ceased to be open to inspection, or copies ceased to be available free of charge, before the end of the date of the first meeting (s 911(1) and (2))")
+         LEST BREACH BY `ss 902-918 a merging company` BECAUSE "the documents were not open to inspection, with copies available free of charge, when the period began, one month before the date of the first meeting (s 911(1) and (2))"
+    ELSE FULFILLED
+
+-- ---- not encoded --------------------------------------------------------------------------------------------------------------------------
+-- s 905(2) and (3), s 908(2), s 909(4) to (6) and s 910(2)(b) to (5): the content of the draft terms and reports, the expert's qualifications and rights, the form of the statement (asked in the Boolean module).
+-- s 906A(2) and (3), s 911A, s 911(3) to (6): the conditions of publication on a website and the list of documents (asked in the Boolean module; their dates are the same period as above).
+-- s 911B (the directors report to the meeting), s 912 (articles of a new transferee company), s 913 and s 914 (what the scheme must provide): not in this module.
+-- ss 915 to 918: encoded here as gates only, through the Boolean functions called above; the conditions of ss 916 to 918 (the one-month notices, the 5% requisition) stay in the Boolean module and enter as the four MAYBE BOOLEAN answers of the scheme record.

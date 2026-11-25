@@ -1118,3 +1118,37 @@ Status: **reported by the part agents and the readers, not re-checked by the mer
 ## Source not official
 
 The quoted text is a plain-text rendering of the Act as deposited in `../../registers/source-bundle/`; it is not the official text. See 'The source' above and `SOURCE-LICENSE.md`.
+
+## Procedure layer (DEONTIC), added beside the Boolean encoding
+
+This section lists the modules that were added to lay the Act's procedures out as regulative rules (`DEONTIC`, with traces).
+They are additive: no existing module was edited, and no existing assertion count moved.
+Each unit is a module, a test module and a notes file (`notes/procedure-<unit>.md`) that says what it encodes, its timeline unit and counting rule, its forks and what it leaves out.
+Every `#TRACE` in the test modules has a `-- EXPECT` line decided from the text before the trace was run, and each was checked against it on two builds: the unstable prerelease `unstable-20261125-a50cbd0` and the stable line, main build 112.
+`check.sh` counts assertions and never reads a `#TRACE` outcome, so it cannot see the differences below; they were found by running each trace on both builds.
+The two builds differ on traces in four known ways: a `MAY` that lapses, a `LEST` continuation's clock, two parties in breach at once, and the first event after a wait device lapses.
+Where a unit's traces read differently on main, its test module ends with a `READS-DIFFERENTLY-ON-MAIN` block listing them, and the count is in the table.
+The traces are the ones to read on unstable; main 112 gives a different class for the listed ones.
+
+| unit (module) | provisions | traces | read differently on main 112 |
+| --- | --- | --- | --- |
+| `coa-proc-register-copy` | ss 116-118 | 35 | 0 |
+| `coa-proc-takeover-notices` | ss 979-986 | 46 | 2 |
+| `coa-proc-scheme-of-arrangement` | ss 895-901 | 47 | 0 |
+| `coa-proc-capital-reduction` | ss 641-653 | 57 | 4 |
+| `coa-proc-derivative-claims` | ss 260-264 | 60 | 0 |
+| `coa-proc-director-interests` | ss 177, 182-184, 197, 204, 207, 213-214 | 51 | 0 |
+| `coa-proc-merger` | Part 27, ss 902-918 (the procedure only, not the report contents) | 49 | 0 |
+
+### Observations on the existing modules (nothing was changed)
+
+- `coa3-part8-inspection.l4:312`, the DEONTIC for s 117(1), takes no input, so it binds from day 0 and silence to day 6 is a breach whatever the request.
+  This reads as a design limit, not a wrong answer: the caller is expected to check the s 116 Boolean first.
+  The new module `coa-proc-register-copy` runs the duty only for a request that s 116 allows.
+- `coa3-part8-inspection.l4:417-424`, the function for s 118(3), has no court-order input, while the function for s 118(1) at 396-405 does.
+  The text of s 118(3) says "any such refusal or default" (src:1588), which can be read as importing the "otherwise than in accordance with an order of the court" exclusion of s 118(1) (src:1584).
+  This is a reading difference, not an established error.
+- `coa5-derivative-claims.l4:136` and `:717` carry a `LEST` on a rule with no `WITHIN`; the unstable build warns `lint/lest-without-deadline` ("This LEST can never be reached, because the rule has no deadline").
+- `coa14-ch10-reduction.l4:229-237`, the function for s 642(1), takes "registered in accordance with section 644" as an input, because the statute's own limb (b) (src:8555) does.
+  So it cannot serve as the gate of the s 644 delivery duty; the statute is circular there, and `coa-proc-capital-reduction` uses its own helper.
+- Existing DEONTICs for s 177 (`coa4-general-duties.l4:551`) and s 182 (`coa4-declaration.l4:164`) exist; `coa-proc-director-interests` does not call them, and its notes compare the two.
