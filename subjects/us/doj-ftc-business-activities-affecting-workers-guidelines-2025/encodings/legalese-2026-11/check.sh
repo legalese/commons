@@ -5,8 +5,9 @@
 # error diagnostics, assertions satisfied, assertions failed, assertions refused.
 #
 # Copied from the IP Licensing Guidelines (2017) row of this repository, itself adapted from the
-# encoding-a-subject skill's assets/check.sh; only this header, the expected counts and the width
-# of the module column differ from that copy. What differs from the skill's script:
+# encoding-a-subject skill's assets/check.sh; only this header, the expected counts, the width of
+# the module column and the wording of the TOTAL line differ from that copy. What differs from the
+# skill's script:
 #   * every module has an expected number of assertions SATISFIED as well as FAILED, and a run that
 #     satisfies a different number is red (so a test file that silently stopped running, or lost an
 #     assertion, is caught, not only one that fails);
@@ -41,19 +42,22 @@ MAIN_TIMEOUT="${L4_MAIN_TIMEOUT:-300}"
 
 # Expected assertions satisfied and failed, per module. A module not listed has none of either.
 # wk-tests-red.l4 is the positive controls: every assertion in it is wrong on purpose and must fail
-# (encoding.json `expected_red`). Update these with the files.
+# (encoding.json `expected_red`). tests-independent.l4 is the independent test author's file: its
+# expected failures are the assertions classified as genuine ambiguity, left failing on purpose
+# (NOTES.md, Independent test pass; encoding.json `expected_failed_independent`). Update these
+# with the files.
 expected_satisfied() {
   case "$1" in
     wk-tests.l4) echo 49 ;;
-    wk-tests-boundaries.l4) echo 99 ;;
-    tests-independent.l4) echo 118 ;;
+    wk-tests-boundaries.l4) echo 122 ;;
+    tests-independent.l4) echo 120 ;;
     *) echo 0 ;;
   esac
 }
 expected_failed() {
   case "$1" in
-    wk-tests-red.l4) echo 6 ;;
-    tests-independent.l4) echo 11 ;;
+    wk-tests-red.l4) echo 9 ;;
+    tests-independent.l4) echo 9 ;;
     *) echo 0 ;;
   esac
 }
@@ -153,7 +157,7 @@ for f in "$HERE"/*.l4; do
   printf '%-30s %4d %4d %4d %4d %9s | %4d %4d %4d %4d  %s%s\n' "$m" "$err" "$ok" "$bad" "$ref" "$exs/$exf" "$merr" "$mok" "$mbad" "$mref" "$verdict" "${note:+  <- $note}"
   n=$((n + 1)) tot_sat=$((tot_sat + ok)) tot_msat=$((tot_msat + mok)) tot_fail=$((tot_fail + bad)) tot_mfail=$((tot_mfail + mbad))
 done
-echo "TOTAL ($n modules): satisfied unstable $tot_sat, main $tot_msat; failed (positive controls) unstable $tot_fail, main $tot_mfail"
+echo "TOTAL ($n modules): satisfied unstable $tot_sat, main $tot_msat; failed (positive controls and expected failures) unstable $tot_fail, main $tot_mfail"
 echo "(a failed assertion is also an error; the expected column is satisfied/failed)"
 case "$status" in 0) echo "check.sh: all passed" ;; *) echo "check.sh: FAILED" ;; esac
 exit "$status"
