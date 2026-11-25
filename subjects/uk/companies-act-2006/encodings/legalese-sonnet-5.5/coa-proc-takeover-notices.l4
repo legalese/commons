@@ -1,0 +1,420 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `coa-core`
+IMPORT `coa21-ch3-squeeze-out`
+IMPORT `coa21-ch3-sell-out`
+
+-- coa-proc-takeover-notices.l4: Companies Act 2006 (United Kingdom), ss 979 to 986: the procedure the Act lays down for compulsory acquisition
+-- after a takeover offer (the squeeze-out of ss 979 to 982, the sell-out right of ss 983 to 985, and the court application of s 986),
+-- written as regulative rules over the Boolean encoding in coa21-ch3-squeeze-out.l4 and coa21-ch3-sell-out.l4. Lines 13612-13799 of ukpga-2006-46.txt.
+-- The gates are the existing functions of those two modules: s 979(2) and (4) say whether the offeror may give notice, s 980(2) says by when,
+-- s 981(3)(a) and s 986(2) give the six weeks, s 982(4) and (5) say when the consideration goes into court, s 983 says whether the holder may require
+-- the offeror to acquire, s 984(2) and (3) give the three months and the one month, s 984(4) and (5) say who commits the offence.
+-- Nothing here edits those modules, and nothing here calls their DEONTICs for s 981(6) and s 984(3).
+--
+-- SEAMS taken as INPUTS: whether the time allowed for acceptance is governed by rules under s 943(1) (Schedule 1C is not in the sources); the answer of the
+-- existing functions s 983(2), (3) or (4), which count shares (their share-count inputs are not repeated here); the day an application to the court is disposed of;
+-- the officer's default (s 1121); whether the notice was given in the prescribed manner (s 980(1)) and what it must contain (ss 981(3), 984(3)) are not encoded.
+--
+-- Each rule has its own day 0 (the day named on its TIMELINE line). The rules are separate, not chained by HENCE, because a later step of the
+-- procedure depends on a fact the earlier step does not carry (the date of the notice, the day an application is disposed of, whether the holder
+-- has accepted); the caller starts each from the day its TIMELINE line names.
+
+DECLARE `ss 979-986 party` IS ONE OF
+    `ss 979-986 the offeror`
+    `ss 979-986 the shareholder`
+    `ss 979-986 the company`
+    `ss 979-986 an officer of the offeror company who is in default`
+
+DECLARE `ss 979-986 act` IS ONE OF
+    `s 980(2) the offeror gives the holder notice that he desires to acquire the shares`
+    `s 980(4)(a) the offeror sends the company a copy of the notice`
+    `s 980(4)(b) the offeror sends the company a statutory declaration in the prescribed form`
+    `s 980(6)(b) the offeror makes the declaration knowing it to be false or without reasonable grounds for believing it to be true`
+    `s 981(3)(a) the shareholder indicates his choice of consideration by a written communication sent to the offeror`
+    `s 981(6)(a) the offeror sends the company a copy of the notice`
+    `s 981(6)(b) the offeror pays or transfers the consideration to the company`
+    `s 981(9) the company holds the consideration on trust for the person who was entitled to the shares`
+    `s 982(2) the company pays the money, and any dividend or other sum accruing, into a separate bank account that complies with subsection (3)`
+    `s 982(4) the company pays the consideration into court`
+    `s 983 the shareholder requires the offeror to acquire the shares by a written communication`
+    `s 984(3) the offeror gives the shareholder notice of the rights and the period`
+    `s 984(5) the officer is in default in the offeror company's failure, or the failure is attributable to the officer's neglect`
+    `s 985(2) the offeror acquires the shares on the terms of the offer or on such other terms as may be agreed`
+    `s 986(1) the shareholder applies to the court`
+
+-- ---- the facts every rule is gated on ------------------------------------------------------------------------------------------
+
+-- The offer's two dates and the Schedule 1C seam, which s 980(2) and (3) need to say by when a notice may be given.
+DECLARE `ss 979-986 offer` HAS
+    `ss 979-986 the date of the offer` IS A DATE
+    `ss 979-986 the last day on which the offer can be accepted` IS A DATE
+    `ss 979-986 the time allowed for acceptance is governed by rules under section 943(1) made in accordance with paragraph 13 or 14 of Schedule 1C` IS A BOOLEAN
+
+-- How the offeror stands to the shares, as the existing s 979(2) and (4) functions take it.
+DECLARE `ss 979-986 the offeror's position` HAS
+    `ss 979-986 the offer relates to shares of different classes` IS A BOOLEAN
+    `ss 979-986 the blocks of shares` IS A LIST OF `s 979 block of shares`
+    `ss 979-986 the day on which the entitlement is determined` IS A DATE
+    `ss 979-986 the class of the holder's shares` IS A STRING
+    `ss 979-986 the shares are voting shares` IS A BOOLEAN
+    `ss 979-986 the holder's shares are shares which the offeror has not acquired or unconditionally contracted to acquire` IS A BOOLEAN
+
+-- src:13612 | 979 Right of offeror to buy out minority shareholder
+-- src:13613 | (1) Subsection (2) applies in a case where a takeover offer does not relate to shares of different classes.
+-- src:13614 | (2) If the offeror has, by virtue of acceptances of the offer, acquired or unconditionally contracted to acquire—
+-- src:13615 | (a) not less than 90% in value of the shares to which the offer relates, and
+-- src:13616 | (b) in a case where the shares to which the offer relates are voting shares, not less than 90% of the voting rights carried by those shares,
+-- src:13617 | he may give notice to the holder of any shares to which the offer relates which the offeror has not acquired or unconditionally contracted to acquire that he desires to acquire those shares.
+-- src:13618 | (3) Subsection (4) applies in a case where a takeover offer relates to shares of different classes.
+-- src:13619 | (4) If the offeror has, by virtue of acceptances of the offer, acquired or unconditionally contracted to acquire—
+-- src:13620 | (a) not less than 90% in value of the shares of any class to which the offer relates, and
+-- src:13621 | (b) in a case where the shares of that class are voting shares, not less than 90% of the voting rights carried by those shares,
+-- src:13622 | he may give notice to the holder of any shares of that class to which the offer relates which the offeror has not acquired or unconditionally contracted to acquire that he desires to acquire those shares.
+@ref s 979 Right of offeror to buy out minority shareholder: who may be given notice (src:13612-13622)
+-- FORK: s 979(2) and (4) "he may give notice" | the offeror's entitlement is the existing function's answer JUST TRUE; any other answer (JUST FALSE for the wrong case, NOTHING for a shortfall) means no notice is encoded as permitted | a shortfall below 90% is a bar and a notice given then is a breach
+GIVEN position IS A `ss 979-986 the offeror's position`
+GIVETH A BOOLEAN
+`ss 979-986 the offeror is entitled to give notice to the holder of the shares` MEANS
+    IF position's `ss 979-986 the offer relates to shares of different classes`
+    THEN (`s 979(4) the offeror may give notice to the holder of the shares of the class` (`s 979(3) subsection (4) applies` TRUE) (position's `ss 979-986 the blocks of shares`) (position's `ss 979-986 the class of the holder's shares`) (position's `ss 979-986 the day on which the entitlement is determined`) (position's `ss 979-986 the shares are voting shares`) (position's `ss 979-986 the holder's shares are shares which the offeror has not acquired or unconditionally contracted to acquire`)) EQUALS JUST TRUE
+    ELSE (`s 979(2) the offeror may give notice to the holder of the shares` (`s 979(1) subsection (2) applies` FALSE) (position's `ss 979-986 the blocks of shares`) (position's `ss 979-986 the day on which the entitlement is determined`) (position's `ss 979-986 the shares are voting shares`) (position's `ss 979-986 the holder's shares are shares which the offeror has not acquired or unconditionally contracted to acquire`)) EQUALS JUST TRUE
+
+-- src:13650 | (2) No notice may be given under section 979(2) or (4) after the end of—
+-- src:13651 | (a) the period of three months beginning with the day after the last day on which the offer can be accepted, or
+-- src:13652 | (b) the period of six months beginning with the date of the offer, where that period ends earlier and the offer is one to which subsection (3) below applies.
+-- src:13653 | (3) This subsection applies to an offer if the time allowed for acceptance of the offer is not governed by rules under section 943(1) made in accordance with paragraph 13 or 14 of Schedule 1C.
+@ref s 980(2)-(3) The last day on which a notice may be given (src:13650-13653)
+GIVEN offer IS A `ss 979-986 offer`
+GIVETH A MAYBE DATE
+`ss 979-986 the last day on which a notice may be given` MEANS
+    `s 980(2) the last day on which a notice may be given` (offer's `ss 979-986 the last day on which the offer can be accepted`) (offer's `ss 979-986 the date of the offer`) (`s 980(3) this subsection applies to the offer` (JUST (offer's `ss 979-986 the time allowed for acceptance is governed by rules under section 943(1) made in accordance with paragraph 13 or 14 of Schedule 1C`)))
+
+-- src:13648 | 980 Further provision about notices given under section 979
+-- src:13649 | (1) A notice under section 979 must be given in the prescribed manner.
+-- src:13650 | (2) No notice may be given under section 979(2) or (4) after the end of—
+-- src:13651 | (a) the period of three months beginning with the day after the last day on which the offer can be accepted, or
+-- src:13652 | (b) the period of six months beginning with the date of the offer, where that period ends earlier and the offer is one to which subsection (3) below applies.
+-- src:13653 | (3) This subsection applies to an offer if the time allowed for acceptance of the offer is not governed by rules under section 943(1) made in accordance with paragraph 13 or 14 of Schedule 1C.
+@ref s 980(2) A notice that section 979 and section 980(2) allow (src:13648-13653)
+GIVEN offer IS A `ss 979-986 offer`
+      position IS A `ss 979-986 the offeror's position`
+      `the day the notice is given` IS A DATE
+GIVETH A BOOLEAN
+`ss 979-986 section 979 allows a notice given on the day` MEANS
+        `ss 979-986 the offeror is entitled to give notice to the holder of the shares` position
+    AND (`s 980(2) the notice is given in time` `the day the notice is given` (`ss 979-986 the last day on which a notice may be given` offer)) EQUALS JUST TRUE
+
+-- src:13679 | (6) At the end of six weeks from the date of the notice the offeror must immediately—
+@ref s 981(3)(a), (6) and s 986(2) The end of six weeks from the date of the notice (src:13679-13679)
+GIVEN `the date of the notice` IS A DATE
+      `the day` IS A DATE
+      `an application to the court under section 986(1) is pending at the end of the six weeks` IS A BOOLEAN
+      `the day that application is disposed of` IS A MAYBE DATE
+GIVETH A BOOLEAN
+`ss 979-986 section 981(6) has effect on the day` MEANS
+        `the day` AT LEAST (`s 981(3)(a) the last day for the shareholder to indicate his choice` `the date of the notice`)
+    AND (IF (`s 986(2) section 981(6) has effect` `an application to the court under section 986(1) is pending at the end of the six weeks`) EQUALS JUST FALSE
+         THEN (CONSIDER `the day that application is disposed of`
+               WHEN NOTHING THEN FALSE
+               WHEN JUST disposed THEN `the day` AT LEAST disposed)
+         ELSE TRUE)
+
+-- ---- s 980(2): the offeror's notice, and the bar on a late one ----------------------------------------------------------------------
+
+-- src:13650 | (2) No notice may be given under section 979(2) or (4) after the end of—
+-- src:13651 | (a) the period of three months beginning with the day after the last day on which the offer can be accepted, or
+-- src:13652 | (b) the period of six months beginning with the date of the offer, where that period ends earlier and the offer is one to which subsection (3) below applies.
+@ref s 980(2) No notice after the end of three months, or of six months where that ends earlier (src:13650-13652)
+-- TIMELINE: unit=calendar day; day 0=the date of the offer; counting="the period of three months beginning with the day after the last day on which the offer can be accepted", or "the period of six months beginning with the date of the offer, where that period ends earlier and the offer is one to which subsection (3) below applies" (the number of days is computed from the offer's two dates by the existing s 980(2) function; a period "beginning with" a date ends the day before the corresponding date, so day n is the last day on which a notice may be given)
+-- FORK: s 980(2) "No notice may be given ... after the end of" | a notice given after the last day is a breach by the offeror of a bar (SHANT) that the lapse of the power opens; the Act makes such a notice of no effect and makes it no offence | the power lapses without more, and a late notice is simply not a notice under section 979
+-- FORK: s 980(2) day 0 | the date of the offer, so that the power runs from the offer and the entitlement gate is tested on that line; a notice may be given before the offer closes | day 0 is the last day on which the offer can be accepted
+-- FORK: s 980(3) "governed by rules under section 943(1)" | a Boolean input of the offer (Schedule 1C is not in the sources) | the question is open and the clock is not encoded
+-- FORK: s 980(2) the entitlement date | the entitlement is tested once, on the position's own date, and the power then runs from the date of the offer, so a notice given before that date is not caught by the gate | the entitlement is tested on the day of each notice (as the s 981(6) rule does)
+GIVEN offer IS A `ss 979-986 offer`
+      position IS A `ss 979-986 the offeror's position`
+GIVETH A DEONTIC `ss 979-986 party` `ss 979-986 act`
+`s 980(2) the offeror's power to give notice under section 979` MEANS
+    IF `ss 979-986 the offeror is entitled to give notice to the holder of the shares` position
+    THEN (CONSIDER `ss 979-986 the last day on which a notice may be given` offer
+          WHEN NOTHING THEN FULFILLED
+          WHEN JUST lastDay THEN
+              PARTY `ss 979-986 the offeror`
+              MAY `s 980(2) the offeror gives the holder notice that he desires to acquire the shares`
+              WITHIN ((Day lastDay) MINUS (Day (offer's `ss 979-986 the date of the offer`)))
+              HENCE FULFILLED
+              LEST PARTY `ss 979-986 the offeror`
+                   SHANT `s 980(2) the offeror gives the holder notice that he desires to acquire the shares`
+                   HENCE FULFILLED
+                   LEST BREACH BY `ss 979-986 the offeror` BECAUSE "a notice was given under section 979 after the end of the period in which section 980(2) allows one")
+    ELSE FULFILLED
+
+-- ---- s 980(4) to (7): the copy of the first notice and the statutory declaration -------------------------------------------------------
+
+-- src:13654 | (4) At the time when the offeror first gives a notice under section 979 in relation to an offer, he must send to the company—
+-- src:13655 | (a) a copy of the notice, and
+-- src:13656 | (b) a statutory declaration by him in the prescribed form, stating that the conditions for the giving of the notice are satisfied.
+-- src:13657 | (5) Where the offeror is a company (whether or not a company within the meaning of this Act) the statutory declaration must be signed by a director.
+-- src:13658 | (6) A person commits an offence if—
+-- src:13659 | (a) he fails to send a copy of a notice or a statutory declaration as required by subsection (4), or
+-- src:13660 | (b) he makes such a declaration for the purposes of that subsection knowing it to be false or without having reasonable grounds for believing it to be true.
+-- src:13661 | (7) It is a defence for a person charged with an offence for failing to send a copy of a notice as required by subsection (4) to prove that he took reasonable steps for securing compliance with that subsection.
+@ref s 980(4)-(7) The copy of the first notice and the declaration, and the offences (src:13654-13661)
+-- TIMELINE: unit=calendar day; day 0=the day the offeror first gives a notice under section 979 in relation to the offer; counting="At the time when the offeror first gives a notice" (WITHIN 0: the same day)
+-- FORK: s 980(4) "At the time when" | the same day as the first notice | a short reasonable time after it
+-- FORK: s 980(6)(a) and (7) | a failure to send either document in time is the breach of this duty, which the Act makes an offence (s 980(6)(a)); the defence of reasonable steps (s 980(7)) is a matter for the charge and does not change the breach | the defence removes the breach where it is made out
+-- not encoded: s 980(5) (a director signs where the offeror is a company) and the prescribed form, which are not time limits
+GIVEN `the notice is the first notice the offeror gives in relation to the offer` IS A BOOLEAN
+GIVETH A DEONTIC `ss 979-986 party` `ss 979-986 act`
+`s 980(4) the offeror's duty to send the company a copy of the first notice and a statutory declaration` MEANS
+    IF `the notice is the first notice the offeror gives in relation to the offer`
+    THEN (   PARTY `ss 979-986 the offeror`
+             MUST `s 980(4)(a) the offeror sends the company a copy of the notice`
+             WITHIN 0
+             HENCE FULFILLED
+             LEST BREACH BY `ss 979-986 the offeror` BECAUSE "the offeror did not send the company a copy of the first notice when he gave it (s 980(4)(a)): an offence under s 980(6)(a)")
+         RAND
+         (   PARTY `ss 979-986 the offeror`
+             MUST `s 980(4)(b) the offeror sends the company a statutory declaration in the prescribed form`
+             WITHIN 0
+             HENCE FULFILLED
+             LEST BREACH BY `ss 979-986 the offeror` BECAUSE "the offeror did not send the company a statutory declaration when he gave the first notice (s 980(4)(b)): an offence under s 980(6)(a)")
+    ELSE FULFILLED
+
+-- src:13658 | (6) A person commits an offence if—
+-- src:13659 | (a) he fails to send a copy of a notice or a statutory declaration as required by subsection (4), or
+-- src:13660 | (b) he makes such a declaration for the purposes of that subsection knowing it to be false or without having reasonable grounds for believing it to be true.
+@ref s 980(6)(b) The offence of a false declaration (src:13658-13660)
+-- TIMELINE: unit=none; day 0=not applicable; counting=silent (s 980(6)(b) gives no time: the prohibition stays open and the false declaration is an event the trace supplies)
+GIVETH A DEONTIC `ss 979-986 party` `ss 979-986 act`
+`s 980(6)(b) the offeror's duty not to make a false declaration` MEANS
+    PARTY `ss 979-986 the offeror`
+    SHANT `s 980(6)(b) the offeror makes the declaration knowing it to be false or without reasonable grounds for believing it to be true`
+    HENCE FULFILLED
+    LEST BREACH BY `ss 979-986 the offeror` BECAUSE "the offeror made the statutory declaration knowing it to be false or without reasonable grounds for believing it to be true: an offence under s 980(6)(b)"
+
+-- ---- s 981(3): the holder's six weeks to choose, and s 986(2): the holder's six weeks to apply to the court ----------------------------
+
+-- src:13670 | (3) Where the terms of an offer are such as to give the shareholder a choice of consideration, the notice must give particulars of the choice and state—
+-- src:13671 | (a) that the shareholder may, within six weeks from the date of the notice, indicate his choice by a written communication sent to the offeror at an address specified in the notice, and
+-- src:13672 | (b) which consideration specified in the offer will apply if he does not indicate a choice.
+-- src:13673 | The reference in subsection (2) to the terms of the offer is to be read accordingly.
+-- src:13674 | (4) Subsection (3) applies whether or not any time-limit or other conditions applicable to the choice under the terms of the offer can still be complied with.
+@ref s 981(3)-(4) The holder's six weeks to indicate a choice of consideration (src:13670-13674)
+-- TIMELINE: unit=calendar day; day 0=the date of the notice; counting="within six weeks from the date of the notice" (42 days, computed from the date of the notice by the existing s 981(3)(a) function; day 42 is the last day)
+-- FORK: s 981(3)(a) "within six weeks from the date of the notice" | the date of the notice is day 0 and day 42 is the last day | the date of the notice counts as day 1 and day 41 is the last day
+-- FORK: s 981(3)(b) | a holder who does not indicate a choice within the six weeks takes the consideration that the notice states will apply; no breach by anyone, so the lapse is FULFILLED | the lapse is a failure of the holder
+GIVEN `the terms of the offer give the shareholder a choice of consideration` IS A BOOLEAN
+      `the date of the notice` IS A DATE
+GIVETH A DEONTIC `ss 979-986 party` `ss 979-986 act`
+`s 981(3) the shareholder's six weeks to indicate a choice of consideration` MEANS
+    IF `the terms of the offer give the shareholder a choice of consideration`
+    THEN PARTY `ss 979-986 the shareholder`
+         MAY `s 981(3)(a) the shareholder indicates his choice of consideration by a written communication sent to the offeror`
+         WITHIN ((Day (`s 981(3)(a) the last day for the shareholder to indicate his choice` `the date of the notice`)) MINUS (Day `the date of the notice`))
+         HENCE FULFILLED
+         LEST FULFILLED
+    ELSE FULFILLED
+
+-- src:13774 | (1) Where a notice is given under section 979 to a shareholder the court may, on an application made by him, order—
+-- src:13775 | (a) that the offeror is not entitled and bound to acquire the shares to which the notice relates, or
+-- src:13776 | (b) that the terms on which the offeror is entitled and bound to acquire the shares shall be such as the court thinks fit.
+-- src:13777 | (2) An application under subsection (1) must be made within six weeks from the date on which the notice referred to in that subsection was given.
+-- src:13778 | If an application to the court under subsection (1) is pending at the end of that period, section 981(6) does not have effect until the application has been disposed of.
+@ref s 986(1)-(2) The holder's six weeks to apply to the court (src:13774-13778)
+-- TIMELINE: unit=calendar day; day 0=the date on which the notice was given; counting="within six weeks from the date on which the notice referred to in that subsection was given" (42 days, computed from the date of the notice by the existing s 986(2) function; day 42 is the last day)
+-- FORK: s 986(2) "within six weeks from the date" | day 42 is the last day | day 41 is the last day
+-- FORK: s 986(2) a late application | the lapse of the power is FULFILLED and nothing else follows; whether the court may entertain a late application is not in the text | a late application is a breach
+-- not encoded here: that an application pending at the end of the six weeks suspends s 981(6) (the s 981(6) rule below takes it as an input), and the court's orders (s 986(1), (3), (4)), which are the court's powers and carry no time limit
+GIVEN `a notice is given under section 979 to the shareholder` IS A BOOLEAN
+      `the date on which the notice was given` IS A DATE
+GIVETH A DEONTIC `ss 979-986 party` `ss 979-986 act`
+`s 986(2) the shareholder's six weeks to apply to the court` MEANS
+    IF (`s 986(1) the court may make an order on the shareholder's application` `a notice is given under section 979 to the shareholder` TRUE) EQUALS JUST TRUE
+    THEN PARTY `ss 979-986 the shareholder`
+         MAY `s 986(1) the shareholder applies to the court`
+         WITHIN ((Day (`s 986(2) the last day for the application` `the date on which the notice was given`)) MINUS (Day `the date on which the notice was given`))
+         HENCE FULFILLED
+         LEST FULFILLED
+    ELSE FULFILLED
+
+-- ---- s 981(6): the end of the six weeks ---------------------------------------------------------------------------------------------
+
+-- src:13679 | (6) At the end of six weeks from the date of the notice the offeror must immediately—
+-- src:13680 | (a) send a copy of the notice to the company, and
+-- src:13681 | (b) pay or transfer to the company the consideration for the shares to which the notice relates.
+-- src:13682 | Where the consideration consists of shares or securities to be allotted by the offeror, the reference in paragraph (b) to the transfer of the consideration is to be read as a reference to the allotment of the shares or securities to the company.
+-- src:13777 | (2) An application under subsection (1) must be made within six weeks from the date on which the notice referred to in that subsection was given.
+-- src:13778 | If an application to the court under subsection (1) is pending at the end of that period, section 981(6) does not have effect until the application has been disposed of.
+@ref s 981(6) At the end of six weeks the offeror must immediately send the copy and pay or transfer (src:13679-13682, src:13777-13778)
+-- TIMELINE: unit=calendar day; day 0=the day section 981(6) has effect: the end of six weeks from the date of the notice (the date of the notice plus 42 days), or, where an application to the court under s 986(1) is pending at the end of the six weeks, the day the application is disposed of; counting="At the end of six weeks from the date of the notice ... must immediately" and "does not have effect until the application has been disposed of" (WITHIN 0: the same day; the helper tests the day given as `the day` against the notice and the application)
+-- FORK: s 981(6) "At the end of six weeks from the date of the notice" | the end of the six weeks is the date of the notice plus 42 days, as the existing encoding reads it | the sixth week ends the day before
+-- FORK: s 981(6) "immediately" | the same day as the end of the six weeks, or as the disposal of the application | a short reasonable time after it
+-- FORK: s 981(6)(a) and (b) | two duties side by side (RAND), so that the copy of the notice and the payment each have the breach of its own | one duty with two limbs
+-- FORK: s 986(2) "does not have effect until the application has been disposed of" | when the application has been disposed of and the court has not ordered that the offeror is not entitled and bound, the duty arises that day | the duty arises at the end of the original six weeks and is only late
+-- a day before section 981(6) has effect, or a notice section 979 does not allow, or a court order that the offeror is not entitled and bound (s 986(1)(a)), leaves no duty: the rule is FULFILLED
+-- the position's "day on which the entitlement is determined" is the caller's to set to the date of the notice, because s 979(5) determines the entitlement "on any particular date"
+-- the day-0 helper tests `the day` with AT LEAST, so every later day also passes and would start its own WITHIN 0: the caller starts the trace on the first day on which the duty arises (the end of the six weeks, or the day the application is disposed of)
+GIVEN offer IS A `ss 979-986 offer`
+      position IS A `ss 979-986 the offeror's position`
+      `the date of the notice` IS A DATE
+      `the day` IS A DATE
+      `an application to the court under section 986(1) is pending at the end of the six weeks` IS A BOOLEAN
+      `the day that application is disposed of` IS A MAYBE DATE
+      `the court has ordered under section 986(1)(a) that the offeror is not entitled and bound to acquire the shares` IS A BOOLEAN
+GIVETH A DEONTIC `ss 979-986 party` `ss 979-986 act`
+`s 981(6) the offeror's duty at the end of six weeks` MEANS
+    IF     (`ss 979-986 section 979 allows a notice given on the day` offer position `the date of the notice`)
+       AND (`ss 979-986 section 981(6) has effect on the day` `the date of the notice` `the day` `an application to the court under section 986(1) is pending at the end of the six weeks` `the day that application is disposed of`)
+       AND (NOT `the court has ordered under section 986(1)(a) that the offeror is not entitled and bound to acquire the shares`)
+    THEN (   PARTY `ss 979-986 the offeror`
+             MUST `s 981(6)(a) the offeror sends the company a copy of the notice`
+             WITHIN 0
+             HENCE FULFILLED
+             LEST BREACH BY `ss 979-986 the offeror` BECAUSE "the offeror did not send the company a copy of the notice immediately at the end of the six weeks (s 981(6)(a))")
+         RAND
+         (   PARTY `ss 979-986 the offeror`
+             MUST `s 981(6)(b) the offeror pays or transfers the consideration to the company`
+             WITHIN 0
+             HENCE FULFILLED
+             LEST BREACH BY `ss 979-986 the offeror` BECAUSE "the offeror did not pay or transfer the consideration to the company immediately at the end of the six weeks (s 981(6)(b))")
+    ELSE FULFILLED
+
+-- ---- s 981(9) and s 982: the trust, the separate account, and payment into court ----------------------------------------------------
+
+-- src:13687 | (9) The company must hold any money or other consideration received by it under subsection (6)(b) on trust for the person who, before the offeror acquired them, was entitled to the shares in respect of which the money or other consideration was received.
+-- src:13688 | Section 982 contains further provision about how the company should deal with such money or other consideration.
+@ref s 981(9) The company holds the consideration on trust (src:13687-13688)
+-- TIMELINE: unit=none; day 0=the day the company receives the consideration under s 981(6)(b); counting=silent (s 981(9) gives no time: the duty stays open until the trace shows the company holding the consideration on trust)
+GIVEN `the company received the money or other consideration under subsection (6)(b)` IS A BOOLEAN
+GIVETH A DEONTIC `ss 979-986 party` `ss 979-986 act`
+`s 981(9) the company's duty to hold the consideration on trust` MEANS
+    IF (`s 981(9) the company holds the consideration on trust for the person who was entitled to the shares` `the company received the money or other consideration under subsection (6)(b)`) EQUALS JUST TRUE
+    THEN PARTY `ss 979-986 the company`
+         MUST `s 981(9) the company holds the consideration on trust for the person who was entitled to the shares`
+         HENCE FULFILLED
+    ELSE FULFILLED
+
+-- src:13690 | (1) This section applies where an offeror pays or transfers consideration to the company under section 981(6).
+-- src:13691 | (2) The company must pay into a separate bank account that complies with subsection (3)—
+-- src:13692 | (a) any money it receives under paragraph (b) of section 981(6), and
+-- src:13693 | (b) any dividend or other sum accruing from any other consideration it receives under that paragraph.
+-- src:13694 | (3) A bank account complies with this subsection if the balance on the account—
+-- src:13695 | (a) bears interest at an appropriate rate, and
+-- src:13696 | (b) can be withdrawn by such notice (if any) as is appropriate.
+@ref s 982(1)-(3) The separate bank account (src:13690-13696)
+-- TIMELINE: unit=none; day 0=the day the offeror pays or transfers consideration to the company under s 981(6); counting=silent (s 982(2) gives no time: the duty stays open until the trace shows the payment into the account)
+-- FORK: s 982(2) the account | the act is the company's payment into a separate bank account that complies with subsection (3); whether a given account complies is the existing s 982(3) function and is not tested here | the compliance of the account is a gate of the duty
+GIVEN `an offeror pays or transfers consideration to the company under section 981(6)` IS A BOOLEAN
+GIVETH A DEONTIC `ss 979-986 party` `ss 979-986 act`
+`s 982(2) the company's duty to pay into a separate bank account` MEANS
+    IF `an offeror pays or transfers consideration to the company under section 981(6)`
+    THEN PARTY `ss 979-986 the company`
+         MUST `s 982(2) the company pays the money, and any dividend or other sum accruing, into a separate bank account that complies with subsection (3)`
+         HENCE FULFILLED
+    ELSE FULFILLED
+
+-- src:13697 | (4) If—
+-- src:13698 | (a) the person entitled to the consideration held on trust by virtue of section 981(9) cannot be found, and
+-- src:13699 | (b) subsection (5) applies,
+-- src:13700 | the consideration (together with any interest, dividend or other benefit that has accrued from it) must be paid into court.
+-- src:13701 | (5) This subsection applies where—
+-- src:13702 | (a) reasonable enquiries have been made at reasonable intervals to find the person, and
+-- src:13703 | (b) twelve years have elapsed since the consideration was received, or the company is wound up.
+-- src:13704 | (6) In relation to a company registered in Scotland, subsections (7) and (8) apply instead of subsection (4).
+@ref s 982(4)-(6) Payment into court where the person cannot be found (src:13697-13704)
+-- TIMELINE: unit=none; day 0=the day the gate is tested (the day the person cannot be found and the s 982(5) conditions hold); counting=silent for the duty ("must be paid into court" gives no time); the twelve years of s 982(5)(b) are a condition tested by the existing s 982(5) function from the day the consideration was received, not a deadline
+-- FORK: s 982(4) "twelve years have elapsed since the consideration was received" | twelve years is `add years` 12 from the day of receipt, and the duty arises on that day or after | twelve years is complete only the day after
+-- not encoded: s 982(6)-(8) (a company registered in Scotland: the trust terminates and the sum goes to the Accountant of Court); for such a company the existing s 982(4) function answers NOTHING and this rule is FULFILLED
+GIVEN `the person entitled to the consideration held on trust by virtue of section 981(9) cannot be found` IS A BOOLEAN
+      `reasonable enquiries have been made at reasonable intervals to find the person` IS A BOOLEAN
+      `the day the consideration was received` IS A DATE
+      `the day` IS A DATE
+      `the company is wound up` IS A BOOLEAN
+      place IS A `Place of registration`
+GIVETH A DEONTIC `ss 979-986 party` `ss 979-986 act`
+`s 982(4) the company's duty to pay the consideration into court` MEANS
+    IF (`s 982(4) the consideration must be paid into court` `the person entitled to the consideration held on trust by virtue of section 981(9) cannot be found` (`s 982(5) this subsection applies` `reasonable enquiries have been made at reasonable intervals to find the person` `the day the consideration was received` `the day` `the company is wound up`) place) EQUALS JUST TRUE
+    THEN PARTY `ss 979-986 the company`
+         MUST `s 982(4) the company pays the consideration into court`
+         HENCE FULFILLED
+    ELSE FULFILLED
+
+-- ---- s 983 and s 984(1)-(2): the holder's right to require the offeror to acquire, and its window --------------------------------------
+
+-- src:13716 | 983 Right of minority shareholder to be bought out by offeror
+-- src:13717 | (1) Subsections (2) and (3) apply in a case where a takeover offer relates to all the shares in a company.
+-- src:13718 | For this purpose a takeover offer relates to all the shares in a company if it is an offer to acquire all the shares in the company within the meaning of section 974.
+-- src:13719 | (2) The holder of any voting shares to which the offer relates who has not accepted the offer may require the offeror to acquire those shares if, at any time before the end of the period within which the offer can be accepted—
+-- src:13743 | (1) Rights conferred on a shareholder by subsection (2), (3) or (4) of section 983 are exercisable by a written communication addressed to the offeror.
+-- src:13744 | (2) Rights conferred on a shareholder by subsection (2), (3) or (4) of that section are not exercisable after the end of the period of three months from—
+-- src:13745 | (a) the end of the period within which the offer can be accepted, or
+-- src:13746 | (b) if later, the date of the notice that must be given under subsection (3) below.
+-- src:13759 | (1) Subject to section 986, this section applies where a shareholder exercises his rights under section 983 in respect of any shares held by him.
+-- src:13760 | (2) The offeror is entitled and bound to acquire those shares on the terms of the offer or on such other terms as may be agreed.
+@ref s 983-985 The holder's right to require acquisition and its three months (src:13716-13719, src:13743-13746, src:13759-13760)
+-- TIMELINE: unit=calendar day; day 0=the end of the period within which the offer can be accepted; counting="not exercisable after the end of the period of three months from (a) the end of the period within which the offer can be accepted, or (b) if later, the date of the notice that must be given under subsection (3)" (computed from the two dates by the existing s 984(2) function; day n is the last day)
+-- FORK: s 984(2) "three months from" | the three months run from the later of the two dates, and the last day is the corresponding date three months on, as the existing function reads it | the last day is the day before
+-- FORK: s 984(2) day 0 | the end of the acceptance period, so a requirement made before then (s 983 allows one "at any time before the end of the period") is put on day 0 | the clock starts at the holder's first chance
+-- FORK: s 984(2) a late requirement | the lapse of the right is FULFILLED and nothing else follows; a requirement after it is not an event this rule consumes | a late requirement is a breach
+-- FORK: s 985(2) | once the holder requires, the offeror is bound to acquire "on the terms of the offer or on such other terms as may be agreed" (src:13760); the Act gives no time, so the duty stays open with no clock; section 986(3) lets the court fix the terms and is not encoded | the offeror's duty is conditional on terms being agreed
+-- FORK: s 983 the gate | the answer of the existing function s 983(2), (3) or (4) is an input, JUST TRUE meaning the right has arisen; its share-count inputs are not repeated | the rule takes the holdings itself
+GIVEN `the holder may require the offeror to acquire the shares (the answer of s 983(2), (3) or (4))` IS A MAYBE BOOLEAN
+      `the end of the period within which the offer can be accepted` IS A DATE
+      `the date of the notice that must be given under subsection (3)` IS A MAYBE DATE
+GIVETH A DEONTIC `ss 979-986 party` `ss 979-986 act`
+`s 984(2) the shareholder's three months to require the offeror to acquire the shares` MEANS
+    IF `the holder may require the offeror to acquire the shares (the answer of s 983(2), (3) or (4))` EQUALS JUST TRUE
+    THEN PARTY `ss 979-986 the shareholder`
+         MAY `s 983 the shareholder requires the offeror to acquire the shares by a written communication`
+         WITHIN ((Day (`s 984(2) the last day on which the rights may be exercised` `the end of the period within which the offer can be accepted` `the date of the notice that must be given under subsection (3)`)) MINUS (Day `the end of the period within which the offer can be accepted`))
+         HENCE (PARTY `ss 979-986 the offeror`
+                MUST `s 985(2) the offeror acquires the shares on the terms of the offer or on such other terms as may be agreed`
+                HENCE FULFILLED)
+         LEST FULFILLED
+    ELSE FULFILLED
+
+-- ---- s 984(3): the offeror's notice of the rights, within one month ------------------------------------------------------------------
+
+-- src:13747 | (3) Within one month of the time specified in subsection (2), (3) or (4) (as the case may be) of that section, the offeror must give any shareholder who has not accepted the offer notice in the prescribed manner of—
+-- src:13748 | (a) the rights that are exercisable by the shareholder under that subsection, and
+-- src:13749 | (b) the period within which the rights are exercisable.
+-- src:13750 | If the notice is given before the end of the period within which the offer can be accepted, it must state that the offer is still open for acceptance.
+-- src:13751 | (4) Subsection (3) does not apply if the offeror has given the shareholder a notice in respect of the shares in question under section 979.
+@ref s 984(3)-(4) The offeror's notice of the rights, within one month (src:13747-13751)
+-- TIMELINE: unit=calendar day; day 0=the end of the period within which the offer can be accepted ("the time specified in subsection (2), (3) or (4)" of section 983); counting="Within one month of the time specified" (the time specified is read as the end of the acceptance period, so day n is one month on, computed by the existing s 984(3) function)
+-- FORK: s 984(3) "Within one month of the time specified" | one month after the end of the acceptance period, the last day being the corresponding date a month on; a notice given earlier (the last sentence of (3) allows one) is put on day 0 | one month from the day the conditions of s 983(2)(a)-(b), (3)(a)-(b) or (4)(a)-(b) are first met (src:13719 "at any time before the end of the period"), which may be earlier than the end of the period, the month then running on both sides of it (src:13750 allows a notice before the offer closes)
+-- FORK: s 984(4) | the duty does not arise where the offeror has given the shareholder a s 979 notice in respect of the shares; the existing function answers JUST FALSE in that case and NOTHING otherwise, and the duty arises unless it answers JUST FALSE | the duty arises only where the existing function answers JUST TRUE (it never does)
+-- FORK: s 984(5) | a missed month is the breach of this duty, which the Act makes an offence of the offeror (and of an officer of an offeror company, below); the defence of reasonable steps (s 984(6)) is a matter for the charge | the defence removes the breach
+-- not encoded: what the notice must contain (s 984(3)(a), (b) and the last sentence), which the existing function s 984(3) tests
+GIVEN `the holder may require the offeror to acquire the shares (the answer of s 983(2), (3) or (4))` IS A MAYBE BOOLEAN
+      `the offeror has given the shareholder a notice in respect of the shares in question under section 979` IS A BOOLEAN
+      `the end of the period within which the offer can be accepted` IS A DATE
+GIVETH A DEONTIC `ss 979-986 party` `ss 979-986 act`
+`s 984(3) the offeror's duty to give the shareholder notice of his rights` MEANS
+    IF     (`the holder may require the offeror to acquire the shares (the answer of s 983(2), (3) or (4))` EQUALS JUST TRUE)
+       AND (NOT ((`s 984(4) subsection (3) applies` `the offeror has given the shareholder a notice in respect of the shares in question under section 979`) EQUALS JUST FALSE))
+    THEN PARTY `ss 979-986 the offeror`
+         MUST `s 984(3) the offeror gives the shareholder notice of the rights and the period`
+         WITHIN ((Day (`s 984(3) the last day for giving the notice` `the end of the period within which the offer can be accepted`)) MINUS (Day `the end of the period within which the offer can be accepted`))
+         HENCE FULFILLED
+         LEST BREACH BY `ss 979-986 the offeror` BECAUSE "the offeror did not give the shareholder notice of his rights and the period within one month of the end of the period within which the offer could be accepted (s 984(3)): an offence under s 984(5)"
+    ELSE FULFILLED
+
+-- src:13752 | (5) An offeror who fails to comply with subsection (3) commits an offence.
+-- src:13753 | If the offeror is a company, every officer of that company who is in default or to whose neglect the failure is attributable also commits an offence.
+@ref s 984(5) The officer's offence (src:13752-13753)
+-- TIMELINE: unit=none; day 0=not applicable; counting=silent (s 984(5) gives the officer no time: the prohibition stays open and the default or neglect is an event the trace supplies)
+-- FORK: s 984(5) "every officer ... who is in default or to whose neglect the failure is attributable" | a prohibition on the officer, gated by the existing s 984(5) function with the officer's default (s 1121) and the neglect as inputs; the offeror's own offence is the breach of the rule above | the officer's liability follows the offeror's breach automatically
+GIVEN `the offeror fails to comply with subsection (3)` IS A BOOLEAN
+      `the offeror is a company` IS A BOOLEAN
+      `s 1121 the officer is in default` IS A MAYBE BOOLEAN
+      `the failure is attributable to the officer's neglect` IS A BOOLEAN
+GIVETH A DEONTIC `ss 979-986 party` `ss 979-986 act`
+`s 984(5) the officer's duty not to be in default in the offeror company's failure` MEANS
+    IF (`s 984(5) the person commits an offence` `the offeror fails to comply with subsection (3)` (`s 984(5) an officer of the offeror company`) `the offeror is a company` `s 1121 the officer is in default` `the failure is attributable to the officer's neglect`) EQUALS JUST TRUE
+    THEN PARTY `ss 979-986 an officer of the offeror company who is in default`
+         SHANT `s 984(5) the officer is in default in the offeror company's failure, or the failure is attributable to the officer's neglect`
+         HENCE FULFILLED
+         LEST BREACH BY `ss 979-986 an officer of the offeror company who is in default` BECAUSE "the offeror company failed to give the notice of the shareholder's rights and the officer was in default or the failure is attributable to the officer's neglect: an offence under s 984(5)"
+    ELSE FULFILLED
