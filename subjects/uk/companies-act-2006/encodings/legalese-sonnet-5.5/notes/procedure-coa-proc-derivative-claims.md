@@ -125,7 +125,7 @@ No warning comes from the new files.
 
 ### Verification
 
-- Both binaries: the unstable build `l4-unstable-20261125-a50cbd0` and main 112 (`~/.cache/l4-main/112/l4`), run from this folder with `JL4_LIBRARY_PATH` unset.
+- Both binaries: the unstable build `l4-unstable-20261125-a50cbd0` and main 112 (the stable build 112), run from this folder with `JL4_LIBRARY_PATH` unset.
 - Both check the module and the tests with no `DiagnosticSeverity_Error` and no warning from the new files; all 13 assertions are satisfied on both.
 - `expect_check.py` matched 60 of 60 traces on unstable and 60 of 60 on main; every EXPECT was written from the text before the run, and every one of the 20 rules has at least one trace in which it acts and one in which its gate fails.
 - Two mutated scratch copies, deleted afterwards, run on the first 40 traces (before the traces for the remaining rules of ss 262 and 264 were added): with the s 263(2) refusal switched off in the hearing rules, one trace changed class (the court adjourns although satisfied under s 263(2)(a): expected RESIDUAL, got FULFILLED), and with the bar's gate switched off, three did (both BREACH traces and the open bar trace).

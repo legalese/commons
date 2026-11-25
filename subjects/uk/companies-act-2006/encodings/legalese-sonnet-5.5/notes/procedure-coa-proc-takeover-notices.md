@@ -3,7 +3,7 @@
 The procedure that Companies Act 2006 ss 979 to 986 lays down once a takeover offer has been accepted widely enough: the offeror's notice to a holder who has not accepted (the squeeze-out, ss 979 to 982), the holder's right to require the offeror to buy (the sell-out, ss 983 to 985), and the court application of s 986.
 It is written as regulative rules over the Boolean encoding in `coa21-ch3-squeeze-out.l4` and `coa21-ch3-sell-out.l4`.
 
-Files: `coa-proc-takeover-notices.l4` (the rules) and `coa-proc-takeover-notices-tests.l4` (46 traces and 14 assertions).
+Files: `coa-proc-takeover-notices.l4` (the rules) and `coa-proc-takeover-notices-tests.l4` (47 traces and 14 assertions).
 Source lines 13612-13799 of `ukpga-2006-46.txt` (s 986 ends at line 13799; s 987 starts at 13800).
 No existing module is edited; the new module imports `coa-core`, `coa21-ch3-squeeze-out` and `coa21-ch3-sell-out` and calls their functions as gates.
 
@@ -25,7 +25,7 @@ No existing module is edited; the new module imports `coa-core`, `coa21-ch3-sque
 | `s 982(2) the company's duty to pay into a separate bank account` | s 982(1)-(3) (src:13690-13696) | a MUST of the company once consideration has been paid to it; no clock |
 | `s 982(4) the company's duty to pay the consideration into court` | s 982(4)-(6) (src:13697-13704) | a MUST of the company, gated by the existing `s 982(4)` and `s 982(5)` functions (the person cannot be found, enquiries, twelve years or winding up, not Scotland); no clock |
 | `s 984(2) the shareholder's three months to require the offeror to acquire the shares` | ss 983, 984(1)-(2), 985(2) (src:13716-13719, 13743-13746, 13759-13760) | a MAY of the holder, gated by the answer of the existing `s 983(2)`, `(3)` or `(4)` function, WITHIN the three months of the existing `s 984(2)` function; the next step is the offeror's duty to acquire (s 985(2)), with no clock |
-| `s 984(3) the offeror's duty to give the shareholder notice of his rights` | s 984(3)-(5) (src:13747-13751) | a MUST of the offeror WITHIN one month of the end of the acceptance period, gated by the s 983 answer and the existing `s 984(4)` function; a miss is the breach and the offence of s 984(5) |
+| `s 984(3) the offeror's duty to give the shareholder notice of his rights` | s 984(3)-(5) (src:13747-13751) | a MUST of the offeror WITHIN one month of the day the s 983 conditions were first met (a date input), gated by the s 983 answer and the existing `s 984(4)` function; a miss is the breach and the offence of s 984(5) |
 | `s 984(5) the officer's duty not to be in default in the offeror company's failure` | s 984(5) (src:13752-13753) | a prohibition on an officer in default, gated by the existing `s 984(5)` function; no clock |
 
 The rules are separate, not chained by HENCE (except the s 985(2) step after the holder's requirement), because each later step needs a fact the earlier one does not carry: the date of the notice, the day an application is disposed of, whether the holder has accepted.
@@ -44,7 +44,7 @@ The offences are encoded as the breach of the duty the Act makes an offence (s 9
 - `s 982(2) the company's duty to pay into a separate bank account`: `TIMELINE: unit=none; day 0=the day the offeror pays or transfers consideration to the company under s 981(6); counting=silent`.
 - `s 982(4) the company's duty to pay the consideration into court`: `TIMELINE: unit=none; day 0=the day the gate is tested; counting=silent` for the duty (the twelve years of s 982(5)(b) are a condition tested from the day the consideration was received, not a deadline).
 - `s 984(2) the shareholder's three months to require the offeror to acquire the shares`: `TIMELINE: unit=calendar day; day 0=the end of the period within which the offer can be accepted; counting="not exercisable after the end of the period of three months from (a) the end of the period within which the offer can be accepted, or (b) if later, the date of the notice that must be given under subsection (3)"` (from the existing `s 984(2)` function; the offeror's duty to acquire that follows has no clock).
-- `s 984(3) the offeror's duty to give the shareholder notice of his rights`: `TIMELINE: unit=calendar day; day 0=the end of the period within which the offer can be accepted; counting="Within one month of the time specified"` (the time specified is read as the end of the acceptance period; the other reading, one month from the day the conditions of s 983 are first met, may be earlier, src:13719 and 13750; computed by the existing `s 984(3)` function; 30 days in the tests, for an acceptance period ending on 30 April).
+- `s 984(3) the offeror's duty to give the shareholder notice of his rights`: `TIMELINE: unit=calendar day; day 0=the date on which the conditions of s 983(2)(a)-(b), (3)(a)-(b) or (4)(a)-(b) were first met; counting="Within one month of the time specified"` (the time specified is the time at which the conditions are met, src:13719 "at any time before the end of the period within which the offer can be accepted" with src:13747, so the month may end before the offer closes, which src:13750 allows for; computed by the existing `s 984(3)` function, which is here given the first-met date; 30 days in the tests, for conditions first met on 20 April).
 - `s 984(5) the officer's duty not to be in default in the offeror company's failure`: `TIMELINE: unit=none; day 0=not applicable; counting=silent`.
 
 ### Forks
@@ -68,14 +68,17 @@ The rules carry these FORK lines, each with the answer taken and the other readi
 - s 984(2) day 0 and a late requirement: the end of the acceptance period; a requirement before it is put on day 0; the lapse of the right is FULFILLED.
 - s 985(2): the offeror's duty to acquire follows the holder's requirement and has no clock; the court's power to fix the terms (s 986(3)) is not encoded.
 - s 983 gate: the answer of the existing s 983(2), (3) or (4) function is an input, so the share-count inputs of those functions are not repeated.
-- s 984(3) "Within one month of": one month after the end of the acceptance period; an earlier notice (the last sentence of s 984(3) allows one) is put on day 0; the other reading is one month from the day the conditions of s 983 are first met, which may be earlier (src:13719 "at any time before the end of the period"), the month then running on both sides of the end of the period.
+- s 984(3) "Within one month of": one month from the day the conditions of s 983 were first met (src:13719 with src:13747), a date the caller supplies, at or before the end of the acceptance period, so the month may end before the offer closes (src:13750 allows a notice before it closes).
+  The other reading, the first draft's and the existing `coa21-ch3-sell-out.l4:276`'s (`add months` from the end of the acceptance period), can only push the last day later, so it misses breaches and invents none; the independent review changed it, and the trace of a notice on 30 May (the conditions first met on 20 April) moved from FULFILLED to BREACH.
 - s 980(2) the entitlement date: the entitlement is tested once, on the position's own date, and the power runs from the date of the offer, so a notice given before that date is not caught by the gate; the other reading tests the entitlement on the day of each notice, as the s 981(6) rule does.
+- s 982(2) the account: the act is the company's payment into a separate bank account that complies with subsection (3); whether a given account complies is the existing s 982(3) function's question and is not tested here; the other reading makes the compliance of the account a gate of the duty.
 - s 984(4): the duty arises unless the existing function answers JUST FALSE (the offeror has given a s 979 notice).
 - s 984(5) and (6): a miss is the breach and the offence of the offeror; the officer has a prohibition of his own; the defence of reasonable steps is a matter for the charge.
 
 ### What the text leaves silent (no clock encoded)
 
 - Any time for the company to hold the consideration on trust (s 981(9)), to pay into a separate account (s 982(2)), or to pay into court (s 982(4)).
+- s 981(7) and (8): silent beyond "on receipt" (src:13684 "On receipt of that instrument the company must register the offeror"); no clock is encoded, and the other reading is a duty WITHIN 0 from the day of receipt, which is how the capital-reduction unit lists s 644(3) as a fork.
 - Any time for the offeror to acquire after the holder requires it (s 985(2)).
 - Any time for a shareholder to give the offeror notice of an application (s 986(6)) or for the offeror to pass a copy on (s 986(7), (8)): not encoded.
 - Whether the date of a notice counts in the six weeks, and whether "within one month of" looks forward or both ways.
@@ -86,9 +89,9 @@ The rules carry these FORK lines, each with the answer taken and the other readi
 
 ### Which binary verified the traces
 
-Both, from inside the encoding folder with `JL4_LIBRARY_PATH` unset: the unstable build `l4-unstable-20261125-a50cbd0` and the stable line, `~/.cache/l4-main/112/l4`.
+Both, from inside the encoding folder with `JL4_LIBRARY_PATH` unset: the unstable build `l4-unstable-20261125-a50cbd0` and the stable line, the stable build 112.
 On each, the module and the test module print no error and no warning other than the import-resolution warning that every module prints in this environment (an installed copy of the prelude and `daydate` in the XDG data directory is shadowed by the embedded one); all 14 assertions are satisfied.
-Under `expect_check.py`, all 46 traces match their `-- EXPECT` line on unstable; 44 match on main (the two that do not are below).
+Under `expect_check.py`, all 47 traces match their `-- EXPECT` line on unstable; 45 match on main (the two that do not are below).
 The count is over the aim of 40 because each time-limited rule has an in-time, a last-day, a late-act and a gate trace where the text gives them; the late acts of s 981(3), s 986(2) and s 984(2) are real events on days 43, 43 and 92, not waits.
 `srcrefs.py check --refs` reports 86 quoted source lines, 19 locators, no problem.
 The expected outcomes and the day counts (180, 211, 42, 30, 91, 122) were written from the text before the first run.
@@ -96,6 +99,14 @@ The expected outcomes and the day counts (180, 211, 42, 30, 91, 122) were writte
 Sensitivity: two scratch copies of the module, each with one change, were run against the test module on unstable and then deleted.
 Counting the s 980(2) clock from the close of the offer instead of the offer's date turned two traces (the notice on the last day and the one under Schedule 1C) into BREACH.
 Dropping the court-order gate of s 981(6) turned the trace for a court order into BREACH.
+
+### Closed routes (not breaches)
+
+Convention for all the procedure units (assumed, not ruled): `BREACH` is kept only for a duty or a prohibition that the text lays on a named party.
+A power that lapses unused, a condition that is not met, a vote that fails and a route that has closed end `FULFILLED`, with the reason (what was lost, and the statute line) in a comment beside the LEST.
+This unit already follows it: the holder's choice of consideration (`s 981(3)`), the holder's three months to require acquisition (`s 984(2)`) and the application to the court (`s 986(2)`) end LEST FULFILLED, and so does the offeror's duty to acquire after a requirement (`s 985(2)`).
+The BREACHes that stay are the offeror's duties and the prohibitions laid on a named party (ss 980, 981(6), 984(3), 984(5)).
+No trace changed class for this reason; the one change of an answer in this unit is the month of s 984(3), in the forks above.
 
 ### READS-DIFFERENTLY-ON-MAIN
 
@@ -125,7 +136,7 @@ For s 981(6):
 For s 984(3):
 
 - **Gate.** The existing rule takes only the end of the acceptance period and binds the offeror whatever the holder's position. This module runs the duty only where the holder has a right under s 983 (the answer of the existing `s 983(2)`, `(3)` or `(4)` function; src:13719-13732) and not where the offeror has given the shareholder a s 979 notice in respect of the shares (src:13751).
-- **Clock.** The same: both read "the time specified" (src:13747 "Within one month of the time specified in subsection (2), (3) or (4)") as the end of the acceptance period, one month on by the existing `s 984(3)` function; the other reading, one month from the day the conditions of s 983 are first met (src:13719 "at any time before the end of the period"), is in the fork. Neither encodes an earlier notice, which the last sentence of s 984(3) allows.
+- **Clock.** Different: the existing rule reads "the time specified" (src:13747 "Within one month of the time specified in subsection (2), (3) or (4)") as the end of the acceptance period, one month on by the existing `s 984(3)` function (`coa21-ch3-sell-out.l4:276`); this module reads it as the day the conditions of s 983 were first met (src:13719 "at any time before the end of the period"), a date input, and gives the existing function that date. Neither encodes an earlier notice, which the last sentence of s 984(3) allows.
 - **Offences.** The existing rule gives the reason for the breach only; this module's reason cites the offence of s 984(5) and adds a separate prohibition on an officer in default (src:13752-13753), gated by the existing `s 984(5)` function.
 - **What follows.** Neither goes on from the notice. This module adds the holder's window (src:13744-13746) and the offeror's duty to acquire once the holder requires it (src:13760).
 
@@ -134,7 +145,7 @@ For s 984(3):
 - The content of the notices (ss 980(1), 981(3), 984(3), 985(3)) and the prescribed manner and form: tested by the existing functions, not time limits.
 - The share counting of ss 979 and 983 (the 90% tests, treasury shares, associates, conditional contracts): the existing functions; this module takes their answers as gates.
 - s 980(5) (a director signs where the offeror is a company) and s 980(8), s 984(7) (the penalties): no duty with a time, and the penalties stay the existing functions.
-- s 981(5) and s 985(5) (cash equivalent where the consideration cannot be provided), s 981(7) and (8) (the instrument of transfer and the warrants, and the company's registration or issue), s 985(3) and (4) (the choice on a requirement): no time limit, and the registration or issue is the company's step on receipt.
+- s 981(5) and s 985(5) (cash equivalent where the consideration cannot be provided), s 981(7) and (8) (the instrument of transfer and the warrants, and the company's registration or issue), s 985(3) and (4) (the choice on a requirement): no time limit beyond "on receipt" for s 981(7) and (8) (listed above as silent beyond "on receipt", not as having no time limit), and the registration or issue is the company's step on receipt.
 - s 982(6) to (9) (a company registered in Scotland, the Accountant of Court, the expenses of enquiries): the existing functions answer for them; for a Scottish company the s 982(4) rule here is FULFILLED.
 - s 986(3) to (10) (the court's orders on terms and costs, the notices of an application, and the court's authority to allow notices where shareholders cannot be traced): the court's powers and the notice duties carry no time limit that the Act states; the Boolean functions stay in `coa21-ch3-sell-out.l4`.
 - s 983(6) and (7) (a requirement made while conditional contracts are open) and the effect of a requirement made after the acceptance period under s 984(2)(b): inside the answer of the existing s 983 function and the existing s 984(2) function.

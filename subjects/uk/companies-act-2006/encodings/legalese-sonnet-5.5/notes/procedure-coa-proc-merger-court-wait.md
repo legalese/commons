@@ -5,7 +5,7 @@ The unit is s 917 (the court's order that no meeting of any of the merging compa
 Sections 916 and 918 carry the same one-month wait counted from the first meeting of the transferor company, so they are encoded beside it.
 Sections 915, 915A and 917A give no time and no step of their own, so nothing is added for them.
 
-Files: `coa-proc-merger-court-wait.l4` (the rules) and `coa-proc-merger-court-wait-tests.l4` (25 traces and 15 assertions).
+Files: `coa-proc-merger-court-wait.l4` (the rules) and `coa-proc-merger-court-wait-tests.l4` (26 traces and 15 assertions).
 Source lines 12691-12784 of `ukpga-2006-46.txt`.
 No existing module is edited.
 The new module imports `coa-core`, `coa20-part26`, `coa20-part27-merger` and `coa-proc-merger`, and calls their functions as gates (the scheme record, `ss 902-918 Part 27 applies to a merger`, `ss 902-918 the scheme is a merger by absorption`, `s 917(1)`, `s 917(2)`, `s 917(3)`, and the calendar-month helpers `s 906(3) the date one month after` and `s 906(3) the date one month before`).
@@ -42,7 +42,8 @@ The earliest date is the first date whose date one calendar month before is not 
 - s 917(4), (4C), (5): the answers are inputs read at the date of the order, because they speak of "the period beginning one month before, and ending on" the order; an answer of NOTHING is treated as not met, so the court's power is not open until the answer is known | an unknown answer leaves the power open.
 - s 917(2) "if the court is satisfied": a MAY of the court with no time limit | a duty of the court to make the order once the conditions are met.
 - ss 916(3A) and 918(2A): one rule serves both sections, gated by s 918(1) (any merger by absorption), because s 916(1) (90% or more, not all) is a narrower case with the same clock and s 917 (all held) has its own anchor | a rule for each section.
-- ss 916(3A) and 918(2A) a meeting held before the wait: shown as the transferor company's breach, because the company summons the meeting; the text names no bearer | no one's breach, the exemption is merely unavailable.
+- ss 916(3A) and 918(2A) the gate: the rule runs only where the transferee company relies on s 916(2) or s 918(1) (the scheme record's answer of either is JUST TRUE), because the month is a condition of that exemption (src:12765, 12767) and not a duty on the transferor company; the other reading, the first draft's, binds every merger by absorption, and the independent review changed it.
+- ss 916(3A) and 918(2A) a meeting held before the wait: a closed route, FULFILLED: the first condition of the exemption is not met, the transferee company's meeting is required (s 907(1)), and the transferor company has done no wrong; the first draft showed it as the transferor company's breach.
 - ss 916(3A) and 918(2A) "the first meeting": the earliest of the meetings of the transferor company (or of any of them) summoned to agree to the scheme | each class meeting counted separately.
 - ss 916(3B)(b) and 918(2B)(b) the website route: the same wait, taken from the Gazette notice mentioned in s 906A(4) | a separate rule.
 
@@ -70,11 +71,24 @@ So the comparison is with the Boolean module and with the comments of the existi
 
 ### Verification
 
-- Both files run with `l4 run` from inside the folder, with `JL4_LIBRARY_PATH` unset, on the unstable binary `l4-unstable-20261125-a50cbd0-darwin-arm64` and on the stable line `~/.cache/l4-main/112/l4`: no `DiagnosticSeverity_Error` and no warning on either, and all 15 assertions satisfied on both.
-- The traces were verified with `expect_check.py`: 25 of 25 match on the unstable binary.
-  On the stable line 19 of 25 match; the other six are listed below.
+- Both files run with `l4 run` from inside the folder, with `JL4_LIBRARY_PATH` unset, on the unstable binary `l4-unstable-20261125-a50cbd0-darwin-arm64` and on the stable line the stable build 112: no `DiagnosticSeverity_Error` and no warning on either, and all 15 assertions satisfied on both.
+- The traces were verified with `expect_check.py`: 26 of 26 match on the unstable binary.
+  On the stable line 20 of 26 match; the other six are listed below.
 - Two sensitivity checks on scratch copies (deleted afterwards): removing the "minus one" from the `WITHIN` of both rules flips four traces (the order on day 31, the website order on day 31, the 31 January order on day 29 and the meeting on day 31 each read BREACH); removing the extra day in the end-of-month case flips the 28 February trace and fails two assertions (the day counts for 31 January 2026 and 31 January 2028).
 - `srcrefs.py check --strict` on the module: 22 quotation lines, 6 locators, 0 problems.
+
+### Closed routes (not breaches)
+
+Convention for all the procedure units (assumed, not ruled): `BREACH` is kept only for a duty or a prohibition that the text lays on a named party.
+A power that lapses unused, a condition that is not met, a vote that fails and a route that has closed end `FULFILLED`, with the reason (what was lost, and the statute line) in a comment beside the LEST.
+In this unit the ss 916(3A) and 918(2A) rule follows it: an early first meeting of the transferor company is the exemption of the transferee company lost, FULFILLED, and three traces moved from BREACH to FULFILLED after the independent review (a meeting on day 0, a meeting on day 30, and a meeting on day 10 where the transferee relies on neither section).
+One trace was added, for a transferee that relies on s 918(1) with a first meeting on day 10, and the first-meeting traces now use a fixture in which the transferee relies on s 916(2).
+The s 917(3A) rule keeps `BREACH BY the court` for an order made too early, by exception: the court may make the order only if it is "satisfied that the following conditions have been complied with" (src:12740), so an order made too early is a limit on the power of the court and a step that binds the court, not a lapsed power of a party; this is the reading the review accepted (UK-merger-court-wait-2).
+
+### Where the readings differ: month-end counting
+
+The one place in this unit where the English month-counting readings differ is the trace of a notice published on 31 January 2026 and a court's order on 28 February 2026 (`publication: 31 January 2026`, the order on day 28): the module treats the month as not yet run (31 January plus one calendar month clamps to 28 February, and the date one month before 28 February is 28 January, earlier than 31 January), so the order is a BREACH BY the court.
+Under the corresponding-date rule (Dodds v Walker [1981] 1 WLR 1027) a month that has no corresponding date ends on its last day, so 31 January to 28 February is one month and the order would be in time; that is the other reading of the module's own fork, and this trace is the only one that blesses the stricter reading.
 
 ### READS-DIFFERENTLY-ON-MAIN
 

@@ -3,7 +3,7 @@
 The procedure that Companies Act 2006 ss 690 to 723 lays down when a limited company buys its own shares: the contract made available before the vote and the approval that a purchase needs (ss 694 to 696), the copy kept for ten years (s 702), the return and the notice of cancellation after the shares are delivered (ss 707 and 708), and, for a private company paying out of capital, the directors' statement, the special resolution, the notices, the inspection, the objection to the court and the window for the payment (ss 709 to 723), with the solvency-statement route of ss 720A, 720B and 723(1A).
 It is written as regulative rules over the Boolean encoding in `coa15-ch4.l4` and `coa15-ch5.l4`.
 
-Files: `coa-proc-purchase-of-own-shares.l4` (the rules) and `coa-proc-purchase-of-own-shares-tests.l4` (83 traces and 15 assertions).
+Files: `coa-proc-purchase-of-own-shares.l4` (the rules) and `coa-proc-purchase-of-own-shares-tests.l4` (86 traces and 15 assertions).
 Source lines 9083-9523 of `ukpga-2006-46.txt` (s 723 ends at line 9522; Chapter 6 starts at line 9523).
 No existing module is edited; the new module imports `coa-core`, `coa15-nouns`, `coa15-ch4` and `coa15-ch5` and calls their Boolean functions as gates.
 It calls none of their DEONTICs.
@@ -21,7 +21,7 @@ The two notices of s 719 are joined by RAND so that both clocks run from the res
 
 | rule | seat | what it does |
 | --- | --- | --- |
-| `ss 690-723 the company makes the contract available before the vote (s 696)` | s 696(1), (2), (5) (src:9164-9173) | gate: the existing `s 696(1)`; at a meeting the copy at the registered office is due on day 0 (the date of the meeting less 14) and the copy at the meeting on day 14, chained; for a written resolution the copy is due on day 0, the day the proposal is sent |
+| `ss 690-723 the company makes the contract available before the vote (s 696)` | s 696(1), (2), (5) (src:9164-9173) | gate: the existing `s 696(1)`; at a meeting the copy at the registered office is due on day 0 (the date of the meeting less 14) and the copy at the meeting on day 14, chained; for a written resolution the copy is due on day 0, the day the proposal is sent; at a meeting, withdrawing the registered-office copy on any day up to the date of the meeting is a bar (SHANT, day 14), side by side with the chain (RAND) |
 | `ss 690-723 the company's bar on an off-market purchase until the contract is approved (s 694)` | ss 694(1)-(2), 695(3), 696(5) (src:9144-9147, 9173) | a bar (SHANT) with no clock; the gate is the helper `the contract is approved in advance`, which calls the existing `s 694(2)`, `s 694(6)`, `s 695(3)`, `s 696(2)(b)` and `s 696(5)`; when the contract is approved the rule is FULFILLED |
 | `ss 690-723 the company keeps the copy or memorandum available for ten years (s 702)` | s 702(1)-(3) (src:9232-9240) | gate: the existing `s 702(1)`; a bar on stopping WITHIN the days from the conclusion of the contract to the last day the existing `s 702(3)` function gives; no end (no clock) while neither completion nor determination is known |
 | `ss 690-723 the company gives notice of the place where the copy or memorandum is kept (s 702(5))` | ss 702(5), 703(1) (src:9244-9247, 9253-9255) | gate: the existing `s 702(5)`; a MUST WITHIN 14 days |
@@ -67,6 +67,7 @@ The module carries one FORK line for each judgement the text does not settle: th
 They are repeated here, in the order of the module.
 
 - `s 696(1)-(2), (5) The copy or memorandum made available to members before the resolution`: s 696(2)(b)(i) "for not less than 15 days ending with the date of the meeting" | the fifteen days include the day of the meeting, so the copy must be available from the date of the meeting minus 14, as the existing s 696(2)(b) function reads it | the fifteen days are complete days before the meeting day, so the copy is due the day before
+- `s 696(1)-(2), (5) The copy or memorandum made available to members before the resolution`: s 696(2)(b)(i) "for not less than 15 days" | availability is kept through the fifteen days: the company is barred (SHANT) from withdrawing the copy at its registered office on any day up to and including the date of the meeting, as the s 720 rule bars withdrawal through day 35 (src:9169) | availability is checked on day 0 and at the meeting only (the first draft's reading, changed after independent review: a copy put up on day 0 and taken down on day 3 read as FULFILLED)
 - `s 696(1)-(2), (5) The copy or memorandum made available to members before the resolution`: s 696(5) | a miss is a breach of the duty, and the text's own consequence (the resolution is not validly passed) is carried by the gate ss 690-723 the contract is approved in advance; the Act makes it no offence | a miss has no breach, only the invalidity
 - `s 696(1)-(2), (5) The copy or memorandum made available to members before the resolution`: s 696(2)(a) "to every eligible member" | one act of sending to every eligible member, at or before the time the proposed resolution is sent | one duty for each member
 - `s 694(1)-(2), 696(5) No off-market purchase until the contract is approved in advance`: s 694(1) "may only make an off-market purchase in pursuance of a contract approved prior to the purchase" | a purchase made while the contract is not approved in advance (by a resolution that ss 695 and 696 do not bar) is a breach of a bar (SHANT) on the company; the gate is the existing s 694(2) and s 694(6) functions, taken over the meeting route | the Act states no consequence but invalidity
@@ -129,14 +130,23 @@ They are repeated here, in the order of the module.
 ### Which binary verified the traces
 
 The unstable build `l4-unstable-20261125-a50cbd0` (25 November 2026): both modules compile with no error and no warning from these files (the eleven warnings printed are from `coa15-ch1`, `coa15-ch4`, `coa15-ch5` and `coa15-ch6`, which this layer does not touch); all 15 assertions are satisfied; all 83 traces match their EXPECT, written from the text before the first run.
-Main (112): both modules compile with no error and no warning from these files; all 15 assertions are satisfied; 73 of the 83 traces match.
+Main (112): both modules compile with no error and no warning from these files; all 15 assertions are satisfied; 76 of the 86 traces match.
 Two scratch copies, each with one of the clocks changed (the resolution's seven days made eight and the fifteen days of the meeting made fourteen; the 34-day bar made 35), each broke at least two traces of this file and were then deleted.
+
+### Closed routes (not breaches)
+
+Convention for all the procedure units (assumed, not ruled): `BREACH` is kept only for a duty or a prohibition that the text lays on a named party.
+A power that lapses unused, a condition that is not met, a vote that fails and a route that has closed end `FULFILLED`, with the reason (what was lost, and the statute line) in a comment beside the LEST.
+This unit already follows it: the power to apply to the court under `s 721(2)` ends LEST FULFILLED when the five weeks lapse, and no trace changed class for the convention.
+The BREACHes here are the company's duties and bars (ss 696, 694, 702, 707, 720, 723) and the applicants' duty of s 722(1).
+After the independent review the s 696 rule gained a bar on withdrawing the registered-office copy through day 14, and three traces were added: a copy taken down on day 3 (BREACH), a copy taken down on day 15 after the fifteen days (FULFILLED), and a written-resolution copy sent on day 3, after the proposal (BREACH, src:9167).
+The first s 696 meeting trace now runs the clock to day 15, because the bar stays open until day 14.
 
 ### The READS-DIFFERENTLY-ON-MAIN list
 
 Ten traces differ in class between unstable and main; the list, with the line of each trace, is at the end of the test file.
-Eight of the ten (lines 453, 458, 468, 478 and 483 for s 723, and 520, 525 and 535 for s 723(1A)) are an event after the 34-day bar of the payment window or the surrender window has lapsed: unstable matches the payment or the surrender against the MAY that follows the bar, and main prints that MAY as still open.
-The other two (lines 382 and 387) are the five weeks of the objection: a late application on day 36, and no application by day 40, are FULFILLED on unstable and RESIDUAL on main, which prints the applicants' duty to tell the registrar as still open (a lapsed MAY).
+Eight of the ten (lines 472, 477, 487, 497 and 502 for s 723, and 539, 544 and 554 for s 723(1A)) are an event after the 34-day bar of the payment window or the surrender window has lapsed: unstable matches the payment or the surrender against the MAY that follows the bar, and main prints that MAY as still open.
+The other two (lines 401 and 406) are the five weeks of the objection: a late application on day 36, and no application by day 40, are FULFILLED on unstable and RESIDUAL on main, which prints the applicants' duty to tell the registrar as still open (a lapsed MAY).
 The window rules and the objection rule therefore read differently on main; every other rule matches on both.
 
 ### Differences from the existing DEONTIC

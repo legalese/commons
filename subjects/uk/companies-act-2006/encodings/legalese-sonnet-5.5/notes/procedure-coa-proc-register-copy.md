@@ -66,7 +66,7 @@ So the court's outcome is an input to each rule, as the Boolean layer already ta
 
 ### Which binary verified the traces
 
-Both, from inside the encoding folder with `JL4_LIBRARY_PATH` unset: the unstable build `l4-unstable-20261125-a50cbd0` and the stable line, `~/.cache/l4-main/112/l4`.
+Both, from inside the encoding folder with `JL4_LIBRARY_PATH` unset: the unstable build `l4-unstable-20261125-a50cbd0` and the stable line, the stable build 112.
 On each, `coa-proc-register-copy.l4` and `coa-proc-register-copy-tests.l4` print no error; all 9 assertions are satisfied; all 35 traces match their `-- EXPECT` line (`expect_check.py`).
 The unstable build prints three `lint/lest-without-deadline` warnings, none in these files: they are at `coa3-part8-members.l4` line 143 and `coa3-part8-inspection.l4` lines 74 and 494, which this unit imports and does not edit.
 `srcrefs.py check --refs` reports 31 quoted source lines, 7 locators, no problem.

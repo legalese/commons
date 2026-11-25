@@ -2,7 +2,7 @@
 
 The procedure that Companies Act 2006 Part 27, Chapter 2 (ss 902 to 918) lays down for a merger of public companies, written as regulative rules over the Boolean encoding in `coa20-part27-merger.l4`.
 
-Files: `coa-proc-merger.l4` (the rules) and `coa-proc-merger-tests.l4` (49 traces and 20 assertions).
+Files: `coa-proc-merger.l4` (the rules) and `coa-proc-merger-tests.l4` (50 traces and 20 assertions).
 Source lines 12530-12784 of `ukpga-2006-46.txt`.
 No existing module is edited; the new module imports `coa-core`, `coa20-part26` and `coa20-part27-merger` and calls their functions as gates.
 This is the merger procedure only: a division (Chapter 3) is outside it, so the answer for a division is passed to `s 902(1)` as `JUST FALSE`.
@@ -13,10 +13,10 @@ This is the merger procedure only: a division (Chapter 3) is outside it, so the 
 | --- | --- | --- |
 | `s 905(1) the directors' duty to draw up the draft terms and adopt them` | s 905(1) (src:12561) | the directors of each merging company must draw up and adopt the draft terms; no clock |
 | `s 906(1) the directors' duty to deliver the draft terms or the website notice to the registrar` | s 906(1), s 906A(4) (src:12578, 12588) | the directors deliver a copy of the draft terms, or, for a company that relies on its website, a notice giving the website's details; no clock |
-| `s 906(3) the registrar's duty to publish the notice at least one month before the meeting` | s 906(2)-(3), s 906A(5) (src:12579-12580, 12589) | the registrar publishes in the Gazette on or before the date one calendar month before the first meeting; day 0 is the day the registrar receives the copy (or the website notice); a copy that arrives after the last day is an immediate BREACH BY the directors |
+| `s 906(3) the registrar's duty to publish the notice at least one month before the meeting` | s 906(2)-(3), s 906A(5) (src:12579-12580, 12589) | the registrar publishes in the Gazette on or before the date one calendar month before the first meeting; day 0 is the day the registrar receives the copy (or the website notice); a copy that arrives after the last day closes the route at once (FULFILLED, not a breach by the directors) |
 | `s 906(2) the registrar's duty to publish the notice where no meeting is summoned` | s 906(2) (src:12579) | the same duty with no meeting date to count from, so no clock |
 | `s 906A(6) the company's duty to keep the draft terms on its website throughout the period` | s 906A(6) (src:12590) | for a company that relies on its website: the terms are on the website on the first day of the period (MUST WITHIN 0) and are not taken off through the date of the meeting (SHANT) |
-| `s 907(1) the company's duty to have the scheme approved at a meeting of its members` | s 907(1), (2) (src:12592-12593) | the meeting is held and the vote taken (MUST, no clock); the majority is counted by the existing `s 907(1)` function from the numbers in each class; a failed vote is BREACH BY the company |
+| `s 907(1) the company's duty to have the scheme approved at a meeting of its members` | s 907(1), (2) (src:12592-12593) | the meeting is held and the vote taken (MUST, no clock); the majority is counted by the existing `s 907(1)` function from the numbers in each class; a failed vote closes the route (FULFILLED, not a breach) |
 | `s 908(1) the directors' duty to draw up and adopt the explanatory report` | s 908(1), (3) (src:12595, 12604) | gated by `s 908(3)`; no clock |
 | `s 909(1) the company's duty to have an expert's report drawn up` | s 909(1)-(3), (7) (src:12606-12609, 12623) | gated by `s 909(7)`; with the court's approval of a joint expert one single report, otherwise a separate report for the company; no clock |
 | `s 909(3) the court's power to approve the appointment of a joint expert` | s 909(3) (src:12608) | a MAY of the court, gated on the joint application of all the merging companies; no clock |
@@ -27,7 +27,7 @@ The gates are Boolean helpers in the same module that call the existing function
 The answers of ss 916, 917 and 918 (each is a `MAYBE BOOLEAN` input of the scheme record, given for the company the duty is traced for), of `s 915A(3)` and `s 915A(4)` and of `s 918A(1)` are inputs, not calls.
 The reason is the signatures: `s 916(2)`, `s 917(2)` and `s 918(1)` each take the answers of their own four conditions (five `MAYBE BOOLEAN`, with `s 916(1)` or `s 917(1)` or the merger-by-absorption answer) and a Boolean for the court's satisfaction, and each condition's function in turn asks for dates and the availability of documents; calling them would put about a dozen more facts in every trace for a result the Boolean module already computes.
 `s 917A(1)` takes one Boolean and is called.
-This is the one place where the brief's "exemptions of ss 915-918 as gates" is met by input and not by call: ss 915 and 915A and 917A are called, ss 916, 917 and 918 are answered by the trace.
+This is the one place where the design's "exemptions of ss 915-918 as gates" is met by input and not by call: ss 915 and 915A and 917A are called, ss 916, 917 and 918 are answered by the trace.
 
 ### TIMELINE lines
 
@@ -57,9 +57,10 @@ All are in comment lines in `coa-proc-merger.l4`; the ones that change a result 
 - s 905(1): one duty for each merging company's directors, not one joint duty.
 - s 906A(1): whether a company relies on the website route is an input chosen at the start; the other reading makes the answer of `s 906A(1)` the gate, which is not known until the meeting.
 - s 906(3) "at least one month before": the last day is the date one calendar month before the meeting and a notice on that date is in time; the other reading is thirty days.
-- s 906(3), copy delivered after the last day: the failure is BREACH BY the directors at once on day 0; the other reading puts it on the registrar.
+- s 906(3), copy delivered after the last day: a closed route, FULFILLED at once on day 0: the notice can no longer be published at least one month before the meeting, so the meeting cannot go ahead on that date, and neither s 906(1) nor s 906A(4) gives the directors a time for delivery, so no one is in breach (src:12580, 12589).
+  The other readings are the first draft's BREACH BY the directors, changed after independent review, and a breach by the registrar.
 - s 906A(6) and s 911(1): the period's availability is a duty (open on day 0, not withdrawn through the meeting day), so a withdrawal shows as BREACH; the other reading is that s 906A(6) is only a condition of the exemption and s 911(1) is answered by the Boolean `s 911(2)`.
-- s 907(1): the section names no bearer; the seat is the merging company, and a vote that misses the majority is BREACH BY the company; the other reading is that a failed vote is no one's breach.
+- s 907(1): the section names no bearer; the seat is the merging company, and a vote that misses the majority is a closed route, FULFILLED, because s 907(1) states a condition for the scheme to proceed (src:12592) and the members may reject it; the other reading, the first draft's and changed after independent review, is BREACH BY the company.
 - s 908(1), s 909(1): no clock; the other reading is that ss 911(3)(b) and (c) make the reports due one month before the first meeting.
 - s 909(1): the merging company is the bearer, since the text names none; the other reading is the expert or the directors.
 - s 909(3): the court's approval is an input that selects which report is owed.
@@ -84,10 +85,21 @@ Where this layer differs from the Boolean answers, it is because a Boolean answe
 ### Verification
 
 Both binaries read every module with no `DiagnosticSeverity_Error` and no `DiagnosticSeverity_Warning`; the `[Import Resolution]` warning about the embedded `prelude` and `daydate` copies appears for every module in the folder and is not from these files.
-Unstable (`l4-unstable-20261125-a50cbd0`): 49 of 49 traces match their `-- EXPECT` line and 20 of 20 assertions are satisfied.
-Stable line (`~/.cache/l4-main/112/l4`): the same, 49 of 49 and 20 of 20.
+Unstable (`l4-unstable-20261125-a50cbd0`): 50 of 50 traces match their `-- EXPECT` line and 20 of 20 assertions are satisfied.
+Stable line (the stable build 112): the same, 50 of 50 and 20 of 20.
 Source quotations: `srcrefs.py check --refs` reports 57 `src:` lines, 15 locators and 0 problems.
 Two mutated copies were run and deleted: one changing the "last day" test of s 906(3) and removing the negation in the s 908 gate (4 traces mismatch), one changing the s 910(2)(a) comparison and the length of the two windows (5 traces mismatch).
+
+### Closed routes (not breaches)
+
+Convention for all the procedure units (assumed, not ruled): `BREACH` is kept only for a duty or a prohibition that the text lays on a named party.
+A power that lapses unused, a condition that is not met, a vote that fails and a route that has closed end `FULFILLED`, with the reason (what was lost, and the statute line) in a comment beside the branch.
+This unit has two, and three traces moved from BREACH to FULFILLED after the independent review:
+
+- `s 906(3)`: a copy that reaches the registrar after the last day (2 March for a meeting on 2 April) means the notice cannot be published at least one month before the meeting (src:12580, 12589), so the meeting cannot go ahead on that date; the directors are given no time for delivery.
+- `s 907(1)`: a vote short of a majority in number, or of 75% in value, of a class fails the scheme (src:12592); the members may reject it and the company does no wrong.
+
+One trace was added (a website-route notice published on day 30, a day late, which is the registrar's BREACH under `s 906A(5)`); the BREACHes that stay are the registrar's duty to publish, the directors' duties of ss 908 to 911, and the withdrawals that ss 906A(6) and 911 prohibit.
 
 ### READS-DIFFERENTLY-ON-MAIN
 

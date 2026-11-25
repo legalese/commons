@@ -16,7 +16,7 @@ No existing module is edited; the new module imports `coa-core`, `coa14-nouns` a
 | `ss 641-653 route one is open to the company` (Boolean helper) | s 641(1)(a), (2); s 642(1)(a) (src:8530-8533, 8553-8555) | the gate: a private company limited by shares, the s 641(2) bar not met (existing function), the statement made in accordance with s 643 (an input) |
 | `ss 641-653 the resolution was passed within 15 days after the solvency statement` (Boolean helper) | s 642(1)(a) (src:8553-8554) | the window of limb (a), from two dates; the statement's day and the 15 days after it are in time |
 | `ss 641-653 the deliveries of s 644 are owed` (Boolean helper) | s 644(1), (5) (src:8576-8593) | route one is open, the resolution is a special resolution (an input), and the window holds |
-| `s 642(1)(a) the company's power to pass the resolution within 15 days of the solvency statement` | s 642(1)(a) (src:8553-8554) | MAY, WITHIN 15, LEST BREACH BY the company |
+| `s 642(1)(a) the company's power to pass the resolution within 15 days of the solvency statement` | s 642(1)(a) (src:8553-8554) | MAY, WITHIN 15, LEST FULFILLED (a closed route, not a breach) |
 | `s 644(1) the company's duty to deliver the solvency statement and the statement of capital, as a procedure` | s 644(1) (src:8575-8579) | MUST, WITHIN the number of days the existing date function gives, LEST BREACH BY the company |
 | `s 644(5) the company's duty to deliver the directors' statement, as a procedure` | s 644(5) (src:8591-8593) | the same, for the directors' statement |
 | `s 644 the company's two deliveries to the registrar` | s 644(1) and (5) (src:8576-8596) | the two duties side by side (RAND) |
@@ -27,7 +27,7 @@ No existing module is edited; the new module imports `coa-core`, `coa14-nouns` a
 | `s 645(1) the company's power to apply to the court for an order confirming the reduction` | s 645(1) (src:8606) | MAY, no clock |
 | `s 646(1) the creditor's power to object to the reduction of capital` | s 646(1) (src:8614-8617) | MAY, no clock, gated by the existing function on the creditor's debt and the real likelihood; what an objection does is the separate s 648(2) rule |
 | `s 646(2) the court's duty to settle a list of creditors entitled to object` | s 646(2) (src:8618) | MUST, no clock |
-| `s 646(3)(b) the creditor's power to claim to be entered on the list by the day fixed` | s 646(3)(b) (src:8619-8621) | MAY, WITHIN the days between two dates the court fixes, LEST BREACH BY the creditor |
+| `s 646(3)(b) the creditor's power to claim to be entered on the list by the day fixed` | s 646(3)(b) (src:8619-8621) | MAY, WITHIN the days between two dates the court fixes, LEST FULFILLED (a closed route, not a breach) |
 | `s 647(1) the officer's duty not to conceal or misrepresent a creditor's name, debt or claim` | s 647(1) (src:8627-8632) | three SHANTs side by side (RAND), one for each limb |
 | `s 648(2) the court's duty not to confirm the reduction unless satisfied about every creditor entitled to object` | s 648(2) (src:8638-8640) | SHANT, the court, where the existing function says the bar applies |
 | `s 648(1) the court's power to make an order confirming the reduction` | s 648(1) (src:8637) | MAY, no clock, where the bar does not apply |
@@ -63,8 +63,8 @@ Copied from the module, one per rule, in the module's order.
   The existing function is not wrong for its own question; it cannot serve as the precondition of the duty that produces its limb (b).
 - s 642(1)(a) "not more than 15 days before": read forward as a power of the company with a LEST, whose last day is day 15.
   The other reading has no forward rule, only the Boolean test on two dates.
-- s 642(1)(a) a lapsed power: a BREACH is how the encoding says that the 15 days passed with no resolution; the Act makes nothing an offence there.
-  The other reading has no BREACH.
+- s 642(1)(a) a lapsed power: a closed route, LEST FULFILLED, because s 642(1) defines when a resolution "is supported by a solvency statement" (src:8553-8554) and puts no duty on the company to pass a resolution.
+  The other reading, the first draft's, is LEST BREACH BY the company; the independent review changed it, and no one is in breach.
 - s 644(1) the gate: the duty arises on route one when the resolution is passed within 15 days of a statement made in accordance with s 643.
   The other reading: any resolution for reducing share capital of a private company, whether or not the statement is in time.
 - s 644(8)(a) the company's offence is the BREACH of the delivery rules, named in the reason, and not a second rule.
@@ -76,7 +76,8 @@ Copied from the module, one per rule, in the module's order.
 - s 645(1): each later step is its own rule with its own day 0, because the court's outcome is an input to each; the other reading makes them the next steps of the application.
 - s 646(1) "is entitled to object": the entitlement is a power of the creditor (MAY), gated by the existing function, and objecting is the act; the other reading has no rule and the entitlement is only a condition of s 648(2).
 - s 646(3)(b) "within which": the day fixed is the last day for a claim; the other reading is that it is the first day that is too late.
-- s 646(3)(b) a lapsed claim: a BREACH says that the day fixed passed with no claim, the loss of a right and no wrong; the other reading has no BREACH, only the exclusion.
+- s 646(3)(b) a lapsed claim: a closed route, LEST FULFILLED: the creditor who does not claim by the day fixed "is to be excluded from the right of objecting" (src:8621), the loss of a right and no wrong.
+  The other reading, the first draft's, is LEST BREACH BY the creditor; the independent review changed it.
 - s 647(1): three prohibitions side by side, each gated by the existing function with its own event TRUE; the other reading is one prohibition with one act.
 - s 648(2) "must not confirm ... unless": a prohibition on the court, the order in the barred case being the BREACH; the other reading is that the order is void or open to appeal, not a breach.
 - s 649(5): the certificate is the next step of the registration; the other reading is a separate rule gated on the registration.
@@ -91,20 +92,29 @@ Copied from the module, one per rule, in the module's order.
 ### Which binary verified the traces
 
 - Unstable build a50cbd0 (25 November 2026): 57 of 57 traces match their EXPECT, and all 11 assertions are satisfied; no `DiagnosticSeverity_Error`, no `DiagnosticSeverity_Warning`.
-- Main build 112: 53 of 57 traces match; the four that differ are listed below; all 11 assertions are satisfied; no `DiagnosticSeverity_Error`, no `DiagnosticSeverity_Warning`.
+- Main build 112: 57 of 57 traces match, with none reading differently in class; all 11 assertions are satisfied; no `DiagnosticSeverity_Error`, no `DiagnosticSeverity_Warning`.
 - The only warnings printed are the two import-resolution warnings about `prelude` and `daydate` (an installed copy under the XDG data directory differs from the embedded one); they come from the machine and not from the new files.
 - A sensitivity check on two scratch copies, deleted afterwards: an off-by-one in the s 644(1) limit, in the s 642(1)(a) window and in the s 646(3)(b) days failed the day-15 delivery trace and the day-59 claim trace, and the assertions that sit on the window boundary; flipping the s 648(2) gate and dropping the "not entered on the list" condition failed the four traces that read them.
 
 ### READS-DIFFERENTLY-ON-MAIN
 
-Four traces differ in class.
-All four are a power with a time limit written as MAY with a LEST: on unstable a power that lapses unused, or is used late, reaches the LEST and prints BREACH; on main it prints FULFILLED either way.
-
-- `s 642(1)(a)`: the resolution passed on day 16, and no resolution by day 20.
-- `s 646(3)(b)`: the creditor claims on day 60 (the day fixed was day 59), and the creditor does nothing.
+No trace differs in class between unstable and main.
+Four traces did differ before the independent review (`s 642(1)(a)`: the resolution on day 16, and no resolution by day 20; `s 646(3)(b)`: the creditor claims on day 60, and the creditor does nothing): a power with a time limit written as MAY with a LEST reached BREACH on unstable and FULFILLED on main.
+The module now ends those two windows with LEST FULFILLED, as a closed route, so both builds print FULFILLED.
 
 Five traces print differently on main with the same class on both: the RAND of two breaches in `s 644` (main prints only the first), the three open prohibitions (`s 643(4)`, `s 647(1)`, `s 648(2)`: the LEST's BREACH is in parentheses on unstable only) and the nested HENCE of `s 649(1)`.
 The test file lists each trace by line.
+
+### Closed routes (not breaches)
+
+Convention for all the procedure units (assumed, not ruled): `BREACH` is kept only for a duty or a prohibition that the text lays on a named party.
+A power that lapses unused, a condition that is not met, a vote that fails and a route that has closed end `FULFILLED`, with the reason (what was lost, and the statute line) in a comment beside the LEST.
+This unit has two, and four traces moved from BREACH to FULFILLED after the independent review:
+
+- `s 642(1)(a)`: a resolution passed on day 16, or no resolution within the 15 days, ends the use of that solvency statement for route one; s 642(1) is a definition of when a resolution "is supported by a solvency statement" (src:8553-8554) and lays no duty on the company.
+- `s 646(3)(b)`: a creditor who does not claim by the day fixed, or claims after it, is excluded from the right of objecting (src:8621), and has done no wrong.
+
+The BREACHes that stay are the deliveries of `s 644(1)` and `s 644(5)` (the duty is the company's, src:8576, 8591) and the offences of ss 643(4), 644(7), 644(8) and 647.
 
 ### Differences from the existing DEONTIC
 

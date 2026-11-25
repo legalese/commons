@@ -2,7 +2,7 @@
 
 The procedure that Companies Act 2006 ss 177, 182 to 184, 197, 213 and 214 lay down for a director who is interested in a transaction with the company and for a loan to a director, written as regulative rules over the Boolean encoding in `coa4-general-duties.l4`, `coa4-declaration.l4`, `coa4-approval-loans.l4` and `coa5-loans-exceptions.l4`.
 
-Files: `coa-proc-director-interests.l4` (the rules) and `coa-proc-director-interests-tests.l4` (51 traces and 14 assertions).
+Files: `coa-proc-director-interests.l4` (the rules) and `coa-proc-director-interests-tests.l4` (53 traces and 14 assertions).
 Source lines 2364-2380, 2413-2445, 2570-2587, 2687-2696, 2729-2737 and 2796-2821 of `ukpga-2006-46.txt`.
 No existing module is edited; the new module imports `coa-core`, `daydate` and the four modules above and calls their functions as gates.
 The two regulative rules those modules already hold (`coa4-general-duties.l4` lines 551-555 for s 177, `coa4-declaration.l4` lines 164-168 for s 182) are neither called nor changed.
@@ -13,7 +13,7 @@ The comparison with those two is in the section "Differences from the existing D
 | rule | seat | what it does |
 | --- | --- | --- |
 | `s 177(4) the company has not yet entered into the transaction on the day the duty to declare arises` and `s 177(4) the last day for the declaration, counted from day 0` (helpers, not DEONTICs) | s 177(1) "proposed transaction", s 177(4) (src:2372) | turn the day of entry and day 0 into a yes/no and a number of days |
-| `s 177(1) and (4) the director's duty to declare before the company enters into the transaction` | s 177(1), (4), gated by s 177(1) with the answers under s 177(5) and (6) (src:2364-2365, 2372) | MUST declare, WITHIN the days before the day of entry, LEST BREACH |
+| `s 177(1) and (4) the director's duty to declare before the company enters into the transaction` | s 177(1), (4), gated by s 177(1) with the answers under s 177(5) and (6) (src:2364-2365, 2372) | MUST declare, WITHIN the days up to and including the day of entry, LEST BREACH |
 | `s 177(3) and (4) the director's duty to make a further declaration before the company enters into the transaction` | s 177(3), (4) (src:2371-2372) | the same limit for a further declaration, from the day the declaration proves inaccurate or incomplete |
 | `s 182(4) the days allowed, counted from day 0` (helper) | s 182(4) (src:2421) | turns the caller's last day into a number of days; a last day before day 0 is read as day 0 |
 | `s 182(4) and s 183(1) the director's duty to declare as soon as is reasonably practicable` | s 182(1), (2), (4), s 183(1) (src:2413-2419, 2421, 2431-2432) | MUST declare at a meeting, by notice in writing or by general notice (ROR), WITHIN the caller's days, LEST BREACH; the breach is the failure that s 183(1) makes an offence |
@@ -32,7 +32,7 @@ The consequences of a loan made in contravention (ss 213 and 214) are separate r
 ### The TIMELINE lines, verbatim from the module
 
 - `s 177(1) and (4) the director's duty to declare before the company enters into the transaction`
-  `-- TIMELINE: unit=calendar day; day 0=the day the director's duty to declare arises (the director is interested in the proposed transaction and aware of it, s 177(5)); counting="before the company enters into the transaction or arrangement" (the last day is the day before the day of entry, see the FORK above)`
+  `-- TIMELINE: unit=calendar day; day 0=the day the director's duty to declare arises (the director is interested in the proposed transaction and aware of it, s 177(5)); counting="before the company enters into the transaction or arrangement" (the last day is the day of entry itself, see the FORK above)`
 - `s 177(3) and (4) the director's duty to make a further declaration before the company enters into the transaction`
   `-- TIMELINE: unit=calendar day; day 0=the day the declaration proves to be, or becomes, inaccurate or incomplete; counting="before the company enters into the transaction or arrangement" (s 177(4) says "any declaration required by this section", so the same limit applies to the further declaration)`
 - `s 182(4) and s 183(1) the director's duty to declare as soon as is reasonably practicable`
@@ -56,9 +56,12 @@ The s 214 day count (30 days from 1 March to a last day of 31 March) is checked 
 
 Each is also a `-- FORK:` line in the module.
 
-- s 177(4) "before the company enters into": a declaration on the day of entry is too late (the last day is the day before it); the other reading lets a declaration on the day of entry, before entry that day, be in time.
+- s 177(4) "before the company enters into": a declaration on the day of entry, before the company enters into the transaction that day, is in time, so the last day is the day of entry (src:2372).
+  The usual case is a declaration at the board meeting that approves the transaction, with entry later the same day, and that complies; a day-granular clock cannot tell before from after within a day, and the module no longer resolves that against the director.
+  The other reading, the first draft's, makes the day before the day of entry the last day; the independent review changed it (traces for a declaration on the day of entry moved from BREACH to FULFILLED).
+  The gate of `s 177(1) "proposed transaction"` is unchanged: where the day of entry is not later than day 0 the rule still gives no duty and s 182 governs.
 - s 177(1) "proposed transaction": s 177 applies only while the company has not yet entered into it, so where the day of entry is not later than day 0 the rule gives no duty and s 182 governs; the other reading treats that as a breach.
-- s 177(3): a further declaration is owed before the day of entry; the other reading lets it be made after entry.
+- s 177(3): a further declaration is owed no later than the day of entry, on the same reading of "before"; the other reading lets it be made after entry.
 - s 182(4) "as soon as is reasonably practicable": the caller's last day is the clock; the other reading is that the text gives no day and the rule has no clock.
 - s 183(1): the offence is the breach of the timing rule; the other reading is that it is committed only if the declaration is never made.
 - s 204(2): the exception applies only while the aggregate does not exceed 50,000 pounds.
@@ -86,7 +89,7 @@ The new rules differ in these ways, each decided by the source line named.
 | difference | existing rule | new rules | deciding source line |
 | --- | --- | --- | --- |
 | gate | none: the duty is owed in every case | s 177(1) and s 182(1) functions with the answers under (5) and (6): a director who is not aware, or need not declare, owes nothing | src:2373 (s 177(5)), src:2375-2380 (s 177(6)), src:2423-2430 |
-| clock for s 177 | none: "before the company enters into" is in the text of the action only | a limit in days from day 0 to the day before the day of entry, from two dates | src:2372 |
+| clock for s 177 | none: "before the company enters into" is in the text of the action only | a limit in days from day 0 to the day of entry, from two dates | src:2372 |
 | clock for s 182 | none: "as soon as is reasonably practicable" is in the text of the action only | the caller's last day, as a limit in days | src:2421 |
 | a missed time | no BREACH | LEST BREACH BY the director; for s 182 the breach names the offence of s 183(1) | src:2431-2432 |
 | the underlying duty after a late declaration | not modelled | a second rule for s 182 with no clock: a late declaration is a breach of the timing rule and still discharges the underlying duty; no declaration leaves the timing rule breached and this one open | src:2422 |
@@ -97,9 +100,17 @@ The new rules differ in these ways, each decided by the source line named.
 
 ### Which binary verified the traces
 
-`expect_check.py` run with the unstable build (a50cbd0, 25 November 2026) and with main (112): all 51 traces match their `-- EXPECT` line on both.
+`expect_check.py` run with the unstable build (a50cbd0, 25 November 2026) and with main (112): all 53 traces match their `-- EXPECT` line on both.
 Both binaries show zero errors and zero warnings on the module and on the test file, and all 14 assertions are satisfied on both.
 A sensitivity check on one scratch copy of the module with three changes (the last day for the s 177 declaration moved by one day; the two limbs of s 213(3) joined by ROR instead of RAND; the s 214 limit set to 0 days) made four traces mismatch their EXPECT (the two s 177 entry-day traces, the s 213(3) one-limb trace, and the s 214 trace that waits to day 10); the copy is deleted.
+
+### Closed routes (not breaches)
+
+Convention for all the procedure units (assumed, not ruled): `BREACH` is kept only for a duty or a prohibition that the text lays on a named party.
+A power that lapses unused, a condition that is not met, a vote that fails and a route that has closed end `FULFILLED`, with the reason (what was lost, and the statute line) in a comment beside the LEST.
+This unit has one: the members' power to affirm under `s 214` (LEST FULFILLED; after the period lapses the affirmation has no effect, and the company's power to avoid under s 213(2) stays open, src:2818-2821).
+The BREACHes here are the duties of ss 177, 182, 183 and 197 and the prohibitions laid on the director or the company.
+Two traces moved from BREACH to FULFILLED after the independent review for another reason: a declaration (and a further declaration) on the day of entry is in time, and two traces were added for a declaration on the day after entry, which breach.
 
 ### READS-DIFFERENTLY-ON-MAIN
 

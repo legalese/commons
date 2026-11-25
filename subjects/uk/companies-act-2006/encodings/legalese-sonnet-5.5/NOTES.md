@@ -1133,12 +1133,27 @@ The traces are the ones to read on unstable; main 112 gives a different class fo
 | unit (module) | provisions | traces | read differently on main 112 |
 | --- | --- | --- | --- |
 | `coa-proc-register-copy` | ss 116-118 | 35 | 0 |
-| `coa-proc-takeover-notices` | ss 979-986 | 46 | 2 |
+| `coa-proc-takeover-notices` | ss 979-986 | 47 | 2 |
 | `coa-proc-scheme-of-arrangement` | ss 895-901 | 47 | 0 |
-| `coa-proc-capital-reduction` | ss 641-653 | 57 | 4 |
+| `coa-proc-capital-reduction` | ss 641-653 | 57 | 0 |
 | `coa-proc-derivative-claims` | ss 260-264 | 60 | 0 |
-| `coa-proc-director-interests` | ss 177, 182-184, 197, 204, 207, 213-214 | 51 | 0 |
-| `coa-proc-merger` | Part 27, ss 902-918 (the procedure only, not the report contents) | 49 | 0 |
+| `coa-proc-director-interests` | ss 177, 182-184, 197, 204, 207, 213-214 | 53 | 0 |
+| `coa-proc-merger` | Part 27, ss 902-918 (the procedure only, not the report contents) | 50 | 0 |
+| `coa-proc-purchase-of-own-shares` | ss 690-723 | 86 | 10 |
+| `coa-proc-merger-court-wait` | ss 915-918 (the clocks of the exemptions) | 26 | 6 |
+
+One convention holds in all nine units (assumed, not ruled): `BREACH` is kept only for a duty or a prohibition that the text lays on a named party.
+A power that lapses unused, a condition that is not met, a vote that fails and a route that has closed end `FULFILLED`, with the reason in a comment beside the LEST or branch and in the unit's notes under `### Closed routes (not breaches)`.
+`BREACH BY the court` stays for an order made too early under s 917(3A), because it is a limit on the power of the court (src:12740).
+
+After an independent review, these changes altered an answer:
+
+- `coa-proc-takeover-notices`: the month of s 984(3) now runs from the day the s 983 conditions were first met, a date input, and not from the end of the acceptance period (src:13747 with src:13719); a notice on 30 May for conditions first met on 20 April is a BREACH.
+- `coa-proc-capital-reduction`: an unused solvency statement (s 642(1)(a)) and a creditor who does not claim by the day fixed (s 646(3)(b)) end FULFILLED, as closed routes (src:8553-8554, 8621).
+- `coa-proc-director-interests`: a declaration on the day of entry is in time, and the last day is the day of entry (src:2372).
+- `coa-proc-merger`: a late copy to the registrar (s 906(3)) and a failed vote (s 907(1)) end FULFILLED, as closed routes (src:12580, 12592).
+- `coa-proc-purchase-of-own-shares`: the s 696 rule bars withdrawing the registered-office copy through the fifteen days (src:9169).
+- `coa-proc-merger-court-wait`: the ss 916(3A) and 918(2A) rule runs only where the transferee company relies on s 916(2) or s 918(1), and an early first meeting is the exemption lost, FULFILLED (src:12765, 12767).
 
 ### Observations on the existing modules (nothing was changed)
 
@@ -1149,6 +1164,8 @@ The traces are the ones to read on unstable; main 112 gives a different class fo
   The text of s 118(3) says "any such refusal or default" (src:1588), which can be read as importing the "otherwise than in accordance with an order of the court" exclusion of s 118(1) (src:1584).
   This is a reading difference, not an established error.
 - `coa5-derivative-claims.l4:136` and `:717` carry a `LEST` on a rule with no `WITHIN`; the unstable build warns `lint/lest-without-deadline` ("This LEST can never be reached, because the rule has no deadline").
-- `coa14-ch10-reduction.l4:229-237`, the function for s 642(1), takes "registered in accordance with section 644" as an input, because the statute's own limb (b) (src:8555) does.
+- `coa14-ch10-reduction.l4:221-239`, the function for s 642(1), takes "registered in accordance with section 644" as an input, because the statute's own limb (b) (src:8555) does.
   So it cannot serve as the gate of the s 644 delivery duty; the statute is circular there, and `coa-proc-capital-reduction` uses its own helper.
-- Existing DEONTICs for s 177 (`coa4-general-duties.l4:551`) and s 182 (`coa4-declaration.l4:164`) exist; `coa-proc-director-interests` does not call them, and its notes compare the two.
+- Existing DEONTICs for s 177 (`coa4-general-duties.l4:552`) and s 182 (`coa4-declaration.l4:165`) exist; `coa-proc-director-interests` does not call them, and its notes compare the two.
+- `coa21-ch3-sell-out.l4:276`, the function for the last day of s 984(3), adds one month to the end of the acceptance period.
+  `coa-proc-takeover-notices` reads "the time specified" as the day the s 983 conditions were first met (src:13747 with src:13719), which can fall before the offer closes (src:13750); the existing reading can only push the last day later, so it misses breaches and invents none.
