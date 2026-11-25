@@ -1,0 +1,584 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `coa-core`
+IMPORT `coa15-nouns`
+IMPORT `coa15-ch4`
+IMPORT `coa15-ch5`
+
+-- coa-proc-purchase-of-own-shares.l4: Companies Act 2006 (United Kingdom), ss 690 to 723: the procedure the Act lays down for a company's purchase of its own shares
+-- (the authority for an off-market purchase, the filings after delivery of the shares, and the payment out of capital by a private company),
+-- written as regulative rules over the Boolean encoding in coa15-ch4.l4 and coa15-ch5.l4. Lines 9083-9523 of ukpga-2006-46.txt.
+-- The gates are the existing functions of those two modules: the vote on a resolution is tested by ss 694(2), 694(6), 695(3), 696(2)(b), 696(5), 716(1), 716(3), 717(3) and 718(3);
+-- the private company's power by s 709(1); the contract copy by s 702(1) and (3); the filings by s 707(1), s 708(1) and s 719(4); the objection by s 721(1); the window by s 723(1).
+-- Nothing here edits those modules, and nothing here calls their DEONTICs.
+--
+-- Where the clock of a step runs from the event that ended the step before it, the steps are chained with HENCE: in L4 the clock of a step that follows HENCE starts on the day of the event that ended
+-- the earlier step (measured on this binary, a probe of 25 November 2026: a duty of 3 days met on day 2 and a successor of 5 days met on day 7 is in time).
+-- Where several clocks run from the same later event (the resolution, the delivery of the shares), each rule takes that event as its own day 0 and the rules stand side by side, not in a chain.
+-- A trigger that is itself a date the text counts from (the date of the meeting, the day of the first notice, the date a contract was concluded) is a DATE input of its rule.
+--
+-- SEAMS taken as INPUTS: whether a resolution is a special resolution (s 283, not repeated here); whether the directors' opinion in the statement was reasonably held (s 715, an offence of the directors);
+-- the amount of the permissible capital payment (ss 710 to 712); what the notices and the statement must contain (ss 714(2) to (5), 719(1)(a) to (d)); the officer in default (s 1121); the penalties (ss 703(2), 707(7), 708(5), 715(2), 720(6), 722(5)).
+-- Not encoded: ss 690 to 693A and 697 to 701 (the power to purchase, the financing, the authority for a market purchase and for a variation or release, which carry no time limit but the five years of a public company's authority),
+-- ss 704 to 706, s 710 to 712 (amounts), s 720A(2)(a) (the solvency statement made not more than 15 days before the resolution is a count back from the resolution, tested by the existing s 720A(2)).
+
+DECLARE `ss 690-723 party` IS ONE OF
+    `ss 690-723 the company`
+    `ss 690-723 the directors`
+    `ss 690-723 an objecting member or creditor`
+    `ss 690-723 the court`
+
+DECLARE `ss 690-723 act` IS ONE OF
+    `s 696(2)(a) the company sends or submits the copy or memorandum to every eligible member`
+    `s 696(2)(b)(i) the company makes the copy or memorandum available for inspection at its registered office`
+    `s 696(2)(b)(ii) the company makes the copy or memorandum available for inspection at the meeting itself`
+    `s 694(1) the company makes the off-market purchase`
+    `s 702(3) the company stops keeping the copy or memorandum available for inspection`
+    `s 702(5) the company gives notice to the registrar of the place where the copy or memorandum is kept`
+    `s 707(1) the company delivers the return to the registrar`
+    `s 708(1) the company gives notice of cancellation to the registrar`
+    `s 714 the directors make the statement with the auditor's report annexed`
+    `s 716 the company passes the special resolution approving the payment out of capital`
+    `s 719(1) the company causes the notice to be published in the Gazette`
+    `s 719(2) the company publishes the notice in an appropriate national newspaper or gives it in writing to each creditor`
+    `s 719(4) the company delivers to the registrar a copy of the directors' statement and auditor's report`
+    `s 720(1) the company makes the statement and report available for inspection`
+    `s 720(1) the company stops keeping the statement and report available for inspection, or refuses an inspection`
+    `s 720(3) the company gives notice to the registrar of the place where the statement and report are kept`
+    `s 721(1) the applicant applies to the court for the cancellation of the resolution`
+    `s 722(1) the applicant gives notice of the application to the registrar`
+    `s 721(4) the court makes an order cancelling or confirming the resolution`
+    `s 722(2) the company gives notice to the registrar of the application`
+    `s 722(3) the company delivers to the registrar a copy of the court's order`
+    `s 723(1) the company makes the payment out of capital`
+    `s 720B(1) the company delivers to the registrar a copy of the solvency statement, a copy of the resolution and a statement of capital`
+    `s 720B(5) the company delivers to the registrar the directors' statement confirming the solvency statement`
+    `s 723(1A) the shares are surrendered to the company`
+
+-- ---- helpers --------------------------------------------------------------------------------------------------------------------------
+
+-- A period the text gives in weeks is counted in days here: seven days to the week.
+GIVEN `the weeks` IS A NUMBER
+GIVETH A NUMBER
+`ss 690-723 the number of days in the weeks` MEANS `the weeks` TIMES 7
+
+-- src:9169 | (i) at the company's registered office for not less than 15 days ending with the date of the meeting, and
+@ref s 696(2)(b)(i) The first of the fifteen days ending with the date of the meeting (src:9169-9169)
+GIVEN `the date of the meeting` IS A DATE
+GIVETH A DATE
+`ss 690-723 the first of the fifteen days ending with the date of the meeting` MEANS `the date of the meeting` MINUS 14
+
+-- The vote on the special resolution of s 716, and the two bars on it (ss 717 and 718), as the existing functions answer them.
+DECLARE `ss 690-723 the vote` HAS
+    `ss 690-723 the resolution is a special resolution (the answer of s 283)` IS A MAYBE BOOLEAN
+    `ss 690-723 the resolution is proposed at a meeting of the company` IS A BOOLEAN
+    `ss 690-723 a member holding shares to which the resolution relates voted on it` IS A BOOLEAN
+    `ss 690-723 the resolution would not have been passed without that vote` IS A BOOLEAN
+    `ss 690-723 the directors' statement and auditor's report were made available to members as s 718(2) requires` IS A BOOLEAN
+
+-- src:9388 | (1) The payment out of capital must be approved by a special resolution of the company.
+-- src:9390 | (3) A resolution under this section is subject to—
+-- src:9391 | section 717 (exercise of voting rights), and
+-- src:9392 | section 718 (disclosure of directors' statement and auditors' report).
+@ref s 716(1), (3) The special resolution is effective unless section 717 or section 718 bars it (src:9388-9392)
+GIVEN vote IS A `ss 690-723 the vote`
+GIVETH A BOOLEAN
+`ss 690-723 the special resolution of section 716 is effective` MEANS
+        (`s 716(1) the payment is approved as the subsection requires` TRUE (vote's `ss 690-723 the resolution is a special resolution (the answer of s 283)`)) EQUALS JUST TRUE
+    AND (`s 716(3) the resolution is barred by section 717 or section 718`
+            (`s 717(3) the resolution is not effective` (vote's `ss 690-723 the resolution is proposed at a meeting of the company`) (vote's `ss 690-723 a member holding shares to which the resolution relates voted on it`) (vote's `ss 690-723 the resolution would not have been passed without that vote`))
+            (`s 718(3) the resolution is ineffective` (vote's `ss 690-723 the directors' statement and auditor's report were made available to members as s 718(2) requires`))) EQUALS JUST FALSE
+
+-- src:9144 | (1) Subject to section 693A, A company may only make an off-market purchase of its own shares in pursuance of a contract approved prior to the purchase in accordance with this section.
+-- src:9145 | (2) Either—
+-- src:9146 | (a) the terms of the contract must be authorised by a . . . resolution of the company before the contract is entered into, or
+-- src:9147 | (b) the contract must provide that no shares may be purchased in pursuance of the contract until its terms have been authorised by a . . . resolution of the company.
+-- src:9173 | (5) The resolution is not validly passed if the requirements of this section are not complied with
+@ref s 694(1)-(2), 696(5) The contract is approved in advance when its terms are authorised by a resolution that sections 695 and 696 do not bar (src:9144-9147, src:9173-9173)
+GIVEN `the terms of the contract were authorised by a resolution of the company before the contract was entered into` IS A BOOLEAN
+      `the contract provides that no shares may be purchased in pursuance of it until its terms have been authorised by a resolution of the company` IS A BOOLEAN
+      `the resolution is proposed at a meeting of the company` IS A BOOLEAN
+      `a member of the company holding shares to which the resolution relates exercises the voting rights carried by any of those shares` IS A BOOLEAN
+      `the resolution would not have been passed if he had not done so` IS A BOOLEAN
+      `the first day on which the copy or memorandum was available for inspection at the registered office, and it stayed available to the date of the meeting` IS A DATE
+      `the date of the meeting` IS A DATE
+      `the copy or memorandum was also available for inspection at the meeting itself` IS A BOOLEAN
+GIVETH A BOOLEAN
+`ss 690-723 the contract is approved in advance` MEANS
+        (`s 694(2) the contract is approved in the way the subsection requires` `the terms of the contract were authorised by a resolution of the company before the contract was entered into` `the contract provides that no shares may be purchased in pursuance of it until its terms have been authorised by a resolution of the company`) EQUALS JUST TRUE
+    AND (`s 694(6) the resolution is barred by section 695 or section 696`
+            (`s 695(3) the resolution is not effective` `the resolution is proposed at a meeting of the company` `a member of the company holding shares to which the resolution relates exercises the voting rights carried by any of those shares` `the resolution would not have been passed if he had not done so`)
+            (`s 696(5) the resolution is not validly passed` ((`s 696(2)(b) the copy or memorandum was made available to members for a resolution at a meeting` `the first day on which the copy or memorandum was available for inspection at the registered office, and it stayed available to the date of the meeting` `the date of the meeting` `the copy or memorandum was also available for inspection at the meeting itself`) EQUALS JUST TRUE))) EQUALS JUST FALSE
+
+-- src:9509 | (3) Within 15 days of the making of the court's order on the application, or such longer period as the court may at any time direct, the company must deliver to the registrar a copy of the order.
+@ref s 722(3) The days allowed for delivering a copy of the court's order: 15, or the longer period the court directs (src:9509-9509)
+GIVEN `the period longer than 15 days that the court has directed, in days, if it has` IS A MAYBE NUMBER
+GIVETH A NUMBER
+`ss 690-723 the days allowed for delivering a copy of the order` MEANS
+    CONSIDER `the period longer than 15 days that the court has directed, in days, if it has`
+    WHEN JUST n THEN IF n GREATER THAN 15 THEN n ELSE 15
+    WHEN NOTHING THEN 15
+
+-- ---- s 696: the contract made available before the vote (day 0 = the first of the fifteen days, or the day a written resolution is sent) -------------------
+
+-- src:9164 | 696 Resolution authorising off-market purchase: disclosure of details of contract
+-- src:9165 | (1) This section applies in relation to a resolution to confer, vary, revoke or renew authority for the purposes of section 694 (authority for off-market purchase of own shares).
+-- src:9166 | (2) A copy of the contract (if it is in writing) or a memorandum setting out its terms (if it is not) must be made available to members—
+-- src:9167 | (a) in the case of a written resolution, by being sent or submitted to every eligible member at or before the time at which the proposed resolution is sent or submitted to him;
+-- src:9168 | (b) in the case of a resolution at a meeting, by being made available for inspection by members of the company both—
+-- src:9169 | (i) at the company's registered office for not less than 15 days ending with the date of the meeting, and
+-- src:9170 | (ii) at the meeting itself.
+-- src:9173 | (5) The resolution is not validly passed if the requirements of this section are not complied with
+@ref s 696(1)-(2), (5) The copy or memorandum made available to members before the resolution (src:9164-9173)
+-- TIMELINE: unit=calendar day; day 0=for a resolution at a meeting, the first of the fifteen days ending with the date of the meeting (the date of the meeting minus 14); for a written resolution, the day the proposed resolution is sent or submitted to an eligible member; counting="for not less than 15 days ending with the date of the meeting" (the fifteen days include the day of the meeting, so the registered-office copy is due on day 0 and the copy at the meeting on day 14, computed from the date of the meeting) and "at or before the time at which the proposed resolution is sent or submitted" (WITHIN 0); joined=the date of the meeting is a DATE input; the copy at the meeting is chained by HENCE after the copy at the registered office (its clock starts on the day of that event)
+-- chained: at a meeting, the copy at the meeting follows the copy at the registered office by HENCE, its clock running from the day of the earlier event; the date of the meeting is a DATE input
+-- FORK: s 696(2)(b)(i) "for not less than 15 days ending with the date of the meeting" | the fifteen days include the day of the meeting, so the copy must be available from the date of the meeting minus 14, as the existing s 696(2)(b) function reads it | the fifteen days are complete days before the meeting day, so the copy is due the day before
+-- FORK: s 696(5) | a miss is a breach of the duty, and the text's own consequence (the resolution is not validly passed) is carried by the gate ss 690-723 the contract is approved in advance; the Act makes it no offence | a miss has no breach, only the invalidity
+-- FORK: s 696(2)(a) "to every eligible member" | one act of sending to every eligible member, at or before the time the proposed resolution is sent | one duty for each member
+-- not encoded: s 696(3) and (4), what the memorandum must contain (the existing functions test it)
+GIVEN `the resolution is one to confer, vary, revoke or renew authority for the purposes of section 694` IS A BOOLEAN
+      `the resolution is proposed as a written resolution` IS A BOOLEAN
+      `the date of the meeting` IS A DATE
+GIVETH A DEONTIC `ss 690-723 party` `ss 690-723 act`
+`ss 690-723 the company makes the contract available before the vote (s 696)` MEANS
+    IF (`s 696(1) this section applies to the resolution` `the resolution is one to confer, vary, revoke or renew authority for the purposes of section 694`) EQUALS JUST TRUE
+    THEN (IF `the resolution is proposed as a written resolution`
+          THEN (PARTY `ss 690-723 the company`
+                MUST `s 696(2)(a) the company sends or submits the copy or memorandum to every eligible member`
+                WITHIN 0
+                HENCE FULFILLED
+                LEST BREACH BY `ss 690-723 the company` BECAUSE "the copy of the contract, or the memorandum of its terms, was not sent or submitted to every eligible member at or before the time the proposed written resolution was (s 696(2)(a)): the resolution is not validly passed (s 696(5))")
+          ELSE (PARTY `ss 690-723 the company`
+                MUST `s 696(2)(b)(i) the company makes the copy or memorandum available for inspection at its registered office`
+                WITHIN 0
+                HENCE (PARTY `ss 690-723 the company`
+                       MUST `s 696(2)(b)(ii) the company makes the copy or memorandum available for inspection at the meeting itself`
+                       WITHIN ((Day `the date of the meeting`) MINUS (Day (`ss 690-723 the first of the fifteen days ending with the date of the meeting` `the date of the meeting`)))
+                       HENCE FULFILLED
+                       LEST BREACH BY `ss 690-723 the company` BECAUSE "the copy of the contract, or the memorandum of its terms, was not made available for inspection at the meeting itself (s 696(2)(b)(ii)): the resolution is not validly passed (s 696(5))")
+                LEST BREACH BY `ss 690-723 the company` BECAUSE "the copy of the contract, or the memorandum of its terms, was not made available for inspection at the registered office for not less than 15 days ending with the date of the meeting (s 696(2)(b)(i)): the resolution is not validly passed (s 696(5))"))
+    ELSE FULFILLED
+
+-- ---- s 694: the bar on an off-market purchase until the contract is approved --------------------------------------------------------------------------
+
+-- src:9144 | (1) Subject to section 693A, A company may only make an off-market purchase of its own shares in pursuance of a contract approved prior to the purchase in accordance with this section.
+-- src:9145 | (2) Either—
+-- src:9146 | (a) the terms of the contract must be authorised by a . . . resolution of the company before the contract is entered into, or
+-- src:9147 | (b) the contract must provide that no shares may be purchased in pursuance of the contract until its terms have been authorised by a . . . resolution of the company.
+-- src:9173 | (5) The resolution is not validly passed if the requirements of this section are not complied with
+@ref s 694(1)-(2), 696(5) No off-market purchase until the contract is approved in advance (src:9144-9147, src:9173-9173)
+-- TIMELINE: unit=none; day 0=not applicable; counting=silent (s 694(1) gives no time: the bar stays open until the contract is approved, and a purchase is an event the trace supplies); joined=not chained, and no clock; the dates of the meeting and of the first day of the copy are DATE inputs of the gate
+-- FORK: s 694(1) "may only make an off-market purchase in pursuance of a contract approved prior to the purchase" | a purchase made while the contract is not approved in advance (by a resolution that ss 695 and 696 do not bar) is a breach of a bar (SHANT) on the company; the gate is the existing s 694(2) and s 694(6) functions, taken over the meeting route | the Act states no consequence but invalidity
+-- FORK: s 693A | the employees' share scheme route of s 693A is not encoded (the gate is the s 694 route only) | s 693A(1) is a second way to authorise
+-- not encoded: the written-resolution route of s 696(2)(a) as a gate: the helper tests the meeting route, where the 15 days are a count the text gives
+GIVEN `the terms of the contract were authorised by a resolution of the company before the contract was entered into` IS A BOOLEAN
+      `the contract provides that no shares may be purchased in pursuance of it until its terms have been authorised by a resolution of the company` IS A BOOLEAN
+      `the resolution is proposed at a meeting of the company` IS A BOOLEAN
+      `a member of the company holding shares to which the resolution relates exercises the voting rights carried by any of those shares` IS A BOOLEAN
+      `the resolution would not have been passed if he had not done so` IS A BOOLEAN
+      `the first day on which the copy or memorandum was available for inspection at the registered office, and it stayed available to the date of the meeting` IS A DATE
+      `the date of the meeting` IS A DATE
+      `the copy or memorandum was also available for inspection at the meeting itself` IS A BOOLEAN
+GIVETH A DEONTIC `ss 690-723 party` `ss 690-723 act`
+`ss 690-723 the company's bar on an off-market purchase until the contract is approved (s 694)` MEANS
+    IF `ss 690-723 the contract is approved in advance` `the terms of the contract were authorised by a resolution of the company before the contract was entered into` `the contract provides that no shares may be purchased in pursuance of it until its terms have been authorised by a resolution of the company` `the resolution is proposed at a meeting of the company` `a member of the company holding shares to which the resolution relates exercises the voting rights carried by any of those shares` `the resolution would not have been passed if he had not done so` `the first day on which the copy or memorandum was available for inspection at the registered office, and it stayed available to the date of the meeting` `the date of the meeting` `the copy or memorandum was also available for inspection at the meeting itself`
+    THEN FULFILLED
+    ELSE PARTY `ss 690-723 the company`
+         SHANT `s 694(1) the company makes the off-market purchase`
+         HENCE FULFILLED
+         LEST BREACH BY `ss 690-723 the company` BECAUSE "the company made an off-market purchase of its own shares in pursuance of a contract that was not approved in advance in accordance with s 694"
+
+-- ---- s 702: the copy of the contract kept for ten years (day 0 = the conclusion of the contract) ------------------------------------------------------
+
+-- src:9232 | (1) This section applies where a company has entered into—
+-- src:9233 | (a) a contract approved under section 694 (authorisation of contract for off-market purchase), or
+-- src:9234 | (b) a contract for a purchase authorised under section 701 (authorisation of market purchase).
+-- src:9235 | (2) The company must keep available for inspection—
+-- src:9236 | (a) a copy of the contract, or
+-- src:9237 | (b) if the contract is not in writing, a written memorandum setting out its terms.
+-- src:9238 | (3) The copy or memorandum must be kept available for inspection from the conclusion of the contract until the end of the period of ten years beginning with—
+-- src:9239 | (a) the date on which the purchase of all the shares in pursuance of the contract is completed, or
+-- src:9240 | (b) the date on which the contract otherwise determines.
+@ref s 702(1)-(3) The copy or memorandum kept available from the conclusion of the contract until the end of ten years (src:9232-9240)
+-- TIMELINE: unit=calendar day; day 0=the date on which the contract was concluded; counting="from the conclusion of the contract until the end of the period of ten years beginning with (a) the date on which the purchase of all the shares ... is completed, or (b) the date on which the contract otherwise determines" (the number of days is computed from the dates by the existing s 702(3) function, which reads the end of the period as the day before the tenth anniversary; while neither date is known the period has no end and the bar stays open without a clock); joined=not chained; the conclusion, completion and determination dates are DATE inputs of its rule
+-- FORK: s 702(3) "the end of the period of ten years beginning with" | the last day is the day before the tenth anniversary of the completion (or the determination), as the existing function reads it | the last day is the tenth anniversary itself
+-- FORK: s 702(2)-(3) "must be kept available" | encoded as a bar on stopping to keep the copy available during the period; stopping inside it is the breach, and the Act makes it an offence (s 703(1)) | a duty to keep that is met only by the copy being available on the last day
+-- FORK: s 702(3) (a) or (b) | the existing function takes the completion when there is one and the determination otherwise | the earlier of the two
+GIVEN `the company has entered into a contract approved under section 694` IS A BOOLEAN
+      `the company has entered into a contract for a purchase authorised under section 701` IS A BOOLEAN
+      `the date on which the contract was concluded` IS A DATE
+      `the date on which the purchase of all the shares in pursuance of the contract is completed, if it is` IS A MAYBE DATE
+      `the date on which the contract otherwise determines, if it does` IS A MAYBE DATE
+GIVETH A DEONTIC `ss 690-723 party` `ss 690-723 act`
+`ss 690-723 the company keeps the copy or memorandum available for ten years (s 702)` MEANS
+    IF (`s 702(1) this section applies` `the company has entered into a contract approved under section 694` `the company has entered into a contract for a purchase authorised under section 701`) EQUALS JUST TRUE
+    THEN (CONSIDER (`s 702(3) the last day on which the copy or memorandum must be kept available` `the date on which the purchase of all the shares in pursuance of the contract is completed, if it is` `the date on which the contract otherwise determines, if it does`)
+          WHEN NOTHING THEN
+              PARTY `ss 690-723 the company`
+              SHANT `s 702(3) the company stops keeping the copy or memorandum available for inspection`
+              HENCE FULFILLED
+              LEST BREACH BY `ss 690-723 the company` BECAUSE "the company stopped keeping the copy of the contract, or the memorandum of its terms, available for inspection before the period of ten years had run (s 702(3)): an offence under s 703(1)"
+          WHEN JUST lastDay THEN
+              PARTY `ss 690-723 the company`
+              SHANT `s 702(3) the company stops keeping the copy or memorandum available for inspection`
+              WITHIN ((Day lastDay) MINUS (Day `the date on which the contract was concluded`))
+              HENCE FULFILLED
+              LEST BREACH BY `ss 690-723 the company` BECAUSE "the company stopped keeping the copy of the contract, or the memorandum of its terms, available for inspection before the end of the period of ten years (s 702(3)): an offence under s 703(1)")
+    ELSE FULFILLED
+
+-- src:9244 | (5) The company must give notice to the registrar—
+-- src:9245 | (a) of the place at which the copy or memorandum is kept available for inspection, and
+-- src:9246 | (b) of any change in that place,
+-- src:9247 | unless it has at all times been kept at the company's registered office.
+-- src:9253 | (1) If default is made in complying with section 702(2), (3) or (4) or default is made for 14 days in complying with section 702(5), or an inspection required under section 702(6) is refused, an offence is committed by—
+-- src:9254 | (a) the company, and
+-- src:9255 | (b) every officer of the company who is in default.
+@ref s 702(5), 703(1) The notice to the registrar of the place where the copy is kept (src:9244-9247, src:9253-9255)
+-- TIMELINE: unit=calendar day; day 0=the day the copy or memorandum is first kept at a place other than the registered office, or the place is changed; counting="default is made for 14 days in complying with section 702(5)" (WITHIN 14: the 14 days are the text's own count of a default, taken as the time allowed); joined=not chained; its day 0 is the trigger of its own rule
+-- FORK: s 702(5) the clock | the 14 days of s 703(1) are the time for the notice: a notice on day 14 is in time and one on day 15 is the default that makes an offence | the duty has no clock and the 14 days are only a condition of the offence
+-- FORK: s 702(5) "unless it has at all times been kept at the company's registered office" | the existing s 702(5) function answers whether the duty arises; when it answers JUST TRUE the duty arises, otherwise it does not | a duty that arises whenever the place changes
+GIVEN `it has at all times been kept at the company's registered office` IS A BOOLEAN
+GIVETH A DEONTIC `ss 690-723 party` `ss 690-723 act`
+`ss 690-723 the company gives notice of the place where the copy or memorandum is kept (s 702(5))` MEANS
+    IF (`s 702(5) the company must give notice to the registrar of the place` `it has at all times been kept at the company's registered office`) EQUALS JUST TRUE
+    THEN PARTY `ss 690-723 the company`
+         MUST `s 702(5) the company gives notice to the registrar of the place where the copy or memorandum is kept`
+         WITHIN 14
+         HENCE FULFILLED
+         LEST BREACH BY `ss 690-723 the company` BECAUSE "default was made for 14 days in giving the registrar notice of the place where the copy or memorandum is kept (s 702(5)): an offence under s 703(1)"
+    ELSE FULFILLED
+
+-- ---- ss 707 and 708: the filings after delivery of the shares (day 0 = the date on which the shares are delivered to the company) ----------------------
+
+-- src:9283 | (1) Where a company purchases shares under this Chapter, it must deliver a return to the registrar within the period of 28 days beginning with the date on which the shares are delivered to it.
+@ref s 707(1) The return to the registrar within the period of 28 days beginning with the date the shares are delivered (src:9283-9283)
+-- TIMELINE: unit=calendar day; day 0=the date on which the shares are delivered to the company; counting="within the period of 28 days beginning with the date on which the shares are delivered to it" (28 days beginning with day 0 end on day 27, computed from the date of delivery by the existing s 707(1) function; the return and the notice of cancellation are separate rules, both from the date of delivery, not chained); joined=not chained, side by side with the notice of cancellation; the date of delivery is a DATE input
+-- FORK: s 707(1) "within the period of 28 days beginning with the date" | the day of delivery is day 0 and day 27 is the last day | the day of delivery is day 1 and day 28 is the last day
+-- FORK: s 707(6) | a missed return is the breach of this duty, which the Act makes an offence of every officer in default, not of the company | no breach of the company
+GIVEN `the company purchases shares under Chapter 4` IS A BOOLEAN
+      `the date on which the shares are delivered to the company` IS A DATE
+GIVETH A DEONTIC `ss 690-723 party` `ss 690-723 act`
+`ss 690-723 the company delivers the return to the registrar (s 707)` MEANS
+    IF `the company purchases shares under Chapter 4`
+    THEN PARTY `ss 690-723 the company`
+         MUST `s 707(1) the company delivers the return to the registrar`
+         WITHIN ((Day (`s 707(1) the last day for delivering the return to the registrar` `the date on which the shares are delivered to the company`)) MINUS (Day `the date on which the shares are delivered to the company`))
+         HENCE FULFILLED
+         LEST BREACH BY `ss 690-723 the company` BECAUSE "the return was not delivered to the registrar within the period of 28 days beginning with the date on which the shares were delivered (s 707(1)): an offence of every officer in default under s 707(6)"
+    ELSE FULFILLED
+
+-- src:9302 | (1) If on the purchase by a company of any of its own shares in accordance with this Part—
+-- src:9303 | (a) section 724 (treasury shares) does not apply (so that the shares are treated as cancelled), or
+-- src:9304 | (b) that section applies but the shares are cancelled forthwith (under section 729 (cancellation of treasury shares)),
+-- src:9305 | the company must give notice of cancellation to the registrar, within the period of 28 days beginning with the date on which the shares are delivered to it, specifying the shares cancelled.
+@ref s 708(1) The notice of cancellation within the period of 28 days beginning with the date the shares are delivered (src:9302-9305)
+-- TIMELINE: unit=calendar day; day 0=the date on which the shares are delivered to the company; counting="within the period of 28 days beginning with the date on which the shares are delivered to it" (day 27 is the last day, computed from the date of delivery by the existing s 708(1) function); joined=not chained, side by side with the return; the date of delivery is a DATE input
+-- FORK: s 708(1) "within the period of 28 days beginning with the date" | the day of delivery is day 0 and day 27 is the last day | the day of delivery is day 1 and day 28 is the last day
+-- FORK: s 708(1) the gate | the duty arises when the existing s 708(1) function answers JUST TRUE (s 724 does not apply, or applies and the shares are cancelled forthwith); any other answer leaves no duty | the duty arises unless the answer is JUST FALSE
+-- FORK: s 708(4) | a missed notice is the breach of the company, which the Act makes an offence of the company and of every officer in default | no breach
+GIVEN `a limited company purchases shares in accordance with Chapter 4` IS A BOOLEAN
+      `the purchase is made out of distributable profits` IS A BOOLEAN
+      `the shares are cancelled forthwith under section 729` IS A BOOLEAN
+      `the date on which the shares are delivered to the company` IS A DATE
+GIVETH A DEONTIC `ss 690-723 party` `ss 690-723 act`
+`ss 690-723 the company gives notice of cancellation to the registrar (s 708)` MEANS
+    IF (`s 708(1) the company must give notice of cancellation to the registrar` `a limited company purchases shares in accordance with Chapter 4` `the purchase is made out of distributable profits` `the shares are cancelled forthwith under section 729`) EQUALS JUST TRUE
+    THEN PARTY `ss 690-723 the company`
+         MUST `s 708(1) the company gives notice of cancellation to the registrar`
+         WITHIN ((Day (`s 708(1) the last day for giving notice of cancellation to the registrar` `the date on which the shares are delivered to the company`)) MINUS (Day `the date on which the shares are delivered to the company`))
+         HENCE FULFILLED
+         LEST BREACH BY `ss 690-723 the company` BECAUSE "notice of cancellation was not given to the registrar within the period of 28 days beginning with the date on which the shares were delivered (s 708(1)): an offence under s 708(4)"
+    ELSE FULFILLED
+
+-- ---- ss 709 to 719: payment out of capital, from the directors' statement to the notices (day 0 = the day the directors make the statement) -------------
+
+-- src:9323 | (1) A private limited company may in accordance with this Chapter, but subject to any restriction or prohibition in the company's articles, make a payment in respect of the redemption or purchase of its own shares otherwise than out of distributable profits or the proceeds of a fresh issue of shares.
+-- src:9366 | (1) The company's directors must make a statement in accordance with this section.
+-- src:9376 | (6) It must in addition have annexed to it a report addressed to the directors by the company's auditor stating that—
+-- src:9388 | (1) The payment out of capital must be approved by a special resolution of the company.
+-- src:9389 | (2) The resolution must be passed on, or within the week immediately following, the date on which the directors make the statement required by section 714.
+-- src:9405 | (2) A copy of the directors' statement and auditor's report under section 714 must be made available to members—
+-- src:9406 | (a) in the case of a written resolution, by being sent or submitted to every eligible member at or before the time at which the proposed resolution is sent or submitted to him;
+-- src:9407 | (b) in the case of a resolution at a meeting, by being made available for inspection by members of the company at the meeting.
+-- src:9408 | (3) The resolution is ineffective if this requirement is not complied with.
+-- src:9410 | (1) Within the week immediately following the date of the resolution under section 716 the company must cause to be published in the Gazette a notice—
+-- src:9417 | (2) Within the week immediately following the date of the resolution the company must also either—
+-- src:9418 | (a) cause a notice to the same effect as that required by subsection (1) to be published in an appropriate national newspaper, or
+-- src:9419 | (b) give notice in writing to that effect to each of its creditors.
+@ref s 709(1), 714(1), (6), 716(1)-(2), 718, 719(1)-(2) The directors' statement, the special resolution on or within the week after it, and the notices within the week after the resolution (src:9323-9323, src:9366-9366, src:9376-9376, src:9388-9389, src:9405-9408, src:9410-9410, src:9417-9419)
+-- TIMELINE: unit=calendar day; day 0=the date on which the directors make the statement; counting="on, or within the week immediately following, the date on which the directors make the statement" (7 days, the resolution on day 0 to day 7) and "Within the week immediately following the date of the resolution" (7 days from the resolution; the notice of s 719(1) and the notice of s 719(2) run side by side from the day of the resolution, not one after the other); joined=chained by HENCE (each clock starts on the day of the event that ended the step before it)
+-- chained: the statement, the resolution and the two notices are chained by HENCE, each clock starting on the day of the event that ended the step before it; the two notices are joined by RAND so that both run from the resolution
+-- FORK: s 716(2) "on, or within the week immediately following" | the statement day is day 0 and day 7 is the last day for the resolution | the week begins the day after, so day 8 is the last
+-- FORK: s 719(1), (2) "Within the week immediately following the date of the resolution" | a notice published on the day of the resolution is in time, because a deadline is met by acting early; day 7 is the last day | the week begins the day after, so a notice on the day of the resolution is not "within the week" (the existing Boolean s 719(1) function reads it so)
+-- FORK: s 714(6) the auditor's report | one act, the directors making the statement with the auditor's report annexed to it; no separate duty on the auditor, since the text puts the report on the statement | a second duty on the auditor
+-- FORK: s 709(1) the gate | the existing s 709(1) function with the payment taken as in accordance with Chapter 5 (the chain is that accordance) answers JUST TRUE when the company is private and its articles do not restrict the payment; any other answer (NOTHING) leaves no duty here | an articles prohibition is a bar
+-- FORK: ss 716 and 718 and 717 the vote | the vote is a gate on the whole chain, tested by the existing functions on the facts of the resolution; an ineffective resolution leaves the payment unlawful under s 713(1), so the company is barred (SHANT) from making the payment out of capital | the chain begins and the ineffectiveness is found later
+-- not encoded here: s 714(2) to (5), s 715 (the contents of the statement and the offence of an opinion without reasonable grounds), s 719(1)(a) to (d) and (3) (the contents of the notices, an appropriate national newspaper)
+GIVEN `the company is a private limited company` IS A BOOLEAN
+      `the company's articles restrict or prohibit the payment` IS A BOOLEAN
+      vote IS A `ss 690-723 the vote`
+GIVETH A DEONTIC `ss 690-723 party` `ss 690-723 act`
+`ss 690-723 payment out of capital: the statement, the resolution and the notices (ss 714, 716, 719)` MEANS
+    IF (`s 709(1) the private limited company may make the payment out of capital` `the company is a private limited company` (JUST TRUE) `the company's articles restrict or prohibit the payment`) EQUALS JUST TRUE
+    THEN (IF `ss 690-723 the special resolution of section 716 is effective` vote
+          THEN (PARTY `ss 690-723 the directors`
+                MUST `s 714 the directors make the statement with the auditor's report annexed`
+                HENCE (PARTY `ss 690-723 the company`
+                       MUST `s 716 the company passes the special resolution approving the payment out of capital`
+                       WITHIN 7
+                       HENCE (   (PARTY `ss 690-723 the company`
+                                  MUST `s 719(1) the company causes the notice to be published in the Gazette`
+                                  WITHIN 7
+                                  HENCE FULFILLED
+                                  LEST BREACH BY `ss 690-723 the company` BECAUSE "the notice was not published in the Gazette within the week immediately following the date of the resolution (s 719(1)): the payment out of capital is not lawful (s 713(1))")
+                              RAND
+                                 (PARTY `ss 690-723 the company`
+                                  MUST `s 719(2) the company publishes the notice in an appropriate national newspaper or gives it in writing to each creditor`
+                                  WITHIN 7
+                                  HENCE FULFILLED
+                                  LEST BREACH BY `ss 690-723 the company` BECAUSE "the notice was neither published in an appropriate national newspaper nor given in writing to each creditor within the week immediately following the date of the resolution (s 719(2)): the payment out of capital is not lawful (s 713(1))"))
+                       LEST BREACH BY `ss 690-723 the company` BECAUSE "the special resolution was not passed on, or within the week immediately following, the date of the directors' statement (s 716(2)): the payment out of capital is not lawful (s 713(1))"))
+          ELSE (PARTY `ss 690-723 the company`
+                SHANT `s 723(1) the company makes the payment out of capital`
+                HENCE FULFILLED
+                LEST BREACH BY `ss 690-723 the company` BECAUSE "the payment out of capital was made on a resolution that is not an effective special resolution (ss 716(1), 717(3), 718(3)): the payment is not lawful (s 713(1))"))
+    ELSE FULFILLED
+
+-- ---- s 719(4): the copy of the statement and report to the registrar (day 0 = the date of the resolution) ----------------------------------------------
+
+-- src:9421 | (4) Not later than the day on which the company—
+-- src:9422 | (a) first publishes the notice required by subsection (1), or
+-- src:9423 | (b) if earlier, first publishes or gives the notice required by subsection (2),
+-- src:9424 | the company must deliver to the registrar a copy of the directors' statement and auditor's report required by section 714.
+@ref s 719(4) The copy of the statement and report to the registrar not later than the day of the first notice (src:9421-9424)
+-- TIMELINE: unit=calendar day; day 0=the date of the resolution under section 716; counting="Not later than the day on which the company first publishes the notice required by subsection (1), or if earlier first publishes or gives the notice required by subsection (2)" (the number of days is computed from the resolution date and the two notice days by the existing s 719(4) function, which takes the earlier of the two; the notice days are DATE inputs, and the rule stands beside the chain, not in it); joined=not chained, beside the chain; the resolution date and the two notice days are DATE inputs
+-- FORK: s 719(4) "Not later than the day on which" | the copy is due on the day of the first notice, so a copy on that day is in time | the copy is due the day before
+GIVEN `the date of the resolution under section 716` IS A DATE
+      `the day on which the company first publishes the notice required by subsection (1)` IS A DATE
+      `the day on which the company first publishes or gives the notice required by subsection (2)` IS A DATE
+GIVETH A DEONTIC `ss 690-723 party` `ss 690-723 act`
+`ss 690-723 the company delivers a copy of the statement and report to the registrar (s 719(4))` MEANS
+    PARTY `ss 690-723 the company`
+    MUST `s 719(4) the company delivers to the registrar a copy of the directors' statement and auditor's report`
+    WITHIN ((Day (`s 719(4) the last day for delivering the copy to the registrar` `the day on which the company first publishes the notice required by subsection (1)` `the day on which the company first publishes or gives the notice required by subsection (2)`)) MINUS (Day `the date of the resolution under section 716`))
+    HENCE FULFILLED
+    LEST BREACH BY `ss 690-723 the company` BECAUSE "a copy of the directors' statement and auditor's report was not delivered to the registrar by the day the company first published or gave notice (s 719(4)): the payment out of capital is not lawful (s 713(1))"
+
+-- ---- s 720: the statement and report open to inspection (day 0 = the date of the resolution) -------------------------------------------------------
+
+-- src:9426 | (1) The directors' statement and auditor's report must be kept available for inspection throughout the period—
+-- src:9427 | (a) beginning with the day on which the company—
+-- src:9428 | (i) first publishes the notice required by section 719(1), or
+-- src:9429 | (ii) if earlier, first publishes or gives the notice required by section 719(2), and
+-- src:9430 | (b) ending five weeks after the date of the resolution for payment out of capital.
+-- src:9438 | (4) They must be open to the inspection of any member or creditor of the company without charge.
+@ref s 720(1), (4) The statement and report kept available throughout the period from the first notice to five weeks after the resolution (src:9426-9430, src:9438-9438)
+-- TIMELINE: unit=calendar day; day 0=the date of the resolution; counting="throughout the period beginning with the day on which the company first publishes the notice ... and ending five weeks after the date of the resolution" (35 days from the resolution, computed by the existing s 720(1) function; the opening is due on the day of the first notice, a DATE input taken from the two notice days; the two parts, the opening and the bar on stopping, run side by side from the resolution); joined=not chained, beside the chain; the resolution date and the two notice days are DATE inputs
+-- FORK: s 720(1)(b) "ending five weeks after the date of the resolution" | day 35 is the last day on which the statement and report must be available | day 34
+-- FORK: s 720(1), (4) "must be kept available" | the opening is a duty due on the day of the first notice, and stopping, or refusing an inspection, on a day up to day 35 is a breach of a bar; a refusal is joined to a withdrawal as one act | two acts, a withdrawal and a refusal
+-- FORK: s 720(4) "any member or creditor" | the act covers a refusal to anyone entitled, without naming who asked | one act for each class of person
+GIVEN `the date of the resolution for payment out of capital` IS A DATE
+      `the day on which the company first publishes the notice required by section 719(1)` IS A DATE
+      `the day on which the company first publishes or gives the notice required by section 719(2)` IS A DATE
+GIVETH A DEONTIC `ss 690-723 party` `ss 690-723 act`
+`ss 690-723 the company keeps the statement and report available for inspection (s 720)` MEANS
+       (PARTY `ss 690-723 the company`
+        MUST `s 720(1) the company makes the statement and report available for inspection`
+        WITHIN ((Day (`s 720(1) the first day of the period` `the day on which the company first publishes the notice required by section 719(1)` `the day on which the company first publishes or gives the notice required by section 719(2)`)) MINUS (Day `the date of the resolution for payment out of capital`))
+        HENCE FULFILLED
+        LEST BREACH BY `ss 690-723 the company` BECAUSE "the statement and report were not available for inspection from the day the company first published or gave notice (s 720(1)(a)): the payment out of capital is not lawful (s 713(1))")
+    RAND
+       (PARTY `ss 690-723 the company`
+        SHANT `s 720(1) the company stops keeping the statement and report available for inspection, or refuses an inspection`
+        WITHIN ((Day (`s 720(1) the last day of the period` `the date of the resolution for payment out of capital`)) MINUS (Day `the date of the resolution for payment out of capital`))
+        HENCE FULFILLED
+        LEST BREACH BY `ss 690-723 the company` BECAUSE "the statement and report ceased to be available for inspection, or an inspection was refused, before five weeks after the date of the resolution (s 720(1), (4)): an offence under s 720(5)")
+
+-- src:9434 | (3) The company must give notice to the registrar—
+-- src:9435 | (a) of the place at which the statement and report are kept available for inspection, and
+-- src:9436 | (b) of any change in that place,
+-- src:9437 | unless they have at all times been kept at the company's registered office.
+-- src:9439 | (5) If default is made for 14 days in complying with subsection (3), or an inspection under subsection (4) is refused, an offence is committed by—
+-- src:9440 | (a) the company, and
+-- src:9441 | (b) every officer of the company who is in default.
+@ref s 720(3), (5) The notice to the registrar of the place where the statement and report are kept (src:9434-9437, src:9439-9441)
+-- TIMELINE: unit=calendar day; day 0=the day the statement and report are first kept at a place other than the registered office, or the place is changed; counting="default is made for 14 days in complying with subsection (3)" (WITHIN 14: the 14 days are the text's own count of a default, taken as the time allowed); joined=not chained; its day 0 is the trigger of its own rule
+-- FORK: s 720(3) the clock | the 14 days of s 720(5) are the time for the notice: a notice on day 14 is in time and one on day 15 is the default that makes an offence | the duty has no clock and the 14 days are only a condition of the offence
+GIVEN `they have at all times been kept at the company's registered office` IS A BOOLEAN
+GIVETH A DEONTIC `ss 690-723 party` `ss 690-723 act`
+`ss 690-723 the company gives notice of the place where the statement and report are kept (s 720(3))` MEANS
+    IF (`s 720(3) the company must give notice to the registrar of the place` `they have at all times been kept at the company's registered office`) EQUALS JUST TRUE
+    THEN PARTY `ss 690-723 the company`
+         MUST `s 720(3) the company gives notice to the registrar of the place where the statement and report are kept`
+         WITHIN 14
+         HENCE FULFILLED
+         LEST BREACH BY `ss 690-723 the company` BECAUSE "default was made for 14 days in giving the registrar notice of the place where the statement and report are kept (s 720(3)): an offence under s 720(5)"
+    ELSE FULFILLED
+
+-- ---- ss 721 and 722: the objection, the court's order, and the notices (day 0 = the date of the resolution) ----------------------------------------
+
+-- src:9485 | (1) Where a private company passes a special resolution approving a payment out of capital for the redemption or purchase of any of its shares—
+-- src:9486 | (a) any member of the company (other than one who consented to or voted in favour of the resolution), and
+-- src:9487 | (b) any creditor of the company,
+-- src:9488 | may apply to the court for the cancellation of the resolution.
+-- src:9489 | (2) The application—
+-- src:9490 | (a) must be made within five weeks after the passing of the resolution, and
+-- src:9491 | (b) may be made on behalf of the persons entitled to make it by such one or more of their number as they may appoint in writing for the purpose.
+-- src:9497 | (4) Subject to that, the court must make an order either cancelling or confirming the resolution, and may do so on such terms and conditions as it thinks fit.
+-- src:9506 | (1) On making an application under section 721 (application to court to cancel resolution) the applicants, or the person making the application on their behalf, must immediately give notice to the registrar.
+-- src:9507 | This is without prejudice to any provision of rules of court as to service of notice of the application.
+-- src:9509 | (3) Within 15 days of the making of the court's order on the application, or such longer period as the court may at any time direct, the company must deliver to the registrar a copy of the order.
+@ref s 721(1)-(2), (4), 722(1), (3) The application to the court within five weeks, the notice to the registrar, the court's order and the copy of the order (src:9485-9491, src:9497-9497, src:9506-9507, src:9509-9509)
+-- TIMELINE: unit=calendar day; day 0=the date on which the resolution was passed; counting="must be made within five weeks after the passing of the resolution" (35 days, the application on day 0 to day 35), "must immediately give notice to the registrar" (WITHIN 0 of the application), "Within 15 days of the making of the court's order, or such longer period as the court may at any time direct" (15 days, or the longer period, counted from the day of the order); joined=chained by HENCE (application, applicants' notice, court's order, copy of the order); day 0 is the resolution date, the caller's
+-- chained: the application, the applicants' notice, the court's order and the copy of the order are chained by HENCE, each clock starting on the day of the event that ended the step before it
+-- FORK: s 721(2)(a) "within five weeks after the passing of the resolution" | the day of the resolution is day 0 and day 35 is the last day for the application | day 34 is the last day
+-- FORK: s 721(2)(a) a late application | the power lapses without more, so an application after day 35 is no breach; whether the court may entertain it is not in the text | a late application is a breach
+-- FORK: s 722(1) "immediately" | the same day as the application (WITHIN 0) | a short reasonable time after it; the Act states no consequence for the applicants' notice (s 722(4) covers only subsections (2) and (3)), so a miss is a breach and nothing more
+-- FORK: s 721(4) "the court must make an order either cancelling or confirming" | one act of the court with no clock, because the text gives no time; the cancelling or confirming is a fact of the next rule (the payment window) | two acts of the court, one for each order
+-- FORK: s 722(3) "Within 15 days of the making" | the day of the order is day 0 and day 15 is the last day, or the longer period the court directs, counted from the same day | the order day counts as day 1
+-- FORK: s 722(4) | a missed copy of the order is the breach of the company, which the Act makes an offence of the company and of every officer in default | no breach
+-- not encoded: the court's powers to adjourn, direct and make other orders (s 721(3), (5) to (7)), and what the order does to the dates (the next rule takes the extension as an input)
+GIVEN `the company is a private company` IS A BOOLEAN
+      `the resolution is a special resolution (the answer of s 283)` IS A MAYBE BOOLEAN
+      `the resolution approves a payment out of capital for the redemption or purchase of shares` IS A BOOLEAN
+      applicant IS A `s 721(1) who applies`
+      `the period longer than 15 days that the court has directed, in days, if it has` IS A MAYBE NUMBER
+GIVETH A DEONTIC `ss 690-723 party` `ss 690-723 act`
+`ss 690-723 the objection to the payment and the court's order (ss 721, 722)` MEANS
+    IF (`s 721(1) the person may apply to the court for the cancellation of the resolution` `the company is a private company` `the resolution is a special resolution (the answer of s 283)` `the resolution approves a payment out of capital for the redemption or purchase of shares` applicant) EQUALS JUST TRUE
+    THEN PARTY `ss 690-723 an objecting member or creditor`
+         MAY `s 721(1) the applicant applies to the court for the cancellation of the resolution`
+         WITHIN (`ss 690-723 the number of days in the weeks` 5)
+         HENCE (PARTY `ss 690-723 an objecting member or creditor`
+                MUST `s 722(1) the applicant gives notice of the application to the registrar`
+                WITHIN 0
+                HENCE (PARTY `ss 690-723 the court`
+                       MUST `s 721(4) the court makes an order cancelling or confirming the resolution`
+                       HENCE (PARTY `ss 690-723 the company`
+                              MUST `s 722(3) the company delivers to the registrar a copy of the court's order`
+                              WITHIN (`ss 690-723 the days allowed for delivering a copy of the order` `the period longer than 15 days that the court has directed, in days, if it has`)
+                              HENCE FULFILLED
+                              LEST BREACH BY `ss 690-723 the company` BECAUSE "a copy of the court's order was not delivered to the registrar within 15 days of the making of the order, or the longer period the court directed (s 722(3)): an offence under s 722(4)"))
+                LEST BREACH BY `ss 690-723 an objecting member or creditor` BECAUSE "the applicants did not immediately give notice to the registrar of the application (s 722(1))")
+         LEST FULFILLED
+    ELSE FULFILLED
+
+-- src:9508 | (2) On being served with notice of any such application, the company must immediately give notice to the registrar.
+@ref s 722(2) The company's notice to the registrar on being served with the application (src:9508-9508)
+-- TIMELINE: unit=calendar day; day 0=the day the company is served with notice of the application; counting="must immediately give notice to the registrar" (WITHIN 0: the same day); joined=not chained; day 0 is the day of service, the caller's
+-- FORK: s 722(2) "immediately" | the same day as the service (WITHIN 0) | a short reasonable time after it
+-- FORK: s 722(2) the service | the day the company is served is day 0 of this rule, taken from the caller, because service is not an act of any party named in the text | a clock from the application
+-- FORK: s 722(4) | a missed notice is the breach of the company, which the Act makes an offence of the company and of every officer in default | no breach
+GIVEN `the company is served with notice of an application under section 721` IS A BOOLEAN
+GIVETH A DEONTIC `ss 690-723 party` `ss 690-723 act`
+`ss 690-723 the company gives notice to the registrar of the application (s 722(2))` MEANS
+    IF `the company is served with notice of an application under section 721`
+    THEN PARTY `ss 690-723 the company`
+         MUST `s 722(2) the company gives notice to the registrar of the application`
+         WITHIN 0
+         HENCE FULFILLED
+         LEST BREACH BY `ss 690-723 the company` BECAUSE "the company did not immediately give notice to the registrar on being served with notice of the application (s 722(2)): an offence under s 722(4)"
+    ELSE FULFILLED
+
+-- ---- s 723: the window for the payment (day 0 = the date of the resolution) -----------------------------------------------------------------------
+
+-- src:9516 | (1) The payment out of capital , if made in accordance with a resolution under section 716 must be made—
+-- src:9517 | (a) no earlier than five weeks after the date on which the resolution under section 716 is passed, and
+-- src:9518 | (b) no more than seven weeks after that date.
+-- src:9522 | (2) This is subject to any exercise of the court's powers under section 721(5) (power to alter or extend time where resolution confirmed after objection).
+@ref s 723(1)-(2) The payment no earlier than five weeks and no more than seven weeks after the resolution (src:9516-9518, src:9522-9522)
+-- TIMELINE: unit=calendar day; day 0=the date on which the resolution under section 716 is passed; counting="no earlier than five weeks after the date on which the resolution ... is passed" and "no more than seven weeks after that date" (the payment is allowed on day 35 to day 49; a payment on day 34 or earlier is a breach of a bar of 34 days, and the window of 15 days that follows it starts on the day the bar ends; the lengths are computed from the five and the seven weeks by the helper that counts the days in weeks, and the court's extension of the last day under s 721(5) is a NUMBER input); joined=not chained; day 0 is the resolution date, the caller's; the court's extension is a NUMBER input; the 34-day bar and the 15-day window that follows it are chained by HENCE
+-- FORK: s 723(1) "if made" | the text states a window and no duty to pay: the company MAY pay in the window, and a payment before it or after it is a breach; not paying at all is no breach | the company MUST pay, by day 49 (the existing DEONTIC does so)
+-- FORK: s 723(1)(a) "no earlier than five weeks after" | day 35 is the first day on which the payment may be made | day 36
+-- FORK: s 723(1)(b) "no more than seven weeks after" | day 49 is the last day on which the payment may be made | day 48
+-- FORK: s 723(2), 721(5) the court's extension | an extension of the last day by a number of days is an input, added to the 15 days of the window; the court may also alter the first date or the length of other periods, which is not encoded | the extension moves both edges
+-- FORK: s 721(4) a cancelled resolution | when the court has cancelled the resolution no payment may be made, so the company is barred (SHANT) without a clock | the cancellation only extends the periods
+GIVEN `the court has cancelled the resolution under section 721(4)` IS A BOOLEAN
+      `the number of days by which the court has extended the last day under section 721(5)` IS A NUMBER
+GIVETH A DEONTIC `ss 690-723 party` `ss 690-723 act`
+`ss 690-723 the company makes the payment out of capital in the window (s 723)` MEANS
+    IF `the court has cancelled the resolution under section 721(4)`
+    THEN PARTY `ss 690-723 the company`
+         SHANT `s 723(1) the company makes the payment out of capital`
+         HENCE FULFILLED
+         LEST BREACH BY `ss 690-723 the company` BECAUSE "the payment out of capital was made on a resolution the court has cancelled (s 721(4)): the payment is not lawful (s 713(1))"
+    ELSE PARTY `ss 690-723 the company`
+         SHANT `s 723(1) the company makes the payment out of capital`
+         WITHIN ((`ss 690-723 the number of days in the weeks` 5) MINUS 1)
+         HENCE (PARTY `ss 690-723 the company`
+                MAY `s 723(1) the company makes the payment out of capital`
+                WITHIN ((((`ss 690-723 the number of days in the weeks` 7) MINUS (`ss 690-723 the number of days in the weeks` 5)) PLUS 1) PLUS `the number of days by which the court has extended the last day under section 721(5)`)
+                HENCE FULFILLED
+                LEST (PARTY `ss 690-723 the company`
+                      SHANT `s 723(1) the company makes the payment out of capital`
+                      HENCE FULFILLED
+                      LEST BREACH BY `ss 690-723 the company` BECAUSE "the payment out of capital was made more than seven weeks after the date of the resolution (s 723(1)(b)): the payment is not lawful (s 713(1))"))
+         LEST BREACH BY `ss 690-723 the company` BECAUSE "the payment out of capital was made earlier than five weeks after the date of the resolution (s 723(1)(a)): the payment is not lawful (s 713(1))"
+
+-- ---- ss 720A, 720B and 723(1A): the solvency-statement route (day 0 = the date the resolution under s 720A is passed) --------------------------------
+
+-- src:9446 | (1) Section 713(1) does not apply to the purchase out of capital by a private company of its own shares for the purposes of or pursuant to an employees' share scheme when approved by special resolution supported by a solvency statement.
+-- src:9455 | (1) Within 15 days after the passing of the resolution for a payment out of capital by a private company for the purchase of its own shares for the purposes of or pursuant to an employees' share scheme the company must deliver to the registrar–
+-- src:9456 | (a) a copy of the solvency statement,
+-- src:9457 | (b) a copy of the resolution, and
+-- src:9458 | (c) a statement of capital.
+-- src:9470 | (5) The company must also deliver to the registrar, within 15 days after the resolution is passed, a statement by the directors confirming that the solvency statement was—
+-- src:9471 | (a) made not more than 15 days before the date on which the resolution was passed, and
+-- src:9472 | (b) provided to members in accordance with section 720A(3) or (4).
+-- src:9477 | (8) If default is made in complying with this section, an offence is committed by–
+-- src:9478 | (a) the company, and
+-- src:9479 | (b) every officer of the company who is in default.
+@ref s 720A(1), 720B(1), (5), (8) The documents and the directors' confirmation within 15 days after the resolution (src:9446-9446, src:9455-9458, src:9470-9472, src:9477-9479)
+-- TIMELINE: unit=calendar day; day 0=the date on which the resolution is passed; counting="Within 15 days after the passing of the resolution" (15 days, the delivery on day 0 to day 15; the documents of s 720B(1) and the confirmation of s 720B(5) both run from the resolution, side by side, joined by RAND); joined=not chained; the two duties run side by side (RAND) from the resolution, the caller's day 0
+-- FORK: s 720B(1) "Within 15 days after the passing" | day 15 is the last day | day 14
+-- FORK: s 720B(6) | a late delivery does not affect the validity of the resolution, but it is still a breach of the duty and an offence under s 720B(8) | no breach of a duty whose lateness does not matter to validity
+-- FORK: s 720A(2)(a) | the solvency statement made not more than 15 days before the resolution is a count back from the resolution, tested by the existing s 720A(2) function and not encoded as a clock here | a clock before day 0
+-- FORK: s 720B(5) | the confirmation is a separate duty with its own breach, run beside the documents | one duty with two limbs
+GIVEN `the company is a private company` IS A BOOLEAN
+      `the purchase is for the purposes of or pursuant to an employees' share scheme (the answer of s 1166)` IS A MAYBE BOOLEAN
+      `the resolution is a special resolution (the answer of s 283)` IS A MAYBE BOOLEAN
+      `the resolution is supported by a solvency statement (the answer of s 720A(2))` IS A MAYBE BOOLEAN
+GIVETH A DEONTIC `ss 690-723 party` `ss 690-723 act`
+`ss 690-723 the company delivers the documents after a resolution supported by a solvency statement (s 720B)` MEANS
+    IF (`s 720A(1) section 713(1) does not apply` `the company is a private company` `the purchase is for the purposes of or pursuant to an employees' share scheme (the answer of s 1166)` `the resolution is a special resolution (the answer of s 283)` `the resolution is supported by a solvency statement (the answer of s 720A(2))`) EQUALS JUST TRUE
+    THEN (   (PARTY `ss 690-723 the company`
+              MUST `s 720B(1) the company delivers to the registrar a copy of the solvency statement, a copy of the resolution and a statement of capital`
+              WITHIN 15
+              HENCE FULFILLED
+              LEST BREACH BY `ss 690-723 the company` BECAUSE "the copy of the solvency statement, the copy of the resolution and the statement of capital were not delivered to the registrar within 15 days after the passing of the resolution (s 720B(1)): an offence under s 720B(8)")
+          RAND
+             (PARTY `ss 690-723 the company`
+              MUST `s 720B(5) the company delivers to the registrar the directors' statement confirming the solvency statement`
+              WITHIN 15
+              HENCE FULFILLED
+              LEST BREACH BY `ss 690-723 the company` BECAUSE "the directors' statement confirming the solvency statement was not delivered to the registrar within 15 days after the resolution was passed (s 720B(5)): an offence under s 720B(8)"))
+    ELSE FULFILLED
+
+-- src:9519 | (1A) Shares to be purchased in accordance with a resolution under section 720A must be surrendered—
+-- src:9520 | (a) no earlier than five weeks after the date on which the resolution under section 720A is passed, and
+-- src:9521 | (b) no later than seven weeks after that date.
+@ref s 723(1A) The shares surrendered no earlier than five weeks and no later than seven weeks after the resolution (src:9519-9521)
+-- TIMELINE: unit=calendar day; day 0=the date on which the resolution under section 720A is passed; counting="no earlier than five weeks after the date on which the resolution under section 720A is passed" and "no later than seven weeks after that date" (the surrender is allowed on day 35 to day 49; a surrender on day 34 or earlier is a breach of a bar of 34 days, and the window of 15 days that follows it starts on the day the bar ends); joined=not chained; the 34-day bar and the 15-day window that follows it are chained by HENCE; day 0 is the resolution date, the caller's
+-- FORK: s 723(1A) the party | the passive "must be surrendered" names no one, so the act is attributed to the company, whose purchase it is | the member who surrenders the shares
+-- FORK: s 723(1A) "must be surrendered" | a window and no duty to surrender: a surrender before it or after it is a breach, and no surrender is no breach | a duty to surrender by day 49
+-- FORK: s 723(1A)(a), (b) | day 35 is the first day and day 49 the last | day 36 and day 48
+GIVEN `the company is a private company` IS A BOOLEAN
+      `the purchase is for the purposes of or pursuant to an employees' share scheme (the answer of s 1166)` IS A MAYBE BOOLEAN
+      `the resolution is a special resolution (the answer of s 283)` IS A MAYBE BOOLEAN
+      `the resolution is supported by a solvency statement (the answer of s 720A(2))` IS A MAYBE BOOLEAN
+GIVETH A DEONTIC `ss 690-723 party` `ss 690-723 act`
+`ss 690-723 the shares are surrendered in the window (s 723(1A))` MEANS
+    IF (`s 720A(1) section 713(1) does not apply` `the company is a private company` `the purchase is for the purposes of or pursuant to an employees' share scheme (the answer of s 1166)` `the resolution is a special resolution (the answer of s 283)` `the resolution is supported by a solvency statement (the answer of s 720A(2))`) EQUALS JUST TRUE
+    THEN PARTY `ss 690-723 the company`
+         SHANT `s 723(1A) the shares are surrendered to the company`
+         WITHIN ((`ss 690-723 the number of days in the weeks` 5) MINUS 1)
+         HENCE (PARTY `ss 690-723 the company`
+                MAY `s 723(1A) the shares are surrendered to the company`
+                WITHIN (((`ss 690-723 the number of days in the weeks` 7) MINUS (`ss 690-723 the number of days in the weeks` 5)) PLUS 1)
+                HENCE FULFILLED
+                LEST (PARTY `ss 690-723 the company`
+                      SHANT `s 723(1A) the shares are surrendered to the company`
+                      HENCE FULFILLED
+                      LEST BREACH BY `ss 690-723 the company` BECAUSE "the shares were surrendered more than seven weeks after the resolution under section 720A was passed (s 723(1A)(b))"))
+         LEST BREACH BY `ss 690-723 the company` BECAUSE "the shares were surrendered earlier than five weeks after the resolution under section 720A was passed (s 723(1A)(a))"
+    ELSE FULFILLED
