@@ -1,0 +1,210 @@
+IMPORT prelude
+IMPORT `coa-core`
+IMPORT `coa3-part8-members`
+IMPORT `coa3-part8-inspection`
+
+-- coa-proc-register-copy.l4: Companies Act 2006 (United Kingdom), ss 116 to 118: the procedure the Act lays down when a person asks to
+-- inspect the register of members or to have a copy of it, written as regulative rules over the Boolean encoding in
+-- coa3-part8-inspection.l4. Lines 1557-1588 of ukpga-2006-46.txt.
+-- The gates are the existing functions of coa3-part8-inspection.l4: the s 116 predicates say whether a request is one the company must answer,
+-- s 117(1) says whether the five-working-day duty arises, and ss 118(1) and 118(3) say whether the offence and the court's power arise.
+-- Nothing here edits that module, and nothing here calls its DEONTIC for s 117(1).
+--
+-- SEAMS taken as INPUTS: the person asking is a member; the prescribed fee is paid; a restriction under s 120A applies (the regulations are not in the
+-- sources); the working days are counted by whoever builds the trace (s 1173(1)); the officer is in default (s 1121).
+
+DECLARE `ss 116-118 party` IS ONE OF
+    `ss 116-118 the company`
+    `ss 116-118 the court`
+    `ss 116-118 an officer of the company who is in default`
+
+DECLARE `ss 116-118 act` IS ONE OF
+    `s 117(1)(a) the company complies with the request by allowing the inspection or providing the copy`
+    `s 117(1)(b) the company applies to the court`
+    `s 117(2) the company notifies the person making the request that it has applied to the court`
+    `s 117(3)(a) the court directs the company not to comply with the request`
+    `s 118(1) the company refuses the inspection or makes default in providing the copy`
+    `s 118(1)(b) the officer is in default in the refusal or default`
+    `s 118(3) the court orders an immediate inspection or directs that the copy be sent to the person requesting it`
+
+-- ---- the gate: is this a request the company must answer? -------------------------------------------------------------------
+
+-- src:1557 | 116	Rights to inspect and require copies
+-- src:1558 | (1) The register and the index of members' names must be open to the inspection—
+-- src:1559 | (a) of any member of the company without charge, and
+-- src:1560 | (b) of any other person on payment of such fee as may be prescribed.
+-- src:1561 | (2) Any person may require a copy of a company's register of members, or of any part of it, on payment of such fee as may be prescribed.
+-- src:1562 | (2A) Subsections (1) and (2) are subject to any restriction imposed by regulations under section 120A (protected material).
+-- src:1563 | (3) A person seeking to exercise either of the rights conferred by this section must make a request to the company to that effect.
+-- src:1564 | (4) The request must contain the following information—
+-- src:1565 | (a) in the case of an individual, his name and address;
+-- src:1566 | (b) in the case of an organisation, the name and address of an individual responsible for making the request on behalf of the organisation;
+-- src:1567 | (c) the purpose for which the information is to be used; and
+-- src:1568 | (d) whether the information will be disclosed to any other person, and if so—
+-- src:1569 | (i) where that person is an individual, his name and address,
+-- src:1570 | (ii) where that person is an organisation, the name and address of an individual responsible for receiving the information on its behalf, and
+-- src:1571 | (iii) the purpose for which the information is to be used by that person.
+@ref s 116 Rights to inspect and require copies (src:1557-1571)
+-- FORK: s 117(1) "a request under section 116" | a request is one under s 116 only if it carries the information s 116(4) requires and the person has the right at s 116(1) or (2) (the fee paid, where one is due) | any request at all starts the five working days, and the missing information is a ground for the court to refuse
+-- FORK: s 120A | where a restriction under s 120A applies the helper answers FALSE and no duty is encoded | the duty is as in s 117 and the restriction only narrows what is shown
+GIVEN request IS A `s 116(4) request for inspection or a copy`
+      `the request is to inspect the register` IS A BOOLEAN
+      `the person is a member of the company` IS A BOOLEAN
+      `the person pays the prescribed fee` IS A BOOLEAN
+      `a restriction imposed by regulations under section 120A (protected material) applies` IS A BOOLEAN
+GIVETH A BOOLEAN
+`ss 116-118 the company has received a request that section 116 allows` MEANS
+        (`s 116(4) the request contains the information that s 116(4) requires` request) EQUALS JUST TRUE
+    AND (IF `the request is to inspect the register`
+         THEN (IF `the person is a member of the company`
+               THEN (`s 116(1)(a) the register and the index of members' names must be open to the person's inspection without charge` `the person is a member of the company` `a restriction imposed by regulations under section 120A (protected material) applies`) EQUALS JUST TRUE
+               ELSE (`s 116(1)(b) the register and the index of members' names must be open to the person's inspection on payment of the prescribed fee` `the person is a member of the company` `the person pays the prescribed fee` `a restriction imposed by regulations under section 120A (protected material) applies`) EQUALS JUST TRUE)
+         ELSE (`s 116(2) the person may require a copy of the register of members or of any part of it` `the person pays the prescribed fee` `a restriction imposed by regulations under section 120A (protected material) applies`) EQUALS JUST TRUE)
+
+-- ---- s 117(1): comply or apply to the court, within five working days ---------------------------------------------------------
+
+-- src:1572 | 117	Register of members: response to request for inspection or copy
+-- src:1573 | (1) Where a company receives a request under section 116 (register of members: right to inspect and require copy), it must within five working days either—
+-- src:1574 | (a) comply with the request, or
+-- src:1575 | (b) apply to the court.
+@ref s 117(1) Response to a request: within five working days (src:1572-1575)
+-- TIMELINE: unit=working day; day 0=the day the company receives the request; counting="within five working days" (the Act fixes the period but does not say whether the day of receipt is counted, so the trace is built with day 0 as the day of receipt and day 5 as the fifth working day after it)
+-- FORK: s 117(1) "within five working days" | the last day is day 5, the fifth working day after the day of receipt | the day of receipt counts as day 1 and the last day is day 4
+-- FORK: s 117(1) "either (a) or (b)" | the two ways of answering are alternatives: either one meets the duty of s 117(1), and what follows an application is the three rules below (s 117(2), s 117(3)(a), s 117(5)), each run from its own day 0 | the company must also comply while the application is pending
+GIVEN request IS A `s 116(4) request for inspection or a copy`
+      `the request is to inspect the register` IS A BOOLEAN
+      `the person is a member of the company` IS A BOOLEAN
+      `the person pays the prescribed fee` IS A BOOLEAN
+      `a restriction imposed by regulations under section 120A (protected material) applies` IS A BOOLEAN
+GIVETH A DEONTIC `ss 116-118 party` `ss 116-118 act`
+`s 117(1) the company's duty to comply with a request or apply to the court` MEANS
+    IF (`s 117(1) the company must within five working days either comply with the request or apply to the court` (`ss 116-118 the company has received a request that section 116 allows` request `the request is to inspect the register` `the person is a member of the company` `the person pays the prescribed fee` `a restriction imposed by regulations under section 120A (protected material) applies`)) EQUALS JUST TRUE
+    THEN (   PARTY `ss 116-118 the company`
+             MUST `s 117(1)(a) the company complies with the request by allowing the inspection or providing the copy`
+             WITHIN 5
+             HENCE FULFILLED
+             LEST BREACH BY `ss 116-118 the company` BECAUSE "the company neither complied with the request nor applied to the court within five working days of receiving it (s 117(1)); a refusal or default in providing the copy is also an offence under s 118(1)")
+         ROR
+         (   PARTY `ss 116-118 the company`
+             MUST `s 117(1)(b) the company applies to the court`
+             WITHIN 5
+             HENCE FULFILLED
+             LEST BREACH BY `ss 116-118 the company` BECAUSE "the company neither complied with the request nor applied to the court within five working days of receiving it (s 117(1)); a refusal or default in providing the copy is also an offence under s 118(1)")
+    ELSE FULFILLED
+
+-- ---- s 117(2) to (5): what follows an application to the court ------------------------------------------------------------
+
+-- Why these are three rules and not the next step of the rule above. Measured on both binaries, in two attempts:
+-- (1) as the HENCE of the apply branch of the ROR, a company that had applied on day 2 and was waiting for the court printed, once the trace waited past day 5,
+--     `DEONTIC BREACHED: BREACH BY ... OR PARTY ...`: the lapsed comply alternative's breach beside the still-open court route (the same on both binaries,
+--     shown with a prelude-only ROR of `MUST a WITHIN 5` and `MUST b WITHIN 5 HENCE MUST c`, traced b on day 2 and then waited to day 30); a reader that classes
+--     a block by the prefix DEONTIC BREACHED reads that as BREACH;
+-- (2) with the court's outcomes written as MAY events in a ROR (the court directs / the court decides without directing / the proceedings are discontinued),
+--     a ROR does not commit to the branch whose event happened: a late compliance after the decision printed as the still-open `court MAY direct` instead of BREACH.
+-- So the court's outcome is an INPUT to each rule (as the Boolean layer already takes it), and each rule has its own day 0.
+
+-- src:1576 | (2) If it applies to the court it must notify the person making the request.
+@ref s 117(2) Notifying the person making the request (src:1576)
+-- TIMELINE: unit=working day; day 0=the day the company applies to the court; counting=silent (s 117(2) gives no time for the notice, so no clock runs: the notice stays owed until the trace shows it)
+GIVEN `the company applies to the court under section 117` IS A BOOLEAN
+GIVETH A DEONTIC `ss 116-118 party` `ss 116-118 act`
+`s 117(2) the company's duty to notify the person making the request` MEANS
+    IF (`s 117(2) the company must notify the person making the request` `the company applies to the court under section 117`) EQUALS JUST TRUE
+    THEN PARTY `ss 116-118 the company`
+         MUST `s 117(2) the company notifies the person making the request that it has applied to the court`
+         HENCE FULFILLED
+    ELSE FULFILLED
+
+-- src:1577 | (3) If on an application under this section the court is satisfied that the inspection or copy is not sought for a proper purpose—
+-- src:1578 | (a) it shall direct the company not to comply with the request, and
+-- src:1579 | (b) it may further order that the company's costs (in Scotland, expenses) on the application be paid in whole or in part by the person who made the request, even if he is not a party to the application.
+@ref s 117(3) The court shall direct the company not to comply, and the costs order (not encoded) (src:1577-1579)
+-- TIMELINE: unit=working day; day 0=the day the company applies to the court; counting=silent (the Act gives the court no time to decide, so no clock runs: the direction stays owed until the trace shows it)
+-- FORK: s 117(3)(a) "it shall direct" | the court's duty to direct is a MUST of the court, gated by the existing function on the court's own finding that the inspection or copy is not sought for a proper purpose (an input) | the direction is a power (MAY)
+-- not encoded: s 117(3)(b) (costs against the person who made the request) and s 117(4) (a direction covering other requests) are powers of the court that change neither this company's duty nor any time limit; they stay as Boolean functions in coa3-part8-inspection.l4
+GIVEN `an application is made under section 117` IS A BOOLEAN
+      `the court is satisfied that the inspection or copy is not sought for a proper purpose` IS A BOOLEAN
+GIVETH A DEONTIC `ss 116-118 party` `ss 116-118 act`
+`s 117(3)(a) the court's duty to direct the company not to comply` MEANS
+    IF (`s 117(3)(a) the court shall direct the company not to comply with the request` `an application is made under section 117` `the court is satisfied that the inspection or copy is not sought for a proper purpose`) EQUALS JUST TRUE
+    THEN PARTY `ss 116-118 the court`
+         MUST `s 117(3)(a) the court directs the company not to comply with the request`
+         HENCE FULFILLED
+    ELSE FULFILLED
+
+-- src:1580 | (4) If the court makes such a direction and it appears to the court that the company is or may be subject to other requests made for a similar purpose (whether made by the same person or different persons), it may direct that the company is not to comply with any such request.
+-- src:1581 | The order must contain such provision as appears to the court appropriate to identify the requests to which it applies.
+-- src:1582 | (5) If on an application under this section the court does not direct the company not to comply with the request, the company must comply with the request immediately upon the court giving its decision or, as the case may be, the proceedings being discontinued.
+@ref s 117(4)-(5) The court's wider direction (not encoded) and the company's duty to comply immediately (src:1580-1582)
+-- TIMELINE: unit=day of the event; day 0=the day the court gives its decision or the proceedings are discontinued; counting="immediately upon" (WITHIN 0: the company acts on that same day)
+-- FORK: s 117(5) "immediately" | the same day as the decision or the discontinuance | a short reasonable time after it
+-- FORK: s 117(5) "does not direct the company not to comply" | the court has not directed the company not to comply when it has not given the s 117(3)(a) direction; a discontinuance is read the same way (the court gives no direction) | the court's not directing means only that it found the purpose proper, and a discontinuance is a separate trigger
+GIVEN `the court directs the company not to comply with the request` IS A BOOLEAN
+      `the court has given its decision or the proceedings have been discontinued` IS A BOOLEAN
+GIVETH A DEONTIC `ss 116-118 party` `ss 116-118 act`
+`s 117(5) the company's duty to comply immediately` MEANS
+    IF (`s 117(5) the company must comply with the request immediately` (NOT `the court directs the company not to comply with the request`) `the court has given its decision or the proceedings have been discontinued`) EQUALS JUST TRUE
+    THEN PARTY `ss 116-118 the company`
+         MUST `s 117(1)(a) the company complies with the request by allowing the inspection or providing the copy`
+         WITHIN 0
+         HENCE FULFILLED
+         LEST BREACH BY `ss 116-118 the company` BECAUSE "the company did not comply with the request immediately upon the court giving its decision or the proceedings being discontinued (s 117(5)); a refusal or default is also an offence under s 118(1)"
+    ELSE FULFILLED
+
+-- ---- s 118(1): the offence of refusal or default ----------------------------------------------------------------------------------
+
+-- src:1583 | 118	Register of members: refusal of inspection or default in providing copy
+-- src:1584 | (1) If an inspection required under section 116 (register of members: right to inspect and require copy) is refused or default is made in providing a copy required under that section, otherwise than in accordance with an order of the court, an offence is committed by—
+-- src:1585 | (a) the company, and
+-- src:1586 | (b) every officer of the company who is in default.
+@ref s 118(1) Offence: refusal of inspection or default in providing a copy (src:1583-1586)
+-- TIMELINE: unit=none; day 0=not applicable; counting=silent ("is refused or default is made": the Act gives no time limit and no day on which a default is made, so no clock is encoded and the refusal or default is an event the trace supplies)
+-- FORK: s 118(1) "default is made" | the offence is encoded as a prohibition on the event "refuses the inspection or makes default in providing the copy", and the missed five working days of s 117(1) is a separate breach (it is not itself the event) | the missed five working days is the default
+-- FORK: s 118(1)(b) "every officer of the company who is in default" | a second prohibition on the officer, standing beside the company's (RAND), gated by the existing s 118(1) function with the officer's default as an input | the officer's liability is only a consequence of the company's breach
+GIVEN `the refusal or default is in accordance with an order of the court` IS A BOOLEAN
+GIVETH A DEONTIC `ss 116-118 party` `ss 116-118 act`
+`s 118(1)(a) the company's duty not to refuse an inspection or make default in providing a copy` MEANS
+    IF (`s 118(1) the person commits an offence` TRUE `the refusal or default is in accordance with an order of the court` Company (JUST TRUE)) EQUALS JUST TRUE
+    THEN PARTY `ss 116-118 the company`
+         SHANT `s 118(1) the company refuses the inspection or makes default in providing the copy`
+         HENCE FULFILLED
+         LEST BREACH BY `ss 116-118 the company` BECAUSE "the company refused an inspection or made default in providing a copy required under section 116, otherwise than in accordance with an order of the court: an offence under s 118(1)(a)"
+    ELSE FULFILLED
+
+-- TIMELINE: unit=none; day 0=not applicable; counting=silent (as for the company's prohibition above: s 118(1)(b) gives the officer no time either)
+GIVEN `the refusal or default is in accordance with an order of the court` IS A BOOLEAN
+      `s 1121 the officer is in default` IS A MAYBE BOOLEAN
+GIVETH A DEONTIC `ss 116-118 party` `ss 116-118 act`
+`s 118(1)(b) the officer's duty not to be in default in a refusal or default` MEANS
+    IF (`s 118(1) the person commits an offence` TRUE `the refusal or default is in accordance with an order of the court` `Officer in default` `s 1121 the officer is in default`) EQUALS JUST TRUE
+    THEN PARTY `ss 116-118 an officer of the company who is in default`
+         SHANT `s 118(1)(b) the officer is in default in the refusal or default`
+         HENCE FULFILLED
+         LEST BREACH BY `ss 116-118 an officer of the company who is in default` BECAUSE "the officer was in default in a refusal of inspection or a default in providing a copy required under section 116, otherwise than in accordance with an order of the court: an offence under s 118(1)(b)"
+    ELSE FULFILLED
+
+-- TIMELINE: unit=none; day 0=not applicable; counting=silent (the two prohibitions above, side by side, with no clock)
+GIVEN `the refusal or default is in accordance with an order of the court` IS A BOOLEAN
+      `s 1121 the officer is in default` IS A MAYBE BOOLEAN
+GIVETH A DEONTIC `ss 116-118 party` `ss 116-118 act`
+`s 118(1) the company and every officer in default` MEANS
+        (`s 118(1)(a) the company's duty not to refuse an inspection or make default in providing a copy` `the refusal or default is in accordance with an order of the court`)
+    RAND
+        (`s 118(1)(b) the officer's duty not to be in default in a refusal or default` `the refusal or default is in accordance with an order of the court` `s 1121 the officer is in default`)
+
+-- ---- s 118(3): the court may compel ------------------------------------------------------------------------------------------------
+
+-- src:1588 | (3) In the case of any such refusal or default the court may by order compel an immediate inspection or, as the case may be, direct that the copy required be sent to the person requesting it.
+@ref s 118(3) The court may compel inspection or direct that the copy be sent (src:1588)
+-- TIMELINE: unit=none; day 0=not applicable; counting=silent (the Act gives the court no time limit, so no clock is encoded: the power stays open until the trace shows it used)
+-- FORK: s 118(3) "any such refusal or default" | "such" carries the words "otherwise than in accordance with an order of the court", so the power does not arise where the refusal is in accordance with an order (the existing function for s 118(3) does not read it so) | any refusal or default
+GIVEN `an inspection required under section 116 is refused or default is made in providing a copy required under that section` IS A BOOLEAN
+      `the refusal or default is in accordance with an order of the court` IS A BOOLEAN
+GIVETH A DEONTIC `ss 116-118 party` `ss 116-118 act`
+`s 118(3) the court's power to compel an inspection or direct that the copy be sent` MEANS
+    IF (    (`s 118(3) the court may by order compel an immediate inspection or direct that the copy required be sent to the person requesting it` `an inspection required under section 116 is refused or default is made in providing a copy required under that section`) EQUALS JUST TRUE
+        AND (NOT `the refusal or default is in accordance with an order of the court`))
+    THEN PARTY `ss 116-118 the court`
+         MAY `s 118(3) the court orders an immediate inspection or directs that the copy be sent to the person requesting it`
+         HENCE FULFILLED
+    ELSE FULFILLED
