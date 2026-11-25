@@ -39,11 +39,13 @@ MAIN_TIMEOUT="${L4_MAIN_TIMEOUT:-300}"
 
 # Expected assertions satisfied and failed, per module. A module not listed has none of either.
 # ip-tests-red.l4 is the positive controls: every assertion in it is wrong on purpose and must fail
-# (encoding.json `expected_red`). Update these with the files.
+# (encoding.json `expected_red`). tests-independent.l4 is the independent test pass (NOTES.md
+# section 11). Update these with the files.
 expected_satisfied() {
   case "$1" in
-    ip-tests.l4) echo 53 ;;
-    ip-tests-boundaries.l4) echo 158 ;;
+    ip-tests.l4) echo 58 ;;
+    ip-tests-boundaries.l4) echo 164 ;;
+    tests-independent.l4) echo 152 ;;
     *) echo 0 ;;
   esac
 }
