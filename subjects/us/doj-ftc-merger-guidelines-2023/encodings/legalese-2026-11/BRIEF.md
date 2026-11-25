@@ -1,7 +1,7 @@
 # Brief: the 2023 Merger Guidelines (U.S. DOJ and FTC)
 
 Written 2026-11-25 by session Commons for one builder session.
-The common rules for both DOJ/FTC guideline encodings are in the common brief, `/Volumes/transcend/corpora/antitrust-caselaw-sizing-1125/guidelines/BRIEF-COMMON.md`, which is not in this repository.
+The common rules for both DOJ/FTC guideline encodings are in a common brief (`BRIEF-COMMON.md`) that session Commons wrote outside this repository.
 This file is this row's part of the brief, with the common rules that shaped the work restated briefly.
 
 ## Target

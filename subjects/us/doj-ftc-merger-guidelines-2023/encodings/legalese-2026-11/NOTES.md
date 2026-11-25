@@ -5,6 +5,8 @@ The Guidelines say of themselves that, "as a statement of the Agencies' law enfo
 Every result in this encoding says what the Agencies presume, infer, examine, credit or accept.
 No result says that a merger is lawful or unlawful, and none should be read as what a court must hold.
 
+**Seat:** the merging firms, and anyone advising them or affected by the merger, asking what the Agencies will presume, examine or credit. The Agencies are never the seat; their positions appear only as what they mean for the merger.
+
 ## 1. Status and what was checked
 
 Status: `draft`, version 0.1.0, written 2026-11-25 by a single builder session from the deposited text alone.
@@ -13,6 +15,7 @@ No independent test pass has been run yet; the brief says a fresh session will w
 Every expected value in the test modules was written from the text, or from a fixture built from the text's own definitions and stated as such in its comment.
 One expected value was wrong when first written, and the fault was mine, not the encoding's: a hand sum of a pre-merger HHI (2,850 for 2,950), corrected before commit.
 No assertion has been changed to match the code.
+A review before hand-back found one test too weak to catch its rule: the failing division test for a rejected offer asserted only that the answer was not `NOTHING`. It now asserts the whole finding, and a scratch copy with footnote 62's bar removed from the division rule fails it (`mg-tests.l4`, the assertion after "Footnote 62's bar applied to a division").
 
 The source is `registers/source-bundle/2023-merger-guidelines.txt`, a `pdftotext` extraction of the justice.gov PDF (sha256 in the `.meta.json` beside it).
 Page markers `[pdf page N of 51]` are the PDF's page index, not the printed page numbers.
@@ -23,7 +26,7 @@ No quotation here has been checked against the PDF itself.
 Target compiler: `main`, the stable 1.6.112.
 The modules use only syntax that build reads; there is no `REFUSE`, so an answer the text does not give is `NOTHING` from a `MAYBE`.
 
-`L4=<unstable l4> L4_MAIN=/Users/mengwong/.cache/l4-main/112/l4 ./check.sh`, run 2026-11-25, exit 0:
+`L4=<unstable l4> L4_MAIN=<main l4, 1.6.112> ./check.sh`, run 2026-11-25, exit 0:
 
 ```
 unstable: unstable-20261125-a50cbd0 (unstable, a50cbd0, 2026-11-25)
@@ -36,9 +39,9 @@ mg-rebuttal.l4             0/0/0/0                    0/0/0/0                   
 mg-test-fixtures.l4        0/0/0/0                    0/0/0/0                    0/0
 mg-tests-boundaries.l4     0/128/0/0                  0/128/0/0                  128/0
 mg-tests-red.l4            19/0/19/0                  19/0/19/0                  0/19
-mg-tests.l4                0/148/0/0                  0/148/0/0                  148/0
+mg-tests.l4                0/150/0/0                  0/150/0/0                  150/0
 mg-tools.l4                0/0/0/0                    0/0/0/0                    0/0
-assertions satisfied: unstable 276, main 276
+assertions satisfied: unstable 278, main 278
 check.sh: all passed
 ```
 
@@ -46,6 +49,7 @@ The stable `l4 run` exits 0 even when an assertion fails, so `check.sh` counts d
 It requires, per module, the expected number of satisfied and failed assertions on both builds, and for the red module that every error is one of its failures.
 
 The unstable build caught two precedence traps that the stable build accepts silently: `NOT (a) OR b` written on one line reads as `NOT (a OR b)`.
+Measured 2026-11-25 with a three-line probe: the stable 1.6.112 fails `#ASSERT NOT (FALSE) OR TRUE` and passes `#ASSERT (NOT (FALSE)) OR TRUE`, and the unstable build rejects the first with `check/not-reaches-connective`.
 Both were bracketed before commit (`mg-rebuttal.l4`, the monopoly clause of 3.3; `mg-tools.l4`, the critical loss guard).
 A stable-only check would not have found them.
 
@@ -74,7 +78,7 @@ Arithmetic is exact: L4 keeps rationals, so 10,000/6 is not 1,666.67.
 | `mg-rebuttal.l4` | 3.1 to 3.3, footnotes 31, 62, 64, 65, 70, 71 | 0 |
 | `mg-tools.l4` | 4.2.B, 4.3, 4.3.A to 4.3.D.2, 4.4.A, 4.4.B, footnotes 72, 84, 85 | 0 |
 | `mg-test-fixtures.l4` | builders for test inputs; not rules of the Guidelines | 0 |
-| `mg-tests.l4` | tests from the text | 148 satisfied |
+| `mg-tests.l4` | tests from the text | 150 satisfied |
 | `mg-tests-boundaries.l4` | both sides of every threshold, impossible inputs, properties | 128 satisfied |
 | `mg-tests-red.l4` | positive controls, each written wrong | 19 failed, as required |
 
@@ -125,7 +129,7 @@ Dispositions: `encoded`; `encoded (list)`, a typed list the caller supplies and 
 | 2.9 a market around one side; both sides only for a transaction platform | 25 | encoded | `the Agencies' reading under Guideline 9 of` |
 | 2.10 Guideline 10: effects on workers; benefits in another market not saving harm | 27-28 | encoded | fork G10-1 |
 | 2.10: concentration concerns "may be lower in labor markets" | 28 | inert | no figure given; open question 7 |
-| 2.11 Guideline 11: partial ownership, the three effects | 29-30 | inert | applies Guidelines 1 to 6, no test of its own; the kinds and effects are typed (`Kind of partial ownership`, `Effect of a partial acquisition`) for a caller |
+| 2.11 Guideline 11: partial ownership, the three effects | 29-30 | encoded (list) | `the Agencies' reading under Guideline 11 of`: the kinds and effects are reported; Guideline 11 has no test of its own and sends the analysis to Guidelines 1 to 6 |
 | after 2.11: mechanisms A, B and C "not covered above" | 30 | inert | examples of past cases, no test |
 | after 2.11: rebuttal evidence is examined under section 3 | 30 | inert | the rebuttal is section 3 |
 | 3 Rebuttal Evidence (introduction) | 31 | inert | framing |
@@ -143,7 +147,7 @@ Dispositions: `encoded`; `encoded (list)`, a typed list the caller supplies and 
 | 4.2.E Innovation and Product Variety | 40 | inert | describes evidence; no test |
 | 4.3 Market Definition (introduction) | 40-41 | inert | framing |
 | 4.3 tools A to D | 41-42 | encoded | `a relevant antitrust market is identified, by the tools of 4.3` |
-| 4.3 C practical indicia | 42 | encoded (list) | `Practical indicium`; no rule reads it ("may identify ... in different settings") |
+| 4.3 C practical indicia | 42 | inert | typed as `Practical indicium` for a caller, but no rule reads it ("Various practical indicia may identify a relevant market in different settings") |
 | 4.3.A The Hypothetical Monopolist Test | 42-43 | encoded | `the HMT answer for` |
 | 4.3.B Implementing the HMT: dimensions, input and labor, geography, negotiations, benchmark | 43 | inert | describes how the test is framed; no further test |
 | 4.3.B Magnitude of the SSNIPT; the pipeline's implicit price | 44 | encoded | `the SSNIP on a price of`; `the implicit price of the pipeline's service` |
@@ -164,7 +168,7 @@ Dispositions: `encoded`; `encoded (list)`, a typed list the caller supplies and 
 | 4.4 Calculating Market Shares and Concentration (introduction, three considerations) | 49-50 | inert | when structural measures are probative; no test |
 | 4.4.A Market Participants | 50-51 | encoded | `the firm's participation in the relevant market` |
 | 4.4.B Market Shares | 51 | encoded | `the market shares on the measure`, whose result is Guideline 1's input |
-| 4.4.B the listed metrics | 51 | encoded (list) | `Measure of market shares`; the choice is the caller's |
+| 4.4.B the listed metrics | 51 | inert | typed as `Measure of market shares` for a caller, but no rule reads it: the choice of metric is the caller's, and the arithmetic is the same for each |
 | fn 13 (five and six equal firms) | 6 | encoded | tested; fork G1-4 |
 | fn 14 (2ab) | 7 | encoded | tested |
 | fn 15 (history of the thresholds; the 1982 bands) | 7 | encoded | `the concentration band of an HHI of`; fork G1-5; history in section 8 |
@@ -192,7 +196,7 @@ Dispositions: `encoded`; `encoded (list)`, a typed list the caller supplies and 
 | fns 2, 8, 10, 11, 17, 27, 36, 42, 45, 46, 48, 52, 69, 73, 83, 86, 89, 92 | various | inert | explanation, definitions or scope (fn 8: remedies are outside the Guidelines); each read, none states a test |
 | fns 1, 3-7, 9, 18-20, 22, 24-26, 28, 29, 32-35, 38-41, 43, 44, 49, 50, 53, 54, 56-61, 63, 66-68, 74-81, 91 | various | inert | citations of statutes, cases and reports |
 
-Counts: 103 rows; `encoded` 54, `encoded, in part` 1, `encoded (list)` 11, `inert` 37, `out-of-scope` 0, `deferred` 0.
+Counts: 103 rows; `encoded` 54, `encoded, in part` 1, `encoded (list)` 10, `inert` 38, `out-of-scope` 0, `deferred` 0.
 Of the 103 rows, 26 are footnotes: 18 encoded, and 8 inert, of which the last two rows group 18 and 49 footnotes, so all 92 footnotes appear.
 Counted from this file with `awk` over the table's disposition column, 2026-11-25.
 
@@ -220,7 +224,7 @@ Every reading below was taken by this builder: assumed, not ruled.
 | G9-1 | 2.9 scenarios A to D and the paragraphs after | which kinds of platform competition each scenario engages | the mapping in `the platform competition Guideline 9 examines`; scenario B also engages competition on a platform |
 | G10-1 | 2.10 "not saved by benefits to competition among sellers"; 3.3 "benefits outside the relevant market" | identity of markets | a benefit is weighed only where it arises in the same market, compared by the caller's market name |
 | FF-1 | fn 62 "If a reasonable alternative offer was rejected, the parties cannot claim that the business is failing"; requirement C "offers that pose a less severe danger" | the bar applies to (a) any rejected reasonable offer; (b) only one less dangerous than the merger | (a), as fn 62 is written |
-| FF-2 | fn 62 "above the liquidation value ... will be regarded as a reasonable alternative offer" | an offer at or below liquidation value is (a) unreasonable; (b) unclassified | (b): when such an offer would decide the answer (it was rejected, or meets what the test asks of an offer), `NOTHING`; otherwise it is ignored |
+| FF-2 | fn 62 "above the liquidation value ... will be regarded as a reasonable alternative offer"; "Liquidation value is the highest value the assets could command outside the market" | an offer at or below liquidation value is (a) unreasonable; (b) unclassified | (b): when such an offer would decide the answer (it was rejected, or meets what the test asks of an offer), `NOTHING`; otherwise it is ignored. The liquidation value is the caller's figure |
 | FD-1 | fn 64 "reasonable alternative offers that would keep its assets in the relevant market" | fn 62's definition and bar apply to a division: (a) yes; (b) no | (a) |
 | EN-1 | 3.2 "replicate the scale, strength, and durability of one of the merging parties" | (a) one party on all three; (b) each dimension against any party | (a); tested with A's scale and strength and B's durability, which is not sufficient |
 | EN-2 | 3.2 "before any effect ... may occur" | strict or not; units | strictly before; the two times in one unit the caller chooses |
@@ -249,7 +253,7 @@ Each line says whether it was read at source in this row or only reported to thi
 - The 2023 text "consolidates, revises, and replaces the various versions of Merger Guidelines previously issued by the Agencies" (`[pdf page 5 of 51]`, printed page 4). Read at source. It does not list them.
 - Fn 15 gives the threshold history: the 1982 guidelines first used HHI thresholds (concentrated above 1,000, "moderately concentrated" between 1,000 and 1,800, "highly concentrated" above 1,800, an increase of 100 "significant"); the 1992 and 1997 Horizontal Merger Guidelines (s 1.51) kept them; the 2010 guidelines raised them; the 2023 Guidelines return to the originals. Read at source. The 2010 figures are not in this text and are not stated here.
 - 2020 Vertical Merger Guidelines: the FTC withdrew its approval on 15 September 2021. Reported to this builder, not read at source. A DOJ notice of December 2023 on their status was reported as ambiguous; not read.
-- 2000 Antitrust Guidelines for Collaborations Among Competitors: withdrawn on 11 December 2024. Reported to this builder from a search summary of an FTC press release that could not be fetched; not read at source. A public inquiry in early 2026 was reported; no replacement was found. These are not merger guidelines, and the "replaces" sentence above does not reach them.
+- 2000 Antitrust Guidelines for Collaborations Among Competitors: withdrawn on 11 December 2024. Reported to this builder from a search summary of an FTC press release that could not be fetched; not read at source. A public inquiry in early 2026 was reported; no replacement was found. Whether the "replaces" sentence above reaches them is open question 12.
 - The 2023 Guidelines remain in force: memoranda of the FTC Chair and of the DOJ of 18 February 2025 were reported to this builder, not read. The DOJ index page `https://www.justice.gov/atr/guidelines-and-policy-statements-0` listed them on 2026-11-25 (read by the parent session; `2023-merger-guidelines.meta.json` records the page as "Updated November 17, 2025").
 
 ## 9. Open questions for a domain expert
@@ -265,3 +269,4 @@ Each line says whether it was read at source in this row or only reported to thi
 9. Critical loss: is the constant-cost breakeven the computation the Agencies intend, or one of several? (TL-1)
 10. Should Guideline 1 accept shares that sum to 100 only after rounding, as fn 13's do? (G1-2)
 11. Does fn 87's and fn 90's "n.81" mean the hypothetical cartel of n.82? (finding 1)
+12. Which prior guidelines does the 2023 text's "consolidates, revises, and replaces the various versions of Merger Guidelines" reach? It names none, and the status of the 2020 Vertical Merger Guidelines and the 2000 Collaboration Guidelines was only reported to this builder (section 8).
