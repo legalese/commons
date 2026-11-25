@@ -39,7 +39,7 @@ Section 338א (the same sections apply to each class of security the offer cover
    `-- TIMELINE: unit=none stated beyond the month the DEONTIC for 341(ב) counts; day 0=the day the duty falls due (the end of a month from the notice, or after the court's ruling on an application then pending); counting="בתום חודש ימים מתאריך הודעתו" (the company's registration: "silent")`
 
 The clock of the six-month and one-month periods is the number of days from the start day to the same day of the month that many calendar months later (the last day of that month if it has no such day), and that last day is inside the period.
-A clock holds only a last day: a notice before the two months end is treated as in time (see the fork on 341(א)).
+The clock of 341(א) now starts when the two months end, so a notice before that day is not a step on this timeline (see the fork on 341(א)).
 In 341(ב) and (ג) an early step is not treated as in time: the offeror's duty is not open until the month lapses or the court has ruled, so an early copy and price are ignored and the duty stays open.
 
 ### Forks
@@ -52,7 +52,7 @@ In 341(ב) and (ג) an early step is not treated as in time: the offeror's duty 
 - `סעיף 338(ב)`: "no later than six months" includes the sixth month's own day, counted in calendar months to the same day of the month (the last day of the month where it has no such day); the other reading: six months of thirty days.
 - `סעיף 338(א)`: the court MAY fix the fair value ("רשאי") and does so only if it finds the consideration was below it; the other reading: a MUST once the finding is made.
 - `סעיף 338(א)`: where the court finds the consideration was not below fair value, no step remains and the DEONTIC ends FULFILLED, which means the Act lays down nothing further and not that the application succeeded; the other reading: an explicit refusal as an act of the court.
-- `סעיף 341(א)`: the notice is a MAY with a last day only: a notice before the two months end counts as in time (the clock holds no lower bound); the other reading: a notice before the end of the two months is outside the power.
+- `סעיף 341(א)`: the notice is a MAY whose window opens when the two months end (day 0) and closes one month later; a notice before the two months end is outside the power and is not a step on this timeline; the other reading: a notice before the two months end counts as in time (the clock holds no lower bound), the reading before the independent review.
 - `סעיף 341(א)`: the month after the two months is counted from the day the two months end (the offer day plus two calendar months), the last day inside, so a month-end clamp can apply twice (offer on 30 December 2026: the two months end on 28 February 2027, the last day is 28 March); the other reading: three calendar months from the offer day in one step (30 March), or counted from the day the shareholders' agreement reached the required rate.
 - `סעיף 341(ב)`: after the notice the dissenter's duty to sell and the offeror's duty to buy are two duties at once with no clock (a RAND), the court's relief being the other DEONTIC; the other reading: the duties arise only when the offeror's copy and price are sent.
 - `סעיף 341(ג)`: "בתום חודש ימים מתאריך הודעתו" is the day the duty falls due, as "לאחר שפסק בה בית המשפט" is for a pending application: the duty opens when the dissenter's month lapses unused or after the court's ruling, and has no last day, so a late copy and price are no breach; the other reading: a last day: a copy and price sent after the month are a breach by the offeror.
@@ -83,17 +83,17 @@ The places where this layer reads the text differently from the Boolean gate it 
 ### Which binary verified the traces
 
 The unstable binary (`l4-unstable-20261125-a50cbd0-darwin-arm64`) ran both modules with no error diagnostic and 5 of 5 assertions satisfied, and `expect_check.py` matched 44 of 44 traces.
-The stable binary (`~/.cache/l4-main/112/l4`) ran both modules with no error diagnostic and 5 of 5 assertions satisfied, and matched 37 of 44 traces; the seven that class differently are listed in the test file's `-- READS-DIFFERENTLY-ON-MAIN:` block and below.
+The stable binary (the stable build 112) ran both modules with no error diagnostic and 5 of 5 assertions satisfied, and matched 37 of 44 traces; the seven that class differently are listed in the test file's `-- READS-DIFFERENTLY-ON-MAIN:` block and below.
 The only warnings either binary prints for these files are the two import-resolution warnings about the user data directory's copies of `prelude` and `daydate`, which every module in the folder prints, including the existing derivative-claim module.
 The `srcrefs.py check --refs` run reports 20 `src:` lines, 12 locators and no problem.
 Three mutated copies were run on the unstable binary and deleted.
 The last was made from this final text: it ended the 341(ב) month's LEST in FULFILLED (so the 341(ג) duty never opens), made the 341(ב) month two months, and cut the 341(א) count to two months, and it turned 6 traces into mismatches, one for each of those three changes' effects (lines 160, 170, 180 and 212 for the 341(א) clock, line 230 for the 341(ב) month, line 237 for the missing opening).
 The first two copies were made on earlier text and turned 6 and 3 traces into mismatches (six months to five in 338, one month to two in 341(ב), `OR` to `AND` in 337(א), among others); they are not re-run on this text, except for the 341(ב) month, which the last copy repeats.
-The day counts in the tests (181, 181, 92, 88 and 28 days, and the 90-day count that the other reading of 341(א) would give) were worked out from the calendar with a date library, not from l4.
+The day counts in the tests (181, 181, 31, 28 and 28 days, and the 90-day count that the other reading of 341(א) would give) were worked out from the calendar with a date library, not from l4.
 
 ### READS-DIFFERENTLY-ON-MAIN
 
-Seven traces class as RESIDUAL on the stable binary where the unstable one gives FULFILLED: 338 with an application on day 182 (two traces) and with no application by day 200, 341(א) with a notice on day 93, on day 89 of the 30 December offer, and with no notice by day 100, and 341(ב) with an application on day 29 followed by the offeror's copy and the company's registration.
+Seven traces class as RESIDUAL on the stable binary where the unstable one gives FULFILLED: 338 with an application on day 182 (two traces) and with no application by day 200, 341(א) with a notice on day 32, on day 29 of the 30 December offer, and with no notice by day 40, and 341(ב) with an application on day 29 followed by the offeror's copy and the company's registration.
 All seven are a late act or a lapse of a MAY whose HENCE is a further step; the stable result is that further step left open.
 One more trace (341(ג), no application by day 100) is RESIDUAL on both, but the open step differs: the offeror's duty on the unstable binary, the court's step on the stable one.
 Every in-time trace and every gate-fails trace gives the same class on both binaries.
@@ -105,4 +105,21 @@ Every in-time trace and every gate-fails trace gives the same class on both bina
 - Sections 339 (the company becomes private) and 340(א) (dormant shares): each states a status that follows from the facts, with no act and no clock; the Boolean gates carry them.
 - Section 340(ב) is not a separate duty: it is the wording of the BREACH of the two prohibitions.
 - The count of disinterested offerees and section 276 (337(א)), the exclusion of the offeror's controllers from the 80 percent count (341(א)), and the change of the articles under sections 20 and 350 (341(ד), 342): inputs of the existing gates, outside this unit.
-- A lower bound on the offeror's notice (341(א): not before the two months end): the clock holds a last day only, so an earlier notice is treated as in time; the fork says so. The 341(ג) duty has none of this problem, because it is not open until the month lapses.
+- A step for a notice given before the two months end (341(א)): the window opens when the two months end, so an early notice is not a step on the timeline and no trace shows it.
+
+### Closed routes (not breaches)
+
+The convention for the whole procedure layer is assumed, not ruled: BREACH is kept only for a duty or a prohibition that the text lays on a named party.
+A power that lapses unused, a condition that is not met, a vote that fails and a route that has closed end FULFILLED, with the reason in a comment beside the branch and listed below.
+A step the Court is bound by may keep a BREACH BY the court; this unit has none.
+
+- 338(ב): the offeree's six months to apply for a valuation lapse unused: the LEST ends FULFILLED.
+- 341(א): the offeror's month to notify lapses unused: FULFILLED (the power is gone).
+- 341(ב): the dissenter's month to apply lapses unused: the lapse opens the offeror's 341(ג) duty, and is no breach.
+- 336(א) and 337(ב) are prohibitions on the offeror by name, so buying past ninety percent otherwise than as the text allows stays a BREACH BY the offeror (the statutory-duty breach of 340(ב)).
+
+### Changes after the independent review
+
+- `סעיף 341(א)` (IL-forced-sale-1, answer changed): the window opens when the two months end (src:2220 "בתוך חודש לאחר תום החודשיים האמורים"), so day 0 of that DEONTIC is the day the two months end and a notice before it is not a step; the eight 341(א) traces with an event or a wait after day 0 were re-timed (a notice on the last day is now day 31 for the 31 October offer and day 28 for the 30 December offer), and no EXPECT class changed.
+- `סעיף 341(ג)` (IL-forced-sale-2, not changed): where the court rules before the month ends the duty still opens at the ruling and not at the later of the month's end and the ruling. The text reads "אותה שעה" as the month's end (src:2222), but the clock of this DEONTIC cannot wait out the rest of the month after an early ruling, because the days left depend on the ruling's date, which is not known when the clock is set; so the reading stays, the fork says so, and the later reading needs a way to hold a step until a day.
+- The verification lines give the new day numbers.

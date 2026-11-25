@@ -32,7 +32,7 @@ It has six assertions in the test file, three true and three false, covering bot
 - `סעיף 129`: "open to inspection" is a power of any person to ask (a MAY) after which the company must let him inspect; the other reading is a standing prohibition on refusing, with no request step.
 - `סעיף 126(א)`: the entitlement to a copy is the company's MUST to give the copy once asked; the other reading is a bare cap on the price.
 - `סעיף 126(א)`: a copy given for a payment above the permitted one does not discharge the duty, which stays open; the other reading makes the excessive charge a breach.
-- `סעיף 126(א)`: for the two registers listed in section 124(7), whether the person is entitled to inspect stays an input although section 129 gives every person that right, so a caller asking for a copy of a register passes TRUE; the other reading derives the entitlement from section 129 for those two documents.
+- `סעיף 126(א)`: for the two registers listed in section 124(7) the entitlement to inspect is derived from section 129 (src:1017: every person may inspect them), so a caller asking for a copy of either needs no input for it; the other reading keeps the entitlement an input for every document, the reading before the independent review.
 
 ### What the text leaves silent
 
@@ -43,9 +43,9 @@ The tests instead cover: done; never done after a long wait (still open); and th
 
 ### How the traces were verified
 
-There are 25 traces and 6 assertions in `ic-proc-register-access-tests.l4`, every EXPECT written from the text before the trace was run.
-All 25 traces match on the unstable binary (`l4-unstable-20261125-a50cbd0`) and on the stable binary at `~/.cache/l4-main/112/l4`, and all 6 assertions are satisfied on both.
-Both binaries give zero error diagnostics and zero warnings on the module and its tests.
+There are 26 traces and 6 assertions in `ic-proc-register-access-tests.l4`, every EXPECT written from the text before the trace was run.
+All 26 traces match on the unstable binary (`l4-unstable-20261125-a50cbd0`) and on the stable binary (the stable build 112), and all 6 assertions are satisfied on both.
+Both binaries give zero error diagnostics and no warning of their own on the module and its tests (`l4 check` prints an import-resolution warning about two copies of `daydate` or `prelude` on this machine, which is a machine effect).
 The match counts come from a small script that reads the `-- EXPECT` line above each `#TRACE`, runs `l4 run` and compares the printed class; the script is not in this repository, so a reader without it can read each trace's `Result:` block by hand.
 The module's source quotations and `@ref` locators pass `srcrefs.py check --refs --strict` against the Wikisource text.
 A mutation check on the unstable binary, making the payment guard always true, made two traces fail.
@@ -63,3 +63,16 @@ This module has no MAY with a LEST and no clock, so none of the known difference
 ### Differences from the existing DEONTIC
 
 There is none to compare: the encoding has no DEONTIC for these sections before this layer.
+
+### Closed routes (not breaches)
+
+The convention for the whole procedure layer is assumed, not ruled: BREACH is kept only for a duty or a prohibition that the text lays on a named party.
+A power that lapses unused, a condition that is not met, a vote that fails and a route that has closed end FULFILLED, with the reason in a comment beside the branch and listed below.
+A step the Court is bound by may keep a BREACH BY the court; this unit has none.
+
+None. This unit has no BREACH and no LEST: the permissions to ask to inspect or for a copy have no clock and never lapse.
+
+### Changes after the independent review
+
+- `סעיף 126(א)`: for the two registers of 124(7) the entitlement to inspect is now derived from section 129, so a caller asking for a copy of either no longer passes the entitlement as an input; one trace was added (the register of shareholders with the entitlement input FALSE: the copy is still due, FULFILLED); no EXPECT changed.
+- The verification line says "no warning of their own" instead of "zero warnings", because `l4 check` prints an import-resolution warning about two copies of `daydate` on this machine.

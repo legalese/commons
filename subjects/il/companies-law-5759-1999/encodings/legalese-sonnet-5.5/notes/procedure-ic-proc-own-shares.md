@@ -13,7 +13,7 @@ The core's `חלוקה` already answers that, and the first DEONTIC calls it: tw
 
 All nine sit in `ic-proc-own-shares.l4`, under the heading for the section they carry.
 None is wired into `ic3-seat.l4`, because that would edit an existing module.
-Chained: the application to the court, then the notice to creditors and the court's decision side by side (a RAND), the decision opening the company's own distribution.
+Chained: the application to the court, then the notice to creditors, then the court's decision, which opens the company's own distribution.
 Chained: the subsidiary's board's determination, then the acquiring corporation's purchase.
 Separate, each run on its own once a forbidden distribution has been made (`בוצעה חלוקה אסורה` is an input): the shareholder's return (section 310) and the directors' deemed breach (section 311).
 
@@ -58,7 +58,8 @@ Because there is no clock, the tests have no "in time", "last day" or "after the
 
 - `סעיפים 302 ו־303`: the company's distribution is a MAY with no time limit; the other reading is a MUST.
 - `סעיף 302(ב)`: six months to the day is in time, and a month shorter than the statements' day counts as complete at its last day; the other reading makes the sixth month incomplete until the same day of the month.
-- `סעיף 303`: the notice to creditors and the court's decision run side by side after the application (a RAND); the other reading makes the decision wait for the notice.
+- `סעיף 302(ב)`: the six months are measured back from the distribution date (src:2009 "ממועד החלוקה"), so statements to 30 June are in time for a distribution on 31 December; the other reading counts forward from the statements' date and rounds up, which gives seven and fails the profit test.
+- `סעיף 303`: the court's decision follows the notice to creditors (src:2017, 2019 and 2020 presuppose it), so an approval given before any notice does not count and the duty to notify stays open; the other reading runs the two side by side (a RAND), the reading before the independent review.
 - `סעיף 303(א)`: the company may apply whenever the profit test is not met, whatever the solvency position; the other reading limits the application to a company whose solvency test is met.
 - `סעיף 303(ב)`: a notice not in the manner the Minister sets does not discharge the duty; the other reading lets any notice discharge it.
 - `סעיף 303(ד)`: the hearing of the objecting creditors is a condition of all three of the court's decisions; the other reading attaches it to approval only.
@@ -90,16 +91,16 @@ Because there is no clock, the tests have no "in time", "last day" or "after the
 
 ### How the traces were verified
 
-There are 44 traces in `ic-proc-own-shares-tests.l4` and 15 `#ASSERT` lines (the month count, the profit test from dates, the amount counted against the parent's capacity, and section 1's definition), every EXPECT written from the text before the trace was run.
-All 44 traces match on the unstable binary (`l4-unstable-20261125-a50cbd0`), and all 15 assertions are satisfied.
-Both binaries give zero error diagnostics and zero warnings on the module and its tests.
+There are 44 traces in `ic-proc-own-shares-tests.l4` and 18 `#ASSERT` lines (the month count, the profit test from dates, the amount counted against the parent's capacity, and section 1's definition), every EXPECT written from the text before the trace was run.
+All 44 traces match on the unstable binary (`l4-unstable-20261125-a50cbd0`), and all 18 assertions are satisfied.
+Both binaries give zero error diagnostics and no warning of their own on the module and its tests (`l4 check` prints an import-resolution warning about two copies of `daydate` or `prelude` on this machine, which is a machine effect).
 Each prints two import-resolution notices (the machine's own copies of `prelude` and `daydate` differ from the embedded ones); they are not diagnostics of these files.
-The stable binary is the one at `~/.cache/l4-main/112/l4`: all 44 traces match on it as well, and all 15 assertions are satisfied.
+The stable binary is the stable build 112: all 44 traces match on it as well, and all 18 assertions are satisfied.
 How a trace is classed: FULFILLED is exactly `FULFILLED`; BREACH is a `DEONTIC BREACHED`; RESIDUAL is any obligation or permission still open.
 An act whose proviso fails does not count and the step stays open, so a refusal without a hearing, an approval without the court's satisfaction on solvency, a conditional distribution before the conditions are met, a purchase before the determination, and a notice in the wrong manner each end RESIDUAL.
 
 Two mutated scratch copies were run on the unstable binary and deleted.
-The first changed the six-month limit in a Boolean helper (since removed, because the profits rule already carries the limit) and made the notice and the court's decision an alternative instead of side by side: five traces failed, all from the second change, so the side-by-side joining is tested.
+The first changed the six-month limit in a Boolean helper (since removed, because the profits rule already carries the limit) and made the notice and the court's decision an alternative instead of side by side: five traces failed, all from the second change, so the joining was tested (the layer has since chained the decision after the notice, see below).
 The second dropped the notice's manner proviso and set 309(ד) aside: one trace failed (the part-owned subsidiary at exactly the parent's capacity), and it showed that the notice-manner trace had no teeth, since it ended RESIDUAL either way.
 After that run the manner trace was extended to include the court's refusal, and the trace for an approval when the court is not satisfied on solvency was extended to include the company's distribution; both were re-run against the real module (they match) but not against a new mutant.
 
@@ -125,3 +126,20 @@ There is none: the encoding had no DEONTIC for these provisions, so there is not
 - Section 310(ב): the presumption that a public company's ordinary shareholder did not know is evidence, not an act; it is called through `סעיף 310(ב)` and decides whether the duty in section 310(א) arises.
 - Section 311: the director's proof of one of the three defences is not a step; it is an input.
 - A purchase by the subsidiary or the acquiring corporation is itself the parent's distribution (section 1); the parent's own run of the procedure is how its capacity (`היקף החלוקה שהחברה האם רשאית לבצע`) is established, and it is an input to section 309(א).
+
+### Closed routes (not breaches)
+
+The convention for the whole procedure layer is assumed, not ruled: BREACH is kept only for a duty or a prohibition that the text lays on a named party.
+A power that lapses unused, a condition that is not met, a vote that fails and a route that has closed end FULFILLED, with the reason in a comment beside the branch and listed below.
+A step the Court is bound by may keep a BREACH BY the court; this unit has none.
+
+- 303(ד): a refusal by the court ends the route with FULFILLED (no step remains, not that the distribution was approved).
+- 302(א) and 303(א): where the profit test is met but the solvency test is not, the Act gives no route and the DEONTIC ends FULFILLED.
+- 308 and 309: cancelling, re-selling, converting and buying are powers with no clock and no breach.
+- 311 is a deemed breach laid on directors by name, so it stays a BREACH BY the director.
+
+### Changes after the independent review
+
+- `סעיף 302(ב)` (IL-own-shares-1, answer changed for month-end statements): the six months are now measured back from the distribution date; the helper caps the count at six when the statements' date is on or after the date six calendar months before the distribution and gives at least seven otherwise; three assertions were added (30 June to 31 December is six, 30 September to 31 March is six, 29 June to 31 December is seven); no trace EXPECT changed.
+- `srcrefs --strict` (IL-own-shares-2): the six problems were fixed by quoting src:2007 above its `@ref`, narrowing the 301 to 303 locator to src:2002-2016, quoting src:2051-2053 and widening the 309 locator to src:2049-2053, and adding src:2052 to the 310 locator; the result is 0 problems.
+- `סעיף 303` (IL-own-shares-3): the court's decision now follows the notice, so an approval before any notice does not count; no EXPECT changed (the trace that approves before any notice already ended RESIDUAL), and its scenario comment now says why.

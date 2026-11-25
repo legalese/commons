@@ -26,7 +26,7 @@ The consequence of a missed 45-day answer (section 197(4)) is not chained: it is
 ### Forks
 
 - `סעיף 194(ב)`: the plaintiff's delivery of a compliant demand is a MAY with no time limit; the other reading is a MUST ("יפנה").
-- `סעיף 196`: the day of receipt is day 0 and the forty-fifth day is in time (the encoding's existing fork F1); the other reading makes the day of receipt day 1.
+- `סעיף 196`: the day of receipt is day 0 and the forty-fifth day is in time (fork F1 of `NOTES-ic4.md`, borrowed here); the other reading makes the day of receipt day 1.
 - `סעיף 196`: an answer that is not a section 195 way (a rejection without reasons) or lacks what section 196 requires does not count, so the 45 days run on; the other reading lets it discharge the duty.
 - `סעיף 196`: a missed answer is a terminal BREACH BY the company, and the plaintiff's route is the third DEONTIC on its own; the other reading chains the breach into the route and so hides it.
 - `סעיף 197(3)`: the company's filing within 75 days is a MAY whose lapse opens the plaintiff's route; the other reading is a MUST with the route as the consequence of its breach.
@@ -46,8 +46,8 @@ The consequence of a missed 45-day answer (section 197(4)) is not chained: it is
 
 There are 68 traces in `ic-proc-derivative-claim-tests.l4`, every EXPECT written from the text before the trace was run.
 All 68 match on the unstable binary (`l4-unstable-20261125-a50cbd0`).
-Both binaries give zero error diagnostics and zero warnings on the module and its tests.
-The stable binary is the one at `~/.cache/l4-main/112/l4`: 62 of the 68 match on it and 6 differ.
+Both binaries give zero error diagnostics and no warning of their own on the module and its tests (`l4 check` prints an import-resolution warning about two copies of `daydate` or `prelude` on this machine, which is a machine effect).
+The stable binary is the stable build 112: 62 of the 68 match on it and 6 differ.
 The match counts come from a small script that reads the `-- EXPECT` line above each `#TRACE`, runs `l4 run` and compares the printed class (FULFILLED, BREACH, or RESIDUAL for anything still open); the script is not in this repository, so a reader without it can read each trace's `Result:` block by hand.
 The module's source quotations and `@ref` locators pass `srcrefs.py check --refs --strict` against the Wikisource text.
 
@@ -74,3 +74,19 @@ A mutation check was run on the unstable binary: removing the `PLUS 1` that turn
 ### Differences from the existing DEONTIC
 
 There is none to compare: the encoding has no DEONTIC for these sections before this layer.
+
+### Closed routes (not breaches)
+
+The convention for the whole procedure layer is assumed, not ruled: BREACH is kept only for a duty or a prohibition that the text lays on a named party.
+A power that lapses unused, a condition that is not met, a vote that fails and a route that has closed end FULFILLED, with the reason in a comment beside the branch and listed below.
+A step the Court is bound by may keep a BREACH BY the court; this unit has none.
+
+- 197(3): the company's seventy-five days to file are a power; when they lapse unused the LEST opens the plaintiff's route (197(4)), and that is no breach.
+- 198: the plaintiff's request to the court, and the court's approval or refusal, are powers; none ends in a breach.
+- The forty-five days of 196 are a duty on the company by name, so a missed answer stays a BREACH BY the company.
+
+### Changes after the independent review
+
+- The counting rule ("within N days" includes the Nth day) is the fork F1 of `NOTES-ic4.md`, scoped there to the Part 8 sections and borrowed here for sections 196 and 197(3); the module and these notes no longer cite a fork F1 of `NOTES.md`, which has none.
+- A new fork: the day the plaintiff delivers the demand is the day the company receives it, because the text counts from receipt (src:1372) and delivery equals receipt only by convention; no answer changed.
+- The verification line says "no warning of their own" instead of "zero warnings".

@@ -47,7 +47,7 @@ The text does not say whether "days" are calendar days or working days; the cloc
 Each is also a `-- FORK:` line above its DEONTIC.
 
 - `סעיף 316`: the boards' duty to draw up and sign is a MUST with no clock; the other reading is that the sentence states no duty.
-- `סעיף 317(א)`: the day of convening is day 0 and the third day is in time (the encoding's existing fork F1); the other reading makes the day of convening day 1.
+- `סעיף 317(א)`: the day of convening is day 0 and the third day is in time (fork F1 of `NOTES-ic4.md`); the other reading makes the day of convening day 1.
 - `סעיף 318(א)`: the day of delivery to the registrar is day 0 and "לא יאוחר משלושה ימים" includes the third day; the other reading makes the third day late.
 - `סעיפים 317(א), 318(א)`: the convening is a MAY with no clock, present only to stamp the day the count starts; the other reading is a duty to convene, which these sections do not state.
 - `סעיף 318(א)`: a missed three-day duty is a terminal BREACH, and the sending to the secured creditors follows only a timely delivery to the registrar; the other reading chains the duty to send after a late delivery as well, so that it survives the breach.
@@ -62,7 +62,7 @@ Each is also a `-- FORK:` line above its DEONTIC.
 - `סעיף 321(ב)`: "לא יאשר ... אלא אם כן שוכנע" is a bar, and the court MAY (not MUST) declare the approval once convinced; the other reading is a MUST.
 - `סעיף 322`: the Commissioner's notice, an event under another Act, is put in the trace as the Commissioner's MAY act stamped on the day the company receives it; the other reading takes the day as an input.
 - `סעיף 322`: the duty arises on any notice from the Commissioner; the other reading limits it to a notice that bears on the merger.
-- `סעיף 323`: the thirty and fifty days are a gate on the registrar's duties and the elapsed days are inputs, one per company, with an exact thirty and an exact fifty enough (the encoding's existing fork F6); the other reading is a prohibition that lasts until a computed day.
+- `סעיף 323`: the thirty and fifty days are a gate on the registrar's duties and the elapsed days are inputs, one per company, with an exact thirty and an exact fifty enough (fork F6 of `NOTES-ic4.md`); the other reading is a prohibition that lasts until a computed day.
 - `סעיפים 322, 323`: while notice of a prevention or delay stands at the registrar, the registrar's duties under 323 do not arise; the other reading lets the bar forbid only the companies and leaves the registrar's steps due.
 - `סעיף 323(3)-(5)`: the registrar's three steps are three MUSTs due together in any order (a RAND); the other reading chains one after another.
 
@@ -80,7 +80,7 @@ Two readings differ from the Boolean encoding's own comments and are worth the n
 
 ### Which binary verified the traces
 
-Both. With the unstable build `l4-unstable-20261125-a50cbd0` and with the stable build 112 (`~/.cache/l4-main/112/l4`), run from this folder with `JL4_LIBRARY_PATH` unset: `ic-proc-merger.l4` and `ic-proc-merger-tests.l4` print no error and no warning of their own, and `expect_check.py` matches 43 of 43 traces on each.
+Both. With the unstable build `l4-unstable-20261125-a50cbd0` and with the stable build 112, run from this folder with `JL4_LIBRARY_PATH` unset: `ic-proc-merger.l4` and `ic-proc-merger-tests.l4` print no error and no warning of their own, and `expect_check.py` matches 43 of 43 traces on each.
 (The one message the binaries print, about two copies of `prelude` in the embedded library and the XDG data directory, comes from the machine and is the same for every module in the folder.)
 There is no new Boolean helper, so the tests carry no `#ASSERT`.
 Two mutated copies, since deleted, were run as a sensitivity check: widening the delivery clock of 317(א) from three days to four failed two traces, and dropping the section 322 bar from the registrar's gate failed one.
@@ -98,3 +98,19 @@ The module has no MAY with a LEST, no RAND of two breaches and no act after a wa
 - Section 320(ג) to (ו) (the special vote where shares are held by the other merging company or a holder of a quarter of its control) and the class meetings of 320(ב): these set the majority needed, not a step or a clock; they are inputs to the general meeting's decision and stay in the Boolean encoding.
 - Sections 324 (freedom to contract), 325 and 327(ב) (floating charges), 326 (regulations) and 327(א) (a transitional majority): no step with a clock; sections 324 to 327 state none.
 - Section 315 (the board's duty to weigh the absorbing company's ability to pay creditors) lies before section 316 and outside the units here.
+
+### Closed routes (not breaches)
+
+The convention for the whole procedure layer is assumed, not ruled: BREACH is kept only for a duty or a prohibition that the text lays on a named party.
+A power that lapses unused, a condition that is not met, a vote that fails and a route that has closed end FULFILLED, with the reason in a comment beside the branch and listed below.
+A step the Court is bound by may keep a BREACH BY the court; this unit has none.
+
+No power in this unit ends in a breach: the creditor's application (319), the shareholders' application (321(ב)) and the court's own steps are MAYs with no clock.
+The three-day duties of 317(א), 318(א), 317(ב) (both the general meeting's decision and the court's) and 322 are laid on the merging company by name, so a lapse stays a BREACH BY the company.
+No step has a BREACH BY the court.
+
+### Changes after the independent review
+
+- The forks F1 and F6 are cited as forks of `NOTES-ic4.md`, where they are, and no longer as forks of `NOTES.md`, which has neither.
+- Not encoded: a step whose clock the text does not state. The delivery duty of 317(א) opens only after the MAY of convening a general meeting, so a merging company whose merger needs no approval of its general meeting (src:2109, the target company wholly owned and controlled by the absorbing company) has no route to deliver its proposal in this layer, although src:2128 counts the fifty days "מהמועד שבו הומצאו הצעות המיזוג לרשם" for every merging company; the text names no starting event for that delivery, so none is encoded.
+- The verification line says "no warning of their own" where it said "zero warnings".
