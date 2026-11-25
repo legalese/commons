@@ -13,6 +13,9 @@
 # read from the diagnostics, the line after every "Message:" included: errors (DiagnosticSeverity_Error), assertions
 # satisfied, assertions failed (or that could not be evaluated), assertions refused.
 #
+# tests-independent.l4 is the independent test pass (NOTES.md section 10): written by another author from the text, and
+# not edited by this encoding's builder.
+#
 # mg-tests-red.l4 holds positive controls: assertions written to be wrong, so that the harness is shown able to fail.
 # Its failures are expected, counted below, and each is also an error diagnostic; any other error makes the run red.
 #
@@ -27,9 +30,10 @@ MAIN="${L4_MAIN:-}"
 # Expected assertions satisfied and failed, per module; a module not listed has none. Update with the files.
 expected_satisfied() {
   case "$1" in
-    mg-tests.l4) echo 150 ;;
-    mg-tests-boundaries.l4) echo 128 ;;
+    mg-tests.l4) echo 155 ;;
+    mg-tests-boundaries.l4) echo 138 ;;
     mg-tests-red.l4) echo 0 ;;
+    tests-independent.l4) echo 291 ;;
     *) echo 0 ;;
   esac
 }
