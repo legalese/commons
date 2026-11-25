@@ -1,0 +1,319 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `ic-core`
+IMPORT `ic-core-company-kinds`
+IMPORT `ic-core-securities`
+IMPORT `ic3-part7-ch2-distributions`
+
+-- ic-proc-own-shares: the procedure the Israeli Companies Law, 5759-1999 (חוק החברות, התשנ״ט–1999) lays down for a distribution, which by section 1 includes the company's purchase of its own shares, sections 301 to 311.
+-- A regulative layer over the Boolean encoding in ic3-part7-ch2-distributions.l4: the profit and solvency tests, the court route and its notice to creditors, the shares and securities a company has bought, a purchase by a controlled corporation, restitution and the directors' liability.
+-- Source: the Hebrew Wikisource raw text (an unofficial consolidation, not the official text); each `-- src:N |` line copies line N of it.
+-- Section 1 (src:209) defines "חלוקה" (distribution) as giving a dividend or undertaking to give it, "וכן רכישה": the purchase, by the company or a subsidiary or another corporation it controls, of the company's own shares or of securities convertible into or exercisable for them, provided that the seller is not the company itself or a corporation it wholly owns.
+-- So a company's purchase of its own shares from a shareholder is a distribution and goes through sections 302 and 303 like a dividend; a purchase from the company itself or from a wholly owned corporation is not a distribution. The core's `חלוקה` answers that, and the procedure below calls it.
+-- The Boolean gates (the tests, the court's power, the creditors' hearing, the buy-back rules, the return, the directors' deemed breach) are called, not restated.
+-- The L4 timeline is a bare integer line with no calendar. This part of the Act sets no time limit on any act of a party, so no clock is encoded and an open step is never a breach.
+-- The one period in these sections is the six months in section 302(ב): the date to which the financial statements are made up may not be earlier than six months before the distribution. That is a look-back between two dates and not a deadline, so it is a Boolean gate computed from two DATE inputs, not a clock.
+-- Chained or separate: the application, the notice to creditors and the court's decision are chained (the notice and the decision run side by side after the application); the return under section 310 and the directors' deemed breach under section 311 are NOT chained to the distribution: each is run on its own once a forbidden distribution has been made.
+
+§ `הליך החלוקה, הרכישה והחלוקה האסורה: סעיפים 301 עד 311`
+
+§§ `הצדדים והפעולות`
+
+-- The parties the text names: the company; the court; a creditor; a shareholder; the board of the subsidiary or the managers of the acquiring corporation (section 309(א)); the acquiring corporation;
+-- the directors of the company, of the subsidiary or the managers of the acquiring corporation, and of the parent (sections 309(ג) and 311).
+DECLARE `גורם בחלוקה` IS ONE OF
+    `החברה בחלוקה`
+    `בית המשפט בחלוקה`
+    `נושה של החברה בחלוקה`
+    `בעל מניה בחלוקה`
+    `הדירקטוריון של החברה הבת או מנהלי התאגיד הרוכש`
+    `התאגיד הרוכש בחלוקה`
+    `דירקטור בחברה שבוצעה בה חלוקה אסורה`
+    `דירקטור בחברה הבת או מנהל בתאגיד הרוכש`
+    `דירקטור בחברה האם`
+
+-- The acts the text names: the company's distribution (302(א)), its application to the court (303(א)), its notice to its creditors (303(ב)), a creditor's objection (303(ג)),
+-- the court's approval, conditional approval or refusal (303(ד)), cancelling a share or securities it bought, selling the securities again, converting or exercising them (308),
+-- the subsidiary's board determining that the purchase would have been a permitted distribution and the acquiring corporation then buying (309(א)), and a shareholder returning what he received (310(א), 309(ג)).
+DECLARE `פעולה בחלוקה` IS ONE OF
+    `החברה מבצעת את החלוקה`
+    `החברה מבקשת מבית המשפט לאשר חלוקה`
+    `החברה מודיעה לנושיה על הבקשה`
+    `נושה מתנגד לבקשה`
+    `בית המשפט מאשר את הבקשה כולה או חלקה`
+    `בית המשפט מאשר את הבקשה בתנאים`
+    `בית המשפט דוחה את הבקשה`
+    `החברה מבטלת את המניה שרכשה`
+    `החברה מבטלת את ניירות הערך שרכשה`
+    `החברה חוזרת ומוכרת את ניירות הערך שרכשה`
+    `החברה ממירה או מממשת את ניירות הערך למניות`
+    `הדירקטוריון או המנהלים קובעים שהרכישה היתה חלוקה מותרת אילו בוצעה בידי החברה האם`
+    `התאגיד הרוכש רוכש מניות או ניירות ערך של החברה האם`
+    `בעל מניה משיב לחברה את שקיבל`
+    `בעל מניה משיב לחברה הבת או לתאגיד הרוכש את שקיבל`
+
+§§ `סעיף 302: מבחן הרווח ומועד הדוחות`
+
+-- Section 302(ב), in the definition of "profits": the date to which the financial statements were made up may not be earlier than six months before the distribution.
+-- The count is in whole calendar months and rounds up: it is the number of months from the statements' date to the distribution's date, plus one if the distribution's day of the month is later than the statements' day.
+-- So six months to the day is six (in time), and six months and a day is seven (too early). The existing profits rule `סעיף 302(ב) - רווחים לענין מבחן הרווח` asks for "at most 6" months, so this count is what it is given and the six-month limit itself stays in that rule.
+-- FORK: סעיף 302(ב) | six months exactly (to the day) is in time, and a month shorter than the statements' day counts as complete at its last day (31 December to 30 June is six months) | the sixth month is not yet complete, so a distribution on 30 June is already too late for statements made up to 31 December
+-- src:2009 | {{ח:תת|סוג=הגדרה}} ”רווחים“, לענין מבחן הרווח – יתרת עודפים או עודפים שנצברו בשנתיים האחרונות, לפי הגבוה מבין השניים, והכל על פי הדוחות הכספיים המותאמים האחרונים, המבוקרים או הסקורים, שערכה החברה, תוך הפחתת חלוקות קודמות אם לא הופחתו כבר מן העודפים, ובלבד שהמועד שלגביו נערכו הדוחות אינו מוקדם ביותר מששה חודשים ממועד החלוקה;
+@ref סעיף 302(ב) רווחים (src:2009)
+GIVEN `מועד הדוחות` IS A DATE
+      `מועד החלוקה` IS A DATE
+GIVETH A NUMBER
+`סעיף 302(ב) - מספר החודשים שבין מועד הדוחות למועד החלוקה, מעוגל כלפי מעלה` MEANS
+    ((((DATE_YEAR `מועד החלוקה`) TIMES 12) PLUS (DATE_MONTH `מועד החלוקה`)) MINUS (((DATE_YEAR `מועד הדוחות`) TIMES 12) PLUS (DATE_MONTH `מועד הדוחות`))) PLUS (IF (DATE_DAY `מועד החלוקה`) GREATER THAN (DATE_DAY `מועד הדוחות`) THEN 1 ELSE 0)
+
+-- The profit test of section 302(א), with the profits of section 302(ב) worked out from the two dates: when the statements are too old the profits rule answers NOTHING and the test is not met.
+@ref סעיף 302(א) מבחן הרווח (src:2007)
+GIVEN `סכום החלוקה` IS A NUMBER
+      `יתרת העודפים` IS A NUMBER
+      `העודפים שנצברו בשנתיים האחרונות` IS A NUMBER
+      `חלוקות קודמות שטרם הופחתו מן העודפים` IS A NUMBER
+      `הדוחות הם האחרונים` IS A BOOLEAN
+      `מועד הדוחות` IS A DATE
+      `מועד החלוקה` IS A DATE
+GIVETH A BOOLEAN
+`סעיף 302(א) - החלוקה מקיימת את מבחן הרווח לפי מועד הדוחות` MEANS
+    `סעיף 302(א) - החלוקה מקיימת את מבחן הרווח` `סכום החלוקה` (`סעיף 302(ב) - רווחים לענין מבחן הרווח` `יתרת העודפים` `העודפים שנצברו בשנתיים האחרונות` `חלוקות קודמות שטרם הופחתו מן העודפים` `הדוחות הם האחרונים` (`סעיף 302(ב) - מספר החודשים שבין מועד הדוחות למועד החלוקה, מעוגל כלפי מעלה` `מועד הדוחות` `מועד החלוקה`))
+
+§§ `סעיף 303: חלוקה באישור בית משפט`
+
+-- The notice to creditors (303(ב)): the company notifies its creditors of the filing of the application, in the manner the Minister sets.
+-- The text gives no time for the notice and the 2001 regulations on the manner are not among the sources, so the manner is a plain input and no clock is encoded: the duty stays open until a notice in that manner is given, and is never a breach.
+-- FORK: סעיף 303(ב) | the notice does not discharge the duty unless it is in the manner the Minister sets (a notice in another manner leaves the duty open) | any notice discharges it and the manner is only a defect
+-- TIMELINE: unit=none stated; day 0=the day the company's application is filed; counting="silent"
+-- src:2017 | {{ח:תת|(ב)}} חברה תודיע לנושיה על הגשת בקשה לבית המשפט כאמור בסעיף קטן (א) באופן שיקבע השר.
+-- src:2018 | {{ח:תת}} {{ח:הערה|פורסמו {{ח:חיצוני|תקנות החברות (אישור חלוקה)|תקנות החברות (אישור חלוקה), התשס״א–2001}}.}}
+@ref סעיף 303(ב) הודעה לנושים (src:2017-2018)
+GIVEN `ההודעה לנושים ניתנה באופן שקבע השר` IS A BOOLEAN
+GIVETH A DEONTIC `גורם בחלוקה` `פעולה בחלוקה`
+`סעיף 303(ב) - ההודעה לנושים על הבקשה` MEANS
+    PARTY `החברה בחלוקה`
+    MUST `החברה מודיעה לנושיה על הבקשה`
+    PROVIDED `ההודעה לנושים ניתנה באופן שקבע השר`
+    HENCE FULFILLED
+
+-- The court's decision (303(א), (ד)): after giving the creditors who objected an opportunity to be heard, the court may approve the application in whole or in part, reject it, or condition its approval.
+-- Approval needs the court to be satisfied that the solvency test is met (303(א)); rejection does not. After an approval the company may carry out the distribution; after an approval on conditions, only once the conditions are met.
+-- The text gives no time within which the court decides: no clock is encoded for the court.
+-- FORK: סעיף 303(ד) | the hearing of the objecting creditors is a condition of every one of the court's three decisions (approve, condition, reject): "לאחר שנתן לנושים שהתנגדו הזדמנות להשמיע את טענותיהם" governs the whole list | the hearing governs only the approval
+-- FORK: סעיף 303(ד) | the court's approval "in whole or in part" is one act; the part approved is the court's decision and is not computed | one act for approval in whole and another for approval in part
+-- FORK: סעיף 303 | a refusal is an act of the court (it ends the route with the company not permitted to distribute); the DEONTIC ends FULFILLED, which means no step remains and not that the distribution was approved | the refusal is not an act the text names and the route simply stays open
+-- TIMELINE: unit=none stated; day 0=the day the company's application is filed; counting="silent"
+-- src:2016 | {{ח:תת|(א)}} בית המשפט רשאי, לבקשת חברה, לאשר לה לבצע חלוקה שלא מקיימת את מבחן הרווח, ובלבד ששוכנע שמתקיים מבחן יכולת הפירעון.
+-- src:2020 | {{ח:תת|(ד)}} בית המשפט רשאי, לאחר שנתן לנושים שהתנגדו הזדמנות להשמיע את טענותיהם, לאשר את בקשת החברה, כולה או חלקה, לדחותה או להתנות את אישורו בתנאים.
+@ref סעיף 303(א), (ד) החלטת בית המשפט (src:2016-2020)
+GIVEN `בית המשפט שוכנע שמתקיים מבחן יכולת הפירעון` IS A BOOLEAN
+      `ניתנה לנושים שהתנגדו הזדמנות להשמיע את טענותיהם` IS A BOOLEAN
+      `התנאים שהתנה בית המשפט מולאו` IS A BOOLEAN
+GIVETH A DEONTIC `גורם בחלוקה` `פעולה בחלוקה`
+`סעיף 303(ד) - החלטת בית המשפט בבקשה` MEANS
+        (   PARTY `בית המשפט בחלוקה`
+            MAY `בית המשפט מאשר את הבקשה כולה או חלקה`
+            PROVIDED (`סעיף 303(א) - בית המשפט רשאי לאשר לחברה לבצע חלוקה שאינה מקיימת את מבחן הרווח` TRUE `בית המשפט שוכנע שמתקיים מבחן יכולת הפירעון`) AND (`סעיף 303(ד) - בית המשפט רשאי להכריע בבקשה, לאשרה, לדחותה או להתנות את אישורה` `ניתנה לנושים שהתנגדו הזדמנות להשמיע את טענותיהם`)
+            HENCE (PARTY `החברה בחלוקה` MAY `החברה מבצעת את החלוקה` HENCE FULFILLED))
+    ROR (   (   PARTY `בית המשפט בחלוקה`
+                MAY `בית המשפט מאשר את הבקשה בתנאים`
+                PROVIDED (`סעיף 303(א) - בית המשפט רשאי לאשר לחברה לבצע חלוקה שאינה מקיימת את מבחן הרווח` TRUE `בית המשפט שוכנע שמתקיים מבחן יכולת הפירעון`) AND (`סעיף 303(ד) - בית המשפט רשאי להכריע בבקשה, לאשרה, לדחותה או להתנות את אישורה` `ניתנה לנושים שהתנגדו הזדמנות להשמיע את טענותיהם`)
+                HENCE (PARTY `החברה בחלוקה` MAY `החברה מבצעת את החלוקה` PROVIDED `התנאים שהתנה בית המשפט מולאו` HENCE FULFILLED))
+        ROR (   PARTY `בית המשפט בחלוקה`
+                MAY `בית המשפט דוחה את הבקשה`
+                PROVIDED `סעיף 303(ד) - בית המשפט רשאי להכריע בבקשה, לאשרה, לדחותה או להתנות את אישורה` `ניתנה לנושים שהתנגדו הזדמנות להשמיע את טענותיהם`
+                HENCE FULFILLED))
+
+-- A creditor's objection (303(ג)): a creditor may apply to the court and object to the company's application. The objection is optional, so the court may decide with or without one.
+-- The text gives no time within which a creditor may object: no clock is encoded.
+-- TIMELINE: unit=none stated; day 0=the day the company's application is filed; counting="silent"
+-- src:2019 | {{ח:תת|(ג)}} נושה רשאי לפנות לבית המשפט ולהתנגד לבקשת החברה להתיר לה ביצוע חלוקה.
+@ref סעיף 303(ג) התנגדות נושה (src:2019)
+GIVEN `בית המשפט שוכנע שמתקיים מבחן יכולת הפירעון` IS A BOOLEAN
+      `ניתנה לנושים שהתנגדו הזדמנות להשמיע את טענותיהם` IS A BOOLEAN
+      `התנאים שהתנה בית המשפט מולאו` IS A BOOLEAN
+GIVETH A DEONTIC `גורם בחלוקה` `פעולה בחלוקה`
+`סעיף 303(ג) - התנגדות נושה ואחריה החלטת בית המשפט` MEANS
+        (   PARTY `נושה של החברה בחלוקה`
+            MAY `נושה מתנגד לבקשה`
+            HENCE (`סעיף 303(ד) - החלטת בית המשפט בבקשה` `בית המשפט שוכנע שמתקיים מבחן יכולת הפירעון` `ניתנה לנושים שהתנגדו הזדמנות להשמיע את טענותיהם` `התנאים שהתנה בית המשפט מולאו`))
+    ROR (`סעיף 303(ד) - החלטת בית המשפט בבקשה` `בית המשפט שוכנע שמתקיים מבחן יכולת הפירעון` `ניתנה לנושים שהתנגדו הזדמנות להשמיע את טענותיהם` `התנאים שהתנה בית המשפט מולאו`)
+
+§§ `סעיפים 301 עד 303: הליך החלוקה`
+
+-- Where the profit test and the solvency test are both met, the company may distribute (302(א)); no time is set.
+-- Where the profit test is not met (the amount is above the profits, or the statements are more than six months old), the company may apply to the court (303(א)); the notice to creditors then runs beside the court's decision.
+-- Where the profit test is met but the solvency test is not, the Act gives no route: section 303(א) is for a distribution "שלא מקיימת את מבחן הרווח", so the court route is not open and the distribution would be a forbidden distribution (301(ב)), whose consequences are the separate DEONTICs below.
+-- Where the act is not a distribution (the seller is the company itself or a wholly owned corporation), chapter 2 lays down no step.
+-- FORK: סעיפים 302 ו־303 | the company's distribution is a MAY with no time limit (the text says "רשאית" and sets none) | a MUST, whose breach nothing in the text states
+-- FORK: סעיף 303 | the notice to creditors and the court's decision run side by side after the application (a RAND: neither is the precondition of the other, because the text makes neither one) | the court may decide only after the notice, or the notice is the precondition of the creditors' objection
+-- FORK: סעיף 303(א) | the company's right to apply is open whenever the profit test is not met, whatever the solvency position (the court's satisfaction on solvency is the court's own finding) | the company may apply only where the solvency test is met
+-- FORK: סעיף 301(א) | the company's own undertaking in its articles or by contract (301(א), second limb) is not an input here: the MAY states what the Act permits | the DEONTIC takes the undertaking and its additional limits as inputs
+-- The only period in this procedure, the six months of 302(ב), is a look-back between two DATE inputs worked out by `סעיף 302(ב) - מספר החודשים שבין מועד הדוחות למועד החלוקה, מעוגל כלפי מעלה`: a gate, not a clock.
+-- TIMELINE: unit=none stated; day 0=the day the company's right to distribute, or to apply to the court, arises; counting="silent"
+-- src:2002 | {{ח:סעיף|301|אי התניה}}
+-- src:2003 | {{ח:תת|(א)}} חברה רשאית לבצע חלוקה לפי הוראות {{ח:פנימי|חלק 7 פרק 2|פרק זה}} בלבד; ואולם חברה רשאית להתחייב בתקנונה או בחוזה שלא לבצע חלוקה במגבלות נוספות על הוראות {{ח:פנימי|חלק 7 פרק 2|פרק זה}}.
+-- src:2004 | {{ח:תת|(ב)}} חלוקה בניגוד להוראות {{ח:פנימי|חלק 7 פרק 2|פרק זה}} היא חלוקה אסורה.
+-- src:2006 | {{ח:סעיף|302|חלוקה מותרת|תיקון: תשס״ה}}
+-- src:2007 | {{ח:תת|(א)}} חברה רשאית לבצע חלוקה מתוך רווחיה (להלן – מבחן הרווח), ובלבד שלא קיים חשש סביר שהחלוקה תמנע מן החברה את היכולת לעמוד בחבויותיה הקיימות והצפויות, בהגיע מועד קיומן (להלן – מבחן יכולת הפרעון).
+-- src:2008 | {{ח:תת|(ב)}} בסעיף זה –
+-- src:2016 | {{ח:תת|(א)}} בית המשפט רשאי, לבקשת חברה, לאשר לה לבצע חלוקה שלא מקיימת את מבחן הרווח, ובלבד ששוכנע שמתקיים מבחן יכולת הפירעון.
+@ref סעיפים 301 עד 303 הליך החלוקה (src:2002-2020)
+GIVEN `המעשה` IS A `עובדות על חלוקה`
+      `סכום החלוקה` IS A NUMBER
+      `יתרת העודפים` IS A NUMBER
+      `העודפים שנצברו בשנתיים האחרונות` IS A NUMBER
+      `חלוקות קודמות שטרם הופחתו מן העודפים` IS A NUMBER
+      `הדוחות הם האחרונים` IS A BOOLEAN
+      `מועד הדוחות` IS A DATE
+      `מועד החלוקה` IS A DATE
+      `קיים חשש סביר שהחלוקה תמנע מן החברה את היכולת לעמוד בחבויותיה הקיימות והצפויות` IS A BOOLEAN
+      `בית המשפט שוכנע שמתקיים מבחן יכולת הפירעון` IS A BOOLEAN
+      `ניתנה לנושים שהתנגדו הזדמנות להשמיע את טענותיהם` IS A BOOLEAN
+      `ההודעה לנושים ניתנה באופן שקבע השר` IS A BOOLEAN
+      `התנאים שהתנה בית המשפט מולאו` IS A BOOLEAN
+GIVETH A DEONTIC `גורם בחלוקה` `פעולה בחלוקה`
+`סעיפים 301 עד 303 - הליך החלוקה` MEANS
+    IF NOT (`חלוקה` `המעשה`)
+    THEN FULFILLED
+    ELSE (
+        IF `סעיף 302(א) - החברה רשאית לבצע חלוקה מתוך רווחיה` (`סעיף 302(א) - החלוקה מקיימת את מבחן הרווח לפי מועד הדוחות` `סכום החלוקה` `יתרת העודפים` `העודפים שנצברו בשנתיים האחרונות` `חלוקות קודמות שטרם הופחתו מן העודפים` `הדוחות הם האחרונים` `מועד הדוחות` `מועד החלוקה`) (`סעיף 302(א) - החלוקה מקיימת את מבחן יכולת הפרעון` `קיים חשש סביר שהחלוקה תמנע מן החברה את היכולת לעמוד בחבויותיה הקיימות והצפויות`)
+        THEN (PARTY `החברה בחלוקה` MAY `החברה מבצעת את החלוקה` HENCE FULFILLED)
+        ELSE (
+            IF `סעיף 302(א) - החלוקה מקיימת את מבחן הרווח לפי מועד הדוחות` `סכום החלוקה` `יתרת העודפים` `העודפים שנצברו בשנתיים האחרונות` `חלוקות קודמות שטרם הופחתו מן העודפים` `הדוחות הם האחרונים` `מועד הדוחות` `מועד החלוקה`
+            THEN FULFILLED
+            ELSE (   PARTY `החברה בחלוקה`
+                     MAY `החברה מבקשת מבית המשפט לאשר חלוקה`
+                     HENCE (   (`סעיף 303(ב) - ההודעה לנושים על הבקשה` `ההודעה לנושים ניתנה באופן שקבע השר`)
+                            RAND (`סעיף 303(ג) - התנגדות נושה ואחריה החלטת בית המשפט` `בית המשפט שוכנע שמתקיים מבחן יכולת הפירעון` `ניתנה לנושים שהתנגדו הזדמנות להשמיע את טענותיהם` `התנאים שהתנה בית המשפט מולאו`)))))
+
+§§ `סעיף 308: מניה וניירות ערך שהחברה רכשה`
+
+-- Section 308(א): a company that bought one of its shares may cancel it; if it did not, the share acquires no rights (a "dormant share") while the company owns it.
+-- The text sets no time for cancelling, so no clock is encoded and "not cancelled" is never an event: the dormant state is the Boolean `סעיף 308(א) - המניה היא מניה רדומה`, not a step.
+-- FORK: סעיף 308(א) | cancelling is a MAY with no time limit and the open permission is not a breach (the text says "רשאית" and attaches to non-cancellation a status, dormancy, and not a duty) | a MUST to cancel or hold the share dormant
+-- TIMELINE: unit=none stated; day 0=the day the company bought the share; counting="silent"
+-- src:2046 | {{ח:תת|(א)}} רכשה חברה מניה ממניותיה, רשאית היא לבטלה; לא ביטלה החברה את המניה האמורה, לא תקנה המניה זכויות כלשהן (להלן – מניה רדומה), כל עוד המניה הרדומה היא בבעלות החברה.
+@ref סעיף 308(א) ביטול מניה שנרכשה (src:2046)
+GIVEN `החברה רכשה מניה ממניותיה` IS A BOOLEAN
+GIVETH A DEONTIC `גורם בחלוקה` `פעולה בחלוקה`
+`סעיף 308(א) - ביטול מניה שנרכשה` MEANS
+    IF `סעיף 308(א) - החברה רשאית לבטל את המניה שרכשה` `החברה רכשה מניה ממניותיה`
+    THEN (PARTY `החברה בחלוקה` MAY `החברה מבטלת את המניה שרכשה` HENCE FULFILLED)
+    ELSE FULFILLED
+
+-- Section 308(ב): a company that bought securities convertible into or exercisable for its shares may cancel them; if it did not, it may sell them again, or convert or exercise them into shares (shares so made are dormant while the company owns them).
+-- The three are alternatives (a security cancelled is not then sold or converted); no time is set for any of them.
+-- FORK: סעיף 308(ב) | the three acts are alternatives, the first done closes the others | the company may cancel part, sell part and convert part
+-- TIMELINE: unit=none stated; day 0=the day the company bought the securities; counting="silent"
+-- src:2047 | {{ח:תת|(ב)}} רכשה חברה ניירות ערך שניתן להמירם או לממשם במניות החברה, רשאית היא לבטלם; לא ביטלה החברה את ניירות הערך האמורים, רשאית החברה לחזור ולמכרם, או להמירם או לממשם למניות; מניות שהומרו או שמומשו כאמור, יהיו מניות רדומות כל עוד הן בבעלות החברה.
+@ref סעיף 308(ב) ניירות ערך שנרכשו (src:2047)
+GIVEN `החברה רכשה ניירות ערך שניתן להמירם או לממשם במניות החברה` IS A BOOLEAN
+GIVETH A DEONTIC `גורם בחלוקה` `פעולה בחלוקה`
+`סעיף 308(ב) - ניירות ערך שנרכשו` MEANS
+    IF `החברה רכשה ניירות ערך שניתן להמירם או לממשם במניות החברה`
+    THEN (   (PARTY `החברה בחלוקה` MAY `החברה מבטלת את ניירות הערך שרכשה` HENCE FULFILLED)
+         ROR (PARTY `החברה בחלוקה` MAY `החברה חוזרת ומוכרת את ניירות הערך שרכשה` PROVIDED `סעיף 308(ב) - החברה רשאית לחזור ולמכור את ניירות הערך שרכשה` `החברה רכשה ניירות ערך שניתן להמירם או לממשם במניות החברה` TRUE HENCE FULFILLED)
+         ROR (PARTY `החברה בחלוקה` MAY `החברה ממירה או מממשת את ניירות הערך למניות` PROVIDED `סעיף 308(ב) - החברה רשאית לחזור ולמכור את ניירות הערך שרכשה` `החברה רכשה ניירות ערך שניתן להמירם או לממשם במניות החברה` TRUE HENCE FULFILLED))
+    ELSE FULFILLED
+
+§§ `סעיף 309: רכישה בידי תאגיד בשליטה`
+
+-- Section 309(ד): despite (א), a purchase by a subsidiary or acquiring corporation that the parent does not wholly own is a distribution in an amount equal to the purchase amount times the share of the rights in its capital held by the parent.
+-- The amount that counts against the parent's capacity to distribute is that amount for a part-owned subsidiary, and the whole purchase for a wholly owned one (where 309(ד) is silent).
+-- src:2053 | {{ח:תת|(ד)}} על אף הוראות סעיף קטן (א), רכישה בידי חברה בת או בידי התאגיד הרוכש שאינם בבעלות מלאה של החברה האם, היא חלוקה בסכום השווה למכפלת סכום הרכישה בשיעור הזכויות בהון החברה הבת או בהון התאגיד הרוכש המוחזקות בידי החברה האם.
+@ref סעיף 309(ד) (src:2053)
+GIVEN `החברה הבת או התאגיד הרוכש בבעלות מלאה של החברה האם` IS A BOOLEAN
+      `סכום הרכישה` IS A NUMBER
+      `שיעור הזכויות בהון החברה הבת או התאגיד הרוכש המוחזקות בידי החברה האם` IS A NUMBER
+GIVETH A NUMBER
+`סעיף 309 - הסכום שנחשב חלוקה ברכישה בידי תאגיד בשליטה` MEANS
+    CONSIDER `סעיף 309(ד) - סכום החלוקה ברכישה בידי חברה בת שאינה בבעלות מלאה` `החברה הבת או התאגיד הרוכש בבעלות מלאה של החברה האם` `סכום הרכישה` `שיעור הזכויות בהון החברה הבת או התאגיד הרוכש המוחזקות בידי החברה האם`
+    WHEN NOTHING THEN `סכום הרכישה`
+    WHEN JUST x THEN x
+
+-- Section 309(א): a subsidiary or other corporation controlled by the parent may buy shares of the parent, or securities convertible into or exercisable for them, to the same extent that the parent may make a distribution,
+-- provided that the subsidiary's board or the acquiring corporation's managers determined that, had the parent made the purchase, it would have been a permitted distribution.
+-- The determination comes first ("קבעו"), so it is the first step and the purchase is the step it opens; the text sets no time for either.
+-- FORK: סעיף 309(א) | the board's determination is a MAY (a power, the condition of the permission to buy) and the purchase a MAY after it | the determination is a MUST of the board before any purchase
+-- FORK: סעיף 309(ד) | for a part-owned subsidiary the amount set against the parent's capacity is the purchase times the parent's share ("על אף הוראות סעיף קטן (א)... היא חלוקה בסכום") | the whole purchase is set against the capacity and 309(ד) only measures what counts as the parent's distribution
+-- FORK: סעיף 309(א) | the parent's capacity to distribute (`היקף החלוקה שהחברה האם רשאית לבצע`) is a plain input, worked out by the parent's own run of the distribution procedure above | the capacity is computed here from the parent's profits
+-- TIMELINE: unit=none stated; day 0=the day the subsidiary's board takes up the question; counting="silent"
+-- src:2049 | {{ח:סעיף|309|רכישה בידי תאגיד בשליטה|תיקון: תשס״ה}}
+-- src:2050 | {{ח:תת|(א)}} חברה בת או תאגיד אחר בשליטת החברה האם (בסעיף זה – התאגיד הרוכש) רשאים לרכוש מניות של החברה האם או ניירות ערך שניתן להמירם או לממשם במניות החברה האם, באותו היקף שבו החברה האם רשאית לבצע חלוקה, ובלבד שהדירקטוריון של החברה הבת או מנהלי התאגיד הרוכש קבעו כי אם רכישת המניות או ניירות הערך שניתן להמירם או לממשם במניות, היתה מתבצעת בידי החברה האם, היתה הרכישה בגדר חלוקה מותרת.
+@ref סעיף 309(א), (ד) רכישה בידי תאגיד בשליטה (src:2050-2053)
+GIVEN `סכום הרכישה` IS A NUMBER
+      `היקף החלוקה שהחברה האם רשאית לבצע` IS A NUMBER
+      `החברה הבת או התאגיד הרוכש בבעלות מלאה של החברה האם` IS A BOOLEAN
+      `שיעור הזכויות בהון החברה הבת או התאגיד הרוכש המוחזקות בידי החברה האם` IS A NUMBER
+GIVETH A DEONTIC `גורם בחלוקה` `פעולה בחלוקה`
+`סעיף 309(א) - רכישה בידי חברה בת או תאגיד רוכש` MEANS
+    PARTY `הדירקטוריון של החברה הבת או מנהלי התאגיד הרוכש`
+    MAY `הדירקטוריון או המנהלים קובעים שהרכישה היתה חלוקה מותרת אילו בוצעה בידי החברה האם`
+    HENCE (
+        PARTY `התאגיד הרוכש בחלוקה`
+        MAY `התאגיד הרוכש רוכש מניות או ניירות ערך של החברה האם`
+        PROVIDED `סעיף 309(א) - החברה הבת או התאגיד הרוכש רשאים לרכוש מניות של החברה האם` (`סעיף 309 - הסכום שנחשב חלוקה ברכישה בידי תאגיד בשליטה` `החברה הבת או התאגיד הרוכש בבעלות מלאה של החברה האם` `סכום הרכישה` `שיעור הזכויות בהון החברה הבת או התאגיד הרוכש המוחזקות בידי החברה האם`) `היקף החלוקה שהחברה האם רשאית לבצע` TRUE
+        HENCE FULFILLED)
+
+§§ `סעיפים 310 ו־311: חלוקה אסורה`
+
+-- Section 310(א): where the company made a forbidden distribution, a shareholder must return to the company what he received, unless he did not know and had no reason to know that it was forbidden; section 310(ב) presumes that a shareholder of a public company who was not a director, general manager or controlling shareholder did not know.
+-- Section 309(ג): where the distribution was a purchase by a subsidiary or acquiring corporation, the return is made to that subsidiary or corporation.
+-- The text sets no time for the return, so the duty stays open without a clock and is never a breach. The forbidden distribution itself (301(ב)) is an input here: the DEONTIC is run on its own once one has been made.
+-- FORK: סעיף 310(א) | the return is a MUST with no time limit (the text says "יהיה על בעל מניה להשיב" and sets none) | a MAY
+-- FORK: סעיף 310(א) | the duty arises only for a shareholder who received something; the Boolean gate already answers it | the duty arises for every shareholder
+-- FORK: סעיף 309(ג) | the return to the subsidiary or the acquiring corporation is a different act from the return to the company, and the one that does not fit the facts does not discharge the duty | one act of returning, whoever receives it
+-- TIMELINE: unit=none stated; day 0=the day the forbidden distribution was made; counting="silent"
+-- src:2060 | {{ח:סעיף|310|תוצאות חלוקה אסורה}}
+-- src:2061 | {{ח:תת|(א)}} ביצעה חברה חלוקה אסורה, יהיה על בעל מניה להשיב לחברה את שקיבל, זולת אם לא ידע ולא היה עליו לדעת כי החלוקה שבוצעה אסורה.
+-- src:2062 | {{ח:תת|(ב)}} חזקה על בעל מניה בחברה ציבורית, שלא היה דירקטור, מנהל כללי או בעל השליטה בחברה במועד החלוקה, שלא ידע ולא היה עליו לדעת, כי חלוקה שבוצעה היא חלוקה אסורה.
+-- src:2052 | {{ח:תת|(ג)}} בוצעה חלוקה אסורה, תתבצע ההשבה, כאמור {{ח:פנימי|סעיף 310|בסעיף 310}}, לחברה הבת או לתאגיד הרוכש, והוראת {{ח:פנימי|סעיף 311|סעיף 311}} תחול, בשינויים המחויבים, על הדירקטורים בחברה הבת והמנהלים בתאגיד הרוכש; ואולם, אם קבע דירקטוריון החברה האם כי החלוקה מותרת תחול האחריות על הדירקטורים בחברה האם כאמור {{ח:פנימי|סעיף 311|בסעיף 311}}.
+@ref סעיף 310 תוצאות חלוקה אסורה (src:2060-2062)
+GIVEN `בוצעה חלוקה אסורה` IS A BOOLEAN
+      `בעל המניה קיבל מן החלוקה` IS A BOOLEAN
+      `בעל המניה ידע שהחלוקה אסורה` IS A BOOLEAN
+      `בנסיבות היה על בעל המניה לדעת שהחלוקה אסורה` IS A BOOLEAN
+      `העובדות על החברה` IS A `עובדות על חברה`
+      `בעל המניה היה דירקטור, מנהל כללי או בעל השליטה בחברה במועד החלוקה` IS A BOOLEAN
+      `הוכח שבעל המניה ידע או שהיה עליו לדעת שהחלוקה אסורה` IS A BOOLEAN
+      `החלוקה בוצעה ברכישה בידי חברה בת או תאגיד רוכש` IS A BOOLEAN
+GIVETH A DEONTIC `גורם בחלוקה` `פעולה בחלוקה`
+`סעיף 310(א) - השבת חלוקה אסורה` MEANS
+    IF `סעיף 310(א) - בעל המניה חייב להשיב לחברה את שקיבל` `בוצעה חלוקה אסורה` `בעל המניה קיבל מן החלוקה` `בעל המניה ידע שהחלוקה אסורה` `בנסיבות היה על בעל המניה לדעת שהחלוקה אסורה` (`סעיף 310(ב) - חזקה שבעל המניה לא ידע ולא היה עליו לדעת שהחלוקה אסורה` `העובדות על החברה` `בעל המניה היה דירקטור, מנהל כללי או בעל השליטה בחברה במועד החלוקה` `הוכח שבעל המניה ידע או שהיה עליו לדעת שהחלוקה אסורה`)
+    THEN (
+        IF `החלוקה בוצעה ברכישה בידי חברה בת או תאגיד רוכש`
+        THEN (PARTY `בעל מניה בחלוקה` MUST `בעל מניה משיב לחברה הבת או לתאגיד הרוכש את שקיבל` HENCE FULFILLED)
+        ELSE (PARTY `בעל מניה בחלוקה` MUST `בעל מניה משיב לחברה את שקיבל` HENCE FULFILLED))
+    ELSE FULFILLED
+
+-- Section 311: where a forbidden distribution was made in a company, everyone who was a director on the day of the distribution is regarded as having breached his duties under sections 252, 253 or 254 toward the company, unless he proves one of three things.
+-- Section 309(ג): where the distribution was a purchase by a subsidiary or acquiring corporation, section 311 applies, with the necessary changes, to the subsidiary's directors and the acquiring corporation's managers; but if the parent's board determined that the distribution was permitted, the liability is on the parent's directors.
+-- Section 311 does not state a duty with an act and a time: it deems a breach. It is encoded as the breach itself: a director the gate catches is in BREACH from the start, with no event, and the director who proves one of the three things is not. The duties of sections 252 to 254 are another part of the Act.
+-- FORK: סעיף 311 | the deemed breach is encoded as a BREACH BY the director, reached with no event and no clock (the text deems the breach and gives no step) | no DEONTIC: the deeming stays only in the Boolean gate `סעיף 311 - הדירקטור נחשב כמי שהפר את חובותיו כלפי החברה`
+-- FORK: סעיף 311 | "unless he proves" is an input that the director's proof is made (the burden of proof is not a step in time) | the proof is an act of the director in the trace
+-- TIMELINE: unit=none stated; day 0=the day of the distribution; counting="silent"
+-- src:2064 | {{ח:סעיף|311|אחריות דירקטורים לחלוקה אסורה|תיקון: תשס״ה}}
+-- src:2065 | {{ח:ת}} בוצעה בחברה חלוקה אסורה יראו כל מי שהיה דירקטור במועד החלוקה כמי שהפר בכך את חובותיו לפי {{ח:פנימי|סעיף 252|סעיפים 252}}, {{ח:פנימי|סעיף 253|253}} {{ח:פנימי|סעיף 254|או 254}}, לפי הענין לחברה, אלא אם כן הוכיח אחד מאלה:
+-- src:2066 | {{ח:תת|(1)}} שהתנגד לחלוקה האסורה ונקט בכל האמצעים הסבירים כדי למנעה;
+-- src:2067 | {{ח:תת|(2)}} שהסתמך בתום לב הסתמכות סבירה על מידע שאלולא היה מטעה היתה החלוקת מותרת;
+-- src:2068 | {{ח:תת|(3)}} שבנסיבות הענין, לא ידע ולא היה עליו לדעת על החלוקה.
+@ref סעיף 311 אחריות דירקטורים לחלוקה אסורה (src:2064-2068)
+GIVEN `בוצעה חלוקה אסורה` IS A BOOLEAN
+      `האדם היה דירקטור במועד החלוקה` IS A BOOLEAN
+      `הוכח שהתנגד לחלוקה האסורה ונקט בכל האמצעים הסבירים כדי למנעה` IS A BOOLEAN
+      `הוכח שהסתמך בתום לב הסתמכות סבירה על מידע שאלולא היה מטעה היתה החלוקה מותרת` IS A BOOLEAN
+      `הוכח שבנסיבות הענין לא ידע ולא היה עליו לדעת על החלוקה` IS A BOOLEAN
+      `החלוקה בוצעה ברכישה בידי חברה בת או תאגיד רוכש` IS A BOOLEAN
+      `דירקטוריון החברה האם קבע כי החלוקה מותרת` IS A BOOLEAN
+GIVETH A DEONTIC `גורם בחלוקה` `פעולה בחלוקה`
+`סעיף 311 - אחריות הדירקטורים לחלוקה אסורה` MEANS
+    IF `סעיף 311 - הדירקטור נחשב כמי שהפר את חובותיו כלפי החברה` `בוצעה חלוקה אסורה` `האדם היה דירקטור במועד החלוקה` `הוכח שהתנגד לחלוקה האסורה ונקט בכל האמצעים הסבירים כדי למנעה` `הוכח שהסתמך בתום לב הסתמכות סבירה על מידע שאלולא היה מטעה היתה החלוקה מותרת` `הוכח שבנסיבות הענין לא ידע ולא היה עליו לדעת על החלוקה`
+    THEN (
+        IF `החלוקה בוצעה ברכישה בידי חברה בת או תאגיד רוכש`
+        THEN (
+            CONSIDER `סעיף 309(ג) - מי נושא באחריות בחלוקה אסורה ברכישה בידי חברה בת` `דירקטוריון החברה האם קבע כי החלוקה מותרת`
+            WHEN `הדירקטורים בחברה האם` THEN BREACH BY `דירקטור בחברה האם` BECAUSE "הדירקטור בחברה האם נחשב כמי שהפר את חובותיו כלפי החברה בחלוקה אסורה, כי דירקטוריון החברה האם קבע שהחלוקה מותרת"
+            WHEN `הדירקטורים בחברה הבת והמנהלים בתאגיד הרוכש` THEN BREACH BY `דירקטור בחברה הבת או מנהל בתאגיד הרוכש` BECAUSE "הדירקטור בחברה הבת או המנהל בתאגיד הרוכש נחשב כמי שהפר את חובותיו כלפי החברה בחלוקה אסורה")
+        ELSE BREACH BY `דירקטור בחברה שבוצעה בה חלוקה אסורה` BECAUSE "הדירקטור נחשב כמי שהפר את חובותיו כלפי החברה בחלוקה אסורה")
+    ELSE FULFILLED
