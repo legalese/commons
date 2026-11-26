@@ -797,16 +797,16 @@ An independent review read all eight units against the Act and re-ran every trac
 Two conventions, both decided by Claude on 2026-11-27 and both assumed, not ruled:
 
 - `BREACH` is kept only for a duty or a prohibition that the text lays on a named party. A power that lapses unused, a condition that is not met, a vote that fails and a route that has closed end `FULFILLED`, with the reason beside it; each notes file lists them under "Closed routes (not breaches)".
-- A do-once duty (a duty to do a thing once, "as soon as practicable", "forthwith", "thereupon", or no time stated) takes the same rule-level found-period input as its twin in the section modules (`the period of all convenient speed, as found`, or `the period the standard of time allows, as found`; the classes are in `notes/lest-without-deadline.md`), with a `WITHIN` that input and a `LEST BREACH`, so the two layers give one answer to one question. A duty left without a clock is listed in its unit's notes with the reason.
+- A do-once duty (a duty to do a thing once, "as soon as practicable", "forthwith", "thereupon", or no time stated) takes the same rule-level found-period input as its twin in the section modules (`the period of all convenient speed, as found`, or `the period the standard of time allows, as found`; the classes are in `notes/lest-without-deadline.md`), with a `WITHIN` that input and a `LEST BREACH`, so the two layers give one answer to one question, with three exceptions that the units' notes disclose and that wait for the section modules: the clocks of s 78D(4)(a) and (b) and s 156(9) have no counterpart there (`sga3-78d-78k.l4` says of s 78D(4) that its rules have no deadline; `sgb1-s156-interests.l4` has no DEONTIC for s 156(9)), so the layers differ at those three sites, and s 215(3) "entitled and bound to acquire" is read as the status that follows the notice, whose acts are the s 215(4) steps and carry the clocks (a reading, not a statement of the text: s 215(4) opens "Where a notice has been given"). Each is decided by Claude 2026-11-27, assumed, not ruled. A duty left without a clock is listed in its unit's notes with the reason.
 
 | unit (module) | provisions | traces | read differently on main 112 |
 | --- | --- | --- | --- |
 | `sg-proc-register-access` | s 12(2)(d), s 192(3)-(4), s 196A | 29 | 0 |
-| `sg-proc-derivative-action` | ss 216A-216B | 40 | 0 |
+| `sg-proc-derivative-action` | ss 216A-216B | 43 | 2 |
 | `sg-proc-director-interests` | ss 156 and 162 | 51 | 0 |
 | `sg-proc-compulsory-acquisition` | ss 215 and 215AA | 56 | 11 |
 | `sg-proc-share-buyback` | ss 76B-76K | 51 | 3 |
-| `sg-proc-capital-reduction` | ss 78B-78K, with the copy under s 186 | 69 | 15 |
+| `sg-proc-capital-reduction` | ss 78B-78K, with the copy under s 186 | 72 | 15 |
 | `sg-proc-amalgamation` | ss 215A-215H | 42 | 6 |
 | `sg-proc-foreign-company-accounts` | s 373 | 24 | 0 |
 
@@ -814,3 +814,10 @@ Two conventions, both decided by Claude on 2026-11-27 and both assumed, not rule
 
 - The s 196A(1) and s 196A(5) DEONTICs in `sgm-part5-div4a.l4` and the s 156 DEONTICs in `sgb1-s156-interests.l4` once carried a `LEST BREACH` with no `WITHIN`, so the Registrar or the director could never be in breach as written. That has since been repaired in the section modules: the dead `LEST` clauses were dropped (#105) and the do-once duties were given their found-period `WITHIN` and `LEST` again (#112). `l4 run` on `unstable-20261126-90eed8e` over those two modules reports no `lint/lest-without-deadline`.
 - For the other procedures of the Act (for example ss 368-377 apart from s 373) the existing DEONTICs in the section modules are the encoding, and no unit was added for them here.
+
+The s 186 copy of a special resolution is a duty of the company in every company, public or private, exempt or not (s 186(1)), and its default an offence of the company and of every officer in default (s 186(3)): decided by Claude 2026-11-27, assumed, not ruled; a late copy ends `BREACH BY` the company, and the s 78C(3)(c) lodging is the copy of the solvency statement alone.
+The wait device of s 215(6) and s 216A(3)(a) (a step nobody takes, then a helper rule that carries the continuation) can be named by a trace; if it is, the helper starts on that day. Each unit's notes say so under "Limits of the wait device".
+
+### What it cost, and why (so that a later job sizes a ruling like it before taking it)
+
+The independent review and its fixes cost about 53M tokens against an estimate of 12M. The estimate was the size of the fixes to the UK and IL layers of the same kind, which cost one builder about 10.6M and 9.2M each. The cause was one ruling taken during the fix: that every do-once duty takes the same rule-level found-period input as its twin in the section modules. It reached about 20 duties in eight units, and each needed a new input passed down its chain and its traces re-argued, which the two builders found only as they went (13.5M and 14.1M instead of about 6M each). A ruling that adds an input to a family of rules is a change to every call and every trace of the family: count the sites first, and price it per site. Two further review passes (6.4M and 5.3M) and a third fixing round (about 3M) were needed, because new code is itself reviewed.

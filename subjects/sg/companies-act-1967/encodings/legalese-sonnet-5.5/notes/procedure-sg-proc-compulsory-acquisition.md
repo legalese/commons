@@ -64,7 +64,7 @@ TIMELINE line: unit=calendar day; day 0=the day of the transfer that takes the t
 - FORK: s 215(3)(a) | a notice not given within the month is a BREACH by the transferee and ends the rule, so the holder's 3 months never start in the trace | the late notice as a breach that still lets the 3 months run from the late notice
 - FORK: s 215(3)(a) | "(unless on a previous transfer ... it has already complied with this requirement)": where it has, no duty arises on this transfer and the rule is FULFILLED at once; the holder's 3 months then run from the earlier notice, under the rule of that transfer | the duty renewed on every transfer
 - FORK: s 215(3)(b) | a holder who has assented is outside "any such holder", so no requirement step is offered to that holder | the step open to every holder
-- FORK: s 215(3) | the acquisition is a MUST of the transferee with no limit and no breach path, because the text says it is "entitled and bound to acquire" and gives no day and no payment machinery (subsection (4) is for notices under subsection (1) only) | a clock borrowed from subsection (4)
+- FORK: s 215(3) | the acquisition is a MUST of the transferee with no clock of its own and no breach path: "entitled and bound to acquire" (src:20722) states the status that follows the holder's notice, and the acts that carry the acquisition out are laid out in s 215(4) (transmit the notice and the instrument, pay the price, and the transferor company registers "thereupon", src:20741-20760), whose rules below have their clocks, so the duty of s 215(3) has no clock of its own; the lead-in of s 215(4) names a notice "under subsection (1)" (src:20741-20742), so that its steps also carry out an acquisition on a holder's requirement is a reading and not a statement of the text (decided by Claude 2026-11-27, assumed, not ruled) | a clock of its own for the acquisition, borrowed from subsection (4) or the found period of s 52
 
 #### `s 215(4) and (5) chain: the transferor company must register the transferee, bank the sums and hold them in trust once it has received them`
 
@@ -194,10 +194,19 @@ The nested clock of each step counts from the day the step before it is done (th
 Traces added: s 215(4) transmission and payment on day 30 FULFILLED, payment on day 31 BREACH; s 215(2) supply on day 40 FULFILLED, day 41 BREACH; registration on day 10 FULFILLED, day 11 BREACH; the bank account on day 31 BREACH; the Official Receiver on day 830 FULFILLED, day 831 BREACH.
 Two EXPECTs changed for this reason, both from RESIDUAL to BREACH: the s 215(4) chain with nothing done by day 400, and the s 215(4) and (5) chain with nothing done by day 30.
 
+### Limits of the wait device
+
+The wait act `s 215(6) the 2 years from the receipt run out before the company may transfer` is a device: the text names no act there, only the lapse of the 2 years, and the module carries it as a step nobody takes (a `MAY` whose `HENCE` and `LEST` both call the helper rule), so that the helper starts when the 2 years have run out.
+The wait act is a device; a trace must not name it; if it is named, the helper starts on that day.
+Measured on unstable-20261126-90eed8e with the act named on day 100 (money received on day 0): a transfer on day 200 and the Official Receiver's dealing on day 210 read `FULFILLED`, so a transfer inside the first 2 years counts; a transfer on day 3100 reads `BREACH` and a transfer on day 3022 reads `FULFILLED`, so the 10-year deadline has moved to day 100 plus the 10 years less the 2 years, which is day 3022, and not day 3652.
+No trace in the tests names the act; the same device, and the same limit, are in `sg-proc-derivative-action.l4` for the 14 days' notice of s 216A(3)(a).
+
 ### Duties left without a clock
 
 - s 215(1B), the statement of which alternative terms apply: tied to the offer ("In offering alternative terms", src:20635), class OTHER in `notes/lest-without-deadline.md` and a `-- no LEST:` comment at `sgd-acquisition.l4:1263`; the module's fork says the same, so the two layers agree.
-- s 215(3), the transferee's acquisition: the text says the transferee is "entitled and bound to acquire", a status that arises with the holder's requirement and not an act that falls due; the section module has no rule for it, so there is no twin to disagree with, and the module's fork keeps it a `MUST` with no limit.
+- s 215(3), the transferee's acquisition: "entitled and bound to acquire" (src:20722) states the status that follows the holder's notice, and the acts that carry the acquisition out are the s 215(4) steps (transmit the notice and the instrument, pay the price, the transferor company registers "thereupon", src:20741-20760), which have their clocks in this module; so the duty of s 215(3) has no clock of its own (decided by Claude 2026-11-27, assumed, not ruled).
+  The lead-in of s 215(4) names a notice "under subsection (1)" (src:20741-20742), so that its steps also carry out an acquisition on a holder's requirement under s 215(3) is a reading and not a statement of the text.
+  The section module has no rule for the acquisition, so there is no twin to disagree with, and the module's fork keeps it a `MUST` with no limit.
 - s 215(5), holding the sums in trust: a duty that holds throughout (class MAINTENANCE, `sgd-acquisition.l4:1374`).
 - s 215AA(6), the joint notice: a requirement on the document's content, class OTHER (`sgd-acquisition.l4:1438`); it is met when the notice is made.
 - s 215(3)(a), the notice of the 90%: already has its clock, one month, and a BREACH.

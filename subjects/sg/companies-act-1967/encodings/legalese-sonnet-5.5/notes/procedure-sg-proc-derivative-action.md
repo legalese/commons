@@ -12,7 +12,7 @@ There is no existing DEONTIC for s 216A or s 216B (`sgf-s216a.l4` and `sgf-s216b
 - `s 216A(3)(a) the complainant may give the directors notice of the intention to apply to the Court`: the complainant MAY give the notice; no gate.
 - `s 216A(2) the complainant may apply to the Court for permission and the Court decides`: the complainant MAY apply, HENCE the Court decides.
   Gate for the application: `s 216A(2) the complainant may apply to the Court for permission`.
-  The decision is chosen by `s 216A(3) the bar on bringing the action or arbitration, or making the intervention, applies`: where the bar does not apply (`JUST FALSE`) the Court MAY grant permission or MAY refuse; where it applies and `s 216A(4) the Court may make an interim order pending the complainant giving notice` holds, the Court MAY make the interim order, HENCE the complainant MAY give the notice the order awaits, HENCE (where the complainant is acting in good faith and it appears prima facie to be in the interests of the company) the Court MAY grant permission or MAY refuse, and otherwise MAY only refuse; or the Court MAY refuse before making the order; otherwise the Court MAY only refuse.
+  The decision is chosen by `s 216A(3) the bar on bringing the action or arbitration, or making the intervention, applies`: where the bar does not apply (`JUST FALSE`) the Court MAY grant permission or MAY refuse; where it applies and `s 216A(4) the Court may make an interim order pending the complainant giving notice` holds, the Court MAY make the interim order, HENCE the complainant MAY give the notice the order awaits, HENCE the Court MAY refuse at once or, once 14 days have run from that notice (a wait act that nobody takes, the device of s 215(6) in the compulsory-acquisition unit), MAY grant permission (where the complainant is acting in good faith and it appears prima facie to be in the interests of the company) or MAY refuse; or the Court MAY refuse before making the order; otherwise the Court MAY only refuse.
   The interim order is made "pending the complainant giving notice as required" (src:21830-21831), so the notice does not end the rule: the application for permission is still to be decided.
   The "or" of the Court's two options is `ROR`.
 - `s 216A(5) the Court may make the order in granting permission`: a separate DEONTIC, one MAY of the Court for each of (a), (b) and (c), each gated by its own function (`s 216A(5)(a)`, `(b)` and `(c) the Court may make an order ...`).
@@ -24,7 +24,7 @@ There is no existing DEONTIC for s 216A or s 216B (`sgf-s216a.l4` and `sgf-s216b
 ### The TIMELINE lines
 
 - s 216A(3)(a), the notice: unit=calendar day; day 0=the day the complainant gives the directors the notice; counting="14 days' notice", read as notice given not less than 14 days before the application (sg-periods P5: the clear-days reading is the other, fork F-216A-3 in `sgf-s216a.l4`); the 14 days are the earliest day for the application, not a last day for anything, so no clock is encoded for the notice and the next rule tests the day from two DATE inputs.
-- s 216A(2) to (4), the application and the decision: unit=calendar day; day 0=the day the complainant gave the directors the notice (where the interim order of subsection (4) is the route, the day the application is made); counting="14 days' notice" as above, so notice on 1 March allows an application from 15 March, which is day 14; the Court's decision and the notice that follows an interim order have no time limit in the text ("silent"); the DATE inputs are the notice day and the application day and must agree with the days of the trace.
+- s 216A(2) to (4), the application and the decision: unit=calendar day; day 0=the day the complainant gave the directors the notice (where the interim order of subsection (4) is the route, the day the application is made); counting="14 days' notice" as above, so notice on 1 March allows an application from 15 March, which is day 14; the Court's decision and the notice that follows an interim order have no time limit in the text ("silent"), but after the notice that an interim order awaits the Court's grant opens only on the 14th day after that notice (s 216A(3)(a), src:21811 and src:21829-21831), a wait of 13 days that the rule carries as a step nobody takes; the DATE inputs are the notice day and the application day and must agree with the days of the trace.
 - s 216A(5), the orders: unit=calendar day; day 0=the day the Court grants permission; counting=silent (the text puts no time limit on the orders).
 - s 216B(1): unit=calendar day; day 0=the day the application is made or the action is brought or intervened in under section 216A; counting=silent (a standing bar with no time limit).
 - s 216B(2): unit=calendar day; day 0=the day the Court is asked to approve the stay, discontinuance, settlement or dismissal; counting=silent (the text puts no time limit on the approval or on the notice).
@@ -41,7 +41,7 @@ There is no existing DEONTIC for s 216A or s 216B (`sgf-s216a.l4` and `sgf-s216b
 - s 216B(1): the text is in the passive ("must not be stayed or dismissed") and names no bearer, so the bar is not a duty of anyone, as the bar of s 216B(2) is not; the Court appears in the rule only as the party who would do the act, which L4 needs to name a step (the other reading: the Court as the bearer of a SHANT, with a BREACH when it stays or dismisses on that ground, which was this module's first reading).
 - s 216B(1): a stay or dismissal by reason only of the members' approval ends the rule `FULFILLED`, as a closed route and not a breach, because the text states no consequence (the other reading: a BREACH by the Court).
 - s 216A(4): after the interim order and the notice the application is still undecided, and the Court's grant is open only where the complainant is acting in good faith and it appears prima facie to be in the interests of the company (s 216A(3)(b) and (c)); the refusal is open in every case (the other reading: the notice ends the rule, which was this module's first reading).
-- s 216A(4): after the notice the Court's grant is open at once, with no wait of 14 days from the notice, because the module has no input for the day of this later notice (the other reading: "giving notice as required" read as 14 days' notice, so the grant is open only from the 14th day after the notice).
+- s 216A(4): after the complainant's notice the Court's grant opens only on the 14th day after it, because s 216A(4) says "giving notice as required in subsection (3)(a)" (src:21829-21831) and the notice required there is "14 days' notice to the directors" (src:21811), so the Court cannot be satisfied of paragraph (a) sooner; the wait is a step nobody takes, followed by a helper rule that carries the continuation, the device of `sg-proc-compulsory-acquisition.l4` (s 215(6)), and the refusal stays open at once (decided by Claude 2026-11-27, assumed, not ruled; the other reading: the grant open at once after the notice, which was this module's reading until the second independent review).
 - s 216B(2): the bar on a stay, discontinuance, settlement or dismissal without the Court's approval has no bearer in the text and is not encoded as a duty of anyone; the Court's approval and the notice order are MAY acts of the Court (the other reading: the party who seeks the stay as the bearer of a SHANT until the Court approves).
 
 ### What the text leaves silent
@@ -54,16 +54,20 @@ There is no existing DEONTIC for s 216A or s 216B (`sgf-s216a.l4` and `sgf-s216b
 ### Which binary verified the traces
 
 Both builds were run from inside the encoding folder with `JL4_LIBRARY_PATH` unset.
-The unstable builds are `unstable-20261125-a50cbd0` (the first run, 37 traces) and `unstable-20261126-90eed8e` (the run after the independent review, 40 traces), and the stable build is the cache entry 112.
-All 40 traces match their `-- EXPECT` on `unstable-20261126-90eed8e` and on the stable build 112 (`expect_check.py`).
+The unstable builds are `unstable-20261125-a50cbd0` (the first run, 37 traces) and `unstable-20261126-90eed8e` (the run after the independent review, 40 traces; 43 after the second one), and the stable build is the cache entry 112.
+All 43 traces match their `-- EXPECT` on `unstable-20261126-90eed8e`; on the stable build 112, 41 match and 2 read differently (below) (`expect_check.py`).
 There are no `#ASSERT`s, because this module defines no new Boolean helper.
 Neither file gives an error or a warning of its own on either build; the only warnings printed are the import-resolution warnings about two differing copies of `prelude` and `daydate` (the embedded library and the XDG data directory), which are about the machine and not about these files.
-The expected outcomes were written from the text before the first run; the two EXPECTs changed after the review were decided from the statute line before the run, and the three traces added were decided from the text first.
+The expected outcomes were written from the text before the first run; the two EXPECTs changed after the review were decided from the statute line before the run, and the three traces added were decided from the text first; the second independent review added three more (the grant on the 13th day after the notice, RESIDUAL; on the 14th day, FULFILLED; the refusal on the 3rd day, FULFILLED), decided from s 216A(3)(a) before the run, and all 43 matched on the first run on unstable.
 
 ### READS-DIFFERENTLY-ON-MAIN
 
-None by outcome class: every one of the 40 traces gives the same class on the stable build 112 as on the unstable build `unstable-20261126-90eed8e`.
-The only difference is in print: a still-open MAY is laid out on one line by the unstable build and on three lines by the stable build.
+Two of the 43 traces read differently on the stable build 112 than on the unstable build `unstable-20261126-90eed8e`, which matches all 43; the other 41 give the same class on both.
+- test-file line 88: expected FULFILLED, MAIN prints RESIDUAL: Subsection (4), after the notice: the Court grants permission on day 30; the application is answered.
+- test-file line 112: expected FULFILLED, MAIN prints RESIDUAL: Subsection (4), the Court grants on day 24, the 14th day after the notice of day 10: the 14 days have run out, and the application is answered.
+Both are a grant made after the wait act of 13 days has run out: on main the grant is not taken as done and the Court's two MAYs stay open, where unstable takes the LEST and the helper that follows it (observed end states only; the module is not changed to suit it).
+The refusal after the wait reads the same on both builds.
+The only difference in print is that a still-open MAY is laid out on one line by the unstable build and on three lines by the stable build.
 
 ### What was not encoded
 
@@ -91,6 +95,19 @@ After the interim order of s 216A(4) and the complainant's notice the rule used 
 The order is made "pending the complainant giving notice as required" (src:21830-21831), so after the notice the application for permission is still undecided.
 The rule now continues to the Court's `MAY` grant `ROR` `MAY` refuse (the grant only where the complainant is acting in good faith and it appears prima facie in the interests of the company, s 216A(3)(b) and (c), src:21820-21824), and the trace "the Court makes an interim order on day 3 and the complainant gives the notice on day 10" reads `RESIDUAL`, with `-- EXPECT changed after independent review` above it.
 Three traces were added: the Court grants on day 30 (`FULFILLED`), the Court refuses on day 30 (`FULFILLED`), and a complainant not acting in good faith with a grant on day 30 (`RESIDUAL`, because only the refusal is open).
+
+### The 14 days' notice before the grant (second independent review)
+
+After the complainant's notice the grant used to be open at once, for the reason that the module had no input for the day of the notice; that reason did not hold, because the notice itself starts a clock (the `HENCE` of the notice restarts the day count).
+The text requires the notice "as required in subsection (3)(a)" (src:21829-21831), which is "14 days' notice to the directors" (src:21811), so the Court cannot be satisfied of paragraph (a) until 14 days after the notice.
+The grant now sits behind a wait act `s 216A(3)(a) the 14 days' notice to the directors run out before the Court may grant permission` (a `MAY` of the Court, `WITHIN 13`, nobody takes it) whose `HENCE` and `LEST` both call the helper `s 216A(4) the Court decides once the 14 days' notice has run out` (the grant `ROR` the refusal where the complainant is in good faith and it appears prima facie in the interests of the company, and the refusal alone otherwise); the refusal stays open at once, beside the wait act, by `ROR`.
+Three traces were added (notice on day 10): a grant on day 23, the 13th day after the notice, reads `RESIDUAL`; a grant on day 24, the 14th, reads `FULFILLED`; a refusal on day 13, the 3rd, reads `FULFILLED`.
+
+### Limits of the wait device
+
+The wait act is a device; a trace must not name it; if it is named, the helper starts on that day.
+The text names no act here, only the lapse of the 14 days, so the act is a step nobody takes: no trace in the tests names it.
+The same device, and the same limit, are in `sg-proc-compulsory-acquisition.l4` (s 215(6)), where naming the act on day 100 was measured to let a transfer on day 200 count.
 
 ### Do-once duties and the found period
 
