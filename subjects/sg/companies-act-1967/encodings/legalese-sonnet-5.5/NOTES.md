@@ -786,21 +786,31 @@ The text this encoding quotes is a converter's rendering of an informal consolid
 
 This section lists the modules that were added to lay the Act's procedures out as regulative rules (`DEONTIC`, with traces).
 They are additive: no existing module was edited, and no existing assertion count moved.
-Each unit is a module, a test module and a notes file (`notes/procedure-<unit>.md`) that says what it encodes, its timeline unit and counting rule, its forks and what it leaves out.
-Every `#TRACE` in the test modules has a `-- EXPECT` line decided from the text before the trace was run, and each was checked against it on two builds: the unstable prerelease `unstable-20261125-a50cbd0` and the stable line, main build 112.
+Each unit is a module, a test module and a notes file (`notes/procedure-sg-proc-<unit>.md`) that says what it encodes, its timeline unit and counting rule, its forks and what it leaves out.
+Every `#TRACE` in the test modules has a `-- EXPECT` line decided from the text before the trace was run, and each was checked against it on two builds: the unstable prerelease `unstable-20261126-90eed8e` (the earlier units were first checked on `unstable-20261125-a50cbd0`, and all still match) and the stable line, main build 112.
 `check.sh` counts assertions and never reads a `#TRACE` outcome, so it cannot see the differences below; they were found by running each trace on both builds.
 The two builds differ on traces in four known ways: a `MAY` that lapses, a `LEST` continuation's clock, two parties in breach at once, and the first event after a wait device lapses.
 Where a unit's traces read differently on main, its test module ends with a `READS-DIFFERENTLY-ON-MAIN` block listing them, and the count is in the table.
 The traces are the ones to read on unstable; main 112 gives a different class for the listed ones.
 
+An independent review read all eight units against the Act and re-ran every trace (0 blocker, 6 major, 11 minor and 5 nit findings, all fixed or listed with reasons in each unit's notes).
+Two conventions, both decided by Claude on 2026-11-27 and both assumed, not ruled:
+
+- `BREACH` is kept only for a duty or a prohibition that the text lays on a named party. A power that lapses unused, a condition that is not met, a vote that fails and a route that has closed end `FULFILLED`, with the reason beside it; each notes file lists them under "Closed routes (not breaches)".
+- A do-once duty (a duty to do a thing once, "as soon as practicable", "forthwith", "thereupon", or no time stated) takes the same rule-level found-period input as its twin in the section modules (`the period of all convenient speed, as found`, or `the period the standard of time allows, as found`; the classes are in `notes/lest-without-deadline.md`), with a `WITHIN` that input and a `LEST BREACH`, so the two layers give one answer to one question. A duty left without a clock is listed in its unit's notes with the reason.
+
 | unit (module) | provisions | traces | read differently on main 112 |
 | --- | --- | --- | --- |
-| `sg-proc-register-access` | s 12(2)(d), s 192(3)-(4), s 196A | 25 | 0 |
-| `sg-proc-derivative-action` | ss 216A-216B | 37 | 0 |
-| `sg-proc-director-interests` | ss 156 and 162 | 45 | 0 |
+| `sg-proc-register-access` | s 12(2)(d), s 192(3)-(4), s 196A | 29 | 0 |
+| `sg-proc-derivative-action` | ss 216A-216B | 40 | 0 |
+| `sg-proc-director-interests` | ss 156 and 162 | 51 | 0 |
+| `sg-proc-compulsory-acquisition` | ss 215 and 215AA | 56 | 11 |
+| `sg-proc-share-buyback` | ss 76B-76K | 51 | 3 |
+| `sg-proc-capital-reduction` | ss 78B-78K, with the copy under s 186 | 69 | 15 |
+| `sg-proc-amalgamation` | ss 215A-215H | 42 | 6 |
+| `sg-proc-foreign-company-accounts` | s 373 | 24 | 0 |
 
 ### Observations on the existing modules (nothing was changed)
 
-- `sgm-part5-div4a.l4:49` and `:254`, the DEONTICs for s 196A(1) and s 196A(5), carry a `LEST BREACH` on a rule with no `WITHIN`; the unstable build warns `lint/lest-without-deadline` ("This LEST can never be reached, because the rule has no deadline"), so the Registrar can never be in breach as written.
-- `sgb1-s156-interests.l4:471`, `:504` and `:518` give the same warning.
-- For the other procedures of the Act (ss 215, 215A-215K, 78A-78K, 76B-76K, 368-377) the existing DEONTICs in the section modules are the encoding, and no new unit was added.
+- The s 196A(1) and s 196A(5) DEONTICs in `sgm-part5-div4a.l4` and the s 156 DEONTICs in `sgb1-s156-interests.l4` once carried a `LEST BREACH` with no `WITHIN`, so the Registrar or the director could never be in breach as written. That has since been repaired in the section modules: the dead `LEST` clauses were dropped (#105) and the do-once duties were given their found-period `WITHIN` and `LEST` again (#112). `l4 run` on `unstable-20261126-90eed8e` over those two modules reports no `lint/lest-without-deadline`.
+- For the other procedures of the Act (for example ss 368-377 apart from s 373) the existing DEONTICs in the section modules are the encoding, and no unit was added for them here.

@@ -42,7 +42,7 @@ In short:
 
 ### Differences from the existing DEONTIC
 
-The existing rule is `s 373(7) the foreign company must lodge ... within the time in subsection (3)` in `sgg-returns.l4` at line 403 (the lines 95, 118 and 190 named in the request are the s 372 rules, and the s 373 rules are at 368 and 403).
+The existing rule is `s 373(7) the foreign company must lodge ... within the time in subsection (3)` in `sgg-returns.l4` at line 404 (the s 373 duty rules are at 369 and 404).
 It was read once, before the module was written, and not called.
 
 - Clock (src:24286-24289, "within the time specified in subsection (3)"): the existing rule takes the number of days as a plain input; this module computes it from the DATE inputs by calling the existing `s 373(3)` function, so a 60-day limit after a meeting and a supplied date for any other company both come out of the rule's own inputs.
@@ -55,7 +55,7 @@ It was read once, before the module was written, and not called.
 ### What was not encoded, and why
 
 - s 373(2): which statements are meant; a definition, with no step.
-- s 373(4) to (6): the Registrar's notice and the company's duty to comply with it; the notice sets its own time, and the existing rule at line 368 covers it.
+- s 373(4) to (6): the Registrar's notice and the company's duty to comply with it; the notice sets its own time, and the existing rule at line 369 covers it.
 - s 373(7A) and (8): the true and fair view and the apportionments; standards, not steps with a time.
 - s 373(10), (12), (13), (13A) to (17): the Registrar's powers to extend, waive, relieve and the Minister's exemptions; each is a power with no time of its own in the text.
 - s 373(18): the offence is carried in the breach reason of each duty; the separate liability of a director or authorised representative who "knowingly and wilfully authorises or permits the default" depends on a state of mind, and the text names no step a trace could show.
@@ -63,11 +63,28 @@ It was read once, before the module was written, and not called.
 
 ### Which binary verified the traces
 
-The unstable build `l4-unstable-20261125-a50cbd0-darwin-arm64` ran the module and the tests with no error and no warning from these two files, all 3 `#ASSERT` lines satisfied, and all 22 `#TRACE` lines matched their `-- EXPECT` (`expect_check.py`).
-The main build (`~/.cache/l4-main/112/l4`) gave the same result: no error and no warning, 3 assertions satisfied, 22 of 22 traces matched.
-A sensitivity check on a scratch copy (the origin for a company with no meeting changed to the meeting day, then deleted) made 2 traces mismatch.
+The unstable builds `unstable-20261125-a50cbd0` (first build checked, 22 traces) and `unstable-20261126-90eed8e` (after the independent review, 24 traces) ran the module and the tests with no error and no warning from these two files, all 3 `#ASSERT` lines satisfied, and all 24 `#TRACE` lines matched their `-- EXPECT` (`expect_check.py` on `unstable-20261126-90eed8e`).
+The main build (the stable build 112) gave the same result: no error and no warning, 3 assertions satisfied, 24 of 24 traces matched.
+A sensitivity check on a scratch copy before the independent review (the origin for a company with no meeting changed to the meeting day, then deleted) made 2 traces mismatch.
 
 ### READS-DIFFERENTLY-ON-MAIN
 
 None.
 No trace uses a lapsed power, a `LEST` clock on a power, or an event after a wait; every step is a duty with a limit.
+
+### Closed routes (not breaches)
+
+Convention for all the procedure units (assumed, not ruled): `BREACH` is kept only for a duty or a prohibition that the text lays on a named party.
+A power that lapses unused, a condition that is not met, a vote that fails and a route that has closed end `FULFILLED`, with the reason (what was lost, and the statute line) in a comment beside the LEST or branch, and here.
+This unit has none: every `BREACH` here is a lodging that s 373(1), (3), (7) or (9) lays on the company, with an offence at s 373(18) (src:24463-24473).
+The dormant alternative of s 373(9) is a choice between two groups of duties, not a closed route.
+
+### Do-once duties and the found period
+
+Decided by Claude on 2026-11-27 (assumed, not ruled), to align the layer with the section modules (`notes/lest-without-deadline.md`): a duty to do a thing once with no number of days in the text takes a rule-level input of days.
+This unit has no such duty: every lodging of s 373(1), (7) and (9) is due by the last day of s 373(3), which the module computes from the DATE inputs, so no input of days was added and the module is unchanged by the review.
+
+### Duties left without a clock
+
+None.
+The independent review of 2026-11-27 added two traces (the audited statement of assets and liabilities of s 373(7)(a) late, and never lodged) and changed no module line.

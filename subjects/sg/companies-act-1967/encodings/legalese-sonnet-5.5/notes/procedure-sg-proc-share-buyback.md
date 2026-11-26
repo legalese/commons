@@ -51,12 +51,12 @@ The 6 months of s 76I(3) are counted by `period: the last day of a period beginn
 ### Forks
 
 - FORK: s 76B(9)(b) | "the directors of the company" are one party, Director "D", who lodges for all of them, and a public company's failure is a BREACH of that party | a breach of each director separately
-- FORK: s 76G(1) | the reduction is a MUST with no WITHIN, so it has no BREACH path and stays open until done | a time taken from the 30 days of s 76B(9)(b)
+- FORK: s 76G(1) | the text states no time for the reduction, so the period is the found input of the section module (`sga3-76f-76g.l4:268-286`, Interpretation Act 1965 s 52: all convenient speed; decided, assumed, not ruled; see `notes/lest-without-deadline.md`), counted from the purchase, and a late or missing reduction is a BREACH by the company | a MUST with no WITHIN and no breach path, or a time taken from the 30 days of s 76B(9)(b)
 - FORK: s 76G(1) | the duty arises only where the shares are cancelled under s 76B(5) and not held in treasury under s 76H, which the caller states in one input | the duty arises on every purchase
 - FORK: s 76B(7) | for a private company the lodging is the step by which the purchase is made, so the permitted act is the lodging and no clock runs from it | the lodging as a duty after a separate purchase
 - FORK: s 76B(9)(c) | a public company's purchase is the day it becomes entitled to exercise the rights, because (c) deems the shares purchased then | the day the agreement is made
 - FORK: s 76C(2)(c) | the permission to purchase lapses at the expiry date with nothing owed (LEST FULFILLED) | a purchase after expiry as a BREACH
-- FORK: s 76F(2)(a) | where the company is not solvent the very act the permission names (becoming entitled, for a public company; lodging, for a private one) is forbidden, with a BREACH, although the text says only that no purchase is lawful | no breach, the purchase being unlawful and nothing more
+- FORK: s 76F(2)(a) | where the company is not solvent the very act the permission names (becoming entitled, for a public company; lodging, for a private one) is barred, and doing it ends FULFILLED with 'the purchase is not lawful' beside it, because the text says only that no purchase is lawful and lays no duty on a named party; the officer's offence is s 76F(3), encoded separately (SG-share-buyback-1, independent review) | a BREACH by the company, as the rule stood before the review
 - FORK: s 76B(9)(a) | the lodging of the copy and the purchase are two parts of one rule that run together, each from day 0 (RAND), because (a) runs from the resolution and not from the purchase | the lodging chained after the purchase through HENCE
 - FORK: s 76C(2)(c) | where the expiry date is later than the date the next annual general meeting is or is required to be held, the authority step is still open but nothing follows it, no copy to lodge and no purchase window | the authority valid up to the stated expiry date, or the resolution not passed at all
 - FORK: s 76C(1) | the authority is "authorised in advance by the company in general meeting" and the text names no majority, so the step is a MAY of the company with no resolution type | an ordinary resolution
@@ -76,20 +76,20 @@ The 6 months of s 76I(3) are counted by `period: the last day of a period beginn
 ### What the text leaves silent (no clock and no breach is encoded for it)
 
 - The day of the general meeting that authorises a purchase (ss 76C(1), 76D(2), 76E(1)): the authority is a MAY with no time limit, so a chain that never starts stays open.
-- A time for the reduction of capital or profits in s 76G(1): the duty is a MUST with no WITHIN, so it has no breach path and stays open until it is done.
+- A number of days for the reduction of capital or profits in s 76G(1): the found period of all convenient speed sets it (see "Do-once duties and the found period").
 - Any consequence of a notice that does not comply with s 76C(2), s 76D(3) or s 76E(2): only the expiry date is gated (fork s 76C(2)(c)); the other contents are not encoded.
 - Any consequence of passing a selective resolution without the consent of s 76D(2A), or of a market purchase without authority (s 76E(1)): the module makes each a forbidden act with a BREACH, as a fork.
-- What "no purchase or acquisition ... is lawful" (s 76F(2)(a)) leads to: the module forbids the act the permission names (becoming entitled to exercise the rights, or a private company's lodging) while the company is not solvent, with a BREACH, as a fork; the text states nothing else.
+- What "no purchase or acquisition ... is lawful" (s 76F(2)(a)) leads to: the module bars the act the permission names (becoming entitled to exercise the rights, or a private company's lodging) while the company is not solvent, and doing it ends FULFILLED with the unlawfulness beside it; the text states nothing else, and lays no duty on a named party.
 - When the Registrar may allow the further period of s 76I(3): the module takes it as an input fixed before the chain starts.
 - A time for a private company's notice under s 76K(1A) and for the Registrar's updating of the electronic register (ss 76B(8), 76K(1B)): the module encodes no step for either.
 - Whether the "general meeting" of ss 76C(1) and 76E(1) needs an ordinary or a special resolution: the text names none, so the module names none.
 
 ### Which build verified the traces
 
-The traces were run with the unstable build `l4-unstable-20261125-a50cbd0` and with the stable build `~/.cache/l4-main/112/l4`, with `JL4_LIBRARY_PATH` unset.
-Unstable: 48 traces, 48 match the class written above each from the text, zero error diagnostics, the 3 `#ASSERT`s satisfied, and no warning from the new files (the one warning printed in the run is `lint/lest-without-deadline` in the existing `sga3-76f-76g.l4`, at line 285).
-Stable: 48 traces, 45 match, 3 differ; zero error diagnostics; the 3 `#ASSERT`s satisfied.
-Two scratch copies were used as a sensitivity check and deleted.
+The traces were run with the unstable builds `unstable-20261125-a50cbd0` (first build checked, 48 traces) and `unstable-20261126-90eed8e` (after the independent review, 51 traces) and with the stable build the stable build 112, with `JL4_LIBRARY_PATH` unset.
+Unstable `unstable-20261126-90eed8e`: 51 traces, 51 match the class written above each from the text, zero error diagnostics, the 3 `#ASSERT`s satisfied, and no warning from the files.
+Stable: 51 traces, 48 match, 3 differ; zero error diagnostics; the 3 `#ASSERT`s satisfied.
+Two scratch copies were used as a sensitivity check before the independent review and deleted.
 Both were run when the test file had 40 traces and before the s 76K(1C) rule and its helper were added in their present form, and before the insolvent branch was changed to forbid the permitted act, so the 30 days of the s 76K(1D) rule, the later traces and that branch were never under a mutant.
 One copy had the two `LEST FULFILLED` removed: the same classes on both builds (40 of 40 on unstable, 38 of 40 on stable).
 The other had each of the three `WITHIN 30` then in the module made `WITHIN 31` and `6 Months` made `5 Months`: 6 of the 40 traces changed class on unstable, so those traces do read the day counts.
@@ -97,39 +97,68 @@ The other had each of the three `WITHIN 30` then in the module made `WITHIN 31` 
 ### READS-DIFFERENTLY-ON-MAIN
 
 The list is at the end of `sg-proc-share-buyback-tests.l4`.
-Three traces read differently on the stable build: the purchase window that runs out unused (line 64), the selective route outside a class case where the window runs out unused (line 180), and a purchase on the day after the authority expires (line 305).
+Three traces read differently on the stable build, by test-file line:
+
+- test-file line 82: expected FULFILLED, MAIN prints RESIDUAL: No purchase before the authority expires: the permission lapses with nothing owed.
+- test-file line 200: expected FULFILLED, MAIN prints RESIDUAL: Not a class case (all the shares in the class, or no class): no consent is needed; the resolution on day 0, then the copy on day 30 while the purchase
+- test-file line 325: expected FULFILLED, MAIN prints RESIDUAL: The authority expired on day 10 and the company becomes entitled to exercise the rights on day 11: the permission to purchase has lapsed with nothing 
+
 Each is a MAY with a WITHIN that lapses: the unstable build reads the permission as lapsed with nothing owed (FULFILLED); the stable build prints a still-open notice-of-purchase duty (the step after the MAY), RESIDUAL.
+
+### Closed routes (not breaches)
+
+Convention for all the procedure units (assumed, not ruled): `BREACH` is kept only for a duty or a prohibition that the text lays on a named party.
+A power that lapses unused, a condition that is not met, a vote that fails and a route that has closed end `FULFILLED`, with the reason (what was lost, and the statute line) in a comment beside the LEST or branch, and here.
+This unit has these, and two traces moved from BREACH to FULFILLED or RESIDUAL after the independent review:
+
+- `s 76F(2)(a)`: "no purchase or acquisition ... is lawful" (src:8965-8967) lays no duty on a named party, so the act the permission names, done while the company is not solvent, ends FULFILLED (and the directors' lodging of the copy stays open where it was open).
+- `s 76C(2)(c)`, `s 76D(3)(a)`, `s 76E(2)(c)`: the permission to purchase lapses at the expiry date with nothing owed.
+
+The BREACHes that stay are duties and prohibitions on a named party: the directors' notices (s 76B(9)(a), (b), s 76K(1D)), the reduction (s 76G(1)), the disposal of the excess (s 76I(3)), the consent before the special resolution (s 76D(2A), "the company must, before passing"), the market purchase without authority (s 76E(1), "must not") and the director's approval (s 76F(3), with its offence).
+
+### Do-once duties and the found period
+
+Decided by Claude on 2026-11-27 (assumed, not ruled), to align the layer with the section modules (`notes/lest-without-deadline.md`): a duty to do a thing once with no number of days in the text takes a rule-level input of days, and a late act is a BREACH by the bearer.
+
+| duty | class | input | twin in the section module |
+| ---- | ----- | ----- | ---- |
+| s 76G(1): the company must reduce its share capital or profits by the purchase price | no time stated, Interpretation Act 1965 s 52 | `the period of all convenient speed, as found` | `sga3-76f-76g.l4:282-290` |
+
+The input is passed down the chain (`s 76B(9)(b) and s 76G(1)`, `s 76B and s 76F`, `s 76B(9)(a)`, `s 76C`, `s 76D`, `s 76E`) as a plain argument; the tests pass 30.
+
+### Duties left without a clock
+
+None among the do-once duties of this unit: the notices, the disposal of the excess and the lodging of the copy have days in the text, and the authorities (ss 76C(1), 76D(2), 76E(1)) and the dealing with treasury shares (s 76K(1C)) are powers.
 
 ### Differences from the existing DEONTIC
 
 The existing DEONTICs for these sections were read after this module and its traces were written.
 
-- **s 76B(9)(a), `sga3-76b.l4:507`.**
+- **s 76B(9)(a), `sga3-76b.l4:508`.**
   The existing rule applies to any company: a private company that is asked is owed the lodging within 30 days.
   This module applies it to a public company only, because the text begins "Where a public company purchases or acquires shares issued by it" (src:8459-8460), and gives a private company the lodging of s 76B(7) as the step by which it purchases (src:8414-8416).
   The existing rule takes day 0 from the trace; here day 0 is the resolution step of a route, and the lodging runs together with the purchase window.
-- **s 76B(9)(b), `sga3-76b.l4:535`.**
+- **s 76B(9)(b), `sga3-76b.l4:536`.**
   The same public-company gate (src:8459-8460).
   The existing rule has no purchase step before it; here the notice follows the purchase through HENCE, and the purchase is itself limited by the authority's expiry date (src:8532-8535), so a purchase on the day after the expiry date opens no notice duty.
-- **s 76E(1), `sga3-76c-76e.l4:927`.**
+- **s 76E(1), `sga3-76c-76e.l4:928`.**
   The existing rule takes only "authorised in advance" and makes any unauthorised purchase a BREACH.
   This module also asks whether the purchase is made on a securities exchange, because the bar is on a purchase "on a securities exchange (called in this section a market purchase)" (src:8890-8892): a purchase elsewhere is not in the bar, and the rule is FULFILLED at once.
   The party is a `Party` and not a name string.
-- **s 76F(3), `sga3-76f-76g.l4:187`.**
+- **s 76F(3), `sga3-76f-76g.l4:188`.**
   The existing rule has no gate; the knowledge is part of the forbidden act, so every approval done is a BREACH.
   This module gates the rule on the company not being solvent (through the existing s 76F(1) gate) and on the person knowing it (src:8978-8981), so an approval where the company is solvent, or where the person does not know, is FULFILLED.
   The BECAUSE text here carries the penalty ("a fine not exceeding $100,000 or to imprisonment for a term not exceeding 3 years", src:8981-8983); the existing one does not.
-- **s 76G(1), `sga3-76f-76g.l4:280`.**
-  The existing rule applies to every purchase and carries a LEST BREACH on a MUST with no WITHIN, which the unstable build reports as unreachable (`lint/lest-without-deadline`, `sga3-76f-76g.l4:285`).
-  This module owes the reduction only where the shares are "cancelled under section 76B(5)" (src:9019-9021), that is, not held in treasury, and has no LEST because the text sets no time.
-  The unstable diagnostic says that rule "waits for its action however long it takes" and that time alone never reaches its LEST, so a trace where the reduction is never made stays open on both; this was read from the diagnostic and not run against the existing rule.
-- **s 76I(3), `sga3-76h-76k.l4:180`.**
+- **s 76G(1), `sga3-76f-76g.l4:282`.**
+  The existing rule applies to every purchase and has `WITHIN` the found period of all convenient speed and a `LEST BREACH` (`sga3-76f-76g.l4:285-290`).
+  This module owes the reduction only where the shares are "cancelled under section 76B(5)" (src:9019-9021), that is, not held in treasury, and takes the same input and the same breach, so the two layers answer alike for a late reduction (since the independent review; before it this module had no clock).
+- **s 76I(3), `sga3-76h-76k.l4:181`.**
   The existing rule takes the number of days from the caller and has no gate: it asks for disposal even where treasury shares do not exceed 10%.
   This module counts the 6 months itself, from the day of the contravention (src:9086-9090), gates on the existing s 76I(1) and (2) functions, takes the Registrar's further period as an input, and chains the s 76K(1D) notice after the disposal.
-- **s 76K(1D), `sga3-76h-76k.l4:430`.**
+- **s 76K(1D), `sga3-76h-76k.l4:431`.**
   The existing rule applies to any company, with no step before it.
   This module applies it to a public company only ("Where a public company cancels or disposes treasury shares in accordance with subsection (1C)", src:9197-9198), after a dealing that the existing s 76K(1C) gate allows, and from the day of that dealing.
-- **s 76J(2), `sga3-76h-76k.l4:281`, and s 76K(3), `sga3-76h-76k.l4:495`.**
+- **s 76J(2), `sga3-76h-76k.l4:282`, and s 76K(3), `sga3-76h-76k.l4:496`.**
   This module has no counterpart: neither has a clock, and neither is a step of the chain.
 - **Nothing in the existing DEONTICs** covers the authority steps of ss 76C, 76D and 76E, the 75% consent and the inspection gate of s 76D, the 20% limit, or the solvency of the purchase under s 76F(2)(a).
 
