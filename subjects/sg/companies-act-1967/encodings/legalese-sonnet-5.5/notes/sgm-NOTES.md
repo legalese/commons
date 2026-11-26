@@ -831,12 +831,12 @@ Every site is tagged in the code with `split site (i)` or `split site (ii)` in i
 - `s 191(3) the officer of the company is guilty of an offence` (sgm-part5-div4.l4:563), fork F-O1
 - `s 192(4) the public company is guilty of an offence` (sgm-part5-div4.l4:756), fork F-O1
 - `s 192(4) the officer of the company is guilty of an offence` (sgm-part5-div4.l4:770), fork F-O1
-- `s 196(9) the public company is guilty of an offence` (sgm-part5-div4.l4:1377), fork F-O1
-- `s 196(9) the officer of the company is guilty of an offence` (sgm-part5-div4.l4:1392), fork F-O1
-- `s 196(9) the person who arranged to make up the principal register is guilty of an offence` (sgm-part5-div4.l4:1408), fork F-O1
+- `s 196(9) the public company is guilty of an offence` (sgm-part5-div4.l4:1379), fork F-O1
+- `s 196(9) the officer of the company is guilty of an offence` (sgm-part5-div4.l4:1394), fork F-O1
+- `s 196(9) the person who arranged to make up the principal register is guilty of an offence` (sgm-part5-div4.l4:1410), fork F-O1
 - `s 197(6) the company is guilty of an offence` (sgm-part5-div5.l4:288), fork F-O1
 - `s 197(6) the officer of the company is guilty of an offence` (sgm-part5-div5.l4:301), fork F-O1
-- `s 344H(2) the officer of the company is guilty of an offence` (sgm-part10.l4:1193), fork F-O1
+- `s 344H(2) the officer of the company is guilty of an offence` (sgm-part10.l4:1219), fork F-O1
 
 ### Split site (ii): a "may" gated by where, when, upon, on application or with the consent of (10 sites tagged in the code, plus s 344(5))
 
@@ -845,11 +845,11 @@ Every site is tagged in the code with `split site (i)` or `split site (ii)` in i
 - `s 195(2) the trustee, executor or administrator may become registered as the holder of the share` (sgm-part5-div4.l4:1007)
 - `s 197(1B) the Registrar may extend the period within which the company must lodge its return` (sgm-part5-div5.l4:203)
 - `s 344(1) the Registrar may send the company and its directors, secretaries and members a letter` (sgm-part10.l4:50)
-- `s 344A(1) the Registrar may strike the company's name off the register on the application of the company` (sgm-part10.l4:429)
-- `s 344C(1) any person may deliver an objection to the striking off of the name of the company` (sgm-part10.l4:754)
-- `s 344E(5)(a) the Court may confirm the Registrar's decision` (sgm-part10.l4:1021)
-- `s 344E(5)(b) the Court may restore the name of the company to the register and give directions and make orders` (sgm-part10.l4:1033)
-- `s 344G(3) the Court may give directions and make orders for placing the company and all other persons in the same position` (sgm-part10.l4:1128)
+- `s 344A(1) the Registrar may strike the company's name off the register on the application of the company` (sgm-part10.l4:435)
+- `s 344C(1) any person may deliver an objection to the striking off of the name of the company` (sgm-part10.l4:772)
+- `s 344E(5)(a) the Court may confirm the Registrar's decision` (sgm-part10.l4:1047)
+- `s 344E(5)(b) the Court may restore the name of the company to the register and give directions and make orders` (sgm-part10.l4:1059)
+- `s 344G(3) the Court may give directions and make orders for placing the company and all other persons in the same position` (sgm-part10.l4:1154)
 
 The fork lines for these sites quote the Guide section 5 line each one relies on:
 
@@ -865,6 +865,27 @@ Of the sites of kind (ii), 9 answer JUST FALSE for an unmet where/upon gate (the
 
 
 ## Rules with no breach path (sgm)
+
+> Added 2026-11-27 (decided by Claude, assumed, not ruled): this section was written before the pass recorded in `lest-without-deadline.md`, and it is no longer true of the rules listed below.
+> Each of them now takes an input-length `WITHIN` and can reach `BREACH`, so read "no time limit", "no deadline" and "no breach path" of them as the position before that pass, here and wherever else these notes say so of them:
+>
+> - `s 196A(5) the Registrar must update the electronic register of members`
+> - `s 196(4) a public company must transmit a copy of every entry in its branch register`
+> - `s 344E(1) the Registrar must give the applicant notice of the decision (rule)`
+> - `s 344B(2)(a) the Registrar must send the company a notice that the application has been withdrawn (rule)`
+> - `s 344B(2)(b) the Registrar must publish a notice on the Authority's website that the application has been withdrawn (rule)`
+> - `s 344E(2)(b)(i) the Registrar must enter in the register a note of the date of the restoration (rule)`
+> - `s 344E(2)(b)(ii) the Registrar must cause notice of the restoration to be published (rule)`
+> - `s 344A(3) the Registrar must send the letter informing the company, its directors, secretaries and members of the application (rule)`
+> - `s 344C(3)(a) the Registrar must give the applicant or applicants notice of the objection (rule)`
+> - `s 344A(5) the Registrar must strike off the name of the company from the register and publish a notice in the Gazette (rule)`
+> - `s 344A(8)(a) the Registrar must send the particulars of the company and of the application to the Inland Revenue Authority of Singapore and the Central Provident Fund Board (rule)`
+> - `s 344A(8)(b) the Registrar must publish the substance of the notices on the Authority's website (rule)`
+> - `s 344(4) the Registrar must publish notice of the striking off in the Gazette (rule)`
+> - `s 344(7)(a) the Registrar must send the particulars to the Inland Revenue Authority of Singapore and the Central Provident Fund Board (rule)`
+> - `s 344(7)(b) the Registrar must publish the substance of the notices on the Authority's website (rule)`
+>
+> The other rules named in this section are unchanged.
 
 A `MUST` or `SHANT` with no deadline cannot reach BREACH in a `#TRACE`: the obligation stays a RESIDUAL until it is done, and the text names no moment at which it lapses.
 These are the 21 regulative rules of this part with no breach path (of 32 in all); each has a `#TRACE` showing FULFILLED and one showing the RESIDUAL, and no `#TRACE` can show BREACH.

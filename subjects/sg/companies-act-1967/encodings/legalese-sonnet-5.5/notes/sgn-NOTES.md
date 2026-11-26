@@ -529,6 +529,13 @@ No other "may" function in the range has a "where", "when" or "upon" gate; the "
 
 ## Rules with no breach path (sgn)
 
+> Added 2026-11-27 (decided by Claude, assumed, not ruled): this section was written before the pass recorded in `lest-without-deadline.md`, and it is no longer true of the rules listed below.
+> Each of them now takes an input-length `WITHIN` and can reach `BREACH`, so read "no time limit", "no deadline" and "no breach path" of them as the position before that pass, here and wherever else these notes say so of them:
+>
+> - `s 386AN(2)(b) the Registrar must require each company or foreign company to lodge the particulars and updates`
+>
+> The other rules named in this section are unchanged.
+
 Each `MUST` below has no time limit and no consequence the text states beyond the offence in a separate subsection (not a trace of this rule), so a late act cannot show it breached: a trace of it can only be FULFILLED or RESIDUAL.
 No deadline or consequence is invented.
 

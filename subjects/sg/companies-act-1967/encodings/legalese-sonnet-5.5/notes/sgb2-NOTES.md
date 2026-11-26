@@ -1240,6 +1240,8 @@ For the "if"-gated grants the answer is `NOTHING` on limit 1 of the ruling of 20
 
 ## Rules with no breach path (sgb2)
 
+> Added 2026-11-27 (decided by Claude, assumed, not ruled): checked against the pass recorded in `lest-without-deadline.md`, by rule name and by section label; none of the rules this section names now takes an input-length `WITHIN`, so it stands as written.
+
 A regulative rule `MUST ... HENCE FULFILLED LEST BREACH` with no deadline cannot reach `BREACH`: a late act still reads `FULFILLED`, and `SHANT` rules reach `BREACH` only by the forbidden act.
 Layer 1 has 38 regulative rules; 26 have at least one `#TRACE` that reaches `BREACH` (the traces are in the `sgb2-tests-*.l4` files, each with an `-- EXPECT` word above it, read by hand against the output on both builds).
 The other 12 have no breach path, for the reason given; each is traced to `FULFILLED` and to a residual obligation, so the rule is exercised.

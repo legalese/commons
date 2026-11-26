@@ -1046,6 +1046,13 @@ The `NOTHING` answers at site (ii) are the ones most likely to be overruled: the
 
 ## Rules with no breach path (sga3)
 
+> Added 2026-11-27 (decided by Claude, assumed, not ruled): this section was written before the pass recorded in `lest-without-deadline.md`, and it is no longer true of the rules listed below.
+> Each of them now takes an input-length `WITHIN` and can reach `BREACH`, so read "no time limit", "no deadline" and "no breach path" of them as the position before that pass, here and wherever else these notes say so of them:
+>
+> - `s 76G(1) the company must reduce its share capital or its profits by the total amount of the purchase price`
+>
+> The other rules named in this section are unchanged.
+
 6 of the 19 regulative rules in this range have no breach path, because the text gives no deadline and no consequence: a `MUST` with no `WITHIN` and no `LEST` can never reach `BREACH`, and a late act still reads `FULFILLED`.
 The text does not say when "as soon as possible" ends (s 78D(4)), and says nothing of what follows a failure to make the solvency statement available at the meeting (ss 78B(4)(a), 78C(4)(a)), to reduce capital (s 76G(1)) or for the Court to ascertain the names (s 78H(4)(a)); no deadline or consequence was invented.
 For each there are a `FULFILLED` trace (the act happens) and a `RESIDUAL` trace (nothing happens in the window), as the Guide's trap says ("A `SHANT` traced with no events reads as a standing obligation (`RESIDUAL`), which is not a pass").

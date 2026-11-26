@@ -527,6 +527,8 @@ One more site of the same family that is not type (i) or (ii): s 10(5) and (6) a
 
 ## Rules with no breach path (keel)
 
+> Added 2026-11-27 (decided by Claude, assumed, not ruled): checked against the pass recorded in `lest-without-deadline.md`, by rule name and by section label; none of the rules this section names now takes an input-length `WITHIN`, so it stands as written.
+
 A `MUST` with no time limit and no consequence the text states cannot reach `BREACH`: a late act still reads `FULFILLED`, and no act leaves the duty standing (`RESIDUAL`).
 The keel did not invent a deadline or a consequence for either.
 

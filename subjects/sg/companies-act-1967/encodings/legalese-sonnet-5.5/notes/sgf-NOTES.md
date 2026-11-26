@@ -453,6 +453,8 @@ These two sites are the only places this range answers `JUST FALSE` for a functi
 
 ## Rules with no breach path (sgf)
 
+> Added 2026-11-27 (decided by Claude, assumed, not ruled): checked against the pass recorded in `lest-without-deadline.md`, by rule name and by section label; none of the rules this section names now takes an input-length `WITHIN`, so it stands as written.
+
 None of the regulative rules lacks a breach path: both reach `BREACH` on both builds (table under "What check.sh prints").
 - `s 216(5) the applicant must lodge a copy of the order with the Registrar within 14 days`: a `MUST` with a 14-day deadline and a stated consequence (the offence of s 216(6)); breach traces: lodged on day 15, and never lodged by day 15.
 - `s 216(4) the company must not make a further alteration to the constitution inconsistent with the order without the permission of the Court`: a `SHANT`; breach trace: the forbidden alteration is made.

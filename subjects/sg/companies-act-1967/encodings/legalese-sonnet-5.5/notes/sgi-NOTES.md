@@ -1190,6 +1190,14 @@ Gated "may" functions that the count leaves out, because the gate is an "if" or 
 
 ## Rules with no breach path (sgi)
 
+> Added 2026-11-27 (decided by Claude, assumed, not ruled): this section was written before the pass recorded in `lest-without-deadline.md`, and it is no longer true of the rules listed below.
+> Each of them now takes an input-length `WITHIN` and can reach `BREACH`, so read "no time limit", "no deadline" and "no breach path" of them as the position before that pass, here and wherever else these notes say so of them:
+>
+> - `s 29(3) the company must insert the conditions in its constitution if the Registrar so directs`
+> - `s 40(1) the company must send a copy of the constitution to the member who requires it`
+>
+> The other rules named in this section are unchanged.
+
 These 8 regulative rules have a `MUST` with no time limit and no stated consequence, so no trace can show them breached: a late action still reads `FULFILLED`.
 Each has a trace that reaches `FULFILLED` and one that stays `RESIDUAL`, and none has a `BREACH` trace.
 

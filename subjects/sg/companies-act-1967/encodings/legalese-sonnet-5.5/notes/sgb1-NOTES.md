@@ -950,6 +950,14 @@ I did not read those other parts, so the pairing above is by section number only
 
 ## Rules with no breach path (sgb1)
 
+> Added 2026-11-27 (decided by Claude, assumed, not ruled): this section was written before the pass recorded in `lest-without-deadline.md`, and it is no longer true of the rules listed below.
+> Each of them now takes an input-length `WITHIN` and can reach `BREACH`, so read "no time limit", "no deadline" and "no breach path" of them as the position before that pass, here and wherever else these notes say so of them:
+>
+> - `s 152(2) a public company must send a copy of the notice of an intended removal to the director`
+> - `s 156(1) a director must declare the nature of the interest`
+>
+> The other rules named in this section are unchanged.
+
 20 regulative rules are encoded (`PARTY ... MUST/SHANT ...`), 12 of them prohibitions (`SHANT`, by ruling N2) and 8 duties (`MUST`).
 Each has at least one `#TRACE` with a `-- EXPECT` line directly above it (47 traces in all); every prohibition and every duty with a `WITHIN` has a trace that reaches `BREACH`.
 A `MUST` with no `WITHIN` cannot be breached: a late act still reads `FULFILLED` and no act reads `RESIDUAL`.
@@ -957,10 +965,10 @@ These 5 rules are of that kind, because the text gives no time limit and no cons
 
 | provision | rule | why there is no deadline | traces (EXPECT) |
 | --- | --- | --- | --- |
-| s 152(2) | `s 152(2) a public company must send a copy of the notice of an intended removal to the director` (`sgb1-s149b-appointment.l4:363`) | the text says "immediately" and gives no number, and states no consequence for the duty | FULFILLED, FULFILLED, RESIDUAL |
-| s 156(1) | `s 156(1) a director must declare the nature of the interest` (`sgb1-s156-interests.l4:467`) | "as soon as is practicable" is a standard, not a number; the consequence is the offence in s 156(15), which is a separate function | FULFILLED, FULFILLED, RESIDUAL |
-| s 156(11) | `s 156(11) the secretary must record every declaration in the minutes` (`sgb1-s156-interests.l4:500`) | no time is given; the secretary "must record every declaration" | FULFILLED, RESIDUAL |
-| s 156(12) | `s 156(12) the directors must permit the chief executive officer to attend` (`sgb1-s156-interests.l4:514`) | no time is given; the directors "must permit" attendance | FULFILLED, RESIDUAL |
+| s 152(2) | `s 152(2) a public company must send a copy of the notice of an intended removal to the director` (`sgb1-s149b-appointment.l4:364`) | the text says "immediately" and gives no number, and states no consequence for the duty | FULFILLED, FULFILLED, RESIDUAL |
+| s 156(1) | `s 156(1) a director must declare the nature of the interest` (`sgb1-s156-interests.l4:468`) | "as soon as is practicable" is a standard, not a number; the consequence is the offence in s 156(15), which is a separate function | FULFILLED, FULFILLED, RESIDUAL |
+| s 156(11) | `s 156(11) the secretary must record every declaration in the minutes` (`sgb1-s156-interests.l4:502`) | no time is given; the secretary "must record every declaration" | FULFILLED, RESIDUAL |
+| s 156(12) | `s 156(12) the directors must permit the chief executive officer to attend` (`sgb1-s156-interests.l4:516`) | no time is given; the directors "must permit" attendance | FULFILLED, RESIDUAL |
 | s 157(1) | `s 157(1) a director must at all times act honestly and use reasonable diligence` (`sgb1-s157-duties.l4:433`) | "at all times" is a standing duty; the consequence is s 157(3), a separate function | FULFILLED, RESIDUAL |
 
 The same duties are also encoded as decision functions over the facts (for example `s 156(1) the person has made the declaration or sent the written notice the subsection requires`), so a caller can ask "was it done" without a clock.

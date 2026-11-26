@@ -340,6 +340,15 @@ Not split sites, but near them: s 359(1)'s "if the Registrar thinks fit" is an "
 
 ## Rules with no breach path (sge)
 
+> Added 2026-11-27 (decided by Claude, assumed, not ruled): this section was written before the pass recorded in `lest-without-deadline.md`, and it is no longer true of the rules listed below.
+> Each of them now takes an input-length `WITHIN` and can reach `BREACH`, so read "no time limit", "no deadline" and "no breach path" of them as the position before that pass, here and wherever else these notes say so of them:
+>
+> - `s 359(3) upon registration the Registrar must issue a notice of transfer of registration`
+> - `s 359(4) the Registrar must issue a certificate of confirmation of registration upon the application of the company`
+> - `s 362(4) the Registrar must publish the notice of the order of revocation and serve a copy on the company`
+>
+> The other rules named in this section are unchanged.
+
 A `MUST` with no time limit and no consequence cannot be shown breached: a late action still reads `FULFILLED`, and a different action leaves the obligation open (`RESIDUAL`).
 These seven rules are regulative rules of the Registrar or of an entity whose text states neither a time nor a consequence; each has a trace that reaches `FULFILLED` and one that stays `RESIDUAL`, on both builds:
 - s 357(1), `s 357(1) a foreign corporate entity that intends to be registered must apply to reserve the name of the intended company` (no time, no consequence).

@@ -722,6 +722,15 @@ No keel module was changed, and no `NEEDS-CORE.md` is written: no type or constr
 
 ## Rules with no breach path (sgc1)
 
+> Added 2026-11-27 (decided by Claude, assumed, not ruled): this section was written before the pass recorded in `lest-without-deadline.md`, and it is no longer true of the rules listed below.
+> Each of them now takes an input-length `WITHIN` and can reach `BREACH`, so read "no time limit", "no deadline" and "no breach path" of them as the position before that pass, here and wherever else these notes say so of them:
+>
+> - `s 201B(7) the chairperson must convene a meeting of the committee on the auditor's request`
+> - `s 203A(4) the company must send copies of the documents to the member who wishes to receive them`
+> - `s 203(3) the company must furnish a copy of the last financial statements on request`
+>
+> The other rules named in this section are unchanged.
+
 The brief asks for a trace that reaches `BREACH` for every regulative rule, and for a list of every rule where none can.
 This part encodes 26 regulative rules.
 Twelve have a trace to `BREACH`: a prohibition (`SHANT`) with the forbidden act in the trace, or a duty with a time limit (`WITHIN`) that the trace misses.

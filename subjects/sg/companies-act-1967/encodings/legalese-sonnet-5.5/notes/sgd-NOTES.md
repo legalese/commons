@@ -787,6 +787,29 @@ Recorded mechanically from `inputs/ENCODING-GUIDE.md` (section 5), with the line
 
 ## Rules with no breach path (sgd)
 
+> Added 2026-11-27 (decided by Claude, assumed, not ruled): this section was written before the pass recorded in `lest-without-deadline.md`, and it is no longer true of the rules listed below.
+> Each of them now takes an input-length `WITHIN` and can reach `BREACH`, so read "no time limit", "no deadline" and "no breach path" of them as the position before that pass, here and wherever else these notes say so of them:
+>
+> - `s 210(10B)(a) the Official Receiver must deal with the moneys as if they were paid under section 197`
+> - `s 210(10B)(b) the Official Receiver must sell or dispose of the other consideration`
+> - `s 210(8)(a) a director must instruct the accountants or solicitors named in the resolution to report`
+> - `s 211(3) the company must furnish the person with a copy of the statement free of charge`
+> - `s 215F(1) the Registrar must issue the notice of amalgamation on receiving the documents and fees`
+> - `s 215K(2)(a) the Official Receiver must deal with the moneys as if they were paid under section 197`
+> - `s 215K(2)(b) the Official Receiver must sell or dispose of the other consideration`
+> - `s 215C(3) a director who votes in favour must sign the declaration`
+> - `s 215F(3) the Registrar must remove the amalgamating companies from the register`
+> - `s 215F(4) the Registrar must issue the certificate of confirmation of amalgamation`
+> - `s 215D(6) a director who votes in favour must sign the declaration`
+> - `s 215(2) the transferor company must supply the dissenting shareholder with the written statement`
+> - `s 215(4) the transferee must transmit the notice and pay, allot or transfer the consideration`
+> - `s 215(4) the transferor company must register the transferee as the holder of the shares`
+> - `s 215(5) the transferor company must pay the sums received into a separate bank account`
+> - `s 215(7)(a) the Official Receiver must deal with the moneys as if they were paid under section 197`
+> - `s 215(7)(b) the Official Receiver must sell or dispose of the other consideration`
+>
+> The other rules named in this section are unchanged.
+
 40 regulative rules are encoded (every one has at least one `#TRACE`, and every trace carries an `-- EXPECT` line).
 15 have a time limit in the text and each of them has a trace that reaches `BREACH` (25 `BREACH` traces in all, 43 `FULFILLED`, 27 `RESIDUAL`; 95 traces in the four tests files).
 The other 25 are a `MUST` with no time limit: a late act still reads `FULFILLED`, so no trace can show them breached, and no deadline has been invented for them.
