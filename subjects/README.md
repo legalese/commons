@@ -45,7 +45,7 @@ modules rather than a `cases/` directory; it gained section 393 and a `projectio
 2026-09-21, and still has no `registers/`, `report/` or `gates/`. The projections are the
 repository's **first generated ladder figures** — six robbery decisions read out of the module
 through `jl4-lsp` in four carriers each, one of them prose, so the section's elements can be laid
-beside a textbook's list without anyone transcribing them. It is filed as a
+beside any other statement of its elements without anyone transcribing them. It is filed as a
 subject rather than an l4-ide example because it is a body of law, and this is where bodies
 of law live; its `NOTES.md` states what the sidecar does not carry. It is also the row whose
 **source terms bite hardest**: inert style works by quoting the statute inline, so unlike

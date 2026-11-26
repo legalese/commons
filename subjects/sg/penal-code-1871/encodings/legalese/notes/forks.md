@@ -69,7 +69,7 @@ No fixture has `attempts to cause` TRUE, so no answer on the bench differs betwe
 **Readings.** (A) "dishonestly" governs the first two limbs and "intentionally" the third, each with its own verbs. (B) The adverbs pool, so a charge may say "dishonestly and intentionally" of any limb relied on.
 **Consequences.** The ladder is the same under both; the recital differs. Under (A), with the first and third limbs both TRUE, it reads "did dishonestly misappropriate the said furniture, and did intentionally suffer another person so to do in respect of the said furniture". Under (B) it read "did dishonestly and intentionally misappropriate, and suffer another person to misappropriate the said furniture", the form replaced on 2026-09-21 (NOTES.md, s 405); three of the module's assertions pin (A).
 **Encoded now.** (A). Each adverb is written in front of its own verbs.
-**A further question, part of the same review.** Whose dishonesty "to do so" carries on the third limb. This row's leaf is named with the anaphor intact, and its `@desc` says that answering TRUE asserts the other person's dishonesty. `legalese-whole-code` forks the question as P-22 and takes the same reading; it is open there for a ruling.
+**A further question, part of the same review.** Whose dishonesty "to do so" carries on the third limb. This row's leaf is named with the anaphor intact, and its `@desc` says that answering TRUE asserts the other person's dishonesty.
 
 ## PC-7 — s 390(2): "carrying away or attempting to carry away" as two leaves (presentation)
 
@@ -93,7 +93,7 @@ Under (A) a fixture can hold exactly one occasion TRUE, which the getaway fixtur
 **Status:** presentation; open for human review as to layout only; the reading taken stands until ruled.
 **Provision.** "(b) in the way of his trade, profession or business as a banker, a merchant, a factor, a broker, an attorney or an agent"; "(g) in his capacity as a key executive of a corporation, an unincorporated association or a partnership".
 **Readings.** (A) One leaf per alternative: paragraph (b) is two lists in series, three leaves then six; paragraph (g) is `in his capacity as a key executive` then three leaves. (B) One BOOLEAN leaf per paragraph, with the alternative chosen named in a STRING particular and recited.
-**Consequences.** None to any verdict: which alternative applies never decides whether the offence is made out, only whether some alternative in each list does. The recital and the facts record differ. `legalese-whole-code` takes (B) (its fork P-23) and gives the same verdicts.
+**Consequences.** None to any verdict: which alternative applies never decides whether the offence is made out, only whether some alternative in each list does. The recital and the facts record differ.
 **Encoded now.** (A).
 **Not a fork: s 409(1)(c)'s carve-out.** "(other than by way of a trade, profession or business mentioned in paragraph (b))" is explicit; the leaf is named with it.
 
