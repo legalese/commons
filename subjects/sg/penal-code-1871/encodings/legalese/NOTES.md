@@ -649,7 +649,7 @@ The same caveat the s 393 and s 394 recitals already carry.
 The capacities on the Carl Elias Moses fixtures are supposed too: the charge actually laid against him was under s 406, and nothing in the judgment says in what capacity Trans-Pacific Credit Pte Ltd entrusted him.
 
 **Six fixtures, 32 assertions, and what they can and cannot catch.**
-The fixtures are the Carl Elias Moses entrustment as an employee (s 408), as a director (s 409(1)(d)), and as an employee NOT entrusted in that capacity (the negative); Illustration (b) to s 405, the warehouse operator, for s 407's storage limb; Illustration (c), the Penang agent, for s 409(1)(b); and the same agent with the trade-profession-business column removed.
+The fixtures are the Carl Elias Moses entrustment as an employee (s 408), as a director (s 409(1)(d)), and as an employee NOT entrusted in that capacity (the negative); Illustration (b) to s 405, the warehouse operator, for s 407's storage limb; Illustration (c), the Penang agent, for s 409(1)(b); and the same agent with the trade-profession-business list removed.
 `charge-sheet.l4` gains three complaints and three assertions (3 → 6 on the branch this landed on): an employee's complaint answers `LIST "408", "406"`, a director's `LIST "409", "406"`, and the employee not entrusted as one `LIST "406"`.
 **No assertion in the module is a tautology, and two are weaker than they look.**
 The all-dark control (`Carl Elias Moses, as charged, no aggravating capacity`) is FALSE under all three sections for two independent reasons — no capacity AND no s 405 case — so the three boolean asserts on it would not flip if only one half broke; the refusal-text assert beside them is the one that discriminates, because it requires the refusal to name BOTH rows.
