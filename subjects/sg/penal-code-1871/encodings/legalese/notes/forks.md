@@ -1,9 +1,7 @@
 # Forks — row `legalese`, Penal Code 1871
 
-*Written 2026-11-24.*
-This register holds the structural choices the row made in the changes of 2026-09-21: a granularity, a factoring, a reading taken.
-Their reasons were first recorded against a published secondary reading of the Code, which this row no longer cites; NOTES.md, "The 2026-09-21 changes, and where they came from", says which changes those were.
-Each fork below is stated from the Code's text alone.
+This register holds the structural choices the row made in the changes of 2026-09-21 (NOTES.md, "The 2026-09-21 changes"): a granularity, a factoring, a reading taken.
+Each fork below rests on the Code's text.
 
 **Five forks are genuine ambiguities in the text and are open for human review:** PC-2, PC-3, PC-4, PC-6 and PC-8.
 The other seven are marked *presentation*: the text is not ambiguous there and the readings give the same answers, so review decides only how the encoding is laid out.
