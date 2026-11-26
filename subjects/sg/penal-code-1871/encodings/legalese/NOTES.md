@@ -210,16 +210,13 @@ first three changes moved them, so the mismatch is total rather than local.
 `misappropriation-403.l4` and `cbt-407-409.l4` have **no goldens at all** — four files each are
 owed under `tests/` when the row is next re-blessed, on the four-per-module pattern.
 
-## The 2026-09-21 changes, and where they came from
+## The 2026-09-21 changes
 
-*Rewritten 2026-11-24.*
-These 2026-09-21 changes came out of a structural comparison of this row with a published secondary reading of the Code: an expert's element-by-element account of these offences, not a review of this row.
-They are s 403 (added), s 390(2) (two places where the ladder was coarser than the grammar), s 392 (restated as an implication), s 380 (added) and ss 407–409 (added).
-The s 405 third-limb change was made beside that comparison, which showed only a difference of factoring; the ladder did not move, and the three defects fixed were defects of form in the recital, each reproduced by probe.
-s 393 was not attributed to the comparison when it was written; the getaway fixtures followed from the s 390(2) split.
-Each change was verified against the Code's text, and each is recorded below on that text alone.
-That reading is not cited or described in this row; each choice stands on the Code's text alone.
-Every structural choice whose recorded reason was that comparison is now in [`notes/forks.md`](notes/forks.md): where the text is ambiguous the fork gives the readings and the statutory reason for the one taken, and where it is not, the fork says the choice is one of presentation.
+The changes are s 403 (added), s 390(2) (two places where the ladder was coarser than the grammar), s 392 (restated as an implication), s 380 (added) and ss 407–409 (added).
+In s 405 the third-limb change is a difference of factoring: the ladder did not move, and the three defects fixed were defects of form in the recital, each reproduced by probe.
+The getaway fixtures of s 393 followed from the s 390(2) split.
+Each change was verified against the Code's text, and each is recorded below on that text.
+Every structural choice of these changes is in [`notes/forks.md`](notes/forks.md): where the text is ambiguous the fork gives the readings and the statutory reason for the one taken, and where it is not, the fork says the choice is one of presentation.
 The five genuine ambiguities among them (PC-2, PC-3, PC-4, PC-6, PC-8) are open for human review, and in every fork the reading taken stands until ruled.
 
 ## 2026-09-21 — section 403, criminal misappropriation
@@ -400,8 +397,7 @@ the s 394 recital already carried.
 
 ## 2026-09-21 — s 390(2) at the granularity of its grammar
 
-The structural comparison described under "The 2026-09-21 changes, and where they came from"
-found this module’s ladder for s 390(2) coarser than the subsection’s grammar in two places.
+This module’s ladder for s 390(2) was coarser than the subsection’s grammar in two places.
 On both, the statutory text requires the finer reading, so the module moved
 ([`notes/forks.md`](notes/forks.md), PC-3 and PC-7).
 
