@@ -66,8 +66,9 @@ OTHER: 15 timed by another act or filing, 9 weighed in the course of another act
 1. **The Registrar, the Minister and the Official Receiver are treated like any other bearer of a duty.**
    Where their duty is an act (issue, publish, send, appoint, register, strike off, report), it is an ACHIEVEMENT, since s 52 speaks of "anything" to be done.
 2. **The 19 sites whose section gives its own word ("immediately", "as soon as practicable", "without delay", "within a reasonable time", "thereupon", "in sufficient time") are ACHIEVEMENT, text's own standard, and s 52 is not their source.**
-   s 52 applies only "where no time is prescribed or allowed", and these sections prescribe one in words, so s 52 does not apply to them.
-   The number of days is as missing as for the others, so they take an input too, named for what it is, `the period the standard of time allows, as found`; the comment beside the `WITHIN` gives the section's own word as the standard and says that s 52 does not apply because the section prescribes its own standard.
+   s 52 does not reach them: it applies only "where no time is prescribed or allowed within which anything is to be done", and each of these sections prescribes a standard of time in its own words, so the first limb of s 52 is not met.
+   The number of days is as missing as for the others, so they take an input too, named for what it is, `the period the standard of time allows, as found`; the comment beside the `WITHIN` gives the section's own standard (its word and its section number) and says the period is an input, as found, and it does not mention s 52.
+   I chose a second name for those 19 and left the other 89 on the s 52 name, which is the least churn: no call site changes, because the input is positional.
    Reclassing them is a one-pass change.
    They are (lines at commit 1142117325): `sgb1-s149b-appointment.l4:367`, `sgb1-s156-interests.l4:471`, `sgc2-s205-appointment.l4:221`, `sgc2-s205-appointment.l4:390`, `sgc2-s205aa-resignation.l4:195`, `sgc2-s206-208a-duties.l4:149`, `sgc2-s206-208a-duties.l4:158`, `sgc2-s206-208a-duties.l4:167`, `sgc2-s206-208a-duties.l4:303`, `sgc2-s206-208a-duties.l4:672`, `sgc2-s206-208a-duties.l4:746`, `sgd-acquisition.l4:1341`, `sgd-amalgamation.l4:1371`, `sgd-compromise.l4:1032`, `sgl-circulation.l4:415`, `sgl-minutes.l4:401`, `sgl-minutes.l4:414`, `sgl-written.l4:613`, `sgm-part5-div4.l4:1248`.
 3. **A duty that is a bar on a power, not an act that falls due, is OTHER.**
@@ -309,7 +310,7 @@ Status: decided by Claude on 2026-11-26, assumed, not ruled; each point can be r
   That is the wording the project's brief quotes.
   The Act is not in this folder's source bundle.
   The 19 rules whose section gives its own word have a second input, written the same way and last in the rule's `GIVEN` list: `` `the period the standard of time allows, as found` IS A NUMBER ``, in days.
-  Its `WITHIN` carries a comment that names the section's own word as the standard ("immediately", "as soon as is practicable", "without delay", "within a reasonable time", ...) and says that Interpretation Act 1965 s 52 does not apply because the section prescribes its own standard (decided by Claude on 2026-11-26, assumed, not ruled).
+  Its `WITHIN` carries a comment that gives the section's own word as the standard ("immediately", "as soon as is practicable", "without delay", "within a reasonable time", ...) with its section number, and does not mention Interpretation Act 1965 s 52, which does not reach these sites because they prescribe their own standard (decided by Claude on 2026-11-26, assumed, not ruled).
   No rule has both inputs.
 - **No default number is anywhere.**
   There is no `TYPICALLY` on the input, and no number in any rule; the only numbers are the ones each `#TRACE` supplies (see the test commit).
