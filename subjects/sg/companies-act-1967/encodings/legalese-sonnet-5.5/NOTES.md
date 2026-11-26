@@ -820,4 +820,15 @@ The wait device of s 215(6) and s 216A(3)(a) (a step nobody takes, then a helper
 
 ### What it cost, and why (so that a later job sizes a ruling like it before taking it)
 
-The independent review and its fixes cost about 53M tokens against an estimate of 12M. The estimate was the size of the fixes to the UK and IL layers of the same kind, which cost one builder about 10.6M and 9.2M each. The cause was one ruling taken during the fix: that every do-once duty takes the same rule-level found-period input as its twin in the section modules. It reached about 20 duties in eight units, and each needed a new input passed down its chain and its traces re-argued, which the two builders found only as they went (13.5M and 14.1M instead of about 6M each). A ruling that adds an input to a family of rules is a change to every call and every trace of the family: count the sites first, and price it per site. Two further review passes (6.4M and 5.3M) and a third fixing round (about 3M) were needed, because new code is itself reviewed.
+The independent review and its fixes cost about 63M tokens against an estimate of 12M.
+The figure is the session's token meter, the sum of every turn of the lead and of each agent: the first review 6.4M, the two builders of the first round 13.5M and 14.1M, two read-throughs of the fixes 8.4M, a third fixing round 4.0M, and the lead's own turns about 16.5M.
+The estimate was the size of the fixes to the UK and IL layers of the same kind, which cost one builder about 10.6M and 9.2M each.
+The cause was one ruling taken during the fix: that every do-once duty takes the same rule-level found-period input as its twin in the section modules.
+It reached about 20 duties in eight units, and each needed a new input passed down its chain and its traces re-argued, which the two builders found only as they went (13.5M and 14.1M instead of about 6M each).
+A ruling that adds an input to a family of rules is a change to every call and every trace of the family: count the sites first, and price it per site.
+Two read-throughs and a third fixing round were needed besides, because new code is itself reviewed.
+
+### Known differences left by the last read-through (listed, not fixed)
+
+- s 215(3) (minor): the fork and the unit's notes say the s 215(4) steps "have their clocks in this module", but the s 215(3) chain does not call them and their gate needs a s 215(1) notice. So in this layer the s 215(3) acquisition has no clock of its own and is not chained into s 215(4). Decided by Claude 2026-11-27, assumed, not ruled.
+- s 78C(3)(c) (nit): the statement and the copy of the resolution are no longer lodged "together" in one act, since the act is the statement alone and the copy is the s 186 rule's; the fork does not say that the "together with" is no longer checked.
