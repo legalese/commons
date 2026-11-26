@@ -25,12 +25,12 @@ After the s 52 pass the 97 sites that are not achievements still begin that way,
 The comment says that the section states no time for the duty, so that a breach needs a standard of time from outside the section, and it names the general one: the Interpretation Act 1965 s 52, under which a thing for which no time is prescribed "is to be done with all convenient speed".
 It then carries the dropped `LEST` clause word for word (`dropped clause: LEST BREACH BY … BECAUSE "…"`), copied from the commit before the drop and checked against it byte for byte; for the 7 clauses whose closing parenthesis moved to the line above, the comment carries the clause without it.
 Not every site wants that standard: a duty that must hold throughout ("keep a register", "act honestly at all times") is broken at any moment it stops holding, not when a period runs out, and L4 has no form for such a duty yet.
-Sorting the 205 into duties to do a thing once, which can take a `WITHIN` whose length is found under s 52, and duties that must hold throughout, which stay as they are, is done in the next section (decided by Claude on 2026-11-26, assumed, not ruled).
+Sorting the 205 into duties to do a thing once, which can take a `WITHIN` whose length is found under s 52, and duties that must hold throughout, which stay as they are, is done in the section "Sorted by kind of duty" (decided by Claude on 2026-11-26, assumed, not ruled).
 
 ## Sorted by kind of duty: achievement, maintenance, other
 
 Status: decided by Claude on 2026-11-26, assumed, not ruled; every row below is a proposal for a maintainer to confirm or reverse.
-The sorting was done by reading the operative verb of each rule and the statute words in its row of the next section, one site at a time; a script only applied the sorting from a table written by hand, and it chose no class.
+The sorting was done by reading the operative verb of each rule and the statute words in its row of the section "Dropped", one site at a time; a script only applied the sorting from a table written by hand, and it chose no class.
 The line column is the line in the tree at the commit that restores the achievement sites: for the 97 sites left as comments it is the line of the `-- no LEST:` comment, and for the 108 restored sites it is the line of the restored `LEST`.
 The rows of the section "Dropped" keep the lines at commit 1142117325, where this work began; restoring a site adds a line or two above every later site in its module.
 Each class is also written on the comment itself, so `grep -rn -e '\[class: ' .` in this folder finds the 97 sites that are not achievements, and says which class each is.
@@ -65,7 +65,7 @@ OTHER: 15 timed by another act or filing, 9 weighed in the course of another act
 2. **The 19 sites whose section gives its own word ("immediately", "as soon as practicable", "without delay", "within a reasonable time", "thereupon", "in sufficient time") are ACHIEVEMENT.**
    s 52 applies "where no time is prescribed or allowed", and these sections arguably prescribe one in words; the number of days is as missing as for the others, so they take the same input, and the comment beside it names the section's own word.
    Reclassing them is a one-pass change.
-   They are: `sgb1-s149b-appointment.l4:367`, `sgb1-s156-interests.l4:471`, `sgc2-s205-appointment.l4:221`, `sgc2-s205-appointment.l4:390`, `sgc2-s205aa-resignation.l4:195`, `sgc2-s206-208a-duties.l4:149`, `sgc2-s206-208a-duties.l4:158`, `sgc2-s206-208a-duties.l4:167`, `sgc2-s206-208a-duties.l4:303`, `sgc2-s206-208a-duties.l4:672`, `sgc2-s206-208a-duties.l4:746`, `sgd-acquisition.l4:1341`, `sgd-amalgamation.l4:1371`, `sgd-compromise.l4:1032`, `sgl-circulation.l4:415`, `sgl-minutes.l4:401`, `sgl-minutes.l4:414`, `sgl-written.l4:613`, `sgm-part5-div4.l4:1248`.
+   They are (lines at commit 1142117325): `sgb1-s149b-appointment.l4:367`, `sgb1-s156-interests.l4:471`, `sgc2-s205-appointment.l4:221`, `sgc2-s205-appointment.l4:390`, `sgc2-s205aa-resignation.l4:195`, `sgc2-s206-208a-duties.l4:149`, `sgc2-s206-208a-duties.l4:158`, `sgc2-s206-208a-duties.l4:167`, `sgc2-s206-208a-duties.l4:303`, `sgc2-s206-208a-duties.l4:672`, `sgc2-s206-208a-duties.l4:746`, `sgd-acquisition.l4:1341`, `sgd-amalgamation.l4:1371`, `sgd-compromise.l4:1032`, `sgl-circulation.l4:415`, `sgl-minutes.l4:401`, `sgl-minutes.l4:414`, `sgl-written.l4:613`, `sgm-part5-div4.l4:1248`.
 3. **A duty that is a bar on a power, not an act that falls due, is OTHER.**
    "The Registrar must refuse to register" (`sge-p10a-360.l4` s 360(1) and (2), `sgh-incorporation.l4` s 20(2)) is breached by registering, and no day arrives on which it is late.
 4. **A duty whose time the Act hands to regulations is OTHER.**
@@ -301,7 +301,9 @@ Status: decided by Claude on 2026-11-26, assumed, not ruled; each point can be r
   Each such rule gains a rule-level `GIVEN`, written last in the rule's `GIVEN` list: `` `the period of all convenient speed, as found` IS A NUMBER ``, in days, which is the unit of every other `WITHIN` in this folder and of the `AT` of every `#TRACE`.
   It means how many days count as all convenient speed for that duty, as found by whoever applies the rule on the facts in front of them.
   The rule's `WITHIN` names it, and a comment on the same line cites Interpretation Act 1965 s 52 ("with all convenient speed") and says that this is assumed, not ruled.
-  The wording of s 52 is the project's brief of 2026-11-26; the Act itself is not in this folder's source bundle, and was not checked here.
+  The wording of s 52 was read on 2026-11-26 in the lawplain copy of the Interpretation Act 1965 (`IA1965`, current, https://sso.agc.gov.sg/Act/IA1965), headed "Provision when no time prescribed": "Where no time is prescribed or allowed within which anything is to be done, that thing is to be done with all convenient speed and as often as the prescribed occasion arises."
+  That is the wording the project's brief quotes.
+  The Act is not in this folder's source bundle.
   At the 19 sites whose section gives its own word, that comment names the word.
 - **No default number is anywhere.**
   There is no `TYPICALLY` on the input, and no number in any rule; the only numbers are the ones each `#TRACE` supplies (see the test commit).
@@ -314,11 +316,39 @@ Status: decided by Claude on 2026-11-26, assumed, not ruled; each point can be r
   One input serves each duty of such a rule.
   For `s 215(4)`, where the text says "after the expiration of one month", the caller starts the trace on the first day the transferee may act (the rule `s 215(4) the first day on which the transferee must act` finds it).
 - **Callers.**
-  The only callers of these rules are the `#TRACE` directives of the test modules: 215 call sites in 41 modules; no other rule and no `@export` calls them.
+  The only callers of these rules are the `#TRACE` directives of the test modules: 215 call sites in 41 modules at the code commit (the next section says what the tests commit added); no other rule and no `@export` calls them.
   A `#TRACE` that leaves the input out is a type error under both `l4 check` and `l4 run` (`check/type-mismatch`; measured on a probe on 2026-11-26).
   Each call passes the input after the rule's other arguments.
 - **Maintenance and other sites are untouched** apart from the class written at the end of their comment.
   The sections of the per-agent notes called "Rules with no breach path" were written before this pass; for a rule that is now an ACHIEVEMENT they are out of date, and this file is the later record.
+
+## What the tests show now
+
+Status: decided by Claude on 2026-11-26, assumed, not ruled; each point can be reversed alone.
+
+- **Each `#TRACE` of an achievement rule passes the input as 7 or as 45, chosen per trace.**
+  Neither is a default or a finding; they are two values that make the outcomes differ.
+  A trace whose last event falls in days 8 to 45 gets 45 (so it keeps its outcome); a trace with no event, or only events by day 7, alternates; a trace with an event or a wait later than day 45 alternates too, and is past the period at either value.
+- **59 `EXPECT` lines changed, all to `BREACH`: 20 from `FULFILLED` and 39 from `RESIDUAL`.**
+  The `FULFILLED` ones are a late act (on day 400 or later): before, no `WITHIN` meant a late act still read `FULFILLED`; now the act is past the input.
+  The `RESIDUAL` ones are a wait with no act (to day 60 or later, and in one trace the first duty of a pair done on day 1 and the second never) which ended with the obligation open because nothing could lapse; now it lapses.
+  Every one is a trace of the achievement rule itself, and its old comment said in terms that the rule could not be breached ("a late act still reads FULFILLED", "the obligation stays open, never BREACH"), so the old line was about exactly this obligation and is wrong now.
+  No `#ASSERT` was changed, and no trace of any other rule: the 339 traces of rules that are not achievements, in the same 41 modules, end as they did before.
+- **One trace kept its outcome on purpose.**
+  `s 176(4)` pays the requisitionists (an achievement) and then retains the sum out of what is due to the directors in default (OTHER, no time of its own): with 45 days, the payment on day 30 is in time and the retaining on day 400 is not timed, so the chain still ends `FULFILLED`.
+  A third trace, with 7 days, shows the payment on day 30 breached.
+- **75 traces were added**: 17 in-time acts (45 days, act on day 5, `FULFILLED`) for the rules that had no trace reaching `FULFILLED` once the late ones changed, and 58 late acts (7 days, the act on day 400, or on day 30 for `s 176(4)`, `BREACH`) for the rules that had none reaching `BREACH`.
+  The achievement rules now have 290 traces (215 before); every one of the 41 test modules has at least one that reaches `BREACH`.
+- **Five rule names lost "(no time limit)"** (`s 183(4B)`, `s 188(3B)`, `s 188(3C)`, `s 184C(1)`, `s 184D(2)(b)`), because they now have one; the name and every call changed together.
+  The rows of the section "Dropped" below quote the old names.
+- **44 comments in the test modules** that said a rule has no time limit or no breach path say the s 52 input sets the time.
+- **The other text that went stale was found by searching every line of the 108 changed modules**, not only the lines near a rule: 10 section headings, 16 more comments and 3 `EXPECT` remarks that said an achievement rule has no time limit or no breach path now say the s 52 input sets the time; the same words above a maintenance or other rule were left, because they are still true there.
+- **The per-agent notes were kept in step.**
+  35 of the 1,458 `module.l4:NNN` cites in `sga1`, `sgb1`, `sgh`, `sgl` and `sgm` NOTES.md moved because a line was added above them, and now cite the line they cited before; every cite was checked against the text of the line at commit 1142117325, and the 17 that differ are `#TRACE` lines that only gained the input.
+  The five renamed rules are renamed in `sgl-NOTES.md` too (12 places).
+  Their sections called "Rules with no breach path" remain what they were: an account of the encoding before this pass.
+- **How it was checked.**
+  `check.sh` counts assertions and never reads a `#TRACE`, so a trace outcome was read from `l4 run` itself: every one of the 629 traces in the 41 modules ends as its `EXPECT` line says, on the unstable build and on the main build (112), with 0 errors on both; the same read of the 554 traces before the change found 0 differences between `EXPECT` and the outcome, so the instrument was not blind.
 
 ## Dropped
 
@@ -864,9 +894,9 @@ Each row gives the module and the line the `LEST` was on, the rule, the section,
 | 256 | s 386AN(2)(b) the Registrar must require each company or foreign company to lodge the particulars and updates | s 386AN(2)(b) | the Registrar must require any company or foreign company to which this Part applies to lodge with the Registrar. The only time phrase, "within the prescribed time" (subsection (3)), is the company's duty to lodge once required. (No period for the Registrar's requiring; the prescribed time in (3) binds the company, and is not a number.) |
 | 408 | s 386ANA(1) the Registrar must keep a central register of nominee directors and a central register of nominee ... | s 386ANA(1) | The Registrar must keep a central register of nominee directors and a central register of nominee shareholders consisting of the particulars contained in the registers kept by companies and foreign companies to which this Part applies. The only time phrase, "within the prescribed time" (subsection (3)), is the company's duty to lodge. (No period for the Registrar's duty; (3)'s prescribed time binds the company, and is not a number.) |
 
-## Where an independent reader asked for a deadline and the drop stands
+## Where an independent reader asked for a deadline: s 377(2)
 
-`sgg-cessation.l4:174`, s 377(2), the notice of the appointment of a liquidator.
+`sgg-cessation.l4:174` at commit 1142117325 (line 176 now, the restored `LEST`), s 377(2), the notice of the appointment of a liquidator.
 The text (raw lines 24655-24661) says the authorised representative must, "(a) within 14 days after the commencement of the liquidation or the dissolution; or (b) within such further time as the Registrar in special circumstances allows, lodge or cause to be lodged with the Registrar notice of that fact and, when a liquidator is appointed, notice of such appointment".
 The 14 days run from the commencement of the liquidation, and the rule `s 377(2)(a)` already carries them for the notice of that fact.
 A liquidator may be appointed later than day 14, so the same clock cannot be met for the notice of the appointment, and the Registrar's further time is an input the module has no place for.

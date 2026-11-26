@@ -306,7 +306,7 @@ The table:
 | s 183(4A) | 16486-16489 | fork F-35 | `s 183(4A) the conditions on which the company is bound to give notice or to circulate are met` |
 | s 183(4A)(a) | 16490-16493 | encoded | within the rule of the whole subsection: `s 183(4A) the conditions on which the company is bound to give notice or to circulate are met` |
 | s 183(4A)(b) | 16494-16496 | encoded | within the rule of the whole subsection: `s 183(4A) the conditions on which the company is bound to give notice or to circulate are met` |
-| s 183(4B) | 16497-16502 | fork F-40 | `s 183(4B) the directors have complied with the duty to notify the date of receipt`; `s 183(4B) the directors must notify the specified person of the date of receipt (no time limit)` |
+| s 183(4B) | 16497-16502 | fork F-40 | `s 183(4B) the directors have complied with the duty to notify the date of receipt`; `s 183(4B) the directors must notify the specified person of the date of receipt` |
 | s 183(5) | 16503-16515 | fork F-37 | `s 183(5) the company is not bound to circulate the statement`; `s 183(5) the Court may order the requisitionists to pay the company's costs of the application in whole or in part` |
 | s 183(6) | 16516-16524 | fork F-38 | `s 183(6) the resolution is business that may be dealt with at the annual general meeting`; `s 183(6) notice is deemed to have been given despite the accidental omission` |
 | s 183(7) | 16525-16529 | fork F-10 | `s 183(7) the person is guilty of the offence this subsection creates`; `s 183(7) the most the person may be sentenced to on conviction` |
@@ -367,7 +367,7 @@ The table:
 | s 184B(1)(c) | 16788-16792 | encoded | within the rule of the whole subsection: `s 184B(1) the resolution may be passed by written means` |
 | s 184B(2) | 16793-16795 | encoded | `s 184B(2) the resolution is invalid because it was passed in contravention of subsection (1)` |
 | heading of s 184C | 16796-16797 | inert (reason 1) | heading: not operative |
-| s 184C(1) | 16798-16809 | fork F-40 | `s 184C(1) the directors have sent each member entitled to vote a copy of the text of the resolution`; `s 184C(1) the directors must send each member a copy of the text of the resolution (no time limit)` |
+| s 184C(1) | 16798-16809 | fork F-40 | `s 184C(1) the directors have sent each member entitled to vote a copy of the text of the resolution`; `s 184C(1) the directors must send each member a copy of the text of the resolution` |
 | s 184C(2) | 16810-16813 | fork F-40 | `s 184C(2) the directors have complied with subsection (1) as respects every member at the same time and without delay` |
 | s 184C(3) | 16814-16818 | encoded | `s 184C(3) the directors have complied with subsections (1) and (2)` |
 | s 184C(4) | 16819-16824 | encoded | `s 184C(4) the validity of the resolution is not affected by its being passed before the directors complied with subsection (1)` |
@@ -375,9 +375,9 @@ The table:
 | s 184D(1) | 16827-16831 | encoded | `s 184D(1) the member or members may give notice requiring a general meeting to be convened for the resolution` |
 | s 184D(1)(a) | 16832-16834 | encoded | within the rule of the whole subsection: `s 184D(1) the member or members may give notice requiring a general meeting to be convened for the resolution` |
 | s 184D(1)(b) | 16835-16843 | encoded | within the rule of the whole subsection: `s 184D(1) the member or members may give notice requiring a general meeting to be convened for the resolution` |
-| s 184D(2) | 16844-16845 | encoded | `s 184D(2)(a) the resolution is invalid because notice was given under subsection (1)`; `s 184D(2)(b) the directors have proceeded to convene a general meeting for the resolution`; `s 184D(2)(b) the directors must proceed to convene a general meeting for the resolution (no time limit)` |
+| s 184D(2) | 16844-16845 | encoded | `s 184D(2)(a) the resolution is invalid because notice was given under subsection (1)`; `s 184D(2)(b) the directors have proceeded to convene a general meeting for the resolution`; `s 184D(2)(b) the directors must proceed to convene a general meeting for the resolution` |
 | s 184D(2)(a) | 16846-16849 | encoded | `s 184D(2)(a) the resolution is invalid because notice was given under subsection (1)` |
-| s 184D(2)(b) | 16850-16855 | encoded | `s 184D(2)(b) the directors have proceeded to convene a general meeting for the resolution`; `s 184D(2)(b) the directors must proceed to convene a general meeting for the resolution (no time limit)` |
+| s 184D(2)(b) | 16850-16855 | encoded | `s 184D(2)(b) the directors have proceeded to convene a general meeting for the resolution`; `s 184D(2)(b) the directors must proceed to convene a general meeting for the resolution` |
 | heading of s 184DA | 16856-16857 | inert (reason 1) | heading: not operative |
 | s 184DA(1) | 16858-16867 | encoded | `s 184DA(1) the last day of the period of 28 days beginning with the date of circulation`; `s 184DA(1) the resolution has lapsed` |
 | s 184DA(2) | 16868-16872 | fork F-15 | `s 184DA(2) the agreement to the resolution is ineffective` |
@@ -420,8 +420,8 @@ The table:
 | s 188(3A)(a)(i) | 17033-17034 | encoded | within the rule of the whole subsection: `s 188(3A) the duty to enter the matter applies`; `s 188(3A) the company has entered the matter in a minute book within one month`; `s 188(3A) the company must cause the matter to be entered in a minute book within one month` |
 | s 188(3A)(a)(ii) | 17035-17036 | encoded | within the rule of the whole subsection: `s 188(3A) the duty to enter the matter applies`; `s 188(3A) the company has entered the matter in a minute book within one month`; `s 188(3A) the company must cause the matter to be entered in a minute book within one month` |
 | s 188(3A)(b) | 17037-17044 | encoded | within the rule of the whole subsection: `s 188(3A) the duty to enter the matter applies`; `s 188(3A) the company has entered the matter in a minute book within one month`; `s 188(3A) the company must cause the matter to be entered in a minute book within one month` |
-| s 188(3B) | 17045-17048 | fork F-40 | `s 188(3B) the company has ensured that the minutes are signed by a director within a reasonable time`; `s 188(3B) the company must ensure that the minutes are signed by a director (no time limit)` |
-| s 188(3C) | 17049-17053 | fork F-40 | `s 188(3C) the sole director has signed the minutes within a reasonable time`; `s 188(3C) the sole director must sign the minutes (no time limit)` |
+| s 188(3B) | 17045-17048 | fork F-40 | `s 188(3B) the company has ensured that the minutes are signed by a director within a reasonable time`; `s 188(3B) the company must ensure that the minutes are signed by a director` |
+| s 188(3C) | 17049-17053 | fork F-40 | `s 188(3C) the sole director has signed the minutes within a reasonable time`; `s 188(3C) the sole director must sign the minutes` |
 | s 188(3D) | 17054-17058 | fork F-45 | `s 188(3D) the minutes are evidence of the resolution or declaration to which they relate` |
 | s 188(4) | 17059-17063 | fork F-10 | `s 188(4) the person is guilty of the offence this subsection creates`; `s 188(4) the most the person may be sentenced to on conviction` |
 | heading of s 189 | 17064-17065 | inert (reason 1) | heading: not operative |
@@ -570,7 +570,7 @@ The Registrar, the Minister and the Court appear only as what they mean to the i
 | s 184A(1) | a private company or an unlisted public company (to pass a resolution by written means) | not named | privilege / no-right | `s 184A(1) the company may pass the resolution by written means` |
 | s 184A(3)-(9) | none (when a resolution is passed by written means; formal agreement; legible form; references; the term "unlisted public company") | none | none | the functions of those names |
 | s 184B(1), (2) | none (the resolution may be passed; invalid if passed in contravention) | none | none | `s 184B(1)`, `s 184B(2)` functions |
-| s 184C(1)-(3) | the members with the right to vote on the resolution | the directors: send each a copy of the text (at the same time and without delay as far as practicable) | claim / duty (no clock) | the functions of those names; regulative `s 184C(1) the directors must send each member a copy of the text of the resolution (no time limit)` |
+| s 184C(1)-(3) | the members with the right to vote on the resolution | the directors: send each a copy of the text (at the same time and without delay as far as practicable) | claim / duty (no clock) | the functions of those names; regulative `s 184C(1) the directors must send each member a copy of the text of the resolution` |
 | s 184D(1) | a member or members representing at least 5% of the voting rights (to give notice, within 7 days, requiring a general meeting for the resolution) | the company and the directors | power / liability | `s 184D(1) the member or members may give notice requiring a general meeting to be convened for the resolution` |
 | s 184D(2) | the members (the resolution is invalid once notice is given; the directors must convene) | the directors | claim / duty (no clock) | `s 184D(2)(a)`, `(b)` functions; regulative `s 184D(2)(b) ...` |
 | s 184DA | none (a resolution lapses if not passed within 28 days; agreement after the period is ineffective) | none | none | the `s 184DA` functions |
@@ -884,18 +884,18 @@ All but one of their names end "(no time limit)" (s 176(4)'s does not), and each
 
 | provision | rule | where | traces (expected outcome: count) |
 | --- | --- | --- | --- |
-| s 176(4) | `s 176(4) the company must pay the requisitionists and retain the sum` | `sgl-calling.l4:383` | FULFILLED: 1, RESIDUAL: 1 |
+| s 176(4) | `s 176(4) the company must pay the requisitionists and retain the sum` | `sgl-calling.l4:384` | FULFILLED: 1, RESIDUAL: 1 |
 | s 183(1)(a) | `s 183(1)(a) the company must give members notice of the resolution (no time limit)` | `sgl-circulation.l4:383` | FULFILLED: 1, RESIDUAL: 2 |
 | s 183(1)(b) | `s 183(1)(b) the company must circulate the statement to members (no time limit)` | `sgl-circulation.l4:397` | FULFILLED: 1, RESIDUAL: 1 |
-| s 183(4B) | `s 183(4B) the directors must notify the specified person of the date of receipt (no time limit)` | `sgl-circulation.l4:411` | FULFILLED: 1, RESIDUAL: 1 |
+| s 183(4B) | `s 183(4B) the directors must notify the specified person of the date of receipt` | `sgl-circulation.l4:412` | FULFILLED: 1, RESIDUAL: 1 |
 | s 188(1)(b) | `s 188(1)(b) the company must cause the minutes to be signed by the chairperson (no time limit)` | `sgl-minutes.l4:364` | FULFILLED: 1, RESIDUAL: 1 |
-| s 188(3B) | `s 188(3B) the company must ensure that the minutes are signed by a director (no time limit)` | `sgl-minutes.l4:397` | FULFILLED: 1, RESIDUAL: 1 |
-| s 188(3C) | `s 188(3C) the sole director must sign the minutes (no time limit)` | `sgl-minutes.l4:410` | FULFILLED: 1, RESIDUAL: 1 |
-| s 189(1) | `s 189(1) the company must keep the books at the registered office or the principal place of business in Singapore (no time limit)` | `sgl-minutes.l4:424` | FULFILLED: 1, RESIDUAL: 1 |
+| s 188(3B) | `s 188(3B) the company must ensure that the minutes are signed by a director` | `sgl-minutes.l4:398` | FULFILLED: 1, RESIDUAL: 1 |
+| s 188(3C) | `s 188(3C) the sole director must sign the minutes` | `sgl-minutes.l4:413` | FULFILLED: 1, RESIDUAL: 1 |
+| s 189(1) | `s 189(1) the company must keep the books at the registered office or the principal place of business in Singapore (no time limit)` | `sgl-minutes.l4:428` | FULFILLED: 1, RESIDUAL: 1 |
 | s 174(6) | `s 174(6) the directors must cause the list of members to be produced and kept open and accessible (no time limit)` | `sgl-statutory.l4:432` | FULFILLED: 1, RESIDUAL: 1 |
-| s 184C(1) | `s 184C(1) the directors must send each member a copy of the text of the resolution (no time limit)` | `sgl-written.l4:609` | FULFILLED: 1, RESIDUAL: 1 |
-| s 184D(2) | `s 184D(2)(b) the directors must proceed to convene a general meeting for the resolution (no time limit)` | `sgl-written.l4:625` | FULFILLED: 1, RESIDUAL: 1 |
-| s 184F(1) | `s 184F(1) the company must cause the record of the resolution to be entered in a book (no time limit)` | `sgl-written.l4:658` | FULFILLED: 1, RESIDUAL: 1 |
+| s 184C(1) | `s 184C(1) the directors must send each member a copy of the text of the resolution` | `sgl-written.l4:610` | FULFILLED: 1, RESIDUAL: 1 |
+| s 184D(2) | `s 184D(2)(b) the directors must proceed to convene a general meeting for the resolution` | `sgl-written.l4:628` | FULFILLED: 1, RESIDUAL: 1 |
+| s 184F(1) | `s 184F(1) the company must cause the record of the resolution to be entered in a book (no time limit)` | `sgl-written.l4:662` | FULFILLED: 1, RESIDUAL: 1 |
 
 **What each says, in the text's own words where short.**
 s 174(6): "The directors must cause a list ... to be produced at the commencement of the meeting and to remain open and accessible to any member during the continuance of the meeting"; "at the commencement of the meeting" is a moment of the meeting and not a period counted from an event of the rule, so the rule has no `WITHIN`.
@@ -923,14 +923,14 @@ Where a rule was not written the decision function answers the same duty from th
 | s 174(5) | `s 174(5) the directors must cause the copy to be lodged` | `sgl-statutory.l4:416` | `WITHIN (`s 174(5) the latest day for the directors to cause the copy to be lodged` `the date the statutory meeting is to be held` MINUS `the day the clock starts`)` |
 | s 175(1) | `s 175(1) the company must hold the annual general meeting` | `sgl-agm.l4:448` | The clock: time 0 is the day the financial year ends; the last day is given in days from it (s 175(1) number of days). |
 | s 176(1) | `s 176(1) the directors must hold the extraordinary general meeting` | `sgl-calling.l4:366` | The clock: time 0 is the day the company received the requisition; the last day is 2 months later (s 176(1) number of days). |
-| s 177(2) | `s 177(2) the company must call the meeting by notice of the length the subsection requires` | `sgl-calling.l4:406` | The clock: time 0 is the day the company starts (the rule is entered); the last day for the notice is given in days from it. |
+| s 177(2) | `s 177(2) the company must call the meeting by notice of the length the subsection requires` | `sgl-calling.l4:408` | The clock: time 0 is the day the company starts (the rule is entered); the last day for the notice is given in days from it. |
 | s 179(7) | `s 179(7) the company must lodge a copy of the minute with the Registrar` | `sgl-voting.l4:808` | The clock: time 0 is the day the minute is signed; the last day is 14 days later. |
 | s 185 | `s 185 the company must give its members notice of the resolution not less than 14 days before the meeting where giving it with the notice of the meeting is not practicable` | `sgl-resolutions.l4:414` | s 185: where giving notice at the time of the notice of the meeting is not practicable, the company must give members notice not less than 14 days before the meeting. Time 0 is a stated day; the last day is 14 days before the meeting. |
 | s 186(1) | `s 186(1) the company must lodge a copy of the resolution with the Registrar` | `sgl-resolutions.l4:434` | s 186(1): time 0 is the day the resolution is passed or made; the last day is 14 days later. |
-| s 184E(1) | `s 184E(1) the company must notify every member that the resolution has been passed within 15 days` | `sgl-written.l4:641` | s 184E(1): time 0 is the earliest day a director or secretary is aware that the resolution has been passed; the last day is 15 days later. |
+| s 184E(1) | `s 184E(1) the company must notify every member that the resolution has been passed within 15 days` | `sgl-written.l4:645` | s 184E(1): time 0 is the earliest day a director or secretary is aware that the resolution has been passed; the last day is 15 days later. |
 | s 188(1)(a) | `s 188(1)(a) the company must cause the minutes to be entered in a book within one month` | `sgl-minutes.l4:350` | s 188(1)(a): time 0 is the day of the meeting; the last day is one month later. |
 | s 188(3A) | `s 188(3A) the company must cause the matter to be entered in a minute book within one month` | `sgl-minutes.l4:383` | s 188(3A): time 0 is the day the resolution was passed or the declaration made; the last day is one month later. |
-| s 189(2) | `s 189(2) the company must furnish the member with a copy of the minutes within 14 days` | `sgl-minutes.l4:438` | s 189(2): time 0 is the day the member makes the request in writing; the last day is 14 days later. |
+| s 189(2) | `s 189(2) the company must furnish the member with a copy of the minutes within 14 days` | `sgl-minutes.l4:442` | s 189(2): time 0 is the day the member makes the request in writing; the last day is 14 days later. |
 
 ## What the text turns out to say (numbered findings)
 

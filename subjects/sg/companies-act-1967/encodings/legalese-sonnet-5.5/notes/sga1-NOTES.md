@@ -689,7 +689,7 @@ Of 252 branches, 68 are marginal under (a), 100 under (b), 13 rest on the encode
 | sga1-rights.l4:213 | s 64A(5) section 64A limits or derogates from the right | "This section does not operate so as to limit or derogate from the rights of any person under section 74" | the text says no in its own words |
 | sga1-rights.l4:290 | s 65(2) the portion is capable of being called up other than in the event and for the purposes of the company being wound up | "thereupon that portion of its share capital is not capable of being called up except in the event and for the | the text says no in its own words |
 | sga1-rights.l4:396 | s 66(4) the company is responsible for the loss incurred by the person by reason of the cancellation | "the company is not responsible for any loss incurred by any person by reason of such cancellation" | the text says no in its own words |
-| sga1-rights.l4:431 | s 67(2) the payment is to be taken as reducing the amount of share capital of the company | "A payment made under subsection (1) is not to be taken as reducing the amount of share capital of the company | the text says no in its own words |
+| sga1-rights.l4:433 | s 67(2) the payment is to be taken as reducing the amount of share capital of the company | "A payment made under subsection (1) is not to be taken as reducing the amount of share capital of the company | the text says no in its own words |
 
 ### (b) A prohibition, grant, power or deeming limited by its own wording does not count as the text's no (100 branches)
 
@@ -790,9 +790,9 @@ Of 252 branches, 68 are marginal under (a), 100 under (b), 13 rest on the encode
 | sga1-rights.l4:369 | s 66(3) the company is responsible for the loss incurred by the person | "for any loss incurred by any person by reason of the company entering in the register the name of a bearer of | limited by its own wording |
 | sga1-rights.l4:384 | s 66(4) the share warrant is one the company must cancel | "any share warrant which is issued by a company before 29 December 1967" -- a warrant issued on or after that  | limited by its own wording |
 | sga1-rights.l4:397 | s 66(4) the company is responsible for the loss incurred by the person by reason of the cancellation | "by reason of such cancellation" -- another loss is not covered | limited by its own wording |
-| sga1-rights.l4:421 | s 67(1) the company may use its share capital to pay the expenses | "any expenses (including brokerage or commission) incurred directly in the issue of new shares" -- other expen | limited by its own wording |
-| sga1-rights.l4:432 | s 67(2) the payment is to be taken as reducing the amount of share capital of the company | "A payment made under subsection (1)" -- another payment is not covered | limited by its own wording |
-| sga1-rights.l4:445 | s 68 the company may issue the shares for no consideration | "A company having a share capital may issue shares for which no consideration is payable to the issuing compan | limited by its own wording |
+| sga1-rights.l4:423 | s 67(1) the company may use its share capital to pay the expenses | "any expenses (including brokerage or commission) incurred directly in the issue of new shares" -- other expen | limited by its own wording |
+| sga1-rights.l4:434 | s 67(2) the payment is to be taken as reducing the amount of share capital of the company | "A payment made under subsection (1)" -- another payment is not covered | limited by its own wording |
+| sga1-rights.l4:447 | s 68 the company may issue the shares for no consideration | "A company having a share capital may issue shares for which no consideration is payable to the issuing compan | limited by its own wording |
 | sga1-sixth-schedule.l4:286 | sch 6 Part 1 the matter must be stated in the statement | "in the case of a statement to be lodged by a private company on becoming a public company, the following item | limited by its own wording |
 | sga1-sixth-schedule.l4:290 | sch 6 Part 1 the matter must be stated in the statement | "in the case of a statement to be lodged by a private company on becoming a public company, the following item | limited by its own wording |
 | sga1-sixth-schedule.l4:314 | sch 6 Part 1 row 26 the contract must be stated as a material contract | "every material contract" -- a contract that is not material is not covered | limited by its own wording |
