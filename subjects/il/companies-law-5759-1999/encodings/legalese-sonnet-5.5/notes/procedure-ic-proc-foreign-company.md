@@ -88,8 +88,8 @@ No trace in this layer lapses a MAY that has a LEST after it, and the RAND of 34
 ### Where the layer departs from the Boolean rules
 
 - Section 348 here counts the first year from the registration day, where the Boolean rule answers NOTHING until a previous report exists, and counts each later year as 365 days from the previous report, where the Boolean rule uses `add years`.
-- A change in a document the Minister added under 346(ד) triggers the notice duty here (`סעיף 346(ג) ו־(ד) - חלה חובה להודיע לרשם על שינוי`, a new helper), and it is absent from the Boolean rule `סעיף 346(ג) - החברה עמדה בחובת ההודעה על שינוי`, whose change input names only a document, the directors and the persons of paragraphs (3) and (4).
-  The Boolean rule would need a second change input for the two to agree; it was not edited.
+- A change in a document the Minister added under 346(ד) triggers the notice duty here (`סעיף 346(ג) ו־(ד) - חלה חובה להודיע לרשם על שינוי`, a new helper).
+  The Boolean rule `סעיף 346(ג) - החברה עמדה בחובת ההודעה על שינוי` now agrees: it takes a second change input, for a further document the Minister required, and applies the same fourteen days to it (assumed, not ruled; see `NOTES-ic6.md`).
 
 ### What was not encoded, and why
 
