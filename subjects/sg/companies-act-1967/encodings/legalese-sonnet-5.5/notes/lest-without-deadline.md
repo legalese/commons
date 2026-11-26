@@ -2,8 +2,9 @@
 
 Status: decided by Claude on 2026-11-26 (assumed, not ruled); every row below is a proposal for a maintainer to confirm or reverse, and each can be restored from the commit before it.
 
-Later the same day the 205 sites were sorted by kind of duty (section "Sorted by kind of duty"), and the 108 that are duties to do a thing once were given a time that is an input: 89 the time that Interpretation Act 1965 s 52 supplies, and 19 the time that their own section's standard ("immediately", "as soon as practicable", ...) supplies (section "What was done to the achievement sites").
-The sections that follow them keep the account of the first drop as it was written, so "dropped" in them means dropped at that time; the 108 are no longer dropped.
+Later the same day the 205 sites were sorted by kind of duty (section "Sorted by kind of duty"), and the 105 that are duties to do a thing once were given a time that is an input: 86 the time that Interpretation Act 1965 s 52 supplies, and 19 the time that their own section's standard ("immediately", "as soon as practicable", ...) supplies (section "What was done to the achievement sites").
+On 2026-11-27, after an independent review, six sites changed class (decided by Claude, assumed, not ruled; section "What the review of 2026-11-27 changed"): s 29A(2)(a) and (b) and s 205(6) went from ACHIEVEMENT back to OTHER and are comments again, s 207(1) went from s 52 to its own standard, s 210(8)(a) went from its own standard to s 52, and s 386AF(7)(b) went from MAINTENANCE to OTHER.
+The sections that follow them keep the account of the first drop as it was written, so "dropped" in them means dropped at that time; the 105 are no longer dropped.
 
 ## What was found and what was done
 
@@ -11,7 +12,8 @@ Running `l4 run` (unstable, a50cbd0) over every module in this folder reported `
 Each such `LEST` was read against the statute lines its rule cites and against the rest of its section.
 A `WITHIN n` was to be added where the text states a period of whole days or weeks for that very duty; otherwise the `LEST` goes.
 The result: all 205 `LEST` clauses dropped; no duty carries a period of days or weeks in the text (one, s 377(2), names 14 days that cannot run for it: see the last section).
-A dropped `LEST` line is replaced by a one-line comment of the same line number, so every `file:line` that cites a later line still holds, and a closing parenthesis that followed the `BECAUSE` string moves to the line above.
+A dropped `LEST` line is replaced by a one-line comment of the same line number, so every `file:line` that cites a later line still held at that commit, and a closing parenthesis that followed the `BECAUSE` string moves to the line above.
+That held for the classification commit, the own-standard commit and the comments commit too, which change no `.l4` line count; the code commit changed the line count of 41 rule modules, the tests commit of 32 modules, and the commit of 2026-11-27 of 5, and the cites were re-pointed at the tests commit and again at that one (section "What the tests show now").
 Dropping an unreachable `LEST` changes no result: the obligation still waits for its action however long it takes, as before.
 The one visible difference is that a `#TRACE` which ends with the obligation still open prints it without the `LEST` it used to carry.
 
@@ -21,19 +23,20 @@ It challenged one site, s 377(2); that was not accepted, and the last section sa
 ## Each dropped clause is kept in its comment
 
 Each of the 205 comments began `-- no LEST:`, so `grep -rn -e '-- no LEST:' .` in this folder found every site without the git history.
-After the s 52 pass the 97 sites that are not achievements still begin that way, and end with their class, so the same grep finds them; the 108 achievements are code again, and `grep -rn -e 'WITHIN `the period of all convenient speed, as found`' .` finds the 89 under s 52, and `grep -rn -e 'WITHIN `the period the standard of time allows, as found`' .` the 19 under their own section's standard.
-The comment says that the section states no time for the duty, so that a breach needs a standard of time from outside the section, and it names the general one: the Interpretation Act 1965 s 52, under which a thing for which no time is prescribed "is to be done with all convenient speed".
-It then carries the dropped `LEST` clause word for word (`dropped clause: LEST BREACH BY … BECAUSE "…"`), copied from the commit before the drop and checked against it byte for byte; for the 7 clauses whose closing parenthesis moved to the line above, the comment carries the clause without it.
-Not every site wants that standard: a duty that must hold throughout ("keep a register", "act honestly at all times") is broken at any moment it stops holding, not when a period runs out, and L4 has no form for such a duty yet.
+After the s 52 pass the 100 sites that are not achievements still begin that way, and end with their class, so the same grep finds them; the 105 achievements are code again, and `grep -rn -e 'WITHIN `the period of all convenient speed, as found`' .` finds the 86 sites under s 52, and `grep -rn -e 'WITHIN `the period the standard of time allows, as found`' .` the 19 under their own section's standard.
+The comment says that no deadline is modelled for the duty (`-- no LEST: no deadline is modelled for this duty; dropped clause: LEST BREACH BY … BECAUSE "…"`).
+Until the review of 2026-11-27 it said instead that the section states no time and that a breach needs a standard of time from outside the section, and it named Interpretation Act 1965 s 52; for 30 of the 97 sites it then covered, the table itself says the text does give a time (another act's, "before" a later act, the party's, a meeting's, another person's window, or regulations'), so the sentence was wrong there and is gone.
+It carries the dropped `LEST` clause word for word (`dropped clause: LEST BREACH BY … BECAUSE "…"`), copied from the commit before the drop and checked against it byte for byte; for the 7 clauses whose closing parenthesis moved to the line above, the 3 that stay comments carry the clause without it.
+Not every site wants a deadline: a duty that must hold throughout ("keep a register", "act honestly at all times") is broken at any moment it stops holding, not when a period runs out, and L4 has no form for such a duty yet.
 Sorting the 205 into duties to do a thing once, which can take a `WITHIN` whose length is found (under s 52, or under the section's own standard where it gives one), and duties that must hold throughout, which stay as they are, is done in the section "Sorted by kind of duty" (decided by Claude on 2026-11-26, assumed, not ruled).
 
 ## Sorted by kind of duty: achievement, maintenance, other
 
 Status: decided by Claude on 2026-11-26, assumed, not ruled; every row below is a proposal for a maintainer to confirm or reverse.
 The sorting was done by reading the operative verb of each rule and the statute words in its row of the section "Dropped", one site at a time; a script only applied the sorting from a table written by hand, and it chose no class.
-The line column is the line in the tree at the commit that restores the achievement sites: for the 97 sites left as comments it is the line of the `-- no LEST:` comment, and for the 108 restored sites it is the line of the restored `LEST`.
+The line column is the line in the tree at the commit that carries this table: for the 100 sites left as comments it is the line of the `-- no LEST:` comment, and for the 105 restored sites it is the line of the restored `LEST`.
 The rows of the section "Dropped" keep the lines at commit 1142117325, where this work began; restoring a site adds a line or two above every later site in its module.
-Each class is also written on the comment itself, so `grep -rn -e '\[class: ' .` in this folder finds the 97 sites that are not achievements, and says which class each is.
+Each class is also written on the comment itself, so `grep -rn -e '\[class: ' .` in this folder finds the 100 sites that are not achievements, and says which class each is.
 
 ### The three classes
 
@@ -49,33 +52,43 @@ Each class is also written on the comment itself, so `grep -rn -e '\[class: ' .`
 
 | class | sites |
 | ----- | ----- |
-| ACHIEVEMENT, s 52 | 89 |
+| ACHIEVEMENT, s 52 | 86 |
 | ACHIEVEMENT, text's own standard | 19 |
-| ACHIEVEMENT, both | 108 |
-| MAINTENANCE | 36 |
-| OTHER | 61 |
+| ACHIEVEMENT, both | 105 |
+| MAINTENANCE | 35 |
+| OTHER | 65 |
 | all | 205 |
 
-ACHIEVEMENT, s 52: 52 a thing done once, 37 a thing done once on a trigger the text names (a request, an application, a receipt).
+ACHIEVEMENT, s 52: 49 a thing done once, 37 a thing done once on a trigger the text names (a request, an application, a receipt).
 ACHIEVEMENT, text's own standard: 19 a thing done once for which the section gives its own non-numeric standard of time.
-MAINTENANCE: 19 a state that must hold, 14 a register, index or record to be kept, 3 others (a holding in trust, a duty attached to every copy issued, a standing rule of treatment).
-OTHER: 15 timed by another act or filing, 9 weighed in the course of another act, 8 a requirement on a document's content, 6 a step in an application, 4 bound only by "before" a later act, 3 tied to a meeting, 3 tied to another person's window, 3 a bar on a power, 3 a time left to regulations, 2 a liability, 2 a time left to the party, 2 an effort standard, 1 a direction on recouping a sum.
+MAINTENANCE: 18 a state that must hold, 14 a register, index or record to be kept, 3 others (a holding in trust, a duty attached to every copy issued, a standing rule of treatment).
+OTHER: 15 timed by another act or filing, 9 weighed in the course of another act, 8 a requirement on a document's content, 8 a step in an application, 4 bound only by "before" a later act, 4 tied to a meeting, 3 tied to another person's window, 3 a bar on a power, 4 a time left to regulations, 2 a liability, 2 a time left to the party, 2 an effort standard, 1 a direction on recouping a sum.
 
 ### Calls the sorting rests on (each decided by Claude on 2026-11-26, assumed, not ruled)
 
 1. **The Registrar, the Minister and the Official Receiver are treated like any other bearer of a duty.**
    Where their duty is an act (issue, publish, send, appoint, register, strike off, report), it is an ACHIEVEMENT, since s 52 speaks of "anything" to be done.
-2. **The 19 sites whose section gives its own word ("immediately", "as soon as practicable", "without delay", "within a reasonable time", "thereupon", "in sufficient time") are ACHIEVEMENT, text's own standard, and s 52 is not their source.**
-   s 52 does not reach them: it applies only "where no time is prescribed or allowed within which anything is to be done", and each of these sections prescribes a standard of time in its own words, so the first limb of s 52 is not met.
+2. **The 19 sites whose section gives its own standard of time ("immediately", "as soon as practicable", "without delay", "within a reasonable time", "thereupon", "in sufficient time") are ACHIEVEMENT, text's own standard, and s 52 is not their source.**
+   s 52 does not reach them: it applies only "where no time is prescribed or allowed within which anything is to be done" (`subjects/sg/interpretation-act/registers/source-bundle/IA1965.txt:2188-2190`), and each of these sections prescribes a standard of time in its own words, so the first limb of s 52 is not met.
    The number of days is as missing as for the others, so they take an input too, named for what it is, `the period the standard of time allows, as found`; the comment beside the `WITHIN` gives the section's own standard (its word and its section number) and says the period is an input, as found, and it does not mention s 52.
-   I chose a second name for those 19 and left the other 89 on the s 52 name, which is the least churn: no call site changes, because the input is positional.
+   I chose a second name for those 19 and left the other 86 on the s 52 name, which is the least churn: no call site changes, because the input is positional.
    Reclassing them is a one-pass change.
-   They are (lines at commit 1142117325): `sgb1-s149b-appointment.l4:367`, `sgb1-s156-interests.l4:471`, `sgc2-s205-appointment.l4:221`, `sgc2-s205-appointment.l4:390`, `sgc2-s205aa-resignation.l4:195`, `sgc2-s206-208a-duties.l4:149`, `sgc2-s206-208a-duties.l4:158`, `sgc2-s206-208a-duties.l4:167`, `sgc2-s206-208a-duties.l4:303`, `sgc2-s206-208a-duties.l4:672`, `sgc2-s206-208a-duties.l4:746`, `sgd-acquisition.l4:1341`, `sgd-amalgamation.l4:1371`, `sgd-compromise.l4:1032`, `sgl-circulation.l4:415`, `sgl-minutes.l4:401`, `sgl-minutes.l4:414`, `sgl-written.l4:613`, `sgm-part5-div4.l4:1248`.
+   They are (lines at commit 1142117325): `sgb1-s149b-appointment.l4:367`, `sgb1-s156-interests.l4:471`, `sgc2-s205-appointment.l4:221`, `sgc2-s205-appointment.l4:390`, `sgc2-s205aa-resignation.l4:195`, `sgc2-s206-208a-duties.l4:149`, `sgc2-s206-208a-duties.l4:158`, `sgc2-s206-208a-duties.l4:167`, `sgc2-s206-208a-duties.l4:264`, `sgc2-s206-208a-duties.l4:303`, `sgc2-s206-208a-duties.l4:672`, `sgc2-s206-208a-duties.l4:746`, `sgd-acquisition.l4:1341`, `sgd-amalgamation.l4:1371`, `sgl-circulation.l4:415`, `sgl-minutes.l4:401`, `sgl-minutes.l4:414`, `sgl-written.l4:613`, `sgm-part5-div4.l4:1248`.
+   `s 207(1)` is among them because `s 207(1A)` says of "a report by an auditor of a company under subsection (1)" that it "must be furnished by the auditor to the directors of the company in sufficient time" (`subjects/sg/companies-act-1967/registers/source-bundle/CoA1967.txt:19791-19794`).
+   The rule for (1) has the one input, as the rule for (1A) has; neither has two, and the two rules are separate duties (to report to the members, to furnish the report to the directors) that use the same input name.
+   `s 210(8)(a)` is not among them: "as soon as possible" governs the accountants' or solicitors' forwarding of their report ("forward their report or reports to the directors as soon as possible"), and I read it as not governing the directors' instruction (assumed, not ruled), so the instruction is under s 52; on the other reading it joins the 19 in one pass.
+   **Why "thereupon" (s 215(4)) is among the 19 and "Upon ..." is not.**
+   "The transferor company must thereupon register the transferee" puts the word on the act itself, saying how soon the register follows the transferee's step, so it is a standard of time in the section's own words.
+   "Upon the application of the company ... the Registrar must issue" opens the clause with the event that arms the duty and says nothing of how soon the act follows it; the event is what the `WITHIN` counts from, and s 52 supplies the speed.
+   14 of the ACHIEVEMENT sites under s 52 have a row below that quotes "upon" (counted by searching the rows of the section "Dropped" for the word).
+   13 of them use it as that opening trigger: s 201B(7), s 215F(1), s 215F(4), s 359(3), s 359(4), s 17(9), s 19(3), s 19(7), s 12B(1), s 134(3), s 344A(3), s 344B(2)(a) and s 344C(3)(a); the 14th, s 233(1), says "upon which the inspector's opinion is based", a relative clause.
+   This is a reading (assumed, not ruled): if "upon" is read as a word of promptness too, those 13 move to ACHIEVEMENT, text's own standard, in one pass, and s 52 stops being their source.
 3. **A duty that is a bar on a power, not an act that falls due, is OTHER.**
    "The Registrar must refuse to register" (`sge-p10a-360.l4` s 360(1) and (2), `sgh-incorporation.l4` s 20(2)) is breached by registering, and no day arrives on which it is late.
 4. **A duty whose time the Act hands to regulations is OTHER.**
-   `sgn-register.l4:502`, `sgn-register.l4:515`, `sgn-register.l4:797` say "within the prescribed time" or "within the prescribed period", so s 52 is not the standard; the existing input `the prescribed period, in days` (as `sgn-register.l4`'s s 386AFA(4) rule uses) is the candidate, and it is not added here.
-5. **A step a person takes to obtain what they apply for is OTHER**: submitting the constitution, paying the fee, making the declaration, reserving a name.
+   `sgn-register.l4:414`, `sgn-register.l4:502`, `sgn-register.l4:515` and `sgn-register.l4:797` say "within the prescribed time" or "within the prescribed period", so s 52 is not the standard (for :414, the update of the register, it is s 386AF(8) that says "must enter the particulars in its register and update the register within the prescribed time"); the existing input `the prescribed period, in days` (as `sgn-register.l4`'s s 386AFA(4) rule uses) is the candidate, and it is not added here.
+   s 386AF(7)(b) is therefore not aligned with s 196A(5): the section of s 196A(5) gives no time anywhere, and (7)(b)'s section does.
+5. **A step a person takes to obtain what they apply for is OTHER**: submitting the constitution, paying the fee, making the declaration, reserving a name, and a charitable company's altering its constitution and filing the form to omit "Limited" or "Berhad" from its name (s 29A(2)(a) and (b), the same shape as s 19(1), s 22(2) and s 357(1)).
    Nothing arms a clock, and failing to take the step forfeits the application and is not a default.
 6. **A duty tied to another act's own time is OTHER**: lodged "with the return", attached "when lodging a return", signed "by the chairperson of the next succeeding meeting", noticed "at the same time as notice of the meeting" (s 183(3C)).
    Giving it an independent period would contradict the anchor the text states.
@@ -83,7 +96,7 @@ OTHER: 15 timed by another act or filing, 9 weighed in the course of another act
 8. **Where a rule holds a `MUST` inside the `HENCE` of another, each is its own site and has its own class.**
    `sgl-calling.l4` s 176(4) pays the requisitionists (ACHIEVEMENT) and then retains the sum out of what is due to the directors in default (OTHER, a direction on recouping a sum); only the first takes a period.
 9. **When the sorting was torn between ACHIEVEMENT and OTHER, it chose OTHER.**
-   Examples: s 201(9)(b), s 215(1B), s 135(1), s 37(4), s 183(1)(a) and (b), s 188(1)(b), s 184F(1), s 156(11), s 215F(1)(b).
+   Examples: s 201(9)(b), s 215(1B), s 135(1), s 37(4), s 183(1)(a) and (b), s 188(1)(b), s 184F(1), s 156(11), s 215F(1)(b), s 205(6) ("as so requested" imports the auditor's request, in (5)(b), that the copy be sent "prior to the meeting", as the module's own comment quotes).
 
 ### The table
 
@@ -117,8 +130,8 @@ OTHER: 15 timed by another act or filing, 9 weighed in the course of another act
 | `sgc1-s203a.l4` | 153 | s 203A(6A) | OTHER | "ensure that the summary financial statements comply with the requirements referred to in sub...": a requirement on the content or form of a document (the summary financial statements must comply), met when the document is made |
 | `sgc2-s205-appointment.l4` | 124 | s 205(2) | OTHER | "appoint an accounting entity or accounting entities as the auditor or auditors at the annual...": tied to a meeting (appointment "at each annual general meeting"), whose own time governs |
 | `sgc2-s205-appointment.l4` | 223 | s 205(5)(a) | ACHIEVEMENT, text's own standard | "send a copy of the notice of the resolution to remove the auditor to the auditor concerned a...": a thing done once; the text's own standard is "immediately" |
-| `sgc2-s205-appointment.l4` | 289 | s 205(6) | ACHIEVEMENT, s 52 | "send a copy of the representations to every member to whom notice of the meeting is sent": a thing done once |
-| `sgc2-s205-appointment.l4` | 396 | s 205(8) | ACHIEVEMENT, text's own standard | "give written notice of the removal of the auditor to the Registrar": a thing done once; the text's own standard is "immediately after the removal" |
+| `sgc2-s205-appointment.l4` | 287 | s 205(6) | OTHER | "send a copy of the representations to every member to whom notice of the meeting is sent": tied to a meeting ("as so requested" imports the auditor's request, in s 205(5)(b), that the copy be sent "prior to the meeting"), whose own time governs |
+| `sgc2-s205-appointment.l4` | 394 | s 205(8) | ACHIEVEMENT, text's own standard | "give written notice of the removal of the auditor to the Registrar": a thing done once; the text's own standard is "immediately after the removal" |
 | `sgc2-s205a-exemption.l4` | 303 | s 205B(4)(d) | OTHER | "accompany the annual return with a statement by the directors": its time is that of another act or filing: the annual return to be lodged |
 | `sgc2-s205a-exemption.l4` | 545 | s 205C(7) | OTHER | "attach a copy of the accounts or consolidated accounts to the return lodged under section 197": its time is that of another act or filing: "when lodging a return with the Registrar under section 197" |
 | `sgc2-s205aa-resignation.l4` | 197 | s 205AB(2) | ACHIEVEMENT, text's own standard | "notify the auditor and the company whether the Registrar consents to the resignation": a thing done once; the text's own standard is "as soon as practicable" |
@@ -129,7 +142,7 @@ OTHER: 15 timed by another act or filing, 9 weighed in the course of another act
 | `sgc2-s206-208a-duties.l4` | 173 | s 206(1)(e) | ACHIEVEMENT, text's own standard | "lay the statement before the company in general meeting": a thing done once; the text's own standard is "immediately" |
 | `sgc2-s206-208a-duties.l4` | 215 | s 206(1A) | ACHIEVEMENT, s 52 | "send the outcome of the review to all persons entitled to receive notice of general meetings...": a thing done once |
 | `sgc2-s206-208a-duties.l4` | 216 | s 206(1A) | ACHIEVEMENT, s 52 | "undertake a review of the fees, expenses and emoluments of the auditor to determine whether...": a thing done once |
-| `sgc2-s206-208a-duties.l4` | 275 | s 207(1) | ACHIEVEMENT, s 52 | "report to the members": a thing done once |
+| `sgc2-s206-208a-duties.l4` | 275 | s 207(1) | ACHIEVEMENT, text's own standard | "report to the members": a thing done once; the text's own standard is "in sufficient time", which s 207(1A) gives for "a report by an auditor of a company under subsection (1)" |
 | `sgc2-s206-208a-duties.l4` | 316 | s 207(1A) | ACHIEVEMENT, text's own standard | "furnish the report to the directors in sufficient time": a thing done once; the text's own standard is "in sufficient time" |
 | `sgc2-s206-208a-duties.l4` | 687 | s 207(9) | ACHIEVEMENT, text's own standard | "report the matter in writing to the Registrar": a thing done once; the text's own standard is "immediately" |
 | `sgc2-s206-208a-duties.l4` | 763 | s 207(9A) | ACHIEVEMENT, text's own standard | "report the matter to the Minister": a thing done once; the text's own standard is "immediately" |
@@ -156,7 +169,7 @@ OTHER: 15 timed by another act or filing, 9 weighed in the course of another act
 | `sgd-amalgamation.l4` | 1436 | s 215K(2)(a) | ACHIEVEMENT, s 52 | "deal with the moneys received under subsection (1) as if they were paid under section 197 of...": a thing done once |
 | `sgd-amalgamation.l4` | 1452 | s 215K(2)(b) | ACHIEVEMENT, s 52 | "sell or dispose of the other consideration and deal with the proceeds as if they were moneys...": a thing done once |
 | `sgd-compromise.l4` | 1017 | s 210(6) | MAINTENANCE | "annex a copy of the order to a copy of the constitution": a duty attached to every item of a continuing flow ("every copy of the constitution ... issued after the order"), so no single act discharges it |
-| `sgd-compromise.l4` | 1034 | s 210(8)(a) | ACHIEVEMENT, text's own standard | "instruct the accountants or solicitors named in the resolution to report on the proposals": a thing done once; the text's own standard is "as soon as possible" |
+| `sgd-compromise.l4` | 1034 | s 210(8)(a) | ACHIEVEMENT, s 52 | "instruct the accountants or solicitors named in the resolution to report on the proposals": a thing done once; "as soon as possible" governs the accountants' forwarding of their report, and is read as not governing the directors' instruction (assumed, not ruled) |
 | `sgd-compromise.l4` | 1093 | s 210(10B)(a) | ACHIEVEMENT, s 52 | "deal with the moneys received under subsection (10A) as if they were paid under section 197...": a thing done once |
 | `sgd-compromise.l4` | 1103 | s 210(10B)(b) | ACHIEVEMENT, s 52 | "sell or dispose of the other consideration and deal with the proceeds as if they were moneys...": a thing done once |
 | `sgd-compromise.l4` | 1121 | s 211(3) | ACHIEVEMENT, s 52 | "furnish the person with a copy of the statement free of charge": a thing done once, on its trigger (an application) |
@@ -209,8 +222,8 @@ OTHER: 15 timed by another act or filing, 9 weighed in the course of another act
 | `sgi-director-transactions.l4` | 243 | s 25C(4)(a) | OTHER | "account to the company for any gain made directly or indirectly by the transaction": a liability that arises with the transaction (a gain made by the transaction), not an act that falls due |
 | `sgi-director-transactions.l4` | 260 | s 25C(4)(b) | OTHER | "indemnify the company for any loss or damage resulting from the transaction": a liability that arises with the transaction (loss or damage resulting from the transaction), not an act that falls due |
 | `sgi-name-changes.l4` | 585 | s 29(3) | ACHIEVEMENT, s 52 | "insert the conditions in the constitution of the company": a thing done once, on its trigger (the Registrar so directing) |
-| `sgi-name-changes.l4` | 912 | s 29A(2)(a) | ACHIEVEMENT, s 52 | "alter the constitution to reflect the change of name": a thing done once |
-| `sgi-name-changes.l4` | 929 | s 29A(2)(b) | ACHIEVEMENT, s 52 | "file the prescribed form with the Registrar, together with a copy of the special resolution...": a thing done once |
+| `sgi-name-changes.l4` | 910 | s 29A(2)(a) | OTHER | "alter the constitution to reflect the change of name": a step taken to obtain what is applied for (a charitable company that "proposes to change its name" takes this step to obtain the change, the same shape as s 19(1)); no event arms a clock |
+| `sgi-name-changes.l4` | 925 | s 29A(2)(b) | OTHER | "file the prescribed form with the Registrar, together with a copy of the special resolution...": a step taken to obtain what is applied for (a charitable company that "proposes to change its name" takes this step to obtain the change, the same shape as s 19(1)); no event arms a clock |
 | `sgj-div4-substantial-shareholdings.l4` | 1026 | s 91(5) | OTHER | "satisfy itself that the order would not unfairly prejudice any person": to be weighed in the course of another act (the Court's own order, "before making an order"), with no time of its own |
 | `sgj-div5-debentures.l4` | 51 | s 93(1) | MAINTENANCE | "keep a register of holders of the debentures at the registered office or at some other place...": a register, index or record to be kept: it must hold throughout, not be done once |
 | `sgj-div5-debentures.l4` | 137 | s 93(3) | MAINTENANCE | "keep the register open to inspection": a state that must hold throughout ("must ... be open to the inspection") |
@@ -286,7 +299,7 @@ OTHER: 15 timed by another act or filing, 9 weighed in the course of another act
 | `sgn-notices.l4` | 56 | s 386AG(1) | OTHER | "take reasonable steps to find out and identify the registrable controllers": an effort standard ("take reasonable steps to find out and identify"), neither one act nor a state |
 | `sgn-register.l4` | 382 | s 386AF(7)(a) | MAINTENANCE | "ensure that the register contains the prescribed particulars of its registrable individual c...": a state that must hold throughout ("ensure that the register contains" the particulars) |
 | `sgn-register.l4` | 397 | s 386AF(7)(aa) | MAINTENANCE | "ensure that the register contains the note and prescribed particulars required under section...": a state that must hold throughout ("ensure that the register contains" the note and particulars) |
-| `sgn-register.l4` | 414 | s 386AF(7)(b) | MAINTENANCE | "ensure that the register is updated if any change to the prescribed particulars occurs": a state that must hold throughout ("ensure that the register is updated" when a change occurs) |
+| `sgn-register.l4` | 414 | s 386AF(7)(b) | OTHER | "ensure that the register is updated if any change to the prescribed particulars occurs": the Act itself defers the time to regulations ("within the prescribed time", s 386AF(8), which covers this update), so s 52 is not the standard |
 | `sgn-register.l4` | 432 | s 386AF(7)(c) | MAINTENANCE | "ensure that the register is kept in the prescribed form and at the prescribed place": a state that must hold throughout ("ensure that the register is kept in the prescribed form and at the prescribed place") |
 | `sgn-register.l4` | 502 | s 386AF(9)(a) | OTHER | "enter or update the particulars of a controller after the controller has confirmed them": the Act itself defers the time to regulations ("within the prescribed time", s 386AF(8)), so s 52 is not the standard |
 | `sgn-register.l4` | 515 | s 386AF(9)(b) | OTHER | "enter or update the particulars of a controller with a note that they have not been confirme...": the Act itself defers the time to regulations ("within the prescribed time", s 386AF(8)), so s 52 is not the standard |
@@ -300,20 +313,20 @@ OTHER: 15 timed by another act or filing, 9 weighed in the course of another act
 Status: decided by Claude on 2026-11-26, assumed, not ruled; each point can be reversed alone.
 
 - **The `LEST` is back, word for word.**
-  At each of the 108 ACHIEVEMENT sites the clause the comment carried is the `LEST` again, and every one of the 108 was compared with the line of the same number in the commit before the drop (`8b082ad0c^`) and is byte-for-byte equal to it.
+  At each of the 105 ACHIEVEMENT sites the clause the comment carried is the `LEST` again, and every one of the 105 was compared with the line of the same number in the commit before the drop (`8b082ad0c^`) and is byte-for-byte equal to it.
   4 of them, the sites whose closing parenthesis had moved to the line above, have it back at the end of the `LEST` line.
 - **The `WITHIN` is an input.**
   Each such rule gains a rule-level `GIVEN`, written last in the rule's `GIVEN` list: `` `the period of all convenient speed, as found` IS A NUMBER ``, in days, which is the unit of every other `WITHIN` in this folder and of the `AT` of every `#TRACE`.
   It means how many days count as all convenient speed for that duty, as found by whoever applies the rule on the facts in front of them.
-  That is the input of the 89 rules whose section states no time: the rule's `WITHIN` names it, and a comment on the same line cites Interpretation Act 1965 s 52 ("with all convenient speed") and says that this is assumed, not ruled.
+  That is the input of the 83 rules (86 sites) whose section states no time: the rule's `WITHIN` names it, and a comment on the same line cites Interpretation Act 1965 s 52 ("with all convenient speed") and says that this is assumed, not ruled.
   The wording of s 52 was read on 2026-11-26 in the lawplain copy of the Interpretation Act 1965 (`IA1965`, current, https://sso.agc.gov.sg/Act/IA1965), headed "Provision when no time prescribed": "Where no time is prescribed or allowed within which anything is to be done, that thing is to be done with all convenient speed and as often as the prescribed occasion arises."
   That is the wording the project's brief quotes.
-  The Act is not in this folder's source bundle.
-  The 19 rules whose section gives its own word have a second input, written the same way and last in the rule's `GIVEN` list: `` `the period the standard of time allows, as found` IS A NUMBER ``, in days.
+  The Act is in this repository at `subjects/sg/interpretation-act/registers/source-bundle/IA1965.txt:2188-2190`, where the same wording stands under the heading "Provision when no time prescribed" (read on 2026-11-27).
+  The 19 rules whose section gives its own standard of time take a different input, written the same way and last in the rule's `GIVEN` list: `` `the period the standard of time allows, as found` IS A NUMBER ``, in days.
   Its `WITHIN` carries a comment that gives the section's own word as the standard ("immediately", "as soon as is practicable", "without delay", "within a reasonable time", ...) with its section number, and does not mention Interpretation Act 1965 s 52, which does not reach these sites because they prescribe their own standard (decided by Claude on 2026-11-26, assumed, not ruled).
   No rule has both inputs.
 - **No default number is anywhere.**
-  There is no `TYPICALLY` on the input, and no number in any rule; the only numbers are the ones each `#TRACE` supplies (see the test commit).
+  There is no `TYPICALLY` on the input, and no number in any rule; the only numbers are the ones each `#TRACE` supplies (see the tests commit).
   The project's guidance on the length of the standard is that a week or two is good, a month is concerning, and more than six weeks could be considered spiteful.
   That is guidance for whoever supplies the input, not a default, and no number taken from it appears in a rule.
 - **Why a rule-level input and not a section-level one.**
@@ -323,11 +336,11 @@ Status: decided by Claude on 2026-11-26, assumed, not ruled; each point can be r
   One input serves each duty of such a rule.
   For `s 215(4)`, where the text says "after the expiration of one month", the caller starts the trace on the first day the transferee may act (the rule `s 215(4) the first day on which the transferee must act` finds it).
 - **Callers.**
-  The only callers of these rules are the `#TRACE` directives of the test modules: 215 call sites in 41 modules at the code commit (the next section says what the tests commit added); no other rule and no `@export` calls them.
-  A `#TRACE` that leaves the input out is a type error under both `l4 check` and `l4 run` (`check/type-mismatch`; measured on a probe on 2026-11-26).
+  The only callers of these rules are the `#TRACE` directives of the test modules: 210 call sites in 41 modules at the commit before this work began (the next section says what the tests added); no other rule and no `@export` calls them.
+  A `#TRACE` that leaves the input out is an error under both `l4 check` and `l4 run`, and the code depends on the rule: `check/wrong-argument-count` ("expects 2 inputs, but here it is given 1 input") for the rules here, which take the name of the actor and the input, and `check/type-mismatch` for a rule with the input alone and no argument given (both measured on probes on 2026-11-27, under `l4 check` and `l4 run` alike, on a `dev` build of the unstable tip).
   Each call passes the input after the rule's other arguments.
-- **Maintenance and other sites are untouched** apart from the class written at the end of their comment.
-  The sections of the per-agent notes called "Rules with no breach path" were written before this pass; for a rule that is now an ACHIEVEMENT they are out of date, and this file is the later record.
+- **Maintenance and other sites are untouched** apart from the class written at the end of their comment and, since the review of 2026-11-27, the opener of that comment (section "What the review of 2026-11-27 changed").
+  The sections of the per-agent notes called "Rules with no breach path" were written before this pass; for a rule that is now an ACHIEVEMENT they are out of date, and this file is the later record: each of the 20 sections carries a dated pointer (2026-11-27) that lists the rules in it that now take a `WITHIN`.
 
 ## What the tests show now
 
@@ -340,26 +353,57 @@ Status: decided by Claude on 2026-11-26, assumed, not ruled; each point can be r
   The `FULFILLED` ones are a late act (on day 400 or later): before, no `WITHIN` meant a late act still read `FULFILLED`; now the act is past the input.
   The `RESIDUAL` ones are a wait with no act (to day 60 or later, and in one trace the first duty of a pair done on day 1 and the second never) which ended with the obligation open because nothing could lapse; now it lapses.
   Every one is a trace of the achievement rule itself, and its old comment said in terms that the rule could not be breached ("a late act still reads FULFILLED", "the obligation stays open, never BREACH"), so the old line was about exactly this obligation and is wrong now.
-  No `#ASSERT` was changed, and no trace of any other rule: the 339 traces of rules that are not achievements, in the same 41 modules, end as they did before.
+  No `#ASSERT` was changed, and no trace of any other rule: the 344 traces of rules that are not achievements, in the same 41 modules, end as they did before.
 - **One trace kept its outcome on purpose.**
   `s 176(4)` pays the requisitionists (an achievement) and then retains the sum out of what is due to the directors in default (OTHER, no time of its own): with 45 days, the payment on day 30 is in time and the retaining on day 400 is not timed, so the chain still ends `FULFILLED`.
   A third trace, with 7 days, shows the payment on day 30 breached.
-- **75 traces were added**: 17 in-time acts (45 days, act on day 5, `FULFILLED`) for the rules that had no trace reaching `FULFILLED` once the late ones changed, and 58 late acts (7 days, the act on day 400, or on day 30 for `s 176(4)`, `BREACH`) for the rules that had none reaching `BREACH`.
-  The achievement rules now have 290 traces (215 before); every one of the 41 test modules has at least one that reaches `BREACH`.
+- **72 traces were added**: 17 in-time acts (45 days, act on day 5, `FULFILLED`) for the rules that had no trace reaching `FULFILLED` once the late ones changed, and 55 late acts (7 days, the act on day 400, or on day 30 for `s 176(4)`, `BREACH`) for the rules that had none reaching `BREACH`.
+  The achievement rules now have 282 traces (210 before); every one of the 41 test modules has at least one that reaches `BREACH`.
 - **Five rule names lost "(no time limit)"** (`s 183(4B)`, `s 188(3B)`, `s 188(3C)`, `s 184C(1)`, `s 184D(2)(b)`), because they now have one; the name and every call changed together.
   The rows of the section "Dropped" below quote the old names.
-- **44 comments in the test modules** that said a rule has no time limit or no breach path say that the input sets the time (the s 52 input, or for the 19 own-standard rules the section's own standard).
-- **The other text that went stale was found by searching every line of the 108 changed modules**, not only the lines near a rule: 10 section headings, 16 more comments and 3 `EXPECT` remarks that said an achievement rule has no time limit or no breach path now say the input sets the time (the s 52 input, or the section's own standard for the 19); the same words above a maintenance or other rule were left, because they are still true there.
+- **The text that went stale was found by searching every line of the 108 changed `.l4` files** (67 rule modules, 41 test modules), not only the lines near a rule, for "no time", "no breach", "no deadline" and the like.
+  Besides the 205 `-- no LEST:` comments, the line diff against commit 1142117325 rewrites 54 comment lines and 3 section headings in the rule modules, and 46 comment lines and 7 section headings in the test modules; they now say that the input sets the time (the s 52 input, or the section's own standard for the 19).
+  The same words above a maintenance or other rule were left, because they are still true there.
 - **The per-agent notes were kept in step.**
-  35 of the 1,458 `module.l4:NNN` cites in `sga1`, `sgb1`, `sgh`, `sgl` and `sgm` NOTES.md moved because a line was added above them, and now cite the line they cited before; every cite was checked against the text of the line at commit 1142117325, and the 17 that differ are `#TRACE` lines that only gained the input.
+  Every `module:NNN` or `module.l4:NNN` cite in the markdown of this folder (1,596 cites) was mapped from commit 1142117325 to the tree through a line diff of the cited module: 114 of them moved because lines were added or removed above them (35 in `sga1`, `sgb1`, `sgh`, `sgl` and `sgm` NOTES.md, re-pointed at the tests commit, and 79 in `sgc2-NOTES.md`, which that pass missed and the review of 2026-11-27 found), and now cite the line they cited before; 22 more cite a line that itself changed (a `#TRACE` that gained its input, a comment), and cite the changed line.
+  A second scan after the edit finds no cite whose line differs from the diff's mapping.
   The five renamed rules are renamed in `sgl-NOTES.md` too (12 places).
-  Their sections called "Rules with no breach path" remain what they were: an account of the encoding before this pass.
+  Their sections called "Rules with no breach path" remain what they were, an account of the encoding before this pass, with a dated pointer under each heading.
 - **How it was checked.**
-  `check.sh` counts assertions and never reads a `#TRACE`, so a trace outcome was read from `l4 run` itself: every one of the 629 traces in the 41 modules ends as its `EXPECT` line says, on the unstable build and on the main build (112), with 0 errors on both; the same read of the 554 traces before the change found 0 differences between `EXPECT` and the outcome, so the instrument was not blind.
+  `check.sh` counts assertions and never reads a `#TRACE`, so a trace outcome was read from `l4 run` itself: every one of the 626 traces in the 41 modules ends as its `EXPECT` line says, on the unstable build and on the main build (112), with 0 errors on both; the same read of the 554 traces before the change found 0 differences between `EXPECT` and the outcome, so the instrument was not blind.
+
+## What the review of 2026-11-27 changed
+
+Status: decided by Claude on 2026-11-27, assumed, not ruled; each point can be reversed alone.
+An independent review of the branch as it stood on 2026-11-26 found no wrong encoding result, but prose that contradicted what the branch did and six disputed classes.
+This section is here so that a later editor does not silently undo a repair.
+
+- **s 29A(2)(a) and (b) are OTHER again.**
+  They are steps to change the name, the same shape as s 19(1), s 22(2) and s 357(1) (call 5), so each rule lost the s 52 input, the `WITHIN` and the `LEST`, which is a comment again.
+  The two day-400 `BREACH` traces of `sgi-tests-name-changes.l4` went with them, and the traces of the two rules are back in the form they had at commit 1142117325.
+- **s 205(6) is OTHER again** (call 9): "as so requested" imports "prior to the meeting" from (5)(b), which the module's own comment quotes, so the meeting's time governs.
+  The same loss, and its trace in `sgc2-tests-s205.l4` is back in its form at commit 1142117325.
+- **s 207(1) moved from s 52 to the text's own standard** (call 2): (1A) says "in sufficient time" of a report under (1).
+  The rule keeps its one input, now named `the period the standard of time allows, as found`; no trace changed, because the input is positional.
+- **s 210(8)(a) moved from the text's own standard to s 52** (call 2): "as soon as possible" governs the accountants' forwarding, not the directors' instruction (assumed, not ruled).
+- **s 386AF(7)(b) moved from MAINTENANCE to OTHER** (call 4): s 386AF(8) gives the time of the update, "within the prescribed time", so it is neither a state that holds throughout nor under s 52, and it is not aligned with s 196A(5), whose section gives no time anywhere.
+- **The opener of the 100 comments** no longer says that the section states no time and needs s 52: 30 of the 97 sites it then covered have a row that says the text does give a time, so it was wrong there.
+  It says `no deadline is modelled for this duty`; the dropped clause and the class tag are unchanged.
+- **The "Rules with no breach path" sections of the per-agent notes** each carry a dated pointer under the heading.
+  15 of the 20 sections name at least one rule that now takes a `WITHIN` (102 rule mentions in all, in 94 rows of those sections), and the pointer lists them and says that "no time limit" and "no breach path" read as the position before this pass, wherever the notes say so of them; the other 5 sections say that none of their rules is affected (checked by rule name and by section label).
+  Other places in the notes say the same of a rule that now has a breach path (the review counted 22 in `sgh`, `sgc2`, `sgg` and `sga1` alone); they are not rewritten one by one, and the pointer covers them.
+- **`NOTES.md`**: the section "Dead LESTs dropped" is rewritten for the sort and renamed "The 205 untimed duties, sorted"; nothing linked to the old heading.
+- **The code comments on s 377(2)** (`sgg-cessation.l4`, `sgg-tests-cessation.l4`) say the notice of the appointment is read as not governed by (a) or (b) (assumed, not ruled).
+- **s 52 is cited by file and line**: `subjects/sg/interpretation-act/registers/source-bundle/IA1965.txt:2188-2190`.
+- **79 cites in `sgc2-NOTES.md`** pointed at lines that moved when the achievement sites were restored; they are re-pointed (section "What the tests show now").
+- **Numbers that moved**: ACHIEVEMENT 108 to 105 (s 52 89 to 86, the text's own standard 19 to 19), MAINTENANCE 36 to 35, OTHER 61 to 65; restored `LEST` lines 108 to 105; traces 629 to 626; added traces 75 to 72; achievement call sites 290 to 282; changed `EXPECT` outcomes stay at 59.
+- **Claims withdrawn**: that no line moved (see "What was found and what was done"), and the figure of 1,458 cites, which did not reproduce; the cite count is now 1,596, counted over the whole folder.
 
 ## Dropped
 
 Each row gives the module and the line the `LEST` was on, the rule, the section, and the statute words the decision rests on (copied from the text, with `/` for a line break in the quotation); "other time phrase" is a period the section states elsewhere, with the reason it is not this duty's.
+A row is the reason given at the first drop.
+Where a site's class has changed since (s 29A(2)(a) and (b), s 205(6), s 207(1), s 210(8)(a), s 386AF(7)(b)), the table in "Sorted by kind of duty" and the section "What the review of 2026-11-27 changed" give the present reading; the s 207(1) row below, which says that "in sufficient time" is in a different subsection, is the reading the review reversed.
 
 ### `sg-solvency.l4`
 
@@ -903,12 +947,13 @@ Each row gives the module and the line the `LEST` was on, the rule, the section,
 
 ## Where an independent reader asked for a deadline: s 377(2)
 
-`sgg-cessation.l4:174` at commit 1142117325 (line 176 now, the restored `LEST`), s 377(2), the notice of the appointment of a liquidator.
+`sgg-cessation.l4:174` at commit 1142117325 (line 176 at the commit that restored it, and the table above has the line now), s 377(2), the notice of the appointment of a liquidator.
 The text (raw lines 24655-24661) says the authorised representative must, "(a) within 14 days after the commencement of the liquidation or the dissolution; or (b) within such further time as the Registrar in special circumstances allows, lodge or cause to be lodged with the Registrar notice of that fact and, when a liquidator is appointed, notice of such appointment".
 The 14 days run from the commencement of the liquidation, and the rule `s 377(2)(a)` already carries them for the notice of that fact.
 A liquidator may be appointed later than day 14, so the same clock cannot be met for the notice of the appointment, and the Registrar's further time is an input the module has no place for.
 The `LEST` was dropped, not given a `WITHIN 14` (assumed, not ruled); a maintainer who reads (a) as binding the notice of the appointment too would add the `WITHIN` and an input for the further time.
 
 Later the same day (decided by Claude on 2026-11-26, assumed, not ruled) the notice of the appointment of a liquidator was sorted as an ACHIEVEMENT, a thing done once, and given the s 52 input: the rule `s 377(2) an authorised representative must lodge notice of the appointment of a liquidator when one is appointed` carries `WITHIN `the period of all convenient speed, as found`` and its `LEST` again.
+The notice of the appointment is read as not governed by the 14 days in (a) or the further time in (b) (assumed, not ruled), which is why it takes the s 52 input; a maintainer who reads (a) as binding it too would replace the input with the 14 days.
 The 14 days of s 377(2)(a) run from the commencement of the liquidation or the dissolution, and they stay on their own rule, `s 377(2)(a)`, for the notice of that fact; they are not given to the notice of the appointment, which a liquidator's appointment after day 14 would make impossible to meet.
 The further time the Registrar may allow under (b) is still an input the module has no place for.

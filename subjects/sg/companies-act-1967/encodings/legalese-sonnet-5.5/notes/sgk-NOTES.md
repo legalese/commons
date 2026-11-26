@@ -1142,6 +1142,28 @@ The other reading is JUST FALSE, if "on application" is read as "upon applicatio
 
 ## Rules with no breach path (sgk)
 
+> Added 2026-11-27 (decided by Claude, assumed, not ruled): this section was written before the pass recorded in `lest-without-deadline.md`, and it is no longer true of the rules listed below.
+> Each of them now takes an input-length `WITHIN` and can reach `BREACH`, so read "no time limit", "no deadline" and "no breach path" of them as the position before that pass, here and wherever else these notes say so of them:
+>
+> - `s 134(1) the Registrar must enter the particulars of the charge in the register`
+> - `s 134(2) the Registrar must issue to the company a notice of the registration of a charge`
+> - `s 134(3) the Registrar must issue to the company a certificate confirming the registration of the charge`
+> - `s 136(1) the Registrar must enter the particulars of the statement in the register`
+> - `s 231(1) the Minister must appoint inspectors for a declared company`
+> - `s 233(1) the Minister must forward a copy of the report to the registered office`
+> - `s 233(1) the inspector must report to the Minister on the conclusion of the investigation`
+> - `s 233(1A) the Minister must give a copy of the report to the person whose affairs it relates to`
+> - `s 233(3) the Minister must cause a prosecution to be instituted`
+> - `s 236(1) the inspector must report on the affairs of the related corporation`
+> - `s 236(2) the officer or agent must produce the books and documents and give the assistance`
+> - `s 237(1) the company investigated must pay the expenses of the investigation`
+> - `s 237(2)(a) the applicants must make good the deficiency`
+> - `s 243(3) the Minister must appoint an inspector to conduct the investigation`
+> - `s 244(3) a person must give the information required of the person under section 244`
+> - `s 245(3)(c) the holder must notify the persons entitled to vote of the restrictions`
+>
+> The other rules named in this section are unchanged.
+
 A regulative `MUST` with no `WITHIN` has no time limit: a late act still reads `FULFILLED`, and no trace can show it breached.
 21 of the regulative rules of my ranges are of that kind.
 For each, the test file has one trace that reads `RESIDUAL` (nothing done) and one that reads `FULFILLED` (done), and none that reads `BREACH`; each trace carries its `-- EXPECT` word and `tracecheck.py` (work area, not shipped) compared every one with the output of both stable builds.

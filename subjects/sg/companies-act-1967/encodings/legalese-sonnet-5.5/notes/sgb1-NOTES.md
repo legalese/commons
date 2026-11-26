@@ -950,6 +950,14 @@ I did not read those other parts, so the pairing above is by section number only
 
 ## Rules with no breach path (sgb1)
 
+> Added 2026-11-27 (decided by Claude, assumed, not ruled): this section was written before the pass recorded in `lest-without-deadline.md`, and it is no longer true of the rules listed below.
+> Each of them now takes an input-length `WITHIN` and can reach `BREACH`, so read "no time limit", "no deadline" and "no breach path" of them as the position before that pass, here and wherever else these notes say so of them:
+>
+> - `s 152(2) a public company must send a copy of the notice of an intended removal to the director`
+> - `s 156(1) a director must declare the nature of the interest`
+>
+> The other rules named in this section are unchanged.
+
 20 regulative rules are encoded (`PARTY ... MUST/SHANT ...`), 12 of them prohibitions (`SHANT`, by ruling N2) and 8 duties (`MUST`).
 Each has at least one `#TRACE` with a `-- EXPECT` line directly above it (47 traces in all); every prohibition and every duty with a `WITHIN` has a trace that reaches `BREACH`.
 A `MUST` with no `WITHIN` cannot be breached: a late act still reads `FULFILLED` and no act reads `RESIDUAL`.

@@ -783,6 +783,15 @@ No "may" in these ranges is gated by "with the consent of"; the consent of the M
 
 ## Rules with no breach path (sgg)
 
+> Added 2026-11-27 (decided by Claude, assumed, not ruled): this section was written before the pass recorded in `lest-without-deadline.md`, and it is no longer true of the rules listed below.
+> Each of them now takes an input-length `WITHIN` and can reach `BREACH`, so read "no time limit", "no deadline" and "no breach path" of them as the position before that pass, here and wherever else these notes say so of them:
+>
+> - `s 370(4) the foreign company must lodge the notice and the consent statement for the new authorised representative`
+> - `s 370(6)(a) the foreign company must appoint another authorised representative`
+> - `s 377(2) an authorised representative must lodge notice of the appointment of a liquidator when one is appointed`
+>
+> The other rules named in this section are unchanged.
+
 A regulative `MUST` with no time limit and no stated consequence cannot be shown breached: with no event the obligation stays `RESIDUAL`, and a late act still reads `FULFILLED`.
 No deadline and no consequence is invented for any of them.
 The rules listed are those whose source has no `WITHIN`, found by script.

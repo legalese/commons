@@ -818,6 +818,8 @@ Each of the 14 "if" and "on application" gates is one fork line.
 
 ## Rules with no breach path (sgo)
 
+> Added 2026-11-27 (decided by Claude, assumed, not ruled): checked against the pass recorded in `lest-without-deadline.md`, by rule name and by section label; none of the rules this section names now takes an input-length `WITHIN`, so it stands as written.
+
 A regulative `MUST` with no time limit and no stated consequence cannot reach `BREACH`: a late action still reads `FULFILLED`.
 This row has seven of them, none of which has an invented deadline or consequence:
 - `s 390(3) the Official Receiver must sell or dispose of the shares received` (no deadline; an official, no seat).

@@ -915,6 +915,13 @@ The duties gated by "where" (ss 63A(1), 63B(1), 63B(3), 63C, 64A(4), 70(8), 73B(
 
 ## Rules with no breach path (sga1)
 
+> Added 2026-11-27 (decided by Claude, assumed, not ruled): this section was written before the pass recorded in `lest-without-deadline.md`, and it is no longer true of the rules listed below.
+> Each of them now takes an input-length `WITHIN` and can reach `BREACH`, so read "no time limit", "no deadline" and "no breach path" of them as the position before that pass, here and wherever else these notes say so of them:
+>
+> - `s 66(4) a company must cancel a share warrant issued before 29 December 1967 that is unaccounted for by the expiry of the 2-year period`
+>
+> The other rules named in this section are unchanged.
+
 A `MUST` with no time limit and no consequence the text states cannot reach `BREACH`: a late act still reads `FULFILLED`, and no act leaves the duty standing (`RESIDUAL`).
 This encoding did not invent a deadline or a consequence.
 

@@ -866,6 +866,27 @@ Of the sites of kind (ii), 9 answer JUST FALSE for an unmet where/upon gate (the
 
 ## Rules with no breach path (sgm)
 
+> Added 2026-11-27 (decided by Claude, assumed, not ruled): this section was written before the pass recorded in `lest-without-deadline.md`, and it is no longer true of the rules listed below.
+> Each of them now takes an input-length `WITHIN` and can reach `BREACH`, so read "no time limit", "no deadline" and "no breach path" of them as the position before that pass, here and wherever else these notes say so of them:
+>
+> - `s 196A(5) the Registrar must update the electronic register of members`
+> - `s 196(4) a public company must transmit a copy of every entry in its branch register`
+> - `s 344E(1) the Registrar must give the applicant notice of the decision (rule)`
+> - `s 344B(2)(a) the Registrar must send the company a notice that the application has been withdrawn (rule)`
+> - `s 344B(2)(b) the Registrar must publish a notice on the Authority's website that the application has been withdrawn (rule)`
+> - `s 344E(2)(b)(i) the Registrar must enter in the register a note of the date of the restoration (rule)`
+> - `s 344E(2)(b)(ii) the Registrar must cause notice of the restoration to be published (rule)`
+> - `s 344A(3) the Registrar must send the letter informing the company, its directors, secretaries and members of the application (rule)`
+> - `s 344C(3)(a) the Registrar must give the applicant or applicants notice of the objection (rule)`
+> - `s 344A(5) the Registrar must strike off the name of the company from the register and publish a notice in the Gazette (rule)`
+> - `s 344A(8)(a) the Registrar must send the particulars of the company and of the application to the Inland Revenue Authority of Singapore and the Central Provident Fund Board (rule)`
+> - `s 344A(8)(b) the Registrar must publish the substance of the notices on the Authority's website (rule)`
+> - `s 344(4) the Registrar must publish notice of the striking off in the Gazette (rule)`
+> - `s 344(7)(a) the Registrar must send the particulars to the Inland Revenue Authority of Singapore and the Central Provident Fund Board (rule)`
+> - `s 344(7)(b) the Registrar must publish the substance of the notices on the Authority's website (rule)`
+>
+> The other rules named in this section are unchanged.
+
 A `MUST` or `SHANT` with no deadline cannot reach BREACH in a `#TRACE`: the obligation stays a RESIDUAL until it is done, and the text names no moment at which it lapses.
 These are the 21 regulative rules of this part with no breach path (of 32 in all); each has a `#TRACE` showing FULFILLED and one showing the RESIDUAL, and no `#TRACE` can show BREACH.
 The Registrar's duties of Part 10 and ss 196A(1), (5) are here because the text gives no time for them; they are encoded in layer 1 for what they decide, and the seat asks them only as what they mean to the person ("must the Registrar update the electronic register of my company"), never from the Registrar's side.

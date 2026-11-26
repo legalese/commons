@@ -567,6 +567,8 @@ Each answer is a fork line above; none was changed to match another part.
 
 ## Rules with no breach path (sga2)
 
+> Added 2026-11-27 (decided by Claude, assumed, not ruled): checked against the pass recorded in `lest-without-deadline.md`, by rule name and by section label; none of the rules this section names now takes an input-length `WITHIN`, so it stands as written.
+
 None.
 The range has ten regulative rules, and each has a `#TRACE` that reaches `BREACH`: the four prohibitions of s 76(1A) and the prohibition of s 76(1) (breached by the forbidden act), s 76(5) (an officer in default), s 76(9C) and s 76(9CA) (giving the assistance after a director has ceased to be satisfied), s 76A(11) (signing a false certificate), each a `SHANT` with `HENCE FULFILLED LEST BREACH`; and s 76(14), a `MUST ... WITHIN 14` whose trace reaches `BREACH` at day 15 and `FULFILLED` at day 14.
 Duties of the text that are encoded only as decision functions, with no regulative rule, because the text names no party's act and deadline together: s 76(10A) (a duty to comply with (10)(f) or (g) "at or before the time"), s 76(13)(a) (a duty of the Court, not a seat), and the notice and lodging duties inside the conditions of (9A), (9B) and (10), which are conditions of a permission and not free-standing duties.

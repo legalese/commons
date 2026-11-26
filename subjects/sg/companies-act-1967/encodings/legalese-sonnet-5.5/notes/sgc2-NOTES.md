@@ -614,21 +614,21 @@ Branches that rest on something else are not repeated here: a "means" definition
 | s 205(2) | `s 205(2) the auditor appointed at the annual general meeting holds office` | s205-appointment:137 | (a) | `JUST FALSE` | `NOTHING` |
 | s 205(3) | `s 205(3) the directors may appoint the accounting entity to fill the casual vacancy` | s205-appointment:159 | (b) | `NOTHING` | `JUST FALSE` |
 | s 205(3) | `s 205(3) the surviving or continuing auditor may act` | s205-appointment:173 | (b) | `NOTHING` | `JUST FALSE` |
-| s 205(5)(b) | `s 205(5)(b) the auditor may make representations and have a copy sent to every member` | s205-appointment:249 | (b) | `NOTHING` | `JUST FALSE` |
-| s 205(6) | `s 205(6) the auditor may require that the representations be read out at the meeting` | s205-appointment:298 | (a) | `JUST FALSE` | `NOTHING` |
-| s 205(6) | `s 205(6) the auditor may require that the representations be read out at the meeting` | s205-appointment:301 | (b) | `NOTHING` | `JUST FALSE` |
-| s 205(7)(a) | `s 205(7)(a) the company may immediately appoint another accounting entity as auditor` | s205-appointment:325 | (a) | `JUST FALSE` | `NOTHING` |
-| s 205(7)(a) | `s 205(7)(a) the company may immediately appoint another accounting entity as auditor` | s205-appointment:329 | (b) | `NOTHING` | `JUST FALSE` |
-| s 205(7)(b) | `s 205(7)(b) the company may appoint another accounting entity as auditor at the adjourned meeting` | s205-appointment:351 | (a) | `JUST FALSE` | `NOTHING` |
-| s 205(7)(b) | `s 205(7)(b) the company may appoint another accounting entity as auditor at the adjourned meeting` | s205-appointment:359 | (b) | `NOTHING` | `JUST FALSE` |
-| s 205(8) | `s 205(8) the Registrar may appoint an auditor of the company` | s205-appointment:399 | (b) | `NOTHING` | `JUST FALSE` |
-| s 205(9) | `s 205(9) the auditor appointed under subsection (7) or (8) holds office` | s205-appointment:412 | (a) | `JUST FALSE` | `NOTHING` |
-| s 205(10) | `s 205(10) the Registrar may make the appointment on the application of a member` | s205-appointment:429 | (b) | `NOTHING` | `JUST FALSE` |
-| s 205(11) | `s 205(11) the accounting entity is capable of being appointed auditor at the annual general meeting` | s205-appointment:448 | (b) | `NOTHING` | `JUST FALSE` |
-| s 205(11) | `s 205(11) the accounting entity is capable of being appointed auditor at the annual general meeting` | s205-appointment:453 | (a) | `JUST FALSE` | `NOTHING` |
-| s 205(12A) | `s 205(12A) the day that stands for the date of the annual general meeting` | s205-appointment:547 | (b) | `NOTHING` | `JUST FALSE` |
-| s 205(13) | `s 205(13) subsection (11) does not apply in relation to the accounting entity` | s205-appointment:570 | (a) | `JUST FALSE` | `NOTHING` |
-| s 205(13) | `s 205(13) the company is deemed to have complied with subsection (12)` | s205-appointment:583 | (a) | `JUST FALSE` | `NOTHING` |
+| s 205(5)(b) | `s 205(5)(b) the auditor may make representations and have a copy sent to every member` | s205-appointment:251 | (b) | `NOTHING` | `JUST FALSE` |
+| s 205(6) | `s 205(6) the auditor may require that the representations be read out at the meeting` | s205-appointment:300 | (a) | `JUST FALSE` | `NOTHING` |
+| s 205(6) | `s 205(6) the auditor may require that the representations be read out at the meeting` | s205-appointment:303 | (b) | `NOTHING` | `JUST FALSE` |
+| s 205(7)(a) | `s 205(7)(a) the company may immediately appoint another accounting entity as auditor` | s205-appointment:327 | (a) | `JUST FALSE` | `NOTHING` |
+| s 205(7)(a) | `s 205(7)(a) the company may immediately appoint another accounting entity as auditor` | s205-appointment:331 | (b) | `NOTHING` | `JUST FALSE` |
+| s 205(7)(b) | `s 205(7)(b) the company may appoint another accounting entity as auditor at the adjourned meeting` | s205-appointment:353 | (a) | `JUST FALSE` | `NOTHING` |
+| s 205(7)(b) | `s 205(7)(b) the company may appoint another accounting entity as auditor at the adjourned meeting` | s205-appointment:361 | (b) | `NOTHING` | `JUST FALSE` |
+| s 205(8) | `s 205(8) the Registrar may appoint an auditor of the company` | s205-appointment:403 | (b) | `NOTHING` | `JUST FALSE` |
+| s 205(9) | `s 205(9) the auditor appointed under subsection (7) or (8) holds office` | s205-appointment:416 | (a) | `JUST FALSE` | `NOTHING` |
+| s 205(10) | `s 205(10) the Registrar may make the appointment on the application of a member` | s205-appointment:433 | (b) | `NOTHING` | `JUST FALSE` |
+| s 205(11) | `s 205(11) the accounting entity is capable of being appointed auditor at the annual general meeting` | s205-appointment:452 | (b) | `NOTHING` | `JUST FALSE` |
+| s 205(11) | `s 205(11) the accounting entity is capable of being appointed auditor at the annual general meeting` | s205-appointment:457 | (a) | `JUST FALSE` | `NOTHING` |
+| s 205(12A) | `s 205(12A) the day that stands for the date of the annual general meeting` | s205-appointment:551 | (b) | `NOTHING` | `JUST FALSE` |
+| s 205(13) | `s 205(13) subsection (11) does not apply in relation to the accounting entity` | s205-appointment:574 | (a) | `JUST FALSE` | `NOTHING` |
+| s 205(13) | `s 205(13) the company is deemed to have complied with subsection (12)` | s205-appointment:587 | (a) | `JUST FALSE` | `NOTHING` |
 | s 205A(1) | `s 205A(1) the company and its directors are exempt from section 205(1) or (2)` | s205a-exemption:47 | (b) | `NOTHING` | `JUST FALSE` |
 | s 205A(2) | `s 205A(2) the auditors appointed hold office` | s205a-exemption:97 | (a) | `JUST FALSE` | `NOTHING` |
 | s 205B(1) | `s 205B(1) the company is exempt from audit requirements` | s205a-exemption:153 | (a) | `JUST FALSE` | `NOTHING` |
@@ -655,48 +655,48 @@ Branches that rest on something else are not repeated here: a "means" definition
 | s 205AA(1) | `s 205AA(1) the auditor may resign by giving the company a notice of resignation in writing` | s205aa-resignation:81 | (b) | `NOTHING` | `JUST FALSE` |
 | s 205AB(1) | `s 205AB(1) the auditor may resign by giving the company a notice of resignation in writing` | s205aa-resignation:166 | (b) | `NOTHING` | `JUST FALSE` |
 | s 205AB(1) | `s 205AB(1) the auditor may resign by giving the company a notice of resignation in writing` | s205aa-resignation:174 | (b) | `NOTHING` | `JUST FALSE` |
-| s 205AB(3)(a) | `s 205AB(3)(a) the statement is admissible in evidence in the proceedings` | s205aa-resignation:217 | (a) | `JUST FALSE` | `NOTHING` |
-| s 205AB(3)(a) | `s 205AB(3)(a) the statement is admissible in evidence in the proceedings` | s205aa-resignation:219 | (b) | `NOTHING` | `JUST FALSE` |
-| s 205AB(3)(a) | `s 205AB(3)(a) the statement is admissible in evidence in the proceedings` | s205aa-resignation:220 | (b) | `NOTHING` | `JUST FALSE` |
+| s 205AB(3)(a) | `s 205AB(3)(a) the statement is admissible in evidence in the proceedings` | s205aa-resignation:219 | (a) | `JUST FALSE` | `NOTHING` |
 | s 205AB(3)(a) | `s 205AB(3)(a) the statement is admissible in evidence in the proceedings` | s205aa-resignation:221 | (b) | `NOTHING` | `JUST FALSE` |
-| s 205AB(3)(b) | `s 205AB(3)(b) the statement may be made the ground of a prosecution, an action or a suit against the auditor` | s205aa-resignation:232 | (a) | `JUST FALSE` | `NOTHING` |
-| s 205AB(3)(b) | `s 205AB(3)(b) the statement may be made the ground of a prosecution, an action or a suit against the auditor` | s205aa-resignation:234 | (b) | `NOTHING` | `JUST FALSE` |
-| s 205AB(3)(b) | `s 205AB(3)(b) the statement may be made the ground of a prosecution, an action or a suit against the auditor` | s205aa-resignation:235 | (b) | `NOTHING` | `JUST FALSE` |
+| s 205AB(3)(a) | `s 205AB(3)(a) the statement is admissible in evidence in the proceedings` | s205aa-resignation:222 | (b) | `NOTHING` | `JUST FALSE` |
+| s 205AB(3)(a) | `s 205AB(3)(a) the statement is admissible in evidence in the proceedings` | s205aa-resignation:223 | (b) | `NOTHING` | `JUST FALSE` |
+| s 205AB(3)(b) | `s 205AB(3)(b) the statement may be made the ground of a prosecution, an action or a suit against the auditor` | s205aa-resignation:234 | (a) | `JUST FALSE` | `NOTHING` |
 | s 205AB(3)(b) | `s 205AB(3)(b) the statement may be made the ground of a prosecution, an action or a suit against the auditor` | s205aa-resignation:236 | (b) | `NOTHING` | `JUST FALSE` |
-| s 205AB(4) | `s 205AB(4) the statement may be used in the proceedings` | s205aa-resignation:259 | (b) | `NOTHING` | `JUST FALSE` |
-| s 205AB(4) | `s 205AB(4) the statement may be used in the proceedings` | s205aa-resignation:260 | (b) | `NOTHING` | `JUST FALSE` |
+| s 205AB(3)(b) | `s 205AB(3)(b) the statement may be made the ground of a prosecution, an action or a suit against the auditor` | s205aa-resignation:237 | (b) | `NOTHING` | `JUST FALSE` |
+| s 205AB(3)(b) | `s 205AB(3)(b) the statement may be made the ground of a prosecution, an action or a suit against the auditor` | s205aa-resignation:238 | (b) | `NOTHING` | `JUST FALSE` |
 | s 205AB(4) | `s 205AB(4) the statement may be used in the proceedings` | s205aa-resignation:261 | (b) | `NOTHING` | `JUST FALSE` |
-| s 205AC(2) | `s 205AC(2) copies of the written statement need not be sent out` | s205aa-resignation:352 | (a) | `JUST FALSE` | `NOTHING` |
-| s 205AD(1) | `s 205AD(1) section 205AD applies` | s205aa-resignation:426 | (a) | `JUST FALSE` | `NOTHING` |
-| s 205AD(2) | `s 205AD(2)(a) the Court is required to direct that copies of the written statement are not to be sent` | s205aa-resignation:446 | (a) | `JUST FALSE` | `NOTHING` |
-| s 205AD(2)(b) | `s 205AD(2)(b) the Court may order the auditor to pay the applicant's costs in whole or in part` | s205aa-resignation:455 | (b) | `NOTHING` | `JUST FALSE` |
-| s 205AE | `s 205AE the person has the privilege against an action for defamation for the publication` | s205aa-resignation:591 | (b) | `NOTHING` | `JUST FALSE` |
-| s 205AE | `s 205AE the person has the privilege against an action for defamation for the publication` | s205aa-resignation:593 | (b) | `NOTHING` | `JUST FALSE` |
-| s 205AF(2) | `s 205AF(2) the Registrar may make the appointment on the application of a member` | s205aa-resignation:699 | (b) | `NOTHING` | `JUST FALSE` |
-| s 205AF(3) | `s 205AF(3) subsections (1) and (2) do not apply` | s205aa-resignation:712 | (a) | `JUST FALSE` | `NOTHING` |
-| s 205AF(4) | `s 205AF(4) the auditor appointed under subsection (1) or (2) holds office` | s205aa-resignation:723 | (a) | `JUST FALSE` | `NOTHING` |
-| s 205AF(4) | `s 205AF(4) the auditor appointed under subsection (1) or (2) holds office` | s205aa-resignation:725 | (a) | `JUST FALSE` | `NOTHING` |
+| s 205AB(4) | `s 205AB(4) the statement may be used in the proceedings` | s205aa-resignation:262 | (b) | `NOTHING` | `JUST FALSE` |
+| s 205AB(4) | `s 205AB(4) the statement may be used in the proceedings` | s205aa-resignation:263 | (b) | `NOTHING` | `JUST FALSE` |
+| s 205AC(2) | `s 205AC(2) copies of the written statement need not be sent out` | s205aa-resignation:354 | (a) | `JUST FALSE` | `NOTHING` |
+| s 205AD(1) | `s 205AD(1) section 205AD applies` | s205aa-resignation:432 | (a) | `JUST FALSE` | `NOTHING` |
+| s 205AD(2) | `s 205AD(2)(a) the Court is required to direct that copies of the written statement are not to be sent` | s205aa-resignation:452 | (a) | `JUST FALSE` | `NOTHING` |
+| s 205AD(2)(b) | `s 205AD(2)(b) the Court may order the auditor to pay the applicant's costs in whole or in part` | s205aa-resignation:461 | (b) | `NOTHING` | `JUST FALSE` |
+| s 205AE | `s 205AE the person has the privilege against an action for defamation for the publication` | s205aa-resignation:597 | (b) | `NOTHING` | `JUST FALSE` |
+| s 205AE | `s 205AE the person has the privilege against an action for defamation for the publication` | s205aa-resignation:599 | (b) | `NOTHING` | `JUST FALSE` |
+| s 205AF(2) | `s 205AF(2) the Registrar may make the appointment on the application of a member` | s205aa-resignation:705 | (b) | `NOTHING` | `JUST FALSE` |
+| s 205AF(3) | `s 205AF(3) subsections (1) and (2) do not apply` | s205aa-resignation:718 | (a) | `JUST FALSE` | `NOTHING` |
+| s 205AF(4) | `s 205AF(4) the auditor appointed under subsection (1) or (2) holds office` | s205aa-resignation:729 | (a) | `JUST FALSE` | `NOTHING` |
+| s 205AF(4) | `s 205AF(4) the auditor appointed under subsection (1) or (2) holds office` | s205aa-resignation:731 | (a) | `JUST FALSE` | `NOTHING` |
 | s 206(1) | `s 206(1) the notice engages the duty of the company` | s206-208a-duties:100 | (a) | `JUST FALSE` | `NOTHING` |
-| s 207(4) | `s 207(4) the auditor is not required to form an opinion on whether the records of the subsidiary corporation have been kept in accordance with this Act` | s206-208a-duties:472 | (b) | `NOTHING` | `JUST FALSE` |
-| s 207(5) | `s 207(5) the auditor has a right of access at all times to the item` | s206-208a-duties:510 | (a) | `JUST FALSE` | `NOTHING` |
-| s 207(5) | `s 207(5) the auditor has a right of access at all times to the item` | s206-208a-duties:512 | (b) | `NOTHING` | `JUST FALSE` |
-| s 207(5) | `s 207(5) the auditor is entitled to require information and explanations from the person` | s206-208a-duties:532 | (b) | `NOTHING` | `JUST FALSE` |
-| s 207(5) | `s 207(5) the auditor is entitled to require information and explanations from the person` | s206-208a-duties:534 | (b) | `NOTHING` | `JUST FALSE` |
-| s 207(6) | `s 207(6) the auditor has a right of access at all times to the item of the subsidiary corporation` | s206-208a-duties:554 | (a) | `JUST FALSE` | `NOTHING` |
-| s 207(6) | `s 207(6) the auditor has a right of access at all times to the item of the subsidiary corporation` | s206-208a-duties:556 | (b) | `NOTHING` | `JUST FALSE` |
-| s 207(6) | `s 207(6) the auditor is entitled, at the expense of the parent company, to require information and explanations from the person` | s206-208a-duties:569 | (b) | `NOTHING` | `JUST FALSE` |
-| s 207(8) | `s 207(8) the person is entitled to attend any general meeting of the company` | s206-208a-duties:610 | (b) | `NOTHING` | `JUST FALSE` |
-| s 207(8) | `s 207(8) the person is entitled to receive all notices of, and other communications relating to, any general meeting which a member is entitled to receive` | s206-208a-duties:619 | (b) | `NOTHING` | `JUST FALSE` |
-| s 207(8) | `s 207(8) the person is entitled to be heard at the general meeting on the part of the business` | s206-208a-duties:631 | (b) | `NOTHING` | `JUST FALSE` |
-| s 207(8) | `s 207(8) the person is entitled to be heard at the general meeting on the part of the business` | s206-208a-duties:632 | (b) | `NOTHING` | `JUST FALSE` |
-| s 207(9C) | `s 207(9C) the auditor is not required to make a report to the Minister under subsection (9A)` | s206-208a-duties:709 | (b) | `NOTHING` | `JUST FALSE` |
-| s 207(9B) | `s 207(9B) no duty to which the auditor is subject is regarded as contravened by the report` | s206-208a-duties:760 | (b) | `NOTHING` | `JUST FALSE` |
-| s 208(1) | `s 208(1) the auditor is not liable to an action for defamation in respect of the statement` | s206-208a-duties:864 | (b) | `NOTHING` | `JUST FALSE` |
-| s 208(2) | `s 208(2) the person is not liable to an action for defamation in respect of the publication of the document` | s206-208a-duties:880 | (b) | `NOTHING` | `JUST FALSE` |
-| s 208(3) | `s 208(3) section 208 limits or affects the right, privilege or immunity` | s206-208a-duties:891 | (a) | `JUST FALSE` | `NOTHING` |
-| s 208A(1) | `s 208A(1) the provision is void` | s206-208a-duties:915 | (b) | `NOTHING` | `JUST FALSE` |
-| s 208A(2) | `s 208A(2) the section does not prevent the company from indemnifying the auditor` | s206-208a-duties:938 | (b) | `NOTHING` | `JUST FALSE` |
-| s 208A(2) | `s 208A(1) and (2) the provision is void under the section` | s206-208a-duties:947 | (a) | `JUST FALSE` | `NOTHING` |
+| s 207(4) | `s 207(4) the auditor is not required to form an opinion on whether the records of the subsidiary corporation have been kept in accordance with this Act` | s206-208a-duties:485 | (b) | `NOTHING` | `JUST FALSE` |
+| s 207(5) | `s 207(5) the auditor has a right of access at all times to the item` | s206-208a-duties:523 | (a) | `JUST FALSE` | `NOTHING` |
+| s 207(5) | `s 207(5) the auditor has a right of access at all times to the item` | s206-208a-duties:525 | (b) | `NOTHING` | `JUST FALSE` |
+| s 207(5) | `s 207(5) the auditor is entitled to require information and explanations from the person` | s206-208a-duties:545 | (b) | `NOTHING` | `JUST FALSE` |
+| s 207(5) | `s 207(5) the auditor is entitled to require information and explanations from the person` | s206-208a-duties:547 | (b) | `NOTHING` | `JUST FALSE` |
+| s 207(6) | `s 207(6) the auditor has a right of access at all times to the item of the subsidiary corporation` | s206-208a-duties:567 | (a) | `JUST FALSE` | `NOTHING` |
+| s 207(6) | `s 207(6) the auditor has a right of access at all times to the item of the subsidiary corporation` | s206-208a-duties:569 | (b) | `NOTHING` | `JUST FALSE` |
+| s 207(6) | `s 207(6) the auditor is entitled, at the expense of the parent company, to require information and explanations from the person` | s206-208a-duties:582 | (b) | `NOTHING` | `JUST FALSE` |
+| s 207(8) | `s 207(8) the person is entitled to attend any general meeting of the company` | s206-208a-duties:623 | (b) | `NOTHING` | `JUST FALSE` |
+| s 207(8) | `s 207(8) the person is entitled to receive all notices of, and other communications relating to, any general meeting which a member is entitled to receive` | s206-208a-duties:632 | (b) | `NOTHING` | `JUST FALSE` |
+| s 207(8) | `s 207(8) the person is entitled to be heard at the general meeting on the part of the business` | s206-208a-duties:644 | (b) | `NOTHING` | `JUST FALSE` |
+| s 207(8) | `s 207(8) the person is entitled to be heard at the general meeting on the part of the business` | s206-208a-duties:645 | (b) | `NOTHING` | `JUST FALSE` |
+| s 207(9C) | `s 207(9C) the auditor is not required to make a report to the Minister under subsection (9A)` | s206-208a-duties:724 | (b) | `NOTHING` | `JUST FALSE` |
+| s 207(9B) | `s 207(9B) no duty to which the auditor is subject is regarded as contravened by the report` | s206-208a-duties:777 | (b) | `NOTHING` | `JUST FALSE` |
+| s 208(1) | `s 208(1) the auditor is not liable to an action for defamation in respect of the statement` | s206-208a-duties:881 | (b) | `NOTHING` | `JUST FALSE` |
+| s 208(2) | `s 208(2) the person is not liable to an action for defamation in respect of the publication of the document` | s206-208a-duties:897 | (b) | `NOTHING` | `JUST FALSE` |
+| s 208(3) | `s 208(3) section 208 limits or affects the right, privilege or immunity` | s206-208a-duties:908 | (a) | `JUST FALSE` | `NOTHING` |
+| s 208A(1) | `s 208A(1) the provision is void` | s206-208a-duties:932 | (b) | `NOTHING` | `JUST FALSE` |
+| s 208A(2) | `s 208A(2) the section does not prevent the company from indemnifying the auditor` | s206-208a-duties:955 | (b) | `NOTHING` | `JUST FALSE` |
+| s 208A(2) | `s 208A(1) and (2) the provision is void under the section` | s206-208a-duties:964 | (a) | `JUST FALSE` | `NOTHING` |
 | s 209A | `s 209A the definitions of this section apply in this Part` | s209-interpretation:156 | (a) | `JUST FALSE` | `NOTHING` |
 | sch 13 para 2 | `sch 13 para 2 the company qualifies as a small company from the financial year` | sch13-small:109 | (a) | `JUST FALSE` | `NOTHING` |
 | sch 13 para 2 | `sch 13 para 2(b) the company qualifies as a small company from the financial year (other reading: the same 2 criteria in both years)` | sch13-small:124 | (a) | `JUST FALSE` | `NOTHING` |
@@ -727,16 +727,16 @@ Branches that rest on something else are not repeated here: a "means" definition
 The brief says that a site that fits none of the Guide's lines is to say so in its fork line and be listed here.
 Two kinds of branch of split site (i) are such sites, and both answer `JUST FALSE` (other reading: `NOTHING`):
 
-- s205-appointment:655, `s 205(17) the person is guilty of the offence`: a person outside the class the text names.
-- s205aa-resignation:403, `s 205AC(4) the person is guilty of the offence`: a person outside the class the text names.
-- s205aa-resignation:556, `s 205AD(5) the person is guilty of the offence`: a person outside the class the text names.
-- s205aa-resignation:741, `s 205AF(5) the person is guilty of the offence`: a person outside the class the text names.
+- s205-appointment:659, `s 205(17) the person is guilty of the offence`: a person outside the class the text names.
+- s205aa-resignation:409, `s 205AC(4) the person is guilty of the offence`: a person outside the class the text names.
+- s205aa-resignation:562, `s 205AD(5) the person is guilty of the offence`: a person outside the class the text names.
+- s205aa-resignation:747, `s 205AF(5) the person is guilty of the offence`: a person outside the class the text names.
 - s205a-exemption:113, `s 205A(3) the person is guilty of the offence`: a person outside the class the text names.
-- s206-208a-duties:222, `s 206(2) the person is guilty of the offence`: a person outside the class the text names.
-- s206-208a-duties:808, `s 207(10) the person is guilty of the offence`: an officer or auditor who does not do what the paragraph describes.
-- s206-208a-duties:818, `s 207(10) the person is guilty of the offence`: an officer or auditor who does not do what the paragraph describes.
-- s206-208a-duties:827, `s 207(10) the person is guilty of the offence`: an officer or auditor who does not do what the paragraph describes.
+- s206-208a-duties:231, `s 206(2) the person is guilty of the offence`: a person outside the class the text names.
+- s206-208a-duties:825, `s 207(10) the person is guilty of the offence`: an officer or auditor who does not do what the paragraph describes.
 - s206-208a-duties:835, `s 207(10) the person is guilty of the offence`: an officer or auditor who does not do what the paragraph describes.
+- s206-208a-duties:844, `s 207(10) the person is guilty of the offence`: an officer or auditor who does not do what the paragraph describes.
+- s206-208a-duties:852, `s 207(10) the person is guilty of the offence`: an officer or auditor who does not do what the paragraph describes.
 
 ### Reading a result: FALSE and NOTHING (sgc2)
 
@@ -803,13 +803,13 @@ Each has a companion function for the fine ("the most the person may be fined on
 
 Fork lines, one per site (the provision, the function, the answer taken, the other reading, the Guide line relied on):
 
-- **s 205(17)**, `s 205(17) the person is guilty of the offence` (branches at s205-appointment:655, s205-appointment:656). Answer taken: `JUST FALSE`. Other reading: `NOTHING`. Guide: the "In short" line, "a condition the text introduces with \"if\" ..." (for "If default is made ..." / "If any person fails ..."), and "Questions with no convention: decide case by case" ("a duty whose \"if\" or \"where\" is unmet"); for the class of persons, none fits (see the next heading).
-- **s 205AC(4)**, `s 205AC(4) the person is guilty of the offence` (branches at s205aa-resignation:403, s205aa-resignation:404). Answer taken: `JUST FALSE`. Other reading: `NOTHING`. Guide: the "In short" line, "a condition the text introduces with \"if\" ..." (for "If default is made ..." / "If any person fails ..."), and "Questions with no convention: decide case by case" ("a duty whose \"if\" or \"where\" is unmet"); for the class of persons, none fits (see the next heading).
-- **s 205AD(5)**, `s 205AD(5) the person is guilty of the offence` (branches at s205aa-resignation:556, s205aa-resignation:557). Answer taken: `JUST FALSE`. Other reading: `NOTHING`. Guide: the "In short" line, "a condition the text introduces with \"if\" ..." (for "If default is made ..." / "If any person fails ..."), and "Questions with no convention: decide case by case" ("a duty whose \"if\" or \"where\" is unmet"); for the class of persons, none fits (see the next heading).
-- **s 205AF(5)**, `s 205AF(5) the person is guilty of the offence` (branches at s205aa-resignation:741, s205aa-resignation:742). Answer taken: `JUST FALSE`. Other reading: `NOTHING`. Guide: the "In short" line, "a condition the text introduces with \"if\" ..." (for "If default is made ..." / "If any person fails ..."), and "Questions with no convention: decide case by case" ("a duty whose \"if\" or \"where\" is unmet"); for the class of persons, none fits (see the next heading).
+- **s 205(17)**, `s 205(17) the person is guilty of the offence` (branches at s205-appointment:659, s205-appointment:660). Answer taken: `JUST FALSE`. Other reading: `NOTHING`. Guide: the "In short" line, "a condition the text introduces with \"if\" ..." (for "If default is made ..." / "If any person fails ..."), and "Questions with no convention: decide case by case" ("a duty whose \"if\" or \"where\" is unmet"); for the class of persons, none fits (see the next heading).
+- **s 205AC(4)**, `s 205AC(4) the person is guilty of the offence` (branches at s205aa-resignation:409, s205aa-resignation:410). Answer taken: `JUST FALSE`. Other reading: `NOTHING`. Guide: the "In short" line, "a condition the text introduces with \"if\" ..." (for "If default is made ..." / "If any person fails ..."), and "Questions with no convention: decide case by case" ("a duty whose \"if\" or \"where\" is unmet"); for the class of persons, none fits (see the next heading).
+- **s 205AD(5)**, `s 205AD(5) the person is guilty of the offence` (branches at s205aa-resignation:562, s205aa-resignation:563). Answer taken: `JUST FALSE`. Other reading: `NOTHING`. Guide: the "In short" line, "a condition the text introduces with \"if\" ..." (for "If default is made ..." / "If any person fails ..."), and "Questions with no convention: decide case by case" ("a duty whose \"if\" or \"where\" is unmet"); for the class of persons, none fits (see the next heading).
+- **s 205AF(5)**, `s 205AF(5) the person is guilty of the offence` (branches at s205aa-resignation:747, s205aa-resignation:748). Answer taken: `JUST FALSE`. Other reading: `NOTHING`. Guide: the "In short" line, "a condition the text introduces with \"if\" ..." (for "If default is made ..." / "If any person fails ..."), and "Questions with no convention: decide case by case" ("a duty whose \"if\" or \"where\" is unmet"); for the class of persons, none fits (see the next heading).
 - **s 205A(3)**, `s 205A(3) the person is guilty of the offence` (branches at s205a-exemption:113, s205a-exemption:114). Answer taken: `JUST FALSE`. Other reading: `NOTHING`. Guide: the "In short" line, "a condition the text introduces with \"if\" ..." (for "If default is made ..." / "If any person fails ..."), and "Questions with no convention: decide case by case" ("a duty whose \"if\" or \"where\" is unmet"); for the class of persons, none fits (see the next heading).
-- **s 206(2)**, `s 206(2) the person is guilty of the offence` (branches at s206-208a-duties:222, s206-208a-duties:223). Answer taken: `JUST FALSE`. Other reading: `NOTHING`. Guide: the "In short" line, "a condition the text introduces with \"if\" ..." (for "If default is made ..." / "If any person fails ..."), and "Questions with no convention: decide case by case" ("a duty whose \"if\" or \"where\" is unmet"); for the class of persons, none fits (see the next heading).
-- **s 207(10)**, `s 207(10) the person is guilty of the offence` (branches at s206-208a-duties:808, s206-208a-duties:818, s206-208a-duties:827, s206-208a-duties:835). Answer taken: `JUST FALSE`. Other reading: `NOTHING`. Guide: none of the Guide's lines fits ("who refuses or fails without lawful excuse ..." is an element the text names, not an "if" and not a flat negative); listed under `## Marginal readings for a lawyer (sgc2)`.
+- **s 206(2)**, `s 206(2) the person is guilty of the offence` (branches at s206-208a-duties:231, s206-208a-duties:232). Answer taken: `JUST FALSE`. Other reading: `NOTHING`. Guide: the "In short" line, "a condition the text introduces with \"if\" ..." (for "If default is made ..." / "If any person fails ..."), and "Questions with no convention: decide case by case" ("a duty whose \"if\" or \"where\" is unmet"); for the class of persons, none fits (see the next heading).
+- **s 207(10)**, `s 207(10) the person is guilty of the offence` (branches at s206-208a-duties:825, s206-208a-duties:835, s206-208a-duties:844, s206-208a-duties:852). Answer taken: `JUST FALSE`. Other reading: `NOTHING`. Guide: none of the Guide's lines fits ("who refuses or fails without lawful excuse ..." is an element the text names, not an "if" and not a flat negative); listed under `## Marginal readings for a lawyer (sgc2)`.
 - **s 209(3)**, `s 209(3) the person is guilty of the offence` (branches at s209-interpretation:127). Answer taken: `JUST FALSE`. Other reading: `NOTHING`. Guide: the "In short" line, "a condition the text introduces with \"if\" ...".
 
 The Guide line relied on where the text says "If default is made ..." or "If any person fails ...": Guide section 5, the "In short" line, "a condition the text introduces with \"if\", \"only if\", \"as long as\" or \"unless\"" (the offence is introduced by an "if", and the function answers `JUST FALSE` where the "if" is not met), and "Questions with no convention: decide case by case (the maintainer, typed 2026-11-05T10:25:24Z)", which names "a duty whose \"if\" or \"where\" is unmet".
@@ -832,6 +832,25 @@ Not counted as sites: the other "may" functions of this part (s 205(3), 205(5)(b
 They answer `NOTHING` by the grant ruling's limit 1 where the "if" or the complement fails (fork entry F-G1), and `JUST FALSE` for a period the text fixes (F-P1).
 
 ## Rules with no breach path (sgc2)
+
+> Added 2026-11-27 (decided by Claude, assumed, not ruled): this section was written before the pass recorded in `lest-without-deadline.md`, and it is no longer true of the rules listed below.
+> Each of them now takes an input-length `WITHIN` and can reach `BREACH`, so read "no time limit", "no deadline" and "no breach path" of them as the position before that pass, here and wherever else these notes say so of them:
+>
+> - `s 205AB(2) the Registrar must notify the auditor and the company whether it consents`
+> - `s 205AC(3)(a) the company that applies must give notice of the application to the auditor`
+> - `s 205AC(3)(b) any other person who applies must give notice of the application to the company and the auditor`
+> - `s 205(5)(a) the company must send a copy of the notice of the removal resolution`
+> - `s 205(8) the company must give written notice of the removal to the Registrar`
+> - `s 206(1)(c) the company must prepare the statement of the auditor's other emoluments`
+> - `s 206(1)(d) the company must forward a copy of the statement`
+> - `s 206(1)(e) the company must lay the statement before the company in general meeting`
+> - `s 206(1A) the public company must review the auditor's fees and send the outcome`
+> - `s 207(1) the auditor must report to the members`
+> - `s 207(1A) the auditor must furnish the report to the directors in sufficient time`
+> - `s 207(9) the auditor must report the matter in writing to the Registrar`
+> - `s 207(9A) the auditor must report the matter to the Minister`
+>
+> The other rules named in this section are unchanged.
 
 29 regulative rules are written in layer 1; 12 have a number of days (`WITHIN`) and each of those has at least one `#TRACE` that reaches `BREACH`; **17 have no number of days, so no trace can show them breached** (a late act still reads `FULFILLED`).
 They are listed here with the provision and the words of the text; no deadline or consequence is invented.

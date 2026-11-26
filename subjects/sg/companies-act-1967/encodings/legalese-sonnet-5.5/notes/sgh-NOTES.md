@@ -976,6 +976,24 @@ These sites fit the Guide's lines only by extension (an offence is a prohibition
 
 ## Rules with no breach path (sgh)
 
+> Added 2026-11-27 (decided by Claude, assumed, not ruled): this section was written before the pass recorded in `lest-without-deadline.md`, and it is no longer true of the rules listed below.
+> Each of them now takes an input-length `WITHIN` and can reach `BREACH`, so read "no time limit", "no deadline" and "no breach path" of them as the position before that pass, here and wherever else these notes say so of them:
+>
+> - `s 12B(1) the Registrar must rectify the register on receipt of the order`
+> - `s 12E(1) rule: the Registrar's duty to exclude the residential address from public access`
+> - `s 12B(2) the applicant company must file the fresh document`
+> - `s 12E(3) rule: the Registrar's duty to cause the exclusion to resume`
+> - `s 12E(4) rule: the Registrar's duty to exclude the residential address entered in the form`
+> - `s 12F(9) rule: the Registrar's duty to replace the contact address`
+> - `s 14(5) rule: the Registrar's duty to register the order`
+> - `s 17(9) rule: the Registrar's duty to issue the certificate of confirmation of incorporation`
+> - `s 19(3) rule: the Registrar's duty to register the company`
+> - `s 19(4) rule: the Registrar's duty to issue a notice of incorporation`
+> - `s 19(7) rule: the Registrar's duty to issue the certificate of confirmation of incorporation`
+> - `s 8E the advocate and solicitor who refuses to produce the document must give the name and address`
+>
+> The other rules named in this section are unchanged.
+
 A rule is a `MUST` with no `WITHIN` and no consequence the text states: a late act still reads `FULFILLED`, so no trace can show it breached; I did not invent a deadline or a consequence.
 Each carries a `LEST BREACH BY ... BECAUSE "..."` that names the failure in the text's own words, and which cannot fire without a deadline.
 The traces of each reach `FULFILLED` (the act is done) and `RESIDUAL` (nothing happens, so the obligation stays open); the table says how many of each.

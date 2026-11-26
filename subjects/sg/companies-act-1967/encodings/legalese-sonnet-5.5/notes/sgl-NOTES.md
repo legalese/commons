@@ -876,6 +876,18 @@ Each answers by its own wording, and the register's F-28 row says which: ss 179(
 
 ## Rules with no breach path (sgl)
 
+> Added 2026-11-27 (decided by Claude, assumed, not ruled): this section was written before the pass recorded in `lest-without-deadline.md`, and it is no longer true of the rules listed below.
+> Each of them now takes an input-length `WITHIN` and can reach `BREACH`, so read "no time limit", "no deadline" and "no breach path" of them as the position before that pass, here and wherever else these notes say so of them:
+>
+> - `s 176(4) the company must pay the requisitionists and retain the sum`
+> - `s 183(4B) the directors must notify the specified person of the date of receipt`
+> - `s 184C(1) the directors must send each member a copy of the text of the resolution`
+> - `s 184D(2)(b) the directors must proceed to convene a general meeting for the resolution`
+> - `s 188(3B) the company must ensure that the minutes are signed by a director`
+> - `s 188(3C) the sole director must sign the minutes`
+>
+> The other rules named in this section are unchanged.
+
 A regulative rule with a `MUST` and no `WITHIN` has no breach path: a late action still reads `FULFILLED`, so no `#TRACE` can reach `BREACH`; the brief says not to invent a deadline or a consequence the text does not state, and I did not.
 Of the 25 regulative rules of this range, **13 have a clock and 12 have none**.
 The 12 have no period in the words of the text, so none of them can reach `BREACH`.

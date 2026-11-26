@@ -789,6 +789,19 @@ Guide line 96: a function named for a grant "that answers `JUST FALSE` because a
 
 ## Rules with no breach path (sgj)
 
+> Added 2026-11-27 (decided by Claude, assumed, not ruled): this section was written before the pass recorded in `lest-without-deadline.md`, and it is no longer true of the rules listed below.
+> Each of them now takes an input-length `WITHIN` and can reach `BREACH`, so read "no time limit", "no deadline" and "no breach path" of them as the position before that pass, here and wherever else these notes say so of them:
+>
+> - `s 125(1) the company must issue a duplicate certificate or document`
+> - `s 126(2) a private company must lodge notice of a transfer of shares with the Registrar`
+> - `s 128(1)(a) a private company must lodge a notice of transfer of shares on the transferor's request`
+> - `s 128(1)(b) a private company must enter the name of the transferee on the transferor's request`
+> - `s 128(3) a private company must require delivery or production of the documents by written notice`
+> - `s 130AA(1) a public company must enter the name of the transferee on the transferor's request`
+> - `s 130AA(2) a public company must require delivery or production of the documents by written notice`
+>
+> The other rules named in this section are unchanged.
+
 A regulative rule has a breach path when a trace of the passing of time, or of the wrong act, ends in `BREACH`.
 **Duties with a deadline** have one: the clock passes the `WITHIN` and the rule is breached (19 rules, each with a trace for in time, late and never in the tests).
 **Prohibitions** (`SHANT`) have one: the forbidden act itself is breached (6 rules: s 91(6), s 126(1), s 127, s 129(3), s 130(1), s 130AB(2)); with no act the prohibition stands, and the trace says `RESIDUAL`.
