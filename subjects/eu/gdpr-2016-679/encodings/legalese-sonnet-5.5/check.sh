@@ -121,6 +121,8 @@ expected_failed() {
     # The independent test author's four assertions that the lead triaged as genuinely open readings
     # (NOTES.md, "Independent test pass"): each asserts the reading the encoding does not take.
     tests-independent-open.l4) echo 4 ;;
+    # Part 2: the independent test author's four answers on which the text can be read two ways (K2-006 Art 2(3); C3-032 Art 12(5)(b); C3-036 Art 12(6); C3-052 Art 13(2)(f)); each asserts the reading the encoding does not take.
+    tests-independent-2-open.l4) echo 4 ;;
     *) echo 0 ;;
   esac
 }
