@@ -80,9 +80,11 @@ OTHER: 15 timed by another act or filing, 9 weighed in the course of another act
    **Why "thereupon" (s 215(4)) is among the 19 and "Upon ..." is not.**
    "The transferor company must thereupon register the transferee" puts the word on the act itself, saying how soon the register follows the transferee's step, so it is a standard of time in the section's own words.
    "Upon the application of the company ... the Registrar must issue" opens the clause with the event that arms the duty and says nothing of how soon the act follows it; the event is what the `WITHIN` counts from, and s 52 supplies the speed.
-   14 of the ACHIEVEMENT sites under s 52 have a row below that quotes "upon" (counted by searching the rows of the section "Dropped" for the word).
-   13 of them use it as that opening trigger: s 201B(7), s 215F(1), s 215F(4), s 359(3), s 359(4), s 17(9), s 19(3), s 19(7), s 12B(1), s 134(3), s 344A(3), s 344B(2)(a) and s 344C(3)(a); the 14th, s 233(1), says "upon which the inspector's opinion is based", a relative clause.
-   This is a reading (assumed, not ruled): if "upon" is read as a word of promptness too, those 13 move to ACHIEVEMENT, text's own standard, in one pass, and s 52 stops being their source.
+   The statute text of each of the 86 ACHIEVEMENT sites under s 52 (the subsection it cites, from the subsection's first line to the last line of the rule's `@ref`) has "upon" at 17 of them.
+   14 use it as the trigger of the duty: s 201B(7), s 215F(1), s 215F(4), s 359(3), s 359(4), s 17(9), s 19(3), s 19(7), s 12B(1), s 134(3), s 344A(3), s 344B(2)(a), s 344B(2)(b) and s 344C(3)(a).
+   The other 3 do not: s 233(1), at two sites, says "upon which the inspector's opinion is based", a relative clause, and s 14(5) says "upon application" of the Court's order, not of the registering.
+   (The rows of the section "Dropped" quote only part of each subsection, so a count made from them misses s 344B(2)(b), whose row does not repeat the "Upon" of its lead-in, and counts s 233(1) once.)
+   This is a reading (assumed, not ruled): if "upon" is read as a word of promptness too, those 14 move to ACHIEVEMENT, text's own standard, in one pass, and s 52 stops being their source.
 3. **A duty that is a bar on a power, not an act that falls due, is OTHER.**
    "The Registrar must refuse to register" (`sge-p10a-360.l4` s 360(1) and (2), `sgh-incorporation.l4` s 20(2)) is breached by registering, and no day arrives on which it is late.
 4. **A duty whose time the Act hands to regulations is OTHER.**
@@ -365,7 +367,7 @@ Status: decided by Claude on 2026-11-26, assumed, not ruled; each point can be r
   Besides the 205 `-- no LEST:` comments, the line diff against commit 1142117325 rewrites 54 comment lines and 3 section headings in the rule modules, and 46 comment lines and 7 section headings in the test modules; they now say that the input sets the time (the s 52 input, or the section's own standard for the 19).
   The same words above a maintenance or other rule were left, because they are still true there.
 - **The per-agent notes were kept in step.**
-  Every `module:NNN` or `module.l4:NNN` cite in the markdown of this folder (1,596 cites) was mapped from commit 1142117325 to the tree through a line diff of the cited module: 114 of them moved because lines were added or removed above them (35 in `sga1`, `sgb1`, `sgh`, `sgl` and `sgm` NOTES.md, re-pointed at the tests commit, and 79 in `sgc2-NOTES.md`, which that pass missed and the review of 2026-11-27 found), and now cite the line they cited before; 22 more cite a line that itself changed (a `#TRACE` that gained its input, a comment), and cite the changed line.
+  Every `module:NNN` or `module.l4:NNN` cite in the other notes of this folder, which is the markdown of the folder other than this file (1,596 cites), was mapped from commit 1142117325 to the tree through a line diff of the cited module: 114 of them moved because lines were added or removed above them (35 in `sga1`, `sgb1`, `sgh`, `sgl` and `sgm` NOTES.md, re-pointed at the tests commit, and 79 in `sgc2-NOTES.md`, which that pass missed because it searched only the `module.l4:NNN` form; a rescan after the review of 2026-11-27 found them), and now cite the line they cited before; 22 more cite a line that itself changed (a `#TRACE` that gained its input, a comment), and cite the changed line.
   A second scan after the edit finds no cite whose line differs from the diff's mapping.
   The five renamed rules are renamed in `sgl-NOTES.md` too (12 places).
   Their sections called "Rules with no breach path" remain what they were, an account of the encoding before this pass, with a dated pointer under each heading.
@@ -383,6 +385,7 @@ This section is here so that a later editor does not silently undo a repair.
   The two day-400 `BREACH` traces of `sgi-tests-name-changes.l4` went with them, and the traces of the two rules are back in the form they had at commit 1142117325.
 - **s 205(6) is OTHER again** (call 9): "as so requested" imports "prior to the meeting" from (5)(b), which the module's own comment quotes, so the meeting's time governs.
   The same loss, and its trace in `sgc2-tests-s205.l4` is back in its form at commit 1142117325.
+  For these three rules the code lines and the trace lines equal commit 1142117325 line for line; the comment lines differ: the `-- no LEST:` comment has the new opener and its class tag, and the lead comment above s 205(6) says why the meeting's time governs where the old one said "no breach path".
 - **s 207(1) moved from s 52 to the text's own standard** (call 2): (1A) says "in sufficient time" of a report under (1).
   The rule keeps its one input, now named `the period the standard of time allows, as found`; no trace changed, because the input is positional.
 - **s 210(8)(a) moved from the text's own standard to s 52** (call 2): "as soon as possible" governs the accountants' forwarding, not the directors' instruction (assumed, not ruled).
@@ -397,7 +400,7 @@ This section is here so that a later editor does not silently undo a repair.
 - **s 52 is cited by file and line**: `subjects/sg/interpretation-act/registers/source-bundle/IA1965.txt:2188-2190`.
 - **79 cites in `sgc2-NOTES.md`** pointed at lines that moved when the achievement sites were restored; they are re-pointed (section "What the tests show now").
 - **Numbers that moved**: ACHIEVEMENT 108 to 105 (s 52 89 to 86, the text's own standard 19 to 19), MAINTENANCE 36 to 35, OTHER 61 to 65; restored `LEST` lines 108 to 105; traces 629 to 626; added traces 75 to 72; achievement call sites 290 to 282; changed `EXPECT` outcomes stay at 59.
-- **Claims withdrawn**: that no line moved (see "What was found and what was done"), and the figure of 1,458 cites, which did not reproduce; the cite count is now 1,596, counted over the whole folder.
+- **Claims withdrawn**: that no line moved (see "What was found and what was done"), and the figure of 1,458 cites, which did not reproduce; the cite count is now 1,596, counted over the other notes (the markdown of this folder other than this file).
 
 ## Dropped
 
