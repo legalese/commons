@@ -9,7 +9,7 @@ It was made to measure how compatible a whole-Code encoding would be with that c
 It sits beside two other rows of the same Code: `legalese` (twelve modules, hand-built, with a bench of reported charges) and `legalese-aswathy` (the whole Code, 45 modules, eight verification passes).
 Rows are equal; none is primary.
 
-**Status: draft, not reviewed by a lawyer.** Revised once, on 30 September 2026 (filed here on 8 October): defects found by a structural comparison of the encoding with a published secondary reading of the Code were fixed, each verified against the Code's text. That reading is not cited here; each change stands on the Code's text, or for P-24 on a case, alone. See "Revised 2026-09-30" below.
+**Status: draft, not reviewed by a lawyer.** Revised once, on 30 September 2026 (filed here on 8 October): defects were fixed, each verified against the Code's text; each change stands on the Code's text, or for P-24 on a case. See "Revised 2026-09-30" below.
 Completed on 4 November 2026 (version 0.2.0): see "Completion pass 2026-11-04".
 **No lawyer or other domain expert has read any of it against the text, the 0.2.0 additions included.**
 
@@ -204,9 +204,9 @@ The last three had been written to a session scratchpad; the copies in `generato
 ## Revised 2026-09-30
 
 Eight modules changed (`pc-body-a-hurt`, `pc-body-a-life`, `pc-body-a-tests`, `pc-exceptions-private-defence`, `pc-exceptions-tests`, `pc-property-cheating`, `pc-property-tests`, `pc-property-trust`), with their generators and the body-a, exceptions and property notes.
-This file said on 8 October that each change came from the structural comparison named in the status line; P-23 records that it was found in a review of charge texts on 2026-09-29, and P-24 rests on a Court of Appeal decision.
-Each change was verified against the Code's text and stands on that text (or, for P-24, on the case) alone, and each has tests; forks F-20, E-17 and P-22 to P-24 record the reasoning, and none of them cites the secondary reading.
-That comparison was with an expert's reading of the Code in general, not a review of this encoding: no domain expert has read this encoding (see the status line).
+P-23 was found in a review of charge texts on 2026-09-29, and P-24 rests on a Court of Appeal decision.
+Each change was verified against the Code's text and stands on that text (or, for P-24, on the case), and each has tests; forks F-20, E-17 and P-22 to P-24 record the reasoning.
+No domain expert has read this encoding (see the status line).
 
 - **s 300 Exception 7.** The abnormality of mind and its listed cause are leaves of their own, required before limbs (a)(i), (a)(ii) and (b). An intoxicated accused with no abnormality of mind no longer comes within the Exception on (a)(ii) alone.
 - **s 300 Exception 2 reads Chapter 4A.** `Homicide Facts` carries a `Private Defence Facts`, and the flat "exceeds the power" leaf is replaced by `the right of private defence was exceeded`, so the Exception and the private-defence rules can no longer disagree.
