@@ -2,7 +2,7 @@
 
 The quoted text of the **UK General Data Protection Regulation** (Regulation (EU) 2016/679, as shown on [legislation.gov.uk](https://www.legislation.gov.uk/) with the added title "(United Kingdom General Data Protection Regulation)") is sourced from that site; the file's `dc:publisher` reads "King's Printer of Acts of Parliament".
 
-- **Copyright owner**: Crown copyright and database right (the site footer reads "© Crown and database right").
+- **Copyright owner**: Crown copyright and database right, as the site footer states it ("© Crown and database right"); for the Regulation's EU-derived base text see "What the XML shows about EUR-Lex".
 - **License**: [Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/), as the site states it for its content in general; the site's footer also says that it contains EUR-Lex-derived content reused under Commission Decision 2011/833/EU, and this deposit does not decide which of the two statements governs the Regulation's EU-derived base text (see "What the XML shows about EUR-Lex").
 - **Terms checked**: terms as recorded at 2026-10-21 in `subjects/uk/fraud-act-2006/SOURCE-LICENSE.md` (the footer of https://www.legislation.gov.uk/help, read that day); the OGL v3.0 page itself was re-read on 2026-11-26. No page of legislation.gov.uk was requested for these terms on 2026-11-26 (see "How the XML was obtained").
 - **Source**: https://www.legislation.gov.uk/eur/2016/679
@@ -32,9 +32,9 @@ Editorial commentary, the contents list and explanatory notes are left out, as i
 
 The site answered an automated request with an AWS WAF challenge on 2026-11-26.
 A plain request for https://www.legislation.gov.uk/robots.txt at 2026-11-26T03:52:21Z was answered HTTP 202 with an empty body and the header `x-amzn-waf-action: challenge`; the retrieval log notes that the run stopped, with no further requests.
-The XML file was therefore saved by hand, in a web browser, on 2026-11-26, from
+The XML file was therefore saved by hand, in a web browser, from
 https://www.legislation.gov.uk/eur/2016/679/data.xml,
-and the retrieval log records the file at 2026-11-26T04:16:10Z, with the note that it was extracted from the saved page's web archive (its main resource); that time is the `retrieved_utc` of the meta.json, and the time of the saving itself is not recorded.
+and the retrieval log records the file at 2026-11-26T04:16:10Z, with the note that it was extracted from the saved page's web archive (its main resource); that time is the `retrieved_utc` of the meta.json. The log gives no time for the saving itself; according to the session that ran the retrieval it was made on 2026-11-26, the day of the challenge.
 The bytes deposited are the bytes extracted, 1,675,337 bytes, sha256 `027f41d0cef381b12cf5abcbf63b065cd639949329d6d7bbf9a845f6f7fe6183`.
 The file begins `<Legislation xmlns=` with no XML declaration, as the Fraud Act 2006 XML fetched by program on 2026-10-21 does; whether the server's own response matches these bytes was not checked.
 

@@ -29,9 +29,9 @@ Editorial commentary, the contents list and explanatory notes are left out, as i
 
 The site answered an automated request with an AWS WAF challenge on 2026-11-26.
 A plain request for https://www.legislation.gov.uk/robots.txt at 2026-11-26T03:52:21Z was answered HTTP 202 with an empty body and the header `x-amzn-waf-action: challenge`; the retrieval log notes that the run stopped, with no further requests.
-The XML file was therefore saved by hand, in a web browser, on 2026-11-26, from
+The XML file was therefore saved by hand, in a web browser, from
 https://www.legislation.gov.uk/ukpga/2018/12/data.xml,
-and the retrieval log records the file at 2026-11-26T04:16:10Z, with the note that it was extracted from the saved page's web archive (its main resource); that time is the `retrieved_utc` of the meta.json, and the time of the saving itself is not recorded.
+and the retrieval log records the file at 2026-11-26T04:16:10Z, with the note that it was extracted from the saved page's web archive (its main resource); that time is the `retrieved_utc` of the meta.json. The log gives no time for the saving itself; according to the session that ran the retrieval it was made on 2026-11-26, the day of the challenge.
 The bytes deposited are the bytes extracted, 5,919,278 bytes, sha256 `712a0ee88e66acd8a9a4d1fdf25db58e51f51433ae8ac7921d178f54cb7a1d6d`.
 The file begins `<Legislation xmlns=` with no XML declaration, as the Fraud Act 2006 XML fetched by program on 2026-10-21 does; whether the server's own response matches these bytes was not checked.
 
