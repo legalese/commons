@@ -1115,6 +1115,19 @@ Status: **reported by the part agents and the readers, not re-checked by the mer
 - The seams are wired or kept as questions, and the requests in `NEEDS-CORE.md` are taken into the core or refused.
 - The prescribed figures and rates that the text leaves to regulations or orders are supplied as inputs; this encoding does not hold them unless a part's notes say so.
 
+## Dead LESTs dropped, and five rules given WITHIN 14 (assumed, not ruled)
+
+The unstable build warned `lint/lest-without-deadline` at 92 places in 35 modules of this folder: a `MUST` with neither `WITHIN` nor `BEFORE`, whose `LEST` time alone can never reach.
+Each was read against the statute lines its rule cites and against the rest of its section, and an independent reader read 60 of the 92 against the statute text itself.
+At 87 of them the `LEST` was dropped: for none did the text state a period of days or weeks that the duty could meet, and `notes/lest-without-deadline.md` gives, site by site, the words of the text and why a period it does state elsewhere is not this duty's.
+A dropped `LEST` line is now a one-line comment at the same line number, so no line moved.
+Five rules were given `WITHIN 14` instead: the duties to give notice to the registrar of the place where a document is kept (ss 114(2), 702(5), 720(3), 805(5) and 809(2)).
+Each has an offence subsection that says "default for 14 days" (ss 114(5), 703(1), 720(5), 806(1) and 809(4)), and the rule for s 859Q(3) already reads the same words as `WITHIN 14` (fork F-P2 in `notes/coa19-NOTES.md`); the text names no event from which the 14 days run, so they count from when the duty is armed.
+In `coa15-tests-ch4.l4` the two traces for s 702(5), a notice on day 20 and no notice by day 40, were expected `FULFILLED` and `RESIDUAL` because the duty had no period; they now read `BREACH` and `BREACH`, and the file has three traces for the rule (a notice on day 10 reads `FULFILLED`).
+The traces of the other four rules (a notice on day 1, 2 or 3) read `FULFILLED` as before.
+`check.sh` after the change gives the same totals as before: 471 modules, 40,187 assertions satisfied, 0 failed, 0 refused, and the same four counts on the main build (build 112).
+Running every module on both builds before and after the change, the output differs only where a `#TRACE` that ends with the obligation still open printed it with its `LEST`, in one diagnostics header line, and in the traces of the five rules just described.
+
 ## Source not official
 
 The quoted text is a plain-text rendering of the Act as deposited in `../../registers/source-bundle/`; it is not the official text. See 'The source' above and `SOURCE-LICENSE.md`.
@@ -1123,6 +1136,7 @@ The quoted text is a plain-text rendering of the Act as deposited in `../../regi
 
 This section lists the modules that were added to lay the Act's procedures out as regulative rules (`DEONTIC`, with traces).
 They are additive: no existing module was edited, and no existing assertion count moved.
+A later change did edit existing modules: to drop their dead `LEST` clauses, to give five rules a `WITHIN 14`, and to rewrite the s 702(5) traces of `coa15-tests-ch4.l4`; see "Dead LESTs dropped, and five rules given WITHIN 14" below.
 Each unit is a module, a test module and a notes file (`notes/procedure-<unit>.md`) that says what it encodes, its timeline unit and counting rule, its forks and what it leaves out.
 Every `#TRACE` in the test modules has a `-- EXPECT` line decided from the text before the trace was run, and each was checked against it on two builds: the unstable prerelease `unstable-20261125-a50cbd0` and the stable line, main build 112.
 `check.sh` counts assertions and never reads a `#TRACE` outcome, so it cannot see the differences below; they were found by running each trace on both builds.
@@ -1163,7 +1177,8 @@ After an independent review, these changes altered an answer:
 - `coa3-part8-inspection.l4:417-424`, the function for s 118(3), has no court-order input, while the function for s 118(1) at 396-405 does.
   The text of s 118(3) says "any such refusal or default" (src:1588), which can be read as importing the "otherwise than in accordance with an order of the court" exclusion of s 118(1) (src:1584).
   This is a reading difference, not an established error.
-- `coa5-derivative-claims.l4:136` and `:717` carry a `LEST` on a rule with no `WITHIN`; the unstable build warns `lint/lest-without-deadline` ("This LEST can never be reached, because the rule has no deadline").
+- `coa5-derivative-claims.l4:136` and `:717` carried a `LEST` on a rule with no `WITHIN`; the unstable build warned `lint/lest-without-deadline` ("This LEST can never be reached, because the rule has no deadline").
+  A later change dropped these two LESTs and dealt with every other one the lint found: it dropped 87 and gave five rules a `WITHIN 14` (see "Dead LESTs dropped, and five rules given WITHIN 14" below).
 - `coa14-ch10-reduction.l4:221-239`, the function for s 642(1), takes "registered in accordance with section 644" as an input, because the statute's own limb (b) (src:8555) does.
   So it cannot serve as the gate of the s 644 delivery duty; the statute is circular there, and `coa-proc-capital-reduction` uses its own helper.
 - Existing DEONTICs for s 177 (`coa4-general-duties.l4:552`) and s 182 (`coa4-declaration.l4:165`) exist; `coa-proc-director-interests` does not call them, and its notes compare the two.

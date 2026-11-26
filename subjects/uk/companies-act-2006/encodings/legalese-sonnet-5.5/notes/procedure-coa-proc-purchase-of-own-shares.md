@@ -159,8 +159,9 @@ The existing DEONTICs were not called and not edited.
   A copy that is late by a day is a breach in the new rule and none in the old.
 - `coa15-ch4.l4` :982, s 702(2): the existing rule is one MUST with no clock.
   The new rule is a bar on stopping WITHIN the days to the last day of the ten years (src:9238-9240); stopping the copy inside the period is the breach, and stopping after it is not.
-- `coa15-ch4.l4` :1052, s 702(5): the existing rule has no clock, on the ground that the text states none.
-  The new rule allows 14 days, the period of the default in s 703(1) (src:9253); a notice on day 15 is a breach in the new rule only.
+- `coa15-ch4.l4` :1052, s 702(5): the existing rule had no clock, on the ground that the text states none.
+  A later change gave it `WITHIN 14` as well, the period of the default in s 703(1) (src:9253), so a notice on day 15 is now a breach in the existing rule too (`lest-without-deadline.md`).
+  The new rule allows the same 14 days.
   The other reading is recorded as a fork.
 - `coa15-ch4.l4` :1279, s 707(1): both rules are a MUST WITHIN 27 days of the delivery (28 days beginning with the delivery, src:9283); the new rule adds a gate (the company has purchased under Chapter 4) and its limit comes from the delivery date through the existing last-day function.
   The traces on day 27 and day 28 behave the same under either.
@@ -173,7 +174,7 @@ The existing DEONTICs were not called and not edited.
   The new rules are chained after the resolution, joined by RAND so both start on the day of the resolution, and gated by the vote and by s 709(1); an ineffective resolution leaves no notice duty and bars the payment instead.
   The limit is the same, 7 days; both the old and the new rules take a notice on the day of the resolution as in time, though the existing Boolean `s 719(1) the notice was published in the Gazette in time` answers JUST FALSE for that day (it asks for a day after the resolution).
 - `coa15-ch5.l4` :649, s 719(4): the existing rule takes the same two notice days and the resolution date and uses the existing last-day helper (the rest of its line was not compared); the new rule has the same limit, and the difference is only in naming and in the breach text.
-- `coa15-ch5.l4` :717, s 720(3): the existing rule is a MUST with no clock; the new rule allows 14 days, the period of the default in s 720(5) (src:9439); a notice on day 15 is a breach in the new rule only.
+- `coa15-ch5.l4` :717, s 720(3): the existing rule was a MUST with no clock; a later change gave it `WITHIN 14` (`lest-without-deadline.md`), the period of the default in s 720(5) (src:9439), as the new rule has it, so a notice on day 15 is now a breach in both.
   s 720(1) has no existing DEONTIC; the new rule is a MUST to open the documents by the day of the first notice and a bar on stopping or refusing an inspection until five weeks after the resolution (src:9426-9430, 9438).
 - `coa15-ch5.l4` :895 and :959, ss 720B(1) and (5): the existing rules are two separate MUSTs WITHIN 15 days of the resolution (src:9455, 9470), with no gate.
   The new rule joins them with RAND and gates them on the existing `s 720A(1)`; the limit is the same.
@@ -181,7 +182,7 @@ The existing DEONTICs were not called and not edited.
 - `coa15-ch5.l4` :1088, s 721(1): the existing rule is a MAY of a person with no clock and nothing after it.
   The new rule gives the member or creditor 35 days (src:9490), a lapse that is no breach, and then the chain of the applicants' notice, the court's order and the copy of the order.
   The gate is the same existing `s 721(1)` function.
-- `coa15-ch5.l4` :1152, s 721(4): the existing rule is a MUST of the court with a breach by the court and no clock; the breach can never be reached.
+- `coa15-ch5.l4` :1152, s 721(4): the existing rule was a MUST of the court with a breach by the court and no clock; the breach could never be reached, and a later change dropped that LEST (`lest-without-deadline.md`).
   The new rule is a MUST of the court with no breach, since the text gives no time, and it is the step between the applicants' notice and the company's copy of the order.
 - `coa15-ch5.l4` :1203, s 722(1): both rules are a MUST WITHIN 0 (immediately, src:9506).
   The existing rule names a member as the party; the new rule names an objecting member or creditor, since the applicants may be creditors (src:9486-9487), and chains the duty after the application.

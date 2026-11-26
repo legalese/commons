@@ -66,7 +66,7 @@ So the duty to refuse and the bar are two rules, and the trace of the bar shows 
 ### Forks
 
 - `FORK: s 263(1) "under section 261 or 262" | s 263 has effect on an application under s 261 or s 262 and, on the words of s 263(1), not on another member's application under s 264, so the refusal below is encoded for ss 261 and 262 only | s 263 governs the s 264 application as well`
-- `FORK: s 261(1) "must apply" | a duty of the member with no clock and no breach clause: the text states neither a time nor a consequence, so the rule has no WITHIN and no LEST | the missed application is a breach (the existing rule for s 261(1) says so, but its LEST can never be reached without a deadline)`
+- `FORK: s 261(1) "must apply" | a duty of the member with no clock and no breach clause: the text states neither a time nor a consequence, so the rule has no WITHIN and no LEST | the missed application is a breach (the existing rule for s 261(1) named a breach for it, but its LEST could never be reached without a deadline, and a later change dropped it: see `lest-without-deadline.md`)`
 - `FORK: s 261(2) "it appears to the court" | the court's view is an input to the rule, and the duty to dismiss arises when the input is true | the duty arises only once the court has stated its view in a decision`
 - `FORK: s 261(2)(b) "may make any consequential order" | a separate power of the court, open only where the court must dismiss, and not a condition of the dismissal being complete | the consequential order is the next step of the dismissal, so a dismissal with no order is unfinished`
 - `FORK: s 261(3)(a) "directions as to the evidence to be provided by the company" | only the court's power to give the direction is encoded: the text lays no duty on the company and no time for its evidence, which the court's own directions set | the company's duty to provide the evidence is a rule of this section`
@@ -98,14 +98,15 @@ Section 261(1) is written again here from the text, without calling the existing
 - **A gate.** The existing rule has no gate: the member MUST apply in every trace, even where no derivative claim is brought.
   The new rule opens only where the existing function says the member must apply (`a member of a company brings a derivative claim under this Chapter`), and otherwise is FULFILLED.
   The source line that decides it is src:3395, "A member of a company who brings a derivative claim under this Chapter must apply": the duty is limited by the relative clause.
-- **A breach clause that cannot fire.** The existing rule ends `LEST BREACH BY Member BECAUSE "... (the text states no consequence)"` with no WITHIN, so time alone never reaches it; unstable's lint says so (`lint/lest-without-deadline`, at `coa5-derivative-claims.l4` lines 136 and 717, the second being s 266).
-  The new rule has no LEST, because src:3395 states no consequence and no time.
+- **A breach clause that could not fire.** The existing rule ended `LEST BREACH BY Member BECAUSE "... (the text states no consequence)"` with no WITHIN, so time alone never reached it; unstable's lint said so (`lint/lest-without-deadline`, at `coa5-derivative-claims.l4` lines 136 and 717, the second being s 266).
+  A later change dropped both LEST clauses (`lest-without-deadline.md`), so the existing rule now has none, as the new rule has none, because src:3395 states no consequence and no time.
   The behaviour does not differ where the gate holds: a trace in which the member has not applied stays open (RESIDUAL; waited to day 10 on the existing rule, to day 30 on the new rule), and a trace in which the member applies on day 3 is FULFILLED on both (measured on unstable a50cbd0 and main 112).
 - **The party.** The existing rule uses `Member` from `coa-core`; the new rule uses its own party enum so that the court's steps, which the text gives in the same sections (src:3396-3405), are in one enum with the member's.
 - **The reach.** The existing DEONTIC covers only the duty to apply; the court's steps (s 261(2) to (4)), s 262, s 263(2) and s 264 are new here (src:3396-3465).
 
-The unstable build prints two `lint/lest-without-deadline` warnings, both from `coa5-derivative-claims.l4`, which is not edited here: its two LESTs (lines 136 and 717) cannot be reached without a deadline.
-No warning comes from the new files.
+When this unit was written the unstable build printed two `lint/lest-without-deadline` warnings, both from `coa5-derivative-claims.l4`, which this unit does not edit: its two LESTs (lines 136 and 717) could not be reached without a deadline.
+A later change dropped both (`lest-without-deadline.md`), so no such warning is printed now.
+No warning came from the new files.
 
 ### What the text leaves silent (no clock, no consequence encoded)
 
