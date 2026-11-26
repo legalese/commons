@@ -33,7 +33,7 @@ The page links its definition of "Authority Law" to `/laws/current/l_4_2018`, th
 
 ## Status of this deposit
 
-`registers/source-bundle/l_3_2018.txt` is an **unofficial** plain-text conversion of the page (see its header and the `.meta.json` beside it): sha256 of the text `63cbbf36d83459096340fb8fdf444807ff5b577a2250a91e2f0ad6639f5fb3fa`, 217632 characters.
+`registers/source-bundle/l_3_2018.txt` is an **unofficial** plain-text conversion of the page (see its header and the `.meta.json` beside it): sha256 of the text `fb0e713896ac26cd38bc4cda55cde07dc6da3875fa2839451448d5979d3c0ec2`, 218018 characters.
 The converter, `je_convert.py` in the same folder, was written on 2026-11-26 because the one that made the earlier `subjects/je` deposits was not kept in the repository.
 
 The licence is OSAL-J because the publisher names it. Nothing here infers a licence the source does not state. **This is not legal advice.**

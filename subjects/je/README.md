@@ -31,7 +31,7 @@ Total: 1,200,716 characters of text.
 
 | Subject | Instrument | Showing the law from | Characters | Why it is here |
 |---|---|---|---|---|
-| `data-protection-2018` | L.3/2018 | 2 October 2026 | 217,632 | Jersey's data protection law, which tracks the GDPR: controllers' and processors' duties, data subjects' rights, exemptions, cross-border transfers, remedies and offences. Source only so far; the encoding is planned, with a column mapping each provision to the GDPR article it derives from (`subjects/eu/gdpr-2016-679`). The Data Protection Authority (Jersey) Law 2018 (linked from the page as `l_4_2018`) is not fetched. |
+| `data-protection-2018` | L.3/2018 | 2 October 2026 | 218,018 | Jersey's data protection law, which tracks the GDPR: controllers' and processors' duties, data subjects' rights, exemptions, cross-border transfers, remedies and offences. Source only so far; the encoding is planned, with a column mapping each provision to the GDPR article it derives from (`subjects/eu/gdpr-2016-679`, proposed, not landed). The Data Protection Authority (Jersey) Law 2018 (linked from the page as `l_4_2018`) is not fetched. |
 
 ## Gaps to know about
 

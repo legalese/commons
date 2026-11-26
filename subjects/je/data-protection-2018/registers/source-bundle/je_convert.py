@@ -16,6 +16,12 @@ CREST = ("iLAWS101", "iLAWS115")
 
 
 def indent_for(cls):
+    # a class ending in "Indent" is a provision quoted inside another (a substitution): one level deeper
+    extra = 2 if any(c.endswith("Indent") for c in cls) else 0
+    return extra + _indent_base(cls)
+
+
+def _indent_base(cls):
     for c in cls:
         m = re.match(r"iLAWS(\d{3})", c)
         if not m:
@@ -70,6 +76,8 @@ class P(HTMLParser):
             self.cell = []; return
         if tag in BLOCK and self.cell is None:
             self.flush()
+        elif tag in BLOCK and self.cell is not None:
+            self.cell.append(" ")
         if tag == "p":
             self.indent = indent_for(cls)
             if any(c.startswith(CREST) for c in cls): self.crest += 1
@@ -81,7 +89,7 @@ class P(HTMLParser):
                 if self.skip_depth == 0: self.skip_tag = None
             return
         if tag in ("td", "th") and self.cell is not None:
-            c = re.sub(r"\s+", " ", re.sub(r"[ ]", " ", " ".join(self.cell))).strip()
+            c = re.sub(r"\s+", " ", "".join(self.cell)).strip()
             if self.row is not None: self.row.append(c)
             self.cell = None
         elif tag == "tr" and self.row is not None:
@@ -90,6 +98,8 @@ class P(HTMLParser):
         elif tag in BLOCK and self.cell is None:
             self.flush()
             if tag == "p": self.crest = 0; self.indent = 0
+        elif tag in BLOCK and self.cell is not None:
+            self.cell.append(" ")
 
     def handle_data(self, data):
         if self.skip_tag is None:
@@ -103,8 +113,11 @@ def main():
     i = html.find("Page Content"); j = html.find("Back to top")
     assert 0 <= i < j, "markers not found"
     p = P(); p.feed(html[i + len("Page Content"):j]); p.flush()
-    m = re.search(r"Showing the law from\s*([^<]{3,60}?)\s*(?:<|$)", html)
-    showing = re.sub(r"\s+", " ", m.group(1)).strip() if m else "?"
+    showing = "?"
+    for l in p.lines:
+        m = re.match(r"^\s*Showing the law from (.+)$", l)
+        if m:
+            showing = m.group(1).strip(); break
     head = f"""{title}
 Citation: {citation}
 Source: {url} (jerseylaw.je, Jersey Legal Information Board), Official Consolidated Version
