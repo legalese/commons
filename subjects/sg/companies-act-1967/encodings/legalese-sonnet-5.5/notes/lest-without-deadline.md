@@ -15,6 +15,14 @@ The one visible difference is that a `#TRACE` which ends with the obligation sti
 An independent reader read 181 of these 205 sites (all 168 whose section holds any time phrase, and 13 of the others) against the statute text itself, and a scan of the whole section of the other 24 found no number of days or weeks.
 It challenged one site, s 377(2); that was not accepted, and the last section says why.
 
+## Each dropped clause is kept in its comment
+
+Each of the 205 comments begins `-- no LEST:`, so `grep -rn -e '-- no LEST:' .` in this folder finds every site without the git history.
+The comment says that the section states no time for the duty, so that a breach needs a standard of time from outside the section, and it names the general one: the Interpretation Act 1965 s 52, under which a thing for which no time is prescribed "is to be done with all convenient speed".
+It then carries the dropped `LEST` clause word for word (`dropped clause: LEST BREACH BY … BECAUSE "…"`), copied from the commit before the drop and checked against it byte for byte; for the 7 clauses whose closing parenthesis moved to the line above, the comment carries the clause without it.
+Not every site wants that standard: a duty that must hold throughout ("keep a register", "act honestly at all times") is broken at any moment it stops holding, not when a period runs out, and L4 has no form for such a duty yet.
+Sorting the 205 into duties to do a thing once, which can take a `WITHIN` whose length is found under s 52, and duties that must hold throughout, which stay as they are, is a later pass (decided by Claude on 2026-11-26, assumed, not ruled).
+
 ## Dropped
 
 Each row gives the module and the line the `LEST` was on, the rule, the section, and the statute words the decision rests on (copied from the text, with `/` for a line break in the quotation); "other time phrase" is a period the section states elsewhere, with the reason it is not this duty's.
