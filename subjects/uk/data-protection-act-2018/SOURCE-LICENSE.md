@@ -16,7 +16,7 @@ Contains public sector information licensed under the Open Government Licence v3
 Statute text deposited 2026-11-26: `registers/source-bundle/ukpga-2018-12.txt`, converted to plain text from
 https://www.legislation.gov.uk/ukpga/2018/12/data.xml
 (point in time (dct:valid) of the version served: 2026-09-30; dc:modified 2026-09-30).
-The XML as saved is deposited unchanged beside it, `registers/source-bundle/ukpga-2018-12-data.xml` (5,919,278 bytes, sha256 `712a0ee88e66acd8a9a4d1fdf25db58e51f51433ae8ac7921d178f54cb7a1d6d`).
+The XML as saved (5,919,278 bytes, sha256 `712a0ee88e66acd8a9a4d1fdf25db58e51f51433ae8ac7921d178f54cb7a1d6d`) is not deposited in commons, because GitHub push protection reads the amendment-effect identifiers it carries (`key-` followed by 32 hexadecimal digits) as API keys.
 
 The text is the in-force text at 2026-09-30 only; where the file records an amendment as unapplied, the text does not carry it.
 How repeals, the amendment notes (Commentary Type F and the others), the unapplied effects (ukm:UnappliedEffect: 9 in this file) and extents are treated is in `registers/source-bundle/ukpga-2018-12.meta.json` (keys `converter` and `text_caveat`).

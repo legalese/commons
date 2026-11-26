@@ -18,7 +18,7 @@ That is the attribution the OGL prescribes where the Information Provider names 
 Statute text deposited 2026-11-26: `registers/source-bundle/eur-2016-679.txt`, converted to plain text from
 https://www.legislation.gov.uk/eur/2016/679/data.xml
 (point in time (dct:valid) of the version served: 2026-09-30; dc:modified 2026-11-24).
-The XML as saved is deposited unchanged beside it, `registers/source-bundle/eur-2016-679-data.xml` (1,675,337 bytes, sha256 `027f41d0cef381b12cf5abcbf63b065cd639949329d6d7bbf9a845f6f7fe6183`).
+The XML as saved (1,675,337 bytes, sha256 `027f41d0cef381b12cf5abcbf63b065cd639949329d6d7bbf9a845f6f7fe6183`) is not deposited in commons, because GitHub push protection reads the amendment-effect identifiers it carries (`key-` followed by 32 hexadecimal digits) as API keys.
 
 The text is the in-force text at 2026-09-30 only; where the file records an amendment as unapplied, the text does not carry it, with one exception named in `text_caveat` (Art. 57(3)).
 How repeals, the amendment notes (Commentary Type F and the others), the unapplied effects (ukm:UnappliedEffect: 5 in this file), extents and, for this Regulation, the recitals and footnotes are treated is in `registers/source-bundle/eur-2016-679.meta.json` (keys `converter` and `text_caveat`).
