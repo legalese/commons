@@ -1,0 +1,385 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `sg-core`
+
+-- Companies Act 1967 (Singapore): ss 5, 5A, 5B and 6 -- subsidiary, holding company, ultimate holding company,
+-- wholly owned subsidiary, related corporations.
+--
+-- HOW A GROUP IS MODELLED. A group is a LIST OF DIRECT CONTROL LINKS: one link says that a parent corporation satisfies
+-- s 5(1)(a) in respect of a subsidiary corporation (it controls the composition of its board, or more than half of its
+-- voting power). s 5(1)(b) then makes "subsidiary" run up a chain of links, which the functions below follow, with a
+-- bound (the number of links) so that a cyclic list ends. The list is taken as COMPLETE: a link not in it does not exist,
+-- which is what lets s 5A(b), "not itself a subsidiary of any corporation", be decided. A part that has only the answer
+-- "C is a subsidiary of P" as a fact does not need this module: it asks the input
+-- `the corporation is a subsidiary of the other corporation` (PLAN section 7).
+-- The earlier pass modelled groups the same way (a list of control links) with the s 5(3) counting rules carried on
+-- each holding; this module does the same and says in NOTES.md where it reads differently.
+--
+-- The direct link itself is decided from the facts of s 5(2) (the directors) and s 5(3) (the holdings).
+
+§ `Types`
+
+-- One direct link: the parent controls the subsidiary under s 5(1)(a).
+DECLARE `s 5(1) control link` HAS
+    `the parent` IS A Corporation
+    `the subsidiary` IS A Corporation
+
+-- A director of the corporation whose board is in question, with the facts s 5(2) and s 5(3)(a) ask about him or her.
+DECLARE `s 5(2) director` HAS
+    `the other corporation can appoint or remove the director by the exercise of some power exercisable by it (as s 5(3) counts a power) without the consent or concurrence of any other person` IS A BOOLEAN
+    `the director cannot be appointed without the exercise in his or her favour by the other corporation of such a power` IS A BOOLEAN
+    `the director's appointment follows necessarily from his or her being a director or other officer of the other corporation` IS A BOOLEAN
+    `the other corporation exercises that power only in a fiduciary capacity` IS A BOOLEAN
+
+-- Who holds a block of voting power, in the terms s 5(3)(a) to (d) use.
+DECLARE `s 5(3) who holds the shares or exercises the power` IS ONE OF
+    `s 5(3) the other corporation itself`
+    `s 5(3) a nominee for the other corporation`
+    `s 5(3) a subsidiary of the other corporation`
+    `s 5(3) a nominee for a subsidiary of the other corporation`
+    `s 5(3) any other person`
+
+-- A block of shares or power, with the facts s 5(3) turns on.
+DECLARE `s 5(3) holding` HAS
+    `who holds it` IS A `s 5(3) who holds the shares or exercises the power`
+    `the votes it carries` IS A NUMBER
+    `it is held in a fiduciary capacity, the corporation it is held for being concerned only in that capacity` IS A BOOLEAN
+    `it is held by virtue of the provisions of debentures of the firstmentioned corporation or of a trust deed securing an issue of them` IS A BOOLEAN
+    `the ordinary business of the corporation it is held for, or of its subsidiary holding it, includes the lending of money` IS A BOOLEAN
+    `it is held by way of security only for a transaction entered into in the ordinary course of that business` IS A BOOLEAN
+
+-- The kinds of member s 5B lists.
+DECLARE `s 5B kind of member` IS ONE OF
+    `s 5B the other corporation`
+    `s 5B a nominee of the other corporation`
+    `s 5B a subsidiary of the other corporation`
+    `s 5B a nominee of a subsidiary of the other corporation`
+    `s 5B any other person`
+
+-- A member of the firstmentioned corporation, and (for a subsidiary, or a nominee of one) the kinds of its own members.
+DECLARE `s 5B member` HAS
+    `what the member is` IS A `s 5B kind of member`
+    `the kinds of member of that subsidiary` IS A LIST OF `s 5B kind of member`
+
+§ `Section 5(2): the composition of the board`
+
+-- src:2007 | (2) For the purposes of subsection (1), the composition of a
+-- src:2008 | corporation’s board of directors is deemed to be controlled by another
+-- src:2009 | corporation if that other corporation by the exercise of some power
+-- src:2010 | exercisable by it without the consent or concurrence of any other
+-- src:2011 | person can appoint or remove all or a majority of the directors, and for
+-- src:2012 | the purposes of this provision that other corporation is deemed to
+-- src:2013 | have power to make such an appointment if —
+-- src:2015 | (a) a person cannot be appointed as a director without the
+-- src:2016 | exercise in his or her favour by that other corporation of
+-- src:2017 | such a power; or
+-- src:2019 | (b) a person’s appointment as a director follows necessarily
+-- src:2020 | from his or her being a director or other officer of that other
+-- src:2021 | corporation.
+@ref s 5(2) (src:2007-2021)
+GIVEN director IS A `s 5(2) director`
+GIVETH A BOOLEAN
+`s 5(2) the other corporation has, or is deemed to have, power to appoint the director` MEANS
+        (NOT director's `the other corporation exercises that power only in a fiduciary capacity`)
+    AND (   director's `the other corporation can appoint or remove the director by the exercise of some power exercisable by it (as s 5(3) counts a power) without the consent or concurrence of any other person`
+         OR director's `the director cannot be appointed without the exercise in his or her favour by the other corporation of such a power`
+         OR director's `the director's appointment follows necessarily from his or her being a director or other officer of the other corporation`)
+
+-- "can appoint or remove all or a majority of the directors": more than half of the directors. The text speaks of the
+-- directors as a body ("all or a majority") and the deeming limbs (a) and (b) of "a person"; this module reads (a) and (b)
+-- person by person and counts the directors the other corporation has power over (a reading, in NOTES.md).
+@ref s 5(2) (src:2007-2021)
+GIVEN directors IS A LIST OF `s 5(2) director`
+GIVETH A MAYBE BOOLEAN
+`s 5(2) the other corporation controls the composition of the board` MEANS
+    IF (count (filter (GIVEN d YIELD `s 5(2) the other corporation has, or is deemed to have, power to appoint the director` d) directors)) TIMES 2
+       GREATER THAN count directors
+    THEN JUST TRUE
+    ELSE JUST FALSE  -- FALSE-kind (the text says no in its own words): "is deemed to be controlled by another corporation if that other corporation ... can appoint or remove all or a majority of the directors" (a failed "if", marginal reading (a))
+
+§ `Section 5(3): the shares and the power that count`
+
+-- src:2023 | (3) In determining whether one corporation is a subsidiary of
+-- src:2024 | another corporation —
+-- src:2026 | (a) any shares held or power exercisable by that other
+-- src:2027 | corporation in a fiduciary capacity is to be treated as not
+-- src:2028 | held or exercisable by it;
+-- src:2030 | (b) subject to paragraphs (c) and (d), any shares held or power
+-- src:2031 | exercisable —
+-- src:2033 | (i) by any person as a nominee for that other corporation
+-- src:2034 | (except where that other corporation is concerned
+-- src:2035 | only in a fiduciary capacity); or
+-- src:2037 | (ii) by, or by a nominee for, a subsidiary of that other
+-- src:2038 | corporation, not being a subsidiary which is
+-- src:2039 | concerned only in a fiduciary capacity,
+-- src:2044 | (b) is to be treated as held or exercisable by that other
+-- src:2045 | corporation;
+-- src:2047 | (c) any shares held or power exercisable by any person by
+-- src:2048 | virtue of the provisions of any debentures of the
+-- src:2049 | firstmentioned corporation or of a trust deed for securing
+-- src:2050 | any issue of such debentures is to be disregarded; and
+-- src:2052 | (d) any shares held or power exercisable by, or by a nominee
+-- src:2053 | for, that other corporation or its subsidiary (not being held
+-- src:2054 | or exercisable as mentioned in paragraph (c)) is to be
+-- src:2055 | treated as not held or exercisable by that other corporation
+-- src:2056 | if the ordinary business of that other corporation or its
+-- src:2057 | subsidiary (as the case may be) includes the lending of
+-- src:2058 | money and the shares are held or power is exercisable as
+-- src:2059 | aforesaid by way of security only for the purposes of a
+-- src:2060 | transaction entered into in the ordinary course of that
+-- src:2061 | business.
+@ref s 5(3) (src:2023-2061)
+GIVEN holding IS A `s 5(3) holding`
+GIVETH A NUMBER
+`s 5(3) the votes counted as held or exercisable by the other corporation` MEANS
+    BRANCH
+        IF holding's `it is held by virtue of the provisions of debentures of the firstmentioned corporation or of a trust deed securing an issue of them`
+        THEN 0    -- (c): "is to be disregarded"
+        IF holding's `who holds it` EQUALS `s 5(3) any other person`
+        THEN 0    -- no limb of s 5(3) makes a stranger's holding the other corporation's
+        IF    holding's `the ordinary business of the corporation it is held for, or of its subsidiary holding it, includes the lending of money`
+          AND holding's `it is held by way of security only for a transaction entered into in the ordinary course of that business`
+        THEN 0    -- (d): "treated as not held or exercisable by that other corporation"
+        IF holding's `it is held in a fiduciary capacity, the corporation it is held for being concerned only in that capacity`
+        THEN 0    -- (a): held in a fiduciary capacity is "treated as not held"; the exceptions in (b)(i) and (b)(ii) say the same of a nominee and of a subsidiary concerned only in that capacity
+        OTHERWISE holding's `the votes it carries`    -- (a), (b)(i), (b)(ii): held by the corporation, by its nominee, or by (a nominee for) a subsidiary: "treated as held or exercisable by that other corporation"
+
+-- The total counted for the other corporation.
+@ref s 5(3) (src:2023-2061)
+GIVEN holdings IS A LIST OF `s 5(3) holding`
+GIVETH A NUMBER
+`s 5(3) the total votes counted as held or exercisable by the other corporation` MEANS
+    sum (map (GIVEN h YIELD `s 5(3) the votes counted as held or exercisable by the other corporation` h) holdings)
+
+§ `Section 5(1): subsidiary`
+
+-- The voting-power limb of s 5(1)(a): "controls more than half of the voting power of the firstmentioned corporation",
+-- the votes counted as s 5(3) directs, against the firstmentioned corporation's total votes (a supplied number).
+-- src:1988 | 5.—(1) For the purposes of this Act, a corporation is, subject to
+-- src:1989 | subsection (3), deemed to be a subsidiary of another corporation, if —
+-- src:1994 | (a) that other corporation —
+-- src:1996 | (i) controls the composition of the board of directors of
+-- src:1997 | the firstmentioned corporation; or
+-- src:1999 | (ii) controls more than half of the voting power of the
+-- src:2000 | firstmentioned corporation; or
+-- src:2002 | (b) the firstmentioned corporation is a subsidiary of any
+-- src:2003 | corporation which is that other corporation’s subsidiary.
+@ref s 5(1) (src:1988-2003)
+GIVEN holdings IS A LIST OF `s 5(3) holding`
+      `the total votes of the firstmentioned corporation` IS A NUMBER
+GIVETH A MAYBE BOOLEAN
+`s 5(1)(a)(ii) the other corporation controls more than half of the voting power` MEANS
+    IF (`s 5(3) the total votes counted as held or exercisable by the other corporation` holdings) TIMES 2
+       GREATER THAN `the total votes of the firstmentioned corporation`
+    THEN JUST TRUE
+    ELSE JUST FALSE  -- FALSE-kind (the text says no in its own words): "deemed to be a subsidiary of another corporation, if ... (ii) controls more than half of the voting power" (a failed "if", marginal reading (a))
+
+-- s 5(1): the three limbs, as facts. (a)(i) and (a)(ii) are decided by the two functions above, or stated.
+@ref s 5(1) (src:1988-2003)
+GIVEN `the other corporation controls the composition of the board of the firstmentioned corporation` IS A BOOLEAN
+      `the other corporation controls more than half of the voting power of the firstmentioned corporation` IS A BOOLEAN
+      `the firstmentioned corporation is a subsidiary of a corporation which is the other corporation's subsidiary` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 5(1) the corporation is deemed to be a subsidiary of the other corporation` MEANS
+    IF    `the other corporation controls the composition of the board of the firstmentioned corporation`
+       OR `the other corporation controls more than half of the voting power of the firstmentioned corporation`
+       OR `the firstmentioned corporation is a subsidiary of a corporation which is the other corporation's subsidiary`
+    THEN JUST TRUE
+    ELSE JUST FALSE  -- FALSE-kind (the text says no in its own words): "a corporation is, subject to subsection (3), deemed to be a subsidiary of another corporation, if" (a failed "if", marginal reading (a))
+
+-- Following the links up a chain: the names of the corporations controlled, directly or through others, by those in the first list.
+GIVEN links IS A LIST OF `s 5(1) control link`
+      `the names reached so far` IS A LIST OF STRING
+      `the steps still allowed` IS A NUMBER
+GIVETH A LIST OF STRING
+`s 5(1)(b) the names of the corporations controlled through` MEANS
+    IF `the steps still allowed` AT MOST 0
+    THEN `the names reached so far`
+    ELSE `s 5(1)(b) the names of the corporations controlled through` links
+            (nub (append `the names reached so far`
+                    (map (GIVEN l YIELD l's `the subsidiary`'s `the name of the corporation`)
+                         (filter (GIVEN l YIELD elem (l's `the parent`'s `the name of the corporation`) `the names reached so far`) links))))
+            (`the steps still allowed` MINUS 1)
+
+-- The subsidiaries of a corporation, direct or by a chain (s 5(1)(a) then (b)). The corporation itself is not one.
+@ref s 5(1)(b) (src:2002-2003)
+GIVEN links IS A LIST OF `s 5(1) control link`
+      parent IS A Corporation
+GIVETH A LIST OF STRING
+`s 5(1) the names of the subsidiaries of` MEANS
+    filter (GIVEN n YIELD NOT (n EQUALS parent's `the name of the corporation`))
+        (`s 5(1)(b) the names of the corporations controlled through` links (LIST parent's `the name of the corporation`) (count links))
+
+-- "Under section 5, is corporation C a subsidiary of corporation P?" from a list of direct links.
+@ref s 5(1) (src:1988-2003)
+GIVEN links IS A LIST OF `s 5(1) control link`
+      subsidiary IS A Corporation
+      parent IS A Corporation
+GIVETH A MAYBE BOOLEAN
+`s 5(1) the corporation is a subsidiary of the other corporation, by the links` MEANS
+    IF elem (subsidiary's `the name of the corporation`) (`s 5(1) the names of the subsidiaries of` links parent)
+    THEN JUST TRUE
+    ELSE JUST FALSE  -- FALSE-kind (the text says no in its own words): "deemed to be a subsidiary of another corporation, if" -- no chain of the listed links runs from the other corporation to this one (a failed "if", marginal reading (a); the list of links is taken as complete)
+
+§ `Section 5(4) and (5): holding company`
+
+-- src:2063 | (4) A reference in this Act to the holding company of a company or
+-- src:2064 | other corporation is a reference to a corporation of which that last
+-- src:2065 | mentioned company or corporation is a subsidiary.
+@ref s 5(4) (src:2063-2065)
+GIVEN links IS A LIST OF `s 5(1) control link`
+      `the corporation` IS A Corporation
+      `the other corporation` IS A Corporation
+GIVETH A MAYBE BOOLEAN
+`s 5(4) the corporation is the holding company of the other corporation, by the links` MEANS
+    IF elem (`the other corporation`'s `the name of the corporation`) (`s 5(1) the names of the subsidiaries of` links `the corporation`)
+    THEN JUST TRUE
+    ELSE JUST FALSE  -- FALSE-kind (the text says no in its own words): "a reference ... to the holding company of a company or other corporation is a reference to a corporation of which that last mentioned company or corporation is a subsidiary"
+
+-- s 5(5): the Depository.
+-- src:2067 | (5) For the purposes of this Act, the Depository is not to be regarded
+-- src:2068 | as a holding company of a corporation by reason only of the shares it
+-- src:2069 | holds in that corporation as a bare trustee.
+@ref s 5(5) (src:2067-2069)
+GIVEN `the corporation is the Depository` IS A BOOLEAN
+      `its only ground for being a holding company is shares it holds as a bare trustee` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 5(5) the corporation is to be regarded as a holding company` MEANS
+    IF `the corporation is the Depository` AND `its only ground for being a holding company is shares it holds as a bare trustee`
+    THEN JUST FALSE  -- FALSE-kind (the text says no in its own words): "the Depository is not to be regarded as a holding company of a corporation by reason only of the shares it holds in that corporation as a bare trustee"
+    ELSE NOTHING     -- NOTHING-kind (silent): the subsection says nothing of any other corporation, or of the Depository on another ground
+
+§ `Section 5A: ultimate holding company`
+
+-- src:2075 | 5A. For the purposes of this Act, a corporation is the ultimate
+-- src:2076 | holding company of another corporation if —
+-- src:2078 | (a) the other corporation is a subsidiary of the firstmentioned
+-- src:2079 | corporation; and
+-- src:2081 | (b) the firstmentioned corporation is not itself a subsidiary of
+-- src:2082 | any corporation.
+@ref s 5A (src:2075-2082)
+GIVEN links IS A LIST OF `s 5(1) control link`
+      `the corporation` IS A Corporation
+      `the other corporation` IS A Corporation
+GIVETH A MAYBE BOOLEAN
+`s 5A the corporation is the ultimate holding company of the other corporation, by the links` MEANS
+    IF    elem (`the other corporation`'s `the name of the corporation`) (`s 5(1) the names of the subsidiaries of` links `the corporation`)
+       AND (NOT (any (GIVEN l YIELD l's `the subsidiary`'s `the name of the corporation` EQUALS `the corporation`'s `the name of the corporation`) links))
+    THEN JUST TRUE
+    ELSE JUST FALSE  -- FALSE-kind (the text says no in its own words): "a corporation is the ultimate holding company of another corporation if (a) the other corporation is a subsidiary of the firstmentioned corporation; and (b) the firstmentioned corporation is not itself a subsidiary of any corporation" (a failed "if", marginal reading (a); the list of links is taken as complete)
+
+-- The same, with the two limbs as facts.
+@ref s 5A (src:2075-2082)
+GIVEN `the other corporation is a subsidiary of the firstmentioned corporation` IS A BOOLEAN
+      `the firstmentioned corporation is itself a subsidiary of a corporation` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 5A the firstmentioned corporation is the ultimate holding company of the other corporation` MEANS
+    IF `the other corporation is a subsidiary of the firstmentioned corporation` AND (NOT `the firstmentioned corporation is itself a subsidiary of a corporation`)
+    THEN JUST TRUE
+    ELSE JUST FALSE  -- FALSE-kind (the text says no in its own words): "is the ultimate holding company of another corporation if (a) ... and (b) ..." (a failed "if", marginal reading (a))
+
+§ `Section 5B: wholly owned subsidiary`
+
+-- A member is within paragraphs (a) to (d) when it is the other corporation, its nominee, a subsidiary of it none of whose
+-- members is a person other than the other corporation or its nominee, or a nominee of such a subsidiary.
+-- src:2086 | 5B. For the purposes of this Act, a corporation is a wholly owned
+-- src:2087 | subsidiary of another corporation if none of the members of the
+-- src:2088 | firstmentioned corporation is a person other than —
+-- src:2093 | (a) that other corporation;
+-- src:2095 | (b) a nominee of that other corporation;
+-- src:2097 | (c) a subsidiary of that other corporation being a subsidiary
+-- src:2098 | none of the members of which is a person other than that
+-- src:2099 | other corporation or a nominee of that other corporation; or
+-- src:2101 | (d) a nominee of such subsidiary.
+@ref s 5B (src:2086-2101)
+GIVEN kind IS A `s 5B kind of member`
+GIVETH A BOOLEAN
+`s 5B the member of a subsidiary is the other corporation or its nominee` MEANS
+    CONSIDER kind
+    WHEN `s 5B the other corporation` THEN TRUE
+    WHEN `s 5B a nominee of the other corporation` THEN TRUE
+    OTHERWISE FALSE
+
+@ref s 5B (src:2086-2101)
+GIVEN member IS A `s 5B member`
+GIVETH A BOOLEAN
+`s 5B the member is within paragraphs (a) to (d)` MEANS
+    CONSIDER member's `what the member is`
+    WHEN `s 5B the other corporation` THEN TRUE                                  -- (a)
+    WHEN `s 5B a nominee of the other corporation` THEN TRUE                     -- (b)
+    WHEN `s 5B a subsidiary of the other corporation` THEN                       -- (c)
+        all (GIVEN k YIELD `s 5B the member of a subsidiary is the other corporation or its nominee` k) (member's `the kinds of member of that subsidiary`)
+    WHEN `s 5B a nominee of a subsidiary of the other corporation` THEN          -- (d): a nominee of "such subsidiary", the (c) kind
+        all (GIVEN k YIELD `s 5B the member of a subsidiary is the other corporation or its nominee` k) (member's `the kinds of member of that subsidiary`)
+    OTHERWISE FALSE
+
+@ref s 5B (src:2086-2101)
+GIVEN members IS A LIST OF `s 5B member`
+GIVETH A MAYBE BOOLEAN
+`s 5B the corporation is a wholly owned subsidiary of the other corporation` MEANS
+    IF all (GIVEN m YIELD `s 5B the member is within paragraphs (a) to (d)` m) members
+    THEN JUST TRUE
+    ELSE JUST FALSE  -- FALSE-kind (the text says no in its own words): "a corporation is a wholly owned subsidiary of another corporation if none of the members of the firstmentioned corporation is a person other than ..." (a failed "if"; the list of persons is closed by "none ... other than", marginal reading (a))
+
+§ `Section 6: related corporations`
+
+-- (a) the corporation is the holding company of the other; (b) it is a subsidiary of the other; (c) it is a subsidiary of the
+-- holding company of the other, that is, both are subsidiaries of one corporation.
+-- src:2104 | 6. Where a corporation —
+-- src:2105 | (a) is the holding company of another corporation;
+-- src:2106 | (b) is a subsidiary of another corporation; or
+-- src:2107 | (c) is a subsidiary of the holding company of another
+-- src:2108 | corporation,
+-- src:2110 | that firstmentioned corporation and that other corporation are for the
+-- src:2111 | purposes of this Act deemed to be related to each other.
+@ref s 6 (src:2104-2111)
+GIVEN links IS A LIST OF `s 5(1) control link`
+      `the corporation` IS A Corporation
+      `the other corporation` IS A Corporation
+GIVETH A MAYBE BOOLEAN
+`s 6 the corporation and the other corporation are deemed to be related, by the links` MEANS
+    IF    `s 5(4) the corporation is the holding company of the other corporation, by the links` links `the corporation` `the other corporation` EQUALS JUST TRUE
+       OR `s 5(1) the corporation is a subsidiary of the other corporation, by the links` links `the corporation` `the other corporation` EQUALS JUST TRUE
+       OR any (GIVEN holding YIELD
+                    (elem (`the corporation`'s `the name of the corporation`) (`s 5(1) the names of the subsidiaries of` links holding))
+                AND (elem (`the other corporation`'s `the name of the corporation`) (`s 5(1) the names of the subsidiaries of` links holding)))
+              (map (GIVEN l YIELD l's `the parent`) links)
+    THEN JUST TRUE
+    ELSE JUST FALSE  -- FALSE-kind (the text says no in its own words): "Where a corporation (a) is the holding company of another corporation; (b) is a subsidiary of another corporation; or (c) is a subsidiary of the holding company of another corporation, ... deemed to be related" (a failed "where", the periods ruling (b)); and s 4(1) "related corporation" means a corporation deemed related "by virtue of section 6"
+
+-- The three limbs as facts.
+@ref s 6 (src:2104-2111)
+GIVEN `the corporation is the holding company of the other corporation` IS A BOOLEAN
+      `the corporation is a subsidiary of the other corporation` IS A BOOLEAN
+      `the corporation is a subsidiary of the holding company of the other corporation` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 6 the corporations are deemed to be related to each other` MEANS
+    IF    `the corporation is the holding company of the other corporation`
+       OR `the corporation is a subsidiary of the other corporation`
+       OR `the corporation is a subsidiary of the holding company of the other corporation`
+    THEN JUST TRUE
+    ELSE JUST FALSE  -- FALSE-kind (the text says no in its own words): "Where a corporation (a) ...; (b) ...; or (c) ..., that firstmentioned corporation and that other corporation are for the purposes of this Act deemed to be related to each other" (a failed "where", the periods ruling (b))
+
+§ `Section 4(1): "related corporation"`
+
+-- "Related corporation" is the s 6 relation, named from the point of view of the firstmentioned corporation.
+-- src:1694 | “related corporation”, in relation to a corporation, means a
+-- src:1695 | corporation that is deemed to be related to the firstmentioned
+-- src:1696 | corporation by virtue of section 6;
+@ref s 4(1) "related corporation" (src:1694-1696)
+GIVEN links IS A LIST OF `s 5(1) control link`
+      `the corporation` IS A Corporation
+      `the other corporation` IS A Corporation
+GIVETH A MAYBE BOOLEAN
+`s 4(1) "related corporation" the other corporation is a related corporation of the corporation, by the links` MEANS
+    IF `s 6 the corporation and the other corporation are deemed to be related, by the links` links `the corporation` `the other corporation` EQUALS JUST TRUE
+    THEN JUST TRUE
+    ELSE JUST FALSE  -- FALSE-kind (the text says no in its own words): "'related corporation', in relation to a corporation, means a corporation that is deemed to be related to the firstmentioned corporation by virtue of section 6" (a "means" definition: a corporation not so deemed is not one)
+
+@ref s 4(1) "related corporation" (src:1694-1696)
+GIVEN `the other corporation is deemed to be related to the corporation by virtue of section 6` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 4(1) "related corporation" the other corporation is a related corporation of the corporation` MEANS
+    IF `the other corporation is deemed to be related to the corporation by virtue of section 6`
+    THEN JUST TRUE
+    ELSE JUST FALSE  -- FALSE-kind (the text says no in its own words): "means a corporation that is deemed to be related to the firstmentioned corporation by virtue of section 6" (a "means" definition)
