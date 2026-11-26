@@ -5,7 +5,7 @@ It was made to measure how compatible a whole-Code encoding would be with that c
 It sits beside two other rows of the same Code: `legalese` (twelve modules, hand-built, with a bench of reported charges) and `legalese-aswathy` (the whole Code, 45 modules, eight verification passes).
 Rows are equal; none is primary.
 
-**Status: draft, not reviewed by a lawyer.** Refinement is planned from the ladder diagrams in Alex Woon's *Essential Criminal Law*.
+**Status: draft, not reviewed by a lawyer.**
 
 ## Where things are
 
