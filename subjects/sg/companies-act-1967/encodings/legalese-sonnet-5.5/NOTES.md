@@ -763,6 +763,17 @@ That is 6 assertions and 3 modules more than the merge of the eight wave-2 parts
 - A check of this edition against the current consolidation, if one later than the version in force to 20 October 2026 exists.
 - A seat audit of either wave, and a ruling on the split-site questions below, on which the independent readers of both waves did not agree among themselves (wave 2: 15 gated-"may" sites and 4 offence-element sites where a reader and the encoding differ).
 
+## Dead LESTs dropped (assumed, not ruled)
+
+The unstable build warned `lint/lest-without-deadline` at 205 places in 67 modules of this folder: a `MUST` with neither `WITHIN` nor `BEFORE`, whose `LEST` time alone can never reach.
+Each was read against the statute lines its rule cites and against the rest of its section, and an independent reader read 181 of the 205 against the statute text itself.
+For none of them did the text state a period of days or weeks that this duty could meet, so the `LEST` was dropped at all 205 sites and no `WITHIN` was added; `notes/lest-without-deadline.md` gives, site by site, the words of the text and why a period it does state elsewhere is not this duty's.
+One site, s 377(2), the notice of the appointment of a liquidator, was challenged by the independent reader and the drop stands; `notes/lest-without-deadline.md` gives the reason.
+A dropped `LEST` line is now a one-line comment at the same line number, so no line moved.
+`notes/lest-without-deadline.md` lists the 205 sites.
+`check.sh` after the change gives the same totals as before: 295 modules, 19,648 assertions satisfied, 0 failed, 0 refused, and the same four counts on the main build (build 112).
+Running every module on both builds before and after the change, the output differs only where a `#TRACE` that ends with the obligation still open printed it with its `LEST`, and in one diagnostics header line; no outcome and no count changed.
+
 ## Source not official
 
 The text this encoding quotes is a converter's rendering of an informal consolidation. No sentence here has been verified against the official text.
