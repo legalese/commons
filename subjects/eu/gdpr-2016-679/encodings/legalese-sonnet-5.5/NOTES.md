@@ -1,0 +1,491 @@
+# NOTES -- P1 of Regulation (EU) 2016/679 (GDPR), and the keel as P1 wrote it
+
+Written by P1 (Sonnet 5.5).
+Every claim below was checked against the files in this folder the day P1 stopped; `check.sh`'s output is under "What check.sh prints".
+The rulings used are the Guide's (section 5, rulings of 2026-11-04, 2026-11-05 and 2026-11-12, the last "not confirmed by the maintainer") and the rule of 2026-10-29 (assumed, not ruled by a lawyer).
+Nothing here has been read by a lawyer: the status of the whole encoding is `draft`, not reviewed.
+
+## What is encoded
+
+**Scope, as provisions.**
+Article 2(1) and (2) (material scope); Article 4 points (1) 'personal data' (with 'identifiable natural person' and 'data subject'), (2) 'processing', (6) 'filing system', (7) 'controller', (8) 'processor'; Chapter II, Articles 5 to 11; Article 24.
+Lines of `eu-gdpr-2016-679-consolidated-20160504.txt`: 19-26, 39-40, 44-46, 76-141, 308-312.
+Nothing else is encoded: Article 1, 2(3), 2(4), 3, Article 4 points (3)-(5), (9)-(26) are K2's; Article 99 is machinery for K2.
+
+**Edition and status of the text.**
+The text is the Publications Office consolidated version of 4.5.2016 (CELEX 02016R0679-20160504, "000.002"), which applies the corrigendum of OJ L 127, 23.5.2018, p. 2.
+It is a rendering made by a script from XHTML, and it is a documentation tool with no legal effect: the Official Journal text is authentic.
+No recital is encoded and none is quoted as an authority; I read no recital for any rule. The one place a recital is cited, `-- see recital 19` in `P1-art-2.l4` at the term 'competent authorities', rests on a search of the uncorrected text for the Directive's number, not on reading the recital.
+The corrigendum: none of its fifteen corrections falls in this range (they are in recital 71 and Articles 37(1)(c), 41(3), 41(5), 42(7), 43(3), 43(6), 57(1)(p), 64(1)(c), 64(6)-(8), 65(1)(a), 69(2), 70(1)(l), (o), (p)); checked against the corrigendum file; every `▼C1` marker of the consolidated text lies at line 451 or later, and so does every inline `►C1` marker (the first is at line 544); line 6 carries the header legend `►C1`, which marks no change in the text.
+There is no date input and no version axis: the Regulation applies from 25 May 2018 (Art 99(2)) and the one text in force is the one encoded (assumed, not ruled).
+
+**Target and binary.**
+Target `main`.
+Binary `~/.cache/l4-main/112/l4`, `1.6.112 (main, e4f4bf3, 2026-11-18)`; `JL4_LIBRARY_PATH` unset.
+`check.sh` was run with `L4_TARGET=unstable` because the binary already is the main build (the lead runs both builds).
+`l4 run` prints `Warning | [Import Resolution] Multiple differing copies of module prelude (and daydate)` on this machine because an older copy is in the XDG data directory; it is not a diagnostic of any module and `check.sh` does not count it.
+
+**Method.**
+Nouns first (`gdpr-core.l4`, DECLARE only), then the Article 4 definitions, then one layer-1 module per article with its tests, then the two seat layers.
+Each rule carries its `@ref` with a source locator and the quoted lines (`srcrefs.py check --refs` and `--strict`: see the numbers below).
+Every expected value in a test was written from the text before the run, and I did not change an expected value to match the code's output.
+I did change expected values in the fix round that followed review (items A1 to A5 of the lead's list): each time the new expectation is licensed by a provision and a ruling that the comment above the assertion names, and the code was changed first.
+The seat, seat-cases and mirror files were produced by a script from the layer-1 signatures, which has since been deleted, so the 351 seat and mirror assertions cannot be re-derived from this folder; their expected values follow the layer-1 tests.
+The `-- FALSE-kind` and `-- NOTHING-kind` comments quote the text; I checked every quoted piece against the consolidated file mechanically (a script over the layer-1 and definitions files: 166 quoted pieces, 159 found verbatim; the other 7 are my own phrases placed in quotation marks in comments, not quotations).
+
+**Design choices that are mine (assumed, not ruled).**
+- `Duty outcome` (core): every duty that has a gate ("where", "if", "when", "where necessary") answers `MAYBE Duty outcome`, with `the duty does not arise` as the text's own no to a failed gate (periods ruling (b), 2026-11-05) and `the duty arises and is not met` as the provision's own question (grant ruling, limit 2).
+  The Guide does not name this type; the rule of 2026-10-29 allows "a constructor whose meaning is 'the text says no'".
+- A principle or requirement with no gate answers `MAYBE BOOLEAN` and JUST FALSE when unmet (the provision's own question).
+- Function names state a condition or "applies"; none says "may I" or "is the processing lawful".
+  The combination of Art 6(1) answers "the condition is met that at least one of points (a) to (f) applies", never "lawful", and the combination of Art 9 answers "prohibited".
+- Arguments the text itself declares irrelevant are kept so the clause has a test, and are not read: Art 4(2) `the operations are performed by automated means` ("whether or not by automated means"), Art 4(6) `how the set is arranged` ("whether centralised, decentralised or dispersed ..."), Art 7(3) both dates ("at any time"), Art 8(3) `what the rule concerns` ("such as").
+  Art 6(1)(f) `the data subject is a child` is a different case: the text makes the child relevant ("except where such interests are overridden by the interests or fundamental rights and freedoms of the data subject which require protection of personal data, in particular where the data subject is a child"), and the function leaves it unread by my choice (fork F6-2), not by the text's words.
+- Art 6(1)(c) and (e) are separate functions from Art 6(3); a seat that wants both asks both (fork F6-4).
+
+### Reading a result: FALSE and NOTHING
+
+Read in this subject's terms.
+
+- `JUST TRUE` means the Regulation says yes in its own words: the thing is within the scope, a definition is met, a principle is met, a condition is met, a permission is given, a prohibition stands.
+- `JUST FALSE` means the Regulation itself says no, and only where it does, on the brief's list: a definition that "means" and is not met (Art 4); a condition the text introduces with "if", "only if", "as long as", "unless", "so long as", "while", "until", "except", "save" or "provided that" and which fails; a list closed with "only" or "nothing but"; a flat negative ("does not apply", "shall not apply", "shall not be obliged", "shall not be binding", "shall not affect", "shall not be considered").
+  Two further inferences are used and are listed for a lawyer: a failed "where" or "when" gate gives `JUST FALSE` (periods ruling (b) and the delegated ruling (c) of 2026-11-05), and a failed "if" within the provision that holds it counts as the text's no (marginal rule (a) of the brief).
+  Separately, an unmet "shall" or "must" in the provision's own question answers `JUST FALSE` as split site (i): "shall" and "must" are not on the brief's list of markers, so each such branch is tagged "the provision's own question (split site (i))" and is listed under "Split sites".
+  Art 2(2)(a) to (d) answer `JUST FALSE` to "does this Regulation apply" because the text says "does not apply", not because the exception is a no on facts.
+- `NOTHING` means the Regulation does not answer on these facts: it is silent; the list is not closed ("inter alia", "such as", "in particular"); a term is left undefined; the answer lies in a law or instrument outside the sources; or the provision limits a grant, a prohibition or a duty in its own wording and the case falls outside the limit (Art 2(1) outside both limbs; Art 9(1) for data it does not name; Art 6(2), 9(4) for other bases and categories; Art 5(1)(e) "may be stored for longer periods ..." when Article 89(1) is not met or the measures are not implemented; Art 5(1)(d) second limb, Art 8(2) and Art 8(1) outside their scope).
+- A caller must never turn `NOTHING` into `FALSE`: "the Regulation does not say" is not "the Regulation says no".
+- A `Duty outcome` says one of three things: the duty does not arise (the gate failed); the duty arises and is met; the duty arises and is not met.
+  `NOTHING` beside it is "not covered".
+- A prohibition lifted by Art 9(2) is not a lawful processing: `JUST FALSE` to "is the processing prohibited" means only that paragraph 1 does not apply.
+- Where the brief and the Guide differ, the Guide governs.
+  The brief's list of markers on which the text says no ("if", "only if", "as long as", "unless", "so long as", "while", "until", "except", "save", "provided that") does not contain "where", "when" or "upon"; the Guide's periods ruling (b) and the delegated ruling (c) of 2026-11-05 add them (a failed "where", "when" or "upon" gate gives `JUST FALSE`).
+  I followed the Guide, so a failed "Where" or "When" gate answers `JUST FALSE` (Art 8(1) when point (a) of Article 6(1) does not apply and, in the helper, at or above the age; Art 7(4)); that is the one difference I found between the two documents.
+  On a function named for a grant the brief and the Guide agree (grant ruling of 2026-11-12, three limits): limit 1 gives `NOTHING` where an "if" gate failed, limit 2 keeps `JUST FALSE` where the text closes the gate itself, limit 3 says to list a "may" gated by "where", "when" or "upon" and not to change its answer.
+  I applied limit 1 to Art 5(1)(e) where Article 89(1) is not met or the measures are not implemented ("insofar as" and "subject to" are not on the brief's list: `NOTHING`), and limit 2 where the purpose is not one of the four ("solely" closes the list: `JUST FALSE`); that is one site answering both (fork F5-3).
+  I kept `JUST FALSE` at Art 8(1) second subparagraph "provided that" (on the list, fork F8-1) and at Art 9(3) "when" (limit 3, fork F9-4); all three sites are listed under "Split sites".
+
+## Sources, edition and status (added by the closing pass, 2026-11-26; assumed, not ruled)
+
+Six statements about what this encoding rests on.
+Each was checked on 2026-11-26 against the source named; where a check was a search snippet and not a reading of the source, it says so.
+
+1. **The text quoted is a rendering, not the official text.**
+   The text quoted is the Publications Office consolidated version of 4.5.2016 (CELEX 02016R0679-20160504), a rendering made by a script from the Publications Office's XHTML.
+   The Publications Office says of the consolidation that it is a documentation tool with no legal effect; the Official Journal text (OJ L 119, 4.5.2016, p. 1, with the corrigendum) is the authentic one.
+   The recitals are reading aids, not rules: they come from the as-published text (`eu-gdpr-2016-679.txt`, CELEX 32016R0679), which is uncorrected, and none is encoded or quoted as an authority (checked in `inputs/SOURCES.md`).
+2. **The corrigenda.**
+   The 2018 corrigendum (OJ L 127, 23.5.2018, p. 2) has fifteen corrections (fifteen `for:` blocks counted in `eu-gdpr-2016-679-corrigendum-20180523.txt`), of recital 71 and Articles 37(1)(c), 41(3), 41(5), 42(7), 43(3), 43(6), 57(1)(p), 64(1)(c), 64(6) to (8), 65(1)(a), 69(2), 70(1)(l), (o) and (p).
+   None falls in this range (Articles 2, 4(1), (2), (6) to (8), 5 to 11 and 24).
+   The 2016 corrigendum (CELEX 32016R0679R(01)) and the 2021 corrigendum (OJ L 74, 4.3.2021, p. 35, CELEX 32016R0679R(03)) were not retrievable: the Publications Office's server answered 404 for both on 2026-11-26.
+   The 2021 corrigendum is reported, not read at source: a search snippet of its EUR-Lex record says it does not concern the English version (`inputs/SOURCES.md`).
+3. **No amending act; one related regulation; one proposal.**
+   No act amending Regulation (EU) 2016/679 was found: the Publications Office's consolidated version of 4.5.2016 lists only the 2018 corrigendum, and consolidated versions dated 2018-05-23, 2021-03-04 and 2026-01-01 answered 404 on 2026-11-26. That is a probe, not a check of the EUR-Lex amendments table.
+   Regulation (EU) 2025/2518 (published in the Official Journal on 12 December 2025) lays down additional procedural rules for the enforcement of the GDPR in cross-border cases. Its text was read at the Publications Office on 2026-11-26: 37 Articles, applying from 2 April 2027, and none of them amends the GDPR.
+   It supplements the GDPR; it is related and not encoded.
+   The Digital Omnibus (procedure 2025/0360(COD), as commentary sites report) proposes amendments to the GDPR. It is a proposal only and is not encoded. That it was still in the legislative process on 2026-11-26 (a Council negotiating mandate reported for 21 October 2026, no Parliament position) is from commentary sites, not read at the Council or Parliament sources.
+4. **The choice of texts and the split into parts are assumed, not ruled.**
+   That the encoding quotes these three texts (consolidated, as published, corrigendum), and the split of the Regulation into the keel K2 and parts P1 to P10, are the coordinating session's assumption of 2026-11-26 (`inputs/PARTS.md`: "assumed, not ruled; accepted by the coordinating session on 2026-11-26"), not a ruling of the maintainer.
+5. **The licence of the deposited texts is UNDETERMINED.**
+   See the subject's `SOURCE-LICENSE.md`, which is held outside this deposit.
+   Nothing here says the texts may be redistributed.
+6. **No lawyer has read this encoding.**
+   Its status is `draft`.
+
+## Seats
+
+- **A data subject** `[subject]` (required): `P1-seat-subject.l4`, 37 questions, `P1-cases-seat-subject.l4` (117 cases).
+  The data subject is the natural person whose data are processed; a child is a data subject, and Article 8 is asked from the child's side as well.
+  It asks only what a data subject can state: scope (Art 2), what is personal data and who is a controller or processor (Art 4), the principles as they touch her data (5(1)(a), (c), (d), (e), 5(2)), the bases she can speak to (6(1)(a), (b), (f)), consent (7), the child (8), the prohibition and the grounds she can state (9(1), 9(2)(a), (c), (e), the combined question), criminal convictions (10), identification (11).
+  It has no question on 4(6), 5(1)(b), 5(1)(f), 6(1)(c)-(e), 6(2)-(4), 8(2), 8(3), 9(2)(b), (d), (f)-(j), 9(3), 9(4) or Article 24: those address only the controller or a lawmaker, or turn on facts a data subject cannot state.
+- **A controller** `[controller]`: `P1-seat-controller.l4`, 67 questions, `P1-cases-seat-controller.l4` (197 cases).
+  A joint controller is the same seat: the plain input `the body decides them jointly with another body` (Art 4(7)).
+  It asks every layer-1 rule that addresses a controller, grouped by article.
+- **A processor** `[processor]`: no seat module and no processor question.
+  The only provision of the range that addresses a processor is Art 4(8), a definition, and it is asked from the controller's and the data subject's seats.
+- **Never** a seat for a supervisory authority, the Board, the Commission or a court.
+  Where a provision addresses only a lawmaker or an official (Art 6(2), 6(3), the second subparagraph of 8(1), 9(4)), the question asks what it means to the controller or the data subject.
+- Mirror cases: `P1-cases-mirror.l4` puts the same facts to both seats and asserts that the answers are equal (53 assertions, 15 mirror groups: Art 2, 4(7), 5(2), 6(1)(a), 7(1), 7(2) second sentence, 7(3) first and second sentences, 8(1) the condition and 8(1) whether consent of the holder of parental responsibility is needed, 9(1) and (2), 10 first sentence, 11(1), 11(2) both); each seat's cases file marks its half `-- MIRROR`.
+- **Direction audit** (the brief asks for it): I read the name and body of all 104 seat questions together (controller 67, data subject 37).
+  None answers in the opposite direction to its name (the two Art 8(1) "is the consent of the holder of parental responsibility needed" questions now answer MAYBE BOOLEAN, JUST TRUE for "needed"): a "may" question answers `JUST TRUE` for "may"; an "am I obliged" question answers `JUST FALSE` for "not obliged" (Art 11(1)); "is the part binding" answers `JUST FALSE` for "not binding" (Art 7(2)); "does the withdrawal affect" answers `JUST FALSE` for "does not affect" (Art 7(3)); "is the processing prohibited" answers `JUST TRUE` for "prohibited" (Art 9).
+  The audit changed names: layer-1 `Art 6(1)(f)` answered `JUST FALSE` for a public authority performing its tasks under a name about necessity, and `Art 9(2)(a)` answers `JUST FALSE` for the "except where" bar under a name about consent; so all sixteen point functions (Art 6(1)(a)-(f), Art 9(2)(a)-(j)) are now named `... point (x) applies: ...`, which is the question they answer.
+
+## Coverage table
+
+Dispositions: `encoded`, `inert`, `fork` (row points at its entry in the fork register and at the rule that encodes the chosen reading), `repealed or blank in this text`.
+There is no `out-of-scope` and no `deferred` row.
+Modules are `P1-art-N.l4` (abbreviated `art-N`); tests are in `P1-tests-art-N.l4`, definitions in `gdpr-definitions.l4` with `gdpr-definitions-tests.l4`.
+Rule names are given by their label; each is the function whose name begins with it.
+
+| provision (consolidated lines) | what it says | disposition | rule | test |
+| --- | --- | --- | --- | --- |
+| Art 2 heading (19-20) | "Article 2 / Material scope" | inert (1): heading | | |
+| Art 2(1) first limb (21) | applies to processing wholly or partly by automated means | fork F2-2 | art-2 `Art 2(1) this Regulation applies to the processing of personal data` | tests-art-2 §Art 2(1) |
+| Art 2(1) second limb (21) | and to non-automated processing of data in or intended for a filing system | fork F2-2 | same | same |
+| Art 2(2) chapeau (22) | does not apply to the processing of personal data: | fork F2-1 | art-2 `Art 2(2) ... given points (a) to (d)`, `Art 2(1) and (2) the processing is within the material scope` | tests-art-2 §Art 2(2) together, §Art 2(1) and (2) together |
+| Art 2(2)(a) (23) | an activity outside Union law | encoded | art-2 `Art 2(2)(a)` | §Art 2(2)(a) |
+| Art 2(2)(b) (24) | Member States, Chapter 2 of Title V TEU | encoded | art-2 `Art 2(2)(b)` | §Art 2(2)(b) |
+| Art 2(2)(c) (25) | natural person, purely personal or household | encoded | art-2 `Art 2(2)(c)` | §Art 2(2)(c) |
+| Art 2(2)(d) (26) | competent authorities, criminal justice and public security | fork F2-3 | art-2 `Art 2(2)(d)` | §Art 2(2)(d): seven purposes and one outside |
+| Art 4(1) 'personal data' (39) | any information relating to an identified or identifiable natural person | fork F4-1 | defs `Art 4(1) the information is personal data` | defs-tests §Art 4(1): personal data |
+| Art 4(1) 'data subject' (39) | the identified or identifiable natural person | encoded | defs `Art 4(1) the person is a data subject` | defs-tests §Art 4(1): data subject |
+| Art 4(1) 'identifiable natural person' (39) | one who can be identified directly or indirectly, in particular by ... | fork F4-1 | defs `Art 4(1) the natural person is an identifiable natural person` | defs-tests §Art 4(1): twelve means, none |
+| Art 4(2) 'processing' (40) | any operation or set of operations on personal data, whether or not by automated means, such as ... | encoded | defs `Art 4(2) the operations are processing` | defs-tests §Art 4(2): nineteen operations, a set, outside |
+| Art 4(6) 'filing system' (44) | structured set of personal data accessible according to specific criteria, however arranged | encoded | defs `Art 4(6) the set is a filing system` | defs-tests §Art 4(6) |
+| Art 4(7) 'controller', first limb (45) | the person, alone or jointly with others, determining purposes and means | encoded | defs `Art 4(7) the body is a controller`, `Art 4(7) how the body determines the purposes and means` | defs-tests §Art 4(7) |
+| Art 4(7) 'controller', second limb (45) | where purposes and means are fixed by Union or Member State law, the controller or the criteria may be provided for by that law | fork F4-2 | defs `Art 4(7) the body is a controller` | defs-tests §Art 4(7): second limb |
+| Art 4(8) 'processor' (46) | a person which processes personal data on behalf of the controller | encoded | defs `Art 4(8) the body is a processor` | defs-tests §Art 4(8) |
+| Chapter II heading (74-75) | "CHAPTER II / Principles" | inert (1): heading (lines outside my ranges; recorded because it heads my chapter) | | |
+| Art 5 heading (76-77) | Article 5 / Principles relating to processing | inert (1): heading | | |
+| Art 5(1) chapeau (78) | "Personal data shall be:" | encoded | the six functions `Art 5(1)(a)` to `Art 5(1)(f)`: every one of their FALSE-kind tags quotes the chapeau's "shall be" (the provision's own question, split site (i)); the chapeau has no function of its own | tests-art-5 §Art 5(1)(a) to §Art 5(1)(f) (each unmet case answers JUST FALSE) |
+| Art 5(1)(a) (79) | lawfully, fairly, transparently | encoded | art-5 `Art 5(1)(a)` | tests-art-5 §Art 5(1)(a) |
+| Art 5(1)(b) first limb (80) | collected for specified, explicit and legitimate purposes | encoded | art-5 `Art 5(1)(b) the personal data are collected ...` | §Art 5(1)(b): the principle |
+| Art 5(1)(b) not further processed incompatibly (80) | | encoded | same | same |
+| Art 5(1)(b) deeming sentence (80) | archiving, research or statistics, in accordance with Art 89(1), not incompatible | fork F5-1 | art-5 `Art 5(1)(b) the further processing is considered incompatible ...` | §Art 5(1)(b): the second limb |
+| Art 5(1)(c) (81) | adequate, relevant, limited to what is necessary | encoded | art-5 `Art 5(1)(c)` | §Art 5(1)(c) |
+| Art 5(1)(d) first limb (82) | accurate and, where necessary, kept up to date | fork F5-2 | art-5 `Art 5(1)(d) the personal data are accurate ...` | §Art 5(1)(d) |
+| Art 5(1)(d) second limb (82) | every reasonable step to erase or rectify inaccurate data without delay | fork F5-2 | art-5 `Art 5(1)(d) every reasonable step ...` | §Art 5(1)(d) |
+| Art 5(1)(e) first limb (83) | identifying form for no longer than necessary | encoded | art-5 `Art 5(1)(e) the personal data are kept in a form ...` | §Art 5(1)(e) |
+| Art 5(1)(e) second limb (83) | longer storage insofar as solely for archiving, research, statistics, with measures | fork F5-3 | art-5 `Art 5(1)(e) the personal data may be stored for longer periods` | §Art 5(1)(e) |
+| Art 5(1)(f) (84) | appropriate security, including protections | fork F5-4 | art-5 `Art 5(1)(f)` | §Art 5(1)(f) |
+| Art 5(2) (85) | the controller shall be responsible for, and able to demonstrate compliance with, paragraph 1; regulative | encoded | art-5 `Art 5(2) the body is responsible ...`, `Art 5(2) the controller is able to demonstrate ...`, `Art 5(2) the controller must be able to demonstrate ...` | §Art 5(2), §Art 5(2): the regulative rule, traced |
+| Art 5 bracketed names (79-85) | 'lawfulness, fairness and transparency', 'purpose limitation', ..., 'accountability' | encoded | core `Art 5 principle` (seven members); labels, not rules | defs-tests (members resolve) |
+| Art 6 heading (86-87) | Article 6 / Lawfulness of processing | inert (1): heading | | |
+| Art 6(1) chapeau (88) | lawful only if and to the extent that at least one of the following applies | fork F6-1, F6-3 | art-6 `Art 6(1) the condition is met that at least one of points (a) to (f) applies` | tests-art-6 §Art 6(1) |
+| Art 6(1)(a) (89) | consent for specific purposes | encoded | art-6 `Art 6(1)(a) point (a) applies` | §Art 6(1)(a) |
+| Art 6(1)(b) (90) | contract or steps before one | encoded | art-6 `Art 6(1)(b)` | §Art 6(1)(b) |
+| Art 6(1)(c) (91) | legal obligation of the controller | fork F6-4 | art-6 `Art 6(1)(c)` | §Art 6(1)(c) |
+| Art 6(1)(d) (92) | vital interests of the data subject or another natural person | encoded | art-6 `Art 6(1)(d)` | §Art 6(1)(d) |
+| Art 6(1)(e) (93) | public interest task or official authority | fork F6-4 | art-6 `Art 6(1)(e)` | §Art 6(1)(e) |
+| Art 6(1)(f) (94) | legitimate interests, except where overridden, in particular a child | fork F6-2 | art-6 `Art 6(1)(f)` | §Art 6(1)(f) |
+| Art 6(1) second subparagraph (95) | point (f) shall not apply to public authorities in the performance of their tasks | encoded | art-6 `Art 6(1)(f)` (first arm) | §Art 6(1)(f): second subparagraph |
+| Art 6(2) (96) | Member States may adapt for points (c) and (e) | encoded | art-6 `Art 6(2)` | §Art 6(2) |
+| Art 6(3) chapeau (97) | the basis for the processing referred to in points (c) and (e) shall be laid down by: | fork F6-4, F6-6 | art-6b `Art 6(3) the basis for the processing is laid down by Union law or by Member State law to which the controller is subject` | tests-art-6b §Art 6(3): the legal basis |
+| Art 6(3)(a) (98) | Union law | fork F6-6 | the same function, input `the basis is laid down by Union law` | same |
+| Art 6(3)(b) (99) | Member State law to which the controller is subject | fork F6-6 | the same function, inputs `the basis is laid down by Member State law` and `the controller is subject to that Member State law` | same |
+| Art 6(3) second paragraph, first sentence (100) | purpose determined in the basis, or for (e) necessary for the task | encoded | art-6b `Art 6(3) the purpose ...` | §Art 6(3): the purpose |
+| Art 6(3) second paragraph, second sentence (100) | the basis may contain specific provisions, inter alia (eight matters) | encoded | art-6b `Art 6(3) the legal basis may contain ...` | §Art 6(3): matters |
+| Art 6(3) second paragraph, last sentence (100) | the law shall meet an objective of public interest and be proportionate | encoded | art-6b `Art 6(3) the Union or Member State law meets ...` | §Art 6(3): the law |
+| Art 6(4) chapeau (101) | where processing for another purpose is not based on consent or a qualifying law, the controller shall take into account, inter alia | fork F6-5 | art-6b `Art 6(4) the controller takes into account ...`, `Art 6(4) the controller must take into account ...` | §Art 6(4) |
+| Art 6(4)(a) (102) | any link between the purposes for which the data were collected and the purposes of the intended further processing | encoded | art-6b constructor `Art 6(4)(a) any link between the purposes` of `Art 6(4) matter to be taken into account`, read by `Art 6(4) the controller takes into account ...` | tests-art-6b §Art 6(4): each missing matter answers JUST `the duty arises and is not met` |
+| Art 6(4)(b) (103) | the context in which the personal data have been collected, in particular the relationship between data subjects and the controller | encoded | art-6b constructor `Art 6(4)(b) the context in which the personal data have been collected` | same |
+| Art 6(4)(c) (104) | the nature of the personal data, in particular special categories and criminal convictions data | encoded | art-6b constructor `Art 6(4)(c) the nature of the personal data` | same |
+| Art 6(4)(d) (105) | the possible consequences of the intended further processing for data subjects | encoded | art-6b constructor `Art 6(4)(d) the possible consequences of the intended further processing for data subjects` | same |
+| Art 6(4)(e) (106) | the existence of appropriate safeguards, which may include encryption or pseudonymisation | encoded | art-6b constructor `Art 6(4)(e) the existence of appropriate safeguards`; "encryption or pseudonymisation" is an example and is not read | same |
+| Art 7 heading (107-108) | Article 7 / Conditions for consent | inert (1): heading | | |
+| Art 7(1) (109) | where processing is based on consent, the controller shall be able to demonstrate | encoded | art-7 `Art 7(1)` (two) | tests-art-7 §Art 7(1) |
+| Art 7(2) first sentence (110) | request for consent clearly distinguishable, intelligible, plain | encoded | art-7 `Art 7(2) the request ...` | §Art 7(2): first sentence |
+| Art 7(2) second sentence (110) | an infringing part shall not be binding | encoded | art-7 `Art 7(2) the part ...` | §Art 7(2): second sentence |
+| Art 7(3) first sentence (111) | the right to withdraw at any time | encoded | art-7 `Art 7(3) the data subject may withdraw his or her consent at any time`, `Art 7(3) the data subject may withdraw consent` (a MAY rule) | §Art 7(3) |
+| Art 7(3) second sentence (111) | withdrawal does not affect earlier processing | fork F7-3 | art-7 `Art 7(3) the withdrawal of consent affects ...` | §Art 7(3) |
+| Art 7(3) third sentence (111) | informed prior to giving consent | fork F7-2 | art-7 `Art 7(3) the data subject was informed ...` | §Art 7(3) |
+| Art 7(3) fourth sentence (111) | as easy to withdraw as to give | encoded | art-7 `Art 7(3) it is as easy ...` | §Art 7(3) |
+| Art 7(4) (112) | utmost account of conditionality, inter alia, when assessing whether consent is freely given | fork F7-1 | art-7 `Art 7(4)` | §Art 7(4) |
+| Art 8 heading (113-114) | Article 8 / child's consent | inert (1): heading | | |
+| Art 8(1) first subparagraph, first sentence (115) | lawful where the child is at least 16 | fork F8-2, F8-3, F8-5 | art-8 `Art 8(1) the processing of a child's personal data meets the condition of Art 8(1)` and the helper `Art 8(1) the case is one in which the consent of the holder of parental responsibility is needed` (same arms) | tests-art-8 §Art 8(1) |
+| Art 8(1) first subparagraph, second sentence (115) | below 16, lawful only if and to the extent that consent is given or authorised by the holder of parental responsibility | fork F8-2, F8-3, F8-5 | same | same |
+| Art 8(1) second subparagraph (116) | Member States may provide a lower age not below 13 | fork F8-1 | art-8 `Art 8(1) a Member State may provide by law for the lower age`, `Art 8(1) the age from which the child may consent in this Member State` | §Art 8(1): what a Member State may provide, the age that applies |
+| Art 8(2) (117) | the controller shall make reasonable efforts to verify, taking technology into consideration | fork F8-4 | art-8 `Art 8(2)` (two; the gate is the Art 8(1) helper `EQUALS JUST TRUE`) | §Art 8(2) |
+| Art 8(3) (118) | paragraph 1 shall not affect general contract law | encoded | art-8 `Art 8(3)` | §Art 8(3) |
+| Art 9 heading (119-120) | Article 9 / special categories | inert (1): heading | | |
+| Art 9(1) (121) | processing of the named categories shall be prohibited | fork F9-1 | art-9 `Art 9(1) the categories ...`, `Art 9(1) the processing ... is prohibited`, `Art 9(1) the controller shall not process ...` | tests-art-9 §Art 9(1) |
+| Art 9(2) chapeau (122) | paragraph 1 shall not apply if one of the following applies | fork F9-2 | art-9 `Art 9(2) one of points (a) to (j) applies` | §Art 9(2): one of points |
+| Art 9(2)(a) (123) | explicit consent, except where law bars lifting | encoded | art-9 `Art 9(2)(a) point (a) applies` | §Art 9(2)(a) |
+| Art 9(2)(b) (124) | employment, social security and social protection law | fork F9-5 | art-9 `Art 9(2)(b)` | §Art 9(2)(b) |
+| Art 9(2)(c) (125) | vital interests where the data subject cannot consent | encoded | art-9 `Art 9(2)(c)` | §Art 9(2)(c) |
+| Art 9(2)(d) (126) | not-for-profit body and its members | fork F9-3 | art-9 `Art 9(2)(d)` | §Art 9(2)(d) |
+| Art 9(2)(e) (127) | manifestly made public by the data subject | encoded | art-9 `Art 9(2)(e)` | §Art 9(2)(e) |
+| Art 9(2)(f) (128) | legal claims, courts | encoded | art-9 `Art 9(2)(f)` | §Art 9(2)(f) |
+| Art 9(2)(g) (129) | substantial public interest | encoded | art-9 `Art 9(2)(g)` | §Art 9(2)(g) |
+| Art 9(2)(h) (130) | health and social care | fork F9-5 | art-9 `Art 9(2)(h)` | §Art 9(2)(h) |
+| Art 9(2)(i) (131) | public health | fork F9-5 | art-9 `Art 9(2)(i)` | §Art 9(2)(i) |
+| Art 9(2)(j) (132) | archiving, research, statistics | fork F9-5 | art-9 `Art 9(2)(j)` | §Art 9(2)(j) |
+| Art 9(3) (133) | may be processed for (h) when under professional secrecy | fork F9-4 | art-9 `Art 9(3)` | §Art 9(3) |
+| Art 9(4) (134) | Member States may add conditions for genetic, biometric, health data | encoded | art-9 `Art 9(4)` | §Art 9(4) |
+| Art 10 heading (135-136) | Article 10 / criminal convictions | inert (1): heading | | |
+| Art 10 first sentence (137) | only under official control or when authorised by law with safeguards | encoded | art-10 `Art 10 the processing ...` | tests-art-10 §first sentence |
+| Art 10 second sentence (137) | a comprehensive register only under official control | encoded | art-10 `Art 10 the comprehensive register ...` | §second sentence |
+| Art 11 heading (138-139) | Article 11 / processing which does not require identification | inert (1): heading | | |
+| Art 11(1) (140) | the controller shall not be obliged to keep additional information to identify | encoded | art-11 `Art 11(1)` | tests-art-11 §Art 11(1) |
+| Art 11(2) first sentence (141) | the controller shall inform the data subject accordingly, if possible | encoded | art-11 `Art 11(2) the controller informs ...`, `Art 11(2) the controller must inform ...` | §Art 11(2), first sentence |
+| Art 11(2) second sentence (141) | Articles 15 to 20 shall not apply except where the data subject provides identifying information | fork F11-1 | art-11 `Art 11(2) Articles 15 to 20 are disapplied` | §Art 11(2), second sentence |
+| Chapter IV and Section 1 headings (304-307) | "CHAPTER IV / Controller and processor / Section 1 / General obligations" | inert (1): headings (lines outside my ranges; recorded because they head Article 24) | | |
+| Art 24 heading (308-309) | Article 24 / Responsibility of the controller | inert (1): heading | | |
+| Art 24(1) first sentence (310) | the controller shall implement appropriate measures, taking into account five matters | encoded | art-24 `Art 24(1) the controller implements ...`, `Art 24(1) the controller must implement ...` | tests-art-24 §Art 24(1) |
+| Art 24(1) second sentence (310) | those measures shall be reviewed and updated where necessary | fork F24-1 | art-24 `Art 24(1) the measures are reviewed ...` | §Art 24(1), second sentence |
+| Art 24(2) (311) | where proportionate, include data protection policies | encoded | art-24 `Art 24(2)` (two) | §Art 24(2) |
+| Art 24(3) (312) | adherence to approved codes or certification may be used as an element | encoded | art-24 `Art 24(3)` | §Art 24(3) |
+
+Terms the range uses and does not define (taken as plain input facts; PLAN.md section 4): consent (Art 4(11)), explicit consent, child, information society services (Art 4(25)), pseudonymisation (Art 4(5)), genetic, biometric and health data (Art 4(13)-(15)), competent authority, Union or Member State law, necessary, proportionate, lawful, fair, adequate, relevant, appropriate, reasonable.
+Row count: 96 rows: 48 `encoded`, 37 `fork`, 11 `inert` (headings); none is repealed or blank; there is no out-of-scope row and no deferred row.
+Every fork id in the register (F2-1 to F24-1, 30 entries) is named in the disposition of at least one `fork` row.
+
+## Fork register
+
+Each entry: the provision, the function, the readings with the text that licenses each, the one taken, and why.
+"Other reading" is what a human reviewer may overrule.
+
+| id | provision and function | readings | taken |
+| --- | --- | --- | --- |
+| F2-1 | Art 2(1) against Art 2(2); `Art 2(1) and (2) the processing is within the material scope` | A: the exceptions of Art 2(2) are tested first ("This Regulation does not apply to the processing of personal data: ..." read as exceptions to "applies"). B: the two statements conflict and nothing says which wins, so a case in both answers NOTHING. | A; the text states no priority, so the order is the encoding's and the arm says so |
+| F2-2 | Art 2(1); `Art 2(1) this Regulation applies ...` | A: for processing by hand of data in no filing system and not intended for one, NOTHING ("applies to" two cases, no "only"; periods ruling (c)). B: JUST FALSE, reading the two limbs as the whole of the Regulation's reach. | A |
+| F2-3 | Art 2(2)(d); `Art 2(2)(d)` | A: 'competent authority' is an input the text does not define (recital 19 and the footnote at line 1240 of the uncorrected text name Directive (EU) 2016/680, which is not among the sources; I found this by a search for "2016/680", not by reading the recital). B: any authority acting for those purposes. | A |
+| F4-1 | Art 4(1); `Art 4(1) the natural person is an identifiable natural person` | A: "can be identified, directly or indirectly" is answered by the list of means a witness gives, with no filter on who can identify or how likely (taken; the text names no filter). B: only means reasonably likely to be used (a rule of the recitals, which I did not read and did not encode). The answers differ for a person identifiable only by an unlikely means. | A; `some other means of identification` stands for every means the list does not name ("in particular") |
+| F4-2 | Art 4(7) second limb; `Art 4(7) the body is a controller` | A: an additional route: a body named by Union or Member State law that determines the purposes and means is a controller although it decides nothing itself ("the controller ... may be provided for"). B: a clarification only: whoever the law names is whoever determines. A body named by the law and deciding nothing is a controller on A and not on B. | A; the definition "means" and the second clause adds a source of the controller |
+| F5-1 | Art 5(1)(b) deeming sentence; `Art 5(1)(b) the further processing is considered incompatible ...` | A: deemed not incompatible only "in accordance with Article 89(1)". B: deemed not incompatible for the four purposes whatever Article 89(1) says. | A: "shall, in accordance with Article 89(1), not be considered" |
+| F5-2 | Art 5(1)(d); the two functions | A: the two limbs are separate duties: inaccurate data breach the first limb even if every reasonable step is taken. B: the second limb excuses the first. In addition, for the second limb: A: when no data are inaccurate "having regard to the purposes", the clause "personal data that are inaccurate, having regard to the purposes for which they are processed" is a scope limit with no gate word, so the answer is NOTHING (periods ruling (c)); B: `the duty does not arise`, reading the clause as a "where" gate (ruling (b)). | A both ways; the semicolon makes two requirements, and the clause has no "where", "if" or "only" |
+| F5-3 | Art 5(1)(e) second limb; `Art 5(1)(e) the personal data may be stored for longer periods` | A (taken): one function, two kinds of arm. The purpose is not one of the four: JUST FALSE, because "solely for archiving purposes in the public interest, scientific or historical research purposes or statistical purposes" closes the list of purposes (a list closed with "solely"; grant ruling of 2026-11-12, limit 2). The purpose is one of the four but Article 89(1) is not met or the measures are not implemented: NOTHING, because the function is named for a grant and "in accordance with Article 89(1) subject to implementation of the appropriate technical and organisational measures" is limited by its own wording, with neither "insofar as" nor "subject to" a marker on the brief's list (limit 1). B: all three arms JUST FALSE (the first limb stands whenever the second fails), or all three NOTHING. Split site (ii), one site answering both. | A |
+| F5-4 | Art 5(1)(f) "including"; `Art 5(1)(f)` | A (taken): "including" is read as closing "appropriate security" to the two named protections plus appropriate measures, so the function answers JUST TRUE when all three hold and JUST FALSE otherwise. B: "including" leaves "appropriate security" open, so the two named protections do not exhaust it: the function would answer NOTHING where one of them is missing, because other measures could still make the security appropriate. The answers differ for a controller that lacks one named protection but has other security. | A |
+| F6-1 | Art 6(1) "to the extent that" | A: each operation is wholly covered or not (the case is one operation). B: the extent of lawful processing is computed field by field. | A; no input could carry B |
+| F6-2 | Art 6(1)(f) "in particular where the data subject is a child" | A: a child does not by itself make the interests overridden; `the data subject is a child` is not read. B: a child raises a presumption of override. | A |
+| F6-3 | Art 6(1) combination; `Art 6(1) the condition is met ...` | A: JUST FALSE when all six points are JUST FALSE ("only if"; marginal reading (a)). B: NOTHING. | A |
+| F6-4 | Art 6(1)(c), (e) with Art 6(3) | A: the points and Art 6(3) are separate functions; a controller may have `Art 6(1)(c)` TRUE and `Art 6(3)` FALSE. B: Art 6(3) is a condition of points (c) and (e) applying. | A; the seat does not combine them, and says so; a caller who wants B asks both |
+| F6-5 | Art 6(4) gate; `Art 6(4) the controller takes into account ...` | A: `the duty does not arise` when the "Where" gate fails (periods ruling (b)). B: NOTHING. | A |
+| F6-6 | Art 6(3) `the basis ... is laid down by Union law or Member State law to which the controller is subject` | A (taken): JUST FALSE when neither is the case, as the provision's own question ("shall be laid down by", split site (i)). B: NOTHING (the text has no "only" and no listed marker). | A; assumed, not ruled |
+| F7-1 | Art 7(4) "When assessing ... utmost account ... inter alia" | Gate: A (taken): JUST FALSE when consent is not being assessed for whether it is freely given, because "when" counts as "where" (periods ruling (b) with the delegated ruling (c) of 2026-11-05). B: NOTHING. Matter: A (taken): when assessing, the function answers only whether the matter is present (JUST TRUE) and otherwise NOTHING ("inter alia"). B: presence makes consent not freely given. | A both ways; the text says only "utmost account" |
+| F7-2 | Art 7(3) third sentence "informed thereof" | A: "thereof" is the right to withdraw. B: also the non-retroactivity of withdrawal. | A |
+| F7-3 | Art 7(3) second sentence | A: JUST FALSE for processing before the withdrawal, NOTHING after it. B: after the withdrawal such processing is unlawful (the text does not say it). | A |
+| F8-1 | Art 8(1) second subparagraph | A (taken): a Member State age below 13, or not lower than 16, is ignored and 16 applies (the proviso "provided that ... not below 13 years"). B: the answer is NOTHING because the text does not say what an invalid age does. Also: "provided that such lower age is not below 13 years" is on the brief's list of markers, so below 13 the function answers JUST FALSE, but the function is named for a grant ("Member States may provide"); reading B is NOTHING below 13 too (grant ruling of 2026-11-12, limit 1). | A; `Art 8(1) a Member State may provide by law for the lower age` answers JUST FALSE below 13 and NOTHING from 16 up; split site (ii) |
+| F8-2 | Art 8(1) "child" | A: the offer "directly to a child" is a plain input, and the age is only compared. B: a child is a person under 18 (not stated). | A |
+| F8-3 | Art 8(1) "lawful" | A: the function answers the Art 8 condition only. B: full lawfulness. | A |
+| F8-4 | Art 8(2) "in such cases" | A (taken): NOTHING outside the cases of Art 8(1) in which consent must be given or authorised: "in such cases" is a scope pointer with no gate word (periods ruling (c)), the same reading as Art 11(2) second sentence (F11-1). B: `the duty does not arise`, reading "in such cases" as a "where" gate (ruling (b)). | A; the regulative form is unchanged |
+| F8-5 | Art 8(1) "Where point (a) of Article 6(1) applies, in relation to the offer of information society services directly to a child" | A (taken): the paragraph's two limits are decided separately, in both the decision function and the helper `... consent of the holder of parental responsibility is needed`: "Where point (a) of Article 6(1) applies" fails: JUST FALSE (periods ruling (b), taken literally); point (a) applies but the services are not offered directly to a child: NOTHING ("in relation to the offer of information society services directly to a child" has no gate word: ruling (c)). Then the age arms: the helper answers JUST TRUE below the age and JUST FALSE at or above it (a failed "Where the child is below the age of 16 years"). B: both limits read together as the scope of the paragraph, NOTHING for either. The two functions share their arms, so a caller never gets different answers to the same facts. | A |
+| F9-1 | Art 9(1) addressee | A: the prohibition is addressed to the controller (assumed; Art 4(7), 5(2) and 24(1) make the controller responsible) and encoded as a SHANT. B: no party is named, so only the decision function is written. | A; both are written, the decision function does not depend on it |
+| F9-2 | Art 9(2) "shall not apply" | A: lifting the prohibition is not lawfulness: the function answers "prohibited". B: a ground is a basis. | A |
+| F9-3 | Art 9(2)(d) disclosure | A: disclosure outside the body with the data subjects' consent is allowed ("not disclosed outside that body without the consent"). B: no disclosure at all. | A |
+| F9-4 | Art 9(3) "may be processed ... when" | A (taken): JUST FALSE when the secrecy condition fails (ruling (b) counts "when" as "where"; point (h) is "subject to the conditions ... in paragraph 3"). B: NOTHING. Split site (ii). The Guide's grant ruling (limit 3) says to keep the answer of the periods ruling and list a "may" gated by "where", "when" or "upon" for a lawyer, which is what is done. | A |
+| F9-5 | Art 9(2)(b), (h), (i), (j): points that list purposes without "only" | A (taken): a failed point answers JUST FALSE by the inference of marginal rule (a) from the chapeau's "if" ("Paragraph 1 shall not apply if one of the following applies"). B: NOTHING, because these lists of purposes are not closed with "only". | A; assumed, not ruled |
+| F11-1 | Art 11(2) "such cases" | A: the cases of paragraph 1 in which the controller is able to demonstrate that it is not in a position to identify. B: the cases of paragraph 1 alone. | A, for the second sentence as well |
+| F24-1 | Art 24(1) second sentence | A: the passive "Those measures shall be reviewed" names no party: decision function only, no regulative rule. B: the controller. | A |
+
+## Jural relations
+
+One row per provision that creates a relation.
+"Right" below is a claim unless it says power, privilege or immunity; the correlative is in the next column.
+A definition, a counting rule and a scope rule are `none`.
+
+| provision | holder | right, privilege, power or immunity | bearer | correlative | L4 rule |
+| --- | --- | --- | --- | --- | --- |
+| Art 2(1), (2); Art 4(1), (2), (6) | | none (scope and definitions) | | | the Art 2 and Art 4 functions |
+| Art 4(7), (8) | | none (definitions) | | | defs `Art 4(7)`, `Art 4(8)` |
+| Art 5(1)(a)-(f) | data subject (and a supervisory authority, an official) | claim that the personal data are processed as the principle says | controller (through Art 5(2) and 24(1): Art 5(1) names no party) | duty | art-5 `Art 5(1)(a)` ... `(f)` |
+| Art 5(2) | data subject | claim that the controller answers for compliance and can show it | controller | duty | art-5 `Art 5(2)` three rules |
+| Art 6(1) | data subject | immunity from lawful processing without one of the six bases | controller | disability (no power to process lawfully without a basis) | art-6 `Art 6(1)` and the six points |
+| Art 6(1) second subparagraph | data subject | immunity against a public authority relying on point (f) in its tasks | public authority as controller | disability | art-6 `Art 6(1)(f)` |
+| Art 6(2) | Member State | power to adapt for points (c), (e) | controllers and data subjects | liability | art-6 `Art 6(2)` |
+| Art 6(3) | none seat-bearing: a duty on the lawmaker | | Union or Member State lawmaker | | art-6b `Art 6(3)` (what it means to a controller: whether the basis is valid) |
+| Art 6(4) | data subject | claim that the compatibility factors are weighed | controller | duty | art-6b `Art 6(4)` |
+| Art 7(1) | data subject | claim that the controller can show consent | controller | duty | art-7 `Art 7(1)` |
+| Art 7(2) first sentence | data subject | claim to a clear request | the person presenting the request (not named; in practice the controller) | duty | art-7 `Art 7(2) the request ...` |
+| Art 7(2) second sentence | data subject | immunity from an infringing part | the other party to the declaration | disability | art-7 `Art 7(2) the part ...` |
+| Art 7(3) first sentence | data subject | power: withdrawing consent ends the basis of the controller's processing under Art 6(1)(a) (L4 encodes it as a MAY rule, its privilege form: no deadline and no consequence for not using it) | controller | liability: the controller is liable to have the basis ended | art-7 `Art 7(3) ... may withdraw` (and the MAY rule) |
+| Art 7(3) second sentence | controller | immunity: withdrawal does not make earlier processing unlawful | data subject | disability | art-7 `Art 7(3) the withdrawal ...` |
+| Art 7(3) third and fourth sentences | data subject | claim to be informed; claim that withdrawal is as easy | controller (not named) | duty | art-7 `Art 7(3) ... informed`, `... as easy` |
+| Art 7(4) | none | an assessing rule | | | art-7 `Art 7(4)` |
+| Art 8(1) | holder of parental responsibility | power to give or authorise a child's consent | controller | liability | art-8 `Art 8(1) the processing of a child's ...` |
+| Art 8(1) second subparagraph | Member State | power to set a lower age (not below 13) | controllers who offer information society services to a child in that Member State, and the child | liability: the age from which the child may consent changes for them | art-8 `Art 8(1) a Member State may ...` |
+| Art 8(2) | child and the holder of parental responsibility | claim that consent is verified | controller | duty | art-8 `Art 8(2)` |
+| Art 8(3) | Member State | immunity of its general contract law from paragraph 1 | none: the disability binds paragraph 1 itself, and the text names no party who is barred | disability of paragraph 1 | art-8 `Art 8(3)` |
+| Art 9(1) | data subject | claim that the named categories are not processed | controller (assumed, F9-1) | duty (prohibition) | art-9 `Art 9(1) ... is prohibited`, the SHANT rule |
+| Art 9(2)(a) | data subject | power to lift the prohibition by explicit consent | controller | liability | art-9 `Art 9(2)(a)` |
+| Art 9(2)(b)-(j) | controller | privilege to process under the ground | data subject | no-right | art-9 `Art 9(2)(b)` ... `(j)` |
+| Art 9(3) | controller | privilege under professional secrecy | data subject | no-right | art-9 `Art 9(3)` |
+| Art 9(4) | Member State | power to add conditions | controllers | liability | art-9 `Art 9(4)` |
+| Art 10 | data subject | claim that criminal-conviction data are processed only under official control or authorised law with safeguards | controller (not named) | duty | art-10 |
+| Art 11(1) | controller | privilege not to keep identifying data for compliance alone | data subject | no-right | art-11 `Art 11(1)` |
+| Art 11(2) first sentence | data subject | claim to be told the controller cannot identify | controller | duty | art-11 `Art 11(2) the controller informs ...` |
+| Art 11(2) second sentence | controller | immunity from Articles 15 to 20 | data subject | disability; the data subject's power to restore them by giving identifying information, the controller's liability | art-11 `Art 11(2) Articles 15 to 20 are disapplied` |
+| Art 24(1) first sentence | data subject (and a supervisory authority) | claim that appropriate technical and organisational measures are implemented | controller (named: "the controller shall implement") | duty | art-24 `Art 24(1) the controller implements ...`, `Art 24(1) the controller must implement ...` |
+| Art 24(1) second sentence | none named | none encoded: the passive "Those measures shall be reviewed and updated where necessary" names no party (fork F24-1) | none named | none | art-24 `Art 24(1) the measures are reviewed ...` (a decision function only, no regulative rule) |
+| Art 24(2) | data subject (and a supervisory authority) | claim that data protection policies are implemented where proportionate | controller (named: "by the controller") | duty | art-24 `Art 24(2) ...` (two) |
+| Art 24(3) | controller | privilege to use adherence to an approved code of conduct or certification mechanism as an element by which to demonstrate compliance | whoever assesses the controller's compliance (the text names no one) | no-right to refuse to take the adherence into account as an element (the text does not say it is conclusive) | art-24 `Art 24(3)` |
+
+## Marginal readings for a lawyer
+
+Rule (a): a failed "if" counts as the text's no, clause by clause, within the provision that holds the "if" (an inference).
+Rule (b): a prohibition or grant limited by its own wording does not count as no, so the answer is NOTHING.
+Periods ruling (b) and (c) of 2026-11-05 (the Guide, which governs the brief where they differ): a failed "where" gives JUST FALSE, and "when", "upon" and "whenever" count as "where".
+
+**Branches that rest on (a) or on a failed "where" or "when" (JUST FALSE, or `the duty does not arise`), other reading: NOTHING.**
+- Art 6(1)(a) to (f): each failed point answers JUST FALSE by an inference from "only if ... applies"; Art 6(1) when all six are JUST FALSE.
+- Art 9(2)(a) to (j): each failed ground answers JUST FALSE by an inference from the chapeau's "if"; Art 9(2) when all ten are JUST FALSE (for points (b), (h), (i), (j), which list purposes without "only", see fork F9-5).
+- Art 7(4): when consent is not being assessed for whether it is freely given, JUST FALSE ("When assessing", a "when" gate; fork F7-1).
+- Art 8(1) decision function and helper: when point (a) of Article 6(1) does not apply, JUST FALSE ("Where point (a) of Article 6(1) applies", a failed "where"; fork F8-5).
+- Art 8(1) helper: at or above the age of consent, JUST FALSE ("Where the child is below the age of 16 years", a failed "where"; fork F8-5).
+- `the duty does not arise` for a failed gate: Art 6(4), 7(1), 7(2) first sentence, 11(2) first sentence (two gates), 24(1) second sentence, 24(2).
+- Art 5(1)(a)-(f), 5(2), 6(3), 7(3) third and fourth sentences, 24(1) first sentence: an unmet "shall" answers JUST FALSE (the provision's own question, split site (i)).
+
+**Branches that rest on (b) (NOTHING), other reading: JUST FALSE.**
+Art 2(1) outside both limbs; Art 2(2)(a) to (d) when the exception does not hold; Art 4(7) alone or jointly for a body that does not determine; Art 5(1)(d) second limb when no data are inaccurate (F5-2); Art 5(1)(e) "may be stored for longer periods insofar as ..." when the exemption is not met (F5-3); Art 5(2) `the body is responsible` for a non-controller; Art 6(2), 6(3) (the purpose, the basis and the matters for the other bases), Art 6(3) matters outside the list; Art 7(2) second sentence for a non-infringing part; Art 7(3) first sentence with no consent, second sentence after the withdrawal and third sentence before consent; Art 7(4) when assessing and the factor is absent; Art 8(1) decision function and helper when point (a) applies but the services are not offered directly to a child (F8-5), and a Member State age of 16 or more; Art 8(2) outside "such cases" (F8-4); Art 8(3) for a rule outside general contract law; Art 9(1) for data that are not of a named category and Art 9(3), 9(4) outside their grants; Art 10 for other data and other registers; Art 11(1) when the purposes require identification; Art 11(2) second sentence outside "such cases"; Art 24(3) with no adherence.
+
+**Branches that rest on a closing word read as no (JUST FALSE), other reading: NOTHING (the three split sites of type (ii) that answer JUST FALSE, one of them in part).**
+Art 5(1)(e) purpose arm ("solely" closes the list of purposes: fork F5-3); Art 8(1) "provided that ... not below 13 years" (the function is named for a grant: fork F8-1); Art 9(3) "when" (fork F9-4).
+
+## Split sites (your part)
+
+Two questions the Guide leaves to me, decided site by site on the text's own words.
+
+**(i) An unmet element of an infringement: JUST FALSE or NOTHING?**
+34 sites: 16 have a NOTHING branch, 21 have a JUST FALSE branch or a `the duty does not arise` branch (15 `JUST FALSE`, 6 `the duty does not arise`), and 3 have one of each (Art 7(3) third sentence, Art 10 first sentence, Art 10 second sentence); 16 + 21 - 3 = 34.
+NOTHING (the text limits the prohibition or duty to the case, and the element is outside it; other reading JUST FALSE), 16: Art 2(2)(a), (b), (c), (d) (four sites); Art 5(1)(d) second limb (no inaccurate data; F5-2); Art 5(2) `the body is responsible`; Art 7(2) second sentence; Art 7(3) second sentence; Art 7(3) third sentence (no consent yet); Art 8(2) (outside "such cases"; F8-4); Art 8(3); Art 9(1) for a category it does not name; Art 10 first sentence; Art 10 second sentence; Art 11(1); Art 11(2) second sentence.
+JUST FALSE (the element is part of a "shall" or "only" requirement whose gate holds; other reading NOTHING), 15: Art 5(1)(a), (b), (c), (d) first limb, (e), (f) (six); Art 5(2) able to demonstrate; Art 6(3) basis; Art 6(3) purpose; Art 6(3) public-interest law; Art 7(3) third sentence (consent given, not informed); Art 7(3) fourth sentence; Art 10 first sentence (gate holds, no route met); Art 10 second sentence (register not under official control); Art 24(1) first sentence.
+`the duty does not arise` (a "where" or "if" gate of a duty fails: the periods ruling (b) answer; other reading NOTHING), 6: Art 6(4); Art 7(1); Art 7(2) first sentence; Art 11(2) first sentence (two gates, one site); Art 24(1) second sentence; Art 24(2).
+Art 5(1)(d) second limb and Art 8(2) were `the duty does not arise` before the fix round and are NOTHING now: neither clause has a gate word.
+
+**(ii) A grant or "may" gated by "where", "when", "upon", "insofar as", "provided that":**
+8 sites: 3 have a JUST FALSE branch and 7 have a NOTHING branch; two sites (Art 5(1)(e) and Art 8(1)) have both, so 3 + 7 - 2 = 8.
+JUST FALSE, other reading NOTHING, 3: Art 5(1)(e) "may be stored for longer periods" when the purpose is not one of the four ("solely" closes the list; F5-3); Art 8(1) "may provide ... provided that ... not below 13" (below 13; F8-1); Art 9(3) "may be processed ... when" (F9-4).
+NOTHING, other reading JUST FALSE, 7: Art 5(1)(e) when Article 89(1) is not met or the measures are not implemented ("in accordance with Article 89(1) subject to implementation of ...", neither "insofar as" nor "subject to" on the brief's list; F5-3); Art 6(2) (scope: points (c), (e)); Art 6(3) matters ("inter alia", list not closed); Art 7(3) first sentence (no consent to withdraw); Art 8(1) for an age of 16 or more ("a lower age" is the scope); Art 9(4) (scope: genetic, biometric, health); Art 24(3) (no adherence).
+The Art 5(1)(e) site is counted once and answers both; Art 8(1) also answers both (JUST FALSE below 13, NOTHING from 16 up), and before this change it was counted only as a JUST FALSE site.
+Art 7(4) "When assessing" is a gate on a rule that is neither a grant nor an infringement, so it is in neither count; it answers JUST FALSE when the gate fails and is listed under "Marginal readings" (fork F7-1).
+
+## Rules with no breach path (your part)
+
+A `MUST` with no time limit and no consequence stated can only stand or be fulfilled; no `#TRACE` can show it breached, and no deadline or consequence has been invented.
+Each is traced to FULFILLED (the party does the act) and to the standing obligation (`WAITUNTIL 1000`); There are 44 traces in 14 files (20 in layer-1 modules, 24 in test files).
+Each trace's result was read from the diagnostics (`l4 run` prints each as an `eval/result` diagnostic) and compared with its comment; the permission trace prints the open permission.
+
+| rule | provision | what the traces give |
+| --- | --- | --- |
+| `Art 5(2) the controller must be able to demonstrate compliance with Art 5(1)` | Art 5(2) | FULFILLED; standing |
+| `Art 6(4) the controller must take into account the matters (a) to (e)` | Art 6(4) | FULFILLED; standing; FULFILLED when the gate fails |
+| `Art 7(1) the controller must be able to demonstrate that the data subject has consented` | Art 7(1) | FULFILLED; standing; FULFILLED when the processing is not based on consent |
+| `Art 8(2) the controller must make reasonable efforts to verify` | Art 8(2) | FULFILLED; standing; FULFILLED when the gate fails |
+| `Art 11(2) the controller must inform the data subject accordingly` | Art 11(2) | FULFILLED; standing; FULFILLED when the duty does not arise |
+| `Art 24(1) the controller must implement appropriate technical and organisational measures` | Art 24(1) | FULFILLED; standing |
+| `Art 24(2) the controller must implement appropriate data protection policies where proportionate` | Art 24(2) | FULFILLED; standing; FULFILLED when not proportionate |
+
+Not listed because it is a permission, which cannot be breached: `Art 7(3) the data subject may withdraw consent` (FULFILLED when the data subject withdraws; `PARTY data subject MAY ... HENCE FULFILLED`, the open permission, when it is not used).
+**A rule with a breach path:** `Art 9(1) the controller shall not process personal data of a category named in paragraph 1` is a `SHANT`; the act is the breach, with no deadline needed.
+Its trace reaches `DEONTIC BREACHED BY controller` when the controller processes while the prohibition applies, stays standing and unbroken otherwise, and is FULFILLED when a ground applies (P1-tests-art-9.l4).
+
+## What the stable binary does not accept
+
+Binary 1.6.112 (main), measured on 2026-11-26 with probes written for this round (the build `unstable` was not run by me).
+Silent (the answer is wrong and nothing is reported):
+- A one-line `NOT a OR b` reads as `NOT (a OR b)` with no error: for `a`, `b` = FALSE, TRUE it answers FALSE, where `(NOT a) OR b` would answer TRUE (found first by a failing test of Art 9(2)(d)).
+  Every `NOT` in P1's files is parenthesised.
+- A `#TRACE` is not counted by `check.sh`: each result was read from the diagnostics.
+Loud (the binary stops with an error):
+- A nested `IF ... THEN ... ELSE IF ... THEN ...` fails with `incorrect indentation (got 10, should be greater than 10)` when the inner `THEN` is on its own line at the column of the outer `THEN` and `ELSE IF`.
+  The same nesting is accepted when the inner `THEN` is indented under the inner `IF`, when `ELSE IF ... THEN ... ELSE ...` is on one line, and with `BRANCH`; P1 uses `BRANCH`.
+- A `DEONTIC` result cannot be asserted; the regulative rules are traced and the gates asserted.
+Not a defect (measured, and I had said otherwise): `NOT x EQUALS y` parses with no error and reads as `NOT (x EQUALS y)`, in four spellings (on its own, after a multi-line `AND`, in `IF NOT x EQUALS y THEN ...` on one line, and with enum constructors); it is not a parse error.
+P1 writes `NOT (x EQUALS y)` anyway.
+Not tried, because the dialect table says main rejects them: `REFUSE`, `#ASSERT REFUSED`, `BECAUSE` outside `LEST BREACH` (I used `LEST BREACH BY controller BECAUSE "..."`, which main accepts), a section `GIVEN`, `TYPICALLY`, sets, an opaque `DECLARE`, `YMD` (the dates in the tests are `Date day month year`), `@lang`, `@nonexhaustive`, an input named in an action.
+Where a skill describes a construct main rejects, the binary governs, and P1 did not use the construct.
+
+## What check.sh prints
+
+The lead's final run of the closing pass, 2026-11-26, from this folder, target main: the unstable build `unstable-20261125-82a76fe` as `L4`, the main build 1.6.112 (`~/.cache/l4-main/112/l4`) as `L4_MAIN`, `JL4_LIBRARY_PATH` unset, exit status 0.
+The first column group is the unstable build, the second the main build.
+
+```
+target: main. Each module is run with your l4 and with the main build below; the main columns must match.
+main build: 1.6.112 (main, e4f4bf3, 2026-11-18)
+module                                    errors satisfied  failed  refused  expected | errors satisfied  failed  refused  main
+gdpr-core.l4                                   0         0       0        0         0 |      0         0       0        0  same
+gdpr-definitions-tests.l4                      0       121       0        0         0 |      0       121       0        0  same
+gdpr-definitions.l4                            0         0       0        0         0 |      0         0       0        0  same
+P1-art-10.l4                                   0         0       0        0         0 |      0         0       0        0  same
+P1-art-11.l4                                   0         0       0        0         0 |      0         0       0        0  same
+P1-art-2.l4                                    0         0       0        0         0 |      0         0       0        0  same
+P1-art-24.l4                                   0         0       0        0         0 |      0         0       0        0  same
+P1-art-5.l4                                    0         0       0        0         0 |      0         0       0        0  same
+P1-art-6.l4                                    0         0       0        0         0 |      0         0       0        0  same
+P1-art-6b.l4                                   0         0       0        0         0 |      0         0       0        0  same
+P1-art-7.l4                                    0         0       0        0         0 |      0         0       0        0  same
+P1-art-8.l4                                    0         0       0        0         0 |      0         0       0        0  same
+P1-art-9.l4                                    0         0       0        0         0 |      0         0       0        0  same
+P1-cases-mirror.l4                             0        53       0        0         0 |      0        53       0        0  same
+P1-cases-seat-controller.l4                    0       197       0        0         0 |      0       197       0        0  same
+P1-cases-seat-subject.l4                       0       117       0        0         0 |      0       117       0        0  same
+P1-seat-controller.l4                          0         0       0        0         0 |      0         0       0        0  same
+P1-seat-subject.l4                             0         0       0        0         0 |      0         0       0        0  same
+P1-tests-art-10.l4                             0        11       0        0         0 |      0        11       0        0  same
+P1-tests-art-11.l4                             0        14       0        0         0 |      0        14       0        0  same
+P1-tests-art-2.l4                              0        38       0        0         0 |      0        38       0        0  same
+P1-tests-art-24.l4                             0        18       0        0         0 |      0        18       0        0  same
+P1-tests-art-5.l4                              0        70       0        0         0 |      0        70       0        0  same
+P1-tests-art-6.l4                              0        41       0        0         0 |      0        41       0        0  same
+P1-tests-art-6b.l4                             0        37       0        0         0 |      0        37       0        0  same
+P1-tests-art-7.l4                              0        30       0        0         0 |      0        30       0        0  same
+P1-tests-art-8.l4                              0        59       0        0         0 |      0        59       0        0  same
+P1-tests-art-9.l4                              0       118       0        0         0 |      0       118       0        0  same
+tests-independent-open.l4                      4         0       4        0         4 |      4         0       4        0  same
+tests-independent.l4                           0       277       0        0         0 |      0       277       0        0  same
+TOTAL (30 modules)                             4      1201       4        0           |      4      1201       4        0
+(a failed assertion is also an error; any other error, or any refused assertion, makes the run red)
+(target main: every module has the same four counts on the main build. That rules out a module main rejects and a difference an assertion shows; it does not see a different TRACE outcome, or any difference no assertion exercises)
+```
+
+- P1's own 28 modules (every file whose name begins `gdpr-` or `P1-`): 0 errors, 924 assertions satisfied, 0 failed, 0 refused, on both builds; `grep -c '^#ASSERT'` over those files gives 924.
+- The other two modules are the independent test author's: `tests-independent.l4` (277 written, 277 satisfied) and `tests-independent-open.l4` (4 written, 4 failed by design, listed in `check.sh`'s `expected_failed` with the count 4; its 4 errors are those 4 failed assertions).
+  All 1,205 `#ASSERT` lines in the folder: 1,201 satisfied plus 4 expected failed; 0 refused; every module reads the same on both builds.
+- `srcrefs.py check --refs` and `--strict` over every `.l4` file in this folder: `118 src: lines, 79 runs, 87 locators, 0 problems`, both times.
+- `check.sh` counts no trace.
+  The lead ran all 44 `#TRACE` directives (20 in layer-1 modules, 24 in test files) on both builds and read each result against its comment: all 44 comments agree with the main build, and the two builds give the same outcome for all 44 (the two `LEST BREACH` residuals print their `BREACH BY ...` with different brackets on the unstable build, the same obligation).
+- The `Warning | [Import Resolution]` lines `l4` prints on this machine are not diagnostics of the modules and `check.sh` does not count them (see "What is encoded").
+- There is no `encoding.json` in this deposit, so the expected-failed count is recorded here and in `check.sh` only.
+
+## Independent test pass and adversarial review (closing pass, 2026-11-26)
+
+Both ran after the build and were not seen by the builder before it finished.
+Neither is a lawyer: the status of the encoding stays `draft`, not reviewed by a lawyer.
+
+**Independent test author (Sonnet).**
+It wrote 276 questions with their answers and the quoted words (`answers.md`, in the lead's scratch folder, not deposited) from the text of Articles 2(1)-(2), 4(1), (2), (6) to (8), 5 to 11 and 24 and the brief's seat sections before opening the deposit, then asserted them through the exported seat questions (and a few layer-1 functions) in `tests-independent.l4`.
+First run on the main build: 281 assertions, 271 satisfied, 10 failed, 0 refused, 0 errors; 15 questions could not be asked through any function (listed in the file as `UNTESTABLE`).
+The lead triaged the ten failures against the text:
+- **The encoder's error, fixed (3):** Q83 on the grant function of Art 5(1)(e) (a gate that is not on the brief's list answered JUST FALSE; now NOTHING where Article 89(1) or the measures fail, JUST FALSE where the purpose is outside the four); Q179 on Art 8(1) (a failed "Where point (a) of Article 6(1) applies" is JUST FALSE, ruling (b), F8-5); Q184 on Art 8(2) (a scope pointer "in such cases" with no gate word is NOTHING, ruling (c), as the encoding already read it in Art 11(2); F8-4).
+- **The author's error, expected value corrected with a comment in the file (3):** Q83 on the seat question of Art 5(1)(e) (the first limb is breached, so JUST FALSE); Q240 on Art 9(3) (the Guide's grant ruling limit 3 keeps JUST FALSE for a "may" gated by "when", F9-4); Q263 on Art 11(2) second sentence ("In such cases" is a scope limit, NOTHING, F11-1).
+- **Genuinely open (4), moved to `tests-independent-open.l4` and expected to fail:** Q57 (F4-2), Q125 (F6-6), Q178 (F8-1), Q232 (F9-5).
+  Each asserts the reading the encoding does not take, with the encoding's reading in the fork register (assumed, not ruled).
+After the fix round: `tests-independent.l4` 277 satisfied, 0 failed; `tests-independent-open.l4` 4 failed as expected.
+The author's seat expectations were also adapted where the fix round renamed the seat-answer constructors and made the Art 8(1) seat question MAYBE BOOLEAN (comment in the file).
+
+**Adversarial review (Opus), four lenses.**
+19 findings: 5 of rank 2 (a branch that answers JUST FALSE where the brief's rule gives NOTHING, or the reverse), 4 of rank 3, 7 of rank 4, 3 of rank 5; no finding of rank 1 (no branch answers the opposite of the text).
+The lead checked each against the text before routing it.
+- **Fixed (14):** findings 1 to 11, 13, 14 and 16 (Art 5(1)(e); Art 7(4) failed "When" gate; the Art 8(1) helper and its seat questions; Art 5(1)(d) second limb; Art 8(2); the Art 7(3) trace comments; the "declared irrelevant" statement about Art 6(1)(f); the stable-binary claims; the constructors without a provision label; the FALSE-kind tags that named "a flat shall"; PLAN's Art 36(5) which is Art 35(10) and its "every function MAYBE BOOLEAN"; the Jural relations bearers; F5-4).
+- **Fixed in part (2):** finding 12 (coverage rows now split for Art 6(3)(a), (b) and Art 6(4)(a) to (e)); finding 19 (the "and 24" comment, the 'means' tags and the "▼C1" statement fixed).
+- **Recorded, not changed (1):** finding 15 (Art 9(2)(h) takes the Art 9(3) conditions as a plain input; Open questions).
+- **Left (2 and the rest of 19):** finding 17 (the 166-quote count reproduces only with quote glyphs normalised and with "..." gaps read as elisions) and finding 18 (25 of 87 `@ref` locators span sibling points; 8 regulative forms have no quote lines; `srcrefs.py` accepts both); of finding 19, 37 of the 121 definitions-test assertions test no rule (`NOT (X EQUALS Y)`, `elem`), left as written.
+- **Observation, not a finding:** `inputs/eu-gdpr-2016-679.txt` (the as-published text) has changed since the builder read it (1,255 lines and another sha256 than `SOURCES.md` gives, 1,252 lines); no line of the range is affected; F2-3's footnote line was updated from 1237 to 1240.
+- The seat, seat-cases and mirror files were generated by a script from the layer-1 signatures, so their expected values cannot be traced from this folder; the refuter asserted the 46 expected values commented in the mirror file (before the fix round added 7 mirror cases) independently and all held.
+
+## Findings
+
+- **A silent misreading of `NOT`.**
+  `(NOT a OR b)` on one line, in my first draft of Art 9(2)(d), made a correct test fail; the test was the instrument that found it.
+  After the fix I parenthesised every `NOT` in all files.
+- **No expected value was edited to match the code's output.**
+  Every assertion passed on its first run except the one above, where the code was the defect.
+  In the fix round the code changed first, on a provision and a ruling that the comment above each changed assertion names (A1 to A5 of the lead's list).
+  No P1 test is meant to fail; every P1 module expects 0 failures; the only entry in `check.sh`'s `expected_failed` is `tests-independent-open.l4`, 4 (the independent author's open readings).
+- **The text findings, each asserted:**
+  Article 6(1)(c) and (e) do not by themselves require the legal basis of Article 6(3), though Article 6(3) says that basis "shall be laid down" (F6-4).
+  Article 8(1) says a child's processing "shall be lawful where the child is at least 16", with no "only if" for those at or above the age; below the age it says "only if and to the extent".
+  Article 9(2) lifts only the prohibition of paragraph 1; it does not say that the processing is lawful.
+  Article 11(2) second sentence disapplies Articles 15 to 20 "in such cases", a phrase whose referent is the first sentence's pair of conditions (F11-1).
+  Article 7(3) gives the right to withdraw "at any time"; the function is TRUE whatever the dates (tested at 0 days and at eight years).
+- **Four open readings asserted by the independent test author** (`tests-independent-open.l4`, expected to fail, expected count 4 in `check.sh`): Q57 (F4-2: a body named by law that decides nothing), Q125 (F6-6: Art 6(3) basis with neither law), Q178 (F8-1: a Member State age of 12 with the function named for a grant), Q232 (F9-5: Art 9(2)(h) with purposes listed without "only"); the encoding takes reading A in each, and the fork register gives reading B.
+- **Line ranges.**
+  My line ranges leave three heading blocks that no range assigns: lines 74-75 (Chapter II), 142-145 (Chapter III, Section 1) and 304-307 (Chapter IV, Section 1); I recorded 74-75 and 304-307 as inert headings of my own provisions and left 142-145 to P2.
+
+## Open questions
+
+For a lawyer.
+- Does a data subject's consent to a processing "for one or more specific purposes" cover a processing for a purpose compatible with those purposes (Art 6(1)(a) with Art 6(4))? The function asks `the processing is for one of those purposes` as a plain fact.
+- Is a body named by Union or Member State law a controller when it determines nothing (F4-2)?
+- Is "can be identified" measured by the controller's means or anyone's (F4-1)?
+- Does Article 6(3) condition Article 6(1)(c) and (e), or only direct the lawmaker (F6-4)?
+- Do the ten grounds of Article 9(2) each also need a lawful basis of Article 6(1)? (The text of Article 9 does not say; the encoding answers only "prohibited".)
+- Are the sites of type (ii) JUST FALSE or NOTHING when their closing word fails: Art 5(1)(e) (JUST FALSE where "solely" closes the list of purposes, NOTHING where "insofar as ... subject to" fails), Art 8(1) "provided that" and Art 9(3) "when" (JUST FALSE taken)?
+- Is the age of a "child" for Art 8 and Art 6(1)(f) fixed anywhere in the sources? (None found; the age is a plain input.)
+- Art 9(2)(h) takes "the conditions and safeguards referred to in paragraph 3 are met" as a plain input, while Art 9(3) is computed in the same module (P1-art-9.l4), so a caller can give inputs on which the two disagree; the controller seat asks both questions separately.
+- Are the clauses that I read as a scope limit with no gate word (Art 5(1)(d) second limb, Art 8(2) "in such cases", Art 8(1) "in relation to the offer of information society services directly to a child") scope limits (NOTHING) or "where" gates (JUST FALSE or `the duty does not arise`), and is Art 8(1) "Where point (a) of Article 6(1) applies" a "where" gate (JUST FALSE, taken)? See F5-2, F8-4, F8-5.
+
+## Provenance of the other files
+
+`fetch-main-l4.sh` and `srcrefs.py` were given and are unchanged. `check.sh` was given; the closing pass added one line to its expected-failed table (4 for `tests-independent-open.l4`).
+`NEEDS-CORE.md` is not written: P1 is the keel, so no type is missing from it; K2 and later parts record their own needs.
