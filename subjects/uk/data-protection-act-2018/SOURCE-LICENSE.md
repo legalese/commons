@@ -1,6 +1,6 @@
 # Source license
 
-The quoted text of the **Data Protection Act 2018** is sourced from [legislation.gov.uk](https://www.legislation.gov.uk/), published by The National Archives.
+The quoted text of the **Data Protection Act 2018** is sourced from [legislation.gov.uk](https://www.legislation.gov.uk/); the file's `dc:publisher` reads "Statute Law Database".
 
 - **Copyright owner**: Crown copyright and database right (the site footer reads "© Crown and database right").
 - **License**: [Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/).
@@ -18,7 +18,7 @@ https://www.legislation.gov.uk/ukpga/2018/12/data.xml
 (point in time (dct:valid) of the version served: 2026-09-30; dc:modified 2026-09-30).
 The XML as saved is deposited unchanged beside it, `registers/source-bundle/ukpga-2018-12-data.xml` (5,919,278 bytes, sha256 `712a0ee88e66acd8a9a4d1fdf25db58e51f51433ae8ac7921d178f54cb7a1d6d`).
 
-The text is the in-force text at 2026-09-30 only, and is not the amended text where the file records an amendment as unapplied.
+The text is the in-force text at 2026-09-30 only; where the file records an amendment as unapplied, the text does not carry it.
 How repeals, the amendment notes (Commentary Type F and the others), the unapplied effects (ukm:UnappliedEffect: 9 in this file) and extents are treated is in `registers/source-bundle/ukpga-2018-12.meta.json` (keys `converter` and `text_caveat`).
 
 The commons converter that made the earlier UK deposits dropped tables, list enumerators, the numbers of headingless Schedule paragraphs, the long title and the date of enactment (checked on `uk/income-tax-act-2007`, as recorded in `subjects/uk/fraud-act-2006/SOURCE-LICENSE.md`).
@@ -28,8 +28,8 @@ Editorial commentary, the contents list and explanatory notes are left out, as i
 ## How the XML was obtained
 
 The site answered an automated request with an AWS WAF challenge on 2026-11-26.
-A plain request for https://www.legislation.gov.uk/robots.txt at 2026-11-26T03:52:21Z was answered HTTP 202 with an empty body and the header `x-amzn-waf-action: challenge`; the automated run stopped there and made no further request, and nothing was done to pass the challenge.
-The XML file was therefore saved by hand, in a web browser, by the repository maintainer on 2026-11-26, from
+A plain request for https://www.legislation.gov.uk/robots.txt at 2026-11-26T03:52:21Z was answered HTTP 202 with an empty body and the header `x-amzn-waf-action: challenge`; the retrieval log notes that the run stopped, with no further requests.
+The XML file was therefore saved by hand, in a web browser, on 2026-11-26, from
 https://www.legislation.gov.uk/ukpga/2018/12/data.xml,
 and the retrieval log records the file at 2026-11-26T04:16:10Z, with the note that it was extracted from the saved page's web archive (its main resource); that time is the `retrieved_utc` of the meta.json, and the time of the saving itself is not recorded.
 The bytes deposited are the bytes extracted, 5,919,278 bytes, sha256 `712a0ee88e66acd8a9a4d1fdf25db58e51f51433ae8ac7921d178f54cb7a1d6d`.
@@ -57,7 +57,7 @@ The OGL page's list of what the licence does not cover includes "third party rig
 
 The site's statement says the site "contains content derived from EUR-Lex"; it does not say which pages.
 The XML of this Act contains no mention of EUR-Lex or europa.eu: a case-insensitive search for `eur-lex` or `europa.eu` over the file, line by line, matched 0 of its 676 lines (0 occurrences), the same method as the Fraud Act 2006 deposit's.
-The XML marks none of this Act's content as derived from EUR-Lex, so the EUR-Lex sentence is recorded here for completeness and not as applying to this Act.
+The XML marks none of this Act's content as derived from EUR-Lex; the site's statement does not say which pages it covers, and nothing is concluded here from that about this Act.
 
 ## The encoding
 

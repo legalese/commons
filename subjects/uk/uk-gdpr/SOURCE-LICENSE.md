@@ -1,15 +1,17 @@
 # Source license
 
-The quoted text of the **UK General Data Protection Regulation** (Regulation (EU) 2016/679, as shown on [legislation.gov.uk](https://www.legislation.gov.uk/) with the added title "(United Kingdom General Data Protection Regulation)") is sourced from that site, published by The National Archives.
+The quoted text of the **UK General Data Protection Regulation** (Regulation (EU) 2016/679, as shown on [legislation.gov.uk](https://www.legislation.gov.uk/) with the added title "(United Kingdom General Data Protection Regulation)") is sourced from that site; the file's `dc:publisher` reads "King's Printer of Acts of Parliament".
 
 - **Copyright owner**: Crown copyright and database right (the site footer reads "© Crown and database right").
-- **License**: [Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/), as the site states it for its content in general; for the Regulation's EU-derived base text the site also states a second term, and this deposit does not decide which governs it (see "What the XML shows about EUR-Lex").
+- **License**: [Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/), as the site states it for its content in general; the site's footer also says that it contains EUR-Lex-derived content reused under Commission Decision 2011/833/EU, and this deposit does not decide which of the two statements governs the Regulation's EU-derived base text (see "What the XML shows about EUR-Lex").
 - **Terms checked**: terms as recorded at 2026-10-21 in `subjects/uk/fraud-act-2006/SOURCE-LICENSE.md` (the footer of https://www.legislation.gov.uk/help, read that day); the OGL v3.0 page itself was re-read on 2026-11-26. No page of legislation.gov.uk was requested for these terms on 2026-11-26 (see "How the XML was obtained").
 - **Source**: https://www.legislation.gov.uk/eur/2016/679
 
 ## Required attribution
 
 Contains public sector information licensed under the Open Government Licence v3.0.
+
+That is the attribution the OGL prescribes where the Information Provider names none; for the Regulation's EU-derived base text see "What the XML shows about EUR-Lex".
 
 ## Status of this deposit
 
@@ -18,7 +20,7 @@ https://www.legislation.gov.uk/eur/2016/679/data.xml
 (point in time (dct:valid) of the version served: 2026-09-30; dc:modified 2026-11-24).
 The XML as saved is deposited unchanged beside it, `registers/source-bundle/eur-2016-679-data.xml` (1,675,337 bytes, sha256 `027f41d0cef381b12cf5abcbf63b065cd639949329d6d7bbf9a845f6f7fe6183`).
 
-The text is the in-force text at 2026-09-30 only, and is not the amended text where the file records an amendment as unapplied.
+The text is the in-force text at 2026-09-30 only; where the file records an amendment as unapplied, the text does not carry it, with one exception named in `text_caveat` (Art. 57(3)).
 How repeals, the amendment notes (Commentary Type F and the others), the unapplied effects (ukm:UnappliedEffect: 5 in this file), extents and, for this Regulation, the recitals and footnotes are treated is in `registers/source-bundle/eur-2016-679.meta.json` (keys `converter` and `text_caveat`).
 
 The commons converter that made the earlier UK deposits dropped tables, list enumerators, the numbers of headingless Schedule paragraphs, the long title and the date of enactment (checked on `uk/income-tax-act-2007`, as recorded in `subjects/uk/fraud-act-2006/SOURCE-LICENSE.md`).
@@ -29,8 +31,8 @@ Editorial commentary, the contents list and explanatory notes are left out, as i
 ## How the XML was obtained
 
 The site answered an automated request with an AWS WAF challenge on 2026-11-26.
-A plain request for https://www.legislation.gov.uk/robots.txt at 2026-11-26T03:52:21Z was answered HTTP 202 with an empty body and the header `x-amzn-waf-action: challenge`; the automated run stopped there and made no further request, and nothing was done to pass the challenge.
-The XML file was therefore saved by hand, in a web browser, by the repository maintainer on 2026-11-26, from
+A plain request for https://www.legislation.gov.uk/robots.txt at 2026-11-26T03:52:21Z was answered HTTP 202 with an empty body and the header `x-amzn-waf-action: challenge`; the retrieval log notes that the run stopped, with no further requests.
+The XML file was therefore saved by hand, in a web browser, on 2026-11-26, from
 https://www.legislation.gov.uk/eur/2016/679/data.xml,
 and the retrieval log records the file at 2026-11-26T04:16:10Z, with the note that it was extracted from the saved page's web archive (its main resource); that time is the `retrieved_utc` of the meta.json, and the time of the saving itself is not recorded.
 The bytes deposited are the bytes extracted, 1,675,337 bytes, sha256 `027f41d0cef381b12cf5abcbf63b065cd639949329d6d7bbf9a845f6f7fe6183`.
@@ -57,15 +59,15 @@ The OGL page's list of what the licence does not cover includes "third party rig
 ## What the XML shows about EUR-Lex
 
 The site's statement says the site "contains content derived from EUR-Lex"; it does not say which pages.
-The XML of this Regulation does mention EUR-Lex and europa.eu: 42 of its 465 lines match (case-insensitive search for `eur-lex` or `europa.eu`), 82 occurrences in all.
-They are in three places and in no text node: not one text node of the Regulation or of its footnotes contains either string.
+The XML of this Regulation does mention EUR-Lex and europa.eu: 42 of its 465 lines match (case-insensitive search for `eur-lex` or `europa.eu`), 76 occurrences of the two strings in all.
+They are in three places, none of them the Regulation's own words: not one text node of the Regulation's body or of its footnotes contains either string.
 
 - the `dc:source` metadata element, which reads `https://webarchive.nationalarchives.gov.uk/eu-exit/https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02016R0679-20160504`;
-- the `ukm:EURLexMetadata` block, with the EUR-Lex identifiers (CELEX, ELI, cellar) and the dates the EUR-Lex text was modified (2019-04-18T16:51:42Z) and extracted (2019-04-18T19:52:48Z);
+- the 38 `VALUE` text nodes of the `ukm:EURLexMetadata` block, which hold identifiers of the EUR-Lex record as URIs on europa.eu (cellar, celex, eli, oj and similar); beside the block, `ukm:EURLexModified` (2019-04-18T16:51:42Z) and `ukm:EURLexExtracted` (2019-04-18T19:52:48Z) give the dates the EUR-Lex text was modified and extracted;
 - the `URI` attributes of 18 `Citation` elements (the references to Official Journal pages), which point into the National Archives' web archive of EUR-Lex.
 
-So the XML itself marks the Regulation's base text as derived from EUR-Lex.
-The UK amendments are marked in the text as Addition and Substitution elements (1,042 and 510 of them) and were made by UK instruments; that the EUR-Lex statement reaches the base text and not those amendments is an inference from this markup, not something the site says.
+The `dc:source` element names a EUR-Lex consolidated text as the source of the document, and the XML carries EUR-Lex's own metadata block; this deposit reads that as marking the Regulation's base text as EUR-Lex-derived, which is an inference from the markup and not a statement by the site.
+The UK amendments are marked in the text as Addition and Substitution elements (1,042 and 510 of them) and were made by UK instruments; that the EUR-Lex statement reaches the base text and not those amendments is a further inference, not something the site says.
 
 Whether Commission Decision 2011/833/EU reaches an act of the European Parliament and of the Council is not decided here.
 `subjects/eu/gdpr-2016-679/SOURCE-LICENSE.md` records that question as undetermined for the same Regulation as the Publications Office publishes it, and quotes the Decision's Articles 2, 4 and 6 as read on 2026-11-26; nothing is added to it here.
