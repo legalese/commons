@@ -21,7 +21,269 @@ Each of the 205 comments begins `-- no LEST:`, so `grep -rn -e '-- no LEST:' .` 
 The comment says that the section states no time for the duty, so that a breach needs a standard of time from outside the section, and it names the general one: the Interpretation Act 1965 s 52, under which a thing for which no time is prescribed "is to be done with all convenient speed".
 It then carries the dropped `LEST` clause word for word (`dropped clause: LEST BREACH BY … BECAUSE "…"`), copied from the commit before the drop and checked against it byte for byte; for the 7 clauses whose closing parenthesis moved to the line above, the comment carries the clause without it.
 Not every site wants that standard: a duty that must hold throughout ("keep a register", "act honestly at all times") is broken at any moment it stops holding, not when a period runs out, and L4 has no form for such a duty yet.
-Sorting the 205 into duties to do a thing once, which can take a `WITHIN` whose length is found under s 52, and duties that must hold throughout, which stay as they are, is a later pass (decided by Claude on 2026-11-26, assumed, not ruled).
+Sorting the 205 into duties to do a thing once, which can take a `WITHIN` whose length is found under s 52, and duties that must hold throughout, which stay as they are, is done in the next section (decided by Claude on 2026-11-26, assumed, not ruled).
+
+## Sorted by kind of duty: achievement, maintenance, other
+
+Status: decided by Claude on 2026-11-26, assumed, not ruled; every row below is a proposal for a maintainer to confirm or reverse.
+The sorting was done by reading the operative verb of each rule and the statute words in its row of the next section, one site at a time; a script only applied the sorting from a table written by hand, and it chose no class.
+The line column is measured at commit 1142117325, the merge this work is cut from; it is the line of the `-- no LEST:` comment.
+Each class is also written on the comment itself, so `grep -rn -e '\[class: ' .` in this folder finds the 97 sites that are not achievements, and says which class each is.
+
+### The three classes
+
+- **ACHIEVEMENT**: the duty is to do a thing once (lodge, send, declare, convene, furnish, issue, notify, pay, appoint, sign, publish).
+  It can be late, so a deadline suits it; where the section states none, the standard of time comes from the Interpretation Act 1965 s 52, "all convenient speed".
+- **MAINTENANCE**: the duty is to hold throughout (keep a register, maintain a system, "at all times act honestly", ensure the register contains the particulars).
+  It is broken at any moment it stops holding, not when a period runs out, so a deadline is the wrong model; and an untimed `MUST` is wrong too, because one compliant act would discharge it for ever.
+  L4 has no form for such a duty yet: a design is proposed, not landed, and a search of `jl4-core/src/L4/Lexer.hs` on the unstable tip on 2026-11-26 found none of `ALWAYS`, `THROUGHOUT`, `MAINTAIN`, `INVARIANT` or `WHILE`; these sites stay as they are.
+- **OTHER**: neither of the above, or the sorting could not tell.
+  Where a site could be either an achievement or something else, the tie goes to OTHER with the reason written on the row.
+
+### Counts
+
+| class | sites |
+| ----- | ----- |
+| ACHIEVEMENT | 108 |
+| MAINTENANCE | 36 |
+| OTHER | 61 |
+| all | 205 |
+
+ACHIEVEMENT: 52 a thing done once, 37 a thing done once on a trigger the text names (a request, an application, a receipt), 19 a thing done once for which the section gives its own non-numeric standard.
+MAINTENANCE: 19 a state that must hold, 14 a register, index or record to be kept, 3 others (a holding in trust, a duty attached to every copy issued, a standing rule of treatment).
+OTHER: 15 timed by another act or filing, 9 weighed in the course of another act, 8 a requirement on a document's content, 6 a step in an application, 4 bound only by "before" a later act, 3 tied to a meeting, 3 tied to another person's window, 3 a bar on a power, 3 a time left to regulations, 2 a liability, 2 a time left to the party, 2 an effort standard, 1 a direction on recouping a sum.
+
+### Calls the sorting rests on (each decided by Claude on 2026-11-26, assumed, not ruled)
+
+1. **The Registrar, the Minister and the Official Receiver are treated like any other bearer of a duty.**
+   Where their duty is an act (issue, publish, send, appoint, register, strike off, report), it is an ACHIEVEMENT, since s 52 speaks of "anything" to be done.
+2. **The 19 sites whose section gives its own word ("immediately", "as soon as practicable", "without delay", "within a reasonable time", "thereupon", "in sufficient time") are ACHIEVEMENT.**
+   s 52 applies "where no time is prescribed or allowed", and these sections arguably prescribe one in words; the number of days is as missing as for the others, so they take the same input, and the comment beside it names the section's own word.
+   Reclassing them is a one-pass change.
+   They are: `sgb1-s149b-appointment.l4:367`, `sgb1-s156-interests.l4:471`, `sgc2-s205-appointment.l4:221`, `sgc2-s205-appointment.l4:390`, `sgc2-s205aa-resignation.l4:195`, `sgc2-s206-208a-duties.l4:149`, `sgc2-s206-208a-duties.l4:158`, `sgc2-s206-208a-duties.l4:167`, `sgc2-s206-208a-duties.l4:303`, `sgc2-s206-208a-duties.l4:672`, `sgc2-s206-208a-duties.l4:746`, `sgd-acquisition.l4:1341`, `sgd-amalgamation.l4:1371`, `sgd-compromise.l4:1032`, `sgl-circulation.l4:415`, `sgl-minutes.l4:401`, `sgl-minutes.l4:414`, `sgl-written.l4:613`, `sgm-part5-div4.l4:1248`.
+3. **A duty that is a bar on a power, not an act that falls due, is OTHER.**
+   "The Registrar must refuse to register" (`sge-p10a-360.l4` s 360(1) and (2), `sgh-incorporation.l4` s 20(2)) is breached by registering, and no day arrives on which it is late.
+4. **A duty whose time the Act hands to regulations is OTHER.**
+   `sgn-register.l4:502`, `sgn-register.l4:515`, `sgn-register.l4:797` say "within the prescribed time" or "within the prescribed period", so s 52 is not the standard; the existing input `the prescribed period, in days` (as `sgn-register.l4`'s s 386AFA(4) rule uses) is the candidate, and it is not added here.
+5. **A step a person takes to obtain what they apply for is OTHER**: submitting the constitution, paying the fee, making the declaration, reserving a name.
+   Nothing arms a clock, and failing to take the step forfeits the application and is not a default.
+6. **A duty tied to another act's own time is OTHER**: lodged "with the return", attached "when lodging a return", signed "by the chairperson of the next succeeding meeting", noticed "at the same time as notice of the meeting" (s 183(3C)).
+   Giving it an independent period would contradict the anchor the text states.
+7. **A requirement on what a document contains or looks like is OTHER**: it is met when the document is made.
+8. **Where a rule holds a `MUST` inside the `HENCE` of another, each is its own site and has its own class.**
+   `sgl-calling.l4` s 176(4) pays the requisitionists (ACHIEVEMENT) and then retains the sum out of what is due to the directors in default (OTHER, a direction on recouping a sum); only the first takes a period.
+9. **When the sorting was torn between ACHIEVEMENT and OTHER, it chose OTHER.**
+   Examples: s 201(9)(b), s 215(1B), s 135(1), s 37(4), s 183(1)(a) and (b), s 188(1)(b), s 184F(1), s 156(11), s 215F(1)(b).
+
+### The table
+
+| module | line | section | class | the operative verb, and why it is in this class |
+| ------ | ---- | ------- | ----- | ------------------------------------------------ |
+| `sg-solvency.l4` | 234 | s 7A(3) | OTHER | "take into account all liabilities of the company (including contingent liabilities)": to be weighed in the course of another act (the director's opinion for the solvency statement), with no time of its own |
+| `sg-solvency.l4` | 258 | s 7A(4)(a) | OTHER | "have regard to all other circumstances that the directors know or ought to know affect the v...": to be weighed in the course of another act (the director's opinion for the solvency statement), with no time of its own |
+| `sg-solvency.l4` | 259 | s 7A(4)(a) | OTHER | "have regard to the most recent financial statements of the company that comply with section...": to be weighed in the course of another act (the director's opinion for the solvency statement), with no time of its own |
+| `sga1-issue.l4` | 595 | s 63B(1) | OTHER | "lodge with the return of allotment the contract, or a copy of it certified as prescribed": its time is that of another act or filing: "with the return of allotment"; the return's own deadline governs |
+| `sga1-issue.l4` | 655 | s 63B(3) | OTHER | "lodge with the return of allotment the document specified in subsection (4)": its time is that of another act or filing: "at the same time and together with the return of allotment", s 63B(5) |
+| `sga1-rights.l4` | 407 | s 66(4) | ACHIEVEMENT | "cancel a share warrant issued before 29 December 1967 that is unaccounted for by the expiry...": a thing done once, on its trigger (the expiry of the 2-year period) |
+| `sga3-76f-76g.l4` | 285 | s 76G(1) | ACHIEVEMENT | "reduce the amount of its share capital or its profits, or both, by the total amount of the p...": a thing done once |
+| `sgb1-s149b-appointment.l4` | 367 | s 152(2) | ACHIEVEMENT | "send a copy of the notice of the intended resolution to the director concerned": a thing done once; the text's own standard is "immediately" |
+| `sgb1-s156-interests.l4` | 471 | s 156(1) | ACHIEVEMENT | "declare the nature of the interest at a meeting of the directors, or send a written notice t...": a thing done once; the text's own standard is "as soon as is practicable" |
+| `sgb1-s156-interests.l4` | 504 | s 156(11) | OTHER | "record the declaration in the minutes": its time is that of another act or filing: the minutes of the meeting, which s 188(1)(a) times ("within one month") |
+| `sgb1-s156-interests.l4` | 518 | s 156(12) | OTHER | "permit the chief executive officer to attend the meeting of the board of directors": tied to a meeting (attendance at a board meeting "where such attendance is necessary"), whose own time governs |
+| `sgb1-s157-duties.l4` | 437 | s 157(1) | MAINTENANCE | "act honestly and use reasonable diligence in the discharge of the duties of the office of di...": a state that must hold throughout ("at all times act honestly") |
+| `sgc1-s199.l4` | 56 | s 199(1) | MAINTENANCE | "cause accounting and other records to be kept": a register, index or record to be kept: it must hold throughout, not be done once |
+| `sgc1-s199.l4` | 138 | s 199(2A) | MAINTENANCE | "devise and maintain a system of internal accounting controls": a state that must hold throughout ("devise and maintain" a system) |
+| `sgc1-s199.l4` | 171 | s 199(3) | MAINTENANCE | "keep the records open to inspection by the directors": a state that must hold throughout ("at all times be open to inspection") |
+| `sgc1-s201-statement.l4` | 213 | s 201(23) | OTHER | "attach a copy of the report prepared under section 201(5) as in force before 1 July 2015 to...": its time is that of another act or filing: "when lodging a return with the Registrar under section 197" |
+| `sgc1-s201.l4` | 281 | s 201(9)(b) | OTHER | "cause the auditor's report to be attached to the financial statements": a requirement on the content or form of a document (the auditor's report attached to the financial statements), met when the document is made |
+| `sgc1-s201.l4` | 343 | s 201(11) | OTHER | "state the name of the ultimate parent corporation in the financial statements": a requirement on the content or form of a document (a statement in the financial statements laid at the annual general meeting), met when the document is made |
+| `sgc1-s201a.l4` | 214 | s 201A(7) | OTHER | "attach a copy of the accounts or consolidated accounts to the return": its time is that of another act or filing: "when lodging a return with the Registrar under section 197" |
+| `sgc1-s201b.l4` | 52 | s 201B(1) | MAINTENANCE | "have an audit committee": a state that must hold throughout ("must have an audit committee") |
+| `sgc1-s201b.l4` | 203 | s 201B(6) | OTHER | "appear before the audit committee when required to do so": tied to a window another person holds (the committee's requirement fixes when the auditor appears) |
+| `sgc1-s201b.l4` | 225 | s 201B(7) | ACHIEVEMENT | "convene a meeting of the audit committee on the auditor's request": a thing done once, on its trigger (the auditor's request) |
+| `sgc1-s201b.l4` | 277 | s 201B(9) | OTHER | "describe in the directors' statement the nature and extent of the functions performed by the...": a requirement on the content or form of a document (a description in the directors' statement), met when the document is made |
+| `sgc1-s203.l4` | 147 | s 203(3) | ACHIEVEMENT | "furnish the member or debenture holder without charge with a copy of the last financial stat...": a thing done once, on its trigger (a request) |
+| `sgc1-s203a.l4` | 88 | s 203A(4) | ACHIEVEMENT | "send copies of the documents referred to in section 203(1) to the member who wishes to recei...": a thing done once, on its trigger (the member wishing to receive them) |
+| `sgc1-s203a.l4` | 151 | s 203A(6A) | OTHER | "ensure that the summary financial statements comply with the requirements referred to in sub...": a requirement on the content or form of a document (the summary financial statements must comply), met when the document is made |
+| `sgc2-s205-appointment.l4` | 124 | s 205(2) | OTHER | "appoint an accounting entity or accounting entities as the auditor or auditors at the annual...": tied to a meeting (appointment "at each annual general meeting"), whose own time governs |
+| `sgc2-s205-appointment.l4` | 221 | s 205(5)(a) | ACHIEVEMENT | "send a copy of the notice of the resolution to remove the auditor to the auditor concerned a...": a thing done once; the text's own standard is "immediately" |
+| `sgc2-s205-appointment.l4` | 285 | s 205(6) | ACHIEVEMENT | "send a copy of the representations to every member to whom notice of the meeting is sent": a thing done once |
+| `sgc2-s205-appointment.l4` | 390 | s 205(8) | ACHIEVEMENT | "give written notice of the removal of the auditor to the Registrar": a thing done once; the text's own standard is "immediately after the removal" |
+| `sgc2-s205a-exemption.l4` | 303 | s 205B(4)(d) | OTHER | "accompany the annual return with a statement by the directors": its time is that of another act or filing: the annual return to be lodged |
+| `sgc2-s205a-exemption.l4` | 545 | s 205C(7) | OTHER | "attach a copy of the accounts or consolidated accounts to the return lodged under section 197": its time is that of another act or filing: "when lodging a return with the Registrar under section 197" |
+| `sgc2-s205aa-resignation.l4` | 195 | s 205AB(2) | ACHIEVEMENT | "notify the auditor and the company whether the Registrar consents to the resignation": a thing done once; the text's own standard is "as soon as practicable" |
+| `sgc2-s205aa-resignation.l4` | 379 | s 205AC(3)(a) | ACHIEVEMENT | "give notice of the application to the auditor of the company": a thing done once |
+| `sgc2-s205aa-resignation.l4` | 388 | s 205AC(3)(b) | ACHIEVEMENT | "give notice of the application to the company and the auditor of the company": a thing done once |
+| `sgc2-s206-208a-duties.l4` | 149 | s 206(1)(c) | ACHIEVEMENT | "prepare a statement showing particulars of all emoluments paid to the auditor or other perso...": a thing done once; the text's own standard is "immediately" |
+| `sgc2-s206-208a-duties.l4` | 158 | s 206(1)(d) | ACHIEVEMENT | "forward a copy of the statement to all persons entitled to receive notice of general meeting...": a thing done once; the text's own standard is "immediately" |
+| `sgc2-s206-208a-duties.l4` | 167 | s 206(1)(e) | ACHIEVEMENT | "lay the statement before the company in general meeting": a thing done once; the text's own standard is "immediately" |
+| `sgc2-s206-208a-duties.l4` | 206 | s 206(1A) | ACHIEVEMENT | "send the outcome of the review to all persons entitled to receive notice of general meetings...": a thing done once |
+| `sgc2-s206-208a-duties.l4` | 207 | s 206(1A) | ACHIEVEMENT | "undertake a review of the fees, expenses and emoluments of the auditor to determine whether...": a thing done once |
+| `sgc2-s206-208a-duties.l4` | 264 | s 207(1) | ACHIEVEMENT | "report to the members": a thing done once |
+| `sgc2-s206-208a-duties.l4` | 303 | s 207(1A) | ACHIEVEMENT | "furnish the report to the directors in sufficient time": a thing done once; the text's own standard is "in sufficient time" |
+| `sgc2-s206-208a-duties.l4` | 672 | s 207(9) | ACHIEVEMENT | "report the matter in writing to the Registrar": a thing done once; the text's own standard is "immediately" |
+| `sgc2-s206-208a-duties.l4` | 746 | s 207(9A) | ACHIEVEMENT | "report the matter to the Minister": a thing done once; the text's own standard is "immediately" |
+| `sgd-acquisition.l4` | 1263 | s 215(1B) | OTHER | "state which of the alternative terms is to apply where the dissenting shareholder fails to e...": a requirement on the content or form of a document (a statement in the notice of which terms apply), met when the document is made |
+| `sgd-acquisition.l4` | 1280 | s 215(2) | ACHIEVEMENT | "supply the dissenting shareholder with a written statement of the names and addresses of all...": a thing done once, on its trigger (the shareholder's written demand) |
+| `sgd-acquisition.l4` | 1325 | s 215(4)(a) | ACHIEVEMENT | "transmit a copy of the notice to the transferor company with an instrument of transfer": a thing done once |
+| `sgd-acquisition.l4` | 1330 | s 215(4)(b) | ACHIEVEMENT | "pay, allot or transfer to the transferor company the amount or other consideration": a thing done once |
+| `sgd-acquisition.l4` | 1341 | s 215(4) | ACHIEVEMENT | "register the transferee as the holder of the shares": a thing done once; the text's own standard is "thereupon" |
+| `sgd-acquisition.l4` | 1356 | s 215(5) | ACHIEVEMENT | "pay the sums received into a separate bank account": a thing done once |
+| `sgd-acquisition.l4` | 1365 | s 215(5) | MAINTENANCE | "hold the sums and other consideration in trust for the persons entitled": a holding that continues ("must be held ... in trust") |
+| `sgd-acquisition.l4` | 1403 | s 215(7)(a) | ACHIEVEMENT | "deal with the moneys received under subsection (6) as if they were paid under section 197 of...": a thing done once |
+| `sgd-acquisition.l4` | 1411 | s 215(7)(b) | ACHIEVEMENT | "sell or dispose of the other consideration and deal with the proceeds as if they were moneys...": a thing done once |
+| `sgd-acquisition.l4` | 1425 | s 215AA(6) | OTHER | "make the notice by all of the joint transferees, signed for each company by a director of th...": a requirement on the content or form of a document (the notice must be made by all the joint transferees and signed by a director), met when the document is made |
+| `sgd-amalgamation-solvency.l4` | 383 | s 215I(3) | OTHER | "take into account all liabilities of the amalgamating company (including contingent liabilit...": to be weighed in the course of another act (the directors' opinion for the solvency statement), with no time of its own |
+| `sgd-amalgamation-solvency.l4` | 407 | s 215I(4)(a) | OTHER | "have regard to the most recent financial statements and all other circumstances": to be weighed in the course of another act (the directors' opinion for the solvency statement), with no time of its own |
+| `sgd-amalgamation-solvency.l4` | 419 | s 215J(2) | OTHER | "take into account all liabilities of the amalgamated company (including contingent liabilities)": to be weighed in the course of another act (the directors' opinion for the solvency statement), with no time of its own |
+| `sgd-amalgamation-solvency.l4` | 444 | s 215J(3)(a) | OTHER | "have regard to the most recent financial statements and all other circumstances": to be weighed in the course of another act (the directors' opinion for the solvency statement), with no time of its own |
+| `sgd-amalgamation.l4` | 1200 | s 215C(3) | ACHIEVEMENT | "sign a declaration stating that, in the director's opinion, the conditions are satisfied, an...": a thing done once |
+| `sgd-amalgamation.l4` | 1334 | s 215D(6) | ACHIEVEMENT | "sign a declaration stating that, in the director's opinion, the conditions specified in sect...": a thing done once |
+| `sgd-amalgamation.l4` | 1355 | s 215F(1) | OTHER | "issue a notice of amalgamation together with the notice of incorporation under section 19(4)": its time is that of another act or filing: "together with the notice of incorporation under section 19(4)" |
+| `sgd-amalgamation.l4` | 1359 | s 215F(1) | ACHIEVEMENT | "issue a notice of amalgamation": a thing done once, on its trigger (receipt of the documents and fees) |
+| `sgd-amalgamation.l4` | 1371 | s 215F(3) | ACHIEVEMENT | "remove the amalgamating companies, other than the amalgamated company, from the register": a thing done once; the text's own standard is "as soon as practicable" |
+| `sgd-amalgamation.l4` | 1383 | s 215F(4) | ACHIEVEMENT | "issue to the amalgamated company a certificate of confirmation of amalgamation": a thing done once, on its trigger (the application and the fee) |
+| `sgd-amalgamation.l4` | 1424 | s 215K(2)(a) | ACHIEVEMENT | "deal with the moneys received under subsection (1) as if they were paid under section 197 of...": a thing done once |
+| `sgd-amalgamation.l4` | 1438 | s 215K(2)(b) | ACHIEVEMENT | "sell or dispose of the other consideration and deal with the proceeds as if they were moneys...": a thing done once |
+| `sgd-compromise.l4` | 1017 | s 210(6) | MAINTENANCE | "annex a copy of the order to a copy of the constitution": a duty attached to every item of a continuing flow ("every copy of the constitution ... issued after the order"), so no single act discharges it |
+| `sgd-compromise.l4` | 1032 | s 210(8)(a) | ACHIEVEMENT | "instruct the accountants or solicitors named in the resolution to report on the proposals": a thing done once; the text's own standard is "as soon as possible" |
+| `sgd-compromise.l4` | 1089 | s 210(10B)(a) | ACHIEVEMENT | "deal with the moneys received under subsection (10A) as if they were paid under section 197...": a thing done once |
+| `sgd-compromise.l4` | 1097 | s 210(10B)(b) | ACHIEVEMENT | "sell or dispose of the other consideration and deal with the proceeds as if they were moneys...": a thing done once |
+| `sgd-compromise.l4` | 1113 | s 211(3) | ACHIEVEMENT | "furnish the person with a copy of the statement free of charge": a thing done once, on its trigger (an application) |
+| `sge-p10a-357-358.l4` | 51 | s 357(1) | OTHER | "apply to reserve the name of the intended company": a step taken to obtain what is applied for (a foreign corporate entity that "intends to be registered" applies to reserve the name); no event arms a clock |
+| `sge-p10a-359.l4` | 77 | s 359(3) | ACHIEVEMENT | "issue a notice of transfer of registration": a thing done once, on its trigger (registration) |
+| `sge-p10a-359.l4` | 162 | s 359(4) | ACHIEVEMENT | "issue a certificate of confirmation of registration": a thing done once, on its trigger (the application) |
+| `sge-p10a-360.l4` | 49 | s 360(1) | OTHER | "refuse to register the foreign corporate entity": a bar on a power (the Registrar "must refuse to register" if not satisfied), breached by registering, not an act that falls due |
+| `sge-p10a-360.l4` | 114 | s 360(2) | OTHER | "refuse to register the foreign corporate entity": a bar on a power (the Registrar "must refuse to register" if satisfied of a ground), breached by registering, not an act that falls due |
+| `sge-p10a-362.l4` | 118 | s 362(2) | OTHER | "consider the company's written representations": tied to a window another person holds (the company's window for representations under the notice) |
+| `sge-p10a-362.l4` | 119 | s 362(2) | OTHER | "and (b) give the company written notice of the Registrar's intention to revoke the registrat...": the text's only time is "before" a later act: "before making an order of revocation" |
+| `sge-p10a-362.l4` | 218 | s 362(4) | ACHIEVEMENT | "serve a copy of the notice of the order of revocation on the company": a thing done once |
+| `sge-p10a-362.l4` | 219 | s 362(4) | ACHIEVEMENT | "cause a notice of the order of revocation to be published in the Gazette": a thing done once |
+| `sgg-cessation.l4` | 174 | s 377(2) | ACHIEVEMENT | "lodge with the Registrar notice of the appointment of a liquidator": a thing done once, on its trigger (the liquidator being appointed) |
+| `sgg-identity.l4` | 47 | s 375(1)(b) | MAINTENANCE | "cause its name and the place where it is formed or incorporated to be stated in legible roma...": a state that must hold throughout (the name and place stated "in legible romanised letters" wherever the section requires) |
+| `sgg-identity.l4` | 97 | s 375(1)(c) | MAINTENANCE | "cause notice that the liability of its members is limited to be given": a state that must hold throughout (notice of limited liability to be given wherever the section requires) |
+| `sgg-identity.l4` | 141 | s 375(3) | MAINTENANCE | "cause its unique entity number to appear in a legible form": a state that must hold throughout (the unique entity number "on all business letters, statements of account, invoices") |
+| `sgg-lodging.l4` | 516 | s 370(1) | MAINTENANCE | "keep a registered office in Singapore open and accessible to the public": a state that must hold throughout ("must be open and accessible to the public" each business day) |
+| `sgg-lodging.l4` | 592 | s 370(4) | ACHIEVEMENT | "lodge the notice and the consent statement for the new authorised representative": a thing done once, on its trigger (the appointment of a new authorised representative) |
+| `sgg-lodging.l4` | 656 | s 370(6)(a) | ACHIEVEMENT | "appoint another authorised representative": a thing done once, on its trigger (the sole authorised representative ceasing) |
+| `sgg-registers.l4` | 235 | s 380(2)(a) | MAINTENANCE | "keep an index in convenient form of the names of the members": a register, index or record to be kept: it must hold throughout, not be done once |
+| `sgg-registers.l4` | 262 | s 380(2)(c) | MAINTENANCE | "keep the index at the same place as the register of members": a register, index or record to be kept: it must hold throughout, not be done once |
+| `sgg-returns.l4` | 783 | s 374 | OTHER | "lodge a return containing the prescribed information about the keeping of the registers": its time is that of another act or filing: "at the time when making a lodgment" of the financial statements |
+| `sgh-address.l4` | 309 | s 12E(1) | ACHIEVEMENT | "cause the residential address to be excluded from public access": a thing done once, on its trigger (the individual's application) |
+| `sgh-address.l4` | 326 | s 12E(3) | ACHIEVEMENT | "cause the exclusion from public access to resume": a thing done once, on its trigger (the change of contact address or Court direction) |
+| `sgh-address.l4` | 344 | s 12E(4) | ACHIEVEMENT | "cause the residential address to be excluded from public access in respect of the document": a thing done once, on its trigger (the form lodged) |
+| `sgh-address.l4` | 361 | s 12F(2) | OTHER | "give the individual, and each company the paragraphs name, the notice under subsection (3)": the text's only time is "before" a later act: "before causing the individual's residential address to cease to be excluded" |
+| `sgh-address.l4` | 372 | s 12F(4) | OTHER | "consider the representations given in response to the notice": tied to a window another person holds (the individual's window for representations) |
+| `sgh-address.l4` | 385 | s 12F(5) | OTHER | "give notice of the decision to the individual and to each company": the text's only time is "before" a later act: "before doing so" |
+| `sgh-address.l4` | 415 | s 12F(9) | ACHIEVEMENT | "replace the individual's contact address in each register kept under section 12(1)": a thing done once |
+| `sgh-constitution.l4` | 377 | s 22(2) | OTHER | "make a declaration to the Registrar as to the number of shares the subscriber agrees to take": a step taken to obtain what is applied for (a subscriber's declaration made in the course of incorporating the company); no event arms a clock |
+| `sgh-formation.l4` | 375 | s 17(9) | ACHIEVEMENT | "issue to the company a certificate of confirmation of incorporation": a thing done once, on its trigger (the application and the fee) |
+| `sgh-incorporation.l4` | 357 | s 19(1)(a) | OTHER | "submit to the Registrar the constitution of the proposed company and such other documents as...": a step taken to obtain what is applied for (a person "desiring to incorporate a company" does this to obtain incorporation); no event arms a clock |
+| `sgh-incorporation.l4` | 369 | s 19(1)(b) | OTHER | "furnish the Registrar with the last day of the proposed company's first financial year and s...": a step taken to obtain what is applied for (a person "desiring to incorporate a company" does this to obtain incorporation); no event arms a clock |
+| `sgh-incorporation.l4` | 379 | s 19(1)(c) | OTHER | "pay the Registrar the prescribed fee": a step taken to obtain what is applied for (a person "desiring to incorporate a company" does this to obtain incorporation); no event arms a clock |
+| `sgh-incorporation.l4` | 401 | s 19(2) | OTHER | "make the declaration to the Registrar": a step taken to obtain what is applied for (a person "desiring to incorporate a company" does this to obtain incorporation); no event arms a clock |
+| `sgh-incorporation.l4` | 413 | s 19(3) | ACHIEVEMENT | "register the company by registering its constitution": a thing done once, on its trigger (receipt of the documents, information and payment) |
+| `sgh-incorporation.l4` | 429 | s 19(4) | ACHIEVEMENT | "issue a notice of incorporation": a thing done once, on its trigger (registration of the constitution) |
+| `sgh-incorporation.l4` | 440 | s 19(7) | ACHIEVEMENT | "issue to the company a certificate of confirmation of incorporation": a thing done once, on its trigger (the application and the fee) |
+| `sgh-incorporation.l4` | 470 | s 20(2) | OTHER | "refuse to register the constitution": a bar on a power (the Registrar "must refuse to register" if satisfied of a ground), breached by registering, not an act that falls due |
+| `sgh-part2-inspection.l4` | 446 | s 8B(4)(d) | MAINTENANCE | "permit a person entitled to inspect the books to inspect them at all reasonable times": a state that must hold throughout ("at all reasonable times" during the period) |
+| `sgh-part2-savings.l4` | 82 | s 8E | ACHIEVEMENT | "give the name and address of the person to whom or by or on behalf of whom the communication...": a thing done once, on its trigger (refusal to produce the document) |
+| `sgh-rectification.l4` | 326 | s 12B(1) | ACHIEVEMENT | "rectify the register on receipt of the Court's order": a thing done once, on its trigger (receipt of the Court's order) |
+| `sgh-rectification.l4` | 339 | s 12B(2) | ACHIEVEMENT | "file the fresh document with a copy of the Court order and a copy of the Court application": a thing done once |
+| `sgh-rectification.l4` | 363 | s 12D(2) | OTHER | "give written notice of the intention to rectify or update the register": the text's only time is "before" a later act: "before the Registrar rectifies or updates the register" |
+| `sgh-registers.l4` | 401 | s 12A(3) | MAINTENANCE | "keep a record of the alteration of the electronic transaction system or the registers under...": a register, index or record to be kept: it must hold throughout, not be done once |
+| `sgh-returns.l4` | 380 | s 14(5) | ACHIEVEMENT | "register the order of the Court lodged with the Registrar": a thing done once |
+| `sgi-constitution.l4` | 186 | s 37(4) | OTHER | "submit a copy of the constitution to the Registrar in accordance with section 19(1)": its time is that of another act or filing: "in accordance with section 19(1)", whose own submission is a step in an application and has no clock |
+| `sgi-constitution.l4` | 323 | s 40(1) | ACHIEVEMENT | "send to the member a copy of the constitution": a thing done once, on its trigger (being so required by a member) |
+| `sgi-contracts-seal.l4` | 291 | s 41(7) | OTHER | "certify in writing under his or her hand, on the instrument to which the official seal is af...": its time is that of another act or filing: the affixing of the official seal to the instrument |
+| `sgi-director-transactions.l4` | 243 | s 25C(4)(a) | OTHER | "account to the company for any gain made directly or indirectly by the transaction": a liability that arises with the transaction (a gain made by the transaction), not an act that falls due |
+| `sgi-director-transactions.l4` | 260 | s 25C(4)(b) | OTHER | "indemnify the company for any loss or damage resulting from the transaction": a liability that arises with the transaction (loss or damage resulting from the transaction), not an act that falls due |
+| `sgi-name-changes.l4` | 583 | s 29(3) | ACHIEVEMENT | "insert the conditions in the constitution of the company": a thing done once, on its trigger (the Registrar so directing) |
+| `sgi-name-changes.l4` | 908 | s 29A(2)(a) | ACHIEVEMENT | "alter the constitution to reflect the change of name": a thing done once |
+| `sgi-name-changes.l4` | 923 | s 29A(2)(b) | ACHIEVEMENT | "file the prescribed form with the Registrar, together with a copy of the special resolution...": a thing done once |
+| `sgj-div4-substantial-shareholdings.l4` | 1026 | s 91(5) | OTHER | "satisfy itself that the order would not unfairly prejudice any person": to be weighed in the course of another act (the Court's own order, "before making an order"), with no time of its own |
+| `sgj-div5-debentures.l4` | 51 | s 93(1) | MAINTENANCE | "keep a register of holders of the debentures at the registered office or at some other place...": a register, index or record to be kept: it must hold throughout, not be done once |
+| `sgj-div5-debentures.l4` | 137 | s 93(3) | MAINTENANCE | "keep the register open to inspection": a state that must hold throughout ("must ... be open to the inspection") |
+| `sgj-div7-private-transfers.l4` | 72 | s 126(2) | ACHIEVEMENT | "lodge with the Registrar notice of the transfer of shares in the prescribed form": a thing done once, on its trigger (a transfer of shares) |
+| `sgj-div7-private-transfers.l4` | 161 | s 128(1)(a) | ACHIEVEMENT | "lodge with the Registrar a notice of transfer of shares in the prescribed form": a thing done once, on its trigger (the transferor's written request) |
+| `sgj-div7-private-transfers.l4` | 170 | s 128(1)(b) | ACHIEVEMENT | "enter the name of the transferee in the register the company considers appropriate": a thing done once, on its trigger (the transferor's request) |
+| `sgj-div7-private-transfers.l4` | 223 | s 128(3) | ACHIEVEMENT | "require by written notice the person having possession, custody or control to deliver or pro...": a thing done once, on its trigger (the company calling in the documents) |
+| `sgj-div7-private-transfers.l4` | 279 | s 128(6) | OTHER | "exhibit and advertise the list of share certificates or debentures called in and not deliver...": the text leaves the time to the party: "at such times as the company thinks fit" |
+| `sgj-div7-public-transfers.l4` | 115 | s 130AA(1) | ACHIEVEMENT | "enter in the appropriate register the name of the transferee": a thing done once, on its trigger (the transferor's request) |
+| `sgj-div7-public-transfers.l4` | 151 | s 130AA(2) | ACHIEVEMENT | "require by written notice the person having possession, custody or control to deliver or pro...": a thing done once, on its trigger (the company calling in the documents) |
+| `sgj-div7-public-transfers.l4` | 206 | s 130AA(5) | OTHER | "exhibit and advertise the list of share certificates or debentures called in and not brought in": the text leaves the time to the party: "at such times as the company thinks fit" |
+| `sgj-div7-public-transfers.l4` | 355 | s 130AC(2) | MAINTENANCE | "accept the document as sufficient evidence of the grant": a standing rule of treatment (a grant document "must be accepted"), not an act |
+| `sgj-div7-title.l4` | 142 | s 123(2) | OTHER | "issue the share certificate under the seal and stating what the subsection requires": a requirement on the content or form of a document (a share certificate "must be under the common seal"), met when the document is made |
+| `sgj-div7-title.l4` | 306 | s 125(1) | ACHIEVEMENT | "issue a duplicate certificate or document in lieu of the one lost or destroyed": a thing done once, on its trigger (the owner's application) |
+| `sgj-part5-office-name.l4` | 68 | s 142(1) | MAINTENANCE | "keep the registered office open and accessible to the public for not less than 3 hours durin...": a state that must hold throughout ("open and accessible to the public" each business day) |
+| `sgk-div8-register.l4` | 90 | s 134(1) | ACHIEVEMENT | "enter the particulars of the charge in the register": a thing done once |
+| `sgk-div8-register.l4` | 111 | s 134(2) | ACHIEVEMENT | "issue to the company a notice of the registration of the charge": a thing done once |
+| `sgk-div8-register.l4` | 141 | s 134(3) | ACHIEVEMENT | "issue to the company a certificate confirming the registration of the charge": a thing done once, on its trigger (the application and the fee) |
+| `sgk-div8-register.l4` | 179 | s 135(1) | OTHER | "endorse on the debenture or certificate of debenture stock a copy of the notice of registrat...": a requirement on the content or form of a document (a copy of the notice endorsed "on every debenture ... which is issued"), met when the document is made |
+| `sgk-div8-register.l4` | 247 | s 136(1) | ACHIEVEMENT | "enter the particulars of the statement of satisfaction or release in the register": a thing done once |
+| `sgk-div8-register.l4` | 356 | s 138(1) | MAINTENANCE | "keep the instrument creating the charge, or a copy, at the registered office": a state that must hold throughout ("for as long as the charge ... remains in force") |
+| `sgk-div8-register.l4` | 452 | s 138(2) | MAINTENANCE | "keep a register of charges at the registered office": a register, index or record to be kept: it must hold throughout, not be done once |
+| `sgk-part9-consequences.l4` | 52 | s 237(1) | ACHIEVEMENT | "pay the expenses of and incidental to the investigation": a thing done once |
+| `sgk-part9-consequences.l4` | 88 | s 237(2)(a) | ACHIEVEMENT | "make good the deficiency up to the amount of the security": a thing done once |
+| `sgk-part9-declared.l4` | 209 | s 231(1) | ACHIEVEMENT | "appoint one or more inspectors to investigate the affairs of the declared company": a thing done once |
+| `sgk-part9-inspectors.l4` | 238 | s 233(1) | ACHIEVEMENT | "report to the Minister the inspector's opinion on the affairs investigated, with the facts o...": a thing done once, on its trigger (the conclusion of the investigation) |
+| `sgk-part9-inspectors.l4` | 246 | s 233(1) | ACHIEVEMENT | "forward a copy of the report to the registered office of the company": a thing done once |
+| `sgk-part9-inspectors.l4` | 258 | s 233(1A) | ACHIEVEMENT | "give a copy of the report to a person whose affairs it relates to in a material extent": a thing done once |
+| `sgk-part9-inspectors.l4` | 336 | s 233(3) | ACHIEVEMENT | "institute a prosecution": a thing done once |
+| `sgk-part9-inspectors.l4` | 345 | s 233(3) | OTHER | "give the Minister all assistance in connection with the prosecution that the person is reaso...": an effort standard (assistance "in connection with the prosecution", at the Minister's requirement), neither one act nor a state |
+| `sgk-part9-inspectors.l4` | 417 | s 236(1) | ACHIEVEMENT | "report on the affairs of the related corporation": a thing done once |
+| `sgk-part9-inspectors.l4` | 455 | s 236(2) | ACHIEVEMENT | "produce to the inspector all books and documents in the person's custody or power and give a...": a thing done once, on its trigger (the inspector's requirement) |
+| `sgk-part9-inspectors.l4` | 519 | s 236(4)(c) | MAINTENANCE | "permit the corporation to have access to the books and documents taken possession of": a state that must hold throughout ("at all reasonable times ... so long as they are in his or her possession") |
+| `sgk-part9-ownership.l4` | 76 | s 243(3) | ACHIEVEMENT | "appoint an inspector to conduct the investigation": a thing done once |
+| `sgk-part9-ownership.l4` | 245 | s 244(3) | ACHIEVEMENT | "give the Minister information required under section 244": a thing done once, on its trigger (the Minister's requirement) |
+| `sgk-part9-ownership.l4` | 466 | s 245(3)(c) | ACHIEVEMENT | "notify the holders entitled to vote of the restrictions": a thing done once |
+| `sgl-calling.l4` | 389 | s 176(4) | OTHER | "retain the sum out of sums due to the directors in default": a direction on recouping a sum (retained "out of any sums due or to become due" to the directors in default), not an act with a time |
+| `sgl-calling.l4` | 390 | s 176(4) | ACHIEVEMENT | "pay the requisitionists their reasonable expenses": a thing done once |
+| `sgl-circulation.l4` | 387 | s 183(1)(a) | OTHER | "give members notice of the resolution": its time is that of another act or filing: the notice of the meeting: "at the same time as notice of the meeting" or "as soon as practicable thereafter", s 183(3C) |
+| `sgl-circulation.l4` | 401 | s 183(1)(b) | OTHER | "circulate the statement to members": its time is that of another act or filing: the notice of the meeting: "at the same time as notice of the meeting" or "as soon as practicable thereafter", s 183(3C) |
+| `sgl-circulation.l4` | 415 | s 183(4B) | ACHIEVEMENT | "notify the specified person of the date of receipt": a thing done once; the text's own standard is "without delay" |
+| `sgl-minutes.l4` | 368 | s 188(1)(b) | OTHER | "have the minutes signed by the chairperson": its time is that of another act or filing: signature "by the chairperson of the next succeeding meeting" bounds it, not a period |
+| `sgl-minutes.l4` | 401 | s 188(3B) | ACHIEVEMENT | "ensure the minutes are signed by a director": a thing done once; the text's own standard is "within a reasonable time" |
+| `sgl-minutes.l4` | 414 | s 188(3C) | ACHIEVEMENT | "sign the minutes": a thing done once; the text's own standard is "within a reasonable time" |
+| `sgl-minutes.l4` | 428 | s 189(1) | MAINTENANCE | "keep the books at the registered office or the principal place of business in Singapore": a state that must hold throughout ("must be kept ... at the registered office") |
+| `sgl-statutory.l4` | 436 | s 174(6) | OTHER | "cause the list of members to be produced at the commencement of the meeting and to remain op...": tied to a meeting (the list "to be produced at the commencement of the meeting and to remain open" during it), whose own time governs |
+| `sgl-written.l4` | 613 | s 184C(1) | ACHIEVEMENT | "send each member a copy of the text of the resolution": a thing done once; the text's own standard is "without delay" |
+| `sgl-written.l4` | 629 | s 184D(2)(b) | ACHIEVEMENT | "proceed to convene a general meeting for the resolution": a thing done once |
+| `sgl-written.l4` | 662 | s 184F(1) | OTHER | "enter the record of the resolution in a book": its time is that of another act or filing: "in the same way as minutes", which s 188(1)(a) times ("within one month") |
+| `sgm-part10.l4` | 203 | s 344(4) | ACHIEVEMENT | "publish in the Gazette notice of the striking off of the name of the company": a thing done once |
+| `sgm-part10.l4` | 389 | s 344(7)(a) | ACHIEVEMENT | "send the particulars to the Inland Revenue Authority of Singapore and the Central Provident...": a thing done once |
+| `sgm-part10.l4` | 413 | s 344(7)(b) | ACHIEVEMENT | "publish the substance of the notices on the Authority's website": a thing done once |
+| `sgm-part10.l4` | 479 | s 344A(3) | ACHIEVEMENT | "send the company and its directors, secretaries and members a letter informing them of the a...": a thing done once |
+| `sgm-part10.l4` | 556 | s 344A(5) | ACHIEVEMENT | "strike off the name of the company from the register and publish a notice in the Gazette": a thing done once |
+| `sgm-part10.l4` | 626 | s 344A(8)(a) | ACHIEVEMENT | "send the particulars of the company and of the application to the Inland Revenue Authority o...": a thing done once |
+| `sgm-part10.l4` | 650 | s 344A(8)(b) | ACHIEVEMENT | "publish the substance of the notices on the Authority's website": a thing done once |
+| `sgm-part10.l4` | 719 | s 344B(2)(a) | ACHIEVEMENT | "send the company by ordinary post a notice that the application has been withdrawn": a thing done once |
+| `sgm-part10.l4` | 732 | s 344B(2)(b) | ACHIEVEMENT | "publish a notice on the Authority's website that the application has been withdrawn": a thing done once |
+| `sgm-part10.l4` | 812 | s 344C(3)(a) | ACHIEVEMENT | "give the applicant or applicants notice of the objection": a thing done once |
+| `sgm-part10.l4` | 825 | s 344C(3)(b) | OTHER | "take into account the considerations prescribed in deciding whether to allow the objection": to be weighed in the course of another act (the Registrar's own decision whether to allow the objection), with no time of its own |
+| `sgm-part10.l4` | 904 | s 344E(1) | ACHIEVEMENT | "give the applicant notice of the decision": a thing done once |
+| `sgm-part10.l4` | 960 | s 344E(2)(b)(i) | ACHIEVEMENT | "enter in the register a note of the date on which the restoration takes effect": a thing done once |
+| `sgm-part10.l4` | 973 | s 344E(2)(b)(ii) | ACHIEVEMENT | "cause notice of the restoration to be published in the Gazette and on the Authority's website": a thing done once |
+| `sgm-part5-div4.l4` | 394 | s 190(1) | MAINTENANCE | "keep a register of its members and enter in it what the subsection requires": a register, index or record to be kept: it must hold throughout, not be done once |
+| `sgm-part5-div4.l4` | 408 | s 190(5) | MAINTENANCE | "keep an index in convenient form of the names of the members": a register, index or record to be kept: it must hold throughout, not be done once |
+| `sgm-part5-div4.l4` | 628 | s 192(2) | MAINTENANCE | "open the register and index to inspection": a state that must hold throughout ("must be open to the inspection" of members) |
+| `sgm-part5-div4.l4` | 1248 | s 196(4) | ACHIEVEMENT | "transmit to the office at which the principal register is kept a copy of every entry in the...": a thing done once; the text's own standard is "as soon as possible" |
+| `sgm-part5-div4.l4` | 1259 | s 196(4) | MAINTENANCE | "cause to be kept at that office a duplicate of the branch register, duly entered up": a register, index or record to be kept: it must hold throughout, not be done once |
+| `sgm-part5-div4a.l4` | 49 | s 196A(1) | MAINTENANCE | "keep and maintain an electronic register of members of the private company": a register, index or record to be kept: it must hold throughout, not be done once |
+| `sgm-part5-div4a.l4` | 254 | s 196A(5) | ACHIEVEMENT | "update the electronic register of members in accordance with the change": a thing done once, on its trigger (a change lodged with the Registrar) |
+| `sgn-nominees.l4` | 65 | s 386AKA(1) | MAINTENANCE | "keep a register of its directors who are nominees in the prescribed form and at the prescrib...": a register, index or record to be kept: it must hold throughout, not be done once |
+| `sgn-nominees.l4` | 684 | s 386ALA(1) | MAINTENANCE | "keep a register of its shareholders who are nominees in the prescribed form and at the presc...": a register, index or record to be kept: it must hold throughout, not be done once |
+| `sgn-notices.l4` | 56 | s 386AG(1) | OTHER | "take reasonable steps to find out and identify the registrable controllers": an effort standard ("take reasonable steps to find out and identify"), neither one act nor a state |
+| `sgn-register.l4` | 382 | s 386AF(7)(a) | MAINTENANCE | "ensure that the register contains the prescribed particulars of its registrable individual c...": a state that must hold throughout ("ensure that the register contains" the particulars) |
+| `sgn-register.l4` | 397 | s 386AF(7)(aa) | MAINTENANCE | "ensure that the register contains the note and prescribed particulars required under section...": a state that must hold throughout ("ensure that the register contains" the note and particulars) |
+| `sgn-register.l4` | 414 | s 386AF(7)(b) | MAINTENANCE | "ensure that the register is updated if any change to the prescribed particulars occurs": a state that must hold throughout ("ensure that the register is updated" when a change occurs) |
+| `sgn-register.l4` | 432 | s 386AF(7)(c) | MAINTENANCE | "ensure that the register is kept in the prescribed form and at the prescribed place": a state that must hold throughout ("ensure that the register is kept in the prescribed form and at the prescribed place") |
+| `sgn-register.l4` | 502 | s 386AF(9)(a) | OTHER | "enter or update the particulars of a controller after the controller has confirmed them": the Act itself defers the time to regulations ("within the prescribed time", s 386AF(8)), so s 52 is not the standard |
+| `sgn-register.l4` | 515 | s 386AF(9)(b) | OTHER | "enter or update the particulars of a controller with a note that they have not been confirme...": the Act itself defers the time to regulations ("within the prescribed time", s 386AF(8)), so s 52 is not the standard |
+| `sgn-register.l4` | 797 | s 386AFA(3) | OTHER | "enter in the register of controllers the note and the prescribed particulars of each directo...": the Act itself defers the time to regulations ("within the prescribed period", s 386AFA(4)), so s 52 is not the standard |
+| `sgn-registrar.l4` | 237 | s 386AN(2)(a) | MAINTENANCE | "keep a central register of controllers consisting of the particulars contained in the regist...": a register, index or record to be kept: it must hold throughout, not be done once |
+| `sgn-registrar.l4` | 256 | s 386AN(2)(b) | ACHIEVEMENT | "require a company or foreign company to which this Part applies to lodge the particulars con...": a thing done once, on its trigger (the Registrar requiring it) |
+| `sgn-registrar.l4` | 408 | s 386ANA(1) | MAINTENANCE | "keep a central register of nominee directors and a central register of nominee shareholders": a register, index or record to be kept: it must hold throughout, not be done once |
 
 ## Dropped
 
