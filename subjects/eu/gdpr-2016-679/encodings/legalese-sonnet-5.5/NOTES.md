@@ -22,6 +22,8 @@ Where parts meet, an answer of another part is a plain input with the name its p
 The notes and plans of the parts were written in the build environment: where they say "the brief" (the part's build instruction), "the Guide" or "the lead", or cite `inputs/`, `lead/` or `DEPOSIT/`, those are build-time files that are not in this folder; the source text is `../../registers/source-bundle/eu-gdpr-2016-679-consolidated-20160504.txt`.
 
 **check.sh over the whole folder, both builds** (unstable and main 1.6.112, read by the merge on 2026-11-26): 76 modules, 3726 assertions satisfied, 8 failed, 0 refused, 0 other errors, the same on both builds.
+The 3726 above is the 2026-11-26 reading and stays as it was.
+After the Art 4(2) split of 2026-11-27 (see "Art 4(2): the OR is two inputs" under "Marginal readings for a lawyer") the same check reads 3732 assertions satisfied, with the other counts as above (76 modules, 8 failed and expected, 0 refused, 0 other errors), the same on both builds: measured on 2026-11-27 with the dev build and the cached main build 1.6.112.
 The 8 failed are expected: `tests-independent-2-open.l4` (4); `tests-independent-open.l4` (4).
 
 <!-- PARTS:END -->
@@ -180,11 +182,11 @@ The row's `SOURCE-LICENSE.md` now says so too, and keeps UNDETERMINED.
 
 ## Seats
 
-- **A data subject** `[subject]` (required): `P1-seat-subject.l4`, 37 questions, `P1-cases-seat-subject.l4` (117 cases).
+- **A data subject** `[subject]` (required): `P1-seat-subject.l4`, 37 questions, `P1-cases-seat-subject.l4` (118 cases).
   The data subject is the natural person whose data are processed; a child is a data subject, and Article 8 is asked from the child's side as well.
   It asks only what a data subject can state: scope (Art 2), what is personal data and who is a controller or processor (Art 4), the principles as they touch her data (5(1)(a), (c), (d), (e), 5(2)), the bases she can speak to (6(1)(a), (b), (f)), consent (7), the child (8), the prohibition and the grounds she can state (9(1), 9(2)(a), (c), (e), the combined question), criminal convictions (10), identification (11).
   It has no question on 4(6), 5(1)(b), 5(1)(f), 6(1)(c)-(e), 6(2)-(4), 8(2), 8(3), 9(2)(b), (d), (f)-(j), 9(3), 9(4) or Article 24: those address only the controller or a lawmaker, or turn on facts a data subject cannot state.
-- **A controller** `[controller]`: `P1-seat-controller.l4`, 67 questions, `P1-cases-seat-controller.l4` (197 cases).
+- **A controller** `[controller]`: `P1-seat-controller.l4`, 67 questions, `P1-cases-seat-controller.l4` (198 cases).
   A joint controller is the same seat: the plain input `the body decides them jointly with another body` (Art 4(7)).
   It asks every layer-1 rule that addresses a controller, grouped by article.
 - **A processor** `[processor]`: no seat module and no processor question.
@@ -413,9 +415,16 @@ The chapeau is inert: it does not change the answer, and each limb is named for 
 Layout decides what the chapeau covers: with the OR on the same line as the chapeau, the chapeau binds only the first limb, `(chapeau AND on personal data) OR on sets of personal data`; with the OR on its own aligned line, as in the function, it covers both, `chapeau AND (on personal data OR on sets of personal data)`.
 Both give the same answers; they differ in the tree (measured 2026-11-27 with `l4 ast` on the dev build and on main 1.6.112, which read both the same).
 The two Art 4(2) seat questions (`P1-seat-controller.l4`, `P1-seat-subject.l4`, both @export) ask the same two as full sentences, `the operations are performed on personal data` and `the operations are performed on sets of personal data`, so each now has four inputs where it had three.
-The second limb may be redundant, because a set of personal data is itself personal data; whether it adds anything is left to a lawyer and is not decided here.
+The second limb may be redundant, if a set of personal data is itself personal data; Art 4(2) does not say, and whether the second limb adds anything is left to a lawyer and is not decided here.
 Every answer is unchanged: an old TRUE maps to (TRUE, FALSE) and an old FALSE to (FALSE, FALSE).
-Four asserts are new (`gdpr-definitions-tests.l4`, §Art 4(2)), so `check.sh` over the folder reads 3730 satisfied after this change, with the other counts as before; the 3726 recorded above is the reading of 2026-11-26, before it, and `encoding.json` says 3730.
+The callers were edited the same way, inputs only: `FALSE` for the new second input is inserted before the last boolean, and every expected value is unchanged.
+That is 24 asserts in `gdpr-definitions-tests.l4`, 2 in `P1-tests-art-2.l4`, 3 each in `P1-cases-seat-controller.l4` and `P1-cases-seat-subject.l4`, and the nine Art 4(2) asserts of `tests-independent.l4` (Q38 to Q46, the independent author's file).
+Six asserts are new: four in `gdpr-definitions-tests.l4` (§Art 4(2): the second limb alone twice, both limbs, neither) and one in each seat's cases file (`P1-cases-seat-controller.l4`, `P1-cases-seat-subject.l4`: the second limb alone).
+The seat cases were added because the 15 seat-level Art 4(2) asserts that existed before them all pass FALSE for the second input, so a seat that ignored that input would have passed the folder.
+After this change `check.sh` over the folder reads 3732 assertions satisfied (3726 plus those six), with the other counts as before, and `encoding.json` says 3732.
+Two earlier readings stay dated and still say 3726: line 24 ("Parts of this row", read by the merge on 2026-11-26) and line 167, in the recitals section ("Measured 2026-11-27", "(a) as committed").
+That "as committed" described the tree before this split, which read 3726; the split's four asserts make 3730, and the two seat cases added after them make 3732.
+The post-split count is written next to line 24 (as line 26), because `encoding.json` points the reader to "Parts of this row".
 
 ## Split sites (your part)
 
