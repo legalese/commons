@@ -36,7 +36,7 @@ Nothing else is encoded: Article 1, 2(3), 2(4), 3, Article 4 points (3)-(5), (9)
 **Edition and status of the text.**
 The text is the Publications Office consolidated version of 4.5.2016 (CELEX 02016R0679-20160504, "000.002"), which applies the corrigendum of OJ L 127, 23.5.2018, p. 2.
 It is a rendering made by a script from XHTML, and it is a documentation tool with no legal effect: the Official Journal text is authentic.
-No recital is encoded and none is quoted as an authority; I read no recital for any rule. The one place a recital is cited, `-- see recital 19` in `P1-art-2.l4` at the term 'competent authorities', rests on a search of the uncorrected text for the Directive's number, not on reading the recital.
+No recital is encoded as a rule and none is quoted as an authority; I read no recital for any rule (added 2026-11-27: all 173 recitals are now carried as inert text by `recitals/gdpr-recitals.l4`, which no rule reads; see "Recitals carried as inert text" below). The one place a recital is cited, `-- see recital 19` in `P1-art-2.l4` at the term 'competent authorities', rests on a search of the uncorrected text for the Directive's number, not on reading the recital.
 The corrigendum: none of its fifteen corrections falls in this range (they are in recital 71 and Articles 37(1)(c), 41(3), 41(5), 42(7), 43(3), 43(6), 57(1)(p), 64(1)(c), 64(6)-(8), 65(1)(a), 69(2), 70(1)(l), (o), (p)); checked against the corrigendum file; every `▼C1` marker of the consolidated text lies at line 451 or later, and so does every inline `►C1` marker (the first is at line 544); line 6 carries the header legend `►C1`, which marks no change in the text.
 There is no date input and no version axis: the Regulation applies from 25 May 2018 (Art 99(2)) and the one text in force is the one encoded (assumed, not ruled).
 
@@ -93,7 +93,8 @@ Each was checked on 2026-11-26 against the source named; where a check was a sea
 1. **The text quoted is a rendering, not the official text.**
    The text quoted is the Publications Office consolidated version of 4.5.2016 (CELEX 02016R0679-20160504), a rendering made by a script from the Publications Office's XHTML.
    The Publications Office says of the consolidation that it is a documentation tool with no legal effect; the Official Journal text (OJ L 119, 4.5.2016, p. 1, with the corrigendum) is the authentic one.
-   The recitals are reading aids, not rules: they come from the as-published text (`eu-gdpr-2016-679.txt`, CELEX 32016R0679), which is uncorrected, and none is encoded or quoted as an authority (checked in `inputs/SOURCES.md`).
+   The recitals are reading aids, not rules: they come from the as-published text (`eu-gdpr-2016-679.txt`, CELEX 32016R0679), which is uncorrected, and none is encoded as a rule or quoted as an authority (checked in `inputs/SOURCES.md`).
+   Added 2026-11-27: `recitals/gdpr-recitals.l4` carries them as inert text from that same file, with the corrigendum's one correction of a recital (71) applied; see "Recitals carried as inert text".
 2. **The corrigenda.**
    The 2018 corrigendum (OJ L 127, 23.5.2018, p. 2) has fifteen corrections (fifteen `for:` blocks counted in `eu-gdpr-2016-679-corrigendum-20180523.txt`), of recital 71 and Articles 37(1)(c), 41(3), 41(5), 42(7), 43(3), 43(6), 57(1)(p), 64(1)(c), 64(6) to (8), 65(1)(a), 69(2), 70(1)(l), (o) and (p).
    None falls in this range (Articles 2, 4(1), (2), (6) to (8), 5 to 11 and 24).
@@ -111,6 +112,71 @@ Each was checked on 2026-11-26 against the source named; where a check was a sea
    Nothing here says the texts may be redistributed.
 6. **No lawyer has read this encoding.**
    Its status is `draft`.
+
+## Recitals carried as inert text (added 2026-11-27, after the parts above; decided by Claude 2026-11-27, pending Meng's review)
+
+This section is outside the generated parts table: it is not a part (P1, K2, P2), and the module is not counted in the 76 modules of the table's check line.
+It adds one module, `recitals/gdpr-recitals.l4`, and two scripts, `notes/gen-recitals.py` and `notes/check-recitals.py`.
+It changes no rule and no test.
+**The recitals are carried as inert text, not read for any rule**: no function reads them, no article is linked to a recital, and none is quoted as an authority.
+The sentences in this file and in the part notes that say no recital is encoded are about rules, and remain true of rules (the part notes and plans are accounts of what each part did, and are left as written).
+
+| what the module adds | count |
+| --- | --- |
+| module | `recitals/gdpr-recitals.l4`, 220 lines, two outlines of the `hierarchy` library |
+| preamble: heading line and citation formulae | 1 + 6 (the heading is "THE EUROPEAN PARLIAMENT AND THE COUNCIL OF THE EUROPEAN UNION,", the six are the lines under it, down to "Acting in accordance with the ordinary legislative procedure (3),") |
+| recitals: heading line and recitals | 1 ("Whereas:") + 173 |
+| sub-points nested under a recital | 0: the source has every recital as one row, with no sub-points, so no `•` nesting below the recital is needed |
+| recitals that differ from the as-published text | 1 (recital 71) |
+| words carried (whitespace-separated, the 173 recitals and the 6 formulae) | 23,565 |
+| assertions | 4, all satisfied; no rule, no test, no `@export` |
+
+**Source and edition.**
+The recitals come from `eu-gdpr-2016-679.txt` (the Regulation as published in the Official Journal, L 119, 4.5.2016, p. 1; CELEX 32016R0679), lines 14 to 186, the rows `| (1) |` to `| (173) |`.
+The consolidated text of 4.5.2016, which is the edition this encoding quotes for the Articles, has no recitals: it has no row of that form (0 found on 2026-11-27) and its `.meta.json` says "Recitals are not part of it".
+So the recitals are the as-published ones, and the one correction of the corrigendum that names a recital is applied, which makes them the same edition as the Articles: the text with the corrigendum of OJ L 127, 23.5.2018, p. 2 applied.
+The corrigendum has fifteen corrections (fifteen `for:` lines); **one falls in the recitals, recital 71 ("On page 14, recital 71, fifth and sixth sentences")**, and the other fourteen are in Articles that this module does not carry.
+Recital 71, as published, then as corrected, in the corrigendum's own words (its two changes inside the fifth and sixth sentences; both passages have 141 words):
+
+1. for: "... the interests and rights of the data subject and that prevents, inter alia, discriminatory effects ..." read: "... the interests and rights of the data subject, and prevent, inter alia, discriminatory effects ...".
+2. for: "... genetic or health status or sexual orientation, or that result in measures having such an effect." read: "... genetic or health status or sexual orientation, or processing that results in measures having such an effect."
+
+The 2016 corrigendum (CELEX 32016R0679R(01)) and the 2021 corrigendum (OJ L 74, 4.3.2021, p. 35) are not deposited (see "Sources, edition and status", item 2), so the module applies the 2018 corrigendum only: whether either of the other two changes a recital is not established here.
+
+**What is carried exactly.**
+Each recital is the text of its row, byte for byte, between the row's frame (`| (n) | ` and ` |`), except recital 71.
+The inline footnote markers are kept as the source writes them (for example "( 4 )"; the preamble's are "(1)", "(2)", "(3)"), and so are the curly single quotes (12 opening, 12 closing) and the "à" of "vis-à-vis" (twice).
+The source region has no double quote and no backslash, so no escape was needed (the generator escapes both anyway, and the check refuses any other escape).
+**Not carried:** the title block (lines 1 to 5 of the source), the line "HAVE ADOPTED THIS REGULATION:" (187), and the texts of footnotes (1) to (18) (lines 1232 to 1252 of the source), which the markers point to.
+A marker in the module therefore points at nothing in the module; the footnote texts are citations of other instruments, not recital text, and carrying them is a choice left open.
+
+**Numbering (decided by Claude 2026-11-27, pending Meng's review).**
+The 173 recitals are items of one level, numbered automatically in the Decimal style, so the library's `render outline` gives "1" to "173" (a tab, then the text).
+The Official Journal's brackets, "(1)", are not carried: the library's marker is the bare number, and pinning "(n)" by hand with `numbered` would make the numbers typed rather than counted.
+Each item line ends with the comment `-- (n)` so that a reader can find a recital by its number; the number the renderer gives is the item's position, and the check requires the comment, the position and the source number to agree.
+The six preamble formulae are not numbered in the source, so they are a second outline rendered with the Bulleted style; "Whereas:" is the root of its own outline (a shared root would render the recitals as 2.1 to 2.173).
+
+**Target and what the folder's gate does.**
+The module reads on the unstable build only.
+The main build 1.6.112 (`e4f4bf3`) has two independent obstacles, measured on 2026-11-27: `hierarchy` is not among the 20 modules embedded in it (with an empty XDG data directory, `IMPORT hierarchy` answers "module not found"), and it rejects the bullet syntax (`unexpected '•'` at the first bullet).
+The row's target is `main`, and this folder has no per-module target: `check.sh` takes one `L4_TARGET` and reads `$DIR/*.l4`, and `encoding.json` has one `target`.
+So the module is in `recitals/`, which `check.sh` does not read (its glob is not recursive), and `encoding.json` lists it under `unstable_only` (the key the sg household row uses for its proofs file).
+Measured 2026-11-27, with `L4` the unstable prerelease `unstable-20261126-1be4053` and `L4_MAIN` the main build 1.6.112:
+(a) as committed, `./check.sh` (target main) over the folder reads 76 modules, 3726 assertions satisfied, 8 failed (the expected 8), 0 refused, the same on both builds, exit 0: this module changes nothing in that line;
+(b) `L4=<unstable l4> L4_TARGET=unstable ./check.sh recitals` reads 1 module, 0 errors, 4 assertions satisfied, 0 failed, 0 refused, exit 0 (the main check is skipped, and says so);
+(c) with the same file copied to the top level of an otherwise empty scratch directory, `./check.sh <that directory>` (target main) exits 1: `reads differently on main`, `main says: parse 30:5-30:5: unexpected '•'` (1 error on main; 4 assertions satisfied on unstable).
+The placement is decided by Claude 2026-11-27, pending Meng's review; the alternatives are the module at the top level with the gate red on main, or at the top level with a skip in `check.sh` for listed unstable-only modules, as the sg household row's own `check.sh` does.
+No library was copied into this repository.
+
+**Checks (2026-11-27).**
+Generate: `python3 -I notes/gen-recitals.py` (deterministic; it checks the sha256 of its inputs against their `.meta.json`, refuses any change in the source's shape, and applies the corrigendum read from the corrigendum file).
+Verify: `L4=<an unstable l4> python3 -I notes/check-recitals.py`, which parses the source and the module by its own code, compares every recital byte for byte (no normalisation: only the row's frame is removed, and putting it back gives the source line), takes recital 71 from the corrigendum by a second route, and then runs `l4 run` and compares the rendered lines, with their numbers, to the source; `--self-test` mutates the module in memory in sixteen ways (a deleted word, a lost footnote marker, a straight quote for a curly one, recital 71 reverted to the as-published wording, a swapped, merged, dropped, duplicated or invented recital, among them) and requires each to be caught, naming the recital.
+Result: PASS with the unstable prerelease `unstable-20261126-1be4053` and with the installed `l4` (version string `dev`): 6 citation formulae and 173 recitals found in the module, the rendered recitals 174 lines (the heading and 173 numbered lines, each number equal to the source's), 0 error diagnostics, 4 assertions satisfied; the self-test caught all sixteen mutations.
+
+**Licence of the text.**
+The licence of the deposited Official Journal texts is **UNDETERMINED**: the subject's `SOURCE-LICENSE.md` says that no reuse grant covering Official Journal legal texts or the Publications Office's consolidated versions has been read as applying to them, and that a person with authority to decide should settle the terms before the subject is relied on as redistributable.
+This module repeats 23,565 words of the as-published text in a derived form (the same words written as L4 string literals), and this section does not decide the question.
+The row's `SOURCE-LICENSE.md` now says so too, and keeps UNDETERMINED.
 
 ## Seats
 
