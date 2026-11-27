@@ -407,9 +407,11 @@ Art 2(1) outside both limbs; Art 2(2)(a) to (d) when the exception does not hold
 **Branches that rest on a closing word read as no (JUST FALSE), other reading: NOTHING (the three split sites of type (ii) that answer JUST FALSE, one of them in part).**
 Art 5(1)(e) purpose arm ("solely" closes the list of purposes: fork F5-3); Art 8(1) "provided that ... not below 13 years" (the function is named for a grant: fork F8-1); Art 9(3) "when" (fork F9-4).
 
-**Art 4(2): the OR is two inputs (a pilot, changed 2026-11-27 to Meng's sketch; whether the second limb is redundant is not ruled).**
+**Art 4(2): the OR is two inputs (added 2026-11-27, a pilot; decided by Claude 2026-11-27, pending Meng's review).**
 The OR in "performed on personal data or on sets of personal data" was one BOOLEAN input and is now two plain BOOLEAN inputs, `on personal data` and `on sets of personal data`, joined by OR under the inert chapeau "the operations are performed" (`gdpr-definitions.l4`, `Art 4(2) the operations are processing`).
 The chapeau is inert: it does not change the answer, and each limb is named for its complement only.
+Layout decides what the chapeau covers: with the OR on the same line as the chapeau, the chapeau binds only the first limb, `(chapeau AND on personal data) OR on sets of personal data`; with the OR on its own aligned line, as in the function, it covers both, `chapeau AND (on personal data OR on sets of personal data)`.
+Both give the same answers; they differ in the tree (measured 2026-11-27 with `l4 ast` on the dev build and on main 1.6.112, which read both the same).
 The two Art 4(2) seat questions (`P1-seat-controller.l4`, `P1-seat-subject.l4`, both @export) ask the same two as full sentences, `the operations are performed on personal data` and `the operations are performed on sets of personal data`, so each now has four inputs where it had three.
 The second limb may be redundant, because a set of personal data is itself personal data; whether it adds anything is left to a lawyer and is not decided here.
 Every answer is unchanged: an old TRUE maps to (TRUE, FALSE) and an old FALSE to (FALSE, FALSE).
