@@ -216,7 +216,7 @@ Rule names are given by their label; each is the function whose name begins with
 | Art 4(1) 'personal data' (39) | any information relating to an identified or identifiable natural person | fork F4-1 | defs `Art 4(1) the information is personal data` | defs-tests §Art 4(1): personal data |
 | Art 4(1) 'data subject' (39) | the identified or identifiable natural person | encoded | defs `Art 4(1) the person is a data subject` | defs-tests §Art 4(1): data subject |
 | Art 4(1) 'identifiable natural person' (39) | one who can be identified directly or indirectly, in particular by ... | fork F4-1 | defs `Art 4(1) the natural person is an identifiable natural person` | defs-tests §Art 4(1): twelve means, none |
-| Art 4(2) 'processing' (40) | any operation or set of operations on personal data, whether or not by automated means, such as ... | encoded | defs `Art 4(2) the operations are processing` | defs-tests §Art 4(2): nineteen operations, a set, outside |
+| Art 4(2) 'processing' (40) | any operation or set of operations on personal data, whether or not by automated means, such as ... | encoded | defs `Art 4(2) the operations are processing` (the OR in "on personal data or on sets of personal data" is two inputs under an inert chapeau: see "Art 4(2): the OR is two inputs" under "Marginal readings for a lawyer") | defs-tests §Art 4(2): nineteen operations, a set, outside, and the two limbs of the OR (second limb alone twice, both, neither) |
 | Art 4(6) 'filing system' (44) | structured set of personal data accessible according to specific criteria, however arranged | encoded | defs `Art 4(6) the set is a filing system` | defs-tests §Art 4(6) |
 | Art 4(7) 'controller', first limb (45) | the person, alone or jointly with others, determining purposes and means | encoded | defs `Art 4(7) the body is a controller`, `Art 4(7) how the body determines the purposes and means` | defs-tests §Art 4(7) |
 | Art 4(7) 'controller', second limb (45) | where purposes and means are fixed by Union or Member State law, the controller or the criteria may be provided for by that law | fork F4-2 | defs `Art 4(7) the body is a controller` | defs-tests §Art 4(7): second limb |
@@ -406,6 +406,14 @@ Art 2(1) outside both limbs; Art 2(2)(a) to (d) when the exception does not hold
 
 **Branches that rest on a closing word read as no (JUST FALSE), other reading: NOTHING (the three split sites of type (ii) that answer JUST FALSE, one of them in part).**
 Art 5(1)(e) purpose arm ("solely" closes the list of purposes: fork F5-3); Art 8(1) "provided that ... not below 13 years" (the function is named for a grant: fork F8-1); Art 9(3) "when" (fork F9-4).
+
+**Art 4(2): the OR is two inputs (a pilot, changed 2026-11-27 to Meng's sketch; whether the second limb is redundant is not ruled).**
+The OR in "performed on personal data or on sets of personal data" was one BOOLEAN input and is now two plain BOOLEAN inputs, `on personal data` and `on sets of personal data`, joined by OR under the inert chapeau "the operations are performed" (`gdpr-definitions.l4`, `Art 4(2) the operations are processing`).
+The chapeau is inert: it does not change the answer, and each limb is named for its complement only.
+The two Art 4(2) seat questions (`P1-seat-controller.l4`, `P1-seat-subject.l4`, both @export) ask the same two as full sentences, `the operations are performed on personal data` and `the operations are performed on sets of personal data`, so each now has four inputs where it had three.
+The second limb may be redundant, because a set of personal data is itself personal data; whether it adds anything is left to a lawyer and is not decided here.
+Every answer is unchanged: an old TRUE maps to (TRUE, FALSE) and an old FALSE to (FALSE, FALSE).
+Four asserts are new (`gdpr-definitions-tests.l4`, §Art 4(2)), so `check.sh` over the folder reads 3730 satisfied after this change, with the other counts as before; the 3726 recorded above and in `encoding.json` are the reading of 2026-11-26, before it.
 
 ## Split sites (your part)
 
