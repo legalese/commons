@@ -935,7 +935,7 @@ The "until" rows below (s 16, Rule 2, Rule 3, s 19(1), s 29(4), s 35(2)) describ
 
 ## Findings: what the text turns out to say
 
-1. An unbracketed `NOT` covers everything to its right in the main binary: `NOT a OR b` is `NOT (a OR b)`. The run exits 0 with no message. Every `NOT` in layer 1 is bracketed. Asserted (soga-cases-findings.l4: four probe functions, `TRUE TRUE` and `TRUE FALSE` inputs, on 1.6.109 and 1.6.108).
+1. An unbracketed `NOT` covers everything to its right in the main binary: `NOT a OR b` is `NOT (a OR b)`. The run exits 0 with no message. Every `NOT` in layer 1 is bracketed. Asserted (soga-cases-findings.l4: four probe functions, `TRUE TRUE` and `TRUE FALSE` inputs, on 1.6.109 and 1.6.108). An `l4` that refuses a `NOT` followed on its own line by `AND`, `OR` or `IMPLIES` rejects the unbracketed spelling, so since 22 November 2026 the two probes of it write out the reading those binaries gave, `NOT (a OR b)` and `NOT (a AND b)`, and assert the same answers.
 
 2. `Date d m y` rolls an impossible day or month forward with no error: `Date 31 2 2025` is 3 March 2025, `Date 15 14 2025` is February 2026. Asserted (soga-cases-findings.l4: `DATE_DAY (Date 31 2 2025) EQUALS 3` and three more).
 
