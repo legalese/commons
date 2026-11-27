@@ -14,7 +14,6 @@ Every question is published with `@export` and a plain-words description, and
 every input carries an `@desc`, so the module can be deployed to Legalese Cloud as
 it stands. One duty with a deadline, the strata company's duty to give the owner a
 s 110 certificate within 14 days, is also written as a regulative rule.
-That rule, `the strata company's duty to give me the certificate`, is the one exception to the line above: its `@export` is commented out ahead of legalese/l4-ide#779 (not landed), which refuses an `@export` whose result is a DEONTIC.
 
 ## Edition
 
@@ -300,8 +299,7 @@ design D2, D4 and D8). The layer is `sta-qa.l4`, with cases in `sta-qa-cases.l4`
 (`@desc Which of these describes you`) and answers `does not arise for you`, reading nothing else, for a role it is not
 about. Every answer type carries that value: `Yes or no`, `Amount`, `Days`, `Working days`, `Vote answer` (wrapping
 the baseline's `Who casts my lot's vote`), `Variation answer` (wrapping `Notifiable variation`) and `Notice deadline`.
-No exported question takes a DEONTIC or EVENT input. The baseline's s 110 duty is a DEONTIC, and its `@export` was
-already commented out; it is not used here.
+No exported question takes a DEONTIC or EVENT input. The baseline's s 110 duty is a DEONTIC; it is not used here.
 
 ### Roles
 
