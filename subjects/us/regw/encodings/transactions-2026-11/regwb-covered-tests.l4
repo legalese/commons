@@ -1,0 +1,151 @@
+-- Tests for regwb-covered.l4 (12 CFR 223.3(h), (i), (a), 223.11, 223.12, 223.16).
+--
+-- The fixtures are small structures built for the purpose.  In every one the member bank is Bank,
+-- P is its parent (an affiliate under 223.2(a)(1)), U has no connection with it, and FS is a
+-- financial subsidiary of Bank (an affiliate under 223.2(a)(8)).  Each group of tests names the
+-- words of the text it exercises, and every expected value is written from those words.
+
+IMPORT prelude
+IMPORT `regw-nouns`
+IMPORT `regw-control`
+IMPORT `regw-affiliate`
+IMPORT `regwb-nouns`
+IMPORT `regwb-covered`
+
+§ `Fixtures`
+
+GIVEN n IS A STRING
+GIVETH A Party
+corp MEANS Party OF n, Corporation, FALSE, FALSE, `Some other activity`, `Not held through a debt previously contracted`, FALSE
+
+GIVEN n IS A STRING
+GIVETH A Party
+`financial subsidiary` MEANS Party OF n, Corporation, FALSE, TRUE, `Some other activity`, `Not held through a debt previously contracted`, FALSE
+
+GIVEN
+    a IS A STRING
+    b IS A STRING
+    p IS A NUMBER
+GIVETH A Holding
+stake MEANS Holding OF a, b, "common", p, 0, FALSE, FALSE
+
+GIVETH A Structure
+`the structure` MEANS Structure OF "Bank", parties, holdings, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY
+    WHERE
+        parties MEANS LIST corp "Bank", corp "P", corp "U", `financial subsidiary` "FS"
+        holdings MEANS LIST stake "P" "Bank" 100, stake "Bank" "FS" 100
+
+GIVETH A Readings
+`default readings` MEANS Readings OF `The member bank is not its own affiliate`, `One board at a time: the member bank, or one controlling company`, `Control through the controller's own holdings and elections, without attribution`, `A subsidiary of a company described in paragraphs (a)(1) through (10) only`
+
+GIVEN
+    k IS A `Transaction kind`
+    w IS A STRING
+    a IS A STRING
+    v IS A NUMBER
+GIVETH A Transaction
+transaction MEANS Transaction OF k, w, a, v, FALSE
+
+GIVEN
+    w IS A STRING
+    v IS A NUMBER
+GIVETH A Transaction
+`loan to` MEANS Transaction OF `An extension of credit`, w, w, v, FALSE
+
+GIVEN t IS A Transaction
+GIVETH A BOOLEAN
+covered MEANS `is a covered transaction` `the structure` `default readings` t
+
+§ `223.3(h): the five limbs, with an affiliate and with a stranger`
+
+-- (1) "An extension of credit to the affiliate": a loan to P is covered; a loan to U is not.
+#ASSERT covered (transaction `An extension of credit` "P" "P" 100)
+#ASSERT NOT (covered (transaction `An extension of credit` "U" "U" 100))
+-- (2) "A purchase of, or an investment in, a security issued by the affiliate".
+#ASSERT covered (transaction `A purchase of, or an investment in, a security` "P" "P" 100)
+#ASSERT NOT (covered (transaction `A purchase of, or an investment in, a security` "U" "U" 100))
+-- (3) "A purchase of an asset from the affiliate".
+#ASSERT covered (transaction `A purchase of an asset` "P" "P" 100)
+#ASSERT NOT (covered (transaction `A purchase of an asset` "U" "U" 100))
+-- (4) "The acceptance of a security issued by the affiliate as collateral for an extension of credit to
+-- any person or company": the borrower is U, the issuer of the collateral is P, so it is covered; with a
+-- security issued by U it is not.
+#ASSERT covered (transaction `The acceptance of a security as collateral for an extension of credit` "U" "P" 100)
+#ASSERT NOT (covered (transaction `The acceptance of a security as collateral for an extension of credit` "P" "U" 100))
+-- (5) "The issuance of a guarantee, acceptance, or letter of credit ... on behalf of the affiliate ... and
+-- a cross-affiliate netting arrangement".
+#ASSERT covered (transaction `The issuance of a guarantee, acceptance or letter of credit, or the confirmation of a letter of credit` "U" "P" 100)
+#ASSERT NOT (covered (transaction `The issuance of a guarantee, acceptance or letter of credit, or the confirmation of a letter of credit` "U" "U" 100))
+#ASSERT covered (transaction `A cross-affiliate netting arrangement` "U" "P" 100)
+-- A transaction of none of those kinds is not covered, even with an affiliate.
+#ASSERT NOT (covered (transaction `Some other transaction` "P" "P" 100))
+-- A financial subsidiary is an affiliate, so a loan to it is covered.
+#ASSERT covered (transaction `An extension of credit` "FS" "FS" 100)
+-- The member bank is not its own affiliate on the default reading.
+#ASSERT NOT (covered (transaction `An extension of credit` "Bank" "Bank" 100))
+
+§ `223.3(h)(3): purchases of property the Board has exempted`
+
+-- "except such purchases of real and personal property as may be specifically exempted by the Board".
+#ASSERT NOT (covered (Transaction OF `A purchase of an asset`, "P", "P", 100, TRUE))
+-- The exception is for purchases of an asset only: the flag does nothing on a loan.
+#ASSERT covered (Transaction OF `An extension of credit`, "P", "P", 100, TRUE)
+
+§ `223.3(i): credit transactions`
+
+#ASSERT `is a credit transaction kind` `An extension of credit`
+#ASSERT `is a credit transaction kind` `The issuance of a guarantee, acceptance or letter of credit, or the confirmation of a letter of credit`
+#ASSERT `is a credit transaction kind` `A cross-affiliate netting arrangement`
+#ASSERT NOT (`is a credit transaction kind` `A purchase of, or an investment in, a security`)
+#ASSERT NOT (`is a credit transaction kind` `A purchase of an asset`)
+#ASSERT NOT (`is a credit transaction kind` `The acceptance of a security as collateral for an extension of credit`)
+#ASSERT NOT (`is a credit transaction kind` `Some other transaction`)
+
+§ `223.3(a): the aggregate amount`
+
+-- "the amount of the covered transaction about to be engaged in added to the current amount of all
+-- outstanding covered transactions": 20 about to be engaged in, 80 outstanding.
+#ASSERT `aggregate amount of covered transactions` 20 80 EQUALS 100
+
+§ `223.11: the 10 percent limit with a single affiliate`
+
+-- Capital stock and surplus is 1,000, so 10 percent is 100.  80 outstanding with P and 20 about to be
+-- engaged in make exactly 100, which does not "exceed" 10 percent ...
+#ASSERT NOT (`would breach the single-affiliate limit` `the structure` `default readings` (`loan to` "P" 20) 80 1000)
+-- ... and 21 would make 101, which does.
+#ASSERT `would breach the single-affiliate limit` `the structure` `default readings` (`loan to` "P" 21) 80 1000
+-- "(other than a financial subsidiary of the member bank)": the same amounts with FS do not breach.
+#ASSERT NOT (`would breach the single-affiliate limit` `the structure` `default readings` (`loan to` "FS" 21) 80 1000)
+-- A transaction with a stranger is not a covered transaction, so no limit is breached.
+#ASSERT NOT (`would breach the single-affiliate limit` `the structure` `default readings` (`loan to` "U" 500) 80 1000)
+-- Exactness: 100.5 about to be engaged in on a capital stock and surplus of 1,005 is 10 percent, not over.
+#ASSERT NOT (`would breach the single-affiliate limit` `the structure` `default readings` (`loan to` "P" 100.5) 0 1005)
+#ASSERT `would breach the single-affiliate limit` `the structure` `default readings` (`loan to` "P" 100.5) 0 1004
+
+§ `223.12: the 20 percent limit with all affiliates`
+
+-- 180 outstanding with all affiliates and 20 about to be engaged in make exactly 200, 20 percent of 1,000.
+#ASSERT NOT (`would breach the all-affiliates limit` `the structure` `default readings` (`loan to` "P" 20) 180 1000)
+#ASSERT `would breach the all-affiliates limit` `the structure` `default readings` (`loan to` "P" 21) 180 1000
+-- Unlike 223.11, the text of 223.12 has no carve-out for a financial subsidiary: "any affiliate".
+#ASSERT `would breach the all-affiliates limit` `the structure` `default readings` (`loan to` "FS" 21) 180 1000
+#ASSERT NOT (`would breach the all-affiliates limit` `the structure` `default readings` (`loan to` "U" 500) 180 1000)
+
+§ `223.16: transactions with a nonaffiliate treated as with an affiliate`
+
+-- (a) "to the extent that the proceeds of the transaction are used for the benefit of, or transferred to,
+-- an affiliate": a 1,000 loan to U of which 400 goes to P counts as 400, and 1,500 cannot count for
+-- more than the 1,000 loan.
+#ASSERT `amount treated as a transaction with an affiliate` (`loan to` "U" 1000) (`Use of proceeds` OF 400, FALSE, FALSE, 0) EQUALS 400
+#ASSERT `amount treated as a transaction with an affiliate` (`loan to` "U" 1000) (`Use of proceeds` OF 1500, FALSE, FALSE, 0) EQUALS 1000
+#ASSERT `amount treated as a transaction with an affiliate` (`loan to` "U" 1000) (`Use of proceeds` OF 0, FALSE, FALSE, 0) EQUALS 0
+-- (b)(1) a loan whose proceeds buy an asset through an affiliate acting exclusively as agent, the asset
+-- not sold as principal by any affiliate: not treated as a loan to an affiliate, except (b)(2) the 10
+-- of agency fee the affiliate receives from the proceeds.
+#ASSERT `amount treated as a transaction with an affiliate` (`loan to` "U" 1000) (`Use of proceeds` OF 1000, TRUE, TRUE, 10) EQUALS 10
+-- (b)(1)(ii) fails if an affiliate sold the asset as principal: the whole 1,000 is treated as with the affiliate.
+#ASSERT `amount treated as a transaction with an affiliate` (`loan to` "U" 1000) (`Use of proceeds` OF 1000, TRUE, FALSE, 10) EQUALS 1000
+-- (b)(1)(i) fails if the affiliate is not acting exclusively as agent or broker.
+#ASSERT `amount treated as a transaction with an affiliate` (`loan to` "U" 1000) (`Use of proceeds` OF 1000, FALSE, TRUE, 10) EQUALS 1000
+-- (b)(1) speaks of an extension of credit: a guarantee does not get the agency exception.
+#ASSERT `amount treated as a transaction with an affiliate` (Transaction OF `The issuance of a guarantee, acceptance or letter of credit, or the confirmation of a letter of credit`, "U", "U", 1000, FALSE) (`Use of proceeds` OF 1000, TRUE, TRUE, 10) EQUALS 1000

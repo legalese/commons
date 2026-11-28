@@ -1,0 +1,322 @@
+-- Regulation W, 12 CFR 223.2: what is an "affiliate" of a member bank.
+--
+-- Target compiler: main (see NOTES.md).
+--
+-- The definition is recursive: prongs (a)(5) and (a)(10) speak of "an affiliate of the member
+-- bank", prong (a)(11) of a "company described in paragraphs (a)(1) through (10)", and the
+-- exclusion in (b)(1)(iii)(A) lets a subsidiary back in when an affiliate controls it directly.
+-- As with control (regw-control.l4), this module takes the LEAST fixed point: it starts from no
+-- affiliates, and a company is added only once the text makes it an affiliate given the companies
+-- already added.  The exclusion is written with its negation pushed inward, so the affiliates
+-- found so far are used only positively and the set can only grow.
+-- The recursion ends because `affiliates from` calls itself only on the companies still
+-- undecided, after at least one has been removed from that list.
+
+IMPORT prelude
+IMPORT `regw-nouns`
+IMPORT `regw-control`
+
+§ `Building the inquiry`
+
+GIVEN
+    s  IS A Structure
+    r  IS A Readings
+    pu IS A Purpose
+GIVETH AN Inquiry
+`inquiry about` MEANS Inquiry OF s, r, pu, `control relation` s, direct, `control relation counting fiduciary holdings` s
+    WHERE
+        direct MEANS
+            IF r's `direct control` EQUALS `Any control, including securities attributed from subsidiaries`
+            THEN `control relation` s
+            ELSE `direct control relation` s
+
+§ `Looking things up in an inquiry`
+
+GIVEN i IS AN Inquiry
+GIVETH A STRING
+`bank of` MEANS i's `structure`'s `the member bank`
+
+GIVEN i IS AN Inquiry
+GIVETH A LIST OF STRING
+`names of` MEANS map (GIVEN q YIELD q's `name`) (i's `structure`'s `the parties`)
+
+GIVEN
+    i IS AN Inquiry
+    a IS A STRING
+    b IS A STRING
+GIVETH A BOOLEAN
+controls MEANS `has link` (i's `control`) a b
+
+GIVEN
+    i IS AN Inquiry
+    a IS A STRING
+    b IS A STRING
+GIVETH A BOOLEAN
+`controls counting fiduciary holdings` MEANS `has link` (i's `control with fiduciary holdings`) a b
+
+GIVEN
+    i IS AN Inquiry
+    a IS A STRING
+    b IS A STRING
+GIVETH A BOOLEAN
+`directly controls` MEANS `has link` (i's `direct control`) a b
+
+-- 223.2(a)(2) with 223.3(f): the member bank is a company controlled by a company that controls
+-- it, so on the literal words it is its own affiliate.  The reading in `readings` decides.
+GIVEN
+    i IS AN Inquiry
+    p IS A Party
+GIVETH A BOOLEAN
+`may be an affiliate at all` MEANS
+       (NOT (p's `name` EQUALS `bank of` i))
+    OR i's `readings`'s `self-affiliation` EQUALS `The member bank is its own affiliate on the literal words`
+
+§ `223.2(a): the prongs`
+
+-- (1) Parent companies. Any company that controls the member bank.
+GIVEN
+    i IS AN Inquiry
+    p IS A Party
+GIVETH A BOOLEAN
+@ref 12 CFR 223.2(a)(1)
+`prong 1` MEANS controls i (p's `name`) (`bank of` i)
+
+-- (2) Companies under common control by a parent company. Any company, including any subsidiary
+-- of the member bank, that is controlled by a company that controls the member bank.
+GIVEN
+    i IS AN Inquiry
+    p IS A Party
+GIVETH A BOOLEAN
+@ref 12 CFR 223.2(a)(2)
+`prong 2` MEANS
+    any (GIVEN y YIELD `names a company` (i's `structure`) y AND controls i y (`bank of` i) AND controls i y (p's `name`)) (`names of` i)
+
+-- (3) Companies under other common control. Any company ... controlled ... by or for the benefit
+-- of shareholders who beneficially or otherwise control ... the member bank or any company that
+-- controls the member bank.  One shareholder at a time (NOTES.md: a group of shareholders).
+-- "by trust or otherwise": the shareholder's control of the company counts its fiduciary holdings too, which is the
+-- exception 223.3(g)(2) makes "as provided in paragraph (a)(3)"; its control of the member bank does not.
+GIVEN
+    i IS AN Inquiry
+    p IS A Party
+GIVETH A BOOLEAN
+@ref 12 CFR 223.2(a)(3)
+`prong 3` MEANS
+    any (GIVEN sh YIELD `controls counting fiduciary holdings` i sh (p's `name`) AND shareholderOfBankOrController sh) (`names of` i)
+    WHERE
+        shareholderOfBankOrController sh MEANS
+               controls i sh (`bank of` i)
+            OR any (GIVEN y YIELD controls i y (`bank of` i) AND controls i sh y) (`names of` i)
+
+-- (4) Companies with interlocking directorates. Any company in which a majority of its directors,
+-- trustees, or general partners (or individuals exercising similar functions) constitute a
+-- majority of the persons holding any such office with the member bank or any company that
+-- controls the member bank.  The reading in `readings` decides "or" (NOTES.md).
+GIVEN
+    i IS AN Inquiry
+    p IS A Party
+GIVETH A BOOLEAN
+@ref 12 CFR 223.2(a)(4)
+`prong 4` MEANS
+    IF i's `readings`'s `interlock` EQUALS `One board at a time: the member bank, or one controlling company`
+    THEN any (GIVEN z YIELD `a majority of both` xs (directors z)) boards
+    ELSE `a majority of both` xs pool
+    WHERE
+        directors c MEANS nub (map (GIVEN l YIELD l's `from`) (filter (GIVEN l YIELD l's `to` EQUALS c) (i's `structure`'s `offices`)))
+        xs MEANS directors (p's `name`)
+        boards MEANS `bank of` i FOLLOWED BY filter (GIVEN y YIELD controls i y (`bank of` i)) (`names of` i)
+        pool MEANS nub (concat (map directors boards))
+
+-- "a majority of its directors ... constitute a majority of the persons holding any such office":
+-- the persons in both groups are more than half of the first group and more than half of the second.
+GIVEN
+    xs IS A LIST OF STRING
+    zs IS A LIST OF STRING
+GIVETH A BOOLEAN
+`a majority of both` MEANS
+        count common TIMES 2 GREATER THAN count xs
+    AND count common TIMES 2 GREATER THAN count zs
+    WHERE
+        common MEANS filter (GIVEN d YIELD elem d zs) xs
+
+-- (5) Sponsored and advised companies. Any company, including a real estate investment trust,
+-- that is sponsored and advised on a contractual basis by the member bank or an affiliate of the
+-- member bank.
+GIVEN
+    i       IS AN Inquiry
+    current IS A LIST OF STRING
+    p       IS A Party
+GIVETH A BOOLEAN
+@ref 12 CFR 223.2(a)(5)
+`prong 5` MEANS
+    any (GIVEN l YIELD l's `to` EQUALS p's `name` AND (l's `from` EQUALS `bank of` i OR elem (l's `from`) current)) (i's `structure`'s `sponsorships`)
+
+-- (7) Depository institution subsidiaries. A depository institution that is a subsidiary of the
+-- member bank.
+GIVEN
+    i IS AN Inquiry
+    p IS A Party
+GIVETH A BOOLEAN
+@ref 12 CFR 223.2(a)(7)
+`prong 7` MEANS p's `is a depository institution` AND controls i (`bank of` i) (p's `name`)
+
+-- (8) Financial subsidiaries. A financial subsidiary of the member bank.
+GIVEN
+    i IS AN Inquiry
+    p IS A Party
+GIVETH A BOOLEAN
+@ref 12 CFR 223.2(a)(8)
+`prong 8` MEANS p's `is a financial subsidiary` AND controls i (`bank of` i) (p's `name`)
+
+-- (10) Partnerships associated with the member bank or an affiliate. Any partnership for which
+-- the member bank or any affiliate of the member bank serves as a general partner or for which
+-- the member bank or any affiliate ... causes any director, officer, or employee ... to serve as
+-- a general partner.
+GIVEN
+    i       IS AN Inquiry
+    current IS A LIST OF STRING
+    p       IS A Party
+GIVETH A BOOLEAN
+@ref 12 CFR 223.2(a)(10)
+`prong 10` MEANS
+        p's `kind` EQUALS Partnership
+    AND any (GIVEN l YIELD l's `to` EQUALS p's `name` AND (l's `from` EQUALS `bank of` i OR elem (l's `from`) current)) (i's `structure`'s `general partners`)
+
+-- A company "described in paragraphs (a)(1) through (10)", which is what prong (11) speaks of.
+-- It is not the same as an affiliate: the exclusions in (b) have not been applied to it.
+GIVEN
+    i       IS AN Inquiry
+    current IS A LIST OF STRING
+    p       IS A Party
+GIVETH A BOOLEAN
+@ref 12 CFR 223.2(a)(11)
+`described in prongs 1 to 10` MEANS
+        `is a company` (i's `structure`) p
+    AND `may be an affiliate at all` i p
+    AND (   `prong 1` i p
+         OR `prong 2` i p
+         OR `prong 3` i p
+         OR `prong 4` i p
+         OR `prong 5` i current p
+         OR `prong 7` i p
+         OR `prong 8` i p
+         OR `prong 10` i current p)
+
+-- (11) Subsidiaries of affiliates. Any subsidiary of a company described in paragraphs (a)(1)
+-- through (10).  The reading in `readings` decides: either a subsidiary of a company described in (1) through (10), as
+-- the words say, or a subsidiary of any affiliate found so far, after the exclusions, so that the prong chains (NOTES.md).
+GIVEN
+    i       IS AN Inquiry
+    current IS A LIST OF STRING
+    p       IS A Party
+GIVETH A BOOLEAN
+@ref 12 CFR 223.2(a)(11)
+`prong 11` MEANS
+    any (GIVEN z YIELD controls i (z's `name`) (p's `name`) AND parentCounts z) (i's `structure`'s `the parties`)
+    WHERE
+        parentCounts z MEANS
+            IF i's `readings`'s `prong 11` EQUALS `A subsidiary of any affiliate, so that the prong chains`
+            THEN elem (z's `name`) current
+            ELSE `described in prongs 1 to 10` i current z
+
+-- (12) Other companies. Any company that the Board determines by regulation or order, or that the
+-- appropriate Federal banking agency determines by order, to have a relationship with the member
+-- bank ... to the detriment of the member bank.  A determination is stated, not computed.
+GIVEN
+    i IS AN Inquiry
+    p IS A Party
+GIVETH A BOOLEAN
+@ref 12 CFR 223.2(a)(12)
+`prong 12` MEANS elem (p's `name`) (i's `structure`'s `determined affiliates`)
+
+§ `223.2(b) and (c): what an affiliate does not include`
+
+-- (b)(1) Subsidiaries. Any company that is a subsidiary of the member bank, unless the company is
+-- (i) a depository institution; (ii) a financial subsidiary; (iii) directly controlled by (A) one
+-- or more affiliates (other than depository institution affiliates) of the member bank, or (B) a
+-- shareholder that controls the member bank [or a group of shareholders that together control it:
+-- not encoded, NOTES.md]; (iv) an employee stock option plan, trust, or similar organization;
+-- or (v) any other company determined to be an affiliate under paragraph (a)(12).
+GIVEN
+    i       IS AN Inquiry
+    current IS A LIST OF STRING
+    p       IS A Party
+GIVETH A BOOLEAN
+@ref 12 CFR 223.2(b)(1)
+`is an excluded subsidiary` MEANS
+        controls i (`bank of` i) (p's `name`)
+    AND NOT (   p's `is a depository institution`
+             OR p's `is a financial subsidiary`
+             OR directlyControlledByAffiliate
+             OR directlyControlledByShareholder
+             OR p's `is an employee benefit organization`
+             OR `prong 12` i p)
+    WHERE
+        directlyControlledByAffiliate MEANS
+            any (GIVEN y YIELD elem (y's `name`) current AND (NOT (y's `is a depository institution`)) AND `directly controls` i (y's `name`) (p's `name`)) (i's `structure`'s `the parties`)
+        directlyControlledByShareholder MEANS
+            any (GIVEN sh YIELD controls i sh (`bank of` i) AND `directly controls` i sh (p's `name`)) (`names of` i)
+
+-- (b)(2) to (4): a company engaged solely in holding the premises of the member bank, in a safe
+-- deposit business, or in holding obligations of the United States or its agencies.
+-- (b)(5): a company where control results from rights arising out of a bona fide debt previously
+-- contracted, for the period the text allows (stated, not computed).
+-- (c): for subpart F (section 23B), a depository institution is not an affiliate.
+GIVEN
+    i       IS AN Inquiry
+    current IS A LIST OF STRING
+    p       IS A Party
+GIVETH A BOOLEAN
+@ref 12 CFR 223.2(b)
+@ref 12 CFR 223.2(c)
+`is excluded` MEANS
+        `is an excluded subsidiary` i current p
+    OR (NOT (p's `sole activity` EQUALS `Some other activity`))
+    OR p's `debt control` EQUALS `Held through a debt previously contracted, within the authorized period`
+    OR (i's `purpose` EQUALS `Subpart F, section 23B` AND p's `is a depository institution`)
+
+§ `The affiliates of a member bank`
+
+-- One step: does 223.2 make `p` an affiliate, given the affiliates found so far?
+GIVEN
+    i       IS AN Inquiry
+    current IS A LIST OF STRING
+    p       IS A Party
+GIVETH A BOOLEAN
+@ref 12 CFR 223.2(a)
+`affiliate step` MEANS
+        `is a company` (i's `structure`) p
+    AND `may be an affiliate at all` i p
+    AND (   `described in prongs 1 to 10` i current p
+         OR `prong 11` i current p
+         OR `prong 12` i p)
+    AND NOT (`is excluded` i current p)
+
+-- The least fixed point.  `current` holds the names found; `pending` the companies not yet found.
+GIVEN
+    i       IS AN Inquiry
+    current IS A LIST OF STRING
+    pending IS A LIST OF Party
+GIVETH A LIST OF STRING
+`affiliates from` MEANS
+    LET found MEANS partition (GIVEN q YIELD `affiliate step` i current q) pending
+    IN IF null (fst found)
+       THEN current
+       ELSE `affiliates from` i (append current (map (GIVEN q YIELD q's `name`) (fst found))) (snd found)
+
+-- The names of the affiliates of the member bank.
+GIVEN
+    s  IS A Structure
+    r  IS A Readings
+    pu IS A Purpose
+GIVETH A LIST OF STRING
+`affiliates of the member bank` MEANS
+    `affiliates from` (`inquiry about` s r pu) EMPTY (filter (GIVEN q YIELD `is a company` s q) (s's `the parties`))
+
+GIVEN
+    s    IS A Structure
+    r    IS A Readings
+    pu   IS A Purpose
+    name IS A STRING
+GIVETH A BOOLEAN
+`is an affiliate` MEANS elem name (`affiliates of the member bank` s r pu)
