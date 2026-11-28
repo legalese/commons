@@ -5,6 +5,7 @@ The rows marked `out of scope` are not encoded, and neither is anything else in 
 No domain expert has read this against the source.
 An independent test author wrote 541 of the assertions from the source before reading the encoding (the encoding skill's step 8); see "The independent test pass".
 This file is updated after each section lands; a row moves only when its tests pass.
+The open questions are recorded in `registers/fork-register.json`, which holds 10 entries, all open; the assumptions this file states beyond those entries are not in it.
 
 ## Scope
 
