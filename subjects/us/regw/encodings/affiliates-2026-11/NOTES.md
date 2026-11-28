@@ -6,7 +6,7 @@ No domain expert has read this against the source.
 An independent test author wrote 541 of the assertions from the source before reading the encoding (the encoding skill's step 8); see "The independent test pass".
 That author was an AI, a separate Claude agent, and not a person.
 This file is updated after each section lands; a row moves only when its tests pass.
-The open questions are recorded in `registers/fork-register.json`, which holds 18 entries, all open; recorded in this file and in `independent-readings.md`, and not entered in the register: R13 (an input convention), the points that file lists as not expressible with the inputs and as interface questions, and the paragraphs of this file on a company as the controller in (a)(2), one list of showings for (g)(4) and (g)(5), there being no seat layer, what is stated and not computed, what voting securities and percent of a class are, and directors and a Board determination as stated inputs.
+The open questions are recorded in `registers/fork-register.json`, which holds 19 entries, all open; recorded in this file and in `independent-readings.md`, and not entered in the register: R13 (an input convention), the points that file lists as not genuinely open, as not expressible with the inputs and as interface questions, and the paragraphs of this file on a company as the controller in (a)(2), one list of showings for (g)(4) and (g)(5), there being no seat layer, what is stated and not computed, what voting securities and percent of a class are, and directors and a Board determination as stated inputs.
 
 ## Scope
 
