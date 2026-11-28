@@ -5,7 +5,7 @@ This file is updated after each section lands; a row moves only when its tests p
 No domain expert has read this against the source.
 An independent test author has since written 966 assertions from the regulation text alone; see "The independent test pass".
 That author was an AI, a separate Claude agent, and not a person.
-The open questions are recorded in `registers/fork-register.json`, which holds 18 entries, all open; recorded in this file and in `independent-readings-b.md`, and not entered in the register: R6 (nothing turns on it in an assessment, as the paragraph on 223.16(c) and 223.15 says), R11 (slice A's switch passed through), IA1 to IA14, and the paragraphs of this file on the principal amount of a revolving credit facility, collateral and a partial exemption, what the assessment takes from the caller, the dates in 223.42(n) and (o), and the conventions of the encoding.
+The open questions are recorded in `registers/fork-register.json`, which holds 19 entries, all open; recorded in this file and in `independent-readings-b.md`, and not entered in the register: R11 (slice A's switch passed through), IA1 to IA14, and the paragraphs of this file on the principal amount of a revolving credit facility, collateral and a partial exemption, what the assessment takes from the caller, the dates in 223.42(n) and (o), and the conventions of the encoding.
 
 ## Scope
 
