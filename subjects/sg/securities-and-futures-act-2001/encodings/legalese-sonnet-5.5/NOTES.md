@@ -1,7 +1,7 @@
 # NOTES: Securities and Futures Act 2001 (Singapore), Cut A of a whole-Act encoding with an individual seat
 
 Status: draft. No lawyer or other domain expert has read this encoding against the text, and it has not been checked against the official text.
-The open questions that the text does not settle, and the recorded limits of this row, are in `registers/fork-register.json` (10 entries, each with status `open`).
+The open questions that the text does not settle, and the recorded limits of this row, are in `registers/fork-register.json` (11 entries, each with status `open`).
 **This is Cut A only.** It encodes Part 1 (the interpretation and the definitional core), Part 7 (disclosure of interests), Part 8 (the Securities Industry Council and the Take-over Code provisions of the Act), Part 12 (market conduct) and Part 13 Division 1, Subdivisions (1) to (5) except (1A) (offers of securities and of securities-based derivatives contracts, with debentures); the rest of the Act (listed below) is not encoded.
 Written 2026-11-18 by Sonnet 5.5 agents (`claude-sonnet-5-5`) working in parallel, and merged by the lead agent of the session that ran them.
 Built with the `l4` 1.6.110 (main, e51181d, 2026-11-11) and compared with 1.6.109 (main, 4c887e0, 2026-11-04); every module has the same four counts on both builds.
