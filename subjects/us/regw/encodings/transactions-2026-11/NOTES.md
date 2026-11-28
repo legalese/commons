@@ -46,7 +46,7 @@ Dispositions: `done` (encoded and tested), `WIP` (encoded, not yet passing), `no
 | 223.3(h), (i) | covered transaction, its five limbs; credit transaction (the kinds of transaction (j) and (o) describe are the stated `kind`) | done |
 | 223.3(a), (d) | the aggregate amount; capital stock and surplus, as a stated number | done (an input) |
 | 223.11, 223.12 | the 10 percent and 20 percent limits | done |
-| 223.13 | safety and soundness, a stated judgement | not started |
+| 223.13 | safety and soundness, a stated judgement | done (an input) |
 | 223.14 | collateral requirements: the percentages, ineligible collateral, priority deductions, exceptions; the replacement rule (e) as the same test at one instant | done |
 | 223.15, 223.3(v) | low-quality assets, and the exception for renewals of participations | done, with a fork on (b)(3) |
 | 223.16 | transactions treated as with an affiliate | (a), (b) and the exemptions in (c) done |
