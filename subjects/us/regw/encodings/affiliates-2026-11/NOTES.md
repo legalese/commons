@@ -4,6 +4,7 @@ Status, 2026-11-21: **every in-scope row is encoded, and its tests pass (664 ass
 The rows marked `out of scope` are not encoded, and neither is anything else in Part 223.
 No domain expert has read this against the source.
 An independent test author wrote 541 of the assertions from the source before reading the encoding (the encoding skill's step 8); see "The independent test pass".
+That author was an AI, a separate Claude agent, and not a person.
 This file is updated after each section lands; a row moves only when its tests pass.
 The open questions are recorded in `registers/fork-register.json`, which holds 10 entries, all open; the assumptions this file states beyond those entries are not in it.
 

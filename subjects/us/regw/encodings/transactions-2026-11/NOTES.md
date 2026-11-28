@@ -2,7 +2,9 @@
 
 Status, 2026-11-21: **in progress.** The rows marked `done` below are encoded and their tests pass; the rest are `not started`.
 This file is updated after each section lands; a row moves only when its tests pass.
+No domain expert has read this against the source.
 An independent test author has since written 966 assertions from the regulation text alone; see "The independent test pass".
+That author was an AI, a separate Claude agent, and not a person.
 The open questions are recorded in `registers/fork-register.json`, which holds 9 entries, all open; the assumptions this file states beyond those entries are not in it.
 
 ## Scope
